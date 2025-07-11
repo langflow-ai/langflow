@@ -139,16 +139,16 @@ textarea[class^="ag-"]:focus {
 }
 
 .ace_scrollbar::-webkit-scrollbar-track {
-  background-color: hsl(var(--muted));
+  background-color: var(--color-muted);
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border));
+  background-color: var(--color-border);
   border-radius: 999px;
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--placeholder-foreground));
+  background-color: var(--color-placeholder-foreground);
   border-radius: 999px;
 }
 
@@ -250,17 +250,17 @@ pre code {
   display: inline-block;
   width: 100%;
   /* Background color */
-  background-color: hsl(var(--muted)) !important;
+  background-color: var(--color-muted) !important;
   font-size: 12px !important;
 }
 
 .dark pre code {
-  color: hsl(var(--code-foreground)) !important;
+  color: var(--color-code-foreground) !important;
 }
 
 pre {
   /* Background color */
-  background-color: hsl(var(--muted)) !important;
+  background-color: var(--color-muted) !important;
 }
 
 .prose li::marker {
@@ -279,12 +279,12 @@ input[type="search"]::-webkit-search-cancel-button {
   position: relative;
   right: -4px;
   mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/></svg>");
-  background-color: hsl(var(--foreground)) !important;
+  background-color: var(--color-foreground) !important;
   background-image: none;
   cursor: pointer;
 }
 .react-flow__background pattern circle {
-  fill: hsl(var(--canvas-dot)) !important;
+  fill: var(--color-canvas-dot) !important;
 }
 
 .markdown td {
@@ -338,30 +338,30 @@ input[type="search"]::-webkit-search-cancel-button {
   border-left: none !important;
 }
 .jse-group-button.jse-button:not(.jse-first) {
-  border-right: solid 1px hsl(var(--border)) !important;
+  border-right: solid 1px var(--color-border) !important;
 }
 
 .jse-group-button.jse-button.jse-selected {
-  background-color: hsl(var(--background)) !important;
-  color: hsl(var(--foreground)) !important;
+  background-color: var(--color-background) !important;
+  color: var(--color-foreground) !important;
 
   background-image: linear-gradient(
     to top,
-    hsl(var(--primary)) 2px,
+    var(--color-primary) 2px,
     transparent 2px
   ) !important;
 }
 
 .jse-group-button.jse-button {
-  background-color: hsl(var(--background)) !important;
-  color: hsl(var(--muted-foreground)) !important;
+  background-color: var(--color-background) !important;
+  color: var(--color-muted-foreground) !important;
   padding: 1rem !important;
   font-weight: 500 !important;
   margin: 0 !important;
 }
 
 .jse-button {
-  color: hsl(var(--primary)) !important;
+  color: var(--color-primary) !important;
 }
 
 .linenumber {
@@ -374,8 +374,8 @@ input[type="search"]::-webkit-search-cancel-button {
 .cm-textfield {
   font-size: 0.875rem !important;
   line-height: 1.25rem !important;
-  border: 1px solid hsl(var(--border)) !important;
-  background-color: hsl(var(--background)) !important;
+  border: 1px solid var(--color-border) !important;
+  background-color: var(--color-background) !important;
   border-radius: calc(var(--radius) - 2px) !important;
   padding-left: 0.75rem !important;
   padding-right: 0.75rem !important;
@@ -385,7 +385,7 @@ input[type="search"]::-webkit-search-cancel-button {
 
 .cm-button {
   border-radius: var(--radius) !important;
-  color: hsl(var(--foreground)) !important;
+  color: var(--color-foreground) !important;
   font-size: 0.875rem !important;
   line-height: 1.25rem !important;
   padding-left: 1rem !important;
@@ -401,7 +401,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 .cm-button:hover {
-  background-color: hsl(var(--border)) !important;
+  background-color: var(--color-border) !important;
 }
 
 .cm-search.cm-panel {
@@ -421,23 +421,23 @@ input[type="search"]::-webkit-search-cancel-button {
   position: unset !important;
   margin-left: auto !important;
   border-radius: var(--radius) !important;
-  color: hsl(var(--foreground)) !important;
+  color: var(--color-foreground) !important;
   height: 32px !important;
   padding-bottom: 5px !important;
 }
 
 .jse-button.jse-search {
   border-radius: var(--radius) !important;
-  color: hsl(var(--foreground)) !important;
+  color: var(--color-foreground) !important;
   height: 32px !important;
   padding-bottom: 5px !important;
   margin-left: auto !important;
 }
 
 .jse-button.jse-search:hover {
-  background-color: hsl(var(--border)) !important;
+  background-color: var(--color-border) !important;
 }
 
 .jse-button.jse-search:active {
-  background-color: hsl(var(--border)) !important;
+  background-color: var(--color-border) !important;
 }

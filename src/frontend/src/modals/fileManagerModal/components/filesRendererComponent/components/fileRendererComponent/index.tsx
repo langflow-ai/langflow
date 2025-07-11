@@ -65,7 +65,7 @@ export default function FileRendererComponent({
           key={index}
           className={cn(
             "flex w-full shrink-0 items-center justify-between gap-2 overflow-hidden rounded-lg py-2",
-            handleFileSelect ? "cursor-pointer px-3 hover:bg-accent" : "",
+            handleFileSelect ? "hover:bg-accent cursor-pointer px-3" : "",
             file.disabled
               ? "pointer-events-none cursor-not-allowed opacity-50"
               : "",
@@ -94,7 +94,7 @@ export default function FileRendererComponent({
             )}
             <div className="flex w-full items-center gap-2 overflow-hidden">
               {file.progress !== undefined && file.progress !== -1 ? (
-                <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
+                <div className="text-muted-foreground flex h-6 items-center justify-center text-xs font-semibold">
                   {Math.round(file.progress * 100)}%
                 </div>
               ) : (
@@ -136,20 +136,20 @@ export default function FileRendererComponent({
                     "flex items-center gap-2 overflow-hidden text-sm font-medium",
                     file.progress !== undefined &&
                       file.progress === -1 &&
-                      "pointer-events-none text-placeholder-foreground",
+                      "text-placeholder-foreground pointer-events-none",
                   )}
                 >
                   <ShadTooltip content={`${file.name}.${type}`} side="bottom">
                     <span
                       className={cn(
-                        "w-full cursor-pointer overflow-hidden truncate",
+                        "w-full cursor-pointer truncate overflow-hidden",
                         handleRemove && "cursor-default",
                       )}
                     >
                       {file.name}.{type}
                     </span>
                   </ShadTooltip>
-                  <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                  <span className="text-muted-foreground shrink-0 text-xs font-normal">
                     {formatFileSize(file.size)}
                   </span>
                 </span>
@@ -158,7 +158,7 @@ export default function FileRendererComponent({
                 <span className="text-mmd text-primary">
                   Upload failed,{" "}
                   <span
-                    className="cursor-pointer text-accent-pink-foreground underline"
+                    className="text-accent-pink-foreground cursor-pointer underline"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (file.file) {
@@ -188,7 +188,7 @@ export default function FileRendererComponent({
               >
                 <ForwardedIconComponent
                   name="X"
-                  className="h-5 w-5 shrink-0 text-muted-foreground"
+                  className="text-muted-foreground h-5 w-5 shrink-0"
                 />
               </Button>
             ) : file.progress === undefined ? (

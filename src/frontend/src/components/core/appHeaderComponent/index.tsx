@@ -51,7 +51,7 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div
-      className={`z-10 flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
+      className={`dark:bg-background z-10 flex h-[48px] w-full items-center justify-between border-b px-6`}
       data-testid="app-header"
     >
       {/* Left Section */}
@@ -92,7 +92,7 @@ export default function AppHeader(): JSX.Element {
         <>
           <Button
             unstyled
-            className="hidden items-center whitespace-nowrap pr-2 lg:inline"
+            className="hidden items-center pr-2 whitespace-nowrap lg:inline"
           >
             <CustomLangflowCounts />
           </Button>
@@ -117,7 +117,7 @@ export default function AppHeader(): JSX.Element {
                 }
                 data-testid="notification_button"
               >
-                <div className="hit-area-hover group relative items-center rounded-md px-2 py-2 text-muted-foreground">
+                <div className="hit-area-hover group text-muted-foreground relative items-center rounded-md px-2 py-2">
                   <span className={getNotificationBadge()} />
                   <ForwardedIconComponent
                     name="Bell"

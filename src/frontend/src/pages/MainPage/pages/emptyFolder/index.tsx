@@ -13,12 +13,12 @@ export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
     <div className="m-0 flex w-full justify-center">
       <div className="absolute top-1/2 flex w-full -translate-y-1/2 flex-col items-center justify-center gap-2">
         <h3
-          className="pt-5 font-chivo text-2xl font-semibold"
+          className="font-chivo pt-5 text-2xl font-semibold"
           data-testid="mainpage_title"
         >
           {folders?.length > 1 ? "Empty project" : "Start building"}
         </h3>
-        <p className="pb-5 text-sm text-secondary-foreground">
+        <p className="text-secondary-foreground pb-5 text-sm">
           Begin with a template, or start from scratch.
         </p>
         <Button
@@ -31,7 +31,7 @@ export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
             aria-hidden="true"
             className="h-4 w-4"
           />
-          <span className="whitespace-nowrap font-semibold">New Flow</span>
+          <span className="font-semibold whitespace-nowrap">New Flow</span>
         </Button>
       </div>
     </div>

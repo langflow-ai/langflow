@@ -64,7 +64,7 @@ export const EmptyPageCommunity = ({
         dragMessage={`Drop your flows or components here`}
         onFileDrop={handleFileDrop}
       >
-        <div className="m-0 h-full w-full bg-background p-0">
+        <div className="bg-background m-0 h-full w-full p-0">
           <div className="z-50 flex h-full w-full flex-col items-center justify-center gap-5">
             <div className="z-50 flex flex-col items-center gap-2">
               <div className="z-50 dark:hidden">
@@ -85,14 +85,14 @@ export const EmptyPageCommunity = ({
               </div>
               <span
                 data-testid="mainpage_title"
-                className="z-50 text-center font-chivo text-2xl font-medium text-foreground"
+                className="font-chivo text-foreground z-50 text-center text-2xl font-medium"
               >
                 {EMPTY_PAGE_TITLE}
               </span>
 
               <span
                 data-testid="empty_page_description"
-                className="z-50 text-center text-base text-secondary-foreground"
+                className="text-secondary-foreground z-50 text-center text-base"
               >
                 {folders?.length > 1
                   ? EMPTY_PAGE_FOLDER_DESCRIPTION
@@ -110,19 +110,19 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_github_button"
               >
-                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:border-accent-pink-foreground">
+                <div className="bg-background hover:border-accent-pink-foreground relative flex flex-col rounded-lg border-[1px] p-4 transition-all duration-300">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
                       <FaGithub className="h-6 w-6" />
                       <div>
                         <span className="font-semibold">GitHub</span>
-                        <span className="ml-2 font-mono text-muted-foreground">
+                        <span className="text-muted-foreground ml-2 font-mono">
                           {formatNumber(stars)}
                         </span>
                       </div>
                     </div>
                     <div>
-                      <span className="text-base text-secondary-foreground">
+                      <span className="text-secondary-foreground text-base">
                         {EMPTY_PAGE_GITHUB_DESCRIPTION}
                       </span>
                     </div>
@@ -140,19 +140,19 @@ export const EmptyPageCommunity = ({
                 }}
                 data-testid="empty_page_discord_button"
               >
-                <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:border-discord-color">
+                <div className="bg-background hover:border-discord-color relative flex flex-col rounded-lg border-[1px] p-4 transition-all duration-300">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
-                      <FaDiscord className="h-6 w-6 text-discord-color" />
+                      <FaDiscord className="text-discord-color h-6 w-6" />
                       <div>
                         <span className="font-semibold">Discord</span>
-                        <span className="ml-2 font-mono text-muted-foreground">
+                        <span className="text-muted-foreground ml-2 font-mono">
                           {formatNumber(discordCount)}
                         </span>
                       </div>
                     </div>
                     <div>
-                      <span className="text-base text-secondary-foreground">
+                      <span className="text-secondary-foreground text-base">
                         {EMPTY_PAGE_DISCORD_DESCRIPTION}
                       </span>
                     </div>
@@ -180,7 +180,7 @@ export const EmptyPageCommunity = ({
         </div>
         <p
           data-testid="empty_page_drag_and_drop_text"
-          className="absolute bottom-5 left-0 right-0 mt-4 cursor-default text-center text-xxs text-muted-foreground"
+          className="text-xxs text-muted-foreground absolute right-0 bottom-5 left-0 mt-4 cursor-default text-center"
         >
           {EMPTY_PAGE_DRAG_AND_DROP_TEXT}
         </p>

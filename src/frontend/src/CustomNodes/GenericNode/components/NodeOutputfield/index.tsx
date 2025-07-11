@@ -49,7 +49,7 @@ const EyeIcon = memo(
 );
 
 const SnowflakeIcon = memo(() => (
-  <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
+  <IconComponent className="text-ice h-5 w-5" name="Snowflake" />
 ));
 
 const InspectButton = memo(
@@ -91,10 +91,10 @@ const InspectButton = memo(
             isToolMode
               ? displayOutputPreview && !unknownOutput && !disabled
                 ? "text-background hover:text-secondary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-80"
+                : "text-placeholder-foreground cursor-not-allowed opacity-80"
               : displayOutputPreview && !unknownOutput && !disabled
                 ? "text-foreground hover:text-primary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-60",
+                : "text-placeholder-foreground cursor-not-allowed opacity-60",
             errorOutput ? "text-destructive" : "",
           )}
         />
@@ -341,7 +341,7 @@ function NodeOutputField({
     <div
       ref={ref}
       className={cn(
-        "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
+        "bg-muted relative flex h-11 w-full flex-wrap items-center justify-between px-5 py-2",
         lastOutput ? "rounded-b-[0.69rem]" : "",
         isToolMode && "bg-primary",
       )}

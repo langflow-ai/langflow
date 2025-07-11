@@ -65,7 +65,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
         }}
       >
         <BaseModal.Header>
-          <div className="flex w-full flex-row items-center border-b border-border px-4 py-3">
+          <div className="border-border flex w-full flex-row items-center border-b px-4 py-3">
             {icon && (
               <ForwardedIconComponent name={icon} className="mr-2 h-6 w-6" />
             )}

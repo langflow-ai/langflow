@@ -138,7 +138,7 @@ export const FilesPage = () => {
           <div className="flex items-center gap-4 font-medium">
             {params.data.progress !== undefined &&
             params.data.progress !== -1 ? (
-              <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
+              <div className="text-muted-foreground flex h-6 items-center justify-center text-xs font-semibold">
                 {Math.round(params.data.progress * 100)}%
               </div>
             ) : (
@@ -159,17 +159,17 @@ export const FilesPage = () => {
                 "flex items-center gap-2 text-sm font-medium",
                 params.data.progress !== undefined &&
                   params.data.progress === -1 &&
-                  "pointer-events-none text-placeholder-foreground",
+                  "text-placeholder-foreground pointer-events-none",
               )}
             >
               {params.value}.{type}
             </div>
             {params.data.progress !== undefined &&
             params.data.progress === -1 ? (
-              <span className="text-xs text-primary">
+              <span className="text-primary text-xs">
                 Upload failed,{" "}
                 <span
-                  className="cursor-pointer text-accent-pink-foreground underline"
+                  className="text-accent-pink-foreground cursor-pointer underline"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (params.data.file) {
@@ -293,7 +293,7 @@ export const FilesPage = () => {
     return (
       <ShadTooltip content="Upload File" side="bottom">
         <Button
-          className="!px-3 md:!px-4 md:!pl-3.5"
+          className="px-3! md:px-4! md:pl-3.5!"
           onClick={async () => {
             await handleUpload();
           }}
@@ -305,7 +305,7 @@ export const FilesPage = () => {
             aria-hidden="true"
             className="h-4 w-4"
           />
-          <span className="hidden whitespace-nowrap font-semibold md:inline">
+          <span className="hidden font-semibold whitespace-nowrap md:inline">
             Upload
           </span>
         </Button>
@@ -327,8 +327,8 @@ export const FilesPage = () => {
               className="flex items-center pb-8 text-xl font-semibold"
               data-testid="mainpage_title"
             >
-              <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-                <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
+              <div className="h-7 w-10 transition-all md:group-data-[open=true]/sidebar-wrapper:w-0 lg:hidden">
+                <div className="relative left-0 opacity-100 transition-all md:group-data-[open=true]/sidebar-wrapper:opacity-0">
                   <SidebarTrigger>
                     <ForwardedIconComponent
                       name="PanelLeftOpen"
@@ -420,13 +420,13 @@ export const FilesPage = () => {
                     >
                       <div
                         className={cn(
-                          "ml-12 flex h-full flex-1 items-center justify-between bg-background",
+                          "bg-background ml-12 flex h-full flex-1 items-center justify-between",
                           selectedFiles.length > 0
                             ? "pointer-events-auto"
                             : "pointer-events-none",
                         )}
                       >
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {quantitySelected} selected
                         </span>
                         <div className="flex items-center gap-2">
@@ -449,7 +449,7 @@ export const FilesPage = () => {
                             <Button
                               variant="destructive"
                               size="iconMd"
-                              className="px-2.5 !text-mmd"
+                              className="text-mmd! px-2.5"
                               loading={isDeleting}
                               data-testid="bulk-delete-btn"
                             >
@@ -470,7 +470,7 @@ export const FilesPage = () => {
                   <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
                     <div className="flex flex-col items-center gap-2">
                       <h3 className="text-2xl font-semibold">No files</h3>
-                      <p className="text-lg text-secondary-foreground">
+                      <p className="text-secondary-foreground text-lg">
                         Upload files or import from your preferred cloud.
                       </p>
                     </div>

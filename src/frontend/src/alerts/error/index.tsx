@@ -44,7 +44,7 @@ export default function ErrorAlert({
         className="error-build-message noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <IconComponent
               name="XCircle"
               className="error-build-message-circle"
@@ -55,7 +55,7 @@ export default function ErrorAlert({
             <h3 className="error-build-foreground line-clamp-2">{title}</h3>
             {list?.length !== 0 &&
             list?.some((item) => item !== null && item !== undefined) ? (
-              <div className="mt-2 text-sm text-error-foreground">
+              <div className="text-error-foreground mt-2 text-sm">
                 <ul className="list-disc space-y-1 pl-5 align-top">
                   {list.map((item, index) => (
                     <li key={index} className="word-break-break-word">

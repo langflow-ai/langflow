@@ -50,7 +50,7 @@ export const MemoizedCanvasControls = memo(
 export const MemoizedSidebarTrigger = memo(() => (
   <Panel
     className={cn(
-      "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+      "react-flow__controls border-secondary-hover bg-background fill-foreground stroke-foreground text-primary [&>button]:bg-background [&>button]:hover:bg-accent top-auto! m-2! flex gap-1.5 rounded-md border p-1.5 shadow transition-all duration-300 [&>button]:border-0",
       "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
     )}
     position="top-left"

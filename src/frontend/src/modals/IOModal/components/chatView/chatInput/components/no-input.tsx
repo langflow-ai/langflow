@@ -18,7 +18,7 @@ const NoInputView: React.FC<NoInputViewProps> = ({
 }) => {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center">
-      <div className="flex w-full flex-col items-center justify-center gap-3 rounded-md border border-input bg-muted p-2 py-4">
+      <div className="border-input bg-muted flex w-full flex-col items-center justify-center gap-3 rounded-md border p-2 py-4">
         {!isBuilding ? (
           <Button
             data-testid="button-send"
@@ -36,7 +36,7 @@ const NoInputView: React.FC<NoInputViewProps> = ({
             onClick={stopBuilding}
             data-testid="button-stop"
             unstyled
-            className="form-modal-send-button cursor-pointer bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input"
+            className="form-modal-send-button bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input cursor-pointer"
           >
             <div className="flex items-center gap-2 rounded-md text-sm font-medium">
               Stop

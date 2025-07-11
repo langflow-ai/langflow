@@ -383,7 +383,7 @@ export function VoiceAssistant({
     <>
       <div
         data-testid="voice-assistant-container"
-        className="mx-auto flex w-full max-w-[324px] items-center justify-center rounded-md border bg-background px-4 py-2 shadow-xl"
+        className="bg-background mx-auto flex w-full max-w-[324px] items-center justify-center rounded-md border px-4 py-2 shadow-xl"
       >
         <div
           className={cn(
@@ -399,7 +399,7 @@ export function VoiceAssistant({
               <IconComponent
                 name={isRecording ? "Mic" : "MicOff"}
                 strokeWidth={ICON_STROKE_WIDTH}
-                className="h-4 w-4 text-placeholder-foreground"
+                className="text-placeholder-foreground h-4 w-4"
               />
             </Button>
           </ShadTooltip>
@@ -421,7 +421,7 @@ export function VoiceAssistant({
               />
             ))}
           </div>
-          <div className="min-w-[50px] cursor-default text-center font-mono text-sm font-medium text-placeholder-foreground">
+          <div className="text-placeholder-foreground min-w-[50px] cursor-default text-center font-mono text-sm font-medium">
             {hasOpenAIAPIKey ? formatTime(recordingTime) : "--:--s"}
           </div>
 
@@ -446,7 +446,7 @@ export function VoiceAssistant({
                       name="Settings"
                       strokeWidth={ICON_STROKE_WIDTH}
                       className={cn(
-                        "relative top-[2px] h-4 w-4 text-muted-foreground hover:text-foreground",
+                        "text-muted-foreground hover:text-foreground relative top-[2px] h-4 w-4",
                       )}
                     />
                   </Button>
@@ -462,7 +462,7 @@ export function VoiceAssistant({
                     <IconComponent
                       name="Key"
                       strokeWidth={ICON_STROKE_WIDTH}
-                      className={cn("h-4 w-4 text-accent-amber-foreground")}
+                      className={cn("text-accent-amber-foreground h-4 w-4")}
                     />
                   </Button>
                 </>
@@ -478,7 +478,7 @@ export function VoiceAssistant({
             <IconComponent
               name="X"
               strokeWidth={ICON_STROKE_WIDTH}
-              className="h-4 w-4 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-4 w-4"
             />
           </Button>
         </div>

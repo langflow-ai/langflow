@@ -185,7 +185,7 @@ export default function ChatMessage({
   };
 
   const editedFlag = chat.edit ? (
-    <div className="text-sm text-muted-foreground">(Edited)</div>
+    <div className="text-muted-foreground text-sm">(Edited)</div>
   ) : null;
 
   if (chat.category === "error") {
@@ -205,7 +205,7 @@ export default function ChatMessage({
 
   return (
     <>
-      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
+      <div className="word-break-break-word w-5/6 max-w-[768px] py-4">
         <div
           className={cn(
             "group relative flex w-full gap-4 rounded-md p-2",
@@ -217,7 +217,7 @@ export default function ChatMessage({
               "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
               !chat.isSend
                 ? "bg-muted"
-                : "border border-border hover:border-input",
+                : "border-border hover:border-input border",
             )}
             style={
               chat.properties?.background_color
@@ -281,16 +281,16 @@ export default function ChatMessage({
                 <span className="flex items-center gap-2">
                   {chat.sender_name}
                   {isAudioMessage && (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
+                    <div className="bg-muted flex h-5 w-5 items-center justify-center rounded-sm">
                       <ForwardedIconComponent
                         name="mic"
-                        className="h-3 w-3 text-muted-foreground"
+                        className="text-muted-foreground h-3 w-3"
                       />
                     </div>
                   )}
                 </span>
                 {chat.properties?.source && !playgroundPage && (
-                  <div className="text-mmd font-normal text-muted-foreground">
+                  <div className="text-mmd text-muted-foreground font-normal">
                     {chat.properties?.source.source}
                   </div>
                 )}
@@ -310,7 +310,7 @@ export default function ChatMessage({
               />
             )}
             {!chat.isSend ? (
-              <div className="form-modal-chat-text-position flex-grow">
+              <div className="form-modal-chat-text-position grow">
                 <div className="form-modal-chat-text">
                   {hidden && chat.thought && chat.thought !== "" && (
                     <div
@@ -375,7 +375,7 @@ export default function ChatMessage({
                 </div>
               </div>
             ) : (
-              <div className="form-modal-chat-text-position flex-grow">
+              <div className="form-modal-chat-text-position grow">
                 <div className="flex w-full flex-col">
                   {editMessage ? (
                     <EditMessageField
@@ -390,7 +390,7 @@ export default function ChatMessage({
                     <>
                       <div
                         className={cn(
-                          "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
+                          "w-full items-baseline text-sm font-normal break-words whitespace-pre-wrap",
                           isEmpty ? "text-muted-foreground" : "text-primary",
                         )}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}

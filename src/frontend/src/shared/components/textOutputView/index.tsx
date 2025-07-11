@@ -17,13 +17,13 @@ const TextOutputView = ({
     <>
       {" "}
       <Textarea
-        className={`w-full resize-none custom-scroll ${left ? "min-h-32" : "h-full"}`}
+        className={`custom-scroll w-full resize-none ${left ? "min-h-32" : "h-full"}`}
         placeholder={"Empty"}
         readOnly
         value={value}
       />
       {isTruncated && (
-        <div className="mt-2 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-2 text-xs">
           This output has been truncated due to its size.
         </div>
       )}

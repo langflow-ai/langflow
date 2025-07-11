@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 import IconComponent from "../../common/genericIconComponent";
 import Loading from "../../ui/loading";
 import Error from "./Error";
@@ -80,9 +80,9 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
       ref={container}
       onMouseEnter={(_) => setShowControl(true)}
       onMouseLeave={(_) => setShowControl(false)}
-      className="flex h-full w-full flex-col items-center justify-end overflow-clip rounded-lg border border-border"
+      className="border-border flex h-full w-full flex-col items-center justify-end overflow-clip rounded-lg border"
     >
-      <div className={"h-full min-h-0 w-full overflow-auto custom-scroll"}>
+      <div className={"custom-scroll h-full min-h-0 w-full overflow-auto"}>
         <Document
           loading={
             <div className="flex h-full w-full items-center justify-center align-middle">
@@ -110,7 +110,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
           "absolute z-50 pb-5 " + (showControl && numPages > 0 ? "" : " hidden")
         }
       >
-        <div className="flex w-min items-center justify-center gap-0.5 rounded-xl bg-muted px-2 align-middle">
+        <div className="bg-muted flex w-min items-center justify-center gap-0.5 rounded-xl px-2 align-middle">
           <button
             type="button"
             disabled={pageNumber <= 1}
@@ -141,7 +141,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
           <input
             type="number"
             step={0.1}
-            className="w-6 border-b bg-transparent text-center arrow-hide"
+            className="arrow-hide w-6 border-b bg-transparent text-center"
             onChange={(e) => handleScaleChange(e.target.value)}
             value={scale}
           />

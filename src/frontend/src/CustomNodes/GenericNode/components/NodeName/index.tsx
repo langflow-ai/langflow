@@ -90,7 +90,7 @@ export default function NodeName({
       <div
         data-testid={"title-" + display_name}
         className={cn(
-          "nodoubleclick truncate font-medium text-primary",
+          "nodoubleclick text-primary truncate font-medium",
           showNode ? "cursor-text" : "cursor-default",
         )}
       >
@@ -103,7 +103,7 @@ export default function NodeName({
       {beta && (
         <div className="shrink-0">
           <ShadTooltip content="Beta component">
-            <div className="flex h-4 w-4 items-center justify-center rounded-sm border border-accent-purple-foreground p-0.5">
+            <div className="border-accent-purple-foreground flex h-4 w-4 items-center justify-center rounded-sm border p-0.5">
               <ForwardedIconComponent
                 name="FlaskConical"
                 className="text-accent-purple-foreground"

@@ -37,7 +37,7 @@ export default function SuccessAlert({
         className="success-alert noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <IconComponent
               name="CheckCircle2"
               className="success-alert-icon"

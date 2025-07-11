@@ -74,7 +74,7 @@ export default function InputComponent({
             required={required}
             className={classNames(
               password && !pwdVisible && value !== ""
-                ? "text-clip password"
+                ? "password text-clip"
                 : "",
               editNode ? "input-edit-node" : "",
               password && editNode ? "pr-8" : "",
@@ -197,7 +197,7 @@ export default function InputComponent({
                   ) || "ChevronsUpDown"
                 }
                 className={cn(
-                  disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
+                  disabled ? "text-placeholder cursor-grab" : "cursor-pointer",
                   "icon-size",
                 )}
                 strokeWidth={ICON_STROKE_WIDTH}
@@ -212,7 +212,7 @@ export default function InputComponent({
           type="button"
           tabIndex={-1}
           className={classNames(
-            "mb-px mr-3 p-0",
+            "mr-3 mb-px p-0",
             editNode
               ? "input-component-true-button"
               : "input-component-false-button",
@@ -225,12 +225,12 @@ export default function InputComponent({
           {pwdVisible ? (
             <ForwardedIconComponent
               name="Eye"
-              className="relative top-[1px] h-5 w-5 text-placeholder-foreground hover:text-foreground"
+              className="text-placeholder-foreground hover:text-foreground relative top-[1px] h-5 w-5"
             />
           ) : (
             <ForwardedIconComponent
               name="EyeOff"
-              className="relative top-[1px] h-5 w-5 text-placeholder-foreground hover:text-foreground"
+              className="text-placeholder-foreground hover:text-foreground relative top-[1px] h-5 w-5"
             />
           )}
         </button>

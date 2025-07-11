@@ -23,11 +23,11 @@ export default function PageLayout({
   const navigate = useCustomNavigate();
 
   return (
-    <div className="flex w-full flex-1 flex-col justify-between overflow-auto overflow-x-hidden bg-background">
+    <div className="bg-background flex w-full flex-1 flex-col justify-between overflow-auto overflow-x-hidden">
       <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col">
         <div className="flex flex-col gap-4 p-6 pt-0">
           <CustomBanner />
-          <div className="flex w-full items-center justify-between gap-4 space-y-0.5 pb-2 pt-10">
+          <div className="flex w-full items-center justify-between gap-4 space-y-0.5 pt-10 pb-2">
             <div className="flex w-full flex-col">
               <div className="flex items-center gap-2">
                 {backTo && (
@@ -54,7 +54,7 @@ export default function PageLayout({
               </div>
               <p className="text-muted-foreground">{description}</p>
             </div>
-            <div className="flex-shrink-0">{button && button}</div>
+            <div className="shrink-0">{button && button}</div>
           </div>
         </div>
         <div className="flex shrink-0 px-6">

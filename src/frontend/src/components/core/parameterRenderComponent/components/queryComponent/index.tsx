@@ -106,7 +106,7 @@ export default function QueryComponent({
         dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
         name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
         className={cn(
-          "cursor-pointer bg-background",
+          "bg-background cursor-pointer",
           externalLinkIconClasses.icon,
           editNode
             ? externalLinkIconClasses.editNodeTop

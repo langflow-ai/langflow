@@ -33,7 +33,7 @@ export const SearchInput = memo(function SearchInput({
         value={search}
       />
       {!isInputFocused && search === "" && (
-        <div className="pointer-events-none absolute inset-y-0 right-3 top-1/2 flex -translate-y-1/2 items-center justify-between gap-2 text-sm text-muted-foreground">
+        <div className="text-muted-foreground pointer-events-none absolute inset-y-0 top-1/2 right-3 flex -translate-y-1/2 items-center justify-between gap-2 text-sm">
           <span>
             <ShortcutDisplay sidebar shortcut="/" />
           </span>

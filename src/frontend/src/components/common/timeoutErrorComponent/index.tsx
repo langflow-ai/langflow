@@ -22,8 +22,8 @@ export default function TimeoutErrorComponent({
           <div role="status" className="m-auto flex flex-col items-center">
             <Loading className={`h-16 w-16`} />
             <br></br>
-            <span className="text-lg text-primary">{message}</span>
-            <span className="text-center text-lg text-primary">
+            <span className="text-primary text-lg">{message}</span>
+            <span className="text-primary text-center text-lg">
               {description}
             </span>
           </div>

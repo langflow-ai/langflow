@@ -118,7 +118,7 @@ export default function FilesContextMenuComponent({
               e.stopPropagation();
               handleSelectOptionsChange("delete");
             }}
-            className="cursor-pointer text-destructive"
+            className="text-destructive cursor-pointer"
             data-testid="btn-delete-file"
           >
             <ForwardedIconComponent
@@ -150,7 +150,7 @@ export default function FilesContextMenuComponent({
         }}
       >
         <ConfirmationModal.Content>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {isLocal
               ? "This action cannot be undone. The file will be permanently deleted."
               : "This will remove the file from your list. You can add it back later if needed."}

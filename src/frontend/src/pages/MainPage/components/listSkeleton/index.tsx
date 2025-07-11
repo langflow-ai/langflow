@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const ListSkeleton = () => {
   return (
-    <div className="flex flex-row justify-between rounded-lg bg-background px-4 py-3">
+    <div className="bg-background flex flex-row justify-between rounded-lg px-4 py-3">
       {/* left side */}
       <div className="flex min-w-0 items-center gap-4">
         {/* Icon skeleton */}

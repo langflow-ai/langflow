@@ -14,18 +14,18 @@ export default function SingleAlert({
 
   return type === "error" ? (
     <div
-      className="mx-2 mb-2 flex rounded-md bg-error-background p-3"
+      className="bg-error-background mx-2 mb-2 flex rounded-md p-3"
       key={dropItem.id}
     >
-      <div className="flex-shrink-0">
-        <IconComponent name="XCircle" className="h-5 w-5 text-status-red" />
+      <div className="shrink-0">
+        <IconComponent name="XCircle" className="text-status-red h-5 w-5" />
       </div>
       <div className="ml-3">
-        <h3 className="text-sm font-medium text-error-foreground word-break-break-word">
+        <h3 className="text-error-foreground word-break-break-word text-sm font-medium">
           {dropItem.title}
         </h3>
         {dropItem.list ? (
-          <div className="mt-2 text-sm text-error-foreground">
+          <div className="text-error-foreground mt-2 text-sm">
             <ul className="list-disc space-y-1 pl-5 align-top">
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
@@ -73,31 +73,31 @@ export default function SingleAlert({
                 removeAlert(dropItem.id);
               }, 500);
             }}
-            className="inline-flex rounded-md p-1.5 text-status-red"
+            className="text-status-red inline-flex rounded-md p-1.5"
           >
             <span className="sr-only">Dismiss</span>
-            <IconComponent name="X" className="h-4 w-4 text-error-foreground" />
+            <IconComponent name="X" className="text-error-foreground h-4 w-4" />
           </button>
         </div>
       </div>
     </div>
   ) : type === "notice" ? (
     <div
-      className="mx-2 mb-2 flex rounded-md bg-info-background p-3"
+      className="bg-info-background mx-2 mb-2 flex rounded-md p-3"
       key={dropItem.id}
     >
-      <div className="flex-shrink-0 cursor-help">
-        <IconComponent name="Info" className="h-5 w-5 text-status-blue" />
+      <div className="shrink-0 cursor-help">
+        <IconComponent name="Info" className="text-status-blue h-5 w-5" />
       </div>
       <div className="ml-3 flex-1 md:flex md:justify-between">
-        <p className="text-sm font-medium text-info-foreground">
+        <p className="text-info-foreground text-sm font-medium">
           {dropItem.title}
         </p>
-        <p className="mt-3 text-sm md:ml-6 md:mt-0">
+        <p className="mt-3 text-sm md:mt-0 md:ml-6">
           {dropItem.link ? (
             <CustomLink
               to={dropItem.link}
-              className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
+              className="text-info-foreground hover:text-accent-foreground font-medium whitespace-nowrap"
             >
               Details
             </CustomLink>
@@ -116,27 +116,27 @@ export default function SingleAlert({
                 removeAlert(dropItem.id);
               }, 500);
             }}
-            className="inline-flex rounded-md p-1.5 text-info-foreground"
+            className="text-info-foreground inline-flex rounded-md p-1.5"
           >
             <span className="sr-only">Dismiss</span>
-            <IconComponent name="X" className="h-4 w-4 text-info-foreground" />
+            <IconComponent name="X" className="text-info-foreground h-4 w-4" />
           </button>
         </div>
       </div>
     </div>
   ) : (
     <div
-      className="mx-2 mb-2 flex rounded-md bg-success-background p-3"
+      className="bg-success-background mx-2 mb-2 flex rounded-md p-3"
       key={dropItem.id}
     >
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <IconComponent
           name="CheckCircle2"
-          className="h-5 w-5 text-status-green"
+          className="text-status-green h-5 w-5"
         />
       </div>
       <div className="ml-3">
-        <p className="text-sm font-medium text-success-foreground">
+        <p className="text-success-foreground text-sm font-medium">
           {dropItem.title}
         </p>
       </div>
@@ -150,12 +150,12 @@ export default function SingleAlert({
                 removeAlert(dropItem.id);
               }, 500);
             }}
-            className="inline-flex rounded-md p-1.5 text-status-green"
+            className="text-status-green inline-flex rounded-md p-1.5"
           >
             <span className="sr-only">Dismiss</span>
             <IconComponent
               name="X"
-              className="h-4 w-4 text-success-foreground"
+              className="text-success-foreground h-4 w-4"
             />
           </button>
         </div>

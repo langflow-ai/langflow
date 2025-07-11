@@ -121,7 +121,7 @@ export default function FlowBuildingComponent() {
             variants={CONTAINER_VARIANTS}
             transition={{ duration: 0.2, delay: 0.2, ease: "easeOut" }}
             className={cn(
-              "flex flex-col justify-center overflow-hidden rounded-lg border bg-background px-4 py-2 text-sm shadow-md transition-colors duration-200",
+              "bg-background flex flex-col justify-center overflow-hidden rounded-lg border px-4 py-2 text-sm shadow-md transition-colors duration-200",
               !isBuilding &&
                 buildInfo?.error &&
                 "border-accent-red-foreground text-accent-red-foreground",
@@ -248,7 +248,7 @@ export default function FlowBuildingComponent() {
                         <Markdown
                           linkTarget="_blank"
                           remarkPlugins={[remarkGfm]}
-                          className="my-1.5 align-text-top truncate-doubleline"
+                          className="truncate-doubleline my-1.5 align-text-top"
                           components={{
                             a: ({ node, ...props }) => (
                               <a

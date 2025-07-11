@@ -109,14 +109,14 @@ export default function GlobalVariablesPage() {
             Global Variables
             <ForwardedIconComponent
               name="Globe"
-              className="ml-2 h-5 w-5 text-primary"
+              className="text-primary ml-2 h-5 w-5"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage global variables and assign them to fields.
           </p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <GlobalVariableModal asChild>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="w-4" />

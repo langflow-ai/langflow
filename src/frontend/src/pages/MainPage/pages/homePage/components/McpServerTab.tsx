@@ -46,12 +46,12 @@ const MemoizedCodeTag = memo(
     isGeneratingApiKey,
     generateApiKey,
   }: MemoizedCodeTagProps) => (
-    <div className="relative bg-background text-[13px]">
-      <div className="absolute right-4 top-4 flex items-center gap-6">
+    <div className="bg-background relative text-[13px]">
+      <div className="absolute top-4 right-4 flex items-center gap-6">
         {!isAutoLogin && (
           <Button
             unstyled
-            className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-2 font-sans"
             disabled={apiKey !== ""}
             loading={isGeneratingApiKey}
             onClick={generateApiKey}
@@ -69,7 +69,7 @@ const MemoizedCodeTag = memo(
         <Button
           unstyled
           size="icon"
-          className={cn("h-4 w-4 text-muted-foreground hover:text-foreground")}
+          className={cn("text-muted-foreground hover:text-foreground h-4 w-4")}
           onClick={copyToClipboard}
         >
           <ForwardedIconComponent
@@ -252,7 +252,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       <div className="pb-2 text-sm font-medium" data-testid="mcp-server-title">
         MCP Server
       </div>
-      <div className="pb-4 text-mmd text-muted-foreground">
+      <div className="text-mmd text-muted-foreground pb-4">
         Access your Project's flows as Tools within a MCP Server. Learn more in
         our
         <a
@@ -272,11 +272,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP tools."
               side="right"
             >
-              <div className="flex items-center text-mmd font-medium hover:cursor-help">
+              <div className="text-mmd flex items-center font-medium hover:cursor-help">
                 Flows/Tools
                 <ForwardedIconComponent
                   name="info"
-                  className="ml-1.5 h-4 w-4 text-muted-foreground"
+                  className="text-muted-foreground ml-1.5 h-4 w-4"
                   aria-hidden="true"
                 />
               </div>
@@ -298,13 +298,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         </div>
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           <div className="flex flex-col">
-            <div className="flex flex-row justify-start border-b border-border">
+            <div className="border-border flex flex-row justify-start border-b">
               {[{ name: "Auto install" }, { name: "JSON" }].map(
                 (item, index) => (
                   <Button
                     unstyled
                     key={item.name}
-                    className={`flex h-6 flex-row items-end gap-2 text-nowrap border-b-2 border-border border-b-transparent !py-1 font-medium ${
+                    className={`border-border flex h-6 flex-row items-end gap-2 border-b-2 border-b-transparent !py-1 font-medium text-nowrap ${
                       selectedMode === item.name
                         ? "border-b-2 border-black dark:border-b-white"
                         : "text-muted-foreground hover:text-foreground"
@@ -340,7 +340,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     ))}
                   </TabsList>
                 </Tabs>
-                <div className="overflow-hidden rounded-lg border border-border">
+                <div className="border-border overflow-hidden rounded-lg border">
                   <SyntaxHighlighter
                     style={syntaxHighlighterStyle}
                     CodeTag={({ children }) => (
@@ -361,7 +361,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   </SyntaxHighlighter>
                 </div>
               </div>
-              <div className="px-2 text-mmd text-muted-foreground">
+              <div className="text-mmd text-muted-foreground px-2">
                 Add this config to your client of choice. Need help? See the{" "}
                 <a
                   href={MCP_SERVER_TUTORIAL_LINK}
@@ -395,7 +395,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               {autoInstallers.map((installer) => (
                 <Button
                   variant="ghost"
-                  className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
+                  className="disabled:text-foreground flex items-center justify-between disabled:opacity-50"
                   disabled={
                     installedMCP?.includes(installer.name) ||
                     loadingMCP.includes(installer.name) ||

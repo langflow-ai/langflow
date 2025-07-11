@@ -289,7 +289,7 @@ export default function ToolsTable({
       </main>
       <Sidebar
         side="right"
-        className="flex h-full flex-col overflow-auto border-l border-border"
+        className="border-border flex h-full flex-col overflow-auto border-l"
       >
         <SidebarHeader className="flex-none px-4 py-4">
           {focusedRow &&
@@ -311,7 +311,7 @@ export default function ToolsTable({
                     placeholder="Edit name..."
                     data-testid="input_update_name"
                   />
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     {isAction
                       ? "Used as the function name when this flow is exposed to clients."
                       : "Used as the function name when this tool is exposed to the agent."}
@@ -333,7 +333,7 @@ export default function ToolsTable({
                     className="h-24"
                     data-testid="input_update_description"
                   />
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     {isAction
                       ? "This is the description for the tool exposed to a client."
                       : "This is the description for the tool exposed to the agents."}
@@ -383,7 +383,7 @@ export default function ToolsTable({
                               <div className="flex items-center text-sm font-medium hover:cursor-help">
                                 <ForwardedIconComponent
                                   name="info"
-                                  className="ml-1.5 h-4 w-4 text-muted-foreground"
+                                  className="text-muted-foreground ml-1.5 h-4 w-4"
                                   aria-hidden="true"
                                 />
                               </div>

@@ -26,20 +26,20 @@ export default function TemplateCardComponent({
   return (
     <div
       data-testid={`template-${convertTestName(example.name)}`}
-      className="group flex cursor-pointer gap-3 overflow-hidden rounded-md p-3 hover:bg-muted focus-visible:bg-muted"
+      className="group hover:bg-muted focus-visible:bg-muted flex cursor-pointer gap-3 overflow-hidden rounded-md p-3"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={onClick}
     >
       <div
         className={cn(
-          "relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-none ring-ring",
+          "ring-ring relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-hidden",
           swatchColors[swatchIndex],
         )}
       >
         <IconComponent
           name={example.icon || "FileText"}
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 duration-300 group-hover:scale-105 group-focus-visible:scale-105"
+          className="absolute top-1/2 left-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 duration-300 group-hover:scale-105 group-focus-visible:scale-105"
         />
       </div>
       <div className="flex flex-1 flex-col justify-between">
@@ -59,7 +59,7 @@ export default function TemplateCardComponent({
               className="mr-3 h-5 w-5 shrink-0 translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
             />
           </div>
-          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
             {example.description}
           </p>
         </div>

@@ -54,12 +54,12 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      className="group bg-muted hover:text-foreground flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border"
       onClick={onClick}
     >
       <ForwardedIconComponent
         name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
+        className="text-placeholder-foreground group-hover:text-foreground h-3 w-3"
       />
     </Button>
   ),
@@ -463,7 +463,7 @@ function GenericNode({
         className={cn(
           borderColor,
           showNode ? "w-80" : `w-48`,
-          "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
+          "generic-node-div group/node relative rounded-xl border shadow-xs hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >
@@ -488,7 +488,7 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid text-wrap leading-5",
+            "grid leading-5 text-wrap",
             showNode ? "border-b" : "relative",
           )}
         >

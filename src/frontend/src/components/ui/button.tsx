@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
 const buttonVariants = cva(
-  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -17,18 +17,18 @@ const buttonVariants = cva(
         outlineAmber:
           "border border-accent-amber-foreground hover:bg-accent-amber",
         primary:
-          "border bg-background text-secondary-foreground hover:bg-muted hover:shadow-sm",
+          "border bg-background text-secondary-foreground hover:bg-muted hover:shadow-2xs",
         warning:
-          "bg-warning-foreground text-warning-text hover:bg-warning-foreground/90 hover:shadow-sm",
+          "bg-warning-foreground text-warning-text hover:bg-warning-foreground/90 hover:shadow-2xs",
         secondary:
           "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
         ghost:
-          "text-foreground hover:bg-accent hover:text-accent-foreground disabled:!bg-transparent",
+          "text-foreground hover:bg-accent hover:text-accent-foreground disabled:bg-transparent!",
         ghostActive:
           "bg-muted text-foreground hover:bg-secondary-hover hover:text-accent-foreground",
-        menu: "hover:bg-muted hover:text-accent-foreground focus:!ring-0 focus-visible:!ring-0",
+        menu: "hover:bg-muted hover:text-accent-foreground focus:ring-0! focus-visible:ring-0!",
         "menu-active":
-          "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
+          "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:ring-offset-0!",
         link: "underline-offset-4 hover:underline text-primary",
       },
       size: {
@@ -90,41 +90,40 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (typeof children === "string") {
       newChildren = ignoreTitleCase ? children : toTitleCase(children);
     }
+
     return (
-      <>
-        <Comp
-          className={
-            !unstyled
-              ? buttonVariants({ variant, size, className })
-              : cn(className)
-          }
-          disabled={loading || disabled}
-          {...(asChild ? {} : { type: type || "button" })}
-          ref={ref}
-          {...props}
-        >
-          {loading ? (
-            <span className="relative flex items-center justify-center">
-              <span
-                className={cn(
-                  className,
-                  "invisible flex items-center justify-center gap-2 !p-0",
-                )}
-              >
-                {newChildren}
-              </span>
-              <span className="absolute inset-0 flex items-center justify-center">
-                <ForwardedIconComponent
-                  name={"Loader2"}
-                  className={"h-full w-full animate-spin"}
-                />
-              </span>
+      <Comp
+        className={
+          !unstyled
+            ? buttonVariants({ variant, size, className })
+            : cn(className)
+        }
+        disabled={loading || disabled}
+        {...(asChild ? {} : { type: type || "button" })}
+        ref={ref}
+        {...props}
+      >
+        {loading ? (
+          <span className="relative flex items-center justify-center">
+            <span
+              className={cn(
+                className,
+                "invisible flex items-center justify-center gap-2 p-0!",
+              )}
+            >
+              {newChildren}
             </span>
-          ) : (
-            newChildren
-          )}
-        </Comp>
-      </>
+            <span className="absolute inset-0 flex items-center justify-center">
+              <ForwardedIconComponent
+                name={"Loader2"}
+                className={"h-full w-full animate-spin"}
+              />
+            </span>
+          </span>
+        ) : (
+          newChildren
+        )}
+      </Comp>
     );
   },
 );

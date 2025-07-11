@@ -66,7 +66,7 @@ const GeneralDeleteConfirmationModal = ({
           <ForwardedIconComponent
             name="Trash2"
             className={cn(
-              "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100",
+              "text-primary hover:text-status-red h-4 w-4 opacity-0 group-hover:opacity-100",
             )}
             aria-hidden="true"
           />

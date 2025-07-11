@@ -16,7 +16,7 @@ const useIconStatus = (buildStatus: BuildStatus | undefined) => {
         icon: (
           <ForwardedIconComponent
             name="CircleAlert"
-            className="h-4 w-4 text-destructive"
+            className="text-destructive h-4 w-4"
           />
         ),
       },
@@ -25,7 +25,7 @@ const useIconStatus = (buildStatus: BuildStatus | undefined) => {
         icon: (
           <ForwardedIconComponent
             name="CircleOff"
-            className="h-4 w-4 text-muted-foreground"
+            className="text-muted-foreground h-4 w-4"
           />
         ),
       },

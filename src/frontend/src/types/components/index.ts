@@ -321,7 +321,7 @@ export type TooltipProps = {
   content?: string;
   disabled?: boolean;
   htmlContent?: React.ReactNode;
-  className?: string; // This should use !impornant to override the default styles eg: '!bg-white'
+  className?: string; // This should use !impornant to override the default styles eg: 'bg-white!'
   position?: "top" | "right" | "bottom" | "left";
   clickable?: boolean;
   children: React.ReactNode;

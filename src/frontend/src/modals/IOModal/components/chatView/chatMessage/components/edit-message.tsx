@@ -32,7 +32,7 @@ export const MarkdownField = ({
         linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
-          "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
+          "markdown prose word-break-break-word dark:prose-invert flex w-full max-w-full flex-col items-baseline text-sm font-normal",
           isEmpty ? "text-muted-foreground" : "text-primary",
         )}
         components={{
@@ -50,7 +50,7 @@ export const MarkdownField = ({
           },
           table: ({ node, ...props }) => {
             return (
-              <div className="max-w-full overflow-hidden rounded-md border bg-muted">
+              <div className="bg-muted max-w-full overflow-hidden rounded-md border">
                 <div className="max-h-[600px] w-full overflow-auto p-4">
                   <table className="!my-0 w-full">{props.children}</table>
                 </div>

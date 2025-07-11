@@ -24,7 +24,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {icon && (
           <ForwardedIconComponent
             name={icon}
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform"
           />
         )}
         <input
@@ -41,7 +41,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         />
         <span
           className={cn(
-            "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
+            "text-placeholder-foreground pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px",
             icon ? "left-9" : "left-3",
             props.value && "hidden",
           )}

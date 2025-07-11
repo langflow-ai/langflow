@@ -253,7 +253,7 @@ export const DESCRIPTIONS: string[] = [
   "Design, Develop, Dialogize.",
 ];
 export const BUTTON_DIV_STYLE =
-  " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+  " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-hidden ";
 
 /**
  * The base text for subtitle of code dialog
@@ -991,11 +991,11 @@ export const NOTE_NODE_MAX_HEIGHT = 800;
 export const NOTE_NODE_MAX_WIDTH = 1000;
 
 export const COLOR_OPTIONS = {
-  amber: "hsl(var(--note-amber))",
-  neutral: "hsl(var(--note-neutral))",
-  rose: "hsl(var(--note-rose))",
-  blue: "hsl(var(--note-blue))",
-  lime: "hsl(var(--note-lime))",
+  amber: "var(--color-note-amber)",
+  neutral: "var(--color-note-neutral)",
+  rose: "var(--color-note-rose)",
+  blue: "var(--color-note-blue)",
+  lime: "var(--color-note-lime)",
   transparent: null,
 };
 
@@ -1013,10 +1013,10 @@ export const PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 
 export const GRADIENT_CLASS =
-  "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
+  "linear-gradient(to right, (var(--color-background) / 0.3), (var(--color-background)))";
 
 export const GRADIENT_CLASS_DISABLED =
-  "linear-gradient(to right, hsl(var(--muted) / 0.3), hsl(var(--muted)))";
+  "linear-gradient(to right, (var(--color-muted) / 0.3), (var(--color-muted)))";
 
 export const RECEIVING_INPUT_VALUE = "Receiving input";
 export const SELECT_AN_OPTION = "Select an option";

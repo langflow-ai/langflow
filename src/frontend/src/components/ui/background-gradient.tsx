@@ -55,7 +55,7 @@ export const BackgroundGradient = ({
           transition: "all 0.4s ease-in-out",
           willChange: "transform",
         }}
-        className="group-hover:filter-[blur(15px)] group-hover:opacity-70 group-hover:brightness-125"
+        className="group-hover:opacity-70 group-hover:brightness-125 group-hover:filter-[blur(15px)]"
       />
       <motion.div
         variants={animate ? variants : undefined}

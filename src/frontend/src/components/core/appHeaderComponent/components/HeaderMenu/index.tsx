@@ -16,14 +16,14 @@ export const HeaderMenu = ({ children }) => (
 
 export const HeaderMenuToggle = ({ children }) => (
   <DropdownMenuTrigger
-    className="inline-flex w-full items-center justify-center rounded-md pl-1 pr-1"
+    className="inline-flex w-full items-center justify-center rounded-md pr-1 pl-1"
     data-testid="user_menu_button"
     id="user_menu_button"
   >
     <div className="group flex items-center self-center rounded-md">
-      <div className="flex h-6 w-10 items-center justify-center rounded-full bg-background transition-colors hover:bg-muted group-hover:bg-muted">
+      <div className="bg-background hover:bg-muted group-hover:bg-muted flex h-6 w-10 items-center justify-center rounded-full transition-colors">
         <div className="relative right-1 z-10">{children}</div>
-        <ChevronsUpDown className="relative h-[14px] w-[14px] text-muted-foreground group-hover:text-primary" />
+        <ChevronsUpDown className="text-muted-foreground group-hover:text-primary relative h-[14px] w-[14px]" />
       </div>
     </div>
   </DropdownMenuTrigger>

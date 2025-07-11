@@ -12,18 +12,18 @@ export const MCPServerNotice: FC<{
     <div className="relative flex flex-col gap-3 rounded-xl border p-4 shadow-md">
       <Button
         unstyled
-        className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground absolute top-4 right-4"
         onClick={handleDismissDialog}
       >
         <ForwardedIconComponent name="X" className="h-5 w-5" />
       </Button>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <div className="font-mono text-sm text-muted-foreground">New</div>
+          <div className="text-muted-foreground font-mono text-sm">New</div>
           <div className="">Projects as MCP Servers</div>
         </div>
         <img src={MCPLangflow} alt="MCP Notice Modal" className="rounded-xl" />
-        <p className="text-sm text-secondary-foreground">
+        <p className="text-secondary-foreground text-sm">
           Expose flows as tools from clients like Cursor or Claude.
         </p>
       </div>

@@ -28,7 +28,7 @@ const JsonOutputViewComponent: React.FC<JsonOutputViewComponentProps> = ({
       <JsonEditor
         data={{ json: jsonData }}
         readOnly={true}
-        className="flex-1 rounded border border-border"
+        className="border-border flex-1 rounded border"
         setFilter={(filter) => {
           setNode(nodeId, (old) => {
             const outputs = (old.data.node as APIClassType).outputs;

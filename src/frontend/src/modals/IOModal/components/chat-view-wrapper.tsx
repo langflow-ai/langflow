@@ -27,7 +27,7 @@ export const ChatViewWrapper = ({
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col justify-between px-4 pb-4 pt-2",
+        "flex h-full w-full flex-col justify-between px-4 pt-2 pb-4",
         selectedViewField ? "hidden" : "",
       )}
     >
@@ -47,7 +47,7 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="PanelLeftOpen"
-                className="h-[18px] w-[18px] text-ring"
+                className="text-ring h-[18px] w-[18px]"
               />
             </Button>
           </div>
@@ -56,8 +56,8 @@ export const ChatViewWrapper = ({
           <div
             className={cn(
               "truncate text-center font-semibold",
-              playgroundPage ? "" : "mr-12 flex-grow lg:mr-0",
-              sidebarOpen ? "blur-sm lg:blur-0" : "",
+              playgroundPage ? "" : "mr-12 grow lg:mr-0",
+              sidebarOpen ? "lg:blur-0 blur-xs" : "",
             )}
           >
             {visibleSession === currentFlowId
@@ -68,13 +68,13 @@ export const ChatViewWrapper = ({
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
+            "ring-offset-background focus:ring-ring flex items-center justify-center rounded-sm transition-opacity focus:ring-2 focus:ring-offset-2 focus:outline-hidden",
+            playgroundPage ? "top-4 right-2" : "absolute top-2 right-12 h-8",
           )}
         >
           <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
             <Button
-              className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
+              className="hover:bg-secondary-hover mr-2 h-[32px] w-[32px]"
               variant="ghost"
               size="icon"
               onClick={() => {
@@ -84,7 +84,7 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="Plus"
-                className="!h-[18px] !w-[18px] text-ring"
+                className="text-ring h-[18px]! w-[18px]!"
               />
             </Button>
           </ShadTooltip>

@@ -15,6 +15,7 @@ import { NoteDataType } from "@/types/flow";
 import { classNames, cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../../components/common/genericIconComponent";
 import { ColorPickerButtons } from "../components/color-picker-buttons";
 import { SelectItems } from "../components/select-items";
@@ -31,16 +32,13 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
   // Combine multiple store selectors into one to reduce re-renders
   const { nodes, setLastCopiedSelection, paste, setNode, deleteNode } =
     useFlowStore(
-      useCallback(
-        (state) => ({
-          nodes: state.nodes,
-          setLastCopiedSelection: state.setLastCopiedSelection,
-          paste: state.paste,
-          setNode: state.setNode,
-          deleteNode: state.deleteNode,
-        }),
-        [],
-      ),
+      useShallow((state) => ({
+        nodes: state.nodes,
+        setLastCopiedSelection: state.setLastCopiedSelection,
+        paste: state.paste,
+        setNode: state.setNode,
+        deleteNode: state.deleteNode,
+      })),
     );
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -105,15 +103,15 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
   );
 
   return (
-    <div className="w-26 noflow nowheel nopan nodelete nodrag h-10">
-      <span className="isolate inline-flex rounded-md shadow-sm">
+    <div className="noflow nowheel nopan nodelete nodrag h-10 w-26">
+      <span className="isolate inline-flex rounded-md shadow-xs">
         <Popover>
           <ShadTooltip content="Pick Color">
             <PopoverTrigger>
               <div>
                 <div
                   data-testid="color_picker"
-                  className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                  className="bg-background text-foreground hover:bg-muted relative inline-flex items-center rounded-l-md px-2 py-2 shadow-md transition-all duration-500 ease-in-out focus:z-10"
                 >
                   <div
                     style={colorPickerStyle}
@@ -142,7 +140,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
                 <div
                   data-testid="more-options-modal"
                   className={classNames(
-                    "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                    "bg-background text-foreground hover:bg-muted relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md shadow-md transition-all duration-500 ease-in-out focus:z-10",
                   )}
                 >
                   <IconComponent

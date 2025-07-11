@@ -53,14 +53,14 @@ export const BundleItem = memo(
               >
                 <ForwardedIconComponent
                   name={item.icon}
-                  className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
+                  className="text-muted-foreground group-aria-expanded/collapsible:text-primary h-4 w-4"
                 />
                 <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
                   {item.display_name}
                 </span>
                 <ForwardedIconComponent
                   name="ChevronRight"
-                  className="-mr-1 h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
+                  className="text-muted-foreground -mr-1 h-4 w-4 transition-all group-aria-expanded/collapsible:rotate-90"
                 />
               </div>
             </SidebarMenuButton>

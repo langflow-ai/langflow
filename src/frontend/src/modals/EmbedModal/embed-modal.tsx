@@ -69,17 +69,17 @@ export default function EmbedModal({
             size="icon"
             onClick={copyToClipboard}
             data-testid="btn-copy-code"
-            className="!hover:bg-foreground group absolute right-2 top-2"
+            className="!hover:bg-foreground group absolute top-2 right-2"
           >
             {isCopied ? (
               <IconComponent
                 name="Check"
-                className="h-5 w-5 text-muted-foreground"
+                className="text-muted-foreground h-5 w-5"
               />
             ) : (
               <IconComponent
                 name="Copy"
-                className="!h-5 !w-5 text-muted-foreground"
+                className="text-muted-foreground h-5! w-5!"
               />
             )}
           </Button>
@@ -88,7 +88,7 @@ export default function EmbedModal({
             wrapLongLines={true}
             language="html"
             style={isDark ? oneDark : oneLight}
-            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+            className="border-border custom-scroll! mt-0! h-full w-full overflow-scroll rounded-b-md! border text-left"
           >
             {embedCode}
           </SyntaxHighlighter>

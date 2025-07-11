@@ -274,13 +274,13 @@ export default function AdminPage() {
                     setFilterUserList(userList.current);
                   }}
                 >
-                  <IconComponent name="X" className="w-6 text-foreground" />
+                  <IconComponent name="X" className="text-foreground w-6" />
                 </div>
               ) : (
                 <div>
                   <IconComponent
                     name="Search"
-                    className="w-6 text-foreground"
+                    className="text-foreground w-6"
                   />
                 </div>
               )}
@@ -315,14 +315,14 @@ export default function AdminPage() {
             <>
               <div
                 className={
-                  "m-4 h-fit overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background custom-scroll" +
+                  "bg-background custom-scroll m-4 h-fit overflow-x-hidden overflow-y-scroll rounded-md border-2" +
                   (isPending ? " border-0" : "")
                 }
               >
                 <Table className={"table-fixed outline-1"}>
                   <TableHeader
                     className={
-                      isPending ? "hidden" : "table-fixed bg-muted outline-1"
+                      isPending ? "hidden" : "bg-muted table-fixed outline-1"
                     }
                   >
                     <TableRow>
@@ -351,7 +351,7 @@ export default function AdminPage() {
                               </span>
                             </ShadTooltip>
                           </TableCell>
-                          <TableCell className="relative left-1 truncate py-2 text-align-last-left">
+                          <TableCell className="text-align-last-left relative left-1 truncate py-2">
                             <ConfirmationModal
                               size="x-small"
                               title="Edit"
@@ -383,7 +383,7 @@ export default function AdminPage() {
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
                           </TableCell>
-                          <TableCell className="relative left-1 truncate py-2 text-align-last-left">
+                          <TableCell className="text-align-last-left relative left-1 truncate py-2">
                             <ConfirmationModal
                               size="x-small"
                               title="Edit"
