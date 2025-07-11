@@ -1,147 +1,112 @@
 ---
-title: Flows
+title: Build flows
 slug: /concepts-flows
 ---
 
-Flows in Langflow are fully serializable and can be saved and loaded from the file system. In this guide, we'll explore how to import and export flows.
+import Icon from "@site/src/components/icon";
 
-## Import Flow
+A _flow_ is a functional representation of an application workflow.
+Flows receive input, process it, and produce output.
 
-If you've already got a Langflow JSON file, import it into Langflow by clicking on the project name and choosing **Import Flow**.
+Flows consist of _components_ that represent individual steps in your application's workflow.
 
-![Import Flow](../../static/img/flows/import.gif)
+![Basic prompting flow within the Workspace](/img/workspace-basic-prompting.png)
 
-Once imported, your flow is ready to use.
+Langflow flows are fully serializable and can be saved and loaded from the file system where Langflow is installed.
 
 :::tip
-You can drag and drop Langflow JSON files directly from your file system into the Langflow window to import a flow, even into the initial Langflow splash screen.
+To try building and running a flow in a few minutes, see the [Langflow quickstart](/get-started-quickstart).
 :::
 
-## Export Flow
+## Create a flow
 
-The option to export a flow is available in the same menu as shown above. Once exported as JSON, you can import your flow into another Langflow instance.
+There are four ways to create a flow in the Langflow UI:
 
-## Langflow JSON file contents
+* **Create a blank flow**: From the [**Projects** page](#projects), select a project, and then click **New Flow**.
+* **Create a flow from a template**: From the [**Projects** page](#projects), select a project, and then click **New Flow**.
+* **Duplicate an existing flow**: From the [**Projects** page](#projects), locate the flow you want to copy, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Duplicate**.
+* **Import a flow**: See [Import and export flows](/concepts-flows-import).
 
-Langflow JSON files contain [nodes](#nodes) and [edges](#edges) that describe components and connections, and [additional metadata](#additional-metadata-and-project-information) that describe the flow.
+You can also create a flow with the [Langflow API](/api-flows), but the Langflow team recommends using the visual editor until you are familiar with flow creation.
 
-For an example Langflow JSON file, examine the [Basic Prompting.json](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/initial_setup/starter_projects/Basic%20Prompting.json) file in the Langflow repository.
+### Add components
 
-### Nodes
+Flows consist of [components](/concepts-components), which are nodes that you configure and connect in the Langflow [visual editor](/concepts-overview).
+Each component performs a specific task, like serving an AI model or connecting a data source.
 
-**Nodes** represent the components that make up the flow.
+Drag and drop components from the **Components** menu to add them to your flow.
+Then, configure the component settings and connect the components together.
 
-The `ChatInput` node is the entry point of the flow. It's the first node that will be executed.
+![Chat input and output connected to Language model component](/img/connect-component.png)
 
-`ChatInput-jFwUm` is a unique identifier for the node.
+Each component has configuration settings and options. Some of these are common to all components, and some are unique to specific components.
 
-```json
-{
-  "data": {
-    "description": "Get chat inputs from the Playground.",
-    "display_name": "Chat Input",
-    "id": "ChatInput-jFwUm",
-    "node": {
-      "base_classes": ["Message"],
-      "description": "Get chat inputs from the Playground.",
-      "display_name": "Chat Input",
-      "icon": "MessagesSquare",
-      "template": {
-        "input_value": {
-          "display_name": "Text",
-          "info": "Message to be passed as input.",
-          "value": "Hello"
-        },
-        "sender": {
-          "value": "User",
-          "options": ["Machine", "User"]
-        },
-        "sender_name": {
-          "value": "User"
-        },
-        "should_store_message": {
-          "value": true
-        }
-      }
-    },
-    "type": "ChatInput"
-  },
-  "position": {
-    "x": 689.5720422421635,
-    "y": 765.155834131403
-  }
-}
-```
+To form a cohesive flow, you connect components by _edges_ or _ports_, which have a specific data type they receive or send.
+For example, message ports send text strings between components.
 
-### Edges
+For more information about component configuration, including port types and underlying component code, see [Components overview](/concepts-components).
 
-**Edges** represent the connections between nodes.
+### Run a flow
 
-The connection between the `ChatInput` node and the `OpenAIModel` node is represented as an edge:
+After you build a flow, you can test it in the [**Playground**](/concepts-playground), and then [publish your flow](/concepts-publish) to embed or share your flow.
+For more information about application development with Langflow, see [Develop an application with Langflow](/develop-application).
 
-```json
-{
-  "className": "",
-  "data": {
-    "sourceHandle": {
-      "dataType": "ChatInput",
-      "id": "ChatInput-jFwUm",
-      "name": "message",
-      "output_types": ["Message"]
-    },
-    "targetHandle": {
-      "fieldName": "input_value",
-      "id": "OpenAIModel-OcXkl",
-      "inputTypes": ["Message"],
-      "type": "str"
-    }
-  },
-  "id": "reactflow__edge-ChatInput-jFwUm{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jFwUmœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-OcXkl{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-OcXklœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-  "source": "ChatInput-jFwUm",
-  "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jFwUmœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-  "target": "OpenAIModel-OcXkl",
-  "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-OcXklœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-}
-```
+If you need to build Langflow as a dependency of an application or deploy a Langflow server for API access over the public internet, see [Langflow deployment overview](/deployment-overview).
 
-This edge shows that the `ChatInput` component outputs a `Message` type to the `target` node, which is the `OpenAIModel` node.
-The `OpenAIModel` component accepts the `Message` type at the `input_value` field.
+#### Flow graphs
 
-### Additional metadata and project information
+When a flow runs, Langflow builds a Directed Acyclic Graph (DAG) object from the nodes (components) and edges (connections), and the nodes are sorted to determine the order of execution.
 
-Additional information about the flow is stored in the root `data` object.
+The graph build calls each component's `def_build` function to validate and prepare the nodes.
+This graph is then processed in dependency order.
+Each node is built and executed sequentially, with results from each built node being passed to nodes that are dependent on that node's results.
 
-* Metadata and project information including the name, description, and `last_tested_version` of the flow.
-```json
-{
-  "name": "Basic Prompting",
-  "description": "Perform basic prompting with an OpenAI model.",
-  "tags": ["chatbots"],
-  "id": "1511c230-d446-43a7-bfc3-539e69ce05b8",
-  "last_tested_version": "1.0.19.post2",
-  "gradient": "2",
-  "icon": "Braces"
-}
-```
+## Manage flows in projects {#projects}
 
-* Visual information about the flow defining the initial position of the flow in the workspace.
-```json
-"viewport": {
-  "x": -37.61270157375441,
-  "y": -155.91266341888854,
-  "zoom": 0.7575251406952855
-}
-```
+The **Projects** page is where you arrive when you launch Langflow.
+It is where you view and manage flows on a high level.
 
-**Notes** are like comments to help you understand the flow within the workspace.
-They may contain links, code snippets, and other information.
-Notes are written in Markdown and stored as `node` objects.
-```json
-{
-  "id": "undefined-kVLkG",
-  "node": {
-    "description": "## 📖 README\nPerform basic prompting with an OpenAI model.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- Open the **Playground** to chat with your bot.\n..."
-  }
-}
-```
+Langflow projects are like folders that you can use to organize related flows.
+The default project is **Starter Project**, and your flows are stored here unless you create another project.
+To create a project, click <Icon name="Plus" aria-hidden="true"/> **Create new project**.
 
+![Projects page with multiple flows in a project](/img/my-projects.png)
+
+From the **Projects** page, you can manage flows within each of your projects:
+* **View flows in a project**: Select the project name in the **Projects** list.
+* **Create flows**: See [Create a flow](#create-a-flow).
+* **Edit a flow's name and description**: Locate the flow you want to edit, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
+* **Delete a flow**: Locate the flow you want to delete, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Delete**.
+* **Serve flows as MCP tools**: See [Use Langflow as an MCP server](/mcp-server).
+
+## Flow storage
+
+Flows and [flow logs](#flow-logs) are stored on local disk at the following default locations:
+
+- **Linux and WSL**: `home/<username>/.cache/langflow/`
+- **macOS**: `/Users/<username>/Library/Caches/langflow/`
+- **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
+
+The flow storage location can be customized with the [`LANGFLOW_CONFIG_DIR`](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable.
+
+## Flow logs
+
+When viewing a flow in the **Workspace**, click **Logs** to examine logs for that flow and its components.
+
+![Logs pane](/img/logs.png)
+
+Langflow logs are stored in `.log` files in the same place as your flows.
+For filepaths, see [Flow storage](/concepts-flows#flow-storage).
+
+The flow storage location can be customized with the [`LANGFLOW_CONFIG_DIR`](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable:
+
+1. Add `LANGFLOW_LOG_FILE=path/to/logfile.log` in your `.env` file.
+
+    An example `.env` file is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+
+2. Start Langflow with the values from your `.env` file by running `uv run langflow run --env-file .env`.
+
+## See also
+
+* [Share and embed flows](/concepts-publish)
+* [Import and export flows](/concepts-flows-import)

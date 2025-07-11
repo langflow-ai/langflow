@@ -3,6 +3,9 @@ title: Troubleshoot Langflow
 slug: /troubleshoot
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
 
 ## Missing components
@@ -72,6 +75,10 @@ sudo apt-get install gcc
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
 
+### C++ build tools required for Langflow Desktop on Windows
+
+Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
+
 ## Langflow startup issues
 
 The following issues can occur when attempting to start Langflow.
@@ -108,6 +115,17 @@ There are two possible reasons for this error:
 
 * **Version conflict during installation**: Some version conflicts might have occurred during the installation process. To resolve this issue, reinstall Langflow and its dependencies by running `python -m pip install langflow --pre -U --force-reinstall`.
 
+### Environment variables not available from terminal
+
+Environment variables set in your terminal are not automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
+To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+### Package is not installed
+
+In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
+
+To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
@@ -134,6 +152,55 @@ The cache folder location depends on your OS:
 - **Linux**: `home/<username>/.cache/langflow/`
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
+
+<!--
+### Unexpected data loss after Langflow Desktop upgrade {#data-loss}
+
+If you upgrade Langflow Desktop and find that your projects, flows, and settings have been replaced by a fresh installation, follow these steps to attempt to recover the data from the prior version:
+
+:::important
+Any projects, flows, and settings you created after the upgrade will be overwritten when you recover the data from your previous installation.
+:::
+
+<Tabs>
+   <TabItem value="Linux and macOS" label="Linux and macOS" default>
+
+1. Navigate to `~/.langflow/.langflow-venv/lib/python3.12/site-packages/langflow`.
+
+2. Copy `langflow.db`, paste it in `~/.langflow/data`, and then rename it to `database.db`.
+This overwrites the existing `database.db` with your previous version's internal Langflow database.
+
+3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
+
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
+
+1. Navigate to `C:\Users\USERNAME\.langflow\.langflow-venv\Lib\site-packages\langflow`.
+
+2. Copy `langflow.db`, paste it in `C:\Users\<name>\AppData\Roaming\com.Langflow\data`, and then rename it to `database.db`.
+This overwrites the existing `database.db` with your previous version's internal Langflow database.
+
+3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
+
+  </TabItem>
+</Tabs>
+-->
+
+## Langflow uninstall issues
+
+The following issues can occur when uninstalling Langflow.
+
+### Dot directory isn't deleted when uninstalling Langflow Desktop on macOS
+
+On macOS, uninstalling Langflow Desktop deletes the `.app` file but doesn't delete files in `~/.langflow`, which includes files generated during usage like cache and settings.
+
+If you reinstall Langflow Desktop, it starts with the existing data from the previous installation.
+
+To fully remove a Langflow Desktop macOS installation, you must also delete `~/.langflow`:
+
+    ```bash
+    rm -rf .langflow
+    ```
 
 ## MCP server issues
 
