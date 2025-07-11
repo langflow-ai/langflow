@@ -309,6 +309,8 @@ async def create_super_user(
             super_user = await get_user_by_username(db, username)
             if not super_user:
                 raise  # Re-raise if it's not a race condition
+        except Exception:
+            logger.opt(exception=True).debug("Error creating superuser.")
 
     return super_user
 
