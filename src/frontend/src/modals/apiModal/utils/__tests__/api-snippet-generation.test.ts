@@ -96,17 +96,17 @@ describe("API Snippet Generation Utilities", () => {
     describe("Python Code Generation", () => {
       it("should generate basic Python code without files", () => {
         const code = getNewPythonApiCode(baseOptions);
-        
+
         // Check for required imports
         expect(code).toContain("import requests");
         expect(code).toContain("import uuid");
-        
+
         // Check for API key
         expect(code).toContain("api_key = 'YOUR_API_KEY_HERE'");
-        
+
         // Check for session_id
         expect(code).toContain('payload["session_id"] = str(uuid.uuid4())');
-        
+
         // Check for correct endpoint
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
@@ -122,27 +122,27 @@ describe("API Snippet Generation Utilities", () => {
             },
           },
         };
-        
+
         const code = getNewPythonApiCode(optionsWithFiles);
-        
+
         // Check for file upload steps
         expect(code).toContain("/api/v1/files/upload/");
         expect(code).toContain("/api/v2/files");
         expect(code).toContain("with open");
-        expect(code).toContain("files={\"file\": f}");
+        expect(code).toContain('files={"file": f}');
       });
     });
 
     describe("JavaScript Code Generation", () => {
       it("should generate basic JavaScript code without files", () => {
         const code = getNewJsApiCode(baseOptions);
-        
+
         // Check for API key
         expect(code).toContain("const apiKey = 'YOUR_API_KEY_HERE'");
-        
+
         // Check for session_id (it's generated server-side, so just check it exists)
         expect(code).toContain("session_id");
-        
+
         // Check for correct endpoint
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
@@ -158,17 +158,17 @@ describe("API Snippet Generation Utilities", () => {
             },
           },
         };
-        
+
         const code = getNewJsApiCode(optionsWithFiles);
-        
+
         // Check for required modules
         expect(code).toContain("const fs = require('fs')");
         expect(code).toContain("const http = require('http')");
-        
+
         // Check for file upload functions
         expect(code).toContain("createFormData");
         expect(code).toContain("makeRequest");
-        
+
         // Check for upload steps
         expect(code).toContain("/api/v1/files/upload/");
         expect(code).toContain("/api/v2/files");
@@ -178,26 +178,28 @@ describe("API Snippet Generation Utilities", () => {
     describe("cURL Code Generation", () => {
       it("should generate Unix cURL code without files", () => {
         const code = getNewCurlCode({ ...baseOptions, platform: "unix" });
-        
+
         // Check for API key (quotes may vary)
         expect(code).toContain("x-api-key: YOUR_API_KEY_HERE");
-        
+
         // Check for session_id with Unix UUID generation
-        expect(code).toContain("$(uuidgen || cat /proc/sys/kernel/random/uuid)");
-        
+        expect(code).toContain(
+          "$(uuidgen || cat /proc/sys/kernel/random/uuid)",
+        );
+
         // Check for correct endpoint
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
 
       it("should generate PowerShell cURL code without files", () => {
         const code = getNewCurlCode({ ...baseOptions, platform: "powershell" });
-        
+
         // Check for API key
         expect(code).toContain('--header "x-api-key: YOUR_API_KEY_HERE"');
-        
+
         // Check for session_id with PowerShell UUID generation
         expect(code).toContain("$(New-Guid).Guid");
-        
+
         // Check for correct endpoint
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
@@ -213,19 +215,19 @@ describe("API Snippet Generation Utilities", () => {
             },
           },
         };
-        
+
         const code = getNewCurlCode({ ...optionsWithFiles, platform: "unix" });
-        
+
         // Check for step markers
         expect(code).toContain("##STEP1_START##");
         expect(code).toContain("##STEP1_END##");
         expect(code).toContain("##STEP2_START##");
         expect(code).toContain("##STEP2_END##");
-        
+
         // Check for file upload commands
         expect(code).toContain("/api/v1/files/upload/");
         expect(code).toContain("/api/v2/files");
-        expect(code).toContain("-F \"file=@");
+        expect(code).toContain('-F "file=@');
       });
     });
 
@@ -234,7 +236,7 @@ describe("API Snippet Generation Utilities", () => {
         const pythonCode = getNewPythonApiCode(baseOptions);
         const jsCode = getNewJsApiCode(baseOptions);
         const curlCode = getNewCurlCode(baseOptions);
-        
+
         expect(pythonCode).toContain("YOUR_API_KEY_HERE");
         expect(jsCode).toContain("YOUR_API_KEY_HERE");
         expect(curlCode).toContain("YOUR_API_KEY_HERE");
@@ -244,7 +246,7 @@ describe("API Snippet Generation Utilities", () => {
         const pythonCode = getNewPythonApiCode(baseOptions);
         const jsCode = getNewJsApiCode(baseOptions);
         const curlCode = getNewCurlCode(baseOptions);
-        
+
         expect(pythonCode).toContain("session_id");
         expect(jsCode).toContain("session_id");
         expect(curlCode).toContain("session_id");
@@ -258,11 +260,11 @@ describe("API Snippet Generation Utilities", () => {
             tweaks: {},
           },
         };
-        
+
         const pythonCode = getNewPythonApiCode(optionsWithEmptyTweaks);
         const jsCode = getNewJsApiCode(optionsWithEmptyTweaks);
         const curlCode = getNewCurlCode(optionsWithEmptyTweaks);
-        
+
         // Should not generate file upload steps
         expect(pythonCode).not.toContain("Step 1:");
         expect(jsCode).not.toContain("Step 1:");
