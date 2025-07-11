@@ -1,6 +1,7 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
+import { hasChatInputFiles, hasFileTweaks, getChatInputNodeId, getFileNodeId } from "./detect-file-tweaks";
 
 /**
  * Generates a cURL command for making a POST request to a webhook endpoint.
@@ -43,14 +44,17 @@ export function getNewCurlCode({
   endpointName,
   processedPayload,
   platform,
+  isAuth,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
   platform?: "unix" | "powershell";
+  isAuth?: boolean;
 }): string {
   const { protocol, host } = customGetHostProtocol();
-  const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
+  const baseUrl = `${protocol}//${host}`;
+  const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
   // Auto-detect if no platform specified
   const detectedPlatform =
@@ -59,41 +63,150 @@ export function getNewCurlCode({
       ? "powershell"
       : "unix");
 
-  const singleLinePayload = JSON.stringify(processedPayload);
+  // Check if there are file uploads
+  const tweaks = processedPayload.tweaks || {};
+  const hasFiles = hasFileTweaks(tweaks);
+  const hasChatFiles = hasChatInputFiles(tweaks);
 
-  if (detectedPlatform === "powershell") {
-    // PowerShell with here-string (most robust for complex JSON)
-    return `if (-not $env:LANGFLOW_API_KEY) {
+  // If no file uploads, use existing logic
+  if (!hasFiles) {
+    const singleLinePayload = JSON.stringify(processedPayload);
+
+    if (detectedPlatform === "powershell") {
+      // PowerShell with here-string (most robust for complex JSON)
+      const authCheck = isAuth
+        ? `if (-not $env:LANGFLOW_API_KEY) {
     Write-Error "LANGFLOW_API_KEY environment variable not found"
     exit 1
 }
 
-$jsonData = @'
+`
+        : "";
+      const authHeader = isAuth
+        ? `     --header "x-api-key: $env:LANGFLOW_API_KEY" \\`
+        : "";
+
+      return `${authCheck}$jsonData = @'
 ${singleLinePayload}
 '@
 
 curl --request POST \`
      --url "${apiUrl}?stream=false" \`
-     --header "Content-Type: application/json" \`
-     --header "x-api-key: $env:LANGFLOW_API_KEY" \`
+     --header "Content-Type: application/json" \`${authHeader ? "\n" + authHeader : ""}
      --data $jsonData`;
-  } else {
-    // Unix-like systems (Linux, Mac, WSL2)
-    const unixFormattedPayload = JSON.stringify(processedPayload, null, 2)
-      .split("\n")
-      .map((line, index) => (index === 0 ? line : "         " + line))
-      .join("\n\t\t");
+    } else {
+      // Unix-like systems (Linux, Mac, WSL2)
+      const unixFormattedPayload = JSON.stringify(processedPayload, null, 2)
+        .split("\n")
+        .map((line, index) => (index === 0 ? line : "         " + line))
+        .join("\n\t\t");
 
-    return `# Get API key from environment variable
+      const authCheck = isAuth
+        ? `# Get API key from environment variable
 if [ -z "$LANGFLOW_API_KEY" ]; then
     echo "Error: LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables."
     exit 1
 fi
 
-curl --request POST \\
+`
+        : "";
+      const authHeader = isAuth
+        ? `     --header "x-api-key: $LANGFLOW_API_KEY" \\`
+        : "";
+
+      return `${authCheck}curl --request POST \\
      --url '${apiUrl}?stream=false' \\
-     --header 'Content-Type: application/json' \\
-     --header "x-api-key: $LANGFLOW_API_KEY" \\
+     --header 'Content-Type: application/json' \\${authHeader ? "\n" + authHeader : ""}
      --data '${unixFormattedPayload}'`;
+    }
+  }
+
+  // File upload logic
+  if (hasChatFiles) {
+    // Chat Input files - use v1 upload API + run endpoint with tweaks
+    const chatInputNodeId = getChatInputNodeId(tweaks) || "ChatInput-NodeId";
+    
+    if (detectedPlatform === "powershell") {
+      const authHeader = isAuth ? `-H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
+
+      return `##STEP1_START##
+curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader ? " " + authHeader : ""} -F "file=@your_image_path.jpg"
+##STEP1_END##
+
+##STEP2_START##
+curl -X POST "${apiUrl}?stream=false" -H "Content-Type: application/json"${authHeader ? " " + authHeader : ""} -d '{
+  "output_type": "${processedPayload.output_type || "chat"}",
+  "input_type": "${processedPayload.input_type || "chat"}",
+  "input_value": "${processedPayload.input_value || "Your message here"}",
+  "tweaks": {
+    "${chatInputNodeId}": {
+      "files": "REPLACE_WITH_FILE_PATH_FROM_STEP_1"
+    }
+  }
+}'
+##STEP2_END##`;
+    } else {
+      const authHeader = isAuth ? `-H "x-api-key: $LANGFLOW_API_KEY"` : "";
+      
+      return `##STEP1_START##
+curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader ? " " + authHeader : ""} -F "file=@your_image_path.jpg"
+##STEP1_END##
+
+##STEP2_START##
+curl -X POST \\
+  "${apiUrl}?stream=false" \\
+  -H "Content-Type: application/json"${authHeader ? " \\\n  " + authHeader : ""} \\
+  -d '{
+    "output_type": "${processedPayload.output_type || "chat"}",
+    "input_type": "${processedPayload.input_type || "chat"}",
+    "input_value": "${processedPayload.input_value || "Your message here"}",
+    "tweaks": {
+      "${chatInputNodeId}": {
+        "files": "REPLACE_WITH_FILE_PATH_FROM_STEP_1"
+      }
+    }
+  }'
+##STEP2_END##`;
+    }
+  } else {
+    // File/VideoFile components - use v2 upload API + run endpoint
+    const fileNodeId = getFileNodeId(tweaks) || "File-NodeId";
+    
+    if (detectedPlatform === "powershell") {
+      const authHeader = isAuth ? `-H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
+
+      return `##STEP1_START##
+curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your_document_path.pdf"
+##STEP1_END##
+
+##STEP2_START##
+curl -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader ? " " + authHeader : ""} -d '{
+  "tweaks": {
+    "${fileNodeId}": {
+      "file_id": "REPLACE_WITH_FILE_ID_FROM_STEP_1"
+    }
+  }
+}'
+##STEP2_END##`;
+    } else {
+      const authHeader = isAuth ? `-H "x-api-key: $LANGFLOW_API_KEY"` : "";
+      
+      return `##STEP1_START##
+curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your_document_path.pdf"
+##STEP1_END##
+
+##STEP2_START##
+curl -X POST \\
+  "${apiUrl}" \\
+  -H "Content-Type: application/json"${authHeader ? " \\\n  " + authHeader : ""} \\
+  -d '{
+    "tweaks": {
+      "${fileNodeId}": {
+        "file_id": "REPLACE_WITH_FILE_ID_FROM_STEP_1"
+      }
+    }
+  }'
+##STEP2_END##`;
+    }
   }
 }
