@@ -13,18 +13,17 @@ The API key has the same permissions and access as you do when you launch Langfl
 An API key represents the user who created it. If you create a key as a superuser, then that key will have superuser privileges.
 Anyone who has that key can authorize superuser actions through the Langflow API, including user management and flow management.
 
-In Langflow versions 1.5 and later, most API requests require a Langflow API key, even when `AUTO_LOGIN=true`.
-
-The only exceptions are the MCP endpoints: `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
-These endpoints don't require authentication, regardless of the `AUTO_LOGIN` setting.
+In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
 
 <details>
-<summary>Auto-login and API key authentication in earlier Langflow versions</summary>
+<summary>AUTO_LOGIN and SKIP_AUTH options</summary>
 
-If you are running a Langflow version earlier than 1.5, if `AUTO_LOGIN=true`, Langflow automatically logs users in as a superuser without requiring authentication, and API requests can be made without a Langflow API key.
+In Langflow versions earlier than 1.5, if `AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
+In this case, API requests don't require a Langflow API key.
 
-If you set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key.
-
+In Langflow version 1.5, you can set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true` to skip authentication for API requests.
+However, the `SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
 </details>
 
 ## Generate a Langflow API key
@@ -36,13 +35,12 @@ The UI-generated key is appropriate for most cases. The CLI-generated key is nee
 <Tabs>
   <TabItem value="Langflow UI" label="Langflow UI" default>
 
-1. Click your user icon, and then select **Settings**.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click **Add New**.
 3. Name your key, and then click **Create API Key**.
-4. Copy the API key and store it in a secure location.
+4. Copy the API key and store it securely.
 
   </TabItem>
-
   <TabItem value="Langflow CLI" label="Langflow CLI">
 
 If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI, because the frontend is not running.
@@ -90,7 +88,7 @@ To create an API key for a user from the CLI, do the following:
 
     </details>
 
-2. Create an API key:
+3. Create an API key:
 
     ```shell
     uv run langflow api-key
@@ -102,7 +100,7 @@ To create an API key for a user from the CLI, do the following:
 
 Include your API key in API requests to authenticate requests to Langflow.
 
-API keys allow access only to the flows and components of the specific user to whom the key was issued.
+API keys allow access only to the flows and components of the specific user who created the key.
 
 <Tabs>
   <TabItem value="HTTP header" label="HTTP header" default>
@@ -141,10 +139,10 @@ For more information, see [Authentication](/configuration-authentication#langflo
 
 ## Revoke an API key
 
-To revoke an API key, delete it from the list of keys in the **Settings** menu.
+To revoke an API key, delete it from your Langflow settings:
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**.
 3. Select the keys you want to delete, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
 This action immediately invalidates the key and prevents it from being used again.
@@ -167,13 +165,18 @@ GOOGLE_API_KEY=...
 
 ### Add component API keys with the Langflow UI
 
-To add component API keys as **Global variables** with the Langflow UI:
+You can store API keys for Langflow components as [global variables](/configuration-global-variables) in Langflow:
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**.
-3. Add new API keys as **Credential** type variables.
-4. Apply them to specific component fields.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Global Variables**.
+3. Click **Add New**.
+4. For **Type**, select **Credential**.
+5. For **Name**, enter a name for the variable that will store the API key.
+6. For **Value**, enter the API key that you want to store.
+7. For **Apply to fields**, you can select component fields to automatically populate with this variable.
 
-Component values set directly in a flow override values set in the UI **and** environment variables.
+    You can override automatically set variables by manually entering a different variable name or value when you add the affected component to a flow.
 
-For more information, see [Global variables](/configuration-global-variables).
+    Additionally, you can override all component settings by [running a flow with tweaks](/concepts-publish#input-schema), which are modifications to component settings that you make at runtime and apply to a single flow run only.
+
+8. Click **Save Variable**.
