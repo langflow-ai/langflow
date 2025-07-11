@@ -11,6 +11,7 @@ class OpenAIResponsesRequest(BaseModel):
     stream: bool = Field(default=False, description="Whether to stream the response")
     background: bool = Field(default=False, description="Whether to process in background")
     tools: Optional[List[Any]] = Field(default=None, description="Tools are not supported yet")
+    previous_response_id: Optional[str] = Field(default=None, description="ID of previous response to continue conversation")
 
 
 class OpenAIResponsesResponse(BaseModel):
@@ -21,6 +22,7 @@ class OpenAIResponsesResponse(BaseModel):
     model: str
     output: str
     status: Literal["completed", "in_progress", "failed"] = "completed"
+    previous_response_id: Optional[str] = None
 
 
 class OpenAIResponsesStreamChunk(BaseModel):

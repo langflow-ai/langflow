@@ -53,16 +53,21 @@ async def run_flow_for_openai_responses(
     if not has_chat_input(flow.data):
         raise ValueError("Flow must have a ChatInput component to be compatible with OpenAI Responses API")
     
+    # Use previous_response_id as session_id for conversation continuity
+    # If no previous_response_id, create a new session_id
+    session_id = request.previous_response_id or str(uuid.uuid4())
+    
     # Convert OpenAI request to SimplifiedAPIRequest
     simplified_request = SimplifiedAPIRequest(
         input_value=request.input,
         input_type="chat",  # Use chat input type for better compatibility
         output_type="chat",  # Use chat output type for better compatibility
         tweaks={},
-        session_id=None,
+        session_id=session_id,
     )
 
-    response_id = str(uuid.uuid4())
+    # Use session_id as response_id for OpenAI compatibility
+    response_id = session_id
     created_timestamp = int(time.time())
 
     if stream:
@@ -112,7 +117,12 @@ async def run_flow_for_openai_responses(
                                 data = parsed_event.get("data", {})
                                 
                                 if event_type == "add_message" and "text" in data:
-                                    content = data["text"]
+                                    text = data["text"]
+                                    sender = data.get("sender", "")
+                                    
+                                    # Only include AI/Machine responses, filter out user input echoes
+                                    if sender in ["Machine", "AI", "Agent"] and text != request.input:
+                                        content = text
                                     
                         except (json.JSONDecodeError, UnicodeDecodeError):
                             continue
@@ -200,6 +210,7 @@ async def run_flow_for_openai_responses(
             created=created_timestamp,
             model=request.model,
             output=output_text,
+            previous_response_id=request.previous_response_id,
         )
 
 
