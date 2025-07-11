@@ -1,9 +1,9 @@
-import { useDarkStore } from "@/stores/darkStore";
-import useFlowStore from "@/stores/flowStore";
-import { nodeColorsName } from "@/utils/styleUtils";
 import { type Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useDarkStore } from "@/stores/darkStore";
+import useFlowStore from "@/stores/flowStore";
+import { nodeColorsName } from "@/utils/styleUtils";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,

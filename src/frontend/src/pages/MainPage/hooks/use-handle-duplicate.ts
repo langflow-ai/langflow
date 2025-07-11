@@ -1,8 +1,8 @@
+import { useParams } from "react-router-dom";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import { createNewFlow } from "@/utils/reactflowUtils";
-import { useParams } from "react-router-dom";
 
 type UseDuplicateFlowsParams = {
   flow?: FlowType;

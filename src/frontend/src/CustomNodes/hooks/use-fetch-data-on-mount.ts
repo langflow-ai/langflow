@@ -1,6 +1,6 @@
-import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { useEffect } from "react";
+import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import useAlertStore from "../../stores/alertStore";
 import { mutateTemplate } from "../helpers/mutate-template";
 

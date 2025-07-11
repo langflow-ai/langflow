@@ -1,19 +1,3 @@
-import { DefaultEdge } from "@/CustomEdges";
-import NoteNode from "@/CustomNodes/NoteNode";
-import FlowToolbar from "@/components/core/flowToolbarComponent";
-import {
-  COLOR_OPTIONS,
-  NOTE_NODE_MIN_HEIGHT,
-  NOTE_NODE_MIN_WIDTH,
-} from "@/constants/constants";
-import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
-import CustomLoader from "@/customization/components/custom-loader";
-import { track } from "@/customization/utils/analytics";
-import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useAddComponent } from "@/hooks/use-add-component";
-import { nodeColorsName } from "@/utils/styleUtils";
-import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
   type Connection,
   type Edge,
@@ -35,6 +19,22 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
+import { DefaultEdge } from "@/CustomEdges";
+import NoteNode from "@/CustomNodes/NoteNode";
+import FlowToolbar from "@/components/core/flowToolbarComponent";
+import {
+  COLOR_OPTIONS,
+  NOTE_NODE_MIN_HEIGHT,
+  NOTE_NODE_MIN_WIDTH,
+} from "@/constants/constants";
+import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import CustomLoader from "@/customization/components/custom-loader";
+import { track } from "@/customization/utils/analytics";
+import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { useAddComponent } from "@/hooks/use-add-component";
+import { nodeColorsName } from "@/utils/styleUtils";
+import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
@@ -63,9 +63,9 @@ import {
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
+import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
-import FlowBuildingComponent from "../flowBuildingComponent";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,

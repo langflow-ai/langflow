@@ -1,7 +1,7 @@
+import { useEffect, useMemo, useRef } from "react";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import { useEffect, useMemo, useRef } from "react";
 
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";

@@ -1,3 +1,5 @@
+import { cloneDeep } from "lodash";
+import { memo, useCallback, useMemo } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
   Popover,
@@ -13,8 +15,6 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import type { NoteDataType } from "@/types/flow";
 import { classNames, cn } from "@/utils/utils";
-import { cloneDeep } from "lodash";
-import { memo, useCallback, useMemo } from "react";
 import IconComponent from "../../../components/common/genericIconComponent";
 import { ColorPickerButtons } from "../components/color-picker-buttons";
 import { SelectItems } from "../components/select-items";

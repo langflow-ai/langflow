@@ -1,10 +1,10 @@
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import Markdown from "react-markdown";
 import { Textarea } from "@/components/ui/textarea";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import Markdown from "react-markdown";
 
 export default function NodeDescription({
   description,

@@ -1,3 +1,5 @@
+import { type FC, useEffect, useMemo, useState } from "react";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
@@ -6,8 +8,6 @@ import ModalsComponent from "@/pages/MainPage/components/modalsComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { Users } from "@/types/api";
 import { cn } from "@/utils/utils";
-import { type FC, useEffect, useMemo, useState } from "react";
-import { FaDiscord, FaGithub } from "react-icons/fa";
 
 export const GetStartedProgress: FC<{
   userData: Users;

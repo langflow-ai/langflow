@@ -1,6 +1,6 @@
+import { useEffect, useRef } from "react";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { type ChatMessageType, ChatType } from "@/types/chat";
-import { useEffect, useRef } from "react";
 
 interface ChatScrollAnchorProps {
   trackVisibility: ChatMessageType;

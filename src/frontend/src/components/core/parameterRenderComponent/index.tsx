@@ -1,14 +1,13 @@
+import { useMemo } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import type { APIClassType, InputFieldType } from "@/types/api";
-import { useMemo } from "react";
-import ToolsComponent from "./components/ToolsComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -22,6 +21,7 @@ import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
+import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
 import type { InputProps, NodeInfoType } from "./types";
 

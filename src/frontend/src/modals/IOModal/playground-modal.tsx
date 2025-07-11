@@ -1,5 +1,8 @@
 //import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 
+import { useCallback, useEffect, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
+import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import {
   useDeleteMessages,
@@ -13,9 +16,6 @@ import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
-import { useShallow } from "zustand/react/shallow";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";

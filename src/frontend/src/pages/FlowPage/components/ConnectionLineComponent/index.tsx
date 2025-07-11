@@ -1,5 +1,5 @@
-import useFlowStore from "@/stores/flowStore";
 import type { ConnectionLineComponentProps } from "@xyflow/react";
+import useFlowStore from "@/stores/flowStore";
 
 const ConnectionLineComponent = ({
   fromX,

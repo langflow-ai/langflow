@@ -1,3 +1,6 @@
+import type { Edge, Node } from "@xyflow/react";
+import type { AxiosError } from "axios";
+import { flushSync } from "react-dom";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -10,9 +13,6 @@ import {
   customEventsUrl,
 } from "@/customization/utils/custom-buildUtils";
 import { useMessagesStore } from "@/stores/messagesStore";
-import type { Edge, Node } from "@xyflow/react";
-import type { AxiosError } from "axios";
-import { flushSync } from "react-dom";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";

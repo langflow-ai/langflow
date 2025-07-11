@@ -1,3 +1,4 @@
+import type { ReactFlowJsonObject } from "@xyflow/react";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -5,7 +6,6 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import type { ReactFlowJsonObject } from "@xyflow/react";
 
 const useSaveFlow = () => {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);

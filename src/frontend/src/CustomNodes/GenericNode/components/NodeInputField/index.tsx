@@ -1,3 +1,6 @@
+import { useEffect, useMemo, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
+import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
@@ -5,12 +8,9 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
-import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
-import { useEffect, useMemo, useRef } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {

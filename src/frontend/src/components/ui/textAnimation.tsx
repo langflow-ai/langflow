@@ -1,5 +1,4 @@
 "use client";
-import { cn } from "@/utils/utils";
 import {
   AnimatePresence,
   motion,
@@ -7,6 +6,7 @@ import {
   type Variants,
 } from "framer-motion";
 import React from "react";
+import { cn } from "@/utils/utils";
 
 type PresetType = "blur" | "shake" | "scale" | "fade" | "slide";
 

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   SelectContentWithoutPortal,
@@ -5,7 +6,6 @@ import {
 } from "@/components/ui/select-custom";
 import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
 import type { NoteDataType } from "@/types/flow";
-import { memo } from "react";
 
 export const SelectItems = memo(
   ({ shortcuts, data }: { shortcuts: any[]; data: NoteDataType }) => (

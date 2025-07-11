@@ -1,6 +1,6 @@
+import { useRef, useState } from "react";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import QueryModal from "@/modals/queryModal";
-import { useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";

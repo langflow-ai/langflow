@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,6 @@ import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavai
 import { useTypesStore } from "@/stores/typesStore";
 import type { ResponseErrorDetailAPI } from "@/types/api";
 import type { GlobalVariable } from "@/types/global_variables";
-import { useEffect, useState } from "react";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
 import sortByName from "./utils/sort-by-name";
 

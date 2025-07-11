@@ -1,4 +1,3 @@
-import { cn } from "@/utils/utils";
 import {
   NumberDecrementStepper,
   NumberIncrementStepper,
@@ -8,6 +7,7 @@ import {
 } from "@chakra-ui/number-input";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
 import type { FloatComponentType, InputProps } from "../../types";
 

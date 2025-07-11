@@ -1,6 +1,6 @@
-import type { AllNodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { useCallback } from "react";
+import type { AllNodeType } from "@/types/flow";
 import { type APIClassType, OutputFieldType } from "../../types/api";
 import { updateHiddenOutputs } from "../helpers/update-hidden-outputs";
 

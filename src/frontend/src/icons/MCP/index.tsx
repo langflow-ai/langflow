@@ -1,6 +1,6 @@
-import { useDarkStore } from "@/stores/darkStore";
 import type React from "react";
 import { forwardRef } from "react";
+import { useDarkStore } from "@/stores/darkStore";
 import SvgMcpIcon from "./McpIcon";
 
 export const McpIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(

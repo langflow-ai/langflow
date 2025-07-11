@@ -1,3 +1,10 @@
+import { useEffect, useState } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import {
+  oneDark,
+  oneLight,
+} from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
@@ -7,13 +14,6 @@ import { useTweaksStore } from "@/stores/tweaksStore";
 import { tabsArrayType } from "@/types/tabs";
 import { hasStreaming } from "@/utils/reactflowUtils";
 import { getOS } from "@/utils/utils";
-import { useEffect, useState } from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-  oneDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/cjs/styles/prism";
-import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "../../../stores/darkStore";
 import { formatPayloadTweaks } from "../utils/filter-tweaks";
 import { getNewCurlCode } from "../utils/get-curl-code";
