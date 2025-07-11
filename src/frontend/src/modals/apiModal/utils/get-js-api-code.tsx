@@ -288,17 +288,17 @@ async function uploadAndExecuteFlow() {
         };
         
         const uploadResult = await makeRequest(uploadOptions, payload);
-        const fileId = uploadResult.id;
-        console.log('Upload successful! File ID:', fileId);
+        const filePath = uploadResult.path;
+        console.log('Upload successful! File path:', filePath);
         
-        // Step 2: Run flow with file_id
+        // Step 2: Run flow with file_path
         const executePayload = JSON.stringify({
             "output_type": "${processedPayload.output_type || "chat"}",
             "input_type": "${processedPayload.input_type || "chat"}",
             "input_value": "${processedPayload.input_value || "Your message here"}",
             "tweaks": {
                 "${fileNodeId}": {
-                    "file_id": fileId
+                    "path": [filePath]
                 }
             }
         });

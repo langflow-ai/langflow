@@ -161,16 +161,16 @@ with open("your-file.pdf", "rb") as f:
         files={"file": f}
     )
     response.raise_for_status()
-    file_id = response.json()["id"]
+    file_path = response.json()["path"]
 
-# Step 2: Run flow with file_id
+# Step 2: Run flow with file_path
 payload = {
     "output_type": "${processedPayload.output_type || "chat"}",
     "input_type": "${processedPayload.input_type || "chat"}",
     "input_value": "${processedPayload.input_value || "Your message here"}",
     "tweaks": {
         "${fileNodeId}": {
-            "file_id": file_id
+            "path": [file_path]
         }
     }
 }

@@ -178,7 +178,7 @@ curl -X POST \\
       const authHeader = isAuth ? `-H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
 
       return `##STEP1_START##
-curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your_document_path.pdf"
+curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your-file.pdf"
 ##STEP1_END##
 
 ##STEP2_START##
@@ -188,7 +188,7 @@ curl -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader ? " " +
   "input_value": "${processedPayload.input_value || "Your message here"}",
   "tweaks": {
     "${fileNodeId}": {
-      "file_id": "REPLACE_WITH_FILE_ID_FROM_STEP_1"
+      "path": ["REPLACE_WITH_FILE_PATH_FROM_STEP_1"]
     }
   }
 }'
@@ -197,7 +197,7 @@ curl -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader ? " " +
       const authHeader = isAuth ? `-H "x-api-key: $LANGFLOW_API_KEY"` : "";
       
       return `##STEP1_START##
-curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your_document_path.pdf"
+curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your-file.pdf"
 ##STEP1_END##
 
 ##STEP2_START##
@@ -210,7 +210,7 @@ curl -X POST \\
     "input_value": "${processedPayload.input_value || "Your message here"}",
     "tweaks": {
       "${fileNodeId}": {
-        "file_id": "REPLACE_WITH_FILE_ID_FROM_STEP_1"
+        "path": ["REPLACE_WITH_FILE_PATH_FROM_STEP_1"]
       }
     }
   }'
