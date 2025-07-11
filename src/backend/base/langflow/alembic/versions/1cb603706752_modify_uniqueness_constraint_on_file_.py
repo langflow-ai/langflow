@@ -36,34 +36,33 @@ def upgrade() -> None:
     if is_sqlite:
         # SQLite: Recreate the table to drop the unique constraint and add the new one
         # Step 1: Create a new table with the desired schema
-        op.execute("""
-            CREATE TABLE file_new (
-                id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                path TEXT NOT NULL,
-                size INTEGER NOT NULL,
-                provider TEXT,
-                created_at TIMESTAMP NOT NULL,
-                updated_at TIMESTAMP NOT NULL,
-                PRIMARY KEY (id),
-                FOREIGN KEY (user_id) REFERENCES user (id),
-                UNIQUE (name, user_id)
-            )
-        """)
+        op.create_table(
+            "file_new",
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("user_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("path", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("size", sa.Integer(), nullable=False),
+            sa.Column("provider", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.Column("updated_at", sa.DateTime(), nullable=False),
+            sa.PrimaryKeyConstraint("id"),
+            sa.ForeignKeyConstraint(["user_id"], ["user.id"], name="fk_file_user_id_user"),
+            sa.UniqueConstraint("name", "user_id", name="file_name_user_id_key"),
+        )
 
-        # Step 2: Copy data from the old table to the new one
-        op.execute("""
+        # Step 2: Copy data
+        op.execute(sa.text("""
             INSERT INTO file_new (
                 id, user_id, name, path, size, provider, created_at, updated_at
             )
             SELECT id, user_id, name, path, size, provider, created_at, updated_at
             FROM file
-        """)
+        """))
 
-        # Step 3: Drop the old table and rename the new one
-        op.execute("DROP TABLE file")
-        op.execute("ALTER TABLE file_new RENAME TO file")
+        # Step 3: Drop and rename
+        op.execute(sa.text("DROP TABLE file"))
+        op.execute(sa.text("ALTER TABLE file_new RENAME TO file"))
     else:
         # PostgreSQL: Drop the existing unique constraint and add the new one
         with op.batch_alter_table("file", schema=None) as batch_op:
@@ -79,32 +78,34 @@ def downgrade() -> None:
     is_sqlite = conn.dialect.name == "sqlite"
 
     if is_sqlite:
-        # SQLite: Recreate the table to restore the original unique constraint
-        op.execute("""
-            CREATE TABLE file_new (
-                id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                name TEXT NOT NULL UNIQUE,
-                path TEXT NOT NULL,
-                size INTEGER NOT NULL,
-                provider TEXT,
-                created_at TIMESTAMP NOT NULL,
-                updated_at TIMESTAMP NOT NULL,
-                PRIMARY KEY (id),
-                FOREIGN KEY (user_id) REFERENCES user (id)
-            )
-        """)
+        # Step 1: Create the new table with the original UNIQUE constraint on "name"
+        op.create_table(
+            "file_new",
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("user_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("path", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("size", sa.Integer(), nullable=False),
+            sa.Column("provider", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.Column("updated_at", sa.DateTime(), nullable=False),
+            sa.PrimaryKeyConstraint("id"),
+            sa.ForeignKeyConstraint(["user_id"], ["user.id"], name="fk_file_user_id_user"),
+            sa.UniqueConstraint("name", name="file_name_key"),
+        )
 
-        op.execute("""
+        # Step 2: Copy the data
+        op.execute(sa.text("""
             INSERT INTO file_new (
                 id, user_id, name, path, size, provider, created_at, updated_at
             )
             SELECT id, user_id, name, path, size, provider, created_at, updated_at
             FROM file
-        """)
+        """))
 
-        op.execute("DROP TABLE file")
-        op.execute("ALTER TABLE file_new RENAME TO file")
+        # Step 3: Drop and rename
+        op.drop_table("file")
+        op.rename_table("file_new", "file")
     else:
         # PostgreSQL: Drop the composite constraint and restore the original
         with op.batch_alter_table("file", schema=None) as batch_op:
