@@ -90,9 +90,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "jailbreak detection model",
             ],
             value=["self check input", "self check output"],
-            info=(
-                "Message to display when the input is off-topic. " "Use [your specific domain/topic] as a placeholder."
-            ),
+            info=("Message to display when the input is off-topic. Use [your specific domain/topic] as a placeholder."),
             advanced=False,
         ),
         HandleInput(
