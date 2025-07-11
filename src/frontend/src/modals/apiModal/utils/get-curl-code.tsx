@@ -138,24 +138,56 @@ curl --request POST \`
   // Add ChatInput file uploads (v1 API)
   chatInputNodeIds.forEach((nodeId, index) => {
     if (detectedPlatform === "powershell") {
-      const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
       uploadCommands.push(
-        `curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader} -F "file=@your_image_${uploadCounter}.jpg"`,
+        `curl --request POST \`
+     --url "${baseUrl}/api/v1/files/upload/${flowId}" \`
+     --header "x-api-key: YOUR_API_KEY_HERE" \`
+     --form "file=@your_image_${uploadCounter}.jpg"`,
       );
     } else {
-      const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
       uploadCommands.push(
-        `curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader} -F "file=@your_image_${uploadCounter}.jpg"`,
+        `curl --request POST \\
+     --url "${baseUrl}/api/v1/files/upload/${flowId}" \\
+     --header "x-api-key: YOUR_API_KEY_HERE" \\
+     --form "file=@your_image_${uploadCounter}.jpg"`,
       );
     }
     const originalTweak = tweaks[nodeId];
     const modifiedTweak = { ...originalTweak };
     modifiedTweak.files = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
-    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("\n").join("\n    ")}`;
+    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("
+").join("
+  fileNodeIds.forEach((nodeId, index) => {
+    if (detectedPlatform === "powershell") {
+      uploadCommands.push(
+        `curl --request POST \`
+     --url "${baseUrl}/api/v2/files" \`
+     --header "x-api-key: YOUR_API_KEY_HERE" \`
+     --form "file=@your_file_${uploadCounter}.pdf"`,
+      );
+    } else {
+      uploadCommands.push(
+        `curl --request POST \\
+     --url "${baseUrl}/api/v2/files" \\
+     --header "x-api-key: YOUR_API_KEY_HERE" \\
+     --form "file=@your_file_${uploadCounter}.pdf"`,
+      );
+    }
+    const originalTweak = tweaks[nodeId];
+    const modifiedTweak = { ...originalTweak };
+    if ("path" in originalTweak) {
+      modifiedTweak.path = [
+        `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`,
+      ];
+    } else if ("file_path" in originalTweak) {
+      modifiedTweak.file_path = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
+    }
+    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("
+").join("
+    ")}`;
     tweakEntries.push(tweakEntry);
     uploadCounter++;
   });
-
   // Add File/VideoFile uploads (v2 API)
   fileNodeIds.forEach((nodeId, index) => {
     if (detectedPlatform === "powershell") {
