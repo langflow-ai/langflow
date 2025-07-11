@@ -186,7 +186,10 @@ const config = {
           },
           {
             to: "/blog-writer",
-            from: ["/starter-projects-blog-writer", "/tutorials-blog-writer"],
+            from: [
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer",
+            ],
           },
           {
             to: "/memory-chatbot",
@@ -197,7 +200,10 @@ const config = {
           },
           {
             to: "/document-qa",
-            from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
+            from: [
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa",
+            ],
           },
           {
             to: "/simple-agent",
@@ -245,7 +251,10 @@ const config = {
           },
           {
             to: "/concepts-publish",
-            from: ["/concepts-api", "/workspace-api"],
+            from: [
+              "/concepts-api",
+              "/workspace-api",
+            ],
           },
           {
             to: "/components-custom-components",
@@ -265,9 +274,7 @@ const config = {
           },
           {
             to: "/deployment-kubernetes-dev",
-            from: [
-              "/deployment-kubernetes",
-            ],
+            from: "/deployment-kubernetes",
           },
           {
             to: "/basic-prompting",
@@ -284,6 +291,10 @@ const config = {
           {
             to: "/agents",
             from: "/agents-tool-calling-agent-component",
+          },
+          {
+            to: "/concepts-publish",
+            from: "/embedded-chat-widget",
           },
           // add more redirects like this
           // {

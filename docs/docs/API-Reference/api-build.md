@@ -16,7 +16,7 @@ To run flows in your apps, see [Flow trigger endpoints](/api-flows-run).
 
 The `/build` endpoints support Langflow's frontend code for building flows in the Langflow Workspace.
 You can use these endpoints to build vertices and flows, as well as execute flows with streaming event responses.
-You might need to use or understand these endpoints when contributing to the Langflow project's core codebase.
+You might need to use or understand these endpoints when contributing to the Langflow codebase.
 
 ## Build flow and stream events
 
@@ -105,8 +105,8 @@ curl -X GET \
 | inputs | object | Optional. Input values for flow components. |
 | data | object | Optional. Flow data to override stored configuration. |
 | files | array[string] | Optional. List of file paths to use. |
-| start_component_id | string | Optional. ID of the component where the execution should start. Component `id` values can be found in [Langflow JSON files](/concepts-flows#langflow-json-file-contents) |
-| stop_component_id | string | Optional. ID of the component where the execution should stop. Component `id` values can be found in [Langflow JSON files](/concepts-flows#langflow-json-file-contents).|
+| start_component_id | string | Optional. ID of the component where the execution should start. Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents) |
+| stop_component_id | string | Optional. ID of the component where the execution should stop. Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents).|
 | log_builds | boolean | Optional. Control build logging. Default: `true`. |
 
 ### Set start and stop points

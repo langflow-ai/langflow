@@ -360,9 +360,3 @@ Log: Log {
 </details>
 
 The `FlowResponse` object is returned to the client, with the `outputs` array including your flow result.
-
-## Langflow TypeScript project repository
-
-You can do even more with the Langflow TypeScript client.
-
-For more information, see the [langflow-client-ts](https://github.com/datastax/langflow-client-ts/) repository.

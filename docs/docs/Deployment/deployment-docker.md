@@ -3,29 +3,29 @@ title: Deploy Langflow on Docker
 slug: /deployment-docker
 ---
 
-This guide demonstrates deploying Langflow with Docker and Docker Compose.
+Running applications in Docker containers ensures consistent behavior across different systems and eliminates dependency conflicts.
 
-Three options are available:
+You can use the Langflow Docker image to start a Langflow container.
 
-* The [Quickstart](#quickstart) option starts a Docker container with default values.
-* The [Docker compose](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
-* The [Package your flow as a docker image](#package-your-flow-as-a-docker-image) option demonstrates packaging an existing flow with a Dockerfile.
+This guide demonstrates several ways to deploy Langflow with [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/):
 
-For more information on configuring the Docker image, see [Customize the Langflow Docker image with your own code](#customize-the-langflow-docker-image-with-your-own-code).
+<!-- no toc -->
+* [Start a Langflow container with default values](#quickstart)
+* [Clone the repo and use Docker Compose to build the Langflow Docker container](#clone-the-repo-and-build-the-langflow-docker-container) with a persistent PostgreSQL database service
+* [Use a Dockerfile to package a flow as a Docker image](#package-your-flow-as-a-docker-image)
+* [Customize the Langflow Docker image](#customize-the-langflow-docker-image-with-your-own-code)
 
-## Prerequisites
+## Start a Langflow container with default values {#quickstart}
 
-- [Docker](https://docs.docker.com/)
-- [Docker Compose](https://docs.docker.com/compose/)
-
-## Quickstart
-
-With Docker installed and running on your system, run this command:
+With Docker installed and running on your system, run the following command:
 
 `docker run -p 7860:7860 langflowai/langflow:latest`
 
-Langflow is now accessible at `http://localhost:7860/`.
+Then, access Langflow at `http://localhost:7860/`.
+
 ## Clone the repo and build the Langflow Docker container
+
+Use Docker Compose to build Langflow with a persistent PostgreSQL database service:
 
 1. Clone the Langflow repository:
 
@@ -39,17 +39,14 @@ Langflow is now accessible at `http://localhost:7860/`.
 
    `docker compose up`
 
-Langflow is now accessible at `http://localhost:7860/`.
+4. Access Langflow at `http://localhost:7860/`.
 
 ### Configure Docker services
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
 
-To configure values for these services at container startup, include them in your `.env` file.
-
-An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
-
-To pass the `.env` values at container startup, include the flag in your `docker run` command:
+To configure values for these services at container startup, define relevant [Langflow environment variables](/environment-variables) in a `.env` file.
+Then, include the `--env-file` flag in your `docker run` command:
 
 ```
 docker run -it --rm \
@@ -57,6 +54,8 @@ docker run -it --rm \
     --env-file .env \
     langflowai/langflow:latest
 ```
+
+If your `.env` file isn't in the same directory, provide the path to your `.env` file.
 
 ### Langflow service
 
@@ -95,7 +94,7 @@ Volumes:
 
 If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
 
-## Package your flow as a Docker image
+## Package your flow as a Docker image {#package-your-flow-as-a-docker-image}
 
 You can include your Langflow flow with the application image.
 When you build the image, your saved flow `.JSON` flow is included.

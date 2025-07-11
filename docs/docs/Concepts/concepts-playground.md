@@ -1,24 +1,27 @@
 ---
-title: Playground
+title: Use the Playground
 slug: /concepts-playground
 ---
 
 import Icon from "@site/src/components/icon";
 
+<!-- TODO: Align and minimize duplications of playground content on the /concepts-overview, /about-langflow, and other pages -->
+
 The **Playground** is a dynamic interface designed for real-time interaction with LLMs, allowing users to chat, access memories, and monitor inputs and outputs. Here, users can directly prototype their models, making adjustments and observing different outcomes.
 
-As long as you have a [Chat Input](/components-io) component in your flow, you can run and chat with your flow by clicking the **Playground** button.
+As long as you have a [Chat Input](/components-io) component in your flow, you can run the flow in the **Playground** test environment.
 
-## Run a flow in the playground
+## Run a flow in the Playground
 
-To run a flow in the **Playground**, click **Playground**.
-
-For example, click **Playground** in a flow that includes connected **Chat Input**, **Language Model**, and **Chat Output** components to chat with the LLM.
+To run a flow in the **Playground**, open the flow, and then click **Playground**.
 
 ![Playground window](/img/playground.png)
 
-If you have an **Agent** in your flow, the **Playground** displays its tool calls and outputs, so you can monitor the agent's tool use and understand how it came to the answer it returns.
-This agent used a connected `fetch_content` tool to perform a web search.
+If your flow has **Chat Input**, **Language Model**, and **Chat Output** components, you can chat with the LLM in the **Playground**.
+
+If your flow has an **Agent** component, the **Playground** prints the tools used by the agent and the output from each tool.
+This helps you monitor the agent's tool use and understand the logic behind the agent's responses.
+For example, the following agent used a connected `fetch_content` tool to perform a web search:
 
 ![Playground window with agent response](/img/playground-with-agent.png)
 
@@ -26,7 +29,7 @@ When you run a flow in the **Playground**, Langflow calls the `/build/{flow_id}/
 
 The `build` function allows components to execute logic at runtime. For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the `LCTextSplitterComponent` class. When text needs to be processed, the parent class's `build` method is called, which creates a `RecursiveCharacterTextSplitter` object and uses it to split the text according to the defined parameters. The split text is then passed on to the next component. This all occurs when the component is built.
 
-## View playground messages by session ID
+## View Playground messages by session ID
 
 When you send a message from the **Playground** interface, the interactions are stored in the **Message Logs** by `session_id`.
 A single flow can have multiple chats, and different flows can share the same chat. Each chat session has a different `session_id`.
@@ -102,3 +105,29 @@ curl -X POST "http://localhost:7860/api/v1/run/FLOW_ID" \
 ```
 
 The image is displayed in the chat interface and can be processed by your flow components.
+
+## Share a flow's Playground
+
+:::important
+The **Shareable Playground** is for testing purposes only, and it isn't available for Langflow Desktop.
+
+The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [Run flows](/concepts-publish).
+:::
+
+The **Shareable Playground** option exposes the **Playground** for a single flow at the `/public_flow/$FLOW_ID` endpoint.
+
+After you [deploy a public Langflow server](/deployment-overview), you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
+The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
+
+To share a flow's **Playground** with another user, do the following:
+
+1. In Langflow, open the flow you want share.
+2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
+3. Click **Shareable Playground** again to open the **Playground** window.
+This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
+4. Send the URL to another user to give them access to the flow's **Playground**.
+
+## See also
+
+- [Run flows](/concepts-publish)
+- [Session ID](/session-id)

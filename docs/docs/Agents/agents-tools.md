@@ -175,4 +175,4 @@ Your flow should be visible in the response as a tool.
 The connected flow returns an answer based on your question.
 For example, a Basic Prompting flow connected as a tool returns a different result depending upon its LLM and prompt instructions.
 
-![Run Flow as tool connected to agnet](/img/agent-example-run-flow-as-tool.png)
+![Run Flow as tool connected to an agent](/img/agent-example-run-flow-as-tool.png)

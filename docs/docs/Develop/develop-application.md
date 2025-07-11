@@ -66,7 +66,7 @@ To add authentication to your server, see [Authentication](/configuration-authen
 
 Add your flow's `.JSON` files to the `/flows` folder.
 
-To export your flows from Langflow, see [Flows](/concepts-flows).
+To export your flows from Langflow, see [Import and export flows](/concepts-flows-import).
 
 Optionally, add any custom components to a `/components` folder, and specify the path in your `docker.env`.
 

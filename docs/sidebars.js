@@ -5,8 +5,21 @@ module.exports = {
       type: "category",
       label: "Get started",
       items: [
-        "Get-Started/get-started-installation",
-        "Get-Started/get-started-quickstart",
+        {
+          type: "doc",
+          id: "Get-Started/about-langflow",
+          label: "About Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-installation",
+          label: "Install Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-quickstart",
+          label: "Quickstart"
+        },
         {
           type: "category",
           label: "Tutorials",
@@ -34,16 +47,48 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Concepts",
+      label: "Flows",
       items: [
-        "Concepts/concepts-overview",
-        "Concepts/concepts-playground",
-        "Concepts/concepts-flows",
-        "Concepts/concepts-objects",
-        "Concepts/concepts-publish",
-        "Concepts/embedded-chat-widget",
-        "Concepts/concepts-file-management",
-        "Concepts/concepts-voice-mode",
+        {
+          type: "doc",
+          id: "Concepts/concepts-overview",
+          label: "Use the visual editor"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-flows",
+          label: "Build flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-publish",
+          label: "Share and embed flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-flows-import",
+          label: "Import and export flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-playground",
+          label: "Use the Playground"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-voice-mode",
+          label: "Use voice mode"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-objects",
+          label: "Langflow objects"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-file-management",
+          label: "Manage files"
+        },
       ],
     },
     {

@@ -249,26 +249,28 @@ Your request is answered.
 A new chat session called `docker-question-on-m1` has appeared, using your unique `session_id`.
 7. To modify additional parameters with **Tweaks** for your **Chat Input** and **Chat Output** components, click **Share**, and then click **API access**.
 8. Click **Input schema** to modify parameters in the component's `data` object.
-For example, disabling storing messages from the **Chat Input** component adds a **Tweak** to your command:
-```text
-curl --request POST \
-  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
-  --header "Content-Type: application/json" \
-  --header "x-api-key: LANGFLOW_API_KEY" \
-  --data '{
-  "input_value": "Text to input to the flow",
-  "output_type": "chat",
-  "input_type": "chat",
-  "tweaks": {
-    "ChatInput-4WKag": {
-      "should_store_message": false
-    }
-  }
-}'
-```
 
-To confirm your command is using the tweak, navigate to the **Logs** pane and view the request from the **Chat Input** component.
-The value for `should_store_message` is `false`.
+    For example, disabling storing messages from the **Chat Input** component adds a **Tweak** to your command:
+
+    ```text
+    curl --request POST \
+      --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+      --header "Content-Type: application/json" \
+      --header "x-api-key: LANGFLOW_API_KEY" \
+      --data '{
+      "input_value": "Text to input to the flow",
+      "output_type": "chat",
+      "input_type": "chat",
+      "tweaks": {
+        "ChatInput-4WKag": {
+          "should_store_message": false
+        }
+      }
+    }'
+    ```
+
+9. To confirm your command is using the tweak, navigate to the **Logs** pane, and then view the request from the **Chat Input** component.
+Given the preceding example, the value for `should_store_message` should be `false`.
 
 ## See also
 

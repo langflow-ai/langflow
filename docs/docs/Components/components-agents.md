@@ -64,7 +64,7 @@ Prior to Langflow 1.5, this component was named **MCP connection**.
 
 The **MCP tools** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
 
-In addition to being an MCP client that can leverage MCP servers, the **MCP tools** component's [SSE mode](/mcp-client#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
+In addition to being an MCP client that can leverage MCP servers, the **MCP tools** component's [SSE mode](/mcp-client#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-flows#projects) as tools within a flow.
 
 For more information, see [MCP client](/mcp-client).
 

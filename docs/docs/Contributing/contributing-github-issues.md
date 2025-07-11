@@ -5,7 +5,7 @@ slug: /contributing-github-issues
 
 The Langflow GitHub repository is an integral part of the [Langflow community](/contributing-community).
 
-In addition to general assistance with Langflow, the repository is the best place to report bugs and request enhancements to ensure that they are tracked by the Langflow project.
+In addition to general assistance with Langflow, the repository is the best place to report bugs and request enhancements to ensure that they are tracked by Langflow maintainers.
 
 ## GitHub issues
 

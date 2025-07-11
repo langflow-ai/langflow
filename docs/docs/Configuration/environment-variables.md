@@ -54,11 +54,13 @@ If it detects a supported environment variable, then it automatically adopts the
 
 ### Import environment variables from a .env file {#configure-variables-env-file}
 
-1. Create a `.env` file and open it in your preferred editor.
+1. If Langflow is running, quit Langflow.
 
-2. Add your environment variables to the file:
+2. Create a `.env` file, and then open it in your preferred editor.
 
-    ```text title=".env"
+3. Define [Langflow environment variables](#supported-variables) in the `.env` file. For example:
+
+    ```text
     DO_NOT_TRACK=true
     LANGFLOW_AUTO_LOGIN=false
     LANGFLOW_AUTO_SAVING=true
@@ -91,44 +93,48 @@ If it detects a supported environment variable, then it automatically adopts the
     LANGFLOW_WORKERS=3
     ```
 
-    :::tip
-    The Langflow project includes a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
-    You can copy the contents of this file into your own `.env` file and replace the example values with your own preferred settings.
-    :::
+   For additional examples, see the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository.
 
-3. Save and close the file.
+4. Save and close `.env`.
 
-4. Start Langflow using the `--env-file` option to define the path to your `.env` file:
+5. Start Langflow with your `.env` file:
 
-   <Tabs>
-
+    <Tabs>
     <TabItem value="local" label="Local" default>
+
     ```bash
     python -m langflow run --env-file .env
     ```
-    </TabItem>
 
+    </TabItem>
     <TabItem value="docker" label="Docker" default>
+
     ```bash
     docker run -it --rm \
         -p 7860:7860 \
         --env-file .env \
         langflowai/langflow:latest
     ```
-    </TabItem>
 
+    </TabItem>
     </Tabs>
+
+    If your `.env` file isn't in the same directory, provide the path to your `.env` file.
 
 On startup, Langflow imports the environment variables from your `.env` file, as well as any that you [set in your terminal](#configure-variables-terminal), and adopts their specified values.
 
 ## Precedence {#precedence}
 
-Environment variables [defined in the .env file](#configure-variables-env-file) take precedence over those [set in your terminal](#configure-variables-terminal).
-That means, if you happen to set the same environment variable in both your terminal and your `.env` file, Langflow adopts the value from the the `.env` file.
+You can set Langflow environment variables in your terminal, in `.env`, and with [Langflow CLI options](./configuration-cli.md).
 
-:::info[CLI precedence]
-[Langflow CLI options](./configuration-cli.md) override the value of corresponding environment variables defined in the `.env` file as well as any environment variables set in your terminal.
-:::
+If an environment variable is set in multiple places, the following hierarchy applies:
+
+1. Langflow CLI options override `.env` and terminal variables.
+2. `.env` overrides terminal variables.
+3. Terminal variables are used only if the variable isn't set in `.env` or Langflow CLI options.
+
+For example, if you set `LANGFLOW_PORT` in `.env` and your terminal, then Langflow uses the value from `.env`.
+Similarly, if you run a Langflow CLI command with `--port`, Langflow uses that port number instead of the `LANGFLOW_PORT` in `.env`.
 
 ## Supported environment variables {#supported-variables}
 

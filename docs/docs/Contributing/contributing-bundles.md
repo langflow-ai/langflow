@@ -9,7 +9,7 @@ This example adds a new bundle named `DarthVader`.
 
 ## Add the bundle to the backend folder
 
-1. Navigate to the backend directory in the Langflow project and create a new folder for your bundle.
+1. Navigate to the backend directory in the Langflow repository and create a new folder for your bundle.
 The path for your new component is `src > backend > base > langflow > components > darth_vader`.
 You can view the [components folder](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/components) in the Langflow repository.
 
@@ -23,7 +23,7 @@ For an example of adding multiple components in a bundle, see the [Notion](https
 
 ## Add the bundle to the frontend folder
 
-1. Navigate to the frontend directory in the Langflow project to add your bundle's icon.
+1. Navigate to the frontend directory in the Langflow repository to add your bundle's icon.
 The path for your new component icon is `src > frontend > src > icons > DarthVader`
 You can view the [icons folder](https://github.com/langflow-ai/langflow/tree/main/src/frontend/src/icons) in the Langflow repository.
 To add your icon, create **three** files inside the `icons/darth_vader` folder.
@@ -89,7 +89,7 @@ For example:
   CrewAI: () =>
     import("@/icons/CrewAI").then((mod) => ({ default: mod.CrewAiIcon })),
   DarthVader: () =>
-    import("@/icons/DartVader").then((mod) => ({ default: mod.DarthVaderIcon })),
+    import("@/icons/DarthVader").then((mod) => ({ default: mod.DarthVaderIcon })),
   DeepSeek: () =>
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
 ```
