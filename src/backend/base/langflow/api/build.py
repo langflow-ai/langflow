@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 import traceback
 import uuid
@@ -36,6 +37,9 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
+
+# Get keep-alive timeout from environment variable, default to 15 seconds
+KEEP_ALIVE_TIMEOUT = float(os.getenv("LANGFLOW_KEEP_ALIVE_TIMEOUT", "15.0"))
 
 
 async def start_flow_build(
@@ -147,21 +151,29 @@ async def get_flow_events_response(
 
 
 async def create_flow_response(
-    queue: asyncio.Queue,
+    queue: asyncio.Queue[tuple[str | None, bytes | None, float]],
     event_manager: EventManager,
     event_task: asyncio.Task,
 ) -> DisconnectHandlerStreamingResponse:
-    """Create a streaming response for the flow build process."""
+    """Create a streaming response for the flow build process.
+
+    Yields:
+        The value from each event in the queue, or Keep-Alive events based on configured timeout.
+    """
 
     async def consume_and_yield() -> AsyncIterator[str]:
         while True:
             try:
-                event_id, value, put_time = await queue.get()
+                event_id, value, put_time = await asyncio.wait_for(queue.get(), timeout=KEEP_ALIVE_TIMEOUT)
                 if value is None:
                     break
                 get_time = time.time()
                 yield value.decode("utf-8")
                 logger.debug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+            except asyncio.TimeoutError:
+                # Send Keep-Alive when no events are available for configured timeout
+                yield '{"event": "keepalive", "data": {}}\n\n'
+                logger.debug(f"Sent Keep-Alive event due to {KEEP_ALIVE_TIMEOUT}-second timeout")
             except Exception as exc:  # noqa: BLE001
                 logger.exception(f"Error consuming event: {exc}")
                 break
