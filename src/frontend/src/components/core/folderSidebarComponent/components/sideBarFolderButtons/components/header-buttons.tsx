@@ -5,7 +5,7 @@ import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
 import useAuthStore from "@/stores/authStore";
 import { Separator } from "@radix-ui/react-separator";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AddFolderButton } from "./add-folder-button";
 import { UploadFolderButton } from "./upload-folder-button";
 
@@ -21,13 +21,26 @@ export const HeaderButtons = ({
   addNewFolder: () => void;
 }) => {
   const userData = useAuthStore((state) => state.userData);
-  const userDismissedDialog = userData?.optins?.dialog_dismissed;
-  const isGithubStarred = userData?.optins?.github_starred;
-  const isDiscordJoined = userData?.optins?.discord_clicked;
-  const [isDismissedDialog, setIsDismissedDialog] =
-    useState(userDismissedDialog);
+
+  const [isDismissedDialog, setIsDismissedDialog] = useState(
+    userData?.optins?.dialog_dismissed,
+  );
+  const [isGithubStarred, setIsGithubStarred] = useState(
+    userData?.optins?.github_starred,
+  );
+  const [isDiscordJoined, setIsDiscordJoined] = useState(
+    userData?.optins?.discord_clicked,
+  );
 
   const { mutate: updateUser } = useUpdateUser();
+
+  useEffect(() => {
+    if (userData) {
+      setIsDismissedDialog(userData.optins?.dialog_dismissed);
+      setIsGithubStarred(userData.optins?.github_starred);
+      setIsDiscordJoined(userData.optins?.discord_clicked);
+    }
+  }, [userData]);
 
   const handleDismissDialog = () => {
     setIsDismissedDialog(true);
@@ -44,7 +57,7 @@ export const HeaderButtons = ({
 
   return (
     <>
-      {!isDismissedDialog && (
+      {!isDismissedDialog && userData && (
         <>
           <CustomGetStartedProgress
             userData={userData!}
