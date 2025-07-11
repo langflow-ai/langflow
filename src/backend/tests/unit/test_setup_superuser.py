@@ -138,7 +138,8 @@ async def test_teardown_superuser_no_default_superuser():
 
 @pytest.mark.asyncio
 async def test_create_super_user_race_condition():
-    """Test that create_super_user handles race conditions gracefully when multiple workers try to create the same user."""
+    """Test create_super_user handles race conditions gracefully when multiple workers try to create the same user."""
+    
     # Mock the database session
     mock_session = AsyncMock()
 
@@ -158,7 +159,6 @@ async def test_create_super_user_race_condition():
     mock_get_user_by_username.side_effect = [None, mock_user]  # None first, then existing user
 
     mock_session.commit.side_effect = IntegrityError("statement", "params", "orig")
-
     with (
         patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username),
         patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
@@ -194,7 +194,7 @@ async def test_create_super_user_race_condition_no_user_found():
     # Set up scenario where IntegrityError occurs but no user is found afterward
     integrity_error = IntegrityError("statement", "params", "orig")
     mock_session.commit.side_effect = integrity_error
-
+    
     with (
         patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username),
         patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
