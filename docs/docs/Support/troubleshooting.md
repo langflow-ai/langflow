@@ -153,6 +153,7 @@ The cache folder location depends on your OS:
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
+<!--
 ### Unexpected data loss after Langflow Desktop upgrade {#data-loss}
 
 If you upgrade Langflow Desktop and find that your projects, flows, and settings have been replaced by a fresh installation, follow these steps to attempt to recover the data from the prior version:
@@ -183,6 +184,7 @@ This overwrites the existing `database.db` with your previous version's internal
 
   </TabItem>
 </Tabs>
+-->
 
 ## Langflow uninstall issues
 

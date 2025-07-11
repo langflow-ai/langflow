@@ -34,9 +34,9 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
    * **Langflow Docker image**: Run the new image in a separate container.
    * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
 
-   :::tip
+   <!-- :::tip
    If you experience data loss after an in-place upgrade of Langflow Desktop, see [Unexpected data loss after Langflow Desktop upgrade](/troubleshoot#data-loss).
-   :::
+   :::-->
 
 3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
 
