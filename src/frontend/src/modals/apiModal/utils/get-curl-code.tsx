@@ -125,6 +125,7 @@ fi
   if (hasChatFiles) {
     // Chat Input files - use v1 upload API + run endpoint with tweaks
     const chatInputNodeId = getChatInputNodeId(tweaks) || "ChatInput-NodeId";
+    const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
     
     if (detectedPlatform === "powershell") {
       const authHeader = isAuth ? `-H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
@@ -171,6 +172,7 @@ curl -X POST \\
   } else {
     // File/VideoFile components - use v2 upload API + run endpoint
     const fileNodeId = getFileNodeId(tweaks) || "File-NodeId";
+    const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
     
     if (detectedPlatform === "powershell") {
       const authHeader = isAuth ? `-H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
@@ -181,6 +183,9 @@ curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "
 
 ##STEP2_START##
 curl -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader ? " " + authHeader : ""} -d '{
+  "output_type": "${processedPayload.output_type || "chat"}",
+  "input_type": "${processedPayload.input_type || "chat"}",
+  "input_value": "${processedPayload.input_value || "Your message here"}",
   "tweaks": {
     "${fileNodeId}": {
       "file_id": "REPLACE_WITH_FILE_ID_FROM_STEP_1"
@@ -200,6 +205,9 @@ curl -X POST \\
   "${apiUrl}" \\
   -H "Content-Type: application/json"${authHeader ? " \\\n  " + authHeader : ""} \\
   -d '{
+    "output_type": "${processedPayload.output_type || "chat"}",
+    "input_type": "${processedPayload.input_type || "chat"}",
+    "input_value": "${processedPayload.input_value || "Your message here"}",
     "tweaks": {
       "${fileNodeId}": {
         "file_id": "REPLACE_WITH_FILE_ID_FROM_STEP_1"
