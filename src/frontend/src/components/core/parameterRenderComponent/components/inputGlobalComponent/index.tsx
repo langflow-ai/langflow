@@ -8,7 +8,7 @@ import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
 import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputGlobalComponentType, InputProps } from "../../types";
+import type { InputGlobalComponentType, InputProps } from "../../types";
 import InputComponent from "../inputComponent";
 
 export default function InputGlobalComponent({

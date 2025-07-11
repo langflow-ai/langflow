@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
-import React, { useState } from "react";
-import { InputProps } from "../../../types/components";
+import type React from "react";
+import { useState } from "react";
+import type { InputProps } from "../../../types/components";
 import { cn } from "../../../utils/utils";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";

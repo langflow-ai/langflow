@@ -13,9 +13,9 @@ import remarkGfm from "remark-gfm";
 import {
   CONTAINER_VARIANTS,
   DISMISS_BUTTON_VARIANTS,
+  getTimeVariants,
   RETRY_BUTTON_VARIANTS,
   STOP_BUTTON_VARIANTS,
-  getTimeVariants,
 } from "./helpers/visual-variants";
 
 export default function FlowBuildingComponent() {

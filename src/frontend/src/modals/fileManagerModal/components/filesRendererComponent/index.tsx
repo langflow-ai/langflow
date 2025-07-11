@@ -1,4 +1,4 @@
-import { FileType } from "@/types/file_management";
+import type { FileType } from "@/types/file_management";
 import FileRendererComponent from "./components/fileRendererComponent";
 
 export default function FilesRendererComponent({

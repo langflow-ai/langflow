@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { memo, useCallback } from "react";
-import { BundleItemProps } from "../../types";
+import type { BundleItemProps } from "../../types";
 import SidebarItemsList from "../sidebarItemsList";
 
 export const BundleItem = memo(

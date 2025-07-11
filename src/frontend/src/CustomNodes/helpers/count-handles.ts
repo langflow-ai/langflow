@@ -1,7 +1,7 @@
-import { NodeDataType } from "../../types/flow";
+import type { NodeDataType } from "../../types/flow";
 
 export function countHandlesFn(data: NodeDataType): number {
-  let count = Object.keys(data.node!.template)
+  const count = Object.keys(data.node!.template)
     .filter(
       (templateField) =>
         templateField.charAt(0) !== "_" &&

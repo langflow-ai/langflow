@@ -1,5 +1,5 @@
-import { APIClassType, APIDataType } from "@/types/api";
-import { Dispatch, SetStateAction } from "react";
+import type { APIClassType, APIDataType } from "@/types/api";
+import type { Dispatch, SetStateAction } from "react";
 
 export interface NodeColors {
   [key: string]: string;

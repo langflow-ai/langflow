@@ -1,5 +1,6 @@
 import { useDarkStore } from "@/stores/darkStore";
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgNovita from "./novita";
 
 export const NovitaIcon = forwardRef<

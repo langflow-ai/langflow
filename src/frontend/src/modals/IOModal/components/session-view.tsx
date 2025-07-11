@@ -4,7 +4,7 @@ import {
   useUpdateMessage,
 } from "@/controllers/API/queries/messages";
 import { useIsFetching } from "@tanstack/react-query";
-import { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
+import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
 import cloneDeep from "lodash/cloneDeep";
 import { useMemo, useState } from "react";
 import TableComponent from "../../../components/core/parameterRenderComponent/components/tableComponent";

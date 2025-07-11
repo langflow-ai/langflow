@@ -17,10 +17,10 @@ import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { MCPSettingsType } from "@/types/mcp";
+import type { MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
-import { memo, ReactNode, useCallback, useState } from "react";
+import { memo, type ReactNode, useCallback, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 

@@ -14,7 +14,7 @@ import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-serv
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
-import { MCPServerInfoType } from "@/types/mcp";
+import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
 

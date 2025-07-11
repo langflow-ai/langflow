@@ -18,7 +18,7 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { FileComponentType, InputProps } from "../../types";
+import type { FileComponentType, InputProps } from "../../types";
 
 export default function InputFileComponent({
   value,

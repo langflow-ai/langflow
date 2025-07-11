@@ -4,6 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
+
 // TODO: fix this test
 test(
   "user must be able to stop a building",

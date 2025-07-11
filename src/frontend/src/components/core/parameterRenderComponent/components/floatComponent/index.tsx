@@ -9,7 +9,7 @@ import {
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
-import { FloatComponentType, InputProps } from "../../types";
+import type { FloatComponentType, InputProps } from "../../types";
 
 export default function FloatComponent({
   value,

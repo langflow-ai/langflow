@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import { ChevronsUpDown } from "lucide-react";
-import React from "react";
+import type React from "react";
 
 export const HeaderMenu = ({ children }) => (
   <DropdownMenu>{children}</DropdownMenu>

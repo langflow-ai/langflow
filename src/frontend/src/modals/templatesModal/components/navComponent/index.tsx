@@ -11,10 +11,9 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { useIsMobile } from "../../../../hooks/use-mobile";
-
 import { cn } from "@/utils/utils";
-import { NavProps } from "../../../../types/templates/types";
+import { useIsMobile } from "../../../../hooks/use-mobile";
+import type { NavProps } from "../../../../types/templates/types";
 
 export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
   const isMobile = useIsMobile();

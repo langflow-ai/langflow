@@ -14,7 +14,7 @@ import {
   SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import {
+import type {
   ChatInputType,
   FilePreviewType,
 } from "../../../../../types/components";
@@ -176,7 +176,7 @@ export default function ChatInput({
         repeat: 1,
         files: filesToSend,
       });
-    } catch (error) {
+    } catch (_error) {
       setChatValueStore(storedChatValue);
       setFiles(storedFiles);
     }

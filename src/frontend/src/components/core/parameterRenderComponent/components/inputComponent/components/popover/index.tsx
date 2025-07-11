@@ -17,7 +17,7 @@ import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { uniqueId } from "lodash";
 import { X } from "lucide-react";
-import { ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 const OptionBadge = ({
   option,

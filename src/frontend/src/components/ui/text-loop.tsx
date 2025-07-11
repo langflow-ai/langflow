@@ -3,10 +3,10 @@
 import { cn } from "@/utils/utils";
 import {
   AnimatePresence,
-  AnimatePresenceProps,
+  type AnimatePresenceProps,
   motion,
-  Transition,
-  Variants,
+  type Transition,
+  type Variants,
 } from "framer-motion";
 import { Children, useCallback, useEffect, useRef, useState } from "react";
 

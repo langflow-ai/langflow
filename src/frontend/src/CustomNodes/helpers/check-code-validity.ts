@@ -1,6 +1,6 @@
 import { componentsToIgnoreUpdate } from "@/constants/constants";
-import { OutputFieldType } from "@/types/api";
-import { NodeDataType } from "../../types/flow";
+import type { OutputFieldType } from "@/types/api";
+import type { NodeDataType } from "../../types/flow";
 
 // Returns true if the code is outdated (code string changed and not ignored)
 const codeIsOutdated = (

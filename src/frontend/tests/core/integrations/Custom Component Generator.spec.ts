@@ -48,7 +48,7 @@ withEventDeliveryModes(
         .locator("input")
         .last()
         .fill(process.env.ANTHROPIC_API_KEY ?? "");
-    } catch (e) {
+    } catch (_e) {
       console.log("There's API already added");
     }
 

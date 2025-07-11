@@ -100,7 +100,7 @@ test(
 
         await page.waitForTimeout(500);
 
-        let count = 0;
+        const count = 0;
 
         while (
           elementText !==
@@ -177,7 +177,7 @@ test(
           /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
-        const sseUrl = sseUrlMatch![1];
+        const _sseUrl = sseUrlMatch![1];
 
         await page.getByText("macOS/Linux", { exact: true }).click();
 
@@ -229,7 +229,7 @@ test(
           await page.getByText("Add MCP Server", { exact: true }).click({
             timeout: 5000,
           });
-        } catch (error) {
+        } catch (_error) {
           await page
             .getByTestId("mcp-server-dropdown")
             .click({ timeout: 3000 });
@@ -274,7 +274,6 @@ test(
         console.log(`Test passed on attempt ${attempt}`);
         return;
       } catch (error) {
-        error = error as Error;
         console.log(`Attempt ${attempt} failed:`, error);
 
         if (attempt === maxRetries) {

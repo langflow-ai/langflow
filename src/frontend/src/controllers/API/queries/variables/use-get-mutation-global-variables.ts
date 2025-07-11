@@ -1,8 +1,8 @@
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
-import { useMutationFunctionType } from "@/types/api";
-import { GlobalVariable } from "@/types/global_variables";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
+import type { GlobalVariable } from "@/types/global_variables";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

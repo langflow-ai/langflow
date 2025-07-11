@@ -7,7 +7,7 @@ import ListSelectionComponent from "../../../../../CustomNodes/GenericNode/compo
 import { cn } from "../../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 export default function McpComponent({
   value,

@@ -91,7 +91,7 @@ test(
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,
       });
-    } catch (error) {
+    } catch (_error) {
       await page.reload();
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,

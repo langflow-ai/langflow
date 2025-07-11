@@ -14,7 +14,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import ExportModal from "@/modals/exportModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
-import { FlowType } from "@/types/flow";
+import type { FlowType } from "@/types/flow";
 import { downloadFlow } from "@/utils/reactflowUtils";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";

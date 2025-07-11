@@ -1,7 +1,7 @@
 import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
-import { PaginatedFolderType } from "@/pages/MainPage/entities";
+import type { PaginatedFolderType } from "@/pages/MainPage/entities";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useQueryFunctionType } from "@/types/api";
+import type { useQueryFunctionType } from "@/types/api";
 import { processFlows } from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
 import { useRef } from "react";

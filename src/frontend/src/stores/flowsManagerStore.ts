@@ -1,8 +1,8 @@
 import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import { cloneDeep } from "lodash";
 import { create } from "zustand";
-import { FlowType } from "../types/flow";
-import {
+import type { FlowType } from "../types/flow";
+import type {
   FlowsManagerStoreType,
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";

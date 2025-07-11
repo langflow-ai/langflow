@@ -10,10 +10,10 @@ import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import Page from "./components/PageComponent";
+import useFlowStore from "../../stores/flowStore";
 import { FlowSidebarComponent } from "./components/flowSidebarComponent";
+import Page from "./components/PageComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);

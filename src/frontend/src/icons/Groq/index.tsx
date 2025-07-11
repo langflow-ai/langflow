@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgGroqLogo from "./GroqLogo";
 
 export const GroqIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(

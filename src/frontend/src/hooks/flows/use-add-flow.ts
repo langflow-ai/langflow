@@ -5,7 +5,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "@/stores/typesStore";
-import { FlowType } from "@/types/flow";
+import type { FlowType } from "@/types/flow";
 import {
   addVersionToDuplicates,
   createNewFlow,
@@ -48,7 +48,7 @@ const useAddFlow = () => {
   }) => {
     return new Promise(async (resolve, reject) => {
       const flow = cloneDeep(params?.flow) ?? undefined;
-      let flowData = flow
+      const flowData = flow
         ? await processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {

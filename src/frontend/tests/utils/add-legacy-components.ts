@@ -1,4 +1,4 @@
-import { expect, Page } from "playwright/test";
+import { expect, type Page } from "playwright/test";
 
 export const addLegacyComponents = async (page: Page) => {
   await page.getByTestId("sidebar-options-trigger").click();

@@ -29,7 +29,7 @@ export default function getRandomName(
   }
 
   // Construct the final name
-  let final_name = noSpace ? `${lv}_${rv}` : `${lv} ${rv}`;
+  const final_name = noSpace ? `${lv}_${rv}` : `${lv} ${rv}`;
   // Return title case final name
   return toTitleCase(final_name);
 }

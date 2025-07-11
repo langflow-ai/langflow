@@ -1,5 +1,5 @@
-import { APIDataType } from "@/types/api";
-import { FuseResult } from "fuse.js";
+import type { APIDataType } from "@/types/api";
+import type { FuseResult } from "fuse.js";
 
 export const combinedResultsFn = (
   fuseResults: FuseResult<any>[],

@@ -36,7 +36,7 @@ import useAuthStore from "@/stores/authStore";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { FolderType } from "../../../../../pages/MainPage/entities";
+import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
@@ -65,7 +65,7 @@ const SideBarFoldersButtonsComponent = ({
   const loading = !folders;
   const refInput = useRef<HTMLInputElement>(null);
 
-  const navigate = useCustomNavigate();
+  const _navigate = useCustomNavigate();
 
   const currentFolder = pathname.split("/");
   const urlWithoutPath =

@@ -81,7 +81,7 @@ const IOKeyPairInput = ({
                   <button
                     type="button"
                     onClick={() => {
-                      let newInputList = _.cloneDeep(currentData);
+                      const newInputList = _.cloneDeep(currentData);
                       newInputList.push({ "": "" });
                       setCurrentData(newInputList);
                       onChange(newInputList);
@@ -96,7 +96,7 @@ const IOKeyPairInput = ({
                   <button
                     type="button"
                     onClick={() => {
-                      let newInputList = _.cloneDeep(currentData);
+                      const newInputList = _.cloneDeep(currentData);
                       newInputList.splice(index, 1);
                       setCurrentData(newInputList);
                       onChange(newInputList);

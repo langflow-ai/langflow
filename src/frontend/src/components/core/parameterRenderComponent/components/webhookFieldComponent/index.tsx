@@ -4,7 +4,7 @@ import SecretKeyModalButton from "@/customization/components/custom-secret-key-m
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { getModalPropsApiKey } from "@/customization/utils/get-modal-props";
 import { useContext, useEffect, useRef, useState } from "react";
-import { InputProps, TextAreaComponentType } from "../../types";
+import type { InputProps, TextAreaComponentType } from "../../types";
 import CopyFieldAreaComponent from "../copyFieldAreaComponent";
 import TextAreaComponent from "../textAreaComponent";
 

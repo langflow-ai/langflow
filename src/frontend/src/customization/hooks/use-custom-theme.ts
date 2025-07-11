@@ -1,4 +1,5 @@
 // Custom Hook to manage theme logic
+
 import { useDarkStore } from "@/stores/darkStore";
 import { useEffect, useState } from "react";
 

@@ -1,4 +1,4 @@
-import { AlertItemType } from "../../alerts";
+import type { AlertItemType } from "../../alerts";
 
 export type AlertStoreType = {
   errorData: { title: string; list?: Array<string> };

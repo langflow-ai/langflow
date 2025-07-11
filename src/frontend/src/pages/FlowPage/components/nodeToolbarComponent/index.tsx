@@ -9,7 +9,7 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
-import { APIClassType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -26,8 +26,8 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
-import { nodeToolbarPropsType } from "../../../../types/components";
-import { FlowType } from "../../../../types/flow";
+import type { nodeToolbarPropsType } from "../../../../types/components";
+import type { FlowType } from "../../../../types/flow";
 import {
   checkHasToolMode,
   createFlowComponent,
@@ -349,11 +349,12 @@ const NodeToolbarComponent = memo(
           case "update":
             updateNode();
             break;
-          case "copy":
+          case "copy": {
             nodes = useFlowStore.getState().nodes;
             const node = nodes.filter((node) => node.id === data.id);
             setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
             break;
+          }
           case "duplicate":
             nodes = useFlowStore.getState().nodes;
             paste(

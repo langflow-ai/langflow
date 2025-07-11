@@ -6,7 +6,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-
 import {
   Popover,
   PopoverContentWithoutPortal,
@@ -15,7 +14,7 @@ import {
 import useFlowStore from "@/stores/flowStore";
 import { useRef } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
-import { outputComponentType } from "../../../../types/components";
+import type { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 
 export default function OutputComponent({

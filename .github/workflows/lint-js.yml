@@ -15,7 +15,7 @@ env:
 
 jobs:
   run-linters:
-    name: Run Prettier
+    name: Run Biome
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -47,7 +47,7 @@ jobs:
           npm install
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
-      - name: Run Prettier
+      - name: Run Biome
         run: |
           cd src/frontend
-          npm run check-format
+          npx @biomejs/biome check --changed

@@ -27,7 +27,7 @@ export const useStartConversation = (
     const audioSettings = JSON.parse(
       getLocalStorage("lf_audio_settings_playground") || "{}",
     );
-    const audioLanguage =
+    const _audioLanguage =
       getLocalStorage("lf_audio_language_playground") || "en-US";
 
     wsRef.current = new WebSocket(url);

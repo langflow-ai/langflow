@@ -5,11 +5,11 @@ import {
   DEL_KEY_SUCCESS_ALERT_PLURAL,
 } from "@/constants/alerts_constants";
 import {
-  IApiKeysDataArray,
+  type IApiKeysDataArray,
   useDeleteApiKey,
   useGetApiKeysQuery,
 } from "@/controllers/API/queries/api-keys";
-import { SelectionChangedEvent } from "ag-grid-community";
+import type { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useState } from "react";
 import TableComponent from "../../../../components/core/parameterRenderComponent/components/tableComponent";
 import { AuthContext } from "../../../../contexts/authContext";

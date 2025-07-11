@@ -5,6 +5,7 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import * as React from "react";
 import { cn } from "../../utils/utils";
 import ShadTooltip from "../common/shadTooltipComponent";
+
 const Dialog = DialogPrimitive.Root;
 
 const DialogTrigger = DialogPrimitive.Trigger;

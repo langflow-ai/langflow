@@ -5,7 +5,7 @@ import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
 import { useParams } from "react-router-dom";
-import { CardData } from "../../../../types/templates/types";
+import type { CardData } from "../../../../types/templates/types";
 
 export default function TemplateGetStartedCardComponent({
   bgImage,

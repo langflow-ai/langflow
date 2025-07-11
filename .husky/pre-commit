@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+cd src/frontend && npx lint-staged

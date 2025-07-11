@@ -1,6 +1,6 @@
 import { cn } from "@/utils/utils";
 import { motion } from "framer-motion";
-import React from "react";
+import type React from "react";
 
 export const BackgroundGradient = ({
   children,

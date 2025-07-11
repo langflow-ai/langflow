@@ -1,4 +1,4 @@
-import { AllNodeType } from "@/types/flow";
+import type { AllNodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 

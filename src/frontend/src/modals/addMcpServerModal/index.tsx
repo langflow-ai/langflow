@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
@@ -19,7 +17,7 @@ import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-s
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
-import { MCPServerType } from "@/types/mcp";
+import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
@@ -28,6 +26,7 @@ import {
   usePrefetchQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 //TODO IMPLEMENT FORM LOGIC
 

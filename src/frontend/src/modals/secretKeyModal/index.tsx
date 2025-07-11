@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
 import { createApiKey } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import { ApiKeyType } from "../../types/components";
+import type { ApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
 import { ContentRenderKey } from "./components/content-render";
 import { FormKeyRender } from "./components/form-key-render";

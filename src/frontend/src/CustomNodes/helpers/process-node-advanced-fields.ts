@@ -1,5 +1,5 @@
-import { APIClassType } from "@/types/api";
-import { EdgeType } from "@/types/flow";
+import type { APIClassType } from "@/types/api";
+import type { EdgeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 
 export function processNodeAdvancedFields(
@@ -7,7 +7,7 @@ export function processNodeAdvancedFields(
   edges: EdgeType[],
   nodeId: string,
 ) {
-  let newNode = cloneDeep(resData);
+  const newNode = cloneDeep(resData);
 
   const relevantEdges = edges.filter(
     (edge) => edge.source !== nodeId || edge.target !== nodeId,

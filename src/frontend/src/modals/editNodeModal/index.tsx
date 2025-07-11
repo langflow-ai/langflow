@@ -1,10 +1,10 @@
-import { APIClassType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useDarkStore } from "../../stores/darkStore";
-import { NodeDataType } from "../../types/flow";
+import type { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import { EditNodeComponent } from "./components/editNodeComponent";
 

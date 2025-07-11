@@ -6,7 +6,7 @@ import { ForwardedIconComponent } from "../../../../common/genericIconComponent"
 import { Badge } from "../../../../ui/badge";
 import { Button } from "../../../../ui/button";
 import { Skeleton } from "../../../../ui/skeleton";
-import { InputProps, ToolsComponentType } from "../../types";
+import type { InputProps, ToolsComponentType } from "../../types";
 
 export default function ToolsComponent({
   description,

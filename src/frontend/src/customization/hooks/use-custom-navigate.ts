@@ -1,7 +1,7 @@
 import {
-  NavigateFunction,
-  NavigateOptions,
-  To,
+  type NavigateFunction,
+  type NavigateOptions,
+  type To,
   useNavigate,
   useParams,
 } from "react-router-dom";

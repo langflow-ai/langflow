@@ -14,10 +14,10 @@ import useDetectScroll, {
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../../stores/flowStore";
-import { ChatMessageType } from "../../../../../types/chat";
-import { chatViewProps } from "../../../../../types/components";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import type { ChatMessageType } from "../../../../../types/chat";
+import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
@@ -47,7 +47,7 @@ export default function ChatView({
 }: chatViewProps): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
   const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;

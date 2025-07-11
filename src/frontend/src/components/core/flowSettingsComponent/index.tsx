@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { FlowType } from "@/types/flow";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { FlowType } from "@/types/flow";
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";

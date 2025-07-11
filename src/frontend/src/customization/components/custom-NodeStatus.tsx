@@ -1,7 +1,7 @@
-import { BuildStatus } from "@/constants/enums";
 import NodeStatus from "@/CustomNodes/GenericNode/components/NodeStatus";
-import { VertexBuildTypeAPI } from "@/types/api";
-import { NodeDataType } from "@/types/flow";
+import type { BuildStatus } from "@/constants/enums";
+import type { VertexBuildTypeAPI } from "@/types/api";
+import type { NodeDataType } from "@/types/flow";
 
 export function CustomNodeStatus({
   nodeId,

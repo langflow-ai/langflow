@@ -1,4 +1,4 @@
-import { LoadingComponentProps } from "../../../types/components";
+import type { LoadingComponentProps } from "../../../types/components";
 
 export default function LoadingComponent({
   remSize,

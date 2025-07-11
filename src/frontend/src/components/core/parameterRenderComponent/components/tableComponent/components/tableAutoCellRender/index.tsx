@@ -4,7 +4,7 @@ import StringReader from "@/components/common/stringReaderComponent";
 import DateReader from "@/components/core/dateReaderComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn, isTimeStampString } from "@/utils/utils";
-import { CustomCellRendererProps } from "ag-grid-react";
+import type { CustomCellRendererProps } from "ag-grid-react";
 import { uniqueId } from "lodash";
 import ToggleShadComponent from "../../../toggleShadComponent";
 
@@ -29,7 +29,7 @@ export default function TableAutoCellRender({
       case "object":
         return (
           <ObjectRender
-            setValue={!!colDef?.onCellValueChanged ? setValue : undefined}
+            setValue={colDef?.onCellValueChanged ? setValue : undefined}
             object={value}
           />
         );

@@ -1,6 +1,6 @@
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { GradientSave } from "@/icons/GradientSparkles";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
+import { GradientSave } from "@/icons/GradientSparkles";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
@@ -526,7 +526,7 @@ export const getNodeIcon = async (name: string) => {
   if (dynamicIconImports[lucideIconName]) {
     try {
       return cacheAndReturn(lazy(dynamicIconImports[lucideIconName]));
-    } catch (e) {
+    } catch (_e) {
       // Fall through to next option
     }
   }

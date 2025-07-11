@@ -7,7 +7,7 @@ import {
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { FilePreviewType } from "@/types/components";
+import type { FilePreviewType } from "@/types/components";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { useState } from "react";
 import ShortUniqueId from "short-unique-id";

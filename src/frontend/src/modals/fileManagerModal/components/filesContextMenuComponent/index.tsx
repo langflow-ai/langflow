@@ -10,8 +10,8 @@ import { useDuplicateFileV2 } from "@/controllers/API/queries/file-management/us
 import { useCustomHandleSingleFileDownload } from "@/customization/hooks/use-custom-handle-single-file-download";
 import ConfirmationModal from "@/modals/confirmationModal";
 import useAlertStore from "@/stores/alertStore";
-import { FileType } from "@/types/file_management";
-import { ReactNode, useState } from "react";
+import type { FileType } from "@/types/file_management";
+import { type ReactNode, useState } from "react";
 
 export default function FilesContextMenuComponent({
   children,

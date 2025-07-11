@@ -1,13 +1,13 @@
-import { Button } from "@/components/ui/button";
-import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
-  UpdateNodesType,
+  type UpdateNodesType,
 } from "@/CustomNodes/hooks/use-update-all-nodes";
+import { Button } from "@/components/ui/button";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
 import { useUpdateNodeInternals } from "@xyflow/react";

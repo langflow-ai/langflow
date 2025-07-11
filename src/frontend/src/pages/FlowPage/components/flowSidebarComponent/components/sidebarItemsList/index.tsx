@@ -5,7 +5,7 @@ import { removeCountFromString } from "@/utils/utils";
 import { useMemo } from "react";
 import { disableItem } from "../../helpers/disable-item";
 import { getDisabledTooltip } from "../../helpers/get-disabled-tooltip";
-import { UniqueInputsComponents } from "../../types";
+import type { UniqueInputsComponents } from "../../types";
 import SidebarDraggableComponent from "../sidebarDraggableComponent";
 
 const SidebarItemsList = ({

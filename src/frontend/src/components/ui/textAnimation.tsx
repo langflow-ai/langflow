@@ -3,8 +3,8 @@ import { cn } from "@/utils/utils";
 import {
   AnimatePresence,
   motion,
-  TargetAndTransition,
-  Variants,
+  type TargetAndTransition,
+  type Variants,
 } from "framer-motion";
 import React from "react";
 

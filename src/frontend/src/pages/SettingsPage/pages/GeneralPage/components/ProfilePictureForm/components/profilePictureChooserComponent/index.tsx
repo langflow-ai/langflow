@@ -1,4 +1,4 @@
-import { ProfilePicturesQueryResponse } from "@/controllers/API/queries/files";
+import type { ProfilePicturesQueryResponse } from "@/controllers/API/queries/files";
 import { customPreLoadImageUrl } from "@/customization/utils/custom-pre-load-image-url";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../../../../../../components/ui/button";

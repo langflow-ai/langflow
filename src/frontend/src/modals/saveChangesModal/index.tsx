@@ -60,6 +60,7 @@ export function SaveChangesModal({
               target="_blank"
               className="text-secondary underline"
               href="https://docs.langflow.org/configuration-auto-save"
+              rel="noopener"
             >
               Enable auto-saving
             </a>{" "}

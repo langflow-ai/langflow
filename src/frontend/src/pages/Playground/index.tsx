@@ -5,7 +5,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { CookieOptions, getCookie, setCookie } from "@/utils/utils";
+import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";

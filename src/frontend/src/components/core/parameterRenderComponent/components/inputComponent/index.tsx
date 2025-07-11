@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { InputComponentType } from "@/types/components";
+import type { InputComponentType } from "@/types/components";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import * as Form from "@radix-ui/react-form";

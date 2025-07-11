@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -128,7 +128,7 @@ async function tryConnectNodes(page: Page) {
       await page.getByTestId("handle-prompt-shownode-prompt-right").click({
         timeout: 500,
       });
-    } catch (e) {
+    } catch (_e) {
       numberOfEdges = await page.locator(".react-flow__edge-path").count();
       expect(numberOfEdges).toBe(0);
     }
@@ -141,7 +141,7 @@ async function tryConnectNodes(page: Page) {
         .click({
           timeout: 500,
         });
-    } catch (e) {
+    } catch (_e) {
       numberOfEdges = await page.locator(".react-flow__edge-path").count();
       expect(numberOfEdges).toBe(0);
     }

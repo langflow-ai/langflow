@@ -1,6 +1,6 @@
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
 import { useEffect, useState } from "react";

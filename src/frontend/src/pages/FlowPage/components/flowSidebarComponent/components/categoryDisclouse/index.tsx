@@ -5,7 +5,7 @@ import {
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { APIClassType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import { memo, useCallback } from "react";
 import SidebarItemsList from "../sidebarItemsList";
 

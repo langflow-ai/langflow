@@ -4,6 +4,7 @@ import path from "path";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+
 test(
   "user should be able to use chat memory as expected",
   { tag: ["@release", "@workspace", "@components"] },
