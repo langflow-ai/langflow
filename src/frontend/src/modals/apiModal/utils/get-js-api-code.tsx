@@ -91,29 +91,83 @@ if (!process.env.LANGFLOW_API_KEY) {
       ? `process.env.LANGFLOW_API_KEY ? {"x-api-key": process.env.LANGFLOW_API_KEY} : {}`
       : `{}`;
 
-    return `${authSection}const BASE_URL = "${baseUrl}";
+    return `${authSection}const fs = require('fs');
+const http = require('http');
+const path = require('path');
+
+const BASE_URL = "${baseUrl}";
 const FLOW_ID = "${flowId}";
+
+// Helper function to create multipart form data
+function createFormData(filePath) {
+    const boundary = '----FormBoundary' + Date.now();
+    const filename = path.basename(filePath);
+    const fileData = fs.readFileSync(filePath);
+    
+    let data = '';
+    data += \`--\${boundary}\\r\\n\`;
+    data += \`Content-Disposition: form-data; name="file"; filename="\${filename}"\\r\\n\`;
+    data += \`Content-Type: image/jpeg\\r\\n\\r\\n\`;
+    
+    const payload = Buffer.concat([
+        Buffer.from(data, 'utf8'),
+        fileData,
+        Buffer.from(\`\\r\\n--\${boundary}--\\r\\n\`, 'utf8')
+    ]);
+    
+    return { payload, boundary };
+}
+
+// Helper function to make HTTP requests
+function makeRequest(options, data) {
+    return new Promise((resolve, reject) => {
+        const req = http.request(options, (res) => {
+            let responseData = '';
+            res.on('data', (chunk) => { responseData += chunk; });
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    try {
+                        resolve(JSON.parse(responseData));
+                    } catch (e) {
+                        resolve(responseData);
+                    }
+                } else {
+                    reject(new Error(\`Request failed with status \${res.statusCode}: \${responseData}\`));
+                }
+            });
+        });
+        req.on('error', reject);
+        if (data) req.write(data);
+        req.end();
+    });
+}
 
 async function uploadAndExecuteFlow() {
     try {
         // Step 1: Upload file for Chat Input
-        const formData = new FormData();
-        formData.append('file', document.getElementById('fileInput').files[0]); // Assuming file input element
+        const { payload, boundary } = createFormData('your-image.jpg');
+        ${isAuth ? `
+        const authHeaders = process.env.LANGFLOW_API_KEY ? 
+            { 'x-api-key': process.env.LANGFLOW_API_KEY } : {};` : ''}
         
-        const headers = ${headersCondition};
-        
-        const uploadResponse = await fetch(\`\${BASE_URL}/api/v1/files/upload/\${FLOW_ID}\`, {
+        const uploadOptions = {
+            hostname: '${host.split(':')[0]}',
+            port: ${host.includes(':') ? host.split(':')[1] : (protocol === 'https:' ? '443' : '80')},
+            path: \`/api/v1/files/upload/\${FLOW_ID}\`,
             method: 'POST',
-            headers: headers,
-            body: formData
-        });
+            headers: {
+                'Content-Type': \`multipart/form-data; boundary=\${boundary}\`,
+                'Content-Length': payload.length${isAuth ? `,
+                ...authHeaders` : ''}
+            }
+        };
         
-        if (!uploadResponse.ok) throw new Error('Upload failed');
-        const uploadData = await uploadResponse.json();
-        const filePath = uploadData.file_path;
+        const uploadResult = await makeRequest(uploadOptions, payload);
+        const filePath = uploadResult.file_path;
+        console.log('Upload successful! File path:', filePath);
         
         // Step 2: Execute flow
-        const payload = {
+        const executePayload = JSON.stringify({
             "output_type": "${processedPayload.output_type || "chat"}",
             "input_type": "${processedPayload.input_type || "chat"}",
             "input_value": "${processedPayload.input_value || "Your message here"}",
@@ -122,23 +176,26 @@ async function uploadAndExecuteFlow() {
                     "files": filePath
                 }
             }
-        };
+        });
         
-        const executeResponse = await fetch(\`\${BASE_URL}/api/v1/run/\${FLOW_ID}?stream=false\`, {
+        const executeOptions = {
+            hostname: '${host.split(':')[0]}',
+            port: ${host.includes(':') ? host.split(':')[1] : (protocol === 'https:' ? '443' : '80')},
+            path: \`/api/v1/run/\${FLOW_ID}?stream=false\`,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...headers
-            },
-            body: JSON.stringify(payload)
-        });
+                'Content-Length': Buffer.byteLength(executePayload)${isAuth ? `,
+                ...authHeaders` : ''}
+            }
+        };
         
-        if (!executeResponse.ok) throw new Error('Execution failed');
-        const result = await executeResponse.json();
+        const result = await makeRequest(executeOptions, executePayload);
+        console.log('Flow execution successful!');
         console.log(result);
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error:', error.message);
     }
 }
 
@@ -159,51 +216,108 @@ if (!process.env.LANGFLOW_API_KEY) {
       ? `process.env.LANGFLOW_API_KEY ? {"x-api-key": process.env.LANGFLOW_API_KEY} : {}`
       : `{}`;
 
-    return `${authSection}const BASE_URL = "${baseUrl}";
+    return `${authSection}const fs = require('fs');
+const http = require('http');
+const path = require('path');
+
+const BASE_URL = "${baseUrl}";
 const FLOW_ID = "${flowId}";
+
+// Helper function to create multipart form data
+function createFormData(filePath) {
+    const boundary = '----FormBoundary' + Date.now();
+    const filename = path.basename(filePath);
+    const fileData = fs.readFileSync(filePath);
+    
+    let data = '';
+    data += \`--\${boundary}\\r\\n\`;
+    data += \`Content-Disposition: form-data; name="file"; filename="\${filename}"\\r\\n\`;
+    data += \`Content-Type: application/octet-stream\\r\\n\\r\\n\`;
+    
+    const payload = Buffer.concat([
+        Buffer.from(data, 'utf8'),
+        fileData,
+        Buffer.from(\`\\r\\n--\${boundary}--\\r\\n\`, 'utf8')
+    ]);
+    
+    return { payload, boundary };
+}
+
+// Helper function to make HTTP requests
+function makeRequest(options, data) {
+    return new Promise((resolve, reject) => {
+        const req = http.request(options, (res) => {
+            let responseData = '';
+            res.on('data', (chunk) => { responseData += chunk; });
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    try {
+                        resolve(JSON.parse(responseData));
+                    } catch (e) {
+                        resolve(responseData);
+                    }
+                } else {
+                    reject(new Error(\`Request failed with status \${res.statusCode}: \${responseData}\`));
+                }
+            });
+        });
+        req.on('error', reject);
+        if (data) req.write(data);
+        req.end();
+    });
+}
 
 async function uploadAndExecuteFlow() {
     try {
         // Step 1: Upload file
-        const formData = new FormData();
-        formData.append('file', document.getElementById('fileInput').files[0]); // Assuming file input element
+        const { payload, boundary } = createFormData('your-file.pdf');
+        ${isAuth ? `
+        const authHeaders = process.env.LANGFLOW_API_KEY ? 
+            { 'x-api-key': process.env.LANGFLOW_API_KEY } : {};` : ''}
         
-        const headers = ${headersCondition};
-        
-        const uploadResponse = await fetch(\`\${BASE_URL}/api/v2/files\`, {
+        const uploadOptions = {
+            hostname: '${host.split(':')[0]}',
+            port: ${host.includes(':') ? host.split(':')[1] : (protocol === 'https:' ? '443' : '80')},
+            path: '/api/v2/files',
             method: 'POST',
-            headers: headers,
-            body: formData
-        });
+            headers: {
+                'Content-Type': \`multipart/form-data; boundary=\${boundary}\`,
+                'Content-Length': payload.length${isAuth ? `,
+                ...authHeaders` : ''}
+            }
+        };
         
-        if (!uploadResponse.ok) throw new Error('Upload failed');
-        const uploadData = await uploadResponse.json();
-        const fileId = uploadData.id;
+        const uploadResult = await makeRequest(uploadOptions, payload);
+        const fileId = uploadResult.id;
+        console.log('Upload successful! File ID:', fileId);
         
         // Step 2: Run flow with file_id
-        const payload = {
+        const executePayload = JSON.stringify({
             "tweaks": {
                 "${fileNodeId}": {
                     "file_id": fileId
                 }
             }
-        };
+        });
         
-        const executeResponse = await fetch(\`\${BASE_URL}/api/v1/run/\${FLOW_ID}\`, {
+        const executeOptions = {
+            hostname: '${host.split(':')[0]}',
+            port: ${host.includes(':') ? host.split(':')[1] : (protocol === 'https:' ? '443' : '80')},
+            path: \`/api/v1/run/\${FLOW_ID}\`,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...headers
-            },
-            body: JSON.stringify(payload)
-        });
+                'Content-Length': Buffer.byteLength(executePayload)${isAuth ? `,
+                ...authHeaders` : ''}
+            }
+        };
         
-        if (!executeResponse.ok) throw new Error('Execution failed');
-        const result = await executeResponse.json();
+        const result = await makeRequest(executeOptions, executePayload);
+        console.log('Flow execution successful!');
         console.log(result);
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error:', error.message);
     }
 }
 
