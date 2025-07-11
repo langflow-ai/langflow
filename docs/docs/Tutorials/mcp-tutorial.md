@@ -169,7 +169,7 @@ At this point, you can open the Playground and ask what the weather is, but an a
 
 This way, you can add MCP servers in the visual builder to improve your application's results, while not changing any code.
 
-1. To construct a Python application to connect to your flow, gather the following information:gather the following information:
+1. To construct a Python application to connect to your flow, gather the following information:
 
     * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
     * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
@@ -182,7 +182,7 @@ This way, you can add MCP servers in the visual builder to improve your applicat
     import requests
     import os
 
-    url = "http://localhost:7861/api/v1/run/10424198-e0da-44b8-91d1-97d55b0e96ce"  # The complete API endpoint URL for this flow
+    url = "LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"  # The complete API endpoint URL for this flow
 
     # Request payload configuration
     payload = {
@@ -194,7 +194,7 @@ This way, you can add MCP servers in the visual builder to improve your applicat
     # Request headers
     headers = {
         "Content-Type": "application/json",
-        "x-api-key": "LANGFLOW_API_KEY"  # Authentication key from environment variable
+        "x-api-key": "LANGFLOW_API_KEY"
     }
 
     try:
@@ -202,13 +202,17 @@ This way, you can add MCP servers in the visual builder to improve your applicat
         response = requests.request("POST", url, json=payload, headers=headers)
         response.raise_for_status()  # Raise exception for bad status codes
 
-        # Print response
-        print(response.text)
+        # Parse and print only the message text
+        data = response.json()
+        message = data["outputs"][0]["outputs"][0]["results"]["message"]["text"]
+        print(message)
 
     except requests.exceptions.RequestException as e:
         print(f"Error making API request: {e}")
     except ValueError as e:
         print(f"Error parsing response: {e}")
+    except (KeyError, IndexError) as e:
+        print(f"Error extracting message from response: {e}")
     ```
 
 3.  Save and run the script to send the request and test the flow.
@@ -220,7 +224,8 @@ This way, you can add MCP servers in the visual builder to improve your applicat
     The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
 
     ```
-    The weather in Waynesboro, Pennsylvania, is currently overcast with a temperature of 23.0°C (about 73.4°F). If you need more details or have any other questions, feel free to ask!
+    The weather in Waynesboro, Pennsylvania, is currently overcast with a temperature of 23.0°C (about 73.4°F).
+    If you need more details or have any other questions, feel free to ask!
     ```
 
     </details>
