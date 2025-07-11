@@ -1,5 +1,3 @@
-import { keepPreviousData } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 import {
   REFETCH_SERVER_HEALTH_INTERVAL,
   SERVER_HEALTH_INTERVAL,
@@ -7,6 +5,8 @@ import {
 import { HEALTH_CHECK_URL } from "@/customization/config-constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
+import { keepPreviousData } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { UseRequestProcessor } from "../../services/request-processor";

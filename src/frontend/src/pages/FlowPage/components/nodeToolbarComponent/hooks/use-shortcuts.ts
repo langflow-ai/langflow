@@ -1,5 +1,5 @@
-import { useHotkeys } from "react-hotkeys-hook";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { useHotkeys } from "react-hotkeys-hook";
 import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class";
 
 export default function useShortcuts({

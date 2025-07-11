@@ -1,4 +1,3 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -14,6 +13,7 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
+import { PopoverAnchor } from "@radix-ui/react-popover";
 
 const CustomInputPopoverObject = ({
   id,

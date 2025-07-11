@@ -1,11 +1,11 @@
+import useFlowStore from "@/stores/flowStore";
+import { scapeJSONParse } from "@/utils/reactflowUtils";
 import {
   BaseEdge,
   type EdgeProps,
   getBezierPath,
   Position,
 } from "@xyflow/react";
-import useFlowStore from "@/stores/flowStore";
-import { scapeJSONParse } from "@/utils/reactflowUtils";
 
 export function DefaultEdge({
   sourceHandleId,

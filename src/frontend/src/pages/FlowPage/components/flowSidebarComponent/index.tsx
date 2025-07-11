@@ -1,8 +1,3 @@
-import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +14,11 @@ import {
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
+import Fuse from "fuse.js";
+import { cloneDeep } from "lodash";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";

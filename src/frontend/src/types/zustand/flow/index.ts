@@ -1,3 +1,4 @@
+import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import type {
   Connection,
   Node,
@@ -6,7 +7,6 @@ import type {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import type { VertexBuildTypeAPI } from "../../api";
 import type { ChatInputType, ChatOutputType } from "../../chat";

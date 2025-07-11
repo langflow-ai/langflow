@@ -1,9 +1,9 @@
-import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import {
   customGetAppVersions,
   customGetLatestVersion,
 } from "@/customization/utils/custom-get-app-latest-version";
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import type {

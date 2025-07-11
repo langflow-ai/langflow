@@ -12,9 +12,16 @@
  */
 
 import {
+  getLeftHandleId,
+  getRightHandleId,
+} from "@/CustomNodes/utils/get-handle-id";
+import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
+import useFlowStore from "@/stores/flowStore";
+import {
+  getOutgoers,
   type Connection,
   type Edge,
-  getOutgoers,
   type Node,
   type OnSelectionChangeParams,
   type ReactFlowJsonObject,
@@ -22,13 +29,6 @@ import {
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import ShortUniqueId from "short-unique-id";
-import {
-  getLeftHandleId,
-  getRightHandleId,
-} from "@/CustomNodes/utils/get-handle-id";
-import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
-import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
-import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
   INPUT_TYPES,

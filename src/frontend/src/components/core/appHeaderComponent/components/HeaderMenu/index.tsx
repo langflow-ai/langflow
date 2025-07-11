@@ -1,5 +1,3 @@
-import { ChevronsUpDown } from "lucide-react";
-import type React from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   DropdownMenu,
@@ -9,6 +7,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
+import { ChevronsUpDown } from "lucide-react";
+import type React from "react";
 
 export const HeaderMenu = ({ children }) => (
   <DropdownMenu>{children}</DropdownMenu>

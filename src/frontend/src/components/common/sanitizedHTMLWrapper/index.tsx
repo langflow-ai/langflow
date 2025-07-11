@@ -1,6 +1,6 @@
+import { cn } from "@/utils/utils";
 import DOMPurify from "dompurify";
 import { forwardRef } from "react";
-import { cn } from "@/utils/utils";
 import type { SanitizedHTMLWrapperType } from "../../../types/components";
 
 const SanitizedHTMLWrapper = forwardRef<

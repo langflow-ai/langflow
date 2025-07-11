@@ -1,11 +1,11 @@
 "use client";
 
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useIsMobile } from "@/hooks/use-mobile";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { cn } from "../../utils/utils";

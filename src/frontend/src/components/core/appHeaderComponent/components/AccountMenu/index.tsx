@@ -1,4 +1,3 @@
-import { FaDiscord, FaGithub } from "react-icons/fa";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   DATASTAX_DOCS_URL,
@@ -14,6 +13,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { cn } from "@/utils/utils";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import {
   HeaderMenu,
   HeaderMenuItemButton,

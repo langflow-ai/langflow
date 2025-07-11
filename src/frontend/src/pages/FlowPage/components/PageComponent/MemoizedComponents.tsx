@@ -1,5 +1,3 @@
-import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControls, {
   CustomControlButton,
@@ -7,6 +5,8 @@ import CanvasControls, {
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
+import { Background, Panel } from "@xyflow/react";
+import { memo } from "react";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />

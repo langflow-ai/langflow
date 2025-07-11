@@ -1,5 +1,5 @@
-import { motion, type Transition } from "framer-motion";
 import { cn } from "@/utils/utils";
+import { motion, type Transition } from "framer-motion";
 
 type BorderTrailProps = {
   className?: string;

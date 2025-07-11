@@ -1,7 +1,7 @@
 // Custom Hook to manage theme logic
 
-import { useEffect, useState } from "react";
 import { useDarkStore } from "@/stores/darkStore";
+import { useEffect, useState } from "react";
 
 const useTheme = () => {
   const [systemTheme, setSystemTheme] = useState(false);

@@ -1,13 +1,13 @@
 "use client";
+import { BorderTrail } from "@/components/core/border-trail";
+import type { ContentBlock } from "@/types/chat";
+import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
-import { BorderTrail } from "@/components/core/border-trail";
-import type { ContentBlock } from "@/types/chat";
-import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import { Separator } from "../../ui/separator";
 import ContentDisplay from "./ContentDisplay";
