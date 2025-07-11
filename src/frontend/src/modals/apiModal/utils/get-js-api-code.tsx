@@ -21,11 +21,12 @@ export function getNewJsApiCode({
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
-  
+
   // Parse URL for robust hostname/port extraction
   const parsedUrl = new URL(baseUrl);
   const hostname = parsedUrl.hostname;
-  const port = parsedUrl.port || (parsedUrl.protocol === 'https:' ? '443' : '80');
+  const port =
+    parsedUrl.port || (parsedUrl.protocol === "https:" ? "443" : "80");
 
   // Check if there are file uploads
   const tweaks = processedPayload.tweaks || {};
