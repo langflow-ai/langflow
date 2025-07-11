@@ -19,14 +19,9 @@ For more information, see [Start a secure Langflow server with authentication](#
 
 The section describes the available authentication configuration variables.
 
-The Langflow project includes a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
-You can copy the contents of this file into your own `.env` file and replace the example values with your own preferred settings.
+You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
 ### LANGFLOW_AUTO_LOGIN
-
-When `True`, Langflow automatically logs users in with username `langflow` and password `langflow` without requiring user authentication.
-To disable automatic login and enforce user authentication, set this value to `False` in your `.env` file.
-By default, this variable is set to `True`.
 
 Langflow **does not** allow users to have simultaneous or shared access to flows.
 If `AUTO_LOGIN` is enabled and user management is disabled (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment, but it is not password protected. If two users access the same flow, Langflow saves only the work of the last user to save.
@@ -34,6 +29,19 @@ If `AUTO_LOGIN` is enabled and user management is disabled (`LANGFLOW_NEW_USER_I
 ```bash
 LANGFLOW_AUTO_LOGIN=True
 ```
+
+In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+
+<details>
+<summary>AUTO_LOGIN and SKIP_AUTH options</summary>
+
+In Langflow versions earlier than 1.5, if `AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
+In this case, API requests don't require a Langflow API key.
+
+In Langflow version 1.5, you can set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true` to skip authentication for API requests.
+However, the `SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
+</details>
 
 ### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD
 
