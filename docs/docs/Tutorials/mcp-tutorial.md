@@ -21,9 +21,10 @@ In this tutorial, you will use Langflow as a client to connect your application 
 
     This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
-## Create an application that connects to Langflow
+## Create
+## Create a Python application that connects to Langflow
 
-Create a Python application that connects to Langflow and asks your LLM if it's a good day to surf.
+Create a Python script that connects to Langflow and asks your LLM if it's a good day to surf.
 
 ```python
 import requests
@@ -59,7 +60,9 @@ except ValueError as e:
 ```
 
 This application works, but it's not very contextually aware.
-The LLM will most likely express that it needs to know your location.
+The LLM will most likely express that it needs to know your location, and if you include your location, the results are generic and not up-to-date.
+
+
 You can add more up-to-date context with MCP.
 The MCP Tools component in Langflow connects to an external MCP server, which can expose APIs as tools, such as “get current time” or “fetch stock price”.
 This lets your Langflow agent use those tools directly, and improves the content for the LLM.
