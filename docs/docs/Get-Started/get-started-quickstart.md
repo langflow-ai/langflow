@@ -11,22 +11,29 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
-- [An OpenAI API key](https://platform.openai.com/api-keys)
-- [A Langflow API key](/configuration-api-keys)
+- [Install and start Langflow](/get-started-installation)
+- [Create an OpenAI API key](https://platform.openai.com/api-keys)
+- [Create a Langflow API key](/configuration-api-keys)
 
-## Create a Langflow API key
+<details>
+<summary>Create a Langflow API key</summary>
 
-A [Langflow API key](/configuration-api-keys) is a user-specific token you can use with Langflow.
+A Langflow API key is a user-specific token you can use with Langflow.
 
 To create a Langflow API key, do the following:
 
 1. In Langflow, click your user icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click <Icon name="Plus" aria-hidden="true"/> **Add New**.
 3. Name your key, and then click **Create API Key**.
-4. Copy the API key and store it in a secure location.
-5. Include your `LANGFLOW_API_KEY` in requests like this:
-    ```text
+4. Copy the API key and store it securely.
+5. To use your Langflow API key in a request, set a `LANGFLOW_API_KEY` environment variable in your terminal, and then include an `x-api-key` header or query parameter with your request.
+For example:
+
+    ```bash
+    # Set variable
+    export LANGFLOW_API_KEY="sk..."
+
+    # Send request
     curl --request POST \
      --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
      --header 'Content-Type: application/json' \
@@ -37,11 +44,7 @@ To create a Langflow API key, do the following:
        "input_value": "Hello"
      }'
     ```
-    The API access pane's code snippets include a script that looks for a `LANGFLOW_API_KEY` environment variable set in your terminal session.
-    Set this variable in your terminal so you can copy and paste the commands.
-    ```bash
-    export LANGFLOW_API_KEY="sk..."
-    ```
+</details>
 
 ## Run the Simple Agent template flow
 
@@ -71,25 +74,22 @@ For this request, the agent selects the URL tool's `fetch_content` action, and t
 
 6. When you are done testing the flow, click <Icon name="X" aria-hidden="true"/>**Close**.
 
+:::tip Next steps
 Now that you've run your first flow, try these next steps:
 
-- Edit your **Simple Agent** flow by attaching different tools or adding more components to the flow.
-- Build your own flows from scratch or by modifying other template flows.
+- Edit your **Simple Agent** flow by attaching different tools or adding more [components](/concepts-components) to the flow.
+- [Build your own flows](/concepts-flows) from scratch or by modifying other template flows.
 - Integrate flows into your applications, as explained in [Run your flows from external applications](#run-your-flows-from-external-applications).
-
-Optionally, stop here if you just want to create more flows within Langflow.
-
-If you want to learn how Langflow integrates into external applications, read on.
+:::
 
 ## Run your flows from external applications
 
-Langflow is an IDE, but it's also a runtime you can call through an API with Python, JavaScript, or HTTP.
+Langflow is an IDE, but it's also a runtime you can call through the [Langflow API](/api-reference-api-examples) with Python, JavaScript, or HTTP.
 
 When you start Langflow locally, you can send requests to the local Langflow server.
-For production applications, you need to deploy a stable Langflow instance to handle API calls.
-For more information, see [Langflow deployment overview](/deployment-overview).
+For production applications, you need to [deploy a stable Langflow instance](/deployment-overview) to handle API calls.
 
-For example, you can use `POST /run` to run a flow and get the result.
+For example, you can use the `/run` endpoint to run a flow and get the result.
 
 Langflow provides code snippets to help you get started with the Langflow API.
 
@@ -553,5 +553,8 @@ payload = {
 
 ## Next steps
 
-* [Model Context Protocol (MCP) servers](/mcp-server)
-* [Langflow deployment overview](/deployment-overview)
+* [Use Langflow as a Model Context Protocol (MCP) server](/mcp-server)
+* [Application development with Langflow](/develop-application)
+* [Deploy a Langflow server](/deployment-overview)
+* [File management](/concepts-file-management)
+* [Credential management](/configuration-api-keys)

@@ -8,7 +8,7 @@ The following pages provide information about how to develop and configure Langf
 The [Develop an application in Langflow](/develop-application) guide walks you through packaging and serving a flow, from your local development environment to a containerized application.
 As you build your application, you will configure the following application behaviors. More detailed explanation is provided in the individual pages.
 
-* [Custom Dependencies](/install-custom-dependencies) - Add and manage additional Python packages and external dependencies in your Langflow projects.
+* [Custom Dependencies](/install-custom-dependencies) - Add and manage additional Python packages and external dependencies in your Langflow applications.
 
 * [Memory and Storage](/memory) - Configure Langflow's storage and caching behavior.
 

@@ -9,9 +9,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ## Prepare to upgrade
 
-To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following:
+:::important
+Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
+This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
+:::
 
-1. [Export your projects](/api-projects#export-a-project) to create backups of your flows:
+To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following upgrade process:
+
+1. Recommended: [Export your projects](/api-projects#export-a-project) to create backups of your flows:
 
     ```bash
     curl -X GET \
@@ -19,17 +25,24 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
       -H "accept: application/json" \
       -H "x-api-key: $LANGFLOW_API_KEY"
     ```
-2. Install the new version: 
 
-   * **Langflow OSS Python package**: Install the new version in a new virtual environment, and then [import your flows](/concepts-flows) to test them in the new version.
-   * **Langflow Docker image**: Run the new image in a separate container, and then [import your flows](/concepts-flows) to the version of Langflow running in the new container.
-   * **Langflow Desktop**: Upgrade Langflow Desktop, as explained in [Manage your version of Langflow Desktop](/get-started-installation#manage-your-version-of-langflow-desktop). If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then  [import your flows](/concepts-flows) to the new installation.
+   To export flows from the Langflow UI, see [Import and export flows](/concepts-flows-import).
 
-4. Test your flows in the new version, [upgrading components](/concepts-components#component-versions) as needed.
+2. Install the new version:
+
+   * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+   * **Langflow Docker image**: Run the new image in a separate container.
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
+
+   <!-- :::tip
+   If you experience data loss after an in-place upgrade of Langflow Desktop, see [Unexpected data loss after Langflow Desktop upgrade](/troubleshoot#data-loss).
+   :::-->
+
+3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
 
     When upgrading components, you can use the **Create backup flow before updating** option if you didn't previously export your flows.
 
-5. If you installed the new version in isolation, upgrade your primary installation after testing the new version.
+4. If you installed the new version in isolation, upgrade your primary installation after testing the new version.
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
@@ -41,8 +54,8 @@ The following updates are included in this version:
 
 - Authentication changes
 
-    All API endpoints now require a Langflow API key to function, even when [LANGFLOW_AUTO_LOGIN](/environment-variables#LANGFLOW_AUTO_LOGIN) is enabled. This change enhances security by ensuring that automatic login features are properly authenticated.
-    The only exceptions are for the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which will not require API keys.
+    To enhance security and ensure proper authentication for automatic login features, most API endpoints now require authentication with a Langflow API key, regardless of the `AUTO_LOGIN` setting.
+    The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
     For more information, see [API keys](/configuration-api-keys).
 
 - New Language Model and Embedding Model components
@@ -64,7 +77,7 @@ The following updates are included in this version:
 
 - Input schema replaces temporary overrides
 
-    The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow’s code snippets, providing ready-to-use templates for making requests in your preferred programming language.
+    The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow's code snippets, providing ready-to-use templates for making requests in your preferred programming language.
 
 - Tools category is now legacy
 
