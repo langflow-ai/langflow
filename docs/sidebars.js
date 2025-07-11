@@ -63,7 +63,7 @@ module.exports = {
         {
           type: "doc",
           id: "Concepts/concepts-publish",
-          label: "Share and embed flows"
+          label: "Run flows"
         },
         {
           type: "doc",
