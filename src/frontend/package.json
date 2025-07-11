@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "private": true,
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -93,6 +93,8 @@
     "dev:docker": "vite --host 0.0.0.0",
     "start": "vite",
     "build": "vite build",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "serve": "vite preview",
     "format": "npx prettier --write \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
     "check-format": "npx prettier --check \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
@@ -116,8 +118,9 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://127.0.0.1:7860",
+  "proxy": "http://localhost:7860",
   "devDependencies": {
+    "@jest/types": "^30.0.1",
     "@playwright/test": "^1.52.0",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
@@ -135,6 +138,9 @@
     "@vitejs/plugin-react-swc": "^3.7.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^9.5.0",
+    "jest": "^30.0.3",
+    "jest-environment-jsdom": "^30.0.2",
+    "jest-junit": "^16.0.0",
     "postcss": "^8.4.38",
     "prettier": "^3.3.2",
     "prettier-plugin-organize-imports": "^3.2.4",
@@ -142,6 +148,7 @@
     "simple-git-hooks": "^2.11.1",
     "tailwindcss": "^3.4.4",
     "tailwindcss-dotted-background": "^1.1.0",
+    "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
     "vite": "^5.4.19"

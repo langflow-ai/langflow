@@ -11,23 +11,21 @@ Vector databases store vector data, which backs AI workloads like chatbots and R
 
 Vector database components establish connections to existing vector databases or create in-memory vector stores for storing and retrieving vector data.
 
-Vector database components are distinct from [memory components](/components-memories), which are built specifically for storing and retrieving chat messages from external databases.
+Vector database components are distinct from [memory components](/components-memories), which are built specifically for storing and retrieving chat messages from internal Langflow memory or external databases. For more information, see [Memory management options](/memory).
 
 ## Use a vector store component in a flow
 
-This example uses the **Astra DB vector store** component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The Astra DB vector store generates embeddings with the connected [model](/components-models) component, and stores them in the connected Astra DB database.
+This example uses the **Chroma DB** vector store component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The vector store component generates embeddings with the connected [model](/components-models) component, and stores them in the connected vector database.
 
 This vector data can then be retrieved for workloads like Retrieval Augmented Generation.
 
-![](/img/vector-store-retrieval.png)
+![Embedding data into a vector store](/img/vector-store-document-ingestion.png)
 
 The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search.
 The results are output from the vector database component as a [Data](/concepts-objects) object and parsed into text.
 This text fills the `{context}` variable in the **Prompt** component, which informs the **Open AI model** component's responses.
 
-Alternatively, connect the vector database component's **Retriever** port to a [retriever tool](components-tools#retriever-tool), and then to an [agent](/components-agents) component. This enables the agent to use your vector database as a tool and make decisions based on the available data.
-
-![](/img/vector-store-agent-retrieval-tool.png)
+![Retrieval from a vector store](/img/vector-store-retrieval.png)
 
 ## Astra DB Vector Store
 
@@ -81,7 +79,7 @@ The **Astra DB Vector Store** component offers two methods for generating embedd
 The embedding model selection is made when creating a new collection and cannot be changed later.
 :::
 
-For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/starter-projects-vector-store-rag).
+For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/vector-store-rag).
 
 For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
@@ -120,12 +118,12 @@ You should convert the query into:
 2. A question to use as the basis for a QA embedding engine.
 Avoid common keywords associated with the user's subject matter.
 ```
-7. To view the keywords and questions the **OpenAI** component generates from your collection, in the **OpenAI** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+7. To view the keywords and questions the **OpenAI** component generates from your collection, in the **OpenAI** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 ```
 1. Keywords: features, data, attributes, characteristics
 2. Question: What characteristics can be identified in my data?
 ```
-8. To view the [DataFrame](/concepts-objects#dataframe-object) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+8. To view the [DataFrame](/concepts-objects#dataframe-object) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 The DataFrame is passed to a **Parser** component, which parses the contents of the **Keywords** column into a string.
 
     This string of comma-separated words is passed to the **Lexical Terms** port of the **Astra DB** component.
@@ -264,11 +262,11 @@ This example splits text from a [URL](/components-data#url) component, and compu
 2. In the **Chroma DB** component, in the **Collection** field, enter a name for your embeddings collection.
 3. Optionally, to persist the Chroma database, in the **Persist** field, enter a directory to store the `chroma.sqlite3` file.
 This example uses `./chroma-db` to create a directory relative to where Langflow is running.
-4. To load data and embeddings into your Chroma database, in the **Chroma DB** component, click <Icon name="Play" aria-label="Play icon" />.
+4. To load data and embeddings into your Chroma database, in the **Chroma DB** component, click <Icon name="Play" aria-hidden="true"/> **Run component**.
 :::tip
 When loading duplicate documents, enable the **Allow Duplicates** option in Chroma DB if you want to store multiple copies of the same content, or disable it to automatically deduplicate your data.
 :::
-5. To view the split data, in the **Split Text** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+5. To view the split data, in the **Split Text** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 6. To query your loaded data, open the **Playground** and query your database.
 Your input is converted to vector data and compared to the stored vectors in a vector similarity search.
 
@@ -399,7 +397,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | Name | Type | Description |
 |------|------|-------------|
 | collection_name | String | The name of the Chroma collection. Default: "langflow". |
-| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `{directory}/vector_stores/{collection_name}`. If not specified, it will use your system's cache folder. |
+| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `$DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, it uses your system's cache folder. |
 | existing_collections | String | Select a previously created collection to search through its stored data. |
 | embedding | Embeddings | The embedding function to use for the vector store. |
 | allow_duplicates | Boolean | If false, will not add documents that are already in the Vector Store. |

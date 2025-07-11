@@ -59,14 +59,15 @@ export const mutateTemplate = async (
                 newTemplate.outputs ?? [],
               );
               newNode.tool_mode = toolMode ?? node.tool_mode;
-            }
-            try {
-              setNodeClass(newNode);
-            } catch (e) {
-              if (e instanceof Error && e.message === "Node not found") {
-                console.log("Node not found");
-              } else {
-                throw e;
+              newNode.last_updated = newTemplate.last_updated;
+              try {
+                setNodeClass(newNode);
+              } catch (e) {
+                if (e instanceof Error && e.message === "Node not found") {
+                  console.log("Node not found");
+                } else {
+                  throw e;
+                }
               }
             }
             callback?.();

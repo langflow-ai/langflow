@@ -1,11 +1,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
-from langflow.custom import Component
-from langflow.inputs import DropdownInput, SecretStrInput, StrInput
+from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import DropdownInput, SecretStrInput, StrInput
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 
@@ -43,8 +43,8 @@ class CombinatorialReasonerComponent(Component):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=OPENAI_MODEL_NAMES,
-            value=OPENAI_MODEL_NAMES[0],
+            options=OPENAI_CHAT_MODEL_NAMES,
+            value=OPENAI_CHAT_MODEL_NAMES[0],
         ),
     ]
 

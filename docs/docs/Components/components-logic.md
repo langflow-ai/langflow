@@ -7,33 +7,6 @@ slug: /components-logic
 
 Logic components provide functionalities for routing, conditional processing, and flow management.
 
-## Use a logic component in a flow
-
-This flow creates a summarizing "for each" loop with the [Loop](/components-logic#loop) component.
-
-The component iterates over a list of [Data](/concepts-objects#data-object) objects until it's completed, and then the **Done** loop aggregates the results.
-
-The **File** component loads text files from your local machine, and then the **Parser** component parses them into a list of structured `Data` objects.
-The **Loop** component passes each `Data` object to a **Prompt** to be summarized.
-
-When the **Loop** component runs out of `Data`, the **Done** loop activates, which counts the number of pages and summarizes their tone with another **Prompt**.
-This is represented in Langflow by connecting the Parser component's **Data List** output to the Loop component's `Data` loop input.
-
-![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
-
-The output is similar to this:
-```text
-Document Summary
-Total Pages Processed
-Total Pages: 2
-Overall Tone of Document
-Tone: Informative and Instructional
-The documentation outlines microservices architecture patterns and best practices.
-It emphasizes service isolation and inter-service communication protocols.
-The use of asynchronous messaging patterns is recommended for system scalability.
-It includes code examples of REST and gRPC implementations to demonstrate integration approaches.
-```
-
 ## Conditional router (If-Else component)
 
 This component routes messages by comparing two strings.
@@ -120,27 +93,6 @@ All options respect the `case_sensitive` setting except **regex**.
 - **ends with**: Checks if input_text ends with match_text.
 - **regex**: Performs regular expression matching. It is always case sensitive and ignores the case_sensitive setting.
 
-## Listen
-
-This component listens for a notification and retrieves its associated state.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type   | Description                                    |
-|------|--------|------------------------------------------------|
-| name | String | The name of the notification to listen for. |
-
-**Outputs**
-
-| Name   | Type | Description                                |
-|--------|------|--------------------------------------------|
-| output | Data | The state associated with the notification. |
-
-</details>
-
 ## Loop
 
 :::tip
@@ -183,51 +135,6 @@ Follow along with this step-by-step video guide for creating this flow and addin
 
 </details>
 
-## Notify
-
-This component generates a notification for the Listen component to use.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name   | Type    | Description                                                       |
-|--------|---------|-------------------------------------------------------------------|
-| name   | String  | The name of the notification. |
-| data   | Data    | The data to store in the notification. |
-| append | Boolean | When set to true, the record is added to the existing notification. |
-
-**Outputs**
-
-| Name   | Type | Description                             |
-|--------|------|-----------------------------------------|
-| output | Data | The data stored in the notification. |
-
-</details>
-
-## Pass
-
-This component forwards the input message, unchanged.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_message | Input Message | The message to forward. |
-| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output_message | Output Message | The forwarded message from the input. |
-
-</details>
-
 ## Run flow
 
 This component allows you to run any flow stored in your Langflow database without opening the flow editor.
@@ -237,7 +144,7 @@ The Run Flow component can also be used as a tool when connected to an [Agent](/
 When you select a flow, the component fetches the flow's graph structure and uses it to generate the inputs and outputs for the Run Flow component.
 
 To use the Run Flow component as a tool, do the following:
-1. Add the **Run Flow** component to the [Simple Agent](/starter-projects-simple-agent) flow.
+1. Add the **Run Flow** component to the [Simple Agent](/simple-agent) flow.
 2. In the **Flow Name** menu, select the sub-flow you want to run.
 The appearance of the **Run Flow** component changes to reflect the inputs and outputs of the selected flow.
 3. On the **Run Flow** component, enable **Tool Mode**.
@@ -314,6 +221,32 @@ The following actions occur when processing a list of Data objects:
 - Objects meeting the condition go to true_output
 - Objects not meeting the condition go to false_output
 - If all objects go to one output, the other output is empty
+
+### Pass
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component forwards the input message, unchanged.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | The message to forward. |
+| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_message | Output Message | The forwarded message from the input. |
+
+</details>
 
 ## Deprecated components
 

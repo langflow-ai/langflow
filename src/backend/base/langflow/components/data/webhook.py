@@ -1,12 +1,13 @@
 import json
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class WebhookComponent(Component):
     display_name = "Webhook"
+    documentation: str = "https://docs.langflow.org/components-data#webhook"
     name = "Webhook"
     icon = "webhook"
 

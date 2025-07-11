@@ -12,7 +12,7 @@ import httpx
 import validators
 
 from langflow.base.curl.parse import parse_context
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import TabInput
 from langflow.io import (
     BoolInput,
@@ -24,7 +24,7 @@ from langflow.io import (
     Output,
     TableInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_settings_service
 from langflow.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
@@ -45,6 +45,7 @@ DEFAULT_FIELDS = ["mode"]
 class APIRequestComponent(Component):
     display_name = "API Request"
     description = "Make HTTP requests using URL or cURL commands."
+    documentation: str = "https://docs.langflow.org/components-data#api-request"
     icon = "Globe"
     name = "APIRequest"
 

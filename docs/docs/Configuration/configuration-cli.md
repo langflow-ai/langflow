@@ -33,12 +33,17 @@ python -m langflow [OPTIONS]
 
 ### langflow api-key
 
-Create an API key for the default superuser if the `LANGFLOW_AUTO_LOGIN` environment variable is set to `true`.
+To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `TRUE`, or you must be logged in as a superuser.
+
+* If `AUTO_LOGIN` is `FALSE`, you must be logged in as a superuser.
+* If `AUTO LOGIN` is `TRUE`, you're already logged in as superuser.
+
+For more information, see [API keys](/configuration-api-keys).
 
 ```bash
 langflow api-key [OPTIONS]
 # or
-python -m langflow api-key [OPTIONS]
+uv run langflow api-key [OPTIONS]
 ```
 
 #### Options
@@ -103,7 +108,7 @@ python -m langflow run [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| <Link id="run-host"/>`--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
+| <Link id="run-host"/>`--host` | `localhost` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
 | <Link id="run-workers"/>`--workers` | `1` | Integer | Number of worker processes.<br/>See [`LANGFLOW_WORKERS` variable](./environment-variables.md#LANGFLOW_WORKERS). |
 | <Link id="run-worker-timeout"/>`--worker-timeout` | `300` | Integer | Worker timeout in seconds.<br/>See [`LANGFLOW_WORKER_TIMEOUT` variable](./environment-variables.md#LANGFLOW_WORKER_TIMEOUT). |
 | <Link id="run-port"/>`--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See [`LANGFLOW_PORT` variable](./environment-variables.md#LANGFLOW_PORT). |

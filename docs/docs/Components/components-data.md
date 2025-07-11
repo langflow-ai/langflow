@@ -11,17 +11,25 @@ Data components load data from a source into your flow.
 
 They may perform some processing or type checking, like converting raw HTML data into text, or ensuring your loaded file is of an acceptable type.
 
-## Use a data component in a flow
+## Use data components in a flow
 
-The **URL** data component loads content from a list of URLs.
+Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe-object) format, or can be connected to an **Agent** component to be used as tools.
 
-In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
+For example, to connect all three components to an Agent component, do the following:
 
-Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs from a component.
+1. Create the [Simple Agent starter flow](/simple-agent).
+2. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
+3. Add the **News search**, **RSS reader**, and **Web Search** components to your flow.
+4. In all three components, enable **Tool Mode**.
+5. Connect the three components to the **Agent** component's **Tools** port.
+The flow looks like the following:
 
-In this example of a document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for a vector database to ingest.
+![Data components connected to agent](/img/connect-data-components-to-agent.png)
 
-![URL component in a data ingestion pipeline](/img/url-component.png)
+6. Open the **Playground** and enter `Use the websearch component to get me an RSS feed of the latest news.`
+The Agent uses the `perform_search` tool to return a list of RSS feeds.
+7. Enter the name of an RSS feed that interests you.
+The Agent uses the `read_rss` tool to fetch and summarize the latest RSS feed.
 
 ## API Request
 
@@ -29,8 +37,6 @@ This component makes HTTP requests using URLs or cURL commands.
 
 1. To use this component in a flow, connect the **Data** output to a component that accepts the input.
 For example, connect the **API Request** component to a **Chat Output** component.
-
-![API request into a chat output component](/img/component-api-request-chat-output.png)
 
 2. In the API component's **URLs** field, enter the endpoint for your request.
 This example uses `https://dummy-json.mock.beeceptor.com/posts`, which is a list of technology blog posts.
@@ -168,9 +174,16 @@ Archive formats (for bundling multiple files):
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
 
-## SQL Query
+## News search
 
-This component executes SQL queries on a specified database.
+This component searches Google News with RSS and returns clean article data. The `clean_html` method parses the HTML content with the BeautifulSoup library, and then removes HTML markup and strips whitespace so the output data is clean.
+
+It returns news content as a DataFrame containing article titles, links, publication dates, and summaries. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, connect the **News Search** output to a component that accepts the DataFrame input.
+For example, connect the **News Search** component to a **Chat Output** component. Enter a search query, open the Playground, and click **Run Flow**.
+
+The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
 
 <details>
 <summary>Parameters</summary>
@@ -179,17 +192,178 @@ This component executes SQL queries on a specified database.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| query | Query | The SQL query to execute. |
-| database_url | Database URL | The URL of the database. |
-| include_columns | Include Columns | Include columns in the result. |
-| passthrough | Passthrough | If an error occurs, return the query instead of raising an exception. |
-| add_error | Add Error | Add the error to the result. |
+| query | Search Query | Search keywords for news articles. |
+| hl | Language (hl) | Language code, such as en-US, fr, de. Default: `en-US`. |
+| gl | Country (gl) | Country code, such as US, FR, DE. Default: `US`. |
+| ceid | Country:Language (ceid) | Language, such as US:en, FR:fr. Default: `US:en`. |
+| topic | Topic | One of: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH. |
+| location | Location (Geo) | City, state, or country for location-based news. Leave blank for keyword search. |
+| timeout | Timeout | Timeout for the request in seconds. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| result | Result | The result of the SQL query execution. |
+| articles | News Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
+
+</details>
+
+## RSS Reader
+
+This component fetches and parses RSS feeds from any valid RSS feed URL. It returns the feed content as a DataFrame containing article titles, links, publication dates, and summaries. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, do the following:
+
+1. Connect the **RSS reader** output to a component that accepts the DataFrame input, such as a **Chat Output** component.
+2. In the **RSS Feed URL** field, enter an RSS feed, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml` for the New York Times.
+3. Open the **Playground**, and then click **Run Flow**.
+
+The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| rss_url | RSS Feed URL | URL of the RSS feed to parse. |
+| timeout | Timeout | Timeout for the RSS feed request in seconds. Default: `5`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| articles | Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
+
+</details>
+
+## SQL database
+
+This component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/).
+It supports any SQLAlchemy-compatible database, including PostgreSQL, MySQL, SQLite, and others.
+
+To use this component in a flow, do the following:
+
+1. Create a test database called `test.db`.
+```shell
+sqlite3 test.db
+```
+
+2. Add values to the test database.
+```shell
+sqlite3 test.db "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, age INTEGER); INSERT INTO users (name, email, age) VALUES ('John Doe', 'john@example.com', 30), ('Jane Smith', 'jane@example.com', 25), ('Bob Johnson', 'bob@example.com', 35);"
+```
+
+3. Verify that `test.db` has been created and contains your data.
+```shell
+sqlite3 test.db "SELECT * FROM users;"
+```
+
+Result:
+```shell
+1|John Doe|john@example.com
+2|Jane Smith|jane@example.com
+3|John Doe|john@example.com
+4|Jane Smith|jane@example.com
+```
+
+4. In the **SQL Database** component's **Database URL** field, add the connection string for `test.db`, such as `sqlite:///test.db`.
+
+With this connection established, the **SQL Query** field now accepts SQL queries.
+Instead of manually entering SQL queries, connect this database to an agent as a **Tool** to query it with natural language.
+
+5. In the **SQL Database** component, enable **Tool Mode**, and then connect it to an **Agent** component.
+The flow looks like the following:
+
+![SQL database connected to agent](/img/component-sql-database.png)
+
+6. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
+7. Open the **Playground** and ask `What users are in my database?`
+The Agent uses the `run_sql_query` tool to retrieve the information, and additionally identifies the duplicate `users` entries.
+
+Result:
+```text
+Here are the users in your database:
+
+1. **John Doe** - Email: john@example.com
+2. **Jane Smith** - Email: jane@example.com
+3. **John Doe** - Email: john@example.com
+4. **Jane Smith** - Email: jane@example.com
+
+It seems there are duplicate entries for the users.
+
+> Finished chain.
+```
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_url | Database URL | The SQLAlchemy-compatible database connection URL. |
+| query | SQL Query | The SQL query to execute. |
+| include_columns | Include Columns | If enabled, includes column names in the result. Default: `true`. |
+| add_error | Add Error | If enabled, adds any error messages to the result. Default: `false`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| run_sql_query | Result Table | The query results as a DataFrame. |
+
+</details>
+
+## Web search
+
+This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/concepts-objects#dataframe-object) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, do the following:
+
+1. Add the **Web search** component to the [Basic prompting](/basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
+3. Connect a **Type Convert** component to convert the DataFrame to a Message.
+4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
+Your flow looks like the following:
+
+![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
+6. Click **Playground**, and then ask about `latest news`.
+
+The search results are returned to the Playground as a message.
+
+Result:
+```text
+Latest news
+AI
+gpt-4o-mini
+Here are some of the latest news articles related to the environment:
+Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+...
+```
+
+:::note
+This component uses web scraping and may be subject to rate limits. For production use, consider using an official search API.
+:::
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Keywords to search for. |
+| timeout | Timeout | Timeout for the web search request in seconds. Default: `5`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| results | Search Results | A DataFrame containing search results with titles, links, and snippets. |
 
 </details>
 
@@ -197,12 +371,10 @@ This component executes SQL queries on a specified database.
 
 This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text or raw HTML.
 
-In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
+In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-hidden="true"/> **Add URL**.
 
 1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
 For example, connect the **URL** component to a **Chat Output** component.
-
-![URL request into a chat output component](/img/component-url.png)
 
 2. In the URL component's **URLs** field, enter the URL for your request.
 This example uses `langflow.org`.
@@ -216,22 +388,7 @@ The component crawls by link traversal, not by URL path depth.
 The text contents of the URL are returned to the Playground as a structured DataFrame.
 
 5. In the **URL** component, change the output port to **Message**, and then run the flow again.
-The text contents of the URL are returned as unstructured raw text, which you can extract patterns from with the **Regex Extractor** tool.
-
-6. Connect the **URL** component to a **Regex Extractor** and **Chat Output**.
-
-![Regex extractor connected to url component](/img/component-url-regex.png)
-
-7. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
-This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`.
-```
-In the news\s*\n(.*?)(?=\n\n)
-```
-
-Result:
-```
-Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
-```
+The text contents of the URL are returned as unstructured raw text, which you can extract patterns with the [Parser](/components-processing#parser) component.
 
 <details>
 <summary>Parameters</summary>
@@ -262,29 +419,37 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 
 This component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
 
-If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. The component does not require an API key.
+If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow.
 
 When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your Langflow deployment.
 
 ```bash
 curl -X POST \
-  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
-  -H 'Content-Type: application/json'\
+  "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: LANGFLOW_API_KEY' \
   -d '{"any": "data"}'
-  ```
+```
 
-To test the webhook component:
+The **Webhook** component is often paired with a [**Parser** component](/components-processing#parser) to extract relevant data from the raw payload.
+For more information, see [Trigger flows with webhooks](/webhook).
 
-1. Add a **Webhook** component to the flow.
-2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Parser](/components-processing#parser) component.
-3. Connect the **Parser** component's **Parsed Text** output to the **Text** input of a [Chat Output](/components-io#chat-output) component.
-4. In the **Parser** component, under **Mode**, select **Stringify**.
-This mode passes the webhook's data as a string for the **Chat Output** component to print.
-5. To send a POST request, copy the code from the **Webhook cURL** tab in the **API** pane and paste it into a terminal.
-6. Send the POST request.
-7. Open the **Playground**.
-Your JSON data is posted to the **Chat Output** component, which indicates that the webhook component is correctly triggering the flow.
+To troubleshoot a flow with a **Webhook** component and verify that the component is receiving data, you can create a small flow that outputs only the parsed payload:
 
+1. Create a flow with **Webhook**, **Parser**, and **Chat Output** components.
+2. Connect the Webhook component's **Data** output to the Parser component's **Data** input.
+3. Connect the Parser component's **Parsed Text** output to the Chat Output component's **Text** input.
+4. Edit the **Parser** component to set **Mode** to **Stringify**.
+
+    This mode passes the data received by the Webhook component as a string that is printed by the **Chat Output** component.
+
+5. Click **Share**, select **API access**, and then copy the **Webhook cURL** code snippet.
+6. Optional: Edit the `data` in the code snippet if you want to pass a different payload.
+7. Send the POST request to trigger the flow.
+8. Click **Playground** to verify that the **Chat Output** component printed the JSON data from your POST request.
+
+For more information, see [Trigger flows with webhooks](/webhook).
 <details>
 <summary>Parameters</summary>
 

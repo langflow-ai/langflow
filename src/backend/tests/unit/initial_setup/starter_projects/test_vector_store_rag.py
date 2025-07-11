@@ -4,17 +4,17 @@ from textwrap import dedent
 
 import pytest
 from langflow.components.data import FileComponent
-from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.languagemodels import OpenAIModelComponent
-from langflow.components.processing import ParseDataComponent
+from langflow.components.openai.openai import OpenAIEmbeddingsComponent
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from langflow.components.processing import ParseDataComponent, PromptComponent
 from langflow.components.processing.split_text import SplitTextComponent
-from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.graph import Graph
+from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 
 
 @pytest.fixture
@@ -22,9 +22,9 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output(name="dataframe", value=Data(text="This is a test file."), cache=True)
+    file_component.set_on_output(name="message", value=Message(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
-    text_splitter.set(data_inputs=file_component.load_files)
+    text_splitter.set(data_inputs=file_component.load_files_message)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
@@ -198,7 +198,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     assert rag_nodes[4]["data"]["type"] == "ParseData"
     assert rag_nodes[4]["id"] == "parse-data-123"
 
-    assert rag_nodes[5]["data"]["type"] == "Prompt"
+    assert rag_nodes[5]["data"]["type"] == "Prompt Template"
     assert rag_nodes[5]["id"] == "prompt-123"
 
     assert rag_nodes[6]["data"]["type"] == "AstraDB"
@@ -258,7 +258,7 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
             {"id": "openai-123", "type": "OpenAIModel"},
             {"id": "openai-embeddings-124", "type": "OpenAIEmbeddings"},
             {"id": "parse-data-123", "type": "ParseData"},
-            {"id": "prompt-123", "type": "Prompt"},
+            {"id": "prompt-123", "type": "Prompt Template"},
             {"id": "rag-vector-store-123", "type": "AstraDB"},
         ],
         key=operator.itemgetter("id"),

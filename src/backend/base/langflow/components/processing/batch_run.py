@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any, cast
 import toml  # type: ignore[import-untyped]
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
-from langflow.schema import DataFrame
+from langflow.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from langchain_core.runnables import Runnable
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 class BatchRunComponent(Component):
     display_name = "Batch Run"
     description = "Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used."
+    documentation: str = "https://docs.langflow.org/components-processing#batch-run"
     icon = "List"
 
     inputs = [

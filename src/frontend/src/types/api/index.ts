@@ -53,6 +53,7 @@ export type APIClassType = {
   field_order?: string[];
   tool_mode?: boolean;
   type?: string;
+  last_updated?: string;
   [key: string]:
     | Array<string>
     | string
@@ -104,6 +105,7 @@ export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
+  group_outputs?: boolean;
   method?: string;
   display_name: string;
   hidden?: boolean;
@@ -328,7 +330,8 @@ export type FieldParserType =
   | "no_blank"
   | "valid_csv"
   | "space_case"
-  | "commands";
+  | "commands"
+  | "sanitize_mcp_name";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;

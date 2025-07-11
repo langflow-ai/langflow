@@ -56,7 +56,7 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-i/o",
+      "disclosure-input / output",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
@@ -75,7 +75,7 @@ test(
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesMem0 Chat Memory",
+      "mem0Mem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacterTextSplitter",
@@ -101,23 +101,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = [
-      "languagemodelsAIML",
-      "languagemodelsAnthropic",
-      "languagemodelsAzure OpenAI",
-      "languagemodelsCohere",
-      "languagemodelsGoogle Generative AI",
-      "languagemodelsGroq",
-      "languagemodelsHuggingFace",
-      "languagemodelsLM Studio",
-      "languagemodelsMaritalk",
-      "languagemodelsMistralAI",
-      "languagemodelsNVIDIA",
-      "languagemodelsOllama",
-      "languagemodelsOpenAI",
-      "languagemodelsPerplexity",
-      "languagemodelsQianfan",
-      "languagemodelsSambaNova",
-      "languagemodelsVertex AI",
+      "cohereCohere Language Models",
+      "groqGroq",
+      "lmstudioLM Studio",
+      "maritalkMaritalk",
+      "mistralMistralAI",
+      "perplexityPerplexity",
+      "baiduQianfan",
+      "sambanovaSambaNova",
+      "xaixAI",
     ];
 
     await Promise.all(
