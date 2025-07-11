@@ -39,7 +39,7 @@ To allow agents to use tools from MCP servers, use the [**MCP Tools** component]
 
 When you attach a component as a tool, you must configure the component as a tool by enabling **Tool Mode**.
 
-For more information, see [Configure tools for agents](/agents-tools)
+For more information, see [Configure tools for agents](/agents-tools).
 
 ## Use the Agent component in a flow
 
@@ -77,7 +77,7 @@ Web Search & Content Fetching: I can fetch and summarize content from web pages,
 News Search: I can search for recent news articles using Google News via RSS feeds.
 Calculator: I can perform arithmetic calculations and evaluate mathematical expressions.
 Date & Time: I can provide the current date and time in various time zones.
-These tools help me provide up-to-date information, perform calculations, and retrieve specific data from the internet when needed. If you have a specific question, let me know, and I’ll use the most appropriate tool(s) to help!
+These tools help me provide up-to-date information, perform calculations, and retrieve specific data from the internet when needed. If you have a specific question, let me know, and I'll use the most appropriate tool(s) to help!
 ```
 
 9. Ask the agent, `Summarize today's tech news`.

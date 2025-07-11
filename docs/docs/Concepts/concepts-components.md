@@ -92,7 +92,7 @@ For example, the **Prompt** component accepts inputs within curly braces, and ne
 Some components include dropdown menus to select the type of output sent to the next component.
 
 For example, the **Language Model** component includes **Model Response** or **Language Model** outputs.
-The **Model Response** output sends a [Message](/concepts-objects#message) output on to another Message port.
+The **Model Response** output sends a [Message](/concepts-objects#message-object) output on to another Message port.
 The **Language Model** output can be connected to components like [Structured output](/components-processing#structured-output) to use the LLM to power the component's reasoning.
 
 ### Port colors
@@ -119,6 +119,8 @@ The following table lists the component port colors and their corresponding inpu
 | Unknown | Gray | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#9CA3AF', fill: '#9CA3AF' }} /> |
 
 ## Component code
+
+You can edit components in the visual editor and in code. When editing a flow, select a component, and then click <Icon name="Code" aria-hidden="true"/> **Code** to see and edit the component's underlying Python code.
 
 All components have underlying code that determines how you configure them and what actions they can perform.
 In the context of creating and running flows, component code does the following:
