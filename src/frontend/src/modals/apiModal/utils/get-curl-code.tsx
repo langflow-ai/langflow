@@ -1,6 +1,15 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
+import {
+  getAllChatInputNodeIds,
+  getAllFileNodeIds,
+  getChatInputNodeId,
+  getFileNodeId,
+  getNonFileTypeTweaks,
+  hasChatInputFiles,
+  hasFileTweaks,
+} from "./detect-file-tweaks";
 
 /**
  * Generates a cURL command for making a POST request to a webhook endpoint.
@@ -38,6 +47,7 @@ export function getCurlWebhookCode({
   `.trim();
 }
 
+/** Generates Curl command for API calls, handling multi-step file uploads (v1 API for ChatInput files, v2 for File/VideoFile) before execution if tweaks contain files. Supports Unix/PowerShell and optional auth. */
 export function getNewCurlCode({
   flowId,
   endpointName,
@@ -50,7 +60,8 @@ export function getNewCurlCode({
   platform?: "unix" | "powershell";
 }): string {
   const { protocol, host } = customGetHostProtocol();
-  const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
+  const baseUrl = `${protocol}//${host}`;
+  const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
   // Auto-detect if no platform specified
   const detectedPlatform =
@@ -59,41 +70,164 @@ export function getNewCurlCode({
       ? "powershell"
       : "unix");
 
-  const singleLinePayload = JSON.stringify(processedPayload);
+  // Check if there are file uploads
+  const tweaks = processedPayload.tweaks || {};
+  const hasFiles = hasFileTweaks(tweaks);
 
-  if (detectedPlatform === "powershell") {
-    // PowerShell with here-string (most robust for complex JSON)
-    return `if (-not $env:LANGFLOW_API_KEY) {
-    Write-Error "LANGFLOW_API_KEY environment variable not found"
-    exit 1
-}
+  // If no file uploads, use existing logic
+  if (!hasFiles) {
+    if (detectedPlatform === "powershell") {
+      const payloadWithSession = {
+        ...processedPayload,
+        session_id: "$(New-Guid).Guid",
+      };
+      const singleLinePayload = JSON.stringify(payloadWithSession);
+      // PowerShell with here-string (most robust for complex JSON)
+      const authHeader = ` --header "x-api-key: YOUR_API_KEY_HERE"`;
 
-$jsonData = @'
+      return `$jsonData = @'
 ${singleLinePayload}
 '@
 
-curl --request POST \`
+curl.exe --request POST \`
      --url "${apiUrl}?stream=false" \`
-     --header "Content-Type: application/json" \`
-     --header "x-api-key: $env:LANGFLOW_API_KEY" \`
+     --header "Content-Type: application/json" \`${authHeader ? "\n" + authHeader : ""}
      --data $jsonData`;
-  } else {
-    // Unix-like systems (Linux, Mac, WSL2)
-    const unixFormattedPayload = JSON.stringify(processedPayload, null, 2)
-      .split("\n")
-      .map((line, index) => (index === 0 ? line : "         " + line))
-      .join("\n\t\t");
+    } else {
+      const payloadWithSession = {
+        ...processedPayload,
+        session_id: "$(uuidgen || cat /proc/sys/kernel/random/uuid)",
+      };
+      // Unix-like systems (Linux, Mac, WSL2)
+      const unixFormattedPayload = JSON.stringify(payloadWithSession, null, 2)
+        .split("\n")
+        .map((line, index) => (index === 0 ? line : "         " + line))
+        .join("\n\t\t");
 
-    return `# Get API key from environment variable
-if [ -z "$LANGFLOW_API_KEY" ]; then
-    echo "Error: LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables."
-    exit 1
-fi
+      const authHeader = ` --header "x-api-key: YOUR_API_KEY_HERE"`;
 
-curl --request POST \\
+      return `curl --request POST \\
      --url '${apiUrl}?stream=false' \\
-     --header 'Content-Type: application/json' \\
-     --header "x-api-key: $LANGFLOW_API_KEY" \\
+     --header 'Content-Type: application/json' \\${authHeader ? "\n" + authHeader : ""}
      --data '${unixFormattedPayload}'`;
+    }
+  }
+
+  // File upload logic - handle multiple file types additively
+  const chatInputNodeIds = getAllChatInputNodeIds(tweaks);
+  const fileNodeIds = getAllFileNodeIds(tweaks);
+  const nonFileTweaks = getNonFileTypeTweaks(tweaks);
+
+  // Build upload commands and tweak entries
+  const uploadCommands: string[] = [];
+  const tweakEntries: string[] = [];
+  let uploadCounter = 1;
+
+  // Add ChatInput file uploads (v1 API)
+  chatInputNodeIds.forEach((nodeId, index) => {
+    if (detectedPlatform === "powershell") {
+      uploadCommands.push(
+        `curl.exe --request POST \`
+     --url "${baseUrl}/api/v1/files/upload/${flowId}" \`
+     --header "x-api-key: YOUR_API_KEY_HERE" \`
+     --form "file=@your_image_${uploadCounter}.jpg"`,
+      );
+    } else {
+      uploadCommands.push(
+        `curl --request POST \\
+     --url "${baseUrl}/api/v1/files/upload/${flowId}" \\
+     --header "x-api-key: YOUR_API_KEY_HERE" \\
+     --form "file=@your_image_${uploadCounter}.jpg"`,
+      );
+    }
+    const originalTweak = tweaks[nodeId];
+    const modifiedTweak = { ...originalTweak };
+    modifiedTweak.files = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
+    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("\n").join("\n    ")}`;
+    tweakEntries.push(tweakEntry);
+    uploadCounter++;
+  });
+
+  // Add File/VideoFile uploads (v2 API)
+  fileNodeIds.forEach((nodeId, index) => {
+    if (detectedPlatform === "powershell") {
+      uploadCommands.push(
+        `curl.exe --request POST \`
+     --url "${baseUrl}/api/v2/files" \`
+     --header "x-api-key: YOUR_API_KEY_HERE" \`
+     --form "file=@your_file_${uploadCounter}.pdf"`,
+      );
+    } else {
+      uploadCommands.push(
+        `curl --request POST \\
+     --url "${baseUrl}/api/v2/files" \\
+     --header "x-api-key: YOUR_API_KEY_HERE" \\
+     --form "file=@your_file_${uploadCounter}.pdf"`,
+      );
+    }
+    const originalTweak = tweaks[nodeId];
+    const modifiedTweak = { ...originalTweak };
+    if ("path" in originalTweak) {
+      modifiedTweak.path = [
+        `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`,
+      ];
+    } else if ("file_path" in originalTweak) {
+      modifiedTweak.file_path = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
+    }
+    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("\n").join("\n    ")}`;
+    tweakEntries.push(tweakEntry);
+    uploadCounter++;
+  });
+
+  // Add non-file tweaks
+  Object.entries(nonFileTweaks).forEach(([nodeId, tweak]) => {
+    tweakEntries.push(
+      `    "${nodeId}": ${JSON.stringify(tweak, null, 6).split("\n").join("\n    ")}`,
+    );
+  });
+
+  const allTweaks = tweakEntries.length > 0 ? tweakEntries.join(",\n") : "";
+
+  if (detectedPlatform === "powershell") {
+    const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
+
+    const finalSnippet = `##STEP1_START##
+${uploadCommands.join("\n")}
+##STEP1_END##
+
+##STEP2_START##
+curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
+  "output_type": "${processedPayload.output_type || "chat"}",
+  "input_type": "${processedPayload.input_type || "chat"}",
+  "input_value": "${processedPayload.input_value || "Your message here"}",
+  "session_id": "'$(New-Guid).Guid'",
+  "tweaks": {
+${allTweaks}
+  }
+}'
+##STEP2_END##`;
+    return finalSnippet;
+  } else {
+    const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
+
+    const finalSnippet = `##STEP1_START##
+${uploadCommands.join("\n")}
+##STEP1_END##
+
+##STEP2_START##
+curl -X POST \\
+  "${apiUrl}" \\
+  -H "Content-Type: application/json"${authHeader ? " \\\n " + authHeader : ""} \\
+  -d '{
+    "output_type": "${processedPayload.output_type || "chat"}",
+    "input_type": "${processedPayload.input_type || "chat"}",
+    "input_value": "${processedPayload.input_value || "Your message here"}",
+    "session_id": "'$(uuidgen || cat /proc/sys/kernel/random/uuid)'",
+    "tweaks": {
+${allTweaks}
+    }
+  }'
+##STEP2_END##`;
+    return finalSnippet;
   }
 }
