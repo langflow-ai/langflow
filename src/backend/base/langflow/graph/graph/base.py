@@ -336,6 +336,8 @@ class Graph:
         max_iterations: int | None = None,
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
+        files: list[str] | None = None,
+        user_id: str | None = None,
     ):
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
@@ -346,14 +348,23 @@ class Graph:
             self.__apply_config(config)
         for _input in inputs or []:
             for key, value in _input.items():
-                vertex = self.get_vertex(key)
-                vertex.set_input_value(key, value)
+                # Skip InputValueRequest metadata fields that are not vertex IDs
+                if key in ("components", "input_value", "session", "type"):
+                    continue
+                # Only process keys that are actual vertex IDs in the graph
+                if key in self.vertex_map:
+                    vertex = self.get_vertex(key)
+                    vertex.set_input_value(key, value)
         # I want to keep a counter of how many tyimes result.vertex.id
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager)
+            result = await self.astep(
+                event_manager=event_manager,
+                files=files,
+                user_id=user_id,
+            )
             yield result
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
@@ -386,6 +397,8 @@ class Graph:
         max_iterations: int | None = None,
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
+        files: list[str] | None = None,
+        user_id: str | None = None,
     ) -> Generator:
         """Starts the graph execution synchronously by creating a new event loop in a separate thread.
 
@@ -394,6 +407,8 @@ class Graph:
             max_iterations: Optional maximum number of iterations
             config: Optional configuration dictionary
             event_manager: Optional event manager
+            files: Optional list of files
+            user_id: Optional user ID
 
         Returns:
             Generator yielding results from graph execution
@@ -416,7 +431,7 @@ class Graph:
 
             try:
                 # Run the async generator
-                async_gen = self.async_start(inputs, max_iterations, event_manager)
+                async_gen = self.async_start(inputs, max_iterations, config, event_manager, files, user_id)
 
                 while True:
                     try:
