@@ -25,7 +25,6 @@ export function getNewPythonApiCode({
   // Check if there are file uploads
   const tweaks = processedPayload.tweaks || {};
   const hasFiles = hasFileTweaks(tweaks);
-  const hasChatFiles = hasChatInputFiles(tweaks);
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
@@ -155,7 +154,7 @@ ${allTweaks}
 }
 
 response = requests.post(
-    f"{base_url}/api/v1/run/{endpointName || flowId}",
+    f"{base_url}/api/v1/run/{endpointName or flowId}",
     headers={"Content-Type": "application/json", **headers},
     json=payload
 )

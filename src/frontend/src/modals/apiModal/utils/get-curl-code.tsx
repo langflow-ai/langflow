@@ -73,7 +73,6 @@ export function getNewCurlCode({
   // Check if there are file uploads
   const tweaks = processedPayload.tweaks || {};
   const hasFiles = hasFileTweaks(tweaks);
-  const hasChatFiles = hasChatInputFiles(tweaks);
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
@@ -99,7 +98,6 @@ curl --request POST \`
         ...processedPayload,
         session_id: "$(uuidgen || cat /proc/sys/kernel/random/uuid)",
       };
-      const singleLinePayload = JSON.stringify(payloadWithSession);
       // Unix-like systems (Linux, Mac, WSL2)
       const unixFormattedPayload = JSON.stringify(payloadWithSession, null, 2)
         .split("\n")
@@ -119,16 +117,6 @@ curl --request POST \`
   const chatInputNodeIds = getAllChatInputNodeIds(tweaks);
   const fileNodeIds = getAllFileNodeIds(tweaks);
   const nonFileTweaks = getNonFileTypeTweaks(tweaks);
-
-  if (chatInputNodeIds.length === 0 && fileNodeIds.length === 0) {
-    // Fallback to non-file logic if no file nodes detected (edge case)
-    return getNewCurlCode({
-      flowId,
-      endpointName,
-      processedPayload: { ...processedPayload, tweaks: nonFileTweaks },
-      platform,
-    });
-  }
 
   // Build upload commands and tweak entries
   const uploadCommands: string[] = [];
@@ -155,8 +143,12 @@ curl --request POST \`
     const originalTweak = tweaks[nodeId];
     const modifiedTweak = { ...originalTweak };
     modifiedTweak.files = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
-    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("
-").join("
+    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("\n").join("\n    ")}`;
+    tweakEntries.push(tweakEntry);
+    uploadCounter++;
+  });
+
+  // Add File/VideoFile uploads (v2 API)
   fileNodeIds.forEach((nodeId, index) => {
     if (detectedPlatform === "powershell") {
       uploadCommands.push(
@@ -171,34 +163,6 @@ curl --request POST \`
      --url "${baseUrl}/api/v2/files" \\
      --header "x-api-key: YOUR_API_KEY_HERE" \\
      --form "file=@your_file_${uploadCounter}.pdf"`,
-      );
-    }
-    const originalTweak = tweaks[nodeId];
-    const modifiedTweak = { ...originalTweak };
-    if ("path" in originalTweak) {
-      modifiedTweak.path = [
-        `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`,
-      ];
-    } else if ("file_path" in originalTweak) {
-      modifiedTweak.file_path = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
-    }
-    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("
-").join("
-    ")}`;
-    tweakEntries.push(tweakEntry);
-    uploadCounter++;
-  });
-  // Add File/VideoFile uploads (v2 API)
-  fileNodeIds.forEach((nodeId, index) => {
-    if (detectedPlatform === "powershell") {
-      const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
-      uploadCommands.push(
-        `curl -X POST "${baseUrl}/api/v2/files"${authHeader} -F "file=@your_file_${uploadCounter}.pdf"`,
-      );
-    } else {
-      const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
-      uploadCommands.push(
-        `curl -X POST "${baseUrl}/api/v2/files"${authHeader} -F "file=@your_file_${uploadCounter}.pdf"`,
       );
     }
     const originalTweak = tweaks[nodeId];

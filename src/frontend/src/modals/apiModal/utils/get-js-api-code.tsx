@@ -25,20 +25,15 @@ export function getNewJsApiCode({
   // Check if there are file uploads
   const tweaks = processedPayload.tweaks || {};
   const hasFiles = hasFileTweaks(tweaks);
-  const hasChatFiles = hasChatInputFiles(tweaks);
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
     const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
-    const payloadWithSession = {
-      ...processedPayload,
-      session_id: crypto.randomUUID(),
-    };
+    const payloadString = JSON.stringify(processedPayload, null, 4);
 
-    const payloadString = JSON.stringify(payloadWithSession, null, 4);
-
-    const authSection = `const apiKey = 'YOUR_API_KEY_HERE';
+    const authSection = `const crypto = require('crypto');
+const apiKey = 'YOUR_API_KEY_HERE';
 
 `;
 
@@ -48,6 +43,7 @@ export function getNewJsApiCode({
     },`;
 
     return `${authSection}const payload = ${payloadString};
+payload.session_id = crypto.randomUUID();
 
 const options = {
     method: 'POST',
@@ -160,12 +156,14 @@ fetch('${apiUrl}', options)
 
   const allTweaks = tweakEntries.length > 0 ? tweakEntries.join(",\n") : "";
 
-  return `${authSection}const fs = require('fs');
-const http = require('http');
+  return `${authSection}const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
 
 const BASE_URL = "${baseUrl}";
 const FLOW_ID = "${flowId}";
+const protocol = new URL(BASE_URL).protocol;
+const httpModule = protocol === 'https:' ? require('https') : require('http');
 
 // Helper function to create multipart form data
 function createFormData(filePath) {
@@ -190,7 +188,7 @@ function createFormData(filePath) {
 // Helper function to make HTTP requests
 function makeRequest(options, data) {
     return new Promise((resolve, reject) => {
-        const req = http.request(options, (res) => {
+        const req = httpModule.request(options, (res) => {
             let responseData = '';
             res.on('data', (chunk) => { responseData += chunk; });
             res.on('end', () => {
