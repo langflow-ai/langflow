@@ -21,6 +21,11 @@ export function getNewJsApiCode({
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
+  
+  // Parse URL for robust hostname/port extraction
+  const parsedUrl = new URL(baseUrl);
+  const hostname = parsedUrl.hostname;
+  const port = parsedUrl.port || (parsedUrl.protocol === 'https:' ? '443' : '80');
 
   // Check if there are file uploads
   const tweaks = processedPayload.tweaks || {};
@@ -86,8 +91,8 @@ fetch('${apiUrl}', options)
         const { payload: chatPayload${index + 1}, boundary: chatBoundary${index + 1} } = createFormData('your_image_${index + 1}.jpg');
         
         const chatUploadOptions${index + 1} = {
-            hostname: '${host.split(":")[0]}',
-            port: ${host.includes(":") ? host.split(":")[1] : protocol === "https:" ? "443" : "80"},
+            hostname: '${hostname}',
+            port: ${port},
             path: \`/api/v1/files/upload/\${FLOW_ID}\`,
             method: 'POST',
             headers: {
@@ -118,8 +123,8 @@ fetch('${apiUrl}', options)
         const { payload: filePayload${index + 1}, boundary: fileBoundary${index + 1} } = createFormData('your_file_${index + 1}.pdf');
         
         const fileUploadOptions${index + 1} = {
-            hostname: '${host.split(":")[0]}',
-            port: ${host.includes(":") ? host.split(":")[1] : protocol === "https:" ? "443" : "80"},
+            hostname: '${hostname}',
+            port: ${port},
             path: '/api/v2/files',
             method: 'POST',
             headers: {
@@ -231,8 +236,8 @@ ${allTweaks}
         });
         
         const executeOptions = {
-            hostname: '${host.split(":")[0]}',
-            port: ${host.includes(":") ? host.split(":")[1] : protocol === "https:" ? "443" : "80"},
+            hostname: '${hostname}',
+            port: ${port},
             path: \`/api/v1/run/${endpointName || flowId}\`,
             method: 'POST',
             headers: {
