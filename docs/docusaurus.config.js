@@ -130,6 +130,7 @@ const config = {
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
+    ["./src/plugins/segment", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
     [
       "@docusaurus/plugin-client-redirects",
       {
@@ -186,7 +187,10 @@ const config = {
           },
           {
             to: "/blog-writer",
-            from: ["/starter-projects-blog-writer", "/tutorials-blog-writer"],
+            from: [
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer",
+            ],
           },
           {
             to: "/memory-chatbot",
@@ -197,7 +201,10 @@ const config = {
           },
           {
             to: "/document-qa",
-            from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
+            from: [
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa",
+            ],
           },
           {
             to: "/simple-agent",
@@ -245,7 +252,10 @@ const config = {
           },
           {
             to: "/concepts-publish",
-            from: ["/concepts-api", "/workspace-api"],
+            from: [
+              "/concepts-api",
+              "/workspace-api",
+            ],
           },
           {
             to: "/components-custom-components",
@@ -265,9 +275,7 @@ const config = {
           },
           {
             to: "/deployment-kubernetes-dev",
-            from: [
-              "/deployment-kubernetes",
-            ],
+            from: "/deployment-kubernetes",
           },
           {
             to: "/basic-prompting",
@@ -284,6 +292,10 @@ const config = {
           {
             to: "/agents",
             from: "/agents-tool-calling-agent-component",
+          },
+          {
+            to: "/concepts-publish",
+            from: "/embedded-chat-widget",
           },
           // add more redirects like this
           // {
@@ -324,6 +336,8 @@ const config = {
             className: "header-github-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'github'
           },
           {
             position: "right",
@@ -331,6 +345,8 @@ const config = {
             className: "header-twitter-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'x'
           },
           {
             position: "right",
@@ -338,6 +354,8 @@ const config = {
             className: "header-discord-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'discord'
           },
         ],
       },
