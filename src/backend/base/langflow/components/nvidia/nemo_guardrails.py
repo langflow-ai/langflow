@@ -1,10 +1,5 @@
-import http.client as http_client
-import json
 import logging
-import time
-from contextlib import nullcontext
 
-import httpx
 import nest_asyncio
 import requests
 import yaml
@@ -19,106 +14,6 @@ from langflow.schema.dotdict import dotdict
 
 # Apply nest_asyncio to allow sync code in async contexts
 nest_asyncio.apply()
-
-
-def setup_logging():
-    """Set up logging configuration."""
-    # Enable debug logging for httpx and httpcore
-    logging.getLogger("httpx").setLevel(logging.DEBUG)
-    logging.getLogger("httpcore").setLevel(logging.DEBUG)
-    logging.getLogger("nemoguardrails").setLevel(logging.DEBUG)
-    # Enable debug logging
-    logging.basicConfig(level=logging.DEBUG)
-
-
-def setup_request_logging():
-    """Set up request logging for httpx."""
-
-    def log_request(request):
-        logging.debug("\n=== Request Details ===")
-        logging.debug("URL: %s", request.url)
-        logging.debug("Method: %s", request.method)
-        logging.debug("Headers:")
-        sensitive_headers = {"authorization", "api-key", "x-api-key", "token", "bearer", "secret"}
-        for header, value in request.headers.items():
-            if not any(sensitive in header.lower() for sensitive in sensitive_headers):
-                logging.debug("  %s: %s", header, value)
-            else:
-                logging.debug("  %s: [REDACTED]", header)
-        logging.debug("Body:")
-        # Try to parse and redact sensitive info from body if it's JSON
-        try:
-            body = request.content.decode("utf-8")
-            if body:
-                try:
-                    body_json = json.loads(body)
-                    # Redact common sensitive fields
-                    sensitive_fields = {"api_key", "token", "secret", "password", "key", "auth"}
-                    for field in sensitive_fields:
-                        if field in body_json:
-                            body_json[field] = "[REDACTED]"
-                    logging.debug(json.dumps(body_json, indent=2))
-                except json.JSONDecodeError:
-                    # If not JSON, just print the body
-                    logging.debug(body)
-        except UnicodeDecodeError:
-            logging.debug("[Unable to decode body]")
-        logging.debug("===================\n")
-
-    return httpx.Client(event_hooks={"request": [log_request]})
-
-
-class HTTPDebugContext:
-    """Context manager for HTTP debug logging."""
-
-    def __init__(self):
-        self.original_levels = {}
-        self.client = None
-
-    def __enter__(self):
-        # Store original logging levels
-        self.original_levels = {
-            "httpx": logging.getLogger("httpx").level,
-            "httpcore": logging.getLogger("httpcore").level,
-            "root": logging.getLogger().level,
-        }
-
-        # Set debug levels
-        logging.getLogger("httpx").setLevel(logging.DEBUG)
-        logging.getLogger("httpcore").setLevel(logging.DEBUG)
-        logging.getLogger().setLevel(logging.DEBUG)
-
-        # Set up request logging
-        self.client = setup_request_logging()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # Restore original logging levels
-        for logger_name, level in self.original_levels.items():
-            logging.getLogger(logger_name).setLevel(level)
-
-        # Clean up client
-        if self.client:
-            self.client.close()
-
-
-def enable_http_debug_logging():
-    """Enable all HTTP debug logging."""
-    # Set up HTTP connection debugging
-    http_client.HTTPConnection.debuglevel = 1
-
-    # Set up basic logging
-    logging.basicConfig(level=logging.DEBUG)
-
-    # Enable urllib3 request logging
-    requests_log = logging.getLogger("requests.packages.urllib3")
-    requests_log.setLevel(logging.DEBUG)
-    requests_log.propagate = True
-
-    # Set up detailed request logging
-    setup_logging()
-    setup_request_logging()
-
 
 # Default prompts
 DEFAULT_SELF_CHECK_INPUT_PROMPT = """Instruction: {{ user_input }}
@@ -198,7 +93,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             info=(
                 "Message to display when the input is off-topic. " "Use [your specific domain/topic] as a placeholder."
             ),
-            advanced=True,
+            advanced=False,
         ),
         HandleInput(
             name="llm",
@@ -321,13 +216,6 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             value=False,
             advanced=True,
             info="If enabled, sets verbose=True on the underlying RunnableRails for detailed debugging output.",
-        ),
-        BoolInput(
-            name="http_logging",
-            display_name="HTTP Request Logging",
-            value=False,
-            advanced=True,
-            info="If enabled, logs detailed HTTP request information (headers and body) with sensitive data redacted.",
         ),
     ]
 
@@ -494,33 +382,24 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
 
         if self.guardrails_verbose:
             self._safe_log_config(yaml_content)
-            start = time.perf_counter()
 
-        # Use context manager for HTTP debug logging if enabled
-        context = HTTPDebugContext() if self.http_logging else nullcontext()
-        with context:
-            try:
-                yaml.safe_load(yaml_content)
-            except yaml.YAMLError as e:
-                error_message = "Invalid YAML syntax"
-                raise ValueError(error_message) from e
+        try:
+            yaml.safe_load(yaml_content)
+        except yaml.YAMLError as e:
+            error_message = "Invalid YAML syntax"
+            raise ValueError(error_message) from e
 
             # Create Colang content if topic control is enabled
-            colang_content = None
-            if "topic control" in self.rails:
-                colang_content = f"""
+        colang_content = None
+        if "topic control" in self.rails:
+            colang_content = f"""
 define bot refuse to respond
   "{self.off_topic_message}"
 """
 
-            config = RailsConfig.from_content(yaml_content=yaml_content, colang_content=colang_content)
-            guardrails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
+        config = RailsConfig.from_content(yaml_content=yaml_content, colang_content=colang_content)
 
-            if self.guardrails_verbose:
-                end = time.perf_counter()
-                self.log(f"Guardrail creation took {end - start:.6f} seconds")
-
-            return guardrails
+        return RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
 
     def get_models(self) -> list[str]:
         """Get available models from NVIDIA API that are suitable for self-check tasks."""
