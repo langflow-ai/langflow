@@ -186,7 +186,7 @@ This overwrites the existing `database.db` with your previous version's internal
 </Tabs>
 -->
 
-## Langflow Desktop and Langflow OSS versions don't match
+### Langflow Desktop and Langflow OSS versions don't match
 
 The version numbers for Langflow Desktop and Langflow OSS will match on major and minor versions, but may differ in patch versions.
 Langflow Desktop requires strict [SemVer](https://semver.org/) versioning, which prevents the use of certain patch version formats.
