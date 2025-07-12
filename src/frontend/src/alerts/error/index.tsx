@@ -77,7 +77,7 @@ export default function ErrorAlert({
                             ),
                             p({ node, ...props }) {
                               return (
-                                <span className="inline-block w-fit max-w-full align-text-top">
+                                <span className="inline-block w-fit max-w-full align-text-top truncate-multiline">
                                   {props.children}
                                 </span>
                               );
