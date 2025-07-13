@@ -147,7 +147,6 @@ async def handle_on_chain_end(
 async def handle_on_tool_start(
     event: dict[str, Any],
     agent_message: Message,
-    tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
     start_time: float,
 ) -> tuple[Message, float]:
@@ -165,6 +164,7 @@ async def handle_on_tool_start(
 
     # Create new tool content with the input exactly as received
     tool_content = ToolContent(
+        tool_key=tool_key,
         type="tool_use",
         name=tool_name,
         tool_input=tool_input,
@@ -175,26 +175,30 @@ async def handle_on_tool_start(
     )
 
     # Store in map and append to message
-    tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
     agent_message = await send_message_method(message=agent_message)
-    if agent_message.content_blocks and agent_message.content_blocks[0].contents:
-        tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
 
 
 async def handle_on_tool_end(
     event: dict[str, Any],
     agent_message: Message,
-    tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
     tool_name = event.get("name", "")
     tool_key = f"{tool_name}_{run_id}"
-    tool_content = tool_blocks_map.get(tool_key)
+
+    if not (agent_message.content_blocks and agent_message.content_blocks[0].contents):
+        return agent_message, start_time
+    tool_content_list = [
+        item
+        for item in agent_message.content_blocks[0].contents
+        if hasattr(item, "tool_key") and item.tool_key == tool_key
+    ]
+    tool_content = tool_content_list[0] if len(tool_content_list) > 0 else None
 
     if tool_content and isinstance(tool_content, ToolContent):
         # Call send_message_method first to get the updated message structure
@@ -233,14 +237,21 @@ async def handle_on_tool_end(
 async def handle_on_tool_error(
     event: dict[str, Any],
     agent_message: Message,
-    tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
     tool_name = event.get("name", "")
     tool_key = f"{tool_name}_{run_id}"
-    tool_content = tool_blocks_map.get(tool_key)
+
+    if not (agent_message.content_blocks and agent_message.content_blocks[0].contents):
+        return agent_message, start_time
+    tool_content_list = [
+        item
+        for item in agent_message.content_blocks[0].contents
+        if hasattr(item, "tool_key") and item.tool_key == tool_key
+    ]
+    tool_content = tool_content_list[0] if len(tool_content_list) > 0 else None
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
@@ -281,7 +292,6 @@ class ToolEventHandler(Protocol):
         self,
         event: dict[str, Any],
         agent_message: Message,
-        tool_blocks_map: dict[str, ContentBlock],
         send_message_method: SendMessageFunctionType,
         start_time: float,
     ) -> tuple[Message, float]: ...
@@ -329,14 +339,11 @@ async def process_agent_events(
     agent_message = await send_message_method(message=agent_message)
     try:
         # Create a mapping of run_ids to tool contents
-        tool_blocks_map: dict[str, ToolContent] = {}
         start_time = perf_counter()
         async for event in agent_executor:
             if event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-                agent_message, start_time = await tool_handler(
-                    event, agent_message, tool_blocks_map, send_message_method, start_time
-                )
+                agent_message, start_time = await tool_handler(event, agent_message, send_message_method, start_time)
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
                 agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
