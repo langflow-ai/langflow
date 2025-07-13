@@ -271,12 +271,36 @@ class JobQueueService(Service):
             except Exception as exc:  # noqa: BLE001
                 logger.error(f"Exception encountered during periodic cleanup: {exc}")
 
+    def _is_task_cleanable(self, task: asyncio.Task, main_queue: asyncio.Queue) -> bool:
+        """Check if a task is cleanable based on its status and exception.
+
+        A task is cleanable if:
+          1. It is cancelled.
+          2. It is done and has an exception.
+          3. It is done and has no exception, and the associated queue is fully consumed.
+
+        Args:
+            task (asyncio.Task): The task to check.
+            main_queue (asyncio.Queue): The queue associated with the task.
+
+        Returns:
+            bool: True if the task is cleanable, False otherwise.
+        """
+        if task.cancelled():
+            return True
+        if task.done():
+            if task.exception() is not None:
+                return True
+            if main_queue.empty():
+                return True
+        return False
+
     async def _cleanup_old_queues(self) -> None:
         """Scan all registered job queues and clean up those with completed or failed tasks."""
         current_time = asyncio.get_running_loop().time()
 
         for job_id in list(self._queues.keys()):
-            _, _, task, cleanup_time = self._queues[job_id]
+            main_queue, _, task, cleanup_time = self._queues[job_id]
             if task:
                 logger.debug(
                     f"Queue {job_id} status - Done: {task.done()}, "
@@ -285,7 +309,7 @@ class JobQueueService(Service):
                 )
 
                 # Check if task should be marked for cleanup
-                if task and (task.cancelled() or (task.done() and task.exception() is not None)):
+                if task and self._is_task_cleanable(task, main_queue):
                     if cleanup_time is None:
                         # Mark for cleanup by setting the timestamp
                         self._queues[job_id] = (
