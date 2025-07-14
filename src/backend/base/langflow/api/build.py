@@ -11,6 +11,7 @@ from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
 from langflow.api.utils import (
+    ComponentConfig,
     CurrentActiveUser,
     EventDeliveryType,
     build_graph_from_data,
@@ -51,6 +52,7 @@ async def start_flow_build(
     current_user: CurrentActiveUser,
     queue_service: JobQueueService,
     flow_name: str | None = None,
+    component_config: ComponentConfig | None = None,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -72,6 +74,7 @@ async def start_flow_build(
             log_builds=log_builds,
             current_user=current_user,
             flow_name=flow_name,
+            component_config=component_config,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -191,6 +194,7 @@ async def generate_flow_events(
     log_builds: bool,
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
+    component_config: ComponentConfig | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -263,6 +267,7 @@ async def generate_flow_events(
                 chat_service=chat_service,
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
+                component_config=component_config,
             )
 
         if not flow_name:

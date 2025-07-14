@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from loguru import logger
+from pydantic import BaseModel
 from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -41,6 +42,10 @@ class EventDeliveryType(str, Enum):
     STREAMING = "streaming"
     DIRECT = "direct"
     POLLING = "polling"
+
+
+class ComponentConfig(BaseModel):
+    persist_messages: bool = True
 
 
 def has_api_terms(word: str):
@@ -168,7 +173,13 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     str_flow_id = str(flow_id)
     session_id = kwargs.get("session_id") or str_flow_id
 
-    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
+    graph = Graph.from_payload(
+        payload,
+        str_flow_id,
+        flow_name,
+        user_id=kwargs.get("user_id"),
+        component_config=kwargs.get("component_config"),
+    )
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
