@@ -28,7 +28,7 @@ const CONTAINER_VARIANTS = {
   exit: { opacity: 0, y: 20 },
 };
 
-export default function UpdateAllComponents({}: {}) {
+export default function UpdateAllComponents() {
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
   const templates = useTypesStore((state) => state.templates);
   const setErrorData = useAlertStore((state) => state.setErrorData);
