@@ -4,10 +4,7 @@ import { GetCodeType } from "@/types/tweaks";
 import {
   getAllChatInputNodeIds,
   getAllFileNodeIds,
-  getChatInputNodeId,
-  getFileNodeId,
   getNonFileTypeTweaks,
-  hasChatInputFiles,
   hasFileTweaks,
 } from "./detect-file-tweaks";
 
@@ -58,7 +55,7 @@ export function getNewCurlCode({
   endpointName: string;
   processedPayload: any;
   platform?: "unix" | "powershell";
-}): string {
+}): { steps: { title: string; code: string }[] } | string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
   const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
@@ -83,7 +80,7 @@ export function getNewCurlCode({
       };
       const singleLinePayload = JSON.stringify(payloadWithSession);
       // PowerShell with here-string (most robust for complex JSON)
-      const authHeader = ` --header "x-api-key: YOUR_API_KEY_HERE"`;
+      const authHeader = `     --header "x-api-key: YOUR_API_KEY_HERE" \``;
 
       return `$jsonData = @'
 ${singleLinePayload}
@@ -104,7 +101,7 @@ curl.exe --request POST \`
         .map((line, index) => (index === 0 ? line : "         " + line))
         .join("\n\t\t");
 
-      const authHeader = ` --header "x-api-key: YOUR_API_KEY_HERE"`;
+      const authHeader = `     --header "x-api-key: YOUR_API_KEY_HERE" \\ `;
 
       return `curl --request POST \\
      --url '${apiUrl}?stream=false' \\
@@ -191,12 +188,8 @@ curl.exe --request POST \`
   if (detectedPlatform === "powershell") {
     const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
 
-    const finalSnippet = `##STEP1_START##
-${uploadCommands.join("\n")}
-##STEP1_END##
-
-##STEP2_START##
-curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
+    const uploadStep = uploadCommands.join("\n");
+    const executeStep = `curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
   "output_type": "${processedPayload.output_type || "chat"}",
   "input_type": "${processedPayload.input_type || "chat"}",
   "input_value": "${processedPayload.input_value || "Your message here"}",
@@ -204,18 +197,20 @@ curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d
   "tweaks": {
 ${allTweaks}
   }
-}'
-##STEP2_END##`;
-    return finalSnippet;
+}'`;
+
+    // Return structured steps instead of concatenated string
+    return {
+      steps: [
+        { title: "Upload files to the server", code: uploadStep },
+        { title: "Execute the flow with uploaded files", code: executeStep },
+      ],
+    };
   } else {
     const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
 
-    const finalSnippet = `##STEP1_START##
-${uploadCommands.join("\n")}
-##STEP1_END##
-
-##STEP2_START##
-curl -X POST \\
+    const uploadStep = uploadCommands.join("\n");
+    const executeStep = `curl -X POST \\
   "${apiUrl}" \\
   -H "Content-Type: application/json"${authHeader ? " \\\n " + authHeader : ""} \\
   -d '{
@@ -226,8 +221,14 @@ curl -X POST \\
     "tweaks": {
 ${allTweaks}
     }
-  }'
-##STEP2_END##`;
-    return finalSnippet;
+  }'`;
+
+    // Return structured steps instead of concatenated string
+    return {
+      steps: [
+        { title: "Upload files to the server", code: uploadStep },
+        { title: "Execute the flow with uploaded files", code: executeStep },
+      ],
+    };
   }
 }

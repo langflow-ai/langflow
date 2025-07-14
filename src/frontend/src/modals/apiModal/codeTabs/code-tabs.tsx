@@ -4,7 +4,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
-import { tabsArrayType } from "@/types/tabs";
 import { hasStreaming } from "@/utils/reactflowUtils";
 import { getOS } from "@/utils/utils";
 import { useEffect, useState } from "react";
@@ -139,22 +138,6 @@ export default function APITabsComponent() {
     }
   };
 
-  // Helper function to parse step-based code
-  const parseStepCode = (code: string) => {
-    const step1Match = code.match(/##STEP1_START##\n?([\s\S]*?)##STEP1_END##/);
-    const step2Match = code.match(/##STEP2_START##\n?([\s\S]*?)##STEP2_END##/);
-
-    if (step1Match && step2Match) {
-      return {
-        hasSteps: true,
-        step1: step1Match[1].trim(),
-        step2: step2Match[1].trim(),
-      };
-    }
-
-    return { hasSteps: false, fullCode: code };
-  };
-
   useEffect(() => {
     setIsCopied(false);
     setCopiedStep(null);
@@ -208,88 +191,61 @@ export default function APITabsComponent() {
         {/* Code content */}
         {currentTab &&
           (() => {
-            const parsedCode = parseStepCode(currentTab.code);
+            // Work directly with structured data - no parsing needed
+            const codeData = currentTab.code;
+            const hasSteps =
+              typeof codeData === "object" &&
+              codeData !== null &&
+              "steps" in codeData;
 
-            if (parsedCode.hasSteps) {
+            if (hasSteps) {
+              const steps = (
+                codeData as { steps: { title: string; code: string }[] }
+              ).steps;
               return (
                 <div className="api-modal-tabs-content flex h-full flex-col gap-4 overflow-auto">
-                  {/* Step 1 - File uploads */}
-                  <div>
-                    <h4 className="mb-2 text-sm font-medium">
-                      Step 1: Upload your files
-                    </h4>
-                    <div className="relative flex w-full">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          copyToClipboard(parsedCode.step1, "step1")
-                        }
-                        data-testid="btn-copy-step1"
-                        className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
-                      >
-                        {copiedStep === "step1" ? (
-                          <IconComponent
-                            name="Check"
-                            className="h-5 w-5 text-muted-foreground"
-                          />
-                        ) : (
-                          <IconComponent
-                            name="Copy"
-                            className="!h-5 !w-5 text-muted-foreground"
-                          />
-                        )}
-                      </Button>
-                      <SyntaxHighlighter
-                        showLineNumbers={false}
-                        wrapLongLines={true}
-                        language={currentTab.language}
-                        style={dark ? oneDark : oneLight}
-                        className="!mt-0 w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
-                      >
-                        {parsedCode.step1}
-                      </SyntaxHighlighter>
+                  {steps.map((step, index) => (
+                    <div
+                      key={index}
+                      className={index === steps.length - 1 ? "flex flex-1 flex-col overflow-hidden" : ""}
+                    >
+                      <h4 className="mb-2 text-sm font-medium">
+                        {step.title}
+                      </h4>
+                      <div className={`relative flex ${index === steps.length - 1 ? "h-full" : ""} w-full`}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            copyToClipboard(step.code, `step${index + 1}`)
+                          }
+                          data-testid={`btn-copy-step${index + 1}`}
+                          className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
+                        >
+                          {copiedStep === `step${index + 1}` ? (
+                            <IconComponent
+                              name="Check"
+                              className="h-5 w-5 text-muted-foreground"
+                            />
+                          ) : (
+                            <IconComponent
+                              name="Copy"
+                              className="!h-5 !w-5 text-muted-foreground"
+                            />
+                          )}
+                        </Button>
+                        <SyntaxHighlighter
+                          showLineNumbers={index > 0}
+                          wrapLongLines={true}
+                          language={currentTab.language}
+                          style={dark ? oneDark : oneLight}
+                          className={`!mt-0 ${index === steps.length - 1 ? "h-full" : ""} w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll`}
+                        >
+                          {step.code}
+                        </SyntaxHighlighter>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Step 2 - Execute flow */}
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <h4 className="mb-2 text-sm font-medium">
-                      Step 2: Execute flow with uploaded files
-                    </h4>
-                    <div className="relative flex h-full w-full">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          copyToClipboard(parsedCode.step2, "step2")
-                        }
-                        data-testid="btn-copy-step2"
-                        className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
-                      >
-                        {copiedStep === "step2" ? (
-                          <IconComponent
-                            name="Check"
-                            className="h-5 w-5 text-muted-foreground"
-                          />
-                        ) : (
-                          <IconComponent
-                            name="Copy"
-                            className="!h-5 !w-5 text-muted-foreground"
-                          />
-                        )}
-                      </Button>
-                      <SyntaxHighlighter
-                        showLineNumbers={true}
-                        wrapLongLines={true}
-                        language={currentTab.language}
-                        style={dark ? oneDark : oneLight}
-                        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
-                      >
-                        {parsedCode.step2}
-                      </SyntaxHighlighter>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               );
             } else {
