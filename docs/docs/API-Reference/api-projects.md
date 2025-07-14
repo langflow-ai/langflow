@@ -6,7 +6,7 @@ slug: /api-projects
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Use the `/projects` endpoint to create, read, update, and delete projects.
+Use the `/projects` endpoint to create, read, update, and delete [Langflow projects](/concepts-flows#projects).
 
 Projects store your flows and components.
 
@@ -20,7 +20,8 @@ Get a list of Langflow projects, including project IDs, names, and descriptions.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -51,6 +52,7 @@ Create a new project.
 curl -X POST \
   "$LANGFLOW_URL/api/v1/projects/" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
   "name": "new_project_name",
   "description": "string",
@@ -83,6 +85,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
   "name": "new_project_name",
   "description": "string",
@@ -107,7 +110,8 @@ To find the UUID of your project, call the [read projects](#read-projects) endpo
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/$PROJECT_ID" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -142,6 +146,7 @@ If you send the same values multiple times, the update is still processed, even 
 curl -X PATCH \
   "$LANGFLOW_URL/api/v1/projects/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
   "name": "string",
   "description": "string",
@@ -180,7 +185,8 @@ Delete a specific project.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/projects/$PROJECT_ID" \
-  -H "accept: */*"
+  -H "accept: */*" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -203,6 +209,7 @@ The `--output` flag is optional.
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/download/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   --output langflow-project.zip
 ```
 
@@ -215,5 +222,6 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/projects/upload/" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -F "file=@20241230_135006_langflow_flows.zip;type=application/zip"
 ```

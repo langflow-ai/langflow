@@ -20,7 +20,6 @@ There are two versions of the `/files` endpoints.
 - `/v2` files are tracked in the Langflow database.
 - `/v2` supports bulk upload and delete.
 - `/v2` responses contain more descriptive metadata.
-- `/v2` endpoints have more strict security, requiring authentication by an API key or JWT.
 
 However, `/v2/files` doesn't support image files.
 To send image files to your flows through the API, use [Upload image files (v1)](#upload-image-files-v1).
@@ -43,6 +42,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -F "file=@FILE_NAME.txt"
 ```
 
@@ -61,53 +61,56 @@ curl -X POST \
 
 ### Upload image files (v1)
 
-Send image files to the Langflow API for AI analysis.
+Send image files to Langflow to use them in flows.
 
-The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more information, see [Supported environment variables](/environment-variables#supported-variables).
+The default file limit is 100 MB.
+To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
-1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
-   Replace **FILE_NAME** with the uploaded file name.
+1. Attach the image to a `POST /v1/files/upload/$FLOW_ID` request with `--form` (`-F`) and the file path:
 
-```bash
-curl -X POST "$LANGFLOW_URL/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@FILE_NAME.png"
-```
+    ```bash
+    curl -X POST "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
+      -H "Content-Type: multipart/form-data" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -F "file=@PATH/TO/FILE.png"
+    ```
 
-The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<TIMESTAMP>_<FILE-NAME>"}`.
+    A successful request returns the `file_path` for the image in the Langflow file management system in the format `FLOW_ID/TIMESTAMP_FILENAME.TYPE`.
+    For example:
 
-```json
-{
-  "flowId": "a430cc57-06bb-4c11-be39-d3d4de68d2c4",
-  "file_path": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"
-}
-```
+    ```json
+    {
+      "flowId": "a430cc57-06bb-4c11-be39-d3d4de68d2c4",
+      "file_path": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"
+    }
+    ```
 
-2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
-   Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
-   Component `id` values can be found in [Langflow JSON files](/concepts-flows#langflow-json-file-contents).
+2. Use the returned `file_path` to send the image file to other components that can accept file input. Where you specify the file path depends on the component type.
 
-```bash
-curl -X POST \
-    "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
-    -H 'Content-Type: application/json'\
-    -d '{
-    "output_type": "chat",
-    "input_type": "chat",
-    "tweaks": {
-  "ChatInput-b67sL": {
-    "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
-    "input_value": "what do you see?"
-  }
-}}'
-```
+    The following example runs a [Basic Prompting flow](/basic-prompting), passing the image file and the query `describe this image` as input for the **Chat Input** component.
+    In this case, the file path is specified in `tweaks`.
 
-Your chatbot describes the image file you sent.
+    ```bash
+    curl -X POST \
+        "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: $LANGFLOW_API_KEY" \
+        -d '{
+        "output_type": "chat",
+        "input_type": "chat",
+        "tweaks": {
+          "ChatInput-b67sL": {
+            "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
+            "input_value": "describe this image"
+          }
+        }
+      }'
+    ```
 
-```text
-"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
-```
+    :::tip
+    For help with tweaks, use the **Input Schema** in a flow's [**API access** pane](/concepts-publish#api-access).
+    Setting tweaks with **Input Schema** also automatically populates the required component IDs.
+    :::
 
 ### List files (v1)
 
@@ -119,7 +122,8 @@ List all files associated with a specific flow.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -145,6 +149,7 @@ Download a specific file from a flow.
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
   -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   --output downloaded_file.txt
 ```
 
@@ -168,7 +173,8 @@ Delete a specific file from a flow.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -187,7 +193,7 @@ curl -X DELETE \
 
 Use the `/files` endpoints to move files between your local machine and Langflow.
 
-The `v2` endpoints require authentication by an API key or JWT.
+The `/v2/files` endpoints can be authenticated by an API key or JWT.
 To create a Langflow API key and export it as an environment variable, see [Get started with the Langflow API](/api-reference-api-examples).
 
 ### Upload file (v2)
@@ -200,7 +206,8 @@ To retrieve your current `user_id`, call the `/whoami` endpoint.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/users/whoami" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 Result:
@@ -279,6 +286,7 @@ In this example, the file uploaded to `/v2/files` is included with the `/v1/run`
 curl --request POST \
   --url "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
   --header "Content-Type: application/json" \
+  --header "x-api-key: $LANGFLOW_API_KEY" \
   --data '{
   "input_value": "what do you see?",
   "output_type": "chat",
