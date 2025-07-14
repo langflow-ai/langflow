@@ -271,7 +271,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: ./src/frontend/package-lock.json
-
       - name: Install Frontend Dependencies
         run: npm ci
         working-directory: ./src/frontend

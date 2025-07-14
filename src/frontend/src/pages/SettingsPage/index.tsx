@@ -8,7 +8,7 @@ import {
 } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
-import { Outlet } from "react-router-dom";
+import { Outlet, To } from "react-router-dom";
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
 import PageLayout from "../../components/common/pageLayout";
 export default function SettingsPage(): JSX.Element {
@@ -39,7 +39,7 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
-      title: "MCP Connections",
+      title: "MCP Servers",
       href: "/settings/mcp-servers",
       icon: (
         <ForwardedIconComponent
@@ -89,7 +89,7 @@ export default function SettingsPage(): JSX.Element {
 
   return (
     <PageLayout
-      backTo={"/"}
+      backTo={-1 as To}
       title="Settings"
       description="Manage the general settings for Langflow."
     >

@@ -34,12 +34,12 @@ Agents are most useful when they have the appropriate tools available to complet
 An Agent component can use any Langflow component as a tool, as long as you attach it to the Agent component.
 
 :::tip
-To allow agents to use tools from MCP servers, use the [**MCP connection** component](/components-tools#mcp-connection). 
+To allow agents to use tools from MCP servers, use the [**MCP Tools** component](/components-tools#mcp-connection).
 :::
 
 When you attach a component as a tool, you must configure the component as a tool by enabling **Tool Mode**.
 
-For more information, see [Configure tools for agents](/)
+For more information, see [Configure tools for agents](/agents-tools).
 
 ## Use the Agent component in a flow
 
@@ -61,7 +61,7 @@ To unlock the power of the Agent component, connect some tools.
 
 5. Add the **News Search**, **URL**, and **Calculator** components to your flow.
 6. Enable **Tool Mode** in the **News Search**, **URL**, and **Calculator** components.
-In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
+In the [component's header menu](/concepts-components#component-menus), enable **Tool Mode** so you can use the component with an agent.
 
     **Tool Mode** makes a component into a tool by modifying the component's inputs to accept requests from the Agent component to use a tool's available actions. A component in tool mode has a **Toolset** port that you must connect to an Agent component's **Tools** port if you want to allow the agent to use the tool's actions.
 7. Connect the **Toolset** port on the three tool components to the **Tools** port on the Agent component.
@@ -77,7 +77,7 @@ Web Search & Content Fetching: I can fetch and summarize content from web pages,
 News Search: I can search for recent news articles using Google News via RSS feeds.
 Calculator: I can perform arithmetic calculations and evaluate mathematical expressions.
 Date & Time: I can provide the current date and time in various time zones.
-These tools help me provide up-to-date information, perform calculations, and retrieve specific data from the internet when needed. If you have a specific question, let me know, and I’ll use the most appropriate tool(s) to help!
+These tools help me provide up-to-date information, perform calculations, and retrieve specific data from the internet when needed. If you have a specific question, let me know, and I'll use the most appropriate tool(s) to help!
 ```
 
 9. Ask the agent, `Summarize today's tech news`.

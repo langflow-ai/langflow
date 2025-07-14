@@ -8,6 +8,7 @@ import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_MCP,
 } from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FlowType } from "@/types/flow";
@@ -30,6 +31,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
+  const navigate = useCustomNavigate();
 
   const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
     type,
@@ -41,6 +43,18 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     folders[0]?.name ??
     "";
   const flows = useFlowsManagerStore((state) => state.flows);
+
+  useEffect(() => {
+    // Only check if we have a folderId and folders have loaded
+    if (folderId && folders && folders.length > 0) {
+      const folderExists = folders.find((folder) => folder.id === folderId);
+      if (!folderExists) {
+        // Folder doesn't exist for this user, redirect to /all
+        console.error("Invalid folderId, redirecting to /all");
+        navigate("/all");
+      }
+    }
+  }, [folderId, folders, navigate]);
 
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
@@ -97,7 +111,16 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
           flow.is_component === (flowType === "components"),
       ) === undefined
     ) {
-      setFlowType(flowType === "flows" ? "components" : "flows");
+      const otherTabHasItems =
+        flows?.find(
+          (flow) =>
+            flow.folder_id === (folderId ?? myCollectionId) &&
+            flow.is_component === (flowType === "flows"),
+        ) !== undefined;
+
+      if (otherTabHasItems) {
+        setFlowType(flowType === "flows" ? "components" : "flows");
+      }
     }
   }, [isEmptyFolder]);
 
@@ -208,7 +231,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     setSelectedFlows((old) =>
       old.filter((id) => data.flows.some((flow) => flow.id === id)),
     );
-  }, [data.flows]);
+  }, [folderData?.flows?.items]);
 
   // Reset key states when navigating away
   useEffect(() => {

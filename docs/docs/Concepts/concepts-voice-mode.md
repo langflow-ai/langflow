@@ -5,6 +5,8 @@ slug: /concepts-voice-mode
 
 import Icon from "@site/src/components/icon";
 
+<!-- TODO: Combine & redirect to /concepts-playground -->
+
 The Langflow **Playground** supports **voice mode** for interacting with your applications through a microphone.
 
 An [OpenAI API key](https://platform.openai.com/) is required to use **voice mode**. An [ElevenLabs](https://elevenlabs.io) API key enables more voices in the chat, but is optional.
@@ -22,7 +24,7 @@ Chat with an agent in the **Playground**, and get more recent results by asking 
 1. Create a [Simple agent starter project](/simple-agent).
 2. Add your **OpenAI API key** credentials to the **Agent** component.
 3. To start a chat session, click **Playground**.
-4. To enable voice mode, click the <Icon name="Mic" aria-label="Microphone"/> icon.
+4. To enable voice mode, click the <Icon name="Mic" aria-hidden="true"/> **Microphone** icon.
 The **Voice mode** pane opens.
 5. In the **OpenAI API Key** field, add your **OpenAI API key** credentials.
 This key is saved as a [global variable](/configuration-global-variables) in Langflow and is accessible from any component or flow.
@@ -65,7 +67,7 @@ This approach is ideal for low latency applications, but it is less deterministi
 
 * `/ws/flow_tts/{flow_id}` or `/ws/flow_tts/{flow_id}/{session_id}`: Converts audio to text using [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription), and then each flow is invoked directly for each transcript.
 This approach is more deterministic but has higher latency.
-This is the mode used in the Langflow playground.
+This is the mode used in the Langflow Playground.
 
 Path parameters:
 * `flow_id`: Required path parameter. The ID of the flow to be used as a tool.

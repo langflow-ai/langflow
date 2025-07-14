@@ -85,13 +85,17 @@ class RunnableVerticesManager:
             return True
 
         if vertex_id in self.cycle_vertices:
-            # If this is a loop vertex that has run before and has pending predecessors,
-            # it should not run again to prevent infinite loops
-            if is_loop and vertex_id in self.ran_at_least_once and pending:
-                return False
-            # Allow running if it's a loop or if none of its pending predecessors are cycle vertices
-            return is_loop or pending.isdisjoint(self.cycle_vertices)
+            pending_set = set(pending)
+            running_predecessors = pending_set & self.vertices_being_run
 
+            # If this vertex has already run at least once, be strict: wait until NOTHING is pending or running
+            if vertex_id in self.ran_at_least_once:
+                # Wait if there are still pending or running predecessors; otherwise allow.
+                return not (pending_set or running_predecessors)
+
+            # FIRST execution of a cycle vertex
+            # Allow running **only** if it's a loop AND *all* pending predecessors are cycle vertices
+            return is_loop and pending_set <= self.cycle_vertices
         return False
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
