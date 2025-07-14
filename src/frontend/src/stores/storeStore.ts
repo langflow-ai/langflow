@@ -30,7 +30,7 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
       });
     } catch (e) {
       set({ loadingApiKey: false });
-      console.log(e);
+      console.error(e);
     }
   },
 }));

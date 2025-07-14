@@ -33,7 +33,7 @@ export const useFileHandler = (currentFlowId: string) => {
         !fileExtension ||
         !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
       ) {
-        console.log("Error uploading file");
+        console.error("Error uploading file");
         setErrorData({
           title: "Error uploading file",
           list: [FS_ERROR_TEXT, SN_ERROR_TEXT],

@@ -111,7 +111,7 @@ export default function InputFileComponent({
           ),
         )
           .then((results) => {
-            console.log(results);
+            console.warn(results);
             // Filter out any failed uploads
             const successfulUploads = results.filter(
               (r): r is { file_name: string; file_path: string } => r !== null,
@@ -134,7 +134,7 @@ export default function InputFileComponent({
             }
           })
           .catch((e) => {
-            console.log(e);
+            console.error(e);
             // Error handling is done in the onError callback above
           });
       },

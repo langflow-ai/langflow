@@ -131,7 +131,7 @@ const JsonEditor = ({
         }
       } catch (jsonQueryError) {
         // If JSONQuery fails, continue with our path-based method
-        console.log(
+        console.error(
           "JSONQuery parsing failed, falling back to path-based method:",
           jsonQueryError,
         );
@@ -272,7 +272,7 @@ const JsonEditor = ({
         }
       }
     } catch (jsonQueryError) {
-      console.log(
+      console.error(
         "JSONQuery parsing failed, falling back to path-based method:",
         jsonQueryError,
       );

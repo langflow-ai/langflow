@@ -121,7 +121,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
     return () => {
       setOnFlowPage(false);
-      console.log("unmounting");
+      console.warn("unmounting");
+
       setCurrentFlow(undefined);
     };
   }, [id]);

@@ -50,7 +50,7 @@ withEventDeliveryModes(
         state: "hidden",
       });
     } catch (_error) {
-      console.log("Timeout error");
+      console.error("Timeout error");
       test.skip(true, "Timeout error");
     }
 

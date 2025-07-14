@@ -49,7 +49,7 @@ withEventDeliveryModes(
         .last()
         .fill(process.env.ANTHROPIC_API_KEY ?? "");
     } catch (_e) {
-      console.log("There's API already added");
+      console.error("There's API already added");
     }
 
     await page.getByTestId("playground-btn-flow-io").click();

@@ -47,7 +47,8 @@ export default function FilesContextMenuComponent({
         handleRename(file.id, file.name);
         break;
       case "replace":
-        console.log("replace");
+        // TODO: Implement replace file
+        console.warn("replace");
         break;
       case "download":
         handleSingleDownload();

@@ -67,7 +67,7 @@ test(
 
       await page.getByText("Exit Anyway", { exact: true }).click();
     } catch (_error) {
-      console.log("Warning text not visible, skipping dialog confirmation");
+      console.error("Warning text not visible, skipping dialog confirmation");
     }
 
     await page.getByText("Untitled document").first().click();

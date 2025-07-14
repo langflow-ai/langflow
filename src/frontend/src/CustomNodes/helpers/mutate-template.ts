@@ -64,7 +64,7 @@ export const mutateTemplate = async (
                 setNodeClass(newNode);
               } catch (e) {
                 if (e instanceof Error && e.message === "Node not found") {
-                  console.log("Node not found");
+                  console.error("Node not found");
                 } else {
                   throw e;
                 }

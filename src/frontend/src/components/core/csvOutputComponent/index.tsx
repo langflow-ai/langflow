@@ -27,7 +27,7 @@ function CsvOutputComponent({
   try {
     file = JSON?.parse(jsonString) || "";
   } catch (_e) {
-    console.log("Error parsing JSON");
+    console.error("Error parsing JSON");
   }
 
   if (!file) {

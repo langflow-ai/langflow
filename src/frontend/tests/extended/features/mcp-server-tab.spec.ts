@@ -10,7 +10,7 @@ test(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`Attempt ${attempt} of ${maxRetries}`);
+        console.warn(`Attempt ${attempt} of ${maxRetries}`);
 
         await awaitBootstrapTest(page);
 
@@ -271,13 +271,16 @@ test(
         expect(fetchOptionCount).toBeGreaterThan(0);
 
         // If we get here, the test passed
-        console.log(`Test passed on attempt ${attempt}`);
+        console.warn(`Test passed on attempt ${attempt}`);
         return;
       } catch (error) {
-        console.log(`Attempt ${attempt} failed:`, error);
+        console.error(`Attempt ${attempt} failed:`, error);
 
         if (attempt === maxRetries) {
-          console.log(`All ${maxRetries} attempts failed. Last error:`, error);
+          console.error(
+            `All ${maxRetries} attempts failed. Last error:`,
+            error,
+          );
           throw error;
         }
 

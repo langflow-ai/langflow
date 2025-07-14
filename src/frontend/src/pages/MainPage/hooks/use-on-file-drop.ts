@@ -38,7 +38,7 @@ const useFileDrop = (type?: string) => {
               });
             })
             .catch((error) => {
-              console.log(error);
+              console.error(error);
               setErrorData({
                 title: CONSOLE_ERROR_MSG,
                 list: [(error as Error).message],

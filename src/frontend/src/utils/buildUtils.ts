@@ -75,7 +75,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
 }
 
 function logFlowLoad(message: string, data?: any) {
-  console.log(`[FlowLoad] ${message}`, data || "");
+  console.warn(`[FlowLoad] ${message}`, data || "");
 }
 
 export async function updateVerticesOrder(
@@ -362,7 +362,7 @@ export async function buildFlowVertices({
       });
     }
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 
   try {

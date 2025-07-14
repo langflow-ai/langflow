@@ -31,7 +31,7 @@ export default function PlaygroundPage() {
       const flow = await getFlow({ id: id!, public: true });
       return flow;
     } catch (error: any) {
-      console.log(error);
+      console.error(error);
       navigate("/");
     }
   }
