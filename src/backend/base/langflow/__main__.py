@@ -39,6 +39,9 @@ from langflow.utils.version import is_pre_release as langflow_is_pre_release
 # Initialize console with Windows-safe settings
 console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
 
+if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 app = typer.Typer(no_args_is_help=True)
 
 
