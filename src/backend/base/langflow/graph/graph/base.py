@@ -68,6 +68,7 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
+        component_config: dict[str, Any] | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -125,6 +126,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+        self.component_config: dict[str, Any] = component_config or {}
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
