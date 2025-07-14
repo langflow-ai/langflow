@@ -132,7 +132,7 @@ class TestAgentComponentWithoutClient(ComponentTestBaseWithoutClient):
 
         # Iterate over all OpenAI models
         failed_models = []
-        for model_name in OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
+        for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
             # Initialize the AgentComponent with mocked inputs
             tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
             agent = AgentComponent(
