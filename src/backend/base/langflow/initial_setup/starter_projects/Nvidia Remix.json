@@ -1893,6 +1893,9 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
