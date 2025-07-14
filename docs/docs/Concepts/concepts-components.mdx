@@ -95,6 +95,9 @@ For example, the **Language Model** component includes **Model Response** or **L
 The **Model Response** output sends a [Message](/concepts-objects#message-object) output on to another Message port.
 The **Language Model** output can be connected to components like [Structured output](/components-processing#structured-output) to use the LLM to power the component's reasoning.
 
+In the component code, `group_outputs` is set to `False` by default, which forces the outputs into the same dropdown menu, and only allows one output to be selected.
+When `group_outputs=True`, outputs are displayed individually.
+
 ### Port colors
 
 Component port colors indicate the data type ingested or emitted by the port.
