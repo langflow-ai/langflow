@@ -1051,6 +1051,7 @@ class Graph:
         flow_id: str | None = None,
         flow_name: str | None = None,
         user_id: str | None = None,
+        component_config: dict[str, Any] | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1059,6 +1060,7 @@ class Graph:
             flow_id: The ID of the flow.
             flow_name: The flow name.
             user_id: The user ID.
+            component_config: Component configuration dictionary.
 
         Returns:
             Graph: The created graph.
@@ -1068,7 +1070,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
+            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, component_config=component_config)
             graph.add_nodes_and_edges(vertices, edges)
         except KeyError as exc:
             logger.exception(exc)

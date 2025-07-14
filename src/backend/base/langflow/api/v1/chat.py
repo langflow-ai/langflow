@@ -25,6 +25,7 @@ from langflow.api.build import (
 )
 from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
 from langflow.api.utils import (
+    ComponentConfig,
     CurrentActiveUser,
     DbSession,
     EventDeliveryType,
@@ -154,6 +155,7 @@ async def build_flow(
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
+    component_config: Annotated[ComponentConfig | None, Body(embed=True)] = None,
 ):
     """Build and process a flow, returning a job ID for event polling.
 
@@ -173,6 +175,7 @@ async def build_flow(
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
         event_delivery: Optional event delivery type - default is streaming
+        component_config: Optional component configuration
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -195,6 +198,7 @@ async def build_flow(
         current_user=current_user,
         queue_service=queue_service,
         flow_name=flow_name,
+        component_config=component_config,
     )
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
@@ -573,6 +577,7 @@ async def build_public_tmp(
     request: Request,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
+    component_config: Annotated[ComponentConfig | None, Body(embed=True)] = None,
 ):
     """Build a public flow without requiring authentication.
 
@@ -601,6 +606,7 @@ async def build_public_tmp(
         request: FastAPI request object (needed for cookie access)
         queue_service: Queue service for job management
         event_delivery: Optional event delivery type - default is streaming
+        component_config: Optional component configuration
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -623,6 +629,7 @@ async def build_public_tmp(
             current_user=owner_user,
             queue_service=queue_service,
             flow_name=flow_name or f"{client_id}_{flow_id}",
+            component_config=component_config,
         )
     except Exception as exc:
         logger.exception("Error building public flow")
