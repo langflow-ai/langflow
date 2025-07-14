@@ -169,7 +169,7 @@ export default function UpdateComponentModal({
             )}
           </div>
           {isMultiple && (
-            <div className="max-h-[200px] overflow-y-auto overflow-x-hidden">
+            <div className="max-h-[200px] overflow-x-hidden overflow-y-auto">
               <div className="-mx-4">
                 <TableComponent
                   columnDefs={columnDefs}
