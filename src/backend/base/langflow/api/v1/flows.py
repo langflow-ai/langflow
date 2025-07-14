@@ -85,7 +85,7 @@ async def _new_flow(
             if flows:
                 # Use regex to extract numbers only from flows that follow the copy naming pattern: "{original_name} ({number})"
                 # This avoids extracting numbers from the original flow name if it naturally contains parentheses
-                # 
+                #
                 # Examples:
                 # - For flow "My Flow": matches "My Flow (1)", "My Flow (2)" → extracts 1, 2
                 # - For flow "Analytics (Q1)": matches "Analytics (Q1) (1)" → extracts 1
