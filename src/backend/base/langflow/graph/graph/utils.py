@@ -453,10 +453,16 @@ def find_sccs_tarjan(edges: list[tuple[str, str]]):
     """
     graph = defaultdict(list)
     nodes = set()
+    self_loops = set()
+    append_graph = graph.setdefault  # Minor speedup, local lookup
+    add_node = nodes.add  # Minor speedup, local lookup
+    add_self = self_loops.add
     for u, v in edges:
         graph[u].append(v)
-        nodes.add(u)
-        nodes.add(v)
+        add_node(u)
+        add_node(v)
+        if u == v:
+            add_self(u)
 
     ids = {}
     low = {}
@@ -475,15 +481,15 @@ def find_sccs_tarjan(edges: list[tuple[str, str]]):
         for to in graph[node]:
             if to not in ids:
                 dfs(to)
-            if to in on_stack:
                 low[node] = min(low[node], low[to])
+            elif to in on_stack:
+                low[node] = min(low[node], ids[to])
 
         if ids[node] == low[node]:
             scc = []
-            while stack:
+            while True:
                 n = stack.pop()
                 on_stack.remove(n)
-                low[n] = ids[node]
                 scc.append(n)
                 if n == node:
                     break
@@ -492,7 +498,7 @@ def find_sccs_tarjan(edges: list[tuple[str, str]]):
     for node in nodes:
         if node not in ids:
             dfs(node)
-    return sccs
+    return sccs, self_loops
 
 
 def find_cycle_vertices(edges: list[tuple[str, str]]) -> list[str]:
@@ -507,19 +513,13 @@ def find_cycle_vertices(edges: list[tuple[str, str]]) -> list[str]:
     Returns:
         A sorted list of vertices that are part of a cycle.
     """
-    sccs = find_sccs_tarjan(edges)
+    sccs, self_loops = find_sccs_tarjan(edges)
     cycle_vertices = set()
-    graph = defaultdict(list)
-    for u, v in edges:
-        graph[u].append(v)
-
     for scc in sccs:
         if len(scc) > 1:
             cycle_vertices.update(scc)
-        elif len(scc) == 1:
-            node = scc[0]
-            if node in graph.get(node, []):
-                cycle_vertices.add(node)
+        elif scc[0] in self_loops:
+            cycle_vertices.add(scc[0])
     return sorted(cycle_vertices)
 
 
