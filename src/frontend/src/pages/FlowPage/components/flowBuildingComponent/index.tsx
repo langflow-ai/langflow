@@ -262,7 +262,7 @@ export default function FlowBuildingComponent() {
                             ),
                             p({ node, ...props }) {
                               return (
-                                <span className="inline-block w-fit max-w-full align-text-top">
+                                <span className="inline-block w-fit max-w-full align-text-top truncate-doubleline">
                                   {props.children}
                                 </span>
                               );
