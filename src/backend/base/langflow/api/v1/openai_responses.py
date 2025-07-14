@@ -98,6 +98,9 @@ async def run_flow_for_openai_responses(
                 )
                 yield f"data: {initial_chunk.model_dump_json()}\n\n"
 
+                tool_call_counter = 0
+                processed_tools = set()  # Track processed tool calls to avoid duplicates
+                
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
                         break
@@ -111,17 +114,71 @@ async def run_flow_for_openai_responses(
                             event_str = event_data.decode('utf-8')
                             parsed_event = json.loads(event_str)
                             
-                            # Extract text from add_message events
                             if isinstance(parsed_event, dict):
                                 event_type = parsed_event.get("event")
                                 data = parsed_event.get("data", {})
                                 
-                                if event_type == "add_message" and "text" in data:
-                                    text = data["text"]
+                                # Handle add_message events
+                                if event_type == "add_message":
+                                    sender_name = data.get("sender_name", "")
+                                    text = data.get("text", "")
                                     sender = data.get("sender", "")
+                                    content_blocks = data.get("content_blocks", [])
                                     
-                                    # Only include AI/Machine responses, filter out user input echoes
-                                    if sender in ["Machine", "AI", "Agent"] and text != request.input:
+                                    # Look for Agent Steps in content_blocks
+                                    for block in content_blocks:
+                                        if block.get("title") == "Agent Steps":
+                                            contents = block.get("contents", [])
+                                            for step in contents:
+                                                # Look for tool_use type items
+                                                if step.get("type") == "tool_use":
+                                                    tool_name = step.get("name", "")
+                                                    tool_input = step.get("tool_input", {})
+                                                    tool_output = step.get("output")
+                                                    
+                                                    # Only emit tool calls with explicit tool names and meaningful arguments
+                                                    if tool_name and tool_input and len(tool_input) > 0:
+                                                        # Create unique identifier for this tool call
+                                                        tool_signature = f"{tool_name}:{hash(str(sorted(tool_input.items())))}"
+                                                        
+                                                        # Skip if we've already processed this tool call
+                                                        if tool_signature in processed_tools:
+                                                            continue
+                                                            
+                                                        processed_tools.add(tool_signature)
+                                                        tool_call_counter += 1
+                                                        call_id = f"call_{tool_call_counter}"
+                                                        tool_id = f"tc_{tool_call_counter}"
+                                                        
+                                                        # Send tool call added event
+                                                        tool_call_event = {
+                                                            "type": "response.output_item.added",
+                                                            "item": {
+                                                                "id": tool_id,
+                                                                "type": "tool_call", 
+                                                                "name": tool_name,
+                                                                "arguments": tool_input,
+                                                                "call_id": call_id
+                                                            }
+                                                        }
+                                                        yield f"event: response.output_item.added\ndata: {json.dumps(tool_call_event)}\n\n"
+                                                        
+                                                        # If there's output, send completion event
+                                                        if tool_output is not None:
+                                                            tool_done_event = {
+                                                                "type": "response.output_item.done",
+                                                                "item": {
+                                                                    "id": tool_id,
+                                                                    "type": "tool_call",
+                                                                    "status": "completed",
+                                                                    "content": [{"type": "text", "text": str(tool_output)}],
+                                                                    "call_id": call_id
+                                                                }
+                                                            }
+                                                            yield f"event: response.output_item.done\ndata: {json.dumps(tool_done_event)}\n\n"
+                                    
+                                    # Extract text content for streaming (only AI responses)
+                                    if sender in ["Machine", "AI", "Agent"] and text != request.input and sender_name == "Agent":
                                         content = text
                                     
                         except (json.JSONDecodeError, UnicodeDecodeError):
