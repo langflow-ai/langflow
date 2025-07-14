@@ -79,6 +79,10 @@ const CanvasControls = ({ children }) => {
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+  const setHelperLineEnabled = useFlowStore(
+    (state) => state.setHelperLineEnabled,
+  );
+  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
   useEffect(() => {
     store.setState({
@@ -108,6 +112,10 @@ const CanvasControls = ({ children }) => {
     });
     handleSaveFlow();
   }, [isInteractive, store, handleSaveFlow]);
+
+  const onToggleHelperLines = useCallback(() => {
+    setHelperLineEnabled(!helperLineEnabled);
+  }, [setHelperLineEnabled, helperLineEnabled]);
 
   return (
     <Panel
@@ -149,6 +157,17 @@ const CanvasControls = ({ children }) => {
           isInteractive ? "" : "text-primary-foreground dark:text-primary"
         }
         testId="lock_unlock"
+      />
+      {/* Display Helper Lines */}
+      <CustomControlButton
+        iconName={helperLineEnabled ? "FoldHorizontal" : "UnfoldHorizontal"}
+        tooltipText={
+          helperLineEnabled ? "Hide Helper Lines" : "Show Helper Lines"
+        }
+        onClick={onToggleHelperLines}
+        backgroundClasses={cn(helperLineEnabled && "bg-muted")}
+        iconClasses={cn(helperLineEnabled && "text-muted-foreground")}
+        testId="helper_lines"
       />
     </Panel>
   );
