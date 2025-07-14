@@ -207,12 +207,16 @@ export default function APITabsComponent() {
                   {steps.map((step, index) => (
                     <div
                       key={index}
-                      className={index === steps.length - 1 ? "flex flex-1 flex-col overflow-hidden" : ""}
+                      className={
+                        index === steps.length - 1
+                          ? "flex flex-1 flex-col overflow-hidden"
+                          : ""
+                      }
                     >
-                      <h4 className="mb-2 text-sm font-medium">
-                        {step.title}
-                      </h4>
-                      <div className={`relative flex ${index === steps.length - 1 ? "h-full" : ""} w-full`}>
+                      <h4 className="mb-2 text-sm font-medium">{step.title}</h4>
+                      <div
+                        className={`relative flex ${index === steps.length - 1 ? "h-full" : ""} w-full`}
+                      >
                         <Button
                           variant="ghost"
                           size="icon"
