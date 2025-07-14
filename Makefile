@@ -177,11 +177,11 @@ format_backend: ## backend code formatters
 
 format: format_backend format_frontend ## run code formatters
 
-biome: ## run biome check and format on frontend code
+format_frontend: ## run biome check and format on frontend code
 	@echo 'Running Biome check and format on frontend...'
 	@cd src/frontend && npx @biomejs/biome check --write
 
-biome_check: ## run biome check without formatting
+format_frontend_check: ## run biome check without formatting
 	@echo 'Running Biome check on frontend...'
 	@cd src/frontend && npx @biomejs/biome check
 
