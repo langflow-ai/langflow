@@ -1196,12 +1196,7 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "required_inputs": [
-                  "database_ref",
-                  "keyspace",
-                  "table_name",
-                  "token"
-                ],
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
