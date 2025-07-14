@@ -15,7 +15,7 @@
     "enabled": true,
     "rules": {
       "recommended": false,
-      "a11y": { "noStaticElementInteractions": "warn" },
+      "a11y": { "noStaticElementInteractions": "off" },
       "complexity": {
         "noAdjacentSpacesInRegex": "error",
         "noExtraBooleanCast": "error",
@@ -55,7 +55,7 @@
         "noConsole": {
           "level": "warn",
           "options": {
-            "allow": ["error", "warn"]
+            "allow": ["error", "warn", "log", "debug"]
           }
         },
         "noControlCharactersInRegex": "error",

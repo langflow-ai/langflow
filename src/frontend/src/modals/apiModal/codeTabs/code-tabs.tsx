@@ -41,7 +41,6 @@ export default function APITabsComponent() {
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
   const flowId = useFlowStore((state) => state.currentFlow?.id);
-  const autologin = useAuthStore((state) => state.autoLogin);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
