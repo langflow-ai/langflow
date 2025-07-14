@@ -88,7 +88,7 @@ Langflow's engine manages:
 * `initialize_data` or `_pre_run_setup` can run setup logic before the component's main execution.
 * `__call__`, `run()`, or `_run()` can be overridden to customize how the component is called or to define custom execution logic.
 
-### Inputs and outputs 
+### Inputs and outputs
 
 Custom component inputs are defined with properties like:
 
