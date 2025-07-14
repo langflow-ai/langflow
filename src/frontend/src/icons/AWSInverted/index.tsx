@@ -1,4 +1,3 @@
-import { useDarkStore } from "@/stores/darkStore";
 import React, { forwardRef } from "react";
 import SvgAWS from "./AWS";
 
@@ -6,6 +5,5 @@ export const AWSInvertedIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  const isdark = useDarkStore((state) => state.dark).toString();
-  return <SvgAWS ref={ref} isdark={isdark} {...props} />;
+  return <SvgAWS ref={ref} {...props} />;
 });

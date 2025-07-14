@@ -5,7 +5,10 @@ import { DarkStoreType } from "../types/zustand/dark";
 const startedStars = Number(window.localStorage.getItem("githubStars")) ?? 0;
 
 export const useDarkStore = create<DarkStoreType>((set, get) => ({
-  dark: JSON.parse(window.localStorage.getItem("isDark")!) ?? false,
+  dark: (() => {
+    const stored = window.localStorage.getItem("isDark");
+    return stored !== null ? JSON.parse(stored) : false;
+  })(),
   stars: startedStars,
   version: "",
   latestVersion: "",
