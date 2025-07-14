@@ -147,10 +147,10 @@ For more information, see **Outputs**.
 The outputs change dynamically based on the number and type of files selected.
 
 If a single file is selected:
-- **Structured Content** [DataFrame](/concepts-objects#dataframe-object): For CSV or Excel files - tabular data from the file.
-- **Structured Content** [Data](/concepts-objects#data-object): For JSON files - parsed JSON data.
-- **Raw Content** [Message](/concepts-objects#message-object): The file's raw text content.
-- **File Path** [Message](/concepts-objects#message-object): The path to the file on the server.
+- **Structured Content** [DataFrame](/concepts-objects#dataframe-object): If a CSV or Excel file is selected, the component outputs tabular data.
+- **Structured Content** [Data](/concepts-objects#data-object): If a JSON file is selected, the component outputs parsed JSON data.
+- **Raw Content** [Message](/concepts-objects#message-object): Outputs the file's raw text content.
+- **File Path** [Message](/concepts-objects#message-object): Outputs the path to the file on the Langflow server.
 
 If multiple files are selected:
 - **Files** [DataFrame](/concepts-objects#dataframe-object): A table containing the content and metadata of all selected files.
