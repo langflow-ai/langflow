@@ -15,7 +15,7 @@
     "enabled": true,
     "rules": {
       "recommended": false,
-      "a11y": { "noStaticElementInteractions": "off" },
+      "a11y": { "noStaticElementInteractions": "warn" },
       "complexity": {
         "noAdjacentSpacesInRegex": "error",
         "noExtraBooleanCast": "error",
