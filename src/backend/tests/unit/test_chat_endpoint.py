@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 from httpx import codes
+from langflow.api.utils import ComponentConfig
 from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
 from loguru import logger
@@ -80,19 +81,20 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
     await check_messages(flow_id)
 
 
-async def check_messages(flow_id):
+async def check_messages(flow_id, expected_messages=2):
     if isinstance(flow_id, str):
         flow_id = UUID(flow_id)
     messages = await aget_messages(flow_id=flow_id, order="ASC")
     flow_id_str = str(flow_id)
-    assert len(messages) == 2
-    assert messages[0].session_id == flow_id_str
-    assert messages[0].sender == "User"
-    assert messages[0].sender_name == "User"
-    assert messages[0].text == ""
-    assert messages[1].session_id == flow_id_str
-    assert messages[1].sender == "Machine"
-    assert messages[1].sender_name == "AI"
+    assert len(messages) == expected_messages
+    if expected_messages == 2:
+        assert messages[0].session_id == flow_id_str
+        assert messages[0].sender == "User"
+        assert messages[0].sender_name == "User"
+        assert messages[0].text == ""
+        assert messages[1].session_id == flow_id_str
+        assert messages[1].sender == "Machine"
+        assert messages[1].sender_name == "AI"
 
 
 @pytest.mark.benchmark
@@ -432,3 +434,78 @@ async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_
     finally:
         # Restore the original function to avoid affecting other tests
         monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_build_flow_with_persist_messages_true(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test building a flow with persist_messages=True (default behavior) - messages should be stored."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Create ComponentConfig with persist_messages=True (explicit)
+    component_config = ComponentConfig(persist_messages=True)
+
+    # Start build with component_config
+    build_response = await build_flow(
+        client, flow_id, logged_in_headers, json={"component_config": component_config.model_dump()}
+    )
+    job_id = build_response["job_id"]
+
+    # Get the events stream
+    events_response = await get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == codes.OK
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
+
+    # Verify messages were persisted to database
+    await check_messages(flow_id)
+
+
+@pytest.mark.benchmark
+async def test_build_flow_with_persist_messages_false(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test building a flow with persist_messages=False - messages should NOT be stored."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Create ComponentConfig with persist_messages=False
+    component_config = ComponentConfig(persist_messages=False)
+
+    # Start build with component_config
+    build_response = await build_flow(
+        client, flow_id, logged_in_headers, json={"component_config": component_config.model_dump()}
+    )
+    job_id = build_response["job_id"]
+
+    # Get the events stream
+    events_response = await get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == codes.OK
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
+
+    # When persist_messages=False, no messages should be stored
+    await check_messages(flow_id, expected_messages=0)
+
+
+@pytest.mark.benchmark
+async def test_build_flow_with_component_config_default(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test building a flow with default ComponentConfig - messages should be stored by default."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Create ComponentConfig with default values (persist_messages=True by default)
+    component_config = ComponentConfig()
+
+    # Start build with component_config
+    build_response = await build_flow(
+        client, flow_id, logged_in_headers, json={"component_config": component_config.model_dump()}
+    )
+    job_id = build_response["job_id"]
+
+    # Get the events stream
+    events_response = await get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == codes.OK
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
+
+    # Verify messages were persisted (default behavior)
+    await check_messages(flow_id)
