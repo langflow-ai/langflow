@@ -1270,6 +1270,26 @@
     --tw-ring-offset-shadow: none !important;
     --tw-ring-color: none !important;
   }
+
+  .helper-lines {
+    @apply pointer-events-none absolute left-0 top-0 z-10 h-full w-full;
+  }
+
+  .helper-line {
+    stroke: hsl(var(--primary));
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.3));
+  }
+
+  .helper-line.horizontal {
+    stroke: hsl(var(--primary));
+  }
+
+  .helper-line.vertical {
+    stroke: hsl(var(--primary));
+  }
 }
 
 /* Gradient background */
