@@ -15,13 +15,16 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
+  applyNodeChanges,
   Connection,
   Edge,
+  NodeChange,
   OnNodeDrag,
   OnSelectionChangeParams,
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
+  XYPosition,
 } from "@xyflow/react";
 import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
@@ -68,6 +71,12 @@ import {
   MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
+import HelperLines from "./components/helper-lines";
+import {
+  getHelperLines,
+  getSnapPosition,
+  HelperLinesState,
+} from "./helpers/helper-lines";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -354,30 +363,107 @@ export default function Page({
     [takeSnapshot, onConnect],
   );
 
-  const onNodeDragStart: OnNodeDrag = useCallback(() => {
-    // 👇 make dragging a node undoable
+  const [helperLines, setHelperLines] = useState<HelperLinesState>({});
+  const [isDragging, setIsDragging] = useState(false);
+  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
-    takeSnapshot();
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot]);
+  const onNodeDrag: OnNodeDrag = useCallback(
+    (_, node) => {
+      if (helperLineEnabled) {
+        const currentHelperLines = getHelperLines(node, nodes);
+        setHelperLines(currentHelperLines);
+      }
+    },
+    [helperLineEnabled, nodes],
+  );
 
-  const onNodeDragStop: OnNodeDrag = useCallback(() => {
-    // 👇 make moving the canvas undoable
-    autoSaveFlow();
-    updateCurrentFlow({ nodes });
-    setPositionDictionary({});
-  }, [
-    takeSnapshot,
-    autoSaveFlow,
-    nodes,
-    edges,
-    reactFlowInstance,
-    setPositionDictionary,
-  ]);
+  const onNodeDragStart: OnNodeDrag = useCallback(
+    (_, node) => {
+      // 👇 make dragging a node undoable
+      takeSnapshot();
+      setIsDragging(true);
+      // 👉 you can place your event handlers here
+    },
+    [takeSnapshot],
+  );
+
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_, node) => {
+      // 👇 make moving the canvas undoable
+      autoSaveFlow();
+      updateCurrentFlow({ nodes });
+      setPositionDictionary({});
+      setIsDragging(false);
+      setHelperLines({});
+    },
+    [
+      takeSnapshot,
+      autoSaveFlow,
+      nodes,
+      edges,
+      reactFlowInstance,
+      setPositionDictionary,
+    ],
+  );
+
+  const onNodesChangeWithHelperLines = useCallback(
+    (changes: NodeChange<AllNodeType>[]) => {
+      if (!helperLineEnabled) {
+        onNodesChange(changes);
+        return;
+      }
+
+      // Apply snapping to position changes during drag
+      const modifiedChanges = changes.map((change) => {
+        if (
+          change.type === "position" &&
+          "dragging" in change &&
+          "position" in change &&
+          "id" in change &&
+          isDragging
+        ) {
+          const nodeId = change.id as string;
+          const draggedNode = nodes.find((n) => n.id === nodeId);
+
+          if (draggedNode && change.position) {
+            const updatedNode = {
+              ...draggedNode,
+              position: change.position,
+            };
+
+            const snapPosition = getSnapPosition(updatedNode, nodes);
+
+            // Only snap if we're actively dragging
+            if (change.dragging) {
+              // Apply snap if there's a significant difference
+              if (
+                Math.abs(snapPosition.x - change.position.x) > 0.1 ||
+                Math.abs(snapPosition.y - change.position.y) > 0.1
+              ) {
+                return {
+                  ...change,
+                  position: snapPosition,
+                };
+              }
+            } else {
+              // This is the final position change when drag ends
+              // Force snap to ensure it stays where it should
+              return {
+                ...change,
+                position: snapPosition,
+              };
+            }
+          }
+        }
+        return change;
+      });
+
+      onNodesChange(modifiedChanges);
+    },
+    [onNodesChange, nodes, isDragging, helperLineEnabled],
+  );
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
-    // 👇 make dragging a selection undoable
-
     takeSnapshot();
   }, [takeSnapshot]);
 
@@ -596,7 +682,7 @@ export default function Page({
           <ReactFlow<AllNodeType, EdgeType>
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
+            onNodesChange={onNodesChangeWithHelperLines}
             onEdgesChange={onEdgesChange}
             onConnect={isLocked ? undefined : onConnectMod}
             disableKeyboardA11y={true}
@@ -605,6 +691,7 @@ export default function Page({
             onReconnect={isLocked ? undefined : onEdgeUpdate}
             onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
             onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
+            onNodeDrag={onNodeDrag}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
             elevateEdgesOnSelect={true}
@@ -634,6 +721,7 @@ export default function Page({
             <FlowBuildingComponent />
             <UpdateAllComponents />
             <MemoizedBackground />
+            {helperLineEnabled && <HelperLines helperLines={helperLines} />}
           </ReactFlow>
           <div
             id="shadow-box"
