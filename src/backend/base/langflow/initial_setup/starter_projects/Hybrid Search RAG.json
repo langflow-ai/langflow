@@ -1196,7 +1196,10 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "required_inputs": [],
+                "required_inputs": [
+                  "supabase_service_key",
+                  "supabase_url"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
