@@ -732,7 +732,7 @@ async def custom_component_update(
             field_value=code_request.field_value,
             field_name=code_request.field,
         )
-        if "code" not in updated_build_config:
+        if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
             updated_build_config = add_code_field_to_build_config(updated_build_config, code_request.code)
         component_node["template"] = updated_build_config
 
