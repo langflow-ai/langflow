@@ -83,8 +83,13 @@ async def _new_flow(
                 )
             ).all()
             if flows:
-                # Only extract numbers from flows that match the exact pattern "{flow.name} ({number})"
-                # This prevents matching the original flow name if it ends with a number in parentheses
+                # Use regex to extract numbers only from flows that follow the copy naming pattern: "{original_name} ({number})"
+                # This avoids extracting numbers from the original flow name if it naturally contains parentheses
+                # 
+                # Examples:
+                # - For flow "My Flow": matches "My Flow (1)", "My Flow (2)" → extracts 1, 2
+                # - For flow "Analytics (Q1)": matches "Analytics (Q1) (1)" → extracts 1
+                #   but does NOT match "Analytics (Q1)" → avoids extracting the original "1"
                 extract_number = re.compile(rf"^{re.escape(flow.name)} \((\d+)\)$")
                 numbers = []
                 for _flow in flows:
