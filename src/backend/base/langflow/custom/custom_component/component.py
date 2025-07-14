@@ -163,7 +163,6 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
-        self._set_output_required_inputs()
         self._database_available: bool | None = None
 
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
