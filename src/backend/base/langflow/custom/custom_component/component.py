@@ -1465,9 +1465,12 @@ class Component(CustomComponent):
 
     def _is_database_available(self) -> bool:
         """Check if the database is available."""
-        if hasattr(self, "graph") and hasattr(self.graph, "component_config"):
-            if not self.graph.component_config.get("persist_messages", True):
-                return False
+        if (
+            hasattr(self, "graph")
+            and hasattr(self.graph, "component_config")
+            and not self.graph.component_config.get("persist_messages", True)
+        ):
+            return False
         return get_db_service().database_available
 
     def _should_skip_message(self, message: Message) -> bool:
