@@ -178,17 +178,17 @@ async def test_openai_responses_streaming(
     # Check that we got some SSE data events
     assert "data:" in text_content
     
-    # Parse the events to validate structure
+    # Parse the events to validate structure and final [DONE] marker
     events = text_content.strip().split("\n\n")
-    data_events = [event for event in events if event.startswith("data:")]
-    
-    # Ensure we received at least one data event
+    # The stream must end with the OpenAI '[DONE]' sentinel
+    assert events and events[-1].strip() == "data: [DONE]", "Stream did not end with [DONE] marker"
+
+    # Filter out the [DONE] marker to inspect JSON data events
+    data_events = [evt for evt in events if evt.startswith("data:") and not evt.startswith("data: [DONE]")]
     assert data_events, "No streaming events were received"
-    
-    # Parse the first and last events to check their structure
+
+    # Parse the first and last JSON events to check their structure
     first_event = json.loads(data_events[0].replace("data: ", ""))
     last_event = json.loads(data_events[-1].replace("data: ", ""))
-    
-    # Verify event structure
     assert "delta" in first_event
     assert "delta" in last_event
