@@ -173,12 +173,18 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     str_flow_id = str(flow_id)
     session_id = kwargs.get("session_id") or str_flow_id
 
+    component_config = kwargs.get("component_config")
+    if component_config is None:
+        component_config = {}
+    if isinstance(component_config, ComponentConfig):
+        component_config = component_config.model_dump()
+
     graph = Graph.from_payload(
         payload,
         str_flow_id,
         flow_name,
         user_id=kwargs.get("user_id"),
-        component_config=kwargs.get("component_config"),
+        component_config=component_config,
     )
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
