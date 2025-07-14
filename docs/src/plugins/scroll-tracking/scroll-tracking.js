@@ -4,11 +4,43 @@ let isScrollTrackingInitialized = false;
 
 // Helper functions for extracting dynamic properties
 const propertyHelpers = {
-  // Extract data-ch-lang attribute from code elements
+  // Extract language from code elements - try multiple approaches
   codeLanguage: (element) => {
+    // Method 1: Look for data-ch-lang attribute
     const codeElement = element.querySelector('[data-ch-lang]') || 
                        element.closest('[data-ch-lang]');
-    return codeElement?.getAttribute('data-ch-lang') || null;
+    if (codeElement) {
+      const lang = codeElement.getAttribute('data-ch-lang');
+      if (lang && lang !== 'text') return lang;
+    }
+    
+    // Method 2: Look for active tab in the same container
+    const container = element.closest('.theme-code-block') || 
+                     element.parentElement?.closest('[class*="code"]') ||
+                     element.parentElement;
+    
+    if (container) {
+      const activeTab = container.querySelector('li[role="tab"][aria-selected="true"]');
+      if (activeTab) {
+        const tabText = activeTab.textContent?.trim();
+        if (tabText && tabText.toLowerCase() !== 'text') {
+          return tabText.toLowerCase();
+        }
+      }
+    }
+    
+    // Method 3: Look for any tab as fallback
+    if (container) {
+      const anyTab = container.querySelector('li[role="tab"]');
+      if (anyTab) {
+        const tabText = anyTab.textContent?.trim();
+        if (tabText && tabText.toLowerCase() !== 'text') {
+          return tabText.toLowerCase();
+        }
+      }
+    }
+    
+    return null;
   }
 };
 
