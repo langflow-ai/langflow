@@ -122,6 +122,16 @@ The loaded file name appears in the component.
 The default maximum supported file size is 100 MB.
 To modify this value, see [--max-file-size-upload](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
 
+### Dynamic output
+
+The **File** component’s outputs change dynamically based on the number and type of files you select.
+
+If you select a single file, the outputs adapt to the file type. For example, a CSV or Excel file displays a **Structured Content** [DataFrame](/concepts-objects#dataframe) output, but a JSON file displays a **Structured Content** (JSON) output.
+
+All file types allow **Raw Content** and **File Path** outputs. Raw Content outputs the entire text of the file as a [Message](/concepts-objects#message-object). **File Path** returns the path to the loaded file on the Langflow server, for example, `
+
+If you select multiple files, the component provides a single **Files** [DataFrame](/concepts-objects#dataframe-object) output containing all loaded files. If no file is selected, no outputs are displayed.
+
 <details>
 <summary>Parameters</summary>
 
@@ -141,11 +151,19 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 
 **Outputs**
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The parsed content of the file as a [Data](/concepts-objects) object. |
-| dataframe | DataFrame | The file content as a [DataFrame](/concepts-objects#dataframe-object) object. |
-| message | Message | The file content as a [Message](/concepts-objects#message-object) object. |
+The outputs change dynamically based on the number and type of files selected:
+
+**Single file selected:**
+- **Structured Content** [DataFrame](/concepts-objects#dataframe-object): For CSV or Excel files - tabular data from the file.
+- **Structured Content** [Data](/concepts-objects#data-object): For JSON files - parsed JSON data.
+- **Raw Content** [Message](/concepts-objects#message-object): The file's raw text content.
+- **File Path** [Message](/concepts-objects#message-object): The path to the file on the server.
+
+**Multiple files selected:**
+- **Files** [DataFrame](/concepts-objects#dataframe-object): A table containing the content and metadata of all selected files.
+
+**No files selected:**
+- No outputs are displayed.
 
 </details>
 
