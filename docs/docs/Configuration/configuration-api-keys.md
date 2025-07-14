@@ -7,66 +7,127 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Langflow provides an API key functionality that allows users to access their individual components and flows without traditional login authentication.
+You can use Langflow API keys to interact with Langflow programmatically.
+
+The API key has the same permissions and access as you do when you launch Langflow. This means your API key can only access your own flows, components, and data. You cannot access other users' resources with your own Langflow API keys.
+An API key represents the user who created it. If you create a key as a superuser, then that key will have superuser privileges.
+Anyone who has that key can authorize superuser actions through the Langflow API, including user management and flow management.
+
+In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+
+<details>
+<summary>AUTO_LOGIN and SKIP_AUTH options</summary>
+
+In Langflow versions earlier than 1.5, if `AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
+In this case, API requests don't require a Langflow API key.
+
+In Langflow version 1.5, you can set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true` to skip authentication for API requests.
+However, the `SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
+</details>
 
 ## Generate a Langflow API key
 
-Generate a user-specific token to use with Langflow.
+You can generate a Langflow API key with the UI or the CLI.
 
-### Generate an API key with the Langflow UI
+The UI-generated key is appropriate for most cases. The CLI-generated key is needed when your Langflow server is running in `--backend-only` mode.
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**, and then click **Add New**.
-3. Name your key, and then click **Create Secret Key**.
-4. Copy the API key and store it in a secure location.
+<Tabs>
+  <TabItem value="Langflow UI" label="Langflow UI" default>
 
-### Generate an API key with the Langflow CLI
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**, and then click **Add New**.
+3. Name your key, and then click **Create API Key**.
+4. Copy the API key and store it securely.
 
-```shell
-langflow api-key
-# or
-python -m langflow api-key
-╭─────────────────────────────────────────────────────────────────────╮
-│ API Key Created Successfully:                                       │
-│                                                                     │
-│ sk-O0elzoWID1izAH8RUKrnnvyyMwIzHi2Wk-uXWoNJ2Ro                      │
-│                                                                     │
-│ This is the only time the API key will be displayed.                │
-│ Make sure to store it in a secure location.                         │
-│                                                                     │
-│ The API key has been copied to your clipboard. Cmd + V to paste it. │
-╰──────────────────────────────
+  </TabItem>
+  <TabItem value="Langflow CLI" label="Langflow CLI">
 
-```
+If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI, because the frontend is not running.
+
+Depending on your authentication settings, note the following requirements for creating API keys with the Langflow CLI:
+
+* If `AUTO_LOGIN` is `FALSE`, you must be logged in as a superuser.
+* If `AUTO LOGIN` is `TRUE`, you're already logged in as superuser.
+
+To create an API key for a user from the CLI, do the following:
+
+1. In your `.env` file, set `AUTO_LOGIN=FALSE`, and set superuser credentials for your server.
+
+    ```text
+    LANGFLOW_AUTO_LOGIN=False
+    LANGFLOW_SUPERUSER=administrator
+    LANGFLOW_SUPERUSER_PASSWORD=securepassword
+    ```
+
+2. To confirm your superuser status, call [`GET /users/whoami`](/api-users#get-current-user), and then check that the response contains `"is_superuser": true`:
+
+    ```bash
+    curl -X GET \
+      "$LANGFLOW_URL/api/v1/users/whoami" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+    <details closed>
+    <summary>Result</summary>
+
+    ```json
+    {
+      "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
+      "username": "langflow",
+      "profile_image": null,
+      "store_api_key": null,
+      "is_active": true,
+      "is_superuser": true,
+      "create_at": "2025-05-08T17:59:07.855965",
+      "updated_at": "2025-05-29T15:06:56.157860",
+      "last_login_at": "2025-05-29T15:06:56.157016",
+    }
+    ```
+
+    </details>
+
+3. Create an API key:
+
+    ```shell
+    uv run langflow api-key
+    ```
+  </TabItem>
+</Tabs>
 
 ## Authenticate requests with the Langflow API key
 
 Include your API key in API requests to authenticate requests to Langflow.
 
-API keys allow access only to the flows and components of the specific user to whom the key was issued.
+API keys allow access only to the flows and components of the specific user who created the key.
 
-### Include the API key in the HTTP header
+<Tabs>
+  <TabItem value="HTTP header" label="HTTP header" default>
 
 To use the API key when making API requests, include the API key in the HTTP header:
 
 ```shell
 curl -X POST \
-  "http://localhost:7860/api/v1/run/FLOW_ID?stream=false" \
+  "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false" \
   -H 'Content-Type: application/json' \
-  -H 'x-api-key: API_KEY' \
+  -H 'x-api-key: LANGFLOW_API_KEY' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
 
-### Include the API key as a query parameter
+  </TabItem>
+  <TabItem value="Query parameter" label="Query parameter">
 
 To pass the API key as a query parameter:
 
 ```shell
 curl -X POST \
-  "http://localhost:7860/api/v1/run/FLOW_ID?x-api-key=API_KEY?stream=false" \
+  "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?x-api-key=LANGFLOW_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
+  </TabItem>
+</Tabs>
 
 ## Generate a Langflow secret key
 
@@ -78,10 +139,10 @@ For more information, see [Authentication](/configuration-authentication#langflo
 
 ## Revoke an API key
 
-To revoke an API key, delete it from the list of keys in the **Settings** menu.
+To revoke an API key, delete it from your Langflow settings:
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**.
 3. Select the keys you want to delete, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
 This action immediately invalidates the key and prevents it from being used again.
@@ -104,13 +165,18 @@ GOOGLE_API_KEY=...
 
 ### Add component API keys with the Langflow UI
 
-To add component API keys as **Global variables** with the Langflow UI:
+You can store API keys for Langflow components as [global variables](/configuration-global-variables) in Langflow:
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**.
-3. Add new API keys as **Credential** type variables.
-4. Apply them to specific component fields.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Global Variables**.
+3. Click **Add New**.
+4. For **Type**, select **Credential**.
+5. For **Name**, enter a name for the variable that will store the API key.
+6. For **Value**, enter the API key that you want to store.
+7. For **Apply to fields**, you can select component fields to automatically populate with this variable.
 
-Component values set directly in a flow override values set in the UI **and** environment variables.
+    You can override automatically set variables by manually entering a different variable name or value when you add the affected component to a flow.
 
-For more information, see [Global variables](/configuration-global-variables).
+    Additionally, you can override all component settings by [running a flow with tweaks](/concepts-publish#input-schema), which are modifications to component settings that you make at runtime and apply to a single flow run only.
+
+8. Click **Save Variable**.

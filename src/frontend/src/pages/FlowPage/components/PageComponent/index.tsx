@@ -263,13 +263,17 @@ export default function Page({
     const multipleSelection = lastSelection?.nodes
       ? lastSelection?.nodes.length > 0
       : false;
+    const hasTextSelection =
+      (window.getSelection()?.toString().length ?? 0) > 0;
+
     if (
       !isWrappedWithClass(e, "noflow") &&
+      !hasTextSelection &&
       (isWrappedWithClass(e, "react-flow__node") || multipleSelection)
     ) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
-      if (window.getSelection()?.toString().length === 0 && lastSelection) {
+      if (lastSelection) {
         setLastCopiedSelection(_.cloneDeep(lastSelection));
       }
     }

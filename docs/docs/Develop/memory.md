@@ -7,7 +7,7 @@ Langflow provides flexible memory management options for storage and retrieval.
 
 This page details the following memory configuration options in Langflow.
 
-- [Use local Langflow database tables](#local-langflow-database-tables)
+- [Local Langflow database tables](#local-langflow-database-tables)
 - [Store messages in local memory](#store-messages-in-local-memory)
 - [Configure external memory](#configure-external-memory)
 - [Configure the external database connection](#configure-the-external-database-connection)
@@ -25,7 +25,7 @@ The following tables are stored in `langflow.db`:
 
 • **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
 
-• **Flow** - Contains flow configurations. For more information, see [Flows](/concepts-flows).
+• **Flow** - Contains flow configurations. For more information, see [Build flows](/concepts-flows).
 
 • **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/concepts-objects#message-object).
 
@@ -33,27 +33,26 @@ The following tables are stored in `langflow.db`:
 
 • **ApiKey** - Manages API authentication keys for users. For more information, see [API keys](/configuration-api-keys).
 
-• **Project** - Provides a structure for flow storage. For more information, see [Projects](/concepts-overview#projects).
+• **Project** - Provides a structure for flow storage. For more information, see [Projects](/concepts-flows#projects).
 
 • **Variables** - Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
-• **VertexBuild** - Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the playground](/concepts-playground).
+• **VertexBuild** - Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the Playground](/concepts-playground).
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
 ## Store messages in local memory
 
-To store messages in local Langflow memory, add a [Message store](/components-helpers#message-store) component to your flow.
+To store and retrieve messages in local Langflow memory, add a [Message history](/components-helpers#message-history) component to your flow.
 
-To retrieve messages from local Langflow memory, add a [Message history](/components-helpers#message-history) component to your flow.
+To store or retrieve chat messages from external memory, connect the **External memory** port of the **Message history** component to a **Memory** component.
+An example flow looks like this:
 
-For an example of using local chat memory, see the [Memory chatbot](/memory-chatbot) starter flow.
-
-To store or retrieve chat messages from external memory, connect the **External memory** port of the **Message store** or **Message history** component to a **Memory** component, like the [Astra DB chat memory](components-memories#astradbchatmemory-component) component. An example flow looks like this:
-
-![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
+![Sample Flow storing Chat Memory in Redit](/img/component-message-history-external-memory.png)
 
 If external storage is connected to a memory helper component, no chat messages are stored in local Langflow memory.
+
+For an example of using local chat memory, see the [Memory chatbot](/memory-chatbot) starter flow.
 
 ## Configure external memory
 

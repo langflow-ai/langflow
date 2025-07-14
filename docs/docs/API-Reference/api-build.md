@@ -16,7 +16,7 @@ To run flows in your apps, see [Flow trigger endpoints](/api-flows-run).
 
 The `/build` endpoints support Langflow's frontend code for building flows in the Langflow Workspace.
 You can use these endpoints to build vertices and flows, as well as execute flows with streaming event responses.
-You might need to use or understand these endpoints when contributing to the Langflow project's core codebase.
+You might need to use or understand these endpoints when contributing to the Langflow codebase.
 
 ## Build flow and stream events
 
@@ -32,6 +32,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "inputs": {
       "input_value": "Tell me a story"
@@ -59,7 +60,8 @@ curl -X POST \
 ```text
 curl -X GET \
   "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
    </TabItem>
@@ -84,7 +86,8 @@ To disable streaming and get all events at once, set `stream` to `false`.
 ```text
 curl -X GET \
   "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events?stream=false" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 ## Build headers
@@ -92,10 +95,8 @@ curl -X GET \
 | Header | Info | Example |
 |--------|------|---------|
 | Content-Type | Required. Specifies the JSON format. | "application/json" |
-| accept | Required. Specifies the response format. | "application/json" |
+| accept | Optional. Specifies the response format. | "application/json" |
 | x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
-
-The `/build/$FLOW_ID/flow` endpoint accepts the following parameters in its request body:
 
 ## Build parameters
 
@@ -104,8 +105,8 @@ The `/build/$FLOW_ID/flow` endpoint accepts the following parameters in its requ
 | inputs | object | Optional. Input values for flow components. |
 | data | object | Optional. Flow data to override stored configuration. |
 | files | array[string] | Optional. List of file paths to use. |
-| start_component_id | string | Optional. ID of the component where the execution should start. Component `id` values can be found in [Langflow JSON files](/concepts-flows#langflow-json-file-contents) |
-| stop_component_id | string | Optional. ID of the component where the execution should stop. Component `id` values can be found in [Langflow JSON files](/concepts-flows#langflow-json-file-contents).|
+| start_component_id | string | Optional. ID of the component where the execution should start. Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents) |
+| stop_component_id | string | Optional. ID of the component where the execution should stop. Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents).|
 | log_builds | boolean | Optional. Control build logging. Default: `true`. |
 
 ### Set start and stop points
@@ -136,6 +137,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "data": {
       "nodes": [],
