@@ -15,7 +15,7 @@ repos:
     hooks:
       - id: ruff
         name: ruff check
-        entry: uv run ruff
+        entry: uv run ruff check
         language: system
         types_or: [python, pyi]
         args: [--fix]
