@@ -3,7 +3,7 @@ title: Langflow release notes
 slug: /release-notes
 ---
 
-:::
+:::important
 Due to strict SemVer requirements, Langflow Desktop can have different patch versions than the core Langflow OSS Python package, but the major and minor versions are aligned.
 :::
 
