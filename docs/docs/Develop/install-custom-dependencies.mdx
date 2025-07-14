@@ -16,7 +16,7 @@ Add the dependency and version to `requirements.txt` on separate lines in the fo
 
 Restart Langflow Desktop to install the dependencies.
 
-If you need to change or uninstall custom dependencies. edit the `requirements.txt` file, and then restart Langflow Desktop.
+If you need to change or uninstall custom dependencies, edit the `requirements.txt` file, and then restart Langflow Desktop.
 
 ## Install custom dependencies in Langflow OSS
 
