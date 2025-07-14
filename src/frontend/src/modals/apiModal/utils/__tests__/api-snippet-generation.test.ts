@@ -218,18 +218,29 @@ describe("API Snippet Generation Utilities", () => {
           },
         };
 
-        const code = getNewCurlCode({ ...optionsWithFiles, platform: "unix" });
+        const result = getNewCurlCode({
+          ...optionsWithFiles,
+          platform: "unix",
+        }) as { steps: { title: string; code: string }[] };
 
-        // Check for step markers
-        expect(code).toContain("##STEP1_START##");
-        expect(code).toContain("##STEP1_END##");
-        expect(code).toContain("##STEP2_START##");
-        expect(code).toContain("##STEP2_END##");
+        // Check that it returns structured steps
+        expect(result).toHaveProperty("steps");
+        expect(Array.isArray(result.steps)).toBe(true);
+        expect(result.steps).toHaveLength(2);
 
-        // Check for file upload commands
-        expect(code).toContain("/api/v1/files/upload/");
-        expect(code).toContain("/api/v2/files");
-        expect(code).toContain('--form "file=@');
+        // Check step 1 (upload files)
+        expect(result.steps[0]).toHaveProperty("title");
+        expect(result.steps[0].title).toContain("Upload files");
+        expect(result.steps[0]).toHaveProperty("code");
+        expect(result.steps[0].code).toContain("/api/v1/files/upload/");
+        expect(result.steps[0].code).toContain("/api/v2/files");
+        expect(result.steps[0].code).toContain('--form "file=@');
+
+        // Check step 2 (execute flow)
+        expect(result.steps[1]).toHaveProperty("title");
+        expect(result.steps[1].title).toContain("Execute");
+        expect(result.steps[1]).toHaveProperty("code");
+        expect(result.steps[1].code).toContain("/api/v1/run/test-endpoint");
       });
     });
 
@@ -237,21 +248,41 @@ describe("API Snippet Generation Utilities", () => {
       it("should always include API key in all generators", () => {
         const pythonCode = getNewPythonApiCode(baseOptions);
         const jsCode = getNewJsApiCode(baseOptions);
-        const curlCode = getNewCurlCode(baseOptions);
+        const curlResult = getNewCurlCode(baseOptions);
 
         expect(pythonCode).toContain("YOUR_API_KEY_HERE");
         expect(jsCode).toContain("YOUR_API_KEY_HERE");
-        expect(curlCode).toContain("YOUR_API_KEY_HERE");
+
+        // Handle both string and object return types for cURL
+        if (typeof curlResult === "string") {
+          expect(curlResult).toContain("YOUR_API_KEY_HERE");
+        } else {
+          // For steps object, check that at least one step contains the API key
+          const hasApiKey = curlResult.steps.some((step) =>
+            step.code.includes("YOUR_API_KEY_HERE"),
+          );
+          expect(hasApiKey).toBe(true);
+        }
       });
 
       it("should include session_id in all generators", () => {
         const pythonCode = getNewPythonApiCode(baseOptions);
         const jsCode = getNewJsApiCode(baseOptions);
-        const curlCode = getNewCurlCode(baseOptions);
+        const curlResult = getNewCurlCode(baseOptions);
 
         expect(pythonCode).toContain("session_id");
         expect(jsCode).toContain("session_id");
-        expect(curlCode).toContain("session_id");
+
+        // Handle both string and object return types for cURL
+        if (typeof curlResult === "string") {
+          expect(curlResult).toContain("session_id");
+        } else {
+          // For steps object, check that at least one step contains session_id
+          const hasSessionId = curlResult.steps.some((step) =>
+            step.code.includes("session_id"),
+          );
+          expect(hasSessionId).toBe(true);
+        }
       });
 
       it("should handle empty tweaks correctly", () => {
@@ -270,7 +301,8 @@ describe("API Snippet Generation Utilities", () => {
         // Should not generate file upload steps
         expect(pythonCode).not.toContain("Step 1:");
         expect(jsCode).not.toContain("Step 1:");
-        expect(curlCode).not.toContain("##STEP1_START##");
+        // cURL should return string, not steps object
+        expect(typeof curlCode).toBe("string");
       });
     });
   });
