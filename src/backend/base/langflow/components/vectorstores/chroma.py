@@ -1,5 +1,5 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
 from chromadb.config import Settings
@@ -8,7 +8,15 @@ from typing_extensions import override
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, NestedDictInput, FloatInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FloatInput,
+    HandleInput,
+    IntInput,
+    NestedDictInput,
+    StrInput,
+)
 from langflow.schema.data import Data
 
 if TYPE_CHECKING:
@@ -204,9 +212,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         threshold = float(self.sim_threshold or 0.0)
 
         if mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_relevance_scores"):
-            docs_and_scores = vs.similarity_search_with_relevance_scores(
-                query, k=k, filter=filt if filt else None
-            )
+            docs_and_scores = vs.similarity_search_with_relevance_scores(query, k=k, filter=filt if filt else None)
             results: list[Data] = []
             for doc, score in docs_and_scores:
                 if score >= threshold:
@@ -250,4 +256,4 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 self.status = data_list
                 return data_list
 
-        return super().search_documents()	
+        return super().search_documents()
