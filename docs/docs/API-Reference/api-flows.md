@@ -22,6 +22,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
   "name": "string2",
   "description": "string",
@@ -74,6 +75,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/batch/" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
   "flows": [
     {
@@ -126,7 +128,8 @@ Retrieves a specific flow by its ID.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -160,7 +163,8 @@ Retrieve all flows with pagination:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=false&components_only=false&get_all=true&header_flows=false&page=1&size=50" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 To retrieve flows from a specific project, use the `project_id` query parameter:
@@ -168,7 +172,8 @@ To retrieve flows from a specific project, use the `project_id` query parameter:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&project_id=$PROJECT_ID&header_flows=false&page=1&size=1" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 ## Read sample flows
@@ -178,7 +183,8 @@ Retrieves a list of sample flows:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/basic_examples/" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 ## Update flow
@@ -195,6 +201,7 @@ curl -X PATCH \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
   "name": "string",
   "description": "string",
@@ -241,7 +248,8 @@ Deletes a specific flow by its ID.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 </TabItem>
@@ -261,7 +269,7 @@ curl -X DELETE \
 
 Exports specified flows to a ZIP file.
 
-This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-flows#langflow-json-file-contents) for each flow ID listed in the request body.
+This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents) for each flow ID listed in the request body.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -271,6 +279,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/download/" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '[
   "e1e40c77-0541-41a9-88ab-ddb3419398b5",
   "92f9a4c5-cfc8-4656-ae63-1f0881163c28"
@@ -292,7 +301,7 @@ curl -X POST \
 
 ## Import flows
 
-Imports flows by uploading a [Langflow-compatible JSON file](/concepts-flows#langflow-json-file-contents).
+Imports flows by uploading a [Langflow-compatible JSON file](/concepts-flows-import#langflow-json-file-contents).
 
 To specify a target project for the flow, include the query parameter `project_id`.
 The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available projects.
@@ -307,6 +316,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -F "file=@agent-with-astra-db-tool.json;type=application/json"
 ```
 

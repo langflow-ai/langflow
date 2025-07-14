@@ -47,40 +47,23 @@ curl --request POST \
 
 ### Base URL
 
-<!-- For 1.5
 By default, local deployments serve the Langflow API at `http://localhost:7860/api`.
 
 Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `http://IP_OR_DNS/api` or `http://IP_OR_DNS:LANGFLOW_PORT/api`.
 
 You can configure the Langflow port number in the `LANGFLOW_PORT` [environment variable](/environment-variables).
--->
-
-Local deployments serve the Langflow API at `http://localhost:LANGFLOW_PORT/api`.
-The default port is 7868 or 7860:
-
-* Local Langflow Desktop: `http://localhost:7868/api`
-* Local Langflow OSS: `http://localhost:7860/api`
-* Local Langflow Docker image: `http://localhost:7860/api`
-
-Remotely hosted Langflow deployments are available at the domain set by the hosting service.
-For example:
 
 * `https://UUID.ngrok.app/api`
 * `http://IP_OR_DNS/api`
 * `http://IP_OR_DNS:LANGFLOW_PORT/api`
 
-:::tip
-The Langflow port number is set in the `LANGFLOW_PORT` [environment variable](/environment-variables).
-::::
-
 ### Authentication
 
-Your [Langflow deployment's authentication settings](/configuration-authentication) determine whether Langflow API requests require explicit authentication with a Langflow API key.
+In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
 
-If explicit authentication is required, you must provide a valid Langflow API key in either an `x-api-key` header or query parameter.
+To authenticate a Langflow API request, provide a Langflow API key in either an `x-api-key` header or query parameter.
 For more information, see [API keys](/configuration-api-keys).
-
-Because authentication isn't always required, Langflow API examples in the Langflow documentation often omit authentication.
 
 As with any API, follow industry best practices for storing and referencing sensitive credentials.
 For example, you can [set environment variables](#set-environment-variables) for your API keys, and then reference those environment variables in your API requests.
@@ -114,6 +97,8 @@ For example:
 export LANGFLOW_API_KEY="sk..."
 export LANGFLOW_SERVER_URL="https://localhost:7860"
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
+export PROJECT_ID="1415de42-8f01-4f36-bf34-539f23e47466"
+export LANGFLOW_API_KEY="sk-..."
 
 # Use environment variables in API requests
 curl --request POST \
@@ -140,8 +125,6 @@ You can retrieve flow IDs from the [**API access** pane](/concepts-publish#api-a
 
 Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.
 
-If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/configuration-api-keys), such as `-H 'x-api-key: $API_KEY'`.
-
 ### Get version
 
 Returns the current Langflow API version:
@@ -150,6 +133,7 @@ Returns the current Langflow API version:
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v1/version" \
   -H "accept: application/json"
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>
@@ -171,6 +155,7 @@ Returns configuration details for your Langflow deployment:
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v1/config" \
   -H "accept: application/json"
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>
@@ -196,7 +181,8 @@ Returns a dictionary of all Langflow components:
 ```bash
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v1/all" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 ## Next steps
