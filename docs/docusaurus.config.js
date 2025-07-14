@@ -137,14 +137,14 @@ const config = {
       selectors: [
         {
           selector: 'h1, h2, h3, h4, h5, h6',
-          eventName: 'Heading Viewed',
+          eventName: 'Docs.langflow.org - Heading Viewed',
           properties: {
             element_type: 'heading'
           }
         },
         {
           selector: '.ch-codeblock',
-          eventName: 'Codeblock Viewed',
+          eventName: 'Docs.langflow.org - Codeblock Viewed',
           properties: {
             element_type: 'code',
             language: 'helper:codeLanguage'
