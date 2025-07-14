@@ -274,13 +274,13 @@ const SettingsVoiceModal = ({
                 <div className="grid w-full items-center gap-2">
                   <span className="flex items-center text-sm">
                     OpenAI API Key
-                    <span className="ml-1 text-destructive">*</span>
+                    <span className="text-destructive ml-1">*</span>
                     <ShadTooltip content="OpenAI API key is required to use the voice assistant.">
                       <div>
                         <IconComponent
                           name="Info"
                           strokeWidth={2}
-                          className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
+                          className="text-placeholder relative -top-[3px] left-1 h-[14px] w-[14px]"
                         />
                       </div>
                     </ShadTooltip>
@@ -369,7 +369,7 @@ const SettingsVoiceModal = ({
                             <IconComponent
                               name="Info"
                               strokeWidth={2}
-                              className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
+                              className="text-placeholder relative -top-[3px] left-1 h-[14px] w-[14px]"
                             />
                           </div>
                         </ShadTooltip>

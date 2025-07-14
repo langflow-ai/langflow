@@ -19,7 +19,7 @@ export default function NodeUpdateComponent({
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-3 rounded-t-[0.69rem] border-b bg-muted p-2 px-4 py-2",
+        "bg-muted flex w-full items-center gap-3 rounded-t-[0.69rem] border-b p-2 px-4 py-2",
       )}
     >
       <div
@@ -28,14 +28,14 @@ export default function NodeUpdateComponent({
           hasBreakingChange ? "bg-warning" : "bg-status-green",
         )}
       />
-      <div className="mb-px flex-1 truncate text-mmd font-medium">
+      <div className="text-mmd mb-px flex-1 truncate font-medium">
         {showNode && (hasBreakingChange ? "Update available" : "Update ready")}
       </div>
 
       <Button
         variant="ghost"
         size="icon"
-        className="shrink-0 !text-mmd"
+        className="text-mmd! shrink-0"
         onClick={(e) => {
           e.stopPropagation();
           setDismissAll(true);
@@ -47,7 +47,7 @@ export default function NodeUpdateComponent({
       </Button>
       <Button
         size="sm"
-        className="!h-8 shrink-0 !text-mmd"
+        className="text-mmd! h-8! shrink-0"
         onClick={(e) => {
           e.stopPropagation();
           handleUpdateCode();

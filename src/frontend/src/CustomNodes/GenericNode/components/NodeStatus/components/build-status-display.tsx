@@ -12,14 +12,14 @@ const StatusMessage = ({ children, className = "text-foreground" }) => (
 );
 
 const TimeStamp = ({ prefix, time }) => (
-  <div className="flex items-center text-sm text-secondary-foreground">
+  <div className="text-secondary-foreground flex items-center text-sm">
     <div>{prefix}</div>
-    <div className="ml-1 text-secondary-foreground">{time}</div>
+    <div className="text-secondary-foreground ml-1">{time}</div>
   </div>
 );
 
 const Duration = ({ duration }) => (
-  <div className="flex items-center text-secondary-foreground">
+  <div className="text-secondary-foreground flex items-center">
     <div>Duration:</div>
     <div className="ml-1">{duration}</div>
   </div>
@@ -33,7 +33,7 @@ const ValidationDetails = ({
   <div className="max-h-100 px-1 py-2.5">
     <div className="flex max-h-80 flex-col gap-2">
       {validationString && (
-        <div className="break-words text-sm text-foreground">
+        <div className="text-foreground text-sm break-words">
           {validationString}
         </div>
       )}

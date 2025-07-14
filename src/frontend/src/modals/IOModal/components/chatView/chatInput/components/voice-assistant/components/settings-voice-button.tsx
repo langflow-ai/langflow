@@ -16,7 +16,7 @@ const SettingsVoiceButton = ({
       <ShadTooltip content="Audio Settings" side="top">
         <div>
           <Button
-            className={`btn-playground-actions cursor-pointer text-muted-foreground hover:text-primary`}
+            className={`btn-playground-actions text-muted-foreground hover:text-primary cursor-pointer`}
             unstyled
             disabled={isRecording}
             onClick={() => setShowSettingsModal(true)}

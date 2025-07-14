@@ -18,7 +18,7 @@ export const LangflowCounts = () => {
         side="bottom"
         styleClasses="z-10"
       >
-        <div className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground">
+        <div className="hit-area-hover text-muted-foreground flex items-center gap-2 rounded-md p-1">
           <FaGithub className="h-4 w-4" />
           <span className="text-xs font-semibold">{formatNumber(stars)}</span>
         </div>
@@ -31,7 +31,7 @@ export const LangflowCounts = () => {
       >
         <div
           onClick={() => window.open(DISCORD_URL, "_blank")}
-          className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
+          className="hit-area-hover text-muted-foreground flex items-center gap-2 rounded-md p-1"
         >
           <FaDiscord className="h-4 w-4" />
           <span className="text-xs font-semibold">

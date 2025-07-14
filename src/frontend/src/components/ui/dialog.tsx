@@ -40,7 +40,7 @@ const VisuallyHidden = React.forwardRef<
 >(({ children, ...props }, ref) => (
   <span
     ref={ref}
-    className="absolute h-px w-px overflow-hidden whitespace-nowrap border-0 p-0"
+    className="absolute h-px w-px overflow-hidden border-0 p-0 whitespace-nowrap"
     style={{ clip: "rect(0 0 0 0)", clipPath: "inset(50%)" }}
     {...props}
   >
@@ -71,7 +71,7 @@ const DialogContent = React.forwardRef<
         <DialogPrimitive.Content
           ref={ref}
           className={cn(
-            "fixed z-50 flex w-full max-w-lg flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
+            "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] fixed z-50 flex w-full max-w-lg flex-col gap-4 rounded-xl border p-6 shadow-lg duration-200",
             className,
           )}
           {...props}
@@ -90,7 +90,7 @@ const DialogContent = React.forwardRef<
           >
             <DialogPrimitive.Close
               className={cn(
-                "absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity hover:bg-secondary-hover hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+                "ring-offset-background hover:bg-secondary-hover hover:text-accent-foreground focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-sm transition-opacity focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none",
                 closeButtonClassName,
               )}
             >
@@ -136,7 +136,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
+      "text-lg leading-none font-semibold tracking-tight",
       className,
     )}
     {...props}
@@ -150,7 +150,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-muted-foreground text-sm", className)}
     {...props}
   />
 ));

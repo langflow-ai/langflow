@@ -114,8 +114,8 @@ const Footer: React.FC<{
     <div
       className={
         centered
-          ? "flex flex-shrink-0 justify-center"
-          : "flex flex-shrink-0 flex-row-reverse"
+          ? "flex shrink-0 justify-center"
+          : "flex shrink-0 flex-row-reverse"
       }
     >
       {submit ? (

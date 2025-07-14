@@ -44,7 +44,7 @@ export default function PaginatorComponent({
 
   return (
     <div className="flex flex-1 items-center justify-between px-6">
-      <div className="flex items-center justify-end gap-1 text-mmd text-secondary-foreground">
+      <div className="text-mmd text-secondary-foreground flex items-center justify-end gap-1">
         {(pageIndex - 1) * pageSize + 1}-
         {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "}
         <span className="text-muted-foreground">
@@ -57,14 +57,14 @@ export default function PaginatorComponent({
         </span>
       </div>
       <div className={"flex items-center gap-2"}>
-        <div className="flex items-center gap-1 text-mmd text-secondary-foreground">
+        <div className="text-mmd text-secondary-foreground flex items-center gap-1">
           <Select
             onValueChange={(value) => paginate(Number(value), size)}
             value={pageIndex.toString()}
           >
             <SelectTrigger
               direction="up"
-              className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-mmd focus:border-none focus:ring-0 focus:!ring-offset-0"
+              className="text-mmd h-7 w-fit gap-1 border-none p-1 pl-1.5 focus:border-none focus:ring-0 focus:ring-offset-0!"
             >
               <SelectValue placeholder="1" />
             </SelectTrigger>

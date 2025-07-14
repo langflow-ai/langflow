@@ -13,6 +13,7 @@ import { APIClassType } from "@/types/api";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   Select,
@@ -67,11 +68,13 @@ const NodeToolbarComponent = memo(
     const updateFreezeStatus = useFlowStore(
       (state) => state.updateFreezeStatus,
     );
-    const { hasStore, hasApiKey, validApiKey } = useStoreStore((state) => ({
-      hasStore: state.hasStore,
-      hasApiKey: state.hasApiKey,
-      validApiKey: state.validApiKey,
-    }));
+    const { hasStore, hasApiKey, validApiKey } = useStoreStore(
+      useShallow((state) => ({
+        hasStore: state.hasStore,
+        hasApiKey: state.hasApiKey,
+        validApiKey: state.validApiKey,
+      })),
+    );
     const shortcuts = useShortcutsStore((state) => state.shortcuts);
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
@@ -544,7 +547,7 @@ const NodeToolbarComponent = memo(
               value={selectedValue!}
               onOpenChange={handleOpenChange}
             >
-              <SelectTrigger className="w-62">
+              <SelectTrigger>
                 <ShadTooltip content="Show More" side="top">
                   <div data-testid="more-options-modal">
                     <Button
@@ -563,7 +566,7 @@ const NodeToolbarComponent = memo(
                 </ShadTooltip>
               </SelectTrigger>
               <SelectContentWithoutPortal
-                className={"relative top-1 w-56 bg-background"}
+                className={"bg-background relative top-1 w-56"}
               >
                 <SelectItem value={"save"}>
                   <ToolbarSelectItem
@@ -700,14 +703,14 @@ const NodeToolbarComponent = memo(
                   />
                 </SelectItem>
                 <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
-                  <div className="font-red flex text-status-red">
+                  <div className="font-red text-status-red flex">
                     <IconComponent
                       name="Trash2"
                       className="relative top-0.5 mr-2 h-4 w-4"
                     />{" "}
                     <span className="">Delete</span>{" "}
                     <span
-                      className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
+                      className={`absolute top-2 right-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
                     >
                       <IconComponent
                         name="Delete"

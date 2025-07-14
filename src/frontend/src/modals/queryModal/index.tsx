@@ -61,7 +61,7 @@ export default function QueryModal({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-sm">{description}</p>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer

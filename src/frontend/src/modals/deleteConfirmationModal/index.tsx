@@ -29,7 +29,7 @@ export default function DeleteConfirmationModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild={!children ? true : asChild} tabIndex={-1}>
+      <DialogTrigger asChild={asChild ?? true} tabIndex={-1}>
         {children ?? <></>}
       </DialogTrigger>
       <DialogContent>
@@ -37,7 +37,7 @@ export default function DeleteConfirmationModal({
           <DialogTitle>
             <div className="flex items-center">
               <Trash2
-                className="h-6 w-6 pr-1 text-foreground"
+                className="text-foreground h-6 w-6 pr-1"
                 strokeWidth={1.5}
               />
               <span className="pl-2">Delete</span>

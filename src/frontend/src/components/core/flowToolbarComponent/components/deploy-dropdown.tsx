@@ -84,11 +84,11 @@ export default function PublishDropdown() {
           <Button
             variant="ghost"
             size="md"
-            className="!px-2.5 font-normal"
+            className="px-2.5! font-normal"
             data-testid="publish-button"
           >
             Share
-            <IconComponent name="ChevronDown" className="!h-5 !w-5" />
+            <IconComponent name="ChevronDown" className="h-5! w-5!" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -202,9 +202,7 @@ export default function PublishDropdown() {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
-        <></>
-      </ApiModal>
+      <ApiModal open={openApiModal} setOpen={setOpenApiModal} />
       <EmbedModal
         open={openEmbedModal}
         setOpen={setOpenEmbedModal}

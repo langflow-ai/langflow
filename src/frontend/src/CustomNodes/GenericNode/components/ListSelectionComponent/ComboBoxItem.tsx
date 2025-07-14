@@ -19,10 +19,10 @@ const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
             type="checkbox"
             checked={isChecked}
             onChange={() => setIsChecked(!isChecked)}
-            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-border border-muted-foreground shadow transition-all hover:shadow-md"
+            className="peer border-border border-muted-foreground h-5 w-5 cursor-pointer appearance-none rounded border shadow transition-all hover:shadow-md"
             id={`check-${item?.name}`}
           />
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform text-black opacity-0 peer-checked:bg-primary peer-checked:opacity-100">
+          <span className="peer-checked:bg-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform text-black opacity-0 peer-checked:opacity-100">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-3.5 w-3.5"
@@ -41,17 +41,17 @@ const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
         </label>
         <Button
           unstyled
-          className="mx-2 flex w-full justify-start rounded-md hover:bg-accent"
+          className="hover:bg-accent mx-2 flex w-full justify-start rounded-md"
         >
           <label
-            className="ml-2 flex w-72 cursor-pointer text-sm font-bold text-primary"
+            className="text-primary ml-2 flex w-72 cursor-pointer text-sm font-bold"
             htmlFor={`check-${item?.name}`}
           >
             <span className="truncate">{item?.name}</span>
           </label>
 
           <label
-            className="flex w-72 cursor-pointer text-sm text-muted-foreground"
+            className="text-muted-foreground flex w-72 cursor-pointer text-sm"
             htmlFor={`check-${item?.name}`}
           >
             <span className="truncate">{item?.description}</span>

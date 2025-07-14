@@ -91,7 +91,7 @@ export default function DragWrapComponent({
 
       <div
         className={cn(
-          "pointer-events-none absolute top-0 h-full w-full rounded-2xl bg-placeholder-foreground transition-all",
+          "bg-placeholder-foreground pointer-events-none absolute top-0 h-full w-full rounded-2xl transition-all",
           isDragging ? "opacity-100" : "opacity-0",
         )}
         style={{
@@ -108,8 +108,8 @@ export default function DragWrapComponent({
             top: `${mousePosition.y + 55}px`,
           }}
         >
-          <div className="w-44 rounded-2xl bg-accent-indigo-foreground px-2.5 py-0.5 text-center backdrop-blur-sm">
-            <span className="font-mono text-xs text-primary-foreground">
+          <div className="bg-accent-indigo-foreground w-44 rounded-2xl px-2.5 py-0.5 text-center backdrop-blur-sm">
+            <span className="text-primary-foreground font-mono text-xs">
               Drop file{filesCount > 1 ? "s" : ""} to upload
             </span>
           </div>

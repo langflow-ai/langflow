@@ -13,7 +13,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { cn } from "@/utils/utils";
-import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import {
   HeaderMenu,
@@ -22,7 +22,6 @@ import {
   HeaderMenuItems,
   HeaderMenuToggle,
 } from "../HeaderMenu";
-import { ProfileIcon } from "../ProfileIcon";
 import ThemeButtons from "../ThemeButtons";
 
 export const AccountMenu = () => {
@@ -32,10 +31,8 @@ export const AccountMenu = () => {
   const navigate = useCustomNavigate();
   const { mutate: mutationLogout } = useLogout();
 
-  const { isAdmin, autoLogin } = useAuthStore((state) => ({
-    isAdmin: state.isAdmin,
-    autoLogin: state.autoLogin,
-  }));
+  const isAdmin = useAuthStore((state) => state.isAdmin);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const handleLogout = () => {
     mutationLogout();
@@ -55,7 +52,7 @@ export const AccountMenu = () => {
           </div>
         </HeaderMenuToggle>
         <HeaderMenuItems position="right" classNameSize="w-[272px]">
-          <div className="divide-y divide-foreground/10">
+          <div className="divide-foreground/10 divide-y">
             <div>
               <div className="h-[44px] items-center px-4 pt-3">
                 <div className="flex items-center justify-between">

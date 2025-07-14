@@ -78,16 +78,16 @@ const ListItem = ({
           </div>
         )}
         <div className="flex w-full flex-col truncate">
-          <div className="flex w-full items-center gap-2 truncate text-mmd font-medium">
+          <div className="text-mmd flex w-full items-center gap-2 truncate font-medium">
             <span className="truncate">{item.name}</span>
             {"description" in item && item.description && (
-              <span className="font-normal text-muted-foreground">
+              <span className="text-muted-foreground font-normal">
                 {item.description}
               </span>
             )}
           </div>
           {"metaData" in item && item.metaData && (
-            <div className="flex w-full truncate text-mmd text-gray-500">
+            <div className="text-mmd flex w-full truncate text-gray-500">
               <span className="truncate">{item.metaData}</span>
             </div>
           )}
@@ -95,13 +95,13 @@ const ListItem = ({
 
         {isHovered || isFocused ? (
           <div className="ml-auto flex items-center justify-start rounded-md">
-            <div className="flex items-center pr-1.5 text-mmd font-semibold text-muted-foreground">
+            <div className="text-mmd text-muted-foreground flex items-center pr-1.5 font-semibold">
               Select
             </div>
             <div className="flex items-center justify-center rounded-md">
               <ForwardedIconComponent
                 name="corner-down-left"
-                className="h-3.5 w-3.5 text-muted-foreground"
+                className="text-muted-foreground h-3.5 w-3.5"
               />
             </div>
           </div>

@@ -1,21 +1,21 @@
 /* set the background color of many elements across the grid */
 .ag-theme-shadcn {
-  --ag-foreground-color: hsl(var(--foreground)) !important;
-  --ag-background-color: hsl(var(--background)) !important;
-  --ag-secondary-foreground-color: hsl(var(--secondary-foreground)) !important;
-  --ag-data-color: hsl(var(--foreground)) !important;
-  --ag-header-foreground-color: hsl(var(--muted-foreground)) !important;
-  --ag-header-background-color: hsl(var(--background)) !important;
-  --ag-tooltip-background-color: hsl(var(--muted)) !important;
-  --ag-disabled-foreground-color: hsl(var(--muted-foreground)) !important;
-  --ag-active-color: hsl(var(--foreground)) !important;
-  --ag-border-color: hsl(var(--border)) !important;
-  --ag-selected-row-background-color: hsl(var(--accent)) !important;
-  --ag-menu-background-color: hsl(var(--accent)) !important;
-  --ag-panel-background-color: hsl(var(--accent)) !important;
-  --ag-row-hover-color: hsl(var(--accent)) !important;
+  --ag-foreground-color: var(--color-foreground) !important;
+  --ag-background-color: var(--color-background) !important;
+  --ag-secondary-foreground-color: var(--color-secondary-foreground) !important;
+  --ag-data-color: var(--color-foreground) !important;
+  --ag-header-foreground-color: var(--color-muted-foreground) !important;
+  --ag-header-background-color: var(--color-background) !important;
+  --ag-tooltip-background-color: var(--color-muted) !important;
+  --ag-disabled-foreground-color: var(--color-muted-foreground) !important;
+  --ag-active-color: var(--color-foreground) !important;
+  --ag-border-color: var(--color-border) !important;
+  --ag-selected-row-background-color: var(--color-accent) !important;
+  --ag-menu-background-color: var(--color-accent) !important;
+  --ag-panel-background-color: var(--color-accent) !important;
+  --ag-row-hover-color: var(--color-accent) !important;
   --ag-header-height: 2.5rem !important;
-  --ag-checkbox-checked-color: hsl(var(--primary)) !important;
+  --ag-checkbox-checked-color: var(--color-primary) !important;
 }
 
 .ag-theme-shadcn .ag-paging-panel {
@@ -58,18 +58,18 @@
 
 .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-track,
 .ag-body-vertical-scroll-viewport::-webkit-scrollbar-track {
-  background-color: hsl(var(--muted));
+  background-color: var(--color-muted);
 }
 
 .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
 .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border));
+  background-color: var(--color-border);
   border-radius: 999px;
 }
 
 .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb:hover,
 .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--placeholder-foreground));
+  background-color: var(--color-placeholder-foreground);
 }
 
 .ag-paging-page-size {
@@ -167,10 +167,10 @@
 }
 
 .ag-tool-mode:not(.ag-no-selection) .ag-row-focus {
-  background-color: hsl(var(--accent)) !important;
+  background-color: var(--color-accent) !important;
 }
 .ag-tool-mode.ag-no-selection .ag-row-selected::before {
-  background-color: hsl(var(--background)) !important;
+  background-color: var(--color-background) !important;
 }
 
 .ag-tool-mode .ag-checkbox-input-wrapper:focus-within,

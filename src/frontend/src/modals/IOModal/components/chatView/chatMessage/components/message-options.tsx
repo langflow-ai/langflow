@@ -33,7 +33,7 @@ export function EditMessageButton({
   };
 
   return (
-    <div className="flex items-center rounded-md border border-border bg-background">
+    <div className="border-border bg-background flex items-center rounded-md border">
       {!isAudioMessage && (
         <ShadTooltip styleClasses="z-50" content="Edit message" side="top">
           <div className="p-1">

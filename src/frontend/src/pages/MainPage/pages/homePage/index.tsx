@@ -250,7 +250,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         className="flex h-full w-full flex-col overflow-y-auto"
         data-testid="cards-wrapper"
       >
-        <div className="flex h-full w-full flex-col 3xl:container">
+        <div className="3xl:container flex h-full w-full flex-col">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
           <div className="flex flex-1 flex-col justify-start p-4">
             <div className="flex h-full flex-col justify-start">
@@ -316,7 +316,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "flows" ? (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
+                    <div className="text-secondary-foreground pt-24 text-center text-sm">
                       No flows in this project.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
@@ -327,7 +327,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       , or browse the store.
                     </div>
                   ) : (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
+                    <div className="text-secondary-foreground pt-24 text-center text-sm">
                       No saved or custom components. Learn more about{" "}
                       <a
                         href="https://docs.langflow.org/components-custom-components"

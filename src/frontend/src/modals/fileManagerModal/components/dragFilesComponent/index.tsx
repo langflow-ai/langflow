@@ -103,7 +103,7 @@ export default function DragFilesComponent({
         <h3 className="text-sm font-semibold">
           {isDragging ? "Drop files here" : "Click or drag files here"}
         </h3>
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground flex items-center gap-1 text-xs">
           <span>{types.slice(0, 3).join(", ")}</span>
           {types.length > 3 && (
             <ShadTooltip content={types.slice(3).join(", ")}>
@@ -121,7 +121,7 @@ export default function DragFilesComponent({
           <svg
             width="100%"
             height="100%"
-            className="overflow-visible stroke-muted-foreground/50"
+            className="stroke-muted-foreground/50 overflow-visible"
             style={{
               position: "absolute",
               top: 1,

@@ -33,26 +33,26 @@ const SortableListItem = memo(
     <li
       className={cn(
         "inline-flex h-12 w-full items-center gap-2 text-sm font-medium",
-        limit === 1 ? "h-6 rounded-md bg-muted" : "group cursor-grab",
+        limit === 1 ? "bg-muted h-6 rounded-md" : "group cursor-grab",
       )}
     >
       {limit !== 1 && (
         <ForwardedIconComponent
           name="GridHorizontal"
-          className="h-5 w-5 text-muted-foreground"
+          className="text-muted-foreground h-5 w-5"
         />
       )}
 
       <div className="flex w-full items-center gap-x-2">
         {limit !== 1 && (
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-border text-center text-mmd text-primary">
+          <div className="bg-border text-mmd text-primary flex h-5 w-5 items-center justify-center rounded-full text-center">
             {index + 1}
           </div>
         )}
 
         <span
           className={cn(
-            "truncate text-xxs font-medium text-muted-foreground",
+            "text-xxs text-muted-foreground truncate font-medium",
             limit === 1 ? "max-w-56 pl-2" : "max-w-48",
           )}
         >
@@ -63,9 +63,9 @@ const SortableListItem = memo(
         size="icon"
         variant={"ghost"}
         className={cn(
-          "ml-auto h-6 w-6 text-muted-foreground opacity-0 transition-opacity duration-200",
+          "text-muted-foreground ml-auto h-6 w-6 opacity-0 transition-opacity duration-200",
           limit === 1
-            ? "group pr-1 opacity-100 hover:text-foreground"
+            ? "group hover:text-foreground pr-1 opacity-100"
             : "hover:text-destructive group-hover:opacity-100",
         )}
         onClick={onRemove}

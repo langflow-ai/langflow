@@ -358,7 +358,7 @@ export default function IOModal({
       type={isPlayground ? "full-screen" : undefined}
       onSubmit={async () => await sendMessage({ repeat: 1 })}
       size="x-large"
-      className="!rounded-[12px] p-0"
+      className="rounded-[12px]! p-0"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -367,7 +367,7 @@ export default function IOModal({
           <div className="flex-max-width h-full">
             <div
               className={cn(
-                "flex h-full flex-shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
+                "flex h-full shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
                 sidebarOpen
                   ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
                   : "w-0",
@@ -375,7 +375,7 @@ export default function IOModal({
             >
               <div
                 className={cn(
-                  "relative flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas",
+                  "border-border bg-muted custom-scroll dark:bg-canvas relative flex h-full flex-col overflow-y-auto border-r p-4 text-center",
                   playgroundPage ? "pt-[15px]" : "pt-3.5",
                 )}
               >
@@ -405,12 +405,12 @@ export default function IOModal({
                   >
                     <Button
                       variant="ghost"
-                      className="flex h-8 w-8 items-center justify-center !p-0"
+                      className="flex h-8 w-8 items-center justify-center p-0!"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
                     >
                       <IconComponent
                         name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
-                        className="h-[18px] w-[18px] text-ring"
+                        className="text-ring h-[18px] w-[18px]"
                       />
                     </Button>
                   </ShadTooltip>
@@ -428,7 +428,7 @@ export default function IOModal({
                   />
                 )}
                 {sidebarOpen && showPublishOptions && (
-                  <div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
+                  <div className="border-border absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t px-2 py-4 transition-all">
                     <div className="flex items-center justify-between px-2">
                       <div className="text-sm">Theme</div>
                       <ThemeButtons />
@@ -436,7 +436,7 @@ export default function IOModal({
                     <Button
                       onClick={LangflowButtonClick}
                       variant="primary"
-                      className="w-full !rounded-xl shadow-lg"
+                      className="w-full rounded-xl! shadow-lg"
                     >
                       <LangflowLogoColor />
                       <div className="text-sm">Built with Langflow</div>
@@ -454,7 +454,7 @@ export default function IOModal({
                 >
                   <Button
                     variant="primary"
-                    className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
+                    className="h-12 w-12 rounded-xl! p-4! shadow-lg"
                     onClick={LangflowButtonClick}
                   >
                     <LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
@@ -462,7 +462,7 @@ export default function IOModal({
                 </ShadTooltip>
               </div>
             )}
-            <div className="flex h-full min-w-96 flex-grow bg-background">
+            <div className="bg-background flex h-full min-w-96 grow">
               {selectedViewField && !sessionsLoading && (
                 <SelectedViewField
                   selectedViewField={selectedViewField}

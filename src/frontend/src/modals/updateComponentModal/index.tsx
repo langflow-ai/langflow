@@ -63,7 +63,7 @@ export default function UpdateComponentModal({
     {
       headerName: "Component",
       field: "display_name",
-      headerClass: "!text-mmd !font-normal",
+      headerClass: "text-mmd! !font-normal",
       flex: 1,
       headerCheckboxSelection: true,
       checkboxSelection: true,
@@ -85,13 +85,13 @@ export default function UpdateComponentModal({
     {
       headerName: "Update Type",
       field: "breakingChange",
-      headerClass: "!text-mmd !font-normal",
+      headerClass: "text-mmd! !font-normal",
       resizable: false,
       flex: 1,
       cellClass: "text-muted-foreground",
       cellRenderer: (params) => {
         return params.value ? (
-          <span className="font-semibold text-accent-amber-foreground">
+          <span className="text-accent-amber-foreground font-semibold">
             Breaking
           </span>
         ) : (
@@ -139,11 +139,11 @@ export default function UpdateComponentModal({
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex flex-col gap-3 text-sm">
             {isMultiple ? (
               <p>
                 Updates marked as{" "}
-                <span className="font-semibold text-accent-amber-foreground">
+                <span className="text-accent-amber-foreground font-semibold">
                   breaking
                 </span>{" "}
                 may change inputs, outputs, or component behavior. In some
@@ -156,7 +156,7 @@ export default function UpdateComponentModal({
                 <p>
                   This update may change inputs, outputs, or component behavior.
                   In some cases, it will{" "}
-                  <span className="font-semibold text-accent-amber-foreground">
+                  <span className="text-accent-amber-foreground font-semibold">
                     disconnect this component from your flow
                   </span>
                   , requiring you to review or reconnect it afterward.
@@ -169,7 +169,7 @@ export default function UpdateComponentModal({
             )}
           </div>
           {isMultiple && (
-            <div className="max-h-[200px] overflow-y-auto overflow-x-hidden">
+            <div className="max-h-[200px] overflow-x-hidden overflow-y-auto">
               <div className="-mx-4">
                 <TableComponent
                   columnDefs={columnDefs}

@@ -283,7 +283,7 @@ export default function InputFileComponent({
                   data-testid="input-file-component"
                   type="text"
                   className={cn(
-                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                    "primary-input focus:border-border h-9 w-full cursor-pointer rounded-r-none text-sm focus:ring-0 focus:outline-hidden",
                     !value && "text-placeholder-foreground",
                     editNode && "h-6",
                   )}
@@ -300,7 +300,7 @@ export default function InputFileComponent({
                     value &&
                       "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
                     isDisabled &&
-                      "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
+                      "ring-border hover:ring-border relative top-[1px] h-9 ring-1 ring-offset-0",
                     editNode && "h-6",
                   )}
                   onClick={handleButtonClick}

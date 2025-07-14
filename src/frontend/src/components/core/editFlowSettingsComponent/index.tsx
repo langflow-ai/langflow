@@ -112,7 +112,7 @@ export const EditFlowSettings: React.FC<
             />
           </Form.Control>
         ) : (
-          <span className="font-normal text-muted-foreground word-break-break-word">
+          <span className="text-muted-foreground word-break-break-word font-normal">
             {name}
           </span>
         )}
@@ -154,7 +154,7 @@ export const EditFlowSettings: React.FC<
         ) : (
           <div
             className={cn(
-              "max-h-[250px] overflow-auto pt-2 font-normal text-muted-foreground word-break-break-word",
+              "text-muted-foreground word-break-break-word max-h-[250px] overflow-auto pt-2 font-normal",
               description === "" ? "font-light italic" : "",
             )}
           >

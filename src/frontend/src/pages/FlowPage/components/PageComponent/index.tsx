@@ -538,7 +538,7 @@ export default function Page({
     const color =
       nodeColorsName[edge?.data?.sourceHandle?.output_types[0]] || "cyan";
 
-    const accentColor = `hsl(var(--datatype-${color}))`;
+    const accentColor = `var(--color-datatype-${color})`;
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
 
@@ -571,9 +571,9 @@ export default function Page({
   };
 
   return (
-    <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
+    <div className="bg-canvas h-full w-full" ref={reactFlowWrapper}>
       {showCanvas ? (
-        <div id="react-flow-id" className="h-full w-full bg-canvas">
+        <div id="react-flow-id" className="bg-canvas h-full w-full">
           {!view && (
             <>
               <MemoizedLogCanvasControls />

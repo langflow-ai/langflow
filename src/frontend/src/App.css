@@ -80,31 +80,31 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background-color: hsl(var(--muted)) !important;
+  background-color: var(--color-muted) !important;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border)) !important;
+  background-color: var(--color-border) !important;
   border-radius: 999px !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--placeholder-foreground)) !important;
+  background-color: var(--color-placeholder-foreground) !important;
 }
 
 .jv-indent::-webkit-scrollbar-track {
-  background-color: hsl(var(--muted)) !important;
+  background-color: var(--color-muted) !important;
   border-radius: 10px;
 }
 
 .jv-indent::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border)) !important;
+  background-color: var(--color-border) !important;
   border-radius: 999px !important;
 }
 
 .jv-indent::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--placeholder-foreground)) !important;
+  background-color: var(--color-placeholder-foreground) !important;
 }
 
 .custom-hover {
@@ -126,44 +126,47 @@ body {
   outline: none !important;
   box-shadow: none !important;
 }
+
 .no-border.ag-cell {
   border: none !important;
   outline: none !important;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--selected) !important;
+  stroke: var(--color-selected) !important;
   stroke-width: 2px !important;
 }
+
 .react-flow__controls-button svg {
   fill: none !important;
 }
 
 .react-flow__edge .react-flow__edge-path {
   transition: color;
-  stroke: var(--connection) !important;
+  stroke: var(--color-connection) !important;
   transition-duration: 150ms;
   stroke-width: 2px !important;
 }
+
 .react-flow__connection path {
   transition: color;
-  stroke: var(--connection) !important;
+  stroke: var(--color-connection) !important;
   transition-duration: 150ms;
   stroke-width: 2px !important;
 }
 
 .react-flow__edge.running .react-flow__edge-path {
-  stroke: hsl(var(--foreground)) !important;
+  stroke: var(--color-foreground) !important;
   stroke-width: 2px !important;
 }
 
 .react-flow__edge.not-running .react-flow__edge-path {
-  stroke: hsl(var(--foreground)) !important;
+  stroke: var(--color-foreground) !important;
   stroke-width: 1px !important;
 }
 
 .react-flow__edge.ran .react-flow__edge-path {
-  stroke: hsl(var(--foreground)) !important;
+  stroke: var(--color-foreground) !important;
   stroke-width: 2px !important;
 }
 
@@ -176,13 +179,13 @@ body {
   width: 0.75rem !important;
   height: 0.75rem !important;
   background-color: white !important;
-  border-color: var(--border) !important;
+  border-color: var(--color-border) !important;
   z-index: 50 !important;
   border-radius: 20% !important;
 }
 
 code {
-  font-family: var(--font-mono) s !important;
+  font-family: var(--font-mono) !important;
 }
 
 .ag-cell {
@@ -200,7 +203,7 @@ code {
 }
 
 .ag-large-text-input.ag-text-area.ag-input-field {
-  background-color: hsl(var(--background)) !important;
+  background-color: var(--color-background) !important;
 }
 
 .ag-large-text-input.ag-text-area.ag-input-field textarea {

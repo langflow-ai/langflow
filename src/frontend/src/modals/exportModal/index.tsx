@@ -103,12 +103,12 @@ const ExportModal = forwardRef(
           }
         }}
       >
-        <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
+        <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
           <IconComponent
             name="Download"
-            className="h-6 w-6 pl-1 text-foreground"
+            className="text-foreground h-6 w-6 pl-1"
             aria-hidden="true"
           />
         </BaseModal.Header>
@@ -131,7 +131,7 @@ const ExportModal = forwardRef(
               {SAVE_WITH_API_CHECKBOX}
             </label>
           </div>
-          <span className="mt-1 text-xs text-destructive">
+          <span className="text-destructive mt-1 text-xs">
             {ALERT_SAVE_WITH_API}
           </span>
         </BaseModal.Content>
