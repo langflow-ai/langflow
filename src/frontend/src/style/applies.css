@@ -1269,7 +1269,7 @@
 
   .helper-line {
     stroke: hsl(var(--primary));
-    stroke-width: 1.5;
+    stroke-width: 1;
     stroke-dasharray: 4 4;
     opacity: 0.8;
     filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.3));
