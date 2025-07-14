@@ -164,11 +164,18 @@ function setupElementTracking(config) {
         );
         
         if (selectorConfig) {
-          const properties = getElementProperties(entry.target, selectorConfig.properties || {});
+          // For code blocks on mobile, add a small delay to ensure DOM has updated
+          const isMobile = window.innerWidth <= 768;
+          const isCodeBlock = entry.target.matches('.ch-codeblock');
+          const delay = (isMobile && isCodeBlock) ? 100 : 0;
           
-          if (window.analytics && typeof window.analytics.track === 'function') {
-            window.analytics.track(selectorConfig.eventName, properties);
-          }
+          setTimeout(() => {
+            const properties = getElementProperties(entry.target, selectorConfig.properties || {});
+            
+            if (window.analytics && typeof window.analytics.track === 'function') {
+              window.analytics.track(selectorConfig.eventName, properties);
+            }
+          }, delay);
         }
       }
     });
