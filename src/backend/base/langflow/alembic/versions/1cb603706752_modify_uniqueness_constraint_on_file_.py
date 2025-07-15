@@ -69,9 +69,10 @@ def upgrade() -> None:
                 batch_op.drop_constraint(name_constraint, type_="unique")
             batch_op.create_unique_constraint("file_name_user_id_key", ["name", "user_id"])
 
+    # Refresh inspector to capture post-constraint-change schema state.
     inspector = inspect(conn)  # Refresh after schema changes
     indexes = inspector.get_indexes("file")
-    if not any(i["column_names"] == ["user_id"] for i in indexes):
+    if not any(i["column_names"] == ["user_id"] and len(i["column_names"]) == 1 for i in indexes):
         op.create_index("ix_file_user_id", "file", ["user_id"], unique=False)
 
 
@@ -99,7 +100,7 @@ def downgrade() -> None:
     if not is_sqlite:
         indexes = inspector.get_indexes("file")
         user_id_index = next(
-            (i["name"] for i in indexes if i["column_names"] == ["user_id"]),
+            (i["name"] for i in indexes if i["column_names"] == ["user_id"] and len(i["column_names"]) == 1),
             None,
         )
         if user_id_index:
