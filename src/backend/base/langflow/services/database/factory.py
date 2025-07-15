@@ -15,7 +15,7 @@ class DatabaseServiceFactory(ServiceFactory):
 
     def create(self, settings_service: SettingsService):
         # Here you would have logic to create and configure a DatabaseService
-        if not settings_service.settings.database_url:
+        if not settings_service.database.database_url:
             msg = "No database URL provided"
             raise ValueError(msg)
         return DatabaseService(settings_service)

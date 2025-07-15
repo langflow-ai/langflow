@@ -42,10 +42,10 @@ class DatabaseService(Service):
     def __init__(self, settings_service: SettingsService):
         self._logged_pragma = False
         self.settings_service = settings_service
-        if settings_service.settings.database_url is None:
+        if settings_service.database.database_url is None:
             msg = "No database URL provided"
             raise ValueError(msg)
-        self.database_url: str = settings_service.settings.database_url
+        self.database_url: str = settings_service.database.database_url
         self._sanitize_database_url()
 
         # This file is in langflow.services.database.manager.py
@@ -57,12 +57,12 @@ class DatabaseService(Service):
         # register the event listener for sqlite as part of this class.
         # Using decorator will make the method not able to use self
         event.listen(Engine, "connect", self.on_connection)
-        if self.settings_service.settings.database_connection_retry:
+        if self.settings_service.database.database_connection_retry:
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
 
-        alembic_log_file = self.settings_service.settings.alembic_log_file
+        alembic_log_file = self.settings_service.server.alembic_log_file
         # Check if the provided path is absolute, cross-platform.
         if Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
@@ -76,7 +76,7 @@ class DatabaseService(Service):
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
-        if self.settings_service.settings.database_connection_retry:
+        if self.settings_service.database.database_connection_retry:
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
@@ -106,7 +106,7 @@ class DatabaseService(Service):
         Returns:
             dict: Connection kwargs with deprecated settings overriding db_connection_settings
         """
-        settings = self.settings_service.settings
+        settings = self.settings_service.database
         # Start with db_connection_settings as base
         connection_kwargs = settings.db_connection_settings.copy()
 
@@ -146,7 +146,7 @@ class DatabaseService(Service):
         return self._create_engine()
 
     def _get_connect_args(self):
-        settings = self.settings_service.settings
+        settings = self.settings_service.database
 
         if settings.db_driver_connection_settings is not None:
             return settings.db_driver_connection_settings
@@ -161,7 +161,7 @@ class DatabaseService(Service):
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
-            pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
+            pragmas: dict = self.settings_service.database.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
                 pragmas_list.append(f"PRAGMA {key} = {val}")
@@ -183,7 +183,7 @@ class DatabaseService(Service):
 
     @asynccontextmanager
     async def with_session(self):
-        if self.settings_service.settings.use_noop_database:
+        if self.settings_service.database.use_noop_database:
             yield NoopSession()
         else:
             async with AsyncSession(self.engine, expire_on_commit=False) as session:
