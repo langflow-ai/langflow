@@ -45,11 +45,11 @@ function ApiInterceptor() {
       request: function (url, config) {
         const accessToken = customGetAccessToken();
 
-        if (accessToken && !isAuthorizedURL(config?.url)) {
-          config.headers["Authorization"] = `Bearer ${accessToken}`;
-        }
-
         if (!isExternalURL(url)) {
+          if (accessToken && !isAuthorizedURL(config?.url)) {
+            config.headers["Authorization"] = `Bearer ${accessToken}`;
+          }
+
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
