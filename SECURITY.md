@@ -49,3 +49,12 @@ Langflow allows users to define and run **custom code components** through endpo
 This means an attacker could send malicious code to the endpoint and have it executed on the server—leading to full system compromise, including data theft, remote shell access, or lateral movement within the network.
 
 To address, upgrade to >= 1.3.0.
+
+### No API key required if running Langflow with `LANGFLOW_AUTH_LOGIN=true` (fixed in 1.5.0)
+
+In Langflow versions earlier than 1.5.0, if `LANGFLOW_AUTO_LOGIN` is set to `true`, Langflow automatically logs users in as a superuser without requiring authentication.
+In this case, API requests don't require a Langflow API key.
+
+To address, upgrade to >= 1.5.0.
+
+For more information, see [Authentication](https://docs.langflow.org/configuration-authentication).
