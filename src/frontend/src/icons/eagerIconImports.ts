@@ -17,6 +17,7 @@ import { BWPythonIcon } from "@/icons/BW python";
 import { CassandraIcon } from "@/icons/Cassandra";
 import { ChromaIcon } from "@/icons/ChromaIcon";
 import { ClickhouseIcon } from "@/icons/Clickhouse";
+import { BrightDataIcon } from "@/icons/BrightData";
 import { CloudflareIcon } from "@/icons/Cloudflare";
 import { CohereIcon } from "@/icons/Cohere";
 import { ComposioIcon } from "@/icons/Composio";
@@ -132,6 +133,7 @@ export const eagerIconsMapping = {
   AWSInverted: AWSInvertedIcon,
   Azure: AzureIcon,
   Bing: BingIcon,
+  BrightData: BrightDataIcon,
   BotMessageSquare: BotMessageSquareIcon,
   BWPython: BWPythonIcon,
   Cassandra: CassandraIcon,
