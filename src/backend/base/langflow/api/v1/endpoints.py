@@ -682,7 +682,9 @@ async def custom_component_update(
 ):
     """Update an existing custom component with new code and configuration.
 
-    Processes the provided code and template updates, applies parameter changes (including those loaded from the database), updates the component's build configuration, and validates outputs. Returns the updated component node as a JSON-serializable dictionary.
+    Processes the provided code and template updates, applies parameter changes (including those loaded from the
+    database), updates the component's build configuration, and validates outputs. Returns the updated component node as
+    a JSON-serializable dictionary.
 
     Raises:
         HTTPException: If an error occurs during component building or updating.
