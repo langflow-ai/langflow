@@ -49,6 +49,9 @@ class TelemetrySettings(LangflowBaseSettings):
     telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
     transactions_storage_enabled: bool = True
     vertex_builds_storage_enabled: bool = True
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 1.0
+    sentry_profiles_sample_rate: float = 1.0
 
 
 class ServerSettings(LangflowBaseSettings):
@@ -106,3 +109,5 @@ class ServerSettings(LangflowBaseSettings):
     worker_timeout: int = 300
     frontend_timeout: int = 0
     user_agent: str = "langflow"
+    mcp_server_enabled: bool = False
+    mcp_server_enable_progress_notifications: bool = False
