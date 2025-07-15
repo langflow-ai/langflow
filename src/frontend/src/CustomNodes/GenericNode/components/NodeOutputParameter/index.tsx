@@ -13,7 +13,6 @@ export const OutputParameter = ({
   types,
   selected,
   showNode,
-  showHiddenOutputs,
   isToolMode,
   hidden,
   handleSelectOutput,
@@ -58,7 +57,6 @@ export const OutputParameter = ({
       handleSelectOutput={handleSelectOutput}
       colorName={colorNames}
       isToolMode={isToolMode}
-      showHiddenOutputs={showHiddenOutputs}
     />
   );
 };

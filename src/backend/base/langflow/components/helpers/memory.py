@@ -123,7 +123,6 @@ class MemoryComponent(Component):
                         display_name="Stored Messages",
                         name="stored_messages",
                         method="store_message",
-                        hidden=True,
                         dynamic=True,
                     )
                 ]

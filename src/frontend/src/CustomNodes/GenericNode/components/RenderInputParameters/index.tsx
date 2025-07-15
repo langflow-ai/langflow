@@ -11,8 +11,7 @@ const RenderInputParameters = ({
   types,
   isToolMode,
   showNode,
-  shownOutputs,
-  showHiddenOutputs,
+  outputs,
 }) => {
   const templateFields = useMemo(() => {
     return Object.keys(data.node?.template || {})
@@ -95,8 +94,7 @@ const RenderInputParameters = ({
       return (
         <NodeInputField
           lastInput={
-            !(shownOutputs.length > 0 || showHiddenOutputs) &&
-            idx === shownTemplateFields.length - 1
+            !(outputs.length > 0) && idx === shownTemplateFields.length - 1
           }
           key={memoizedKey}
           data={data}

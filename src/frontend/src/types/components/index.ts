@@ -108,7 +108,7 @@ export type NodeOutputFieldComponentType = {
   lastOutput?: boolean;
   colorName?: string[];
   isToolMode?: boolean;
-  showHiddenOutputs?: boolean;
+
   hidden?: boolean;
   outputs?: any;
   handleSelectOutput?: (output: any) => void;

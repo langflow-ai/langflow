@@ -6,7 +6,6 @@ import {
 import { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
-import { updateHiddenOutputs } from "./update-hidden-outputs";
 
 // Map to store debounced functions for each node ID
 const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
@@ -54,10 +53,7 @@ export const mutateTemplate = async (
             });
             if (newTemplate) {
               newNode.template = newTemplate.template;
-              newNode.outputs = updateHiddenOutputs(
-                newNode.outputs ?? [],
-                newTemplate.outputs ?? [],
-              );
+              newNode.outputs = newTemplate.outputs ?? [];
               newNode.tool_mode = toolMode ?? node.tool_mode;
               newNode.last_updated = newTemplate.last_updated;
               try {

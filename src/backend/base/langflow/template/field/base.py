@@ -188,8 +188,7 @@ class Output(BaseModel):
     name: str = Field(description="The name of the field.")
     """The name of the field."""
 
-    hidden: bool | None = Field(default=None)
-    """Dictates if the field is hidden."""
+
 
     display_name: str | None = Field(default=None)
     """The display name of the field."""

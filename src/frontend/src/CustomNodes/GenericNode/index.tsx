@@ -11,11 +11,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "../../components/ui/button";
-import {
-  ICON_STROKE_WIDTH,
-  TOOLTIP_HIDDEN_OUTPUTS,
-  TOOLTIP_OPEN_HIDDEN_OUTPUTS,
-} from "../../constants/constants";
+import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
@@ -44,27 +40,6 @@ const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
 const MemoizedNodeOutputs = memo(NodeOutputs);
 
-const HiddenOutputsButton = memo(
-  ({
-    showHiddenOutputs,
-    onClick,
-  }: {
-    showHiddenOutputs: boolean;
-    onClick: () => void;
-  }) => (
-    <Button
-      unstyled
-      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
-      onClick={onClick}
-    >
-      <ForwardedIconComponent
-        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
-      />
-    </Button>
-  ),
-);
-
 function GenericNode({
   data,
   selected,
@@ -76,7 +51,7 @@ function GenericNode({
 }): JSX.Element {
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
-  const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
+
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
@@ -245,18 +220,7 @@ function GenericNode({
     callback: toggleEditNameDescription,
   });
 
-  const { shownOutputs, hiddenOutputs } = useMemo(() => {
-    const shownOutputs: typeof data.node.outputs = [];
-    const hiddenOutputs: typeof data.node.outputs = [];
-    (data.node?.outputs ?? []).forEach((output) => {
-      if (output.hidden) {
-        hiddenOutputs.push(output);
-      } else {
-        shownOutputs.push(output);
-      }
-    });
-    return { shownOutputs, hiddenOutputs };
-  }, [data.node?.outputs]);
+  const outputs = data.node?.outputs ?? [];
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
     () =>
@@ -377,7 +341,7 @@ function GenericNode({
                 data: { ...old.data, showNode: show },
               }));
             }}
-            numberOfOutputHandles={shownOutputs.length ?? 0}
+            numberOfOutputHandles={outputs.length ?? 0}
             showNode={showNode}
             openAdvancedModal={false}
             onCloseAdvancedModal={() => {}}
@@ -442,11 +406,6 @@ function GenericNode({
     toggleEditNameDescription,
     selectedNodesCount,
   ]);
-  useEffect(() => {
-    if (hiddenOutputs && hiddenOutputs.length === 0) {
-      setShowHiddenOutputs(false);
-    }
-  }, [hiddenOutputs]);
 
   const memoizedOnUpdateNode = useCallback(
     () => handleUpdateCode(true),
@@ -528,18 +487,16 @@ function GenericNode({
                     types={types}
                     isToolMode={isToolMode}
                     showNode={showNode}
-                    shownOutputs={shownOutputs}
-                    showHiddenOutputs={showHiddenOutputs}
+                    outputs={outputs}
                   />
                   <MemoizedNodeOutputs
-                    outputs={shownOutputs ?? []}
+                    outputs={outputs ?? []}
                     keyPrefix="render-outputs"
                     data={data}
                     types={types}
                     selected={selected ?? false}
                     showNode={showNode}
                     isToolMode={isToolMode}
-                    showHiddenOutputs={showHiddenOutputs}
                     selectedOutput={selectedOutput}
                     handleSelectOutput={handleSelectOutput}
                   />
@@ -585,8 +542,7 @@ function GenericNode({
                 types={types}
                 isToolMode={isToolMode}
                 showNode={showNode}
-                shownOutputs={shownOutputs}
-                showHiddenOutputs={showHiddenOutputs}
+                outputs={outputs}
               />{" "}
               <div
                 className={classNames(
@@ -597,29 +553,13 @@ function GenericNode({
                 {" "}
               </div>
               <MemoizedNodeOutputs
-                outputs={shownOutputs}
-                keyPrefix={"shown"}
+                outputs={outputs}
+                keyPrefix={"outputs"}
                 data={data}
                 types={types}
                 selected={selected ?? false}
                 showNode={showNode}
                 isToolMode={isToolMode}
-                showHiddenOutputs={showHiddenOutputs}
-                selectedOutput={selectedOutput}
-                handleSelectOutput={handleSelectOutput}
-                hasExistingHiddenOutputs={
-                  !!hiddenOutputs && hiddenOutputs.length > 0
-                }
-              />
-              <MemoizedNodeOutputs
-                outputs={hiddenOutputs}
-                keyPrefix="hidden"
-                data={data}
-                types={types}
-                selected={selected ?? false}
-                showNode={showNode}
-                isToolMode={isToolMode}
-                showHiddenOutputs={true}
                 selectedOutput={selectedOutput}
                 handleSelectOutput={handleSelectOutput}
               />

@@ -122,7 +122,7 @@ function NodeOutputField({
   lastOutput,
   colorName,
   isToolMode = false,
-  showHiddenOutputs,
+
   hidden,
   handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
@@ -190,45 +190,6 @@ function NodeOutputField({
       );
     });
   }, [edges, id]);
-
-  const handleUpdateOutputHide = useCallback(
-    (value?: boolean) => {
-      setNode(data.id, (oldNode) => {
-        if (oldNode.type !== "genericNode") return oldNode;
-        let newNode = cloneDeep(oldNode);
-        newNode.data = {
-          ...newNode.data,
-          node: {
-            ...newNode.data.node,
-            outputs: newNode.data.node.outputs?.map((output, i) => {
-              if (i === index) {
-                output.hidden = value ?? !output.hidden;
-              }
-              return output;
-            }),
-          },
-        };
-        return newNode;
-      });
-      updateNodeInternals(data.id);
-    },
-    [data.id, index, setNode, updateNodeInternals],
-  );
-
-  useEffect(() => {
-    const outputHasGroupOutputsFalse =
-      data.node?.outputs?.[index]?.group_outputs === false;
-
-    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
-      handleUpdateOutputHide(false);
-    }
-  }, [
-    disabledOutput,
-    handleUpdateOutputHide,
-    hidden,
-    data.node?.outputs,
-    index,
-  ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -334,7 +295,6 @@ function NodeOutputField({
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
 
-  if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
 
   return (

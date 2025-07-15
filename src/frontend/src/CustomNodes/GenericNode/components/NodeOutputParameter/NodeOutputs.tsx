@@ -9,10 +9,8 @@ export default function NodeOutputs({
   selected,
   showNode,
   isToolMode,
-  showHiddenOutputs,
   selectedOutput,
   handleSelectOutput,
-  hasExistingHiddenOutputs = false,
 }: {
   outputs: any;
   keyPrefix: string;
@@ -21,28 +19,20 @@ export default function NodeOutputs({
   selected: boolean;
   showNode: boolean;
   isToolMode: boolean;
-  showHiddenOutputs: boolean;
   selectedOutput: any;
   handleSelectOutput: any;
-  hasExistingHiddenOutputs?: boolean;
 }) {
   const hasLoopOutput = outputs.some((output) => output.allows_loop);
   const hasGroupOutputs = outputs.some((output) => output.group_outputs);
   const isConditionalRouter = data.type === "ConditionalRouter";
-  const hasHiddenOutputs = outputs.some((output) => output.hidden);
 
   const shouldShowAllOutputs =
-    hasLoopOutput || hasGroupOutputs || isConditionalRouter || hasHiddenOutputs;
+    hasLoopOutput || hasGroupOutputs || isConditionalRouter;
 
   if (shouldShowAllOutputs) {
-    const outputsToRender =
-      keyPrefix === "hidden"
-        ? outputs.filter((output) => output.hidden)
-        : outputs.filter((output) => !output.hidden);
-
     return (
       <>
-        {outputsToRender?.map((output, idx) => (
+        {outputs?.map((output, idx) => (
           <OutputParameter
             key={`${keyPrefix}-${output.name}-${idx}`}
             output={output}
@@ -52,21 +42,14 @@ export default function NodeOutputs({
                 (out) => out.name === output.name,
               ) ?? idx
             }
-            lastOutput={idx === outputsToRender.length - 1}
+            lastOutput={idx === outputs.length - 1}
             data={data}
             types={types}
             selected={selected}
             showNode={showNode}
             isToolMode={isToolMode}
-            showHiddenOutputs={showHiddenOutputs}
             handleSelectOutput={handleSelectOutput}
-            hidden={
-              keyPrefix === "hidden"
-                ? showHiddenOutputs
-                  ? output.hidden
-                  : true
-                : false
-            }
+            hidden={false}
           />
         ))}
       </>
@@ -74,16 +57,11 @@ export default function NodeOutputs({
   }
 
   const getDisplayOutput = () => {
-    const filteredOutputs =
-      keyPrefix === "hidden"
-        ? outputs.filter((output) => output.hidden)
-        : outputs.filter((output) => !output.hidden);
-
-    const outputWithSelection = filteredOutputs.find(
+    const outputWithSelection = outputs.find(
       (output) => output.name === selectedOutput?.name,
     );
 
-    return outputWithSelection || filteredOutputs[0];
+    return outputWithSelection || outputs[0];
   };
 
   const displayOutput = getDisplayOutput();
@@ -100,21 +78,14 @@ export default function NodeOutputs({
           (out) => out.name === displayOutput.name,
         ) ?? 0
       }
-      lastOutput={!hasExistingHiddenOutputs}
+      lastOutput={true}
       data={data}
       types={types}
       selected={selected}
       handleSelectOutput={handleSelectOutput}
       showNode={showNode}
       isToolMode={isToolMode}
-      showHiddenOutputs={showHiddenOutputs}
-      hidden={
-        keyPrefix === "hidden"
-          ? showHiddenOutputs
-            ? displayOutput.hidden
-            : true
-          : false
-      }
+      hidden={false}
     />
   );
 }

@@ -183,7 +183,7 @@
                                 "method": "build_tool",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             }
                         ],
                         "field_order": [
@@ -337,7 +337,7 @@
                                 "method": "run_model",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -913,7 +913,7 @@
                                 "method": "build_agent",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -1229,7 +1229,7 @@
                                 "method": "text_response",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -1698,7 +1698,7 @@
                                 "method": "build_agent",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -2014,7 +2014,7 @@
                                 "method": "text_response",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -2170,7 +2170,7 @@
                                 "method": "run_model",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -2319,7 +2319,7 @@
                                 "method": "run_model",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -2446,7 +2446,7 @@
                                 "method": "run_model",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -2594,7 +2594,7 @@
                                 "method": "run_model",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             },
                             {
                                 "types": [
@@ -2773,7 +2773,7 @@
                                 "method": "build_tool",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             }
                         ],
                         "field_order": [
@@ -3219,7 +3219,7 @@
                                 "method": "build_tool",
                                 "value": "__UNDEFINED__",
                                 "cache": true,
-                                "hidden": true
+                                
                             }
                         ],
                         "field_order": [
