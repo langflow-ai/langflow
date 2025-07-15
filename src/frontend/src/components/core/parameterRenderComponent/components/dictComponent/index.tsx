@@ -5,7 +5,7 @@ import DictAreaModal from "../../../../../modals/dictAreaModal";
 import { classNames, cn, toTitleCase } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 export default function DictComponent({
   value,

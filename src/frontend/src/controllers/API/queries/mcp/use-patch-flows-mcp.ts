@@ -1,6 +1,6 @@
-import { useMutationFunctionType } from "@/types/api";
-import { MCPSettingsType } from "@/types/mcp";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
+import type { MCPSettingsType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

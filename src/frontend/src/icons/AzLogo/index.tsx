@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgAzLogo from "./AzLogo";
 
 export const AzIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(

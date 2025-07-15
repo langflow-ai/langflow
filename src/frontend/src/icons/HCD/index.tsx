@@ -1,5 +1,6 @@
+import type React from "react";
+import { forwardRef } from "react";
 import { useDarkStore } from "@/stores/darkStore";
-import React, { forwardRef } from "react";
 import HCDSVG from "./HCD";
 
 export const HCDIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
