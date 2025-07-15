@@ -18,13 +18,13 @@ class SettingsService(Service):
         super().__init__()
         self.settings: Settings = settings
         self.auth_settings: AuthSettings = auth_settings
-        
+
         # Cache for categorized settings
         self._database_settings: DatabaseSettings | None = None
         self._redis_settings: RedisSettings | None = None
         self._server_settings: ServerSettings | None = None
         self._telemetry_settings: TelemetrySettings | None = None
-        
+
         # Build attribute mapping for O(1) lookup
         self._attribute_mapping: dict[str, str] = {}
         self._build_attribute_mapping()
@@ -35,17 +35,17 @@ class SettingsService(Service):
         database_fields = DatabaseSettings.model_fields.keys()
         for field in database_fields:
             self._attribute_mapping[field] = "database"
-        
+
         # Map redis settings
         redis_fields = RedisSettings.model_fields.keys()
         for field in redis_fields:
             self._attribute_mapping[field] = "redis"
-        
+
         # Map server settings
         server_fields = ServerSettings.model_fields.keys()
         for field in server_fields:
             self._attribute_mapping[field] = "server"
-        
+
         # Map telemetry settings
         telemetry_fields = TelemetrySettings.model_fields.keys()
         for field in telemetry_fields:
@@ -98,51 +98,52 @@ class SettingsService(Service):
     # ---------------------------------------------------------------------
     def __getattr__(self, name: str):
         """Django-like attribute access for settings."""
-        if name.startswith('_'):
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-        
+        if name.startswith("_"):
+            msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
+            raise AttributeError(msg)
+
         # Check if it's a categorized setting
         category = self._get_category_for_attribute(name)
         if category:
             category_obj = getattr(self, category)
             if hasattr(category_obj, name):
                 return getattr(category_obj, name)
-        
+
         # Check if it's in the main settings
         if hasattr(self.settings, name):
             return getattr(self.settings, name)
-        
+
         # Check if it's in auth settings
         if hasattr(self.auth_settings, name):
             return getattr(self.auth_settings, name)
-        
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
+        msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        raise AttributeError(msg)
 
     def __setattr__(self, name: str, value):
         """Django-like attribute setting for settings."""
-        if name.startswith('_') or name in ('settings', 'auth_settings'):
+        if name.startswith("_") or name in ("settings", "auth_settings"):
             super().__setattr__(name, value)
             return
-        
+
         # Check if it's a categorized setting
         category = self._get_category_for_attribute(name)
-        if category:
-            if hasattr(self.settings, name):
-                setattr(self.settings, name, value)
-                self._invalidate_cache()
-                return
-        
+        if category and hasattr(self.settings, name):
+            setattr(self.settings, name, value)
+            self._invalidate_cache()
+            return
+
         # Check if it's in the main settings
         if hasattr(self.settings, name):
             setattr(self.settings, name, value)
             self._invalidate_cache()
             return
-        
+
         # Check if it's in auth settings
         if hasattr(self.auth_settings, name):
             setattr(self.auth_settings, name, value)
             return
-        
+
         super().__setattr__(name, value)
 
     @classmethod
