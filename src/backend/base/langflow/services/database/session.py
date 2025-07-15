@@ -49,4 +49,14 @@ class NoopSession:
         return None
 
     async def exec(self, *args, **kwargs):  # noqa: ARG002
-        return []
+        class _NoopResult:
+            def first(self):
+                return None
+
+            def all(self):
+                return []
+
+            def one_or_none(self):
+                return None
+
+        return _NoopResult()
