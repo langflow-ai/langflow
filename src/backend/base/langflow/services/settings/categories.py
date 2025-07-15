@@ -50,8 +50,8 @@ class TelemetrySettings(LangflowBaseSettings):
     transactions_storage_enabled: bool = True
     vertex_builds_storage_enabled: bool = True
     sentry_dsn: str | None = None
-    sentry_traces_sample_rate: float = 1.0
-    sentry_profiles_sample_rate: float = 1.0
+    sentry_traces_sample_rate: float = Field(default=1.0, ge=0.0, le=1.0)
+    sentry_profiles_sample_rate: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
 class ServerSettings(LangflowBaseSettings):
