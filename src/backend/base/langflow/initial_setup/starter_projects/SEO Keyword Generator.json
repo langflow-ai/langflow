@@ -562,7 +562,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Output Message",
-                "group_outputs": false,
+                "group_outputs": true,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",

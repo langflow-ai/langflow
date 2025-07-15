@@ -122,8 +122,6 @@ function NodeOutputField({
   lastOutput,
   colorName,
   isToolMode = false,
-
-  hidden,
   handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
