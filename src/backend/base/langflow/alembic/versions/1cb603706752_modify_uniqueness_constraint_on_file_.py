@@ -51,6 +51,10 @@ def upgrade() -> None:
             sa.UniqueConstraint("name", "user_id", name="file_name_user_id_key"),
         )
 
+        # Verify new table was created before proceeding
+        if not inspector.has_table("file_new"):
+            raise RuntimeError("New table creation failed")
+
         op.execute(sa.text("""
             INSERT INTO file_new (
                 id, user_id, name, path, size, provider, created_at, updated_at
@@ -58,6 +62,12 @@ def upgrade() -> None:
             SELECT id, user_id, name, path, size, provider, created_at, updated_at
             FROM file
         """))
+
+        # Verify row counts match after data copy
+        original_count = conn.execute(sa.text("SELECT COUNT(*) FROM file")).scalar()
+        new_count = conn.execute(sa.text("SELECT COUNT(*) FROM file_new")).scalar()
+        if original_count != new_count:
+            raise RuntimeError("Data copy verification failed")
 
         op.drop_table("file")
         op.rename_table("file_new", "file")
@@ -98,6 +108,10 @@ def downgrade() -> None:
             sa.UniqueConstraint("name", name="file_name_key"),
         )
 
+        # Verify new table was created before proceeding
+        if not inspector.has_table("file_new"):
+            raise RuntimeError("New table creation failed")
+
         op.execute(sa.text("""
             INSERT INTO file_new (
                 id, user_id, name, path, size, provider, created_at, updated_at
@@ -105,6 +119,12 @@ def downgrade() -> None:
             SELECT id, user_id, name, path, size, provider, created_at, updated_at
             FROM file
         """))
+
+        # Verify row counts match after data copy
+        original_count = conn.execute(sa.text("SELECT COUNT(*) FROM file")).scalar()
+        new_count = conn.execute(sa.text("SELECT COUNT(*) FROM file_new")).scalar()
+        if original_count != new_count:
+            raise RuntimeError("Data copy verification failed")
 
         op.drop_table("file")
         op.rename_table("file_new", "file")
