@@ -28,7 +28,7 @@ const SvgPineconeLogo = (props) => {
         d="m22.266 5.585-2.92-3.474-3.971 2.262"
       />
       <path
-        stroke={props.color}
+        stroke={color}
         strokeLinecap="square"
         strokeWidth={2.118}
         d="m14.92 26.553.814-4.536"
@@ -41,7 +41,7 @@ const SvgPineconeLogo = (props) => {
         d="m18.773 24.93-2.943-3.463-3.96 2.274"
       />
       <path
-        stroke={props.color}
+        stroke={color}
         strokeLinecap="square"
         strokeWidth={2.118}
         d="m16.608 17.2.813-4.537"
@@ -54,7 +54,7 @@ const SvgPineconeLogo = (props) => {
         d="m20.459 15.58-2.931-3.452-3.96 2.262"
       />
       <path
-        stroke={props.color}
+        stroke={color}
         strokeLinecap="square"
         strokeWidth={2.01}
         d="m8.329 26.155-3.577 2.426"
@@ -73,7 +73,7 @@ const SvgPineconeLogo = (props) => {
         d="m21.321 28.43 2.489 3.498"
       />
       <path
-        stroke={props.color}
+        stroke={color}
         strokeLinecap="square"
         strokeLinejoin="round"
         strokeWidth={2.01}
