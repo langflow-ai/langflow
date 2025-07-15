@@ -145,12 +145,7 @@
     bottom: -10px;
     left: -10px;
     right: -10px;
-    background: rgba(
-      255,
-      255,
-      255,
-      0.5
-    ); /* Reduced opacity for better readability */
+    background: rgba(255, 255, 255, 0.5); /* Reduced opacity for better readability */
     border-radius: 10px;
     pointer-events: none;
   }

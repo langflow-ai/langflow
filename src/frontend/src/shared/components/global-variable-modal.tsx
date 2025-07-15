@@ -3,9 +3,7 @@ import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVar
 import { CommandItem } from "@/components/ui/command";
 import { cn } from "@/utils/utils";
 
-interface GeneralGlobalVariableModalProps {}
-
-const GeneralGlobalVariableModal = ({}: GeneralGlobalVariableModalProps) => {
+const GeneralGlobalVariableModal = () => {
   return (
     <>
       <GlobalVariableModal disabled={false}>

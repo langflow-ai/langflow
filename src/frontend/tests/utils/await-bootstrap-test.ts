@@ -1,4 +1,4 @@
-import { Page } from "playwright/test";
+import type { Page } from "playwright/test";
 import { addFlowToTestOnEmptyLangflow } from "./add-flow-to-test-on-empty-langflow";
 
 export const awaitBootstrapTest = async (
@@ -34,7 +34,7 @@ export const awaitBootstrapTest = async (
       if (modalTitleElement) {
         modalCount = await modalTitleElement.count();
       }
-    } catch (error) {
+    } catch (_error) {
       modalCount = 0;
     }
 
