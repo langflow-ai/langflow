@@ -25,8 +25,8 @@ file_table_columns = [
     sa.Column("path", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column("size", sa.Integer(), nullable=False),
     sa.Column("provider", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-    sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()),
+    sa.Column("created_at", sa.DateTime(), nullable=False),
+    sa.Column("updated_at", sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(["user_id"], ["user.id"], name="fk_file_user_id_user"),
 ]
 
@@ -39,7 +39,7 @@ def upgrade() -> None:
     # Detect current unique constraint on 'name'
     constraints = inspector.get_unique_constraints("file")
     name_constraint = next(
-        (c["name"] for c in constraints if c["column_names"] == ["name"]),
+        (c["name"] for c in constraints if set(c["column_names"]) == {"name"}),
         None,
     )
 
@@ -69,12 +69,6 @@ def upgrade() -> None:
                 batch_op.drop_constraint(name_constraint, type_="unique")
             batch_op.create_unique_constraint("file_name_user_id_key", ["name", "user_id"])
 
-    # Refresh inspector to capture post-constraint-change schema state.
-    inspector = inspect(conn)  # Refresh after schema changes
-    indexes = inspector.get_indexes("file")
-    if not any(i["column_names"] == ["user_id"] and len(i["column_names"]) == 1 for i in indexes):
-        op.create_index("ix_file_user_id", "file", ["user_id"], unique=False)
-
 
 def downgrade() -> None:
     conn = op.get_bind()
@@ -91,20 +85,10 @@ def downgrade() -> None:
     duplicates = conn.execute(duplicate_check).fetchall()
     if duplicates:
         duplicate_names = [row[0] for row in duplicates]
-        raise ValueError(
+        raise RuntimeError(
             f"Downgrade aborted: Duplicate file names exist across users: {duplicate_names}. "
             f"To resolve, rename conflicting files or manually handle the migration."
         )
-    
-    # Drop user_id index (only for PostgreSQL - SQLite will recreate table)
-    if not is_sqlite:
-        indexes = inspector.get_indexes("file")
-        user_id_index = next(
-            (i["name"] for i in indexes if i["column_names"] == ["user_id"] and len(i["column_names"]) == 1),
-            None,
-        )
-        if user_id_index:
-            op.drop_index(user_id_index, table_name="file")
 
     if is_sqlite:
         # SQLite: Recreate table with single column constraint
@@ -126,7 +110,6 @@ def downgrade() -> None:
         op.rename_table("file_new", "file")
 
     else:
-        # PostgreSQL: Drop composite constraint, add single column constraint
         with op.batch_alter_table("file") as batch_op:
             constraints = inspector.get_unique_constraints("file")
             composite_constraint = next(
