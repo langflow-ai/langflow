@@ -50,7 +50,7 @@ This means an attacker could send malicious code to the endpoint and have it exe
 
 To address, upgrade to >= 1.3.0.
 
-### No API key required if running Langflow with `LANGFLOW_AUTH_LOGIN=true` (fixed in 1.5.0)
+### No API key required if running Langflow with `LANGFLOW_AUTO_LOGIN=true` (fixed in 1.5.0)
 
 In Langflow versions earlier than 1.5.0, if `LANGFLOW_AUTO_LOGIN` is set to `true`, Langflow automatically logs users in as a superuser without requiring authentication.
 In this case, API requests don't require a Langflow API key.
