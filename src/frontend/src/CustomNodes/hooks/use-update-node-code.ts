@@ -1,20 +1,20 @@
-import useFlowStore from "@/stores/flowStore";
-import { cloneDeep } from "lodash"; // or any other deep cloning library you prefer
-import { useCallback } from "react";
-import { APIClassType } from "../../types/api";
+import { cloneDeep } from 'lodash';
+import { useCallback } from 'react';
+import useFlowStore from '@/stores/flowStore';
+import type { APIClassType } from '../../types/api';
 
 const useUpdateNodeCode = (
   dataId: string,
-  dataNode: APIClassType, // Define YourNodeType according to your data structure
+  dataNode: APIClassType,
   setNode: (id: string, callback: (oldNode) => any) => void,
-  updateNodeInternals: (id: string) => void,
+  updateNodeInternals: (id: string) => void
 ) => {
   const { setComponentsToUpdate } = useFlowStore();
 
   const updateNodeCode = useCallback(
     (newNodeClass: APIClassType, code: string, name: string, type: string) => {
-      setNode(dataId, (oldNode) => {
-        let newNode = cloneDeep(oldNode);
+      setNode(dataId, oldNode => {
+        const newNode = cloneDeep(oldNode);
 
         newNode.data = {
           ...newNode.data,
@@ -33,12 +33,12 @@ const useUpdateNodeCode = (
         return newNode;
       });
 
-      setComponentsToUpdate((old) =>
-        old.filter((component) => component.id !== dataId),
+      setComponentsToUpdate(old =>
+        old.filter(component => component.id !== dataId)
       );
       updateNodeInternals(dataId);
     },
-    [dataId, dataNode, setNode, updateNodeInternals],
+    [dataId, dataNode, setNode, updateNodeInternals]
   );
 
   return updateNodeCode;
