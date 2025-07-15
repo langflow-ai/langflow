@@ -22,9 +22,9 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
-<script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.530387df.css">
-<script src="/assets/js/runtime~main.c6ae87e0.js" defer="defer"></script>
-<script src="/assets/js/main.8a426651.js" defer="defer"></script>
+<script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
+<script src="/assets/js/runtime~main.f6bf0cf5.js" defer="defer"></script>
+<script src="/assets/js/main.d9e913d6.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -93,6 +93,7 @@ For example, the <strong>Prompt</strong> component accepts inputs within curly b
 <p>For example, the <strong>Language Model</strong> component includes <strong>Model Response</strong> or <strong>Language Model</strong> outputs.
 The <strong>Model Response</strong> output sends a <a href="/concepts-objects#message-object">Message</a> output on to another Message port.
 The <strong>Language Model</strong> output can be connected to components like <a href="/components-processing#structured-output">Structured output</a> to use the LLM to power the component&#x27;s reasoning.</p>
+<p><img decoding="async" loading="lazy" alt="Output type selection in the Language Model component" src="/assets/images/select-output-f7d64629d278098e3fba32fe79f79ed6.png" width="280" height="446" class="img_ev3q"></p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="port-colors">Port colors<a href="#port-colors" class="hash-link" aria-label="Direct link to Port colors" title="Direct link to Port colors">​</a></h3>
 <p>Component port colors indicate the data type ingested or emitted by the port.
 For example, a text port either accepts or emits text data.</p>
@@ -150,8 +151,13 @@ These copies are detached from the primary Langflow database, and they don&#x27;
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="group-components">Group components<a href="#group-components" class="hash-link" aria-label="Direct link to Group components" title="Direct link to Group components">​</a></h2>
 <p>Multiple components can be grouped into a single component for reuse. This is useful for organizing large flows by combining related components together, such as a RAG <strong>Agent</strong> component and an associated vector database component.</p>
 <ol>
-<li>Hold <kbd>Shift</kbd>, and then click and drag to highlight all components you want to merge. Components must be completely within the selection area to be merged.</li>
-<li>Release the mouse and keyboard, and then click <strong>Group</strong> to merge the components into a single, group component.</li>
+<li>
+<p>Hold <kbd>Shift</kbd>, and then click and drag to highlight all components you want to merge. Components must be completely within the selection area to be merged.</p>
+<p>Alternatively, to select components for merging one by one, hold <kbd>Ctrl</kbd> on Windows or <kbd>Cmd</kbd> on Mac, and then click each component to add them to the group.</p>
+</li>
+<li>
+<p>Release the mouse and keyboard, and then click <strong>Group</strong> to merge the components into a single, group component.</p>
+</li>
 </ol>
 <p>Grouped components are configured and managed as a single component, including the component name, code, and settings.</p>
 <p>To ungroup the components, click the component in the <strong>Workspace</strong> to expose the component&#x27;s header menu, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>Show More</strong>, and then select <strong>Ungroup</strong>.</p>
