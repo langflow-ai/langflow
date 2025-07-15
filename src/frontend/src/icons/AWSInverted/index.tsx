@@ -1,5 +1,6 @@
+import type React from "react";
+import { forwardRef } from "react";
 import { useDarkStore } from "@/stores/darkStore";
-import React, { forwardRef } from "react";
 import SvgAWS from "./AWS";
 
 export const AWSInvertedIcon = forwardRef<

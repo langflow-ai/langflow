@@ -40,13 +40,16 @@ withEventDeliveryModes(
     await page.waitForTimeout(1000);
 
     try {
+      await page.waitForSelector("anchor-popover-anchor-input-api_key", {
+        timeout: 5000,
+      });
       await page
         .getByTestId("anchor-popover-anchor-input-api_key")
         .locator("input")
         .last()
         .fill(process.env.ANTHROPIC_API_KEY ?? "");
-    } catch (e) {
-      console.log("There's API already added");
+    } catch (_e) {
+      console.error("There's API already added");
     }
 
     await page.getByTestId("playground-btn-flow-io").click();

@@ -1,4 +1,4 @@
-import { AxiosRequestConfig, ResponseType } from "axios";
+import type { AxiosRequestConfig, ResponseType } from "axios";
 import { track } from "./analytics";
 
 export const customGetDownloadTypeFolders = (): AxiosRequestConfig => {
@@ -16,10 +16,6 @@ export const customGetDownloadFolderBlob = (
   folderName?: string,
   setSuccessData?: (data: any) => void,
 ) => {
-  if (folderName === "My Projects") {
-    folderName = "Starter Project";
-  }
-
   // Create a blob from the response data
   const blob = new Blob([response.data], {
     type: "application/x-zip-compressed",

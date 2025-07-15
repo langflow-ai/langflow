@@ -5,8 +5,30 @@ module.exports = {
       type: "category",
       label: "Get started",
       items: [
-        "Get-Started/get-started-installation",
-        "Get-Started/get-started-quickstart",
+        {
+          type: "doc",
+          id: "Get-Started/about-langflow",
+          label: "About Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-installation",
+          label: "Install Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-quickstart",
+          label: "Quickstart"
+        },
+        {
+          type: "category",
+          label: "Tutorials",
+          items: [
+            "Tutorials/chat-with-rag",
+            "Tutorials/chat-with-files",
+            "Tutorials/agent",
+          ],
+        },
       ],
     },
     {
@@ -26,23 +48,55 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Concepts",
+      label: "Flows",
       items: [
-        "Concepts/concepts-overview",
-        "Concepts/concepts-playground",
-        "Concepts/concepts-components",
-        "Concepts/concepts-flows",
-        "Concepts/concepts-objects",
-        "Concepts/concepts-publish",
-        "Concepts/embedded-chat-widget",
-        "Concepts/concepts-file-management",
-        "Concepts/concepts-voice-mode",
+        {
+          type: "doc",
+          id: "Concepts/concepts-overview",
+          label: "Use the visual editor"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-flows",
+          label: "Build flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-publish",
+          label: "Run flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-flows-import",
+          label: "Import and export flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-playground",
+          label: "Use the Playground"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-voice-mode",
+          label: "Use voice mode"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-objects",
+          label: "Langflow objects"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-file-management",
+          label: "Manage files"
+        },
       ],
     },
     {
       type: "category",
       label: "Components",
       items: [
+        "Concepts/concepts-components",
         "Components/components-agents",
         "Components/components-bundles",
         "Components/components-custom-components",
@@ -153,6 +207,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-docker",
           label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-public-server",
+          label: "Deploy a public Langflow server"
         },
         {
           type: "doc",
@@ -289,10 +348,14 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/Docling/integrations-docling",
+          label: "Docling",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
-            'Integrations/Google/integrations-setup-google-oauth-langflow',
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
             'Integrations/Google/integrations-google-big-query',
           ],
@@ -347,12 +410,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
         {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },

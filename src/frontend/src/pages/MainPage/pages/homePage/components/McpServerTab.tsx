@@ -1,13 +1,12 @@
+import { memo, type ReactNode, useCallback, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
-import {
-  DEFAULT_FOLDER,
-  DEFAULT_FOLDER_DEPRECATED,
-  MAX_MCP_SERVER_NAME_LENGTH,
-} from "@/constants/constants";
+import { MAX_MCP_SERVER_NAME_LENGTH } from "@/constants/constants";
 import { createApiKey } from "@/controllers/API";
 import {
   useGetFlowsMCP,
@@ -15,18 +14,15 @@ import {
 } from "@/controllers/API/queries/mcp";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
+import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
-import { useIsLocalConnection } from "@/hooks/useIsLocalConnection";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { MCPSettingsType } from "@/types/mcp";
+import type { MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
-import { memo, ReactNode, useCallback, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 
 // Define interface for MemoizedCodeTag props
 interface MemoizedCodeTagProps {
@@ -102,6 +98,11 @@ const autoInstallers = [
     title: "Claude",
     icon: "Claude",
   },
+  {
+    name: "windsurf",
+    title: "Windsurf",
+    icon: "Windsurf",
+  },
 ];
 
 const operatingSystemTabs = [
@@ -149,7 +150,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
   // Check if the current connection is local
-  const isLocalConnection = useIsLocalConnection();
+  const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
     isLocalConnection ? "Auto install" : "JSON",
@@ -188,7 +189,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
-    "lf-${parseString(folderName === DEFAULT_FOLDER_DEPRECATED ? DEFAULT_FOLDER : (folderName ?? "project"), ["snake_case", "no_blank", "lowercase"]).slice(0, MAX_MCP_SERVER_NAME_LENGTH - 4)}": {
+    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, MAX_MCP_SERVER_NAME_LENGTH - 4)}": {
       "command": "${selectedPlatform === "windows" ? "cmd" : selectedPlatform === "wsl" ? "wsl" : "uvx"}",
       "args": [
         ${
@@ -252,8 +253,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         MCP Server
       </div>
       <div className="pb-4 text-mmd text-muted-foreground">
-        Access your Project's flows as Actions within a MCP Server. Learn more
-        in our
+        Access your Project's flows as Tools within a MCP Server. Learn more in
+        our
         <a
           className="text-accent-pink-foreground"
           href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
@@ -268,11 +269,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         <div className="w-full xl:w-2/5">
           <div className="flex flex-row justify-between">
             <ShadTooltip
-              content="Flows in this project can be exposed as callable MCP actions."
+              content="Flows in this project can be exposed as callable MCP tools."
               side="right"
             >
               <div className="flex items-center text-mmd font-medium hover:cursor-help">
-                Flows/Actions
+                Flows/Tools
                 <ForwardedIconComponent
                   name="info"
                   className="ml-1.5 h-4 w-4 text-muted-foreground"
@@ -284,11 +285,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           <div className="flex flex-row flex-wrap gap-2 pt-2">
             <ToolsComponent
               value={flowsMCPData}
-              title="MCP Server Actions"
-              description="Select actions to add to this server"
+              title="MCP Server Tools"
+              description="Select tools to add to this server"
               handleOnNewValue={handleOnNewValue}
               id="mcp-server-tools"
-              button_description="Edit Actions"
+              button_description="Edit Tools"
               editNode={false}
               isAction
               disabled={false}
@@ -409,7 +410,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       {
                         onSuccess: () => {
                           setSuccessData({
-                            title: `MCP Server installed successfully on ${installer.title}`,
+                            title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
                           });
                           setLoadingMCP(
                             loadingMCP.filter(

@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format_frontend format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -45,6 +45,7 @@ help: ## show this help message
 	awk -F ':.*##' '{printf "\033[36mmake %s\033[0m: %s\n", $$1, $$2}' | \
 	column -c2 -t -s :
 	@echo '----'
+	@echo 'For frontend commands, run: make help_frontend'
 
 ######################
 # INSTALL PROJECT
@@ -58,22 +59,7 @@ install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
 	@uv sync --frozen --extra "postgresql" $(EXTRA_ARGS)
 
-install_frontend: ## install the frontend dependencies
-	@echo 'Installing frontend dependencies'
-	@cd src/frontend && npm install > /dev/null 2>&1
 
-build_frontend: ## build the frontend static files
-	@echo '==== Starting frontend build ===='
-	@echo 'Current directory: $$(pwd)'
-	@echo 'Checking if src/frontend exists...'
-	@ls -la src/frontend || true
-	@echo 'Building frontend static files...'
-	@cd src/frontend && CI='' npm run build 2>&1 || { echo "\nBuild failed! Error output above ☝️"; exit 1; }
-	@echo 'Clearing destination directory...'
-	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
-	@echo 'Copying build files...'
-	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
-	@echo '==== Frontend build complete ===='
 
 init: check_tools ## initialize the project
 	@make install_backend
@@ -189,10 +175,15 @@ format_backend: ## backend code formatters
 	@uv run ruff check . --fix
 	@uv run ruff format . --config pyproject.toml
 
-format_frontend: ## frontend code formatters
-	@cd src/frontend && npm run format
-
 format: format_backend format_frontend ## run code formatters
+
+format_frontend: ## run biome check and format on frontend code
+	@echo 'Running Biome check and format on frontend...'
+	@cd src/frontend && npx @biomejs/biome check --write
+
+format_frontend_check: ## run biome check without formatting
+	@echo 'Running Biome check on frontend...'
+	@cd src/frontend && npx @biomejs/biome check
 
 unsafe_fix:
 	@uv run ruff check . --fix --unsafe-fixes
@@ -200,22 +191,7 @@ unsafe_fix:
 lint: install_backend ## run linters
 	@uv run mypy --namespace-packages -p "langflow"
 
-install_frontendci:
-	@cd src/frontend && npm ci > /dev/null 2>&1
 
-install_frontendc:
-	@cd src/frontend && $(call CLEAR_DIRS,node_modules) && rm -f package-lock.json && npm install > /dev/null 2>&1
-
-run_frontend: ## run the frontend
-	@-kill -9 `lsof -t -i:3000`
-	@cd src/frontend && npm start $(if $(FRONTEND_START_FLAGS),-- $(FRONTEND_START_FLAGS))
-
-tests_frontend: ## run frontend tests
-ifeq ($(UI), true)
-	@cd src/frontend && npx playwright test --ui --project=chromium
-else
-	@cd src/frontend && npx playwright test --project=chromium
-endif
 
 run_cli: install_frontend install_backend build_frontend ## run the CLI
 	@echo 'Running the CLI'
@@ -250,11 +226,7 @@ setup_devcontainer: ## set up the development container
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
 
-frontend: install_frontend ## run the frontend in development mode
-	make run_frontend
 
-frontendc: install_frontendc
-	make run_frontend
 
 
 backend: setup_env install_backend ## run the backend in development mode
@@ -551,3 +523,10 @@ locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 l
 			--host $(locust_host) \
 			-f $$(basename "$(locust_file)"); \
 	fi
+
+######################
+# INCLUDE FRONTEND MAKEFILE
+######################
+
+# Include frontend-specific Makefile
+include Makefile.frontend
