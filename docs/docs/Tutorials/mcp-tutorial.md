@@ -28,7 +28,7 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 3. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
 
-    The LLM response is vague, though the Agent does know the current date by using its internal `get_current_date` function.
+    This query demonstrates how an LLM, by itself, might not have access to information or functions designed to address specialized queries. In this example, the default OpenAI model provides a vague response, although the agent does know the current date by using its internal `get_current_date` function.
 
     ```
     Today is July 11, 2025.
@@ -36,13 +36,15 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
     Would you like a detailed weather forecast or information on trail conditions for the Adirondacks today?
     ```
 
-    For improved, up-to-date context for your Agent, replace the connected tools with a connection to a weather MCP server.
+    To improve the response, you can connect MCP servers to your flow, which provide specialized tools to the agent to use when generating responses. In the next part of this tutorial, you'll connect an MCP server that provides the agent with real-time weather information so that it can generate a more specific response.
 
 ## Add an MCP Tools component
 
-    :::tip Manage MCP Servers
-    You can manage your MCP servers' configurations in the **Settings** menu, but you still need an **MCP Tools** component in your flow for each individual server.
-    :::
+There are many MCP servers available online that offer different tools for different tasks.
+To use an MCP server in Langflow, you need to connect your Langflow deployment to the server, and then add an **MCP Tools** component to your flow.
+
+The **MCP Tools** component is required to use a particular MCP server within a flow.
+You need one **MCP Tools** component for each MCP server that you want your flow to use.
 
 1. Remove the **URL** and **Calculator** tools, and then drag the [**MCP Tools**](/mcp-client) component into your workspace.
 2. In the **MCP Tools** component, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
@@ -165,9 +167,14 @@ This MCP server can be started with [npx](https://docs.npmjs.com/cli/v8/commands
 
 ## Create a Python application that connects to Langflow
 
-At this point, you can open the Playground and ask what the weather is, but an additional feature of using MCP with Langflow is connecting your flows to your code.
+At this point, you can open the **Playground** and ask about the weather in your current location to test the IP geolocation tool.
+However, the IP geolocation MCP server is most useful in an application where you or your users want to ask about the weather from different places around the world.
 
-This way, you can add MCP servers in the visual builder to improve your application's results, while not changing any code.
+In the last part of this tutorial, you'll learn how to use the Langflow API to run a flow in a script.
+
+When you use the Langflow API to run a flow, you can change some aspects of the flow without changing your code.
+For example, you can add more MCP servers to your flow in Langflow, and then use the same script to run the flow.
+You can use the same input or a new input that prompts the agent to use other tools.
 
 1. To construct a Python application to connect to your flow, gather the following information:
 
@@ -216,12 +223,14 @@ This way, you can add MCP servers in the visual builder to improve your applicat
     ```
 
 3.  Save and run the script to send the request and test the flow.
-    Your application correctly identifies your approximate location with `geolocation`, and retrieves the weather in that location with `weather`.
+    The application identifies your approximate location with `geolocation`, and then retrieves the weather in that location with `weather`.
 
     <details closed>
     <summary>Response</summary>
 
     The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
+    
+    If you are using a VPN or a similar service, the `geolocation` tool might use the simulated location rather than your actual location.
 
     ```
     The weather in Waynesboro, Pennsylvania, is currently overcast with a temperature of 23.0°C (about 73.4°F).
@@ -232,7 +241,9 @@ This way, you can add MCP servers in the visual builder to improve your applicat
 
 ## Next steps
 
-For more information on building or extending this tutorial, see the following:
+To continue building on the concepts introduced in this tutorial, see the following:
 
-* [Connect applications to agents](/agent-tutorial)
+* [Use Langflow as an MCP client](/mcp-client)
+* [Use Langflow Agents](/agents)
+* [Use Langflow as an MCP server](/mcp-server)
 * [Langflow deployment overview](/deployment-overview)
