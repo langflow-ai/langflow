@@ -71,7 +71,6 @@ def upgrade() -> None:
 
         op.drop_table("file")
         op.rename_table("file_new", "file")
-
     else:
         # PostgreSQL: Drop old unique, add new composite
         with op.batch_alter_table("file") as batch_op:
@@ -128,7 +127,6 @@ def downgrade() -> None:
 
         op.drop_table("file")
         op.rename_table("file_new", "file")
-
     else:
         with op.batch_alter_table("file") as batch_op:
             constraints = inspector.get_unique_constraints("file")
