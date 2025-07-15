@@ -25,6 +25,8 @@ jobs:
         run: cd docs && yarn install
       - name: Build website
         run: cd docs && yarn build
+        env:
+          SEGMENT_PUBLIC_WRITE_KEY: ${{ vars.DOCS_PROD_SEGMENT_PUBLIC_WRITE_KEY }}
 
       # Popular action to deploy to GitHub Pages:
       # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus
