@@ -47,7 +47,7 @@ async def upload_file(
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     try:
-        max_file_size_upload = settings_service.settings.max_file_size_upload
+        max_file_size_upload = settings_service.server.max_file_size_upload
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

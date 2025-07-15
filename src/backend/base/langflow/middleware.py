@@ -31,7 +31,7 @@ class ContentSizeLimitMiddleware:
         received = 0
 
         async def inner():
-            max_file_size_upload = get_settings_service().settings.max_file_size_upload
+            max_file_size_upload = get_settings_service().server.max_file_size_upload
             nonlocal received
             message = await receive()
             if message["type"] != "http.request" or max_file_size_upload is None:

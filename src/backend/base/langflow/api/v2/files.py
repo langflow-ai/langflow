@@ -90,7 +90,7 @@ async def upload_user_file(
     """Upload a file for the current user and track it in the database."""
     # Get the max allowed file size from settings (in MB)
     try:
-        max_file_size_upload = settings_service.settings.max_file_size_upload
+        max_file_size_upload = settings_service.server.max_file_size_upload
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Settings error: {e}") from e
 
