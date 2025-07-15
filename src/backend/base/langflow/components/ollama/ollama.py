@@ -33,7 +33,7 @@ class ChatOllamaComponent(LCModelComponent):
             name="base_url",
             display_name="Base URL",
             info="Endpoint of the Ollama API.",
-            value="",
+            value="http://localhost:11434",
         ),
         DropdownInput(
             name="model_name",
