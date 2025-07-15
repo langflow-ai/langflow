@@ -306,9 +306,7 @@ def run(
         log_level = settings_service.server.log_level
         frontend_path = settings_service.server.frontend_path
         backend_only = settings_service.server.backend_only
-        ssl_cert_file_path = (
-            settings_service.server.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
-        )
+        ssl_cert_file_path = settings_service.server.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
         ssl_key_file_path = settings_service.server.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
 
         # create path object if frontend_path is provided
