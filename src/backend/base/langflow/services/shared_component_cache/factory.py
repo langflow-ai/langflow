@@ -15,4 +15,4 @@ class SharedComponentCacheServiceFactory(ServiceFactory):
 
     @override
     def create(self, settings_service: "SettingsService"):
-        return SharedComponentCacheService(expiration_time=settings_service.settings.cache_expire)
+        return SharedComponentCacheService(expiration_time=settings_service.server.cache_expire)

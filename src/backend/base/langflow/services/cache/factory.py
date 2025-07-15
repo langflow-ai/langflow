@@ -22,23 +22,23 @@ class CacheServiceFactory(ServiceFactory):
         # Here you would have logic to create and configure a CacheService
         # based on the settings_service
 
-        if settings_service.settings.cache_type == "redis":
+        if settings_service.server.cache_type == "redis":
             logger.debug("Creating Redis cache")
             return RedisCache(
-                host=settings_service.settings.redis_host,
-                port=settings_service.settings.redis_port,
-                db=settings_service.settings.redis_db,
-                url=settings_service.settings.redis_url,
-                expiration_time=settings_service.settings.redis_cache_expire,
+                host=settings_service.redis.redis_host,
+                port=settings_service.redis.redis_port,
+                db=settings_service.redis.redis_db,
+                url=settings_service.redis.redis_url,
+                expiration_time=settings_service.redis.redis_cache_expire,
             )
 
-        if settings_service.settings.cache_type == "memory":
-            return ThreadingInMemoryCache(expiration_time=settings_service.settings.cache_expire)
-        if settings_service.settings.cache_type == "async":
-            return AsyncInMemoryCache(expiration_time=settings_service.settings.cache_expire)
-        if settings_service.settings.cache_type == "disk":
+        if settings_service.server.cache_type == "memory":
+            return ThreadingInMemoryCache(expiration_time=settings_service.server.cache_expire)
+        if settings_service.server.cache_type == "async":
+            return AsyncInMemoryCache(expiration_time=settings_service.server.cache_expire)
+        if settings_service.server.cache_type == "disk":
             return AsyncDiskCache(
-                cache_dir=settings_service.settings.config_dir,
-                expiration_time=settings_service.settings.cache_expire,
+                cache_dir=settings_service.database.config_dir,
+                expiration_time=settings_service.server.cache_expire,
             )
         return None
