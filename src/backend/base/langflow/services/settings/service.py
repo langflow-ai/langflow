@@ -69,28 +69,44 @@ class SettingsService(Service):
     def database(self) -> DatabaseSettings:
         """Return database-related settings."""
         if self._database_settings is None:
-            self._database_settings = DatabaseSettings(**self.settings.model_dump())
+            # Only pass fields that exist in DatabaseSettings
+            data = self.settings.model_dump()
+            database_fields = set(DatabaseSettings.model_fields.keys())
+            filtered_data = {k: v for k, v in data.items() if k in database_fields}
+            self._database_settings = DatabaseSettings(**filtered_data)
         return self._database_settings
 
     @property
     def redis(self) -> RedisSettings:
         """Return redis-related settings."""
         if self._redis_settings is None:
-            self._redis_settings = RedisSettings(**self.settings.model_dump())
+            # Only pass fields that exist in RedisSettings
+            data = self.settings.model_dump()
+            redis_fields = set(RedisSettings.model_fields.keys())
+            filtered_data = {k: v for k, v in data.items() if k in redis_fields}
+            self._redis_settings = RedisSettings(**filtered_data)
         return self._redis_settings
 
     @property
     def server(self) -> ServerSettings:
         """Return web-server settings."""
         if self._server_settings is None:
-            self._server_settings = ServerSettings(**self.settings.model_dump())
+            # Only pass fields that exist in ServerSettings
+            data = self.settings.model_dump()
+            server_fields = set(ServerSettings.model_fields.keys())
+            filtered_data = {k: v for k, v in data.items() if k in server_fields}
+            self._server_settings = ServerSettings(**filtered_data)
         return self._server_settings
 
     @property
     def telemetry(self) -> TelemetrySettings:
         """Return telemetry settings."""
         if self._telemetry_settings is None:
-            self._telemetry_settings = TelemetrySettings(**self.settings.model_dump())
+            # Only pass fields that exist in TelemetrySettings
+            data = self.settings.model_dump()
+            telemetry_fields = set(TelemetrySettings.model_fields.keys())
+            filtered_data = {k: v for k, v in data.items() if k in telemetry_fields}
+            self._telemetry_settings = TelemetrySettings(**filtered_data)
         return self._telemetry_settings
 
     # ---------------------------------------------------------------------
