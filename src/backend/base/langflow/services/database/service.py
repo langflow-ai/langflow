@@ -184,9 +184,7 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def with_session(self):
         if self.settings_service.settings.use_noop_database:
-            logger.warning(
-                "Running with NOOP database session (LANGFLOW_USE_NOOP_DATABASE=1). All DB operations are disabled."
-            )
+            logger.info("Running with NOOP database session. All DB operations are disabled.")
             yield NoopSession()
         else:
             async with AsyncSession(self.engine, expire_on_commit=False) as session:
