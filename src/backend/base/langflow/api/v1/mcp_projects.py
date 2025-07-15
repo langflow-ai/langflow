@@ -38,8 +38,6 @@ from langflow.services.deps import get_settings_service, session_scope
 # Common MCP utilities now imported from mcp_support.py
 
 
-
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
