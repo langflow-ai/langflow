@@ -12,7 +12,7 @@ from pydantic import PydanticDeprecatedSince20
 from langflow.custom.eval import eval_custom_component_code
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
-from langflow.services.deps import get_tracing_service, session_scope
+from langflow.services.deps import get_settings_service, get_tracing_service, session_scope
 
 if TYPE_CHECKING:
     from langflow.custom.custom_component.component import Component
@@ -129,7 +129,7 @@ async def update_params_with_load_from_db_fields(
     *,
     fallback_to_env_vars=False,
 ):
-    if not custom_component._is_database_available():
+    if not get_settings_service().settings.use_noop_database:
         logger.warning("Loading variables from environment variables because database is not available.")
         return load_from_env_vars(params, load_from_db_fields)
     async with session_scope() as session:
