@@ -32,18 +32,18 @@ class TelemetryService(Service):
     def __init__(self, settings_service: SettingsService):
         super().__init__()
         self.settings_service = settings_service
-        self.base_url = settings_service.settings.telemetry_base_url
+        self.base_url = settings_service.telemetry.telemetry_base_url
         self.telemetry_queue: asyncio.Queue = asyncio.Queue()
         self.client = httpx.AsyncClient(timeout=10.0)  # Set a reasonable timeout
         self.running = False
         self._stopping = False
 
-        self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
+        self.ot = OpenTelemetry(prometheus_enabled=settings_service.server.prometheus_enabled)
         self.architecture: str | None = None
         self.worker_task: asyncio.Task | None = None
         # Check for do-not-track settings
         self.do_not_track = (
-            os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.settings.do_not_track
+            os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.telemetry.do_not_track
         )
         self.log_package_version_task: asyncio.Task | None = None
 
@@ -105,8 +105,8 @@ class TelemetryService(Service):
             version=version_info["version"],
             platform=platform.platform(),
             python=python_version,
-            cache_type=self.settings_service.settings.cache_type,
-            backend_only=self.settings_service.settings.backend_only,
+            cache_type=self.settings_service.server.cache_type,
+            backend_only=self.settings_service.server.backend_only,
             arch=self.architecture,
             auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
             desktop=self._get_langflow_desktop(),
