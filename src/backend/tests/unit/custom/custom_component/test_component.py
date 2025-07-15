@@ -9,7 +9,7 @@ from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import update_component_build_config
 from langflow.schema import dotdict
 from langflow.schema.message import Message
-from langflow.services.database.service import NoopSession
+from langflow.services.database.session import NoopSession
 from langflow.template import Output
 
 crewai_available = False

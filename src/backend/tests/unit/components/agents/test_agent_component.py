@@ -15,7 +15,7 @@ from langflow.base.models.openai_constants import (
 from langflow.components.agents.agent import AgentComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
-from langflow.services.database.service import NoopSession
+from langflow.services.database.session import NoopSession
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
