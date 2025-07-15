@@ -126,6 +126,8 @@ test(
 
       await page.getByTestId("text_card_container").nth(i).click();
 
+      await page.waitForTimeout(500);
+
       await page.waitForSelector('[data-testid="fit_view"]', {
         timeout: 5000,
       });

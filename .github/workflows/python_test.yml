@@ -2,6 +2,11 @@ name: Python tests
 
 on:
   workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      ANTHROPIC_API_KEY:
+        required: true
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
@@ -28,9 +33,12 @@ env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
   PYTEST_RUN_PATH: "src/backend/tests"
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
 jobs:
   build:
+
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
@@ -62,6 +70,8 @@ jobs:
           timeout_minutes: 12
           max_attempts: 2
           command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
+
+
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}

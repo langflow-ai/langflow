@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
-  "user should be able to manage MCP server actions and configuration",
+  "user should be able to manage MCP server tools and configuration",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     const maxRetries = 5;
@@ -47,14 +47,14 @@ test(
 
         // Verify MCP server tab is visible
         await expect(page.getByTestId("mcp-server-title")).toBeVisible();
-        await expect(page.getByText("Flows/Actions")).toBeVisible();
+        await expect(page.getByText("Flows/Tools")).toBeVisible();
 
-        // Click on Edit Actions button
+        // Click on Edit Tools button
         await page.getByTestId("button_open_actions").click();
         await page.waitForTimeout(500);
 
         // Verify actions modal is open
-        await expect(page.getByText("MCP Server Actions")).toBeVisible();
+        await expect(page.getByText("MCP Server Tools")).toBeVisible();
 
         // Select some actions
         const rowsCount = await page.getByRole("row").count();
@@ -165,7 +165,9 @@ test(
         await expect(page.getByTestId("icon-check")).toBeVisible();
 
         // Get the SSE URL from the configuration
-        const configJson = await page.locator("pre").textContent();
+        const configJson = await page.evaluate(() => {
+          return navigator.clipboard.readText();
+        });
         expect(configJson).toContain("mcpServers");
         expect(configJson).toContain("mcp-proxy");
         expect(configJson).toContain("uvx");
@@ -180,8 +182,13 @@ test(
         await page.getByText("macOS/Linux", { exact: true }).click();
 
         await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
+        // Copy configuration
+        await page.getByTestId("icon-copy").click();
+        await expect(page.getByTestId("icon-check")).toBeVisible();
 
-        const configJsonLinux = await page.locator("pre").textContent();
+        const configJsonLinux = await page.evaluate(() => {
+          return navigator.clipboard.readText();
+        });
 
         const sseUrlMatchLinux = configJsonLinux?.match(
           /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
