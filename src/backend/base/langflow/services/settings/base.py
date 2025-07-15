@@ -126,6 +126,10 @@ class Settings(BaseSettings):
     - echo: Enable SQL query logging (development only)
     """
 
+    use_noop_database: bool = False
+    """If True, disables all database operations and uses a no-op session.
+    Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
+
     # cache configuration
     cache_type: Literal["async", "redis", "memory", "disk"] = "async"
     """The cache type can be 'async' or 'redis'."""

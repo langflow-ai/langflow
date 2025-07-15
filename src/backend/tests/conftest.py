@@ -372,7 +372,10 @@ def deactivate_tracing(monkeypatch):
 
 @pytest.fixture
 def use_noop_session(monkeypatch):
-    monkeypatch.setenv("NO_DB", "1")
+    monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
+    # Optionally patch the Settings object if needed
+    # from langflow.services.settings.base import Settings
+    # monkeypatch.setattr(Settings, "use_noop_database", True)
     yield
     monkeypatch.undo()
 
