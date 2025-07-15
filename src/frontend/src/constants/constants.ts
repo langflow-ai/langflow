@@ -1,7 +1,7 @@
 // src/constants/constants.ts
 
 import custom from "../customization/config-constants";
-import { languageMap } from "../types/components";
+import type { languageMap } from "../types/components";
 
 /**
  * invalid characters for flow name

@@ -1,5 +1,5 @@
 import IOModal from "@/modals/IOModal/playground-modal";
-import { IOModalPropsType } from "@/types/components";
+import type { IOModalPropsType } from "@/types/components";
 
 export function CustomIOModal({
   children,

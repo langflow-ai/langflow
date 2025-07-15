@@ -1,6 +1,6 @@
-import { VertexBuildTypeAPI } from "@/types/api";
 import { useEffect } from "react";
-import { FlowPoolType } from "../../types/zustand/flow";
+import type { VertexBuildTypeAPI } from "@/types/api";
+import type { FlowPoolType } from "../../types/zustand/flow";
 
 const useUpdateValidationStatus = (
   dataId: string,

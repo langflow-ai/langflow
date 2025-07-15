@@ -1,6 +1,6 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import { GetCodeType } from "@/types/tweaks";
+import type { GetCodeType } from "@/types/tweaks";
 
 /**
  * Generates a cURL command for making a POST request to a webhook endpoint.

@@ -7,7 +7,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select-custom";
 import { DEFAULT_FOLDER } from "@/constants/constants";
-import { FolderType } from "@/pages/MainPage/entities";
+import type { FolderType } from "@/pages/MainPage/entities";
 import { cn } from "@/utils/utils";
 import { handleSelectChange } from "../helpers/handle-select-change";
 import { FolderSelectItem } from "./folder-select-item";

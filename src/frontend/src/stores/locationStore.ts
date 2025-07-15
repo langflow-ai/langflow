@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import { LocationStoreType } from "../types/zustand/location";
+import type { LocationStoreType } from "../types/zustand/location";
 
 export const useLocationStore = create<LocationStoreType>((set, get) => ({
   routeHistory: [],
   setRouteHistory: (location) => {
-    let routeHistoryArray = get().routeHistory;
+    const routeHistoryArray = get().routeHistory;
     routeHistoryArray.push(location);
 
     if (routeHistoryArray?.length > 100) {

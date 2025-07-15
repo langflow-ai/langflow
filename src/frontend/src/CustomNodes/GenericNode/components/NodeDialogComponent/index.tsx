@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +13,9 @@ import {
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import { track } from "@/customization/utils/analytics";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { useState } from "react";
+import type { APIClassType, InputFieldType } from "@/types/api";
 
 interface NodeDialogProps {
   open: boolean;

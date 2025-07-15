@@ -10,7 +10,7 @@ test(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`Attempt ${attempt} of ${maxRetries}`);
+        console.warn(`Attempt ${attempt} of ${maxRetries}`);
 
         await awaitBootstrapTest(page);
 
@@ -100,7 +100,7 @@ test(
 
         await page.waitForTimeout(500);
 
-        let count = 0;
+        const count = 0;
 
         while (
           elementText !==
@@ -177,7 +177,7 @@ test(
           /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
-        const sseUrl = sseUrlMatch![1];
+        const _sseUrl = sseUrlMatch![1];
 
         await page.getByText("macOS/Linux", { exact: true }).click();
 
@@ -229,7 +229,7 @@ test(
           await page.getByText("Add MCP Server", { exact: true }).click({
             timeout: 5000,
           });
-        } catch (error) {
+        } catch (_error) {
           await page
             .getByTestId("mcp-server-dropdown")
             .click({ timeout: 3000 });
@@ -271,14 +271,16 @@ test(
         expect(fetchOptionCount).toBeGreaterThan(0);
 
         // If we get here, the test passed
-        console.log(`Test passed on attempt ${attempt}`);
+        console.warn(`Test passed on attempt ${attempt}`);
         return;
       } catch (error) {
-        error = error as Error;
-        console.log(`Attempt ${attempt} failed:`, error);
+        console.error(`Attempt ${attempt} failed:`, error);
 
         if (attempt === maxRetries) {
-          console.log(`All ${maxRetries} attempts failed. Last error:`, error);
+          console.error(
+            `All ${maxRetries} attempts failed. Last error:`,
+            error,
+          );
           throw error;
         }
 

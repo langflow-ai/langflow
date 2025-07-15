@@ -1,6 +1,6 @@
 import BaseModal from "@/modals/baseModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { CardData } from "@/types/templates/types";
+import type { CardData } from "@/types/templates/types";
 import memoryChatbot from "../../../../assets/temp-pat-1.png";
 import vectorRag from "../../../../assets/temp-pat-2.png";
 import multiAgent from "../../../../assets/temp-pat-3.png";

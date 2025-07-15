@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -59,7 +59,7 @@ withEventDeliveryModes(
     await page.getByTestId("button_run_chat output").last().click();
 
     if (await checkRateLimit(page)) {
-      console.log("Rate limit detected, skipping test");
+      console.warn("Rate limit detected, skipping test");
       test.skip();
     }
 

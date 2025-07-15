@@ -1,8 +1,8 @@
-import { ContentType } from "@/types/chat";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
+import type { ContentType } from "@/types/chat";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
@@ -144,7 +144,7 @@ export default function ContentDisplay({
       );
       break;
 
-    case "tool_use":
+    case "tool_use": {
       const formatToolOutput = (output: any) => {
         if (output === null || output === undefined) return "";
 
@@ -241,6 +241,7 @@ export default function ContentDisplay({
         </div>
       );
       break;
+    }
 
     case "media":
       contentData = (

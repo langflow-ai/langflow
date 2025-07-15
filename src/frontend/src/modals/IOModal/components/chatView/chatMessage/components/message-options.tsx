@@ -1,8 +1,8 @@
+import { type ButtonHTMLAttributes, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import { ButtonHTMLAttributes, useState } from "react";
 
 export function EditMessageButton({
   onEdit,

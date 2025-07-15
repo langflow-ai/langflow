@@ -9,7 +9,7 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
-import ReactAce from "react-ace/lib/ace";
+import type ReactAce from "react-ace/lib/ace";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -26,8 +26,8 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import { CodeErrorDataTypeAPI } from "../../types/api";
-import { codeAreaModalPropsType } from "../../types/components";
+import type { CodeErrorDataTypeAPI } from "../../types/api";
+import type { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
 
@@ -75,8 +75,8 @@ export default function CodeAreaModal({
       {
         onSuccess: (apiReturn) => {
           if (apiReturn) {
-            let importsErrors = apiReturn.imports.errors;
-            let funcErrors = apiReturn.function.errors;
+            const importsErrors = apiReturn.imports.errors;
+            const funcErrors = apiReturn.function.errors;
             if (funcErrors.length === 0 && importsErrors.length === 0) {
               setSuccessData({
                 title: CODE_SUCCESS_ALERT,

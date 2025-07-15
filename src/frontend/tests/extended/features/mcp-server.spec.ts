@@ -35,7 +35,7 @@ test(
       await page.getByText("Add MCP Server", { exact: true }).click({
         timeout: 5000,
       });
-    } catch (error) {
+    } catch (_error) {
       await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
       await page.getByText("Add MCP Server", { exact: true }).click({
         timeout: 5000,
@@ -74,7 +74,7 @@ test(
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    let fetchOptionCount = await page.getByTestId("fetch-0-option").count();
+    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
     expect(fetchOptionCount).toBeGreaterThan(0);
 
@@ -89,13 +89,13 @@ test(
       timeout: 30000,
     });
 
-    let maxLengthOptionCount = await page
+    const maxLengthOptionCount = await page
       .getByTestId("int_int_max_length")
       .count();
 
     expect(maxLengthOptionCount).toBeGreaterThan(0);
 
-    let urlOptionCount = await page
+    const urlOptionCount = await page
       .getByTestId("anchor-popover-anchor-input-url")
       .count();
 

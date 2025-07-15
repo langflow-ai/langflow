@@ -1,5 +1,5 @@
 import ChatInput from "@/modals/IOModal/components/chatView/chatInput/chat-input";
-import { ChatInputType } from "@/types/components";
+import type { ChatInputType } from "@/types/components";
 
 export const CustomChatInput = ({
   sendMessage,

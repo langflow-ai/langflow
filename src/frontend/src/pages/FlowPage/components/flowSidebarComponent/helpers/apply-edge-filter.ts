@@ -1,4 +1,4 @@
-import { APIDataType } from "@/types/api";
+import type { APIDataType } from "@/types/api";
 
 export const applyEdgeFilter = (filteredData: APIDataType, getFilterEdge) => {
   return Object.fromEntries(

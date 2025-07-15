@@ -4,7 +4,7 @@ import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import IconComponent from "../../common/genericIconComponent";
 import Loading from "../../ui/loading";
-import Error from "./Error";
+import ErrorComponent from "./Error";
 import NoDataPdf from "./noData";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -92,7 +92,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
           onLoadSuccess={onDocumentLoadSuccess}
           file={pdf}
           noData={<NoDataPdf />}
-          error={<Error />}
+          error={<ErrorComponent />}
           className="h-full w-full"
         >
           <Page

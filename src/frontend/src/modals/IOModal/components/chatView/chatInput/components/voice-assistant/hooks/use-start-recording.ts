@@ -1,4 +1,4 @@
-import { MutableRefObject } from "react";
+import type { MutableRefObject } from "react";
 
 export const useStartRecording = async (
   audioContextRef: MutableRefObject<AudioContext | null>,
@@ -49,7 +49,7 @@ export const useStartRecording = async (
           err instanceof DOMException &&
           err.message.includes("already been loaded")
         ) {
-          console.log("AudioWorklet module already loaded, continuing...");
+          console.error("AudioWorklet module already loaded, continuing...");
         } else {
           throw err;
         }

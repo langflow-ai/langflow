@@ -1,5 +1,5 @@
-import { useQueryFunctionType } from "@/types/api";
-import { MCPSettingsType } from "@/types/mcp";
+import type { useQueryFunctionType } from "@/types/api";
+import type { MCPSettingsType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

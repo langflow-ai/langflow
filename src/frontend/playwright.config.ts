@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { PORT } from "./src/customization/config-constants";
+
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 

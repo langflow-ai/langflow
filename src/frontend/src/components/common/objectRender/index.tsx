@@ -11,11 +11,11 @@ export default function ObjectRender({
   if (typeof object === "string") {
     try {
       newObject = JSON.parse(object);
-    } catch (e) {
+    } catch (_e) {
       newObject = object;
     }
   }
-  let preview =
+  const preview =
     newObject === null || newObject === undefined
       ? "‎"
       : JSON.stringify(newObject);

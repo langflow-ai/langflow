@@ -2,12 +2,11 @@ import _ from "lodash";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "../../../../ui/input";
-import { ButtonInputList } from "./components/button-input-list";
-
 import { cn } from "../../../../../utils/utils";
+import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputListComponentType, InputProps } from "../../types";
+import type { InputListComponentType, InputProps } from "../../types";
+import { ButtonInputList } from "./components/button-input-list";
 import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({
@@ -20,7 +19,7 @@ export default function InputListComponent({
   placeholder,
   listAddLabel,
 }: InputProps<string[], InputListComponentType>): JSX.Element {
-  const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
+  const [_dropdownOpen, setDropdownOpen] = useState<number | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 

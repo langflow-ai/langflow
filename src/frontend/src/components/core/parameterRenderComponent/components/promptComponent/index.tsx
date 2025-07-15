@@ -5,7 +5,7 @@ import PromptModal from "@/modals/promptModal";
 import { cn } from "../../../../../utils/utils";
 import { Button } from "../../../../ui/button";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps, PromptAreaComponentType } from "../../types";
+import type { InputProps, PromptAreaComponentType } from "../../types";
 
 const promptContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap bg-background h-fit max-h-28",

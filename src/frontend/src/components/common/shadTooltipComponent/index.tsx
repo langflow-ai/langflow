@@ -1,5 +1,6 @@
-import React, { forwardRef, memo, useMemo } from "react";
-import { ShadToolTipType } from "../../../types/components";
+import type React from "react";
+import { forwardRef, memo, useMemo } from "react";
+import type { ShadToolTipType } from "../../../types/components";
 import { cn } from "../../../utils/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 

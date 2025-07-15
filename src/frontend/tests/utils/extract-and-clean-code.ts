@@ -1,4 +1,4 @@
-import { Page } from "playwright/test";
+import type { Page } from "playwright/test";
 
 export async function extractAndCleanCode(page: Page): Promise<string> {
   const outerHTML = await page
@@ -10,7 +10,7 @@ export async function extractAndCleanCode(page: Page): Promise<string> {
     throw new Error("Could not find value attribute in the HTML");
   }
 
-  let codeContent = valueMatch[1]
+  const codeContent = valueMatch[1]
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")

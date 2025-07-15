@@ -1,3 +1,5 @@
+import { cloneDeep } from "lodash";
+import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   useAddUser,
@@ -6,8 +8,6 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import CustomLoader from "@/customization/components/custom-loader";
-import { cloneDeep } from "lodash";
-import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -40,8 +40,8 @@ import { AuthContext } from "../../contexts/authContext";
 import ConfirmationModal from "../../modals/confirmationModal";
 import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
-import { Users } from "../../types/api";
-import { UserInputType } from "../../types/components";
+import type { Users } from "../../types/api";
+import type { UserInputType } from "../../types/components";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");

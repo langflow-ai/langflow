@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { MessagesStoreType } from "../types/zustand/messages";
+import type { MessagesStoreType } from "../types/zustand/messages";
 
 export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
   displayLoadingMessage: false,

@@ -39,8 +39,10 @@ export function getURL(
   v2: boolean = false,
 ) {
   let url = URLs[key];
-  Object.keys(params).forEach((key) => (url += `/${params[key]}`));
-  return `${v2 ? BASE_URL_API_V2 : BASE_URL_API}${url.toString()}`;
+  for (const paramKey of Object.keys(params)) {
+    url += `/${params[paramKey]}`;
+  }
+  return `${v2 ? BASE_URL_API_V2 : BASE_URL_API}${url}`;
 }
 
 export type URLsType = typeof URLs;

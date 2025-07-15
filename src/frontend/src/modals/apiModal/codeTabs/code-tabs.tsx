@@ -1,3 +1,10 @@
+import { useEffect, useState } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import {
+  oneDark,
+  oneLight,
+} from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
@@ -7,13 +14,6 @@ import { useTweaksStore } from "@/stores/tweaksStore";
 import { tabsArrayType } from "@/types/tabs";
 import { hasStreaming } from "@/utils/reactflowUtils";
 import { getOS } from "@/utils/utils";
-import { useEffect, useState } from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-  oneDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/cjs/styles/prism";
-import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "../../../stores/darkStore";
 import { formatPayloadTweaks } from "../utils/filter-tweaks";
 import { getNewCurlCode } from "../utils/get-curl-code";
@@ -34,14 +34,13 @@ const operatingSystemTabs = [
 ];
 
 export default function APITabsComponent() {
-  const [isCopied, setIsCopied] = useState<Boolean>(false);
+  const [isCopied, setIsCopied] = useState<boolean>(false);
   const endpointName = useFlowStore(
     useShallow((state) => state.currentFlow?.endpoint_name),
   );
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
   const flowId = useFlowStore((state) => state.currentFlow?.id);
-  const autologin = useAuthStore((state) => state.autoLogin);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");

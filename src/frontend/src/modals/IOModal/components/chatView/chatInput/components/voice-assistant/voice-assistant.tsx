@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
@@ -16,7 +17,6 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import { useEffect, useMemo, useRef, useState } from "react";
 import IconComponent from "../../../../../../../components/common/genericIconComponent";
 import SettingsVoiceModal from "./components/audio-settings/audio-settings-dialog";
 import { checkProvider } from "./helpers/check-provider";
@@ -40,9 +40,9 @@ export function VoiceAssistant({
 }: VoiceAssistantProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [status, setStatus] = useState("");
-  const [message, setMessage] = useState("");
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [_status, setStatus] = useState("");
+  const [_message, setMessage] = useState("");
+  const [showSettingsModal, _setShowSettingsModal] = useState(false);
   const [addKey, setAddKey] = useState(false);
   const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
   const [preferredLanguage, setPreferredLanguage] = useState(
@@ -60,7 +60,7 @@ export function VoiceAssistant({
   const analyserRef = useRef<AnalyserNode | null>(null);
 
   const soundDetected = useVoiceStore((state) => state.soundDetected);
-  const setIsVoiceAssistantActive = useVoiceStore(
+  const _setIsVoiceAssistantActive = useVoiceStore(
     (state) => state.setIsVoiceAssistantActive,
   );
   const setSoundDetected = useVoiceStore((state) => state.setSoundDetected);

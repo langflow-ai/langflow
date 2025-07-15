@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import IconComponent from "../../components/common/genericIconComponent";
-import { ErrorAlertType } from "../../types/alerts";
+import type { ErrorAlertType } from "../../types/alerts";
 
 export default function ErrorAlert({
   title,

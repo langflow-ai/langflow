@@ -1,4 +1,4 @@
-import { ContentBlock } from "../chat";
+import type { ContentBlock } from "../chat";
 
 type Message = {
   flow_id: string;

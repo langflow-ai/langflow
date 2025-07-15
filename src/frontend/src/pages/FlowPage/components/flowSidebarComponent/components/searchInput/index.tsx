@@ -1,6 +1,6 @@
+import { memo } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
-import { memo } from "react";
 import ShortcutDisplay from "../../../nodeToolbarComponent/shortcutDisplay";
 
 export const SearchInput = memo(function SearchInput({

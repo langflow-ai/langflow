@@ -1,5 +1,5 @@
 import BaseModal from "../../../modals/baseModal";
-import { fetchErrorComponentType } from "../../../types/components";
+import type { fetchErrorComponentType } from "../../../types/components";
 import IconComponent from "../genericIconComponent";
 
 export default function FetchErrorComponent({

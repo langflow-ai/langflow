@@ -1,5 +1,5 @@
-import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useCallback, useRef } from "react";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { CONSOLE_ERROR_MSG } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
 
@@ -38,7 +38,7 @@ const useFileDrop = (type?: string) => {
               });
             })
             .catch((error) => {
-              console.log(error);
+              console.error(error);
               setErrorData({
                 title: CONSOLE_ERROR_MSG,
                 list: [(error as Error).message],

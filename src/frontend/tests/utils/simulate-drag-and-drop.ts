@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { readFileSync } from "fs";
 
 export async function simulateDragAndDrop(

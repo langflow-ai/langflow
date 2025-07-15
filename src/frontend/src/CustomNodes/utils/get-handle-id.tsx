@@ -1,4 +1,4 @@
-import { sourceHandleType, targetHandleType } from "@/types/flow";
+import type { sourceHandleType, targetHandleType } from "@/types/flow";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 
 export function getRightHandleId({

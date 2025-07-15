@@ -2,7 +2,7 @@ import Loading from "@/components/ui/loading";
 import useFlowStore from "@/stores/flowStore";
 import { Button } from "../../../../../../components/ui/button";
 import { Case } from "../../../../../../shared/components/caseComponent";
-import { FilePreviewType } from "../../../../../../types/components";
+import type { FilePreviewType } from "../../../../../../types/components";
 import { classNames } from "../../../../../../utils/utils";
 
 const BUTTON_STATES = {

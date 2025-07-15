@@ -1,16 +1,16 @@
+import type { CustomCellRendererProps } from "ag-grid-react";
+import { useMemo } from "react";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
-import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
+import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { CustomCellRendererProps } from "ag-grid-react";
-import { useMemo } from "react";
 
 export default function TableNodeCellRender({
   value: { nodeId, parameterId, isTweaks },

@@ -1,11 +1,11 @@
+import Convert from "ansi-to-html";
+import { useEffect, useRef, useState } from "react";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import Convert from "ansi-to-html";
-import { useEffect, useRef, useState } from "react";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import Robot from "../../../../../assets/robot.png";
 import IconComponent, {
   ForwardedIconComponent,
@@ -13,7 +13,7 @@ import IconComponent, {
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
 import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
-import { chatMessagePropsType } from "../../../../../types/components";
+import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
 import { ErrorView } from "./components/content-view";
 import { MarkdownField } from "./components/edit-message";
@@ -63,7 +63,7 @@ export default function ChatMessage({
     return new Promise<boolean>((resolve, reject) => {
       eventSource.current = new EventSource(url);
       eventSource.current.onmessage = (event) => {
-        let parsedData = JSON.parse(event.data);
+        const parsedData = JSON.parse(event.data);
         if (parsedData.chunk) {
           setChatMessage((prev) => prev + parsedData.chunk);
         }
@@ -122,7 +122,7 @@ export default function ChatMessage({
   let decodedMessage = chatMessage ?? "";
   try {
     decodedMessage = decodeURIComponent(chatMessage);
-  } catch (e) {
+  } catch (_e) {
     // console.error(e);
   }
   const isEmpty = decodedMessage?.trim() === "";

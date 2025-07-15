@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+
 // TODO: This test might not be needed anymore
 test(
   "should be able to select all with ctrl + A on advanced modal",

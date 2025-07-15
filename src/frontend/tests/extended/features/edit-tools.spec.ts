@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 test(
   "user should be able to edit tools",
   { tag: ["@release", "@components"] },

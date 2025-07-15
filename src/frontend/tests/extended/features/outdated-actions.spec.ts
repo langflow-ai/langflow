@@ -41,10 +41,10 @@ test("user must be able to update outdated components by update all button", asy
     timeout: 30000,
   });
 
-  let outdatedComponents = await page.getByTestId("update-button").count();
+  const outdatedComponents = await page.getByTestId("update-button").count();
   expect(outdatedComponents).toBe(1);
 
-  let outdatedBreakingComponents = await page
+  const outdatedBreakingComponents = await page
     .getByTestId("review-button")
     .count();
   expect(outdatedBreakingComponents).toBe(4);
@@ -130,10 +130,10 @@ test("user must be able to update outdated components by each outdated component
     timeout: 30000,
   });
 
-  let outdatedComponents = await page.getByTestId("update-button").count();
+  const outdatedComponents = await page.getByTestId("update-button").count();
   expect(outdatedComponents).toBe(1);
 
-  let outdatedBreakingComponents = await page
+  const outdatedBreakingComponents = await page
     .getByTestId("review-button")
     .count();
   expect(outdatedBreakingComponents).toBe(4);

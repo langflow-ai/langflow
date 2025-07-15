@@ -1,6 +1,6 @@
-import { useMutationFunctionType } from "@/types/api";
-import { MCPServerType } from "@/types/mcp";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
+import type { MCPServerType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -20,7 +20,7 @@ export const usePatchMCPServer: useMutationFunctionType<
     body: MCPServerType,
   ): Promise<PatchMCPServerResponse> {
     try {
-      let payload: Omit<MCPServerType, "name"> = {};
+      const payload: Omit<MCPServerType, "name"> = {};
 
       if (body.url) {
         payload.url = body.url;

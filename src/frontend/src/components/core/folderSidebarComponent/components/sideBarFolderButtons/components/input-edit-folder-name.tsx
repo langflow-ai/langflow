@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { FolderType } from "@/pages/MainPage/entities";
+import type { FolderType } from "@/pages/MainPage/entities";
 
 export const InputEditFolderName = ({
   handleEditFolderName,

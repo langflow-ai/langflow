@@ -1,5 +1,5 @@
 import Dropdown from "../../../dropdownComponent";
-import { DropDownComponentType, InputProps } from "../../types";
+import type { DropDownComponentType, InputProps } from "../../types";
 import ToggleShadComponent from "../toggleShadComponent";
 
 export default function DropdownComponent({

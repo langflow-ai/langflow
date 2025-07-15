@@ -1,12 +1,12 @@
+import { useContext, useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { CONTROL_PATCH_USER_STATE } from "@/constants/constants";
 import { AuthContext } from "@/contexts/authContext";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import useAlertStore from "@/stores/alertStore";
 import { useStoreStore } from "@/stores/storeStore";
-import { inputHandlerEventType } from "@/types/components";
-import { useContext, useState } from "react";
-import { useParams } from "react-router-dom";
+import type { inputHandlerEventType } from "@/types/components";
 import useScrollToElement from "../hooks/use-scroll-to-element";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
