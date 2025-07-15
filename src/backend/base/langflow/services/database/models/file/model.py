@@ -8,7 +8,7 @@ from langflow.schema.serialize import UUIDstr
 
 class File(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="user.id")
+    user_id: UUID = Field(foreign_key="user.id", index=True)
     name: str = Field(nullable=False)
     path: str = Field(nullable=False)
     size: int = Field(nullable=False)
