@@ -1,8 +1,8 @@
 import React, { Suspense, forwardRef, memo } from "react";
+import { useDarkStore } from "../../../stores/darkStore";
 import { IconComponentProps } from "../../../types/components";
 import { getCachedIcon, getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
-import { useDarkStore } from "../../../stores/darkStore";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCallback, useEffect, useState } from "react";

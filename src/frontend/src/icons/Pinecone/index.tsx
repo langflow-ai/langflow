@@ -5,7 +5,5 @@ export const PineconeIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return (
-    <SvgPineconeLogo ref={ref} {...props} />
-  );
+  return <SvgPineconeLogo ref={ref} {...props} />;
 });
