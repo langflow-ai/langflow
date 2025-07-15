@@ -146,7 +146,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             current_time = asyncio.get_event_loop().time()
             logger.debug("Loading bundles")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-            get_settings_service().settings.components_path.extend(bundles_components_paths)
+            get_settings_service().server.components_path.extend(bundles_components_paths)
             logger.debug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
@@ -216,7 +216,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             from langflow.cli.progress import create_langflow_shutdown_progress
 
             log_level = os.getenv("LANGFLOW_LOG_LEVEL", "info").lower()
-            num_workers = get_number_of_workers(get_settings_service().settings.workers)
+            num_workers = get_number_of_workers(get_settings_service().server.workers)
             shutdown_progress = create_langflow_shutdown_progress(
                 verbose=log_level == "debug", multiple_workers=num_workers > 1
             )
@@ -345,7 +345,7 @@ def create_app():
 
         return await call_next(request)
 
-    settings = get_settings_service().settings
+    settings = get_settings_service().server
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
@@ -393,7 +393,7 @@ def create_app():
 
 
 def setup_sentry(app: FastAPI) -> None:
-    settings = get_settings_service().settings
+    settings = get_settings_service().telemetry
     if settings.sentry_dsn:
         import sentry_sdk
         from sentry_sdk.integrations.asgi import SentryAsgiMiddleware

@@ -299,17 +299,17 @@ def run(
             logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
         # Get final values from settings
-        host = settings_service.settings.host
-        port = settings_service.settings.port
-        workers = settings_service.settings.workers
-        worker_timeout = settings_service.settings.worker_timeout
-        log_level = settings_service.settings.log_level
-        frontend_path = settings_service.settings.frontend_path
-        backend_only = settings_service.settings.backend_only
+        host = settings_service.server.host
+        port = settings_service.server.port
+        workers = settings_service.server.workers
+        worker_timeout = settings_service.server.worker_timeout
+        log_level = settings_service.server.log_level
+        frontend_path = settings_service.server.frontend_path
+        backend_only = settings_service.server.backend_only
         ssl_cert_file_path = (
-            settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
+            settings_service.server.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
         )
-        ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
+        ssl_key_file_path = settings_service.server.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
 
         # create path object if frontend_path is provided
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
@@ -331,7 +331,7 @@ def run(
         pass  # Components are loaded during app startup
 
     # Step 5: Adding Starter Projects (placeholder for starter projects)
-    if get_settings_service().settings.create_starter_projects:
+    if get_settings_service().server.create_starter_projects:
         with progress.step(5):
             pass  # Starter projects are added during app startup
 
