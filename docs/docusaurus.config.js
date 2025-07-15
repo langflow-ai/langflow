@@ -297,6 +297,10 @@ const config = {
             to: "/concepts-publish",
             from: "/embedded-chat-widget",
           },
+          {
+            to: "/components-data",
+            from: "/integrations-setup-google-oauth-langflow",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
