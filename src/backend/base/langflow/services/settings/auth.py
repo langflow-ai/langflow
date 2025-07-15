@@ -5,13 +5,13 @@ from typing import Literal
 from loguru import logger
 from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from .common import LangflowBaseSettings
 
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
 
-class AuthSettings(BaseSettings):
+class AuthSettings(LangflowBaseSettings):
     # Login settings
     CONFIG_DIR: str
     SECRET_KEY: SecretStr = Field(
@@ -54,8 +54,6 @@ class AuthSettings(BaseSettings):
     """The domain attribute of the cookies. If None, the domain is not set."""
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-    model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     def reset_credentials(self) -> None:
         self.SUPERUSER = DEFAULT_SUPERUSER

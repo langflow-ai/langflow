@@ -3,6 +3,12 @@ from __future__ import annotations
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
+from langflow.services.settings.categories import (
+    DatabaseSettings,
+    RedisSettings,
+    ServerSettings,
+    TelemetrySettings,
+)
 
 
 class SettingsService(Service):
@@ -12,6 +18,29 @@ class SettingsService(Service):
         super().__init__()
         self.settings: Settings = settings
         self.auth_settings: AuthSettings = auth_settings
+
+    # ---------------------------------------------------------------------
+    # Convenience accessors for grouped settings
+    # ---------------------------------------------------------------------
+    @property
+    def database(self) -> DatabaseSettings:
+        """Return database-related settings."""
+        return DatabaseSettings(**self.settings.model_dump())
+
+    @property
+    def redis(self) -> RedisSettings:
+        """Return redis-related settings."""
+        return RedisSettings(**self.settings.model_dump())
+
+    @property
+    def server(self) -> ServerSettings:
+        """Return web-server settings."""
+        return ServerSettings(**self.settings.model_dump())
+
+    @property
+    def telemetry(self) -> TelemetrySettings:
+        """Return telemetry settings."""
+        return TelemetrySettings(**self.settings.model_dump())
 
     @classmethod
     def initialize(cls) -> SettingsService:

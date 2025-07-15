@@ -13,7 +13,6 @@ from loguru import logger
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import (
-    BaseSettings,
     EnvSettingsSource,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
@@ -22,6 +21,7 @@ from typing_extensions import override
 
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from .common import LangflowBaseSettings
 from langflow.utils.util_strings import is_valid_database_url
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
@@ -64,7 +64,7 @@ class MyCustomSource(EnvSettingsSource):
         return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 
-class Settings(BaseSettings):
+class Settings(LangflowBaseSettings):
     # Define the default LANGFLOW_DIR
     config_dir: str | None = None
     # Define if langflow db should be saved in config dir or
@@ -497,7 +497,7 @@ class Settings(BaseSettings):
     @override
     def settings_customise_sources(  # type: ignore[misc]
         cls,
-        settings_cls: type[BaseSettings],
+        settings_cls: type[LangflowBaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
