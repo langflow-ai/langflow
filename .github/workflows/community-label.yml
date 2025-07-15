@@ -1,0 +1,27 @@
+name: Add Community Label
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  add-label:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add community label
+        if: github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'COLLABORATOR'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pullRequestNumber = context.payload.pull_request.number;
+            const repoDetails = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pullRequestNumber
+            };
+            await github.rest.issues.addLabels({
+              ...repoDetails,
+              labels: ['community']
+            });
