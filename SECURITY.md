@@ -55,6 +55,6 @@ To address, upgrade to >= 1.3.0.
 In Langflow versions earlier than 1.5.0, if `LANGFLOW_AUTO_LOGIN` is set to `true`, Langflow automatically logs users in as a superuser without requiring authentication.
 In this case, API requests don't require a Langflow API key.
 
-To address, upgrade to >= 1.5.0.
+To address, upgrade to >= 1.5.0. API requests will require an API key even if `LANGFLOW_AUTO_LOGIN` is set to `true`.
 
 For more information, see [Authentication](https://docs.langflow.org/configuration-authentication).
