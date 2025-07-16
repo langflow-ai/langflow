@@ -1,4 +1,4 @@
-const JigsawStackIconSVG = ({ isdark, ...props }) => (
+const JigsawStackIconSVG = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="278"
@@ -9,7 +9,7 @@ const JigsawStackIconSVG = ({ isdark, ...props }) => (
   >
     <path
       fill={
-        stringToBool(isdark)
+        props.isDark
           ? "url(#paint0_linear_102_21_dark)"
           : "url(#paint0_linear_102_21)"
       }

@@ -6,6 +6,5 @@ export const JigsawStackIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  const isdark = useDarkStore((state) => state.dark).toString();
-  return <JigsawStackIconSVG ref={ref} {...props} isdark={isdark} />;
+  return <JigsawStackIconSVG ref={ref} {...props} />;
 });
