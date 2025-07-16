@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9124e4d9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e4bbd7a3.js" defer="defer"></script>
 <script src="/assets/js/main.d9e913d6.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -93,6 +93,8 @@ For example, the <strong>Prompt</strong> component accepts inputs within curly b
 <p>For example, the <strong>Language Model</strong> component includes <strong>Model Response</strong> or <strong>Language Model</strong> outputs.
 The <strong>Model Response</strong> output sends a <a href="/concepts-objects#message-object">Message</a> output on to another Message port.
 The <strong>Language Model</strong> output can be connected to components like <a href="/components-processing#structured-output">Structured output</a> to use the LLM to power the component&#x27;s reasoning.</p>
+<p>In the component code, <code>group_outputs</code> is set to <code>False</code> by default, which forces the outputs into the same dropdown menu, and only allows one output to be selected.
+When <code>group_outputs=True</code>, outputs are displayed individually.</p>
 <p><img decoding="async" loading="lazy" alt="Output type selection in the Language Model component" src="/assets/images/select-output-f7d64629d278098e3fba32fe79f79ed6.png" width="280" height="446" class="img_ev3q"></p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="port-colors">Port colors<a href="#port-colors" class="hash-link" aria-label="Direct link to Port colors" title="Direct link to Port colors">​</a></h3>
 <p>Component port colors indicate the data type ingested or emitted by the port.
