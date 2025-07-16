@@ -1,8 +1,8 @@
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
 import { formatNumber } from "@/utils/utils";
-import { FaDiscord, FaGithub } from "react-icons/fa";
 
 export const LangflowCounts = () => {
   const stars: number | undefined = useDarkStore((state) => state.stars);
