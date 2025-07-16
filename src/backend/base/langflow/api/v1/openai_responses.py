@@ -262,11 +262,26 @@ async def run_flow_for_openai_responses(
                 if output_text:
                     break
 
+        # Create output in the correct format
+        output_message = {
+            "type": "message",
+            "id": f"msg_{response_id}",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "output_text",
+                    "text": output_text,
+                    "annotations": []
+                }
+            ]
+        }
+
         return OpenAIResponsesResponse(
             id=response_id,
-            created=created_timestamp,
+            created_at=created_timestamp,
             model=request.model,
-            output=output_text,
+            output=[output_message],
             previous_response_id=request.previous_response_id,
         )
 

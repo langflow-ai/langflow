@@ -18,11 +18,27 @@ class OpenAIResponsesResponse(BaseModel):
     """OpenAI-compatible responses response."""
     id: str
     object: Literal["response"] = "response"
-    created: int
-    model: str
-    output: str
+    created_at: int
     status: Literal["completed", "in_progress", "failed"] = "completed"
+    error: Optional[dict] = None
+    incomplete_details: Optional[dict] = None
+    instructions: Optional[str] = None
+    max_output_tokens: Optional[int] = None
+    model: str
+    output: List[dict]
+    parallel_tool_calls: bool = True
     previous_response_id: Optional[str] = None
+    reasoning: dict = Field(default_factory=lambda: {"effort": None, "summary": None})
+    store: bool = True
+    temperature: float = 1.0
+    text: dict = Field(default_factory=lambda: {"format": {"type": "text"}})
+    tool_choice: str = "auto"
+    tools: List[dict] = Field(default_factory=list)
+    top_p: float = 1.0
+    truncation: str = "disabled"
+    usage: Optional[dict] = None
+    user: Optional[str] = None
+    metadata: dict = Field(default_factory=dict)
 
 
 class OpenAIResponsesStreamChunk(BaseModel):
