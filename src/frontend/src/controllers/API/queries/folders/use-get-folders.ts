@@ -1,8 +1,8 @@
 import { DEFAULT_FOLDER } from "@/constants/constants";
-import { FolderType } from "@/pages/MainPage/entities";
+import type { FolderType } from "@/pages/MainPage/entities";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useQueryFunctionType } from "@/types/api";
+import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
