@@ -11,7 +11,8 @@ This tutorial shows you how to connect MCP tools to your applications using Lang
 
 The [Model Context Protocol](https://modelcontextprotocol.io/), or MCP, helps agents integrate with LLMs.
 Langflow can be run as an [MCP client](/mcp-client) and [MCP server](/mcp-server).
-In this tutorial, you will use Langflow as a client to connect to MCP servers, and then connect a Python application to Langflow.
+Running Langflow as an MCP server allows your flows to be used as tools by connected MCP clients.
+In this tutorial, you will use the Langflow **MCP Tools** component as a client to connect your flow to multiple MCP servers, and then connect a Python application to Langflow.
 
 ## Prerequisites
 
@@ -41,15 +42,16 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
 ## Add an MCP Tools component
 
 There are many MCP servers available online that offer different tools for different tasks.
-To use an MCP server in Langflow, you need to connect your Langflow deployment to the server, and then add an **MCP Tools** component to your flow.
-
 The **MCP Tools** component is required to use a particular MCP server within a flow.
 You need one **MCP Tools** component for each MCP server that you want your flow to use.
 
-1. Remove the **URL** and **Calculator** tools, and then drag the [**MCP Tools**](/mcp-client) component into your workspace.
-2. In the **MCP Tools** component, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
+    :::tip MCP installation methods
+    There are multiple ways to install MCP servers, including local installation, using `uvx` or `npx` to fetch and run the server package, or services like Smithery.
+    This tutorial demonstrates both local installation with `uv pip install` for the weather server, and using `npx` for the geolocation server.
+    Your particular MCP server's requirements may vary.
+    :::
 
-3. There are multiple ways to install MCP servers, which are covered in the [**MCP Tools**](/mcp-client) component page.
+1. To install an MCP server locally, do the following:
 
     This example installs an [MCP weather server](https://github.com/isdaniel/mcp_weather_server) to your local machine with uv and Python.
 
@@ -63,16 +65,18 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     uv pip install mcp_weather_server
     ```
 
-4. Configure the MCP server.
+2. Remove the **URL** and **Calculator** tools, and then drag the [**MCP Tools**](/mcp-client) component into your workspace.
+3. In the **MCP Tools** component, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
+4. To configure the MCP server, do the following:
 
-    In the **Add MCP Server** pane, select either **JSON** or **STDIO** to enter the configuration for starting your server.
+    1. In the **Add MCP Server** pane, select either **JSON** or **STDIO** to enter the configuration for starting your server.
     Both options configure an MCP server in Langflow with a command and arguments, which Langflow executes to launch the server process when needed.
-    Both are included here to demonstrate how the STDIO commands can be filled in from the JSON configuration values.
+    Both options are included here to demonstrate how the STDIO commands can be filled in from the JSON configuration values.
 
     <Tabs>
     <TabItem value="JSON" label="JSON" default>
 
-    Paste the server configuration into the **JSON** field.
+    2. Paste the server configuration into the **JSON** field.
     ```json
     {
       "mcpServers": {
@@ -92,7 +96,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     </TabItem>
     <TabItem value="STDIO" label="STDIO">
 
-    Enter the values from the configuration JSON manually into the STDIO fields.
+    2. Enter the values from the configuration JSON manually into the STDIO fields.
     Some MCP server repositories only offer JSON files, which you can parse out into the STDIO fields.
 
     - **Name:** `weather`
@@ -109,7 +113,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     In the **MCP Tools** component, a field for **City** appears, but you don't need to fill in any more specific values.
     Connecting your MCP server to an **Agent** will define those values based on the request.
 
-3. In the **MCP Tools** component, enable **Tool Mode**, and then connect the **Toolset** port to the **Agent** component's **Tools** port.
+6. In the **MCP Tools** component, enable **Tool Mode**, and then connect the **Toolset** port to the **Agent** component's **Tools** port.
 
     At this point your flow has four components.
     The Chat Input is connected to the Agent component's input port.
@@ -118,7 +122,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
     ![An agent component connected to an MCP weather server](/img/tutorial-mcp-weather.png)
 
-4. Click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
+7. Click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
 
     The Agent's response is more useful than the previous response, because you provided context with the MCP server.
 
@@ -139,14 +143,15 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     This is improved, but what makes adding MCP servers different from just calling a weather API?
 
     The `weather` MCP server is just **one** MCP server, and it's already improved your LLM's context.
-    You can add more servers depending on the problems you want your application to solve. The MCP protocol ensures they are all added in the same way to the Agent, without having to know how the endpoints are structured or write custom integrations.
+    You can add more servers depending on the problems you want your application to solve.
+    The MCP protocol ensures they are all added in the same way to the Agent, without having to know how the endpoints are structured or write custom integrations.
 
     In the next section, add a `ip_geolocation` MCP server so the user can discover the weather without having to fill in their location.
     If the user wants to know the weather elsewhere instead, the Agent understands the difference and dynamically selects the correct MCP server.
 
 ## Add a geolocation server
 
-The [Toolkit MCP Server](https://github.com/cyanheads/toolkit-mcp-server) includes multiple MCP servers for network monitoring, including IP geolocation. It isn't extremely precise, but it doesn't require an API key.
+The [Toolkit MCP Server](https://github.com/cyanheads/toolkit-mcp-server) includes multiple MCP servers for network monitoring, including IP geolocation. It isn't extremely precise, but it doesn't require an API key. The tool returns the IP geolocation of the **Langflow server**, so if your server is deployed elsewhere, consider alternative approaches for getting user-specific location data, such as browser geolocation APIs.
 
 This MCP server can be started with [npx](https://docs.npmjs.com/cli/v8/commands/npx), which downloads and runs the [Node registry package](https://www.npmjs.com/package/@cyanheads/toolkit-mcp-server) with one command without installing the package locally.
 
@@ -168,7 +173,7 @@ This MCP server can be started with [npx](https://docs.npmjs.com/cli/v8/commands
 ## Create a Python application that connects to Langflow
 
 At this point, you can open the **Playground** and ask about the weather in your current location to test the IP geolocation tool.
-However, the IP geolocation MCP server is most useful in an application where you or your users want to ask about the weather from different places around the world.
+However, the IP geolocation MCP server is most useful in an application where you or your users want to ask about the weather from different places around the world, depending on the Langflow server's location.
 
 In the last part of this tutorial, you'll learn how to use the Langflow API to run a flow in a script.
 
@@ -229,7 +234,7 @@ You can use the same input or a new input that prompts the agent to use other to
     <summary>Response</summary>
 
     The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
-    
+
     If you are using a VPN or a similar service, the `geolocation` tool might use the simulated location rather than your actual location.
 
     ```
