@@ -7,7 +7,8 @@ import React, {
   useState,
 } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { IconComponentProps } from "../../../types/components";
+import { useDarkStore } from "../../../stores/darkStore";
+import { IconComponentProps } from "../../../types/components";
 import { getCachedIcon, getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
@@ -26,6 +27,10 @@ export const ForwardedIconComponent = memo(
       }: IconComponentProps,
       ref,
     ) => {
+      // Subscribe to dark store directly in memoized component
+      // This forces re-render when theme changes, bypassing memo
+      const { dark: isDark } = useDarkStore();
+
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
       const [TargetIcon, setTargetIcon] = useState<any>(getCachedIcon(name));
@@ -109,6 +114,7 @@ export const ForwardedIconComponent = memo(
                 className={className}
                 style={style}
                 ref={ref}
+                isDark={isDark}
                 data-testid={
                   dataTestId
                     ? dataTestId
