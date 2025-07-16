@@ -243,11 +243,11 @@ def _generate_result_lines(output_nodes: list[str], node_id_to_outputs: dict[str
     result_lines = ["\n\n    # Collect results from output nodes"]
     output_nodes.sort()
 
-    for node_id in output_nodes:
-        for output_name in node_id_to_outputs.get(node_id, []):
-            result_lines.append(
-                f"    results['outputs']['{node_id}.{output_name}'] = components['{node_id}'].{output_name}",
-            )
+    result_lines.extend(
+        f"    results['outputs']['{node_id}.{output_name}'] = components['{node_id}'].{output_name}"
+        for node_id in output_nodes
+        for output_name in node_id_to_outputs.get(node_id, [])
+    )
 
     result_lines.append("""    results["components"] = {
         node_id: {
