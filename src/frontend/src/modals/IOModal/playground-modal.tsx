@@ -1,4 +1,8 @@
 //import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
+import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import {
   useDeleteMessages,
@@ -12,9 +16,6 @@ import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
-import { useShallow } from "zustand/react/shallow";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
@@ -23,7 +24,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
-import { IOModalPropsType } from "../../types/components";
+import type { IOModalPropsType } from "../../types/components";
 import { cn, getNumberFromString } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
@@ -78,13 +79,12 @@ export default function IOModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const { mutate: deleteMessagesFunction } = useDeleteMessages();
   const { mutate: deleteSessionFunction } = useDeleteSession();
 
   const [visibleSession, setvisibleSession] = useState<string | undefined>(

@@ -1,11 +1,11 @@
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
-import { memo, useCallback, useMemo, useState } from "react";
-import { SidebarGroupProps } from "../../types";
+import type { SidebarGroupProps } from "../../types";
 import { BundleItem } from "../bundleItems";
 
 export const MemoizedSidebarGroup = memo(

@@ -1,7 +1,7 @@
-import { cn } from "@/utils/utils";
 import DOMPurify from "dompurify";
 import { forwardRef } from "react";
-import { SanitizedHTMLWrapperType } from "../../../types/components";
+import { cn } from "@/utils/utils";
+import type { SanitizedHTMLWrapperType } from "../../../types/components";
 
 const SanitizedHTMLWrapper = forwardRef<
   HTMLDivElement,
