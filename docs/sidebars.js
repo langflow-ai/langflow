@@ -33,7 +33,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Concepts",
+      label: "Flows",
       items: [
         {
           type: "doc",
@@ -41,34 +41,23 @@ module.exports = {
           label: "Use the visual editor"
         },
         {
+          type: "doc",
+          id: "Concepts/concepts-flows",
+          label: "Build flows"
+        },
+        {
           type: "category",
-          label: "Create flows",
+          label: "Templates",
           items: [
-            {
-              type: "doc",
-              id: "Concepts/concepts-flows",
-              label: "Build flows"
-            },
-            {
-              type: "category",
-              label: "Templates",
-              items: [
-                'Templates/basic-prompting',
-                'Templates/simple-agent',
-                'Templates/blog-writer',
-                'Templates/document-qa',
-                'Templates/memory-chatbot',
-                'Templates/vector-store-rag',
-                'Templates/financial-report-parser',
-                'Templates/sequential-agent',
-                'Templates/travel-planning-agent',
-              ],
-            },
-            {
-              type: "doc",
-              id: "Concepts/concepts-flows-import",
-              label: "Import and export flows"
-            },
+            'Templates/basic-prompting',
+            'Templates/simple-agent',
+            'Templates/blog-writer',
+            'Templates/document-qa',
+            'Templates/memory-chatbot',
+            'Templates/vector-store-rag',
+            'Templates/financial-report-parser',
+            'Templates/sequential-agent',
+            'Templates/travel-planning-agent',
           ],
         },
         {
@@ -108,18 +97,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Concepts/concepts-file-management",
-          label: "Manage files"
-        },
-        {
-          type: "doc",
-          id: "Develop/memory",
-          label: "Manage memory"
-        },
-        {
-          type: "doc",
-          id: "Develop/session-id",
-          label: "Use Session IDs"
+          id: "Concepts/concepts-flows-import",
+          label: "Import and export flows"
         },
       ],
     },
@@ -141,56 +120,94 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Configuration",
-      items: [
-        "Configuration/configuration-api-keys",
-        "Configuration/configuration-authentication",
-        "Configuration/configuration-cli",
-        "Configuration/configuration-custom-database",
-        "Configuration/configuration-global-variables",
-        "Configuration/environment-variables",
-        "Contributing/contributing-telemetry",
-      ],
-    },
-    {
-      type: "category",
       label: "Develop",
       items: [
         {
           type: "doc",
           id: "Develop/develop-overview",
-          label: "Overview"
+          label: "Langflow application development overview"
         },
         {
           type: "doc",
           id: "Develop/develop-application",
           label: "Develop an application in Langflow"
         },
+        //TODO: Combine overview + develop-application into one "Develop with Langflow" page.
         {
           type: "doc",
           id: "Develop/install-custom-dependencies",
           label: "Install custom dependencies"
         },
         {
+          type: "category",
+          label: "Security",
+          items: [
+            "Configuration/configuration-api-keys",
+            "Configuration/configuration-authentication",
+          ],
+        },
+        {
+          type: "category",
+          label: "Variables",
+          items: [
+            "Configuration/configuration-custom-database",
+            "Configuration/configuration-global-variables",
+            "Configuration/environment-variables",
+          ],
+        },
+        {
+          type: "category",
+          label: "Storage and memory",
+          items: [
+            {
+              type: "doc",
+              id: "Concepts/concepts-file-management",
+              label: "Manage files"
+            },
+            {
+              type: "doc",
+              id: "Develop/memory",
+              label: "Manage memory"
+            },
+            {
+              type: "doc",
+              id: "Develop/session-id",
+              label: "Use Session IDs"
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Observability",
+          items: [
+            "Develop/logging",
+            {
+              type: "doc",
+              id: "Integrations/Arize/integrations-arize",
+              label: "Arize",
+            },
+            "Integrations/integrations-langfuse",
+            "Integrations/integrations-langsmith",
+            "Integrations/integrations-langwatch",
+            "Integrations/integrations-opik",
+            "Contributing/contributing-telemetry",
+          ],
+        },
+        {
           type: "doc",
-          id: "Develop/logging",
-          label: "Logging"
+          id: "Configuration/configuration-cli",
+          label: "Use the Langflow CLI"
         },
       ],
     },
     {
       type: "category",
-      label: "Deployment",
+      label: "Deploy",
       items: [
         {
           type:"doc",
           id: "Deployment/deployment-overview",
-          label: "Deployment overview"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-docker",
-          label: "Docker"
+          label: "Langflow deployment overview"
         },
         {
           type: "doc",
@@ -198,50 +215,61 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
-          type: "doc",
-          id: "Deployment/deployment-caddyfile",
-          label: "Deploy Langflow on a remote server"
-        },
-        {
           type: "category",
-          label: "Kubernetes",
+          label: "Containerized deployments",
           items: [
             {
               type: "doc",
-              id: "Deployment/deployment-prod-best-practices",
-              label: "Langflow architecture and best practices"
+              id: "Deployment/deployment-docker",
+              label: "Langflow Docker images"
             },
             {
               type: "doc",
-              id: "Deployment/deployment-kubernetes-dev",
-              label: "Deploy in development"
+              id: "Deployment/deployment-caddyfile",
+              label: "Deploy Langflow on a remote server"
+            },
+            {
+              type: "category",
+              label: "Kubernetes",
+              items: [
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-prod-best-practices",
+                  label: "Langflow architecture and best practices"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-kubernetes-dev",
+                  label: "Deploy in development"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-kubernetes-prod",
+                  label: "Deploy in production"
+                }
+              ]
             },
             {
               type: "doc",
-              id: "Deployment/deployment-kubernetes-prod",
-              label: "Deploy in production"
-            }
-          ]
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-gcp",
-          label: "Google Cloud Platform"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-hugging-face-spaces",
-          label: "Hugging Face Spaces"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-railway",
-          label: "Railway"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-render",
-          label: "Render"
+              id: "Deployment/deployment-gcp",
+              label: "Google Cloud Platform"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-hugging-face-spaces",
+              label: "Hugging Face Spaces"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-railway",
+              label: "Railway"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-render",
+              label: "Render"
+            },
+          ],
         },
       ],
     },
@@ -250,20 +278,98 @@ module.exports = {
       label: "Components reference",
       items: [
         "Concepts/concepts-components",
-        "Components/components-agents",
-        "Components/components-bundles",
+        {
+          type: "category",
+          label: "Core components",
+          items: [
+            "Components/components-agents",
+            "Components/components-data",
+            "Components/components-embedding-models",
+            "Components/components-helpers",
+            "Components/components-io",
+            "Components/components-logic",
+            "Components/components-memories",
+            "Components/components-models",
+            "Components/components-processing",
+            "Components/components-prompts",
+            "Components/components-tools",
+            "Components/components-vector-stores",
+          ],
+        },
+        {
+          type: "category",
+          label: "Bundles",
+          items: [
+            "Components/components-bundles",
+            // TODO: Break apart bundles page.
+            // TODO: Check which bundles still exist vs legacy/removed
+            "Integrations/Apify/integrations-apify",
+            {
+              type: "doc",
+              id: "Integrations/integrations-assemblyai",
+              label: "AssemblyAI",
+            },
+            {
+              type: "doc",
+              id: "Integrations/mcp-component-astra",
+              label: "Astra DB MCP server",
+            },
+            {
+              type: "doc",
+              id: "Integrations/Cleanlab/integrations-cleanlab",
+              label: "Cleanlab",
+            },
+            {
+              type: "doc",
+              id: "Integrations/Composio/integrations-composio",
+              label: "Composio",
+            },
+            {
+              type: "doc",
+              id: "Integrations/Docling/integrations-docling",
+              label: "Docling",
+            },
+            {
+              type: 'category',
+              label: 'Google',
+              items: [
+                'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
+                'Integrations/Google/integrations-google-big-query',
+              ],
+            },
+            {
+              type: "category",
+              label: "Notion",
+              items: [
+                "Integrations/Notion/integrations-notion",
+                "Integrations/Notion/notion-agent-conversational",
+                "Integrations/Notion/notion-agent-meeting-notes",
+              ],
+            },
+            {
+              type: "category",
+              label: "NVIDIA",
+              items: [
+                {
+                  type: "doc",
+                  id: "Integrations/Nvidia/integrations-nvidia-ingest",
+                  label: "NVIDIA Ingest"
+                },
+                {
+                  type: "doc",
+                  id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+                  label: "NVIDIA NIM on WSL2"
+                },
+                {
+                  type: "doc",
+                  id: "Integrations/Nvidia/integrations-nvidia-g-assist",
+                  label: "NVIDIA G-Assist"
+                },
+              ],
+            },
+          ],
+        },
         "Components/components-custom-components",
-        "Components/components-data",
-        "Components/components-embedding-models",
-        "Components/components-helpers",
-        "Components/components-io",
-        "Components/components-logic",
-        "Components/components-memories",
-        "Components/components-models",
-        "Components/components-processing",
-        "Components/components-prompts",
-        "Components/components-tools",
-        "Components/components-vector-stores",
       ],
     },
     {
@@ -324,85 +430,6 @@ module.exports = {
           type: "doc",
           id: "Develop/Clients/typescript-client",
           label: "TypeScript Client"
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Integrations",
-      items: [
-        "Integrations/Apify/integrations-apify",
-        {
-          type: "doc",
-          id: "Integrations/Arize/integrations-arize",
-          label: "Arize",
-        },
-        {
-          type: "doc",
-          id: "Integrations/integrations-assemblyai",
-          label: "AssemblyAI",
-        },
-        {
-          type: "doc",
-          id: "Integrations/mcp-component-astra",
-          label: "Astra DB MCP server",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Cleanlab/integrations-cleanlab",
-          label: "Cleanlab",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Composio/integrations-composio",
-          label: "Composio",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Docling/integrations-docling",
-          label: "Docling",
-        },
-        {
-          type: 'category',
-          label: 'Google',
-          items: [
-            'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
-            'Integrations/Google/integrations-google-big-query',
-          ],
-        },
-        "Integrations/integrations-langfuse",
-        "Integrations/integrations-langsmith",
-        "Integrations/integrations-langwatch",
-        "Integrations/integrations-opik",
-        {
-          type: "category",
-          label: "Notion",
-          items: [
-            "Integrations/Notion/integrations-notion",
-            "Integrations/Notion/notion-agent-conversational",
-            "Integrations/Notion/notion-agent-meeting-notes",
-          ],
-        },
-        {
-          type: "category",
-          label: "NVIDIA",
-          items: [
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-ingest",
-              label: "NVIDIA Ingest"
-            },
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
-              label: "NVIDIA NIM on WSL2"
-            },
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-g-assist",
-              label: "NVIDIA G-Assist"
-            },
-          ],
         },
       ],
     },
