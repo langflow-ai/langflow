@@ -85,9 +85,6 @@ module.exports = {
               id: "Develop/webhook",
               label: "Trigger flows with webhooks"
             },
-            // TODO: Add "Trigger flows with files".
-            // TODO: Separate concepts-publish.mdx into separate API + Embedded chat widget pages.
-            // TODO: Add MCP Server page.
           ],
         },
         {
@@ -100,7 +97,6 @@ module.exports = {
           id: "Concepts/concepts-voice-mode",
           label: "Use voice mode"
         },
-        //TODO: Combine voice mode with concepts-playground.mdx
         {
           type: "doc",
           id: "Concepts/concepts-objects",
@@ -122,23 +118,14 @@ module.exports = {
       items: [
         "Concepts/mcp-server",
         "Components/mcp-client",
+        "Integrations/mcp-component-astra",
       ],
     },
     {
       type: "category",
       label: "Develop",
       items: [
-        {
-          type: "doc",
-          id: "Develop/develop-overview",
-          label: "Langflow application development overview"
-        },
-        {
-          type: "doc",
-          id: "Develop/develop-application",
-          label: "Develop an application in Langflow"
-        },
-        //TODO: Combine overview + develop-application into one "Develop with Langflow" page.
+        "Develop/develop-application",
         {
           type: "doc",
           id: "Develop/install-custom-dependencies",
@@ -272,6 +259,7 @@ module.exports = {
       label: "Components reference",
       items: [
         "Concepts/concepts-components",
+        //TODO: Break all components into individual pages
         {
           type: "category",
           label: "Core components",
@@ -302,11 +290,6 @@ module.exports = {
               type: "doc",
               id: "Integrations/integrations-assemblyai",
               label: "AssemblyAI",
-            },
-            {
-              type: "doc",
-              id: "Integrations/mcp-component-astra",
-              label: "Astra DB MCP server",
             },
             {
               type: "doc",

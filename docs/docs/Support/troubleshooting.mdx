@@ -153,39 +153,6 @@ The cache folder location depends on your OS:
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
-<!--
-### Unexpected data loss after Langflow Desktop upgrade {#data-loss}
-
-If you upgrade Langflow Desktop and find that your projects, flows, and settings have been replaced by a fresh installation, follow these steps to attempt to recover the data from the prior version:
-
-:::important
-Any projects, flows, and settings you created after the upgrade will be overwritten when you recover the data from your previous installation.
-:::
-
-<Tabs>
-   <TabItem value="Linux and macOS" label="Linux and macOS" default>
-
-1. Navigate to `~/.langflow/.langflow-venv/lib/python3.12/site-packages/langflow`.
-
-2. Copy `langflow.db`, paste it in `~/.langflow/data`, and then rename it to `database.db`.
-This overwrites the existing `database.db` with your previous version's internal Langflow database.
-
-3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
-
-  </TabItem>
-  <TabItem value="Windows" label="Windows">
-
-1. Navigate to `C:\Users\USERNAME\.langflow\.langflow-venv\Lib\site-packages\langflow`.
-
-2. Copy `langflow.db`, paste it in `C:\Users\<name>\AppData\Roaming\com.Langflow\data`, and then rename it to `database.db`.
-This overwrites the existing `database.db` with your previous version's internal Langflow database.
-
-3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
-
-  </TabItem>
-</Tabs>
--->
-
 ## Langflow uninstall issues
 
 The following issues can occur when uninstalling Langflow.

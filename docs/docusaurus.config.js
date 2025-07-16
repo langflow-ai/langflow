@@ -322,6 +322,10 @@ const config = {
             to: "/components-data",
             from: "/integrations-setup-google-oauth-langflow",
           },
+          {
+            to: "/develop-application",
+            from: "/develop-overview",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
