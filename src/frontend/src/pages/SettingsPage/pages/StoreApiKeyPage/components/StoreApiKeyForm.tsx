@@ -77,6 +77,7 @@ const StoreApiKeyFormComponent = ({
                   className="text-high-indigo underline"
                   href="https://langflow.store/"
                   target="_blank"
+                  rel="noopener"
                 >
                   langflow.store
                 </a>
