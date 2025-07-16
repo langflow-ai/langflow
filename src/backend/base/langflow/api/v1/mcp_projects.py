@@ -666,13 +666,19 @@ class ProjectMCPServer:
         @self.server.read_resource()
         async def handle_read_project_resource(uri: str) -> bytes:
             """Handle resource read requests for this specific project."""
-            return await handle_read_resource(uri)
+            return await handle_read_resource(uri=uri)
 
         @self.server.call_tool()
         @handle_mcp_errors
         async def handle_call_project_tool(name: str, arguments: dict) -> list[types.TextContent]:
             """Handle tool execution requests for this specific project."""
-            return await handle_call_tool(name, arguments, self.server, project_id=self.project_id, is_action=True)
+            return await handle_call_tool(
+                name=name,
+                arguments=arguments,
+                server=self.server,
+                project_id=self.project_id,
+                is_action=True,
+            )
 
 
 # Cache of project MCP servers

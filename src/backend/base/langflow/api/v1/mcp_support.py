@@ -88,12 +88,7 @@ async def handle_list_resources(project_id=None):
 
         async with session_scope() as session:
             # Build query based on whether project_id is provided
-            if project_id:
-                # Filter flows by project (folder_id)
-                flows_query = select(Flow).where(Flow.folder_id == project_id)
-            else:
-                # Get all flows
-                flows_query = select(Flow)
+            flows_query = select(Flow).where(Flow.folder_id == project_id) if project_id else select(Flow)
 
             flows = (await session.exec(flows_query)).all()
 
@@ -160,7 +155,7 @@ async def handle_read_resource(uri: str) -> bytes:
 
 
 async def handle_call_tool(
-    name: str, arguments: dict, server, project_id=None, is_action=False
+    name: str, arguments: dict, server, project_id=None, *, is_action=False
 ) -> list[types.TextContent]:
     """Handle tool execution requests.
 
@@ -280,7 +275,7 @@ async def handle_call_tool(
         raise
 
 
-async def handle_list_tools(project_id=None, mcp_enabled_only=False):
+async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
     """Handle listing tools for MCP.
 
     Args:
