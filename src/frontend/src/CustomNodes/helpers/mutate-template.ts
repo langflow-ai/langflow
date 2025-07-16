@@ -1,11 +1,11 @@
-import type { UseMutationResult } from '@tanstack/react-query';
-import { cloneDeep, debounce } from 'lodash';
+import type { UseMutationResult } from "@tanstack/react-query";
+import { cloneDeep, debounce } from "lodash";
 import {
   ERROR_UPDATING_COMPONENT,
   SAVE_DEBOUNCE_TIME,
   TITLE_ERROR_UPDATING_COMPONENT,
-} from '@/constants/constants';
-import type { APIClassType, ResponseErrorDetailAPI } from '@/types/api';
+} from "@/constants/constants";
+import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 
 // Map to store debounced functions for each node ID
 const debouncedFunctions = new Map<string, ReturnType<typeof debounce>>();
@@ -23,7 +23,7 @@ export const mutateTemplate = async (
   setErrorData,
   parameterName?: string,
   callback?: () => void,
-  toolMode?: boolean
+  toolMode?: boolean,
 ) => {
   // Get or create a debounced function for this node ID
   if (!debouncedFunctions.has(nodeId)) {
@@ -42,7 +42,7 @@ export const mutateTemplate = async (
           setErrorData,
           parameterName?: string,
           callback?: () => void,
-          toolMode?: boolean
+          toolMode?: boolean,
         ) => {
           try {
             const newNode = cloneDeep(node);
@@ -59,8 +59,8 @@ export const mutateTemplate = async (
               try {
                 setNodeClass(newNode);
               } catch (e) {
-                if (e instanceof Error && e.message === 'Node not found') {
-                  console.error('Node not found');
+                if (e instanceof Error && e.message === "Node not found") {
+                  console.error("Node not found");
                 } else {
                   throw e;
                 }
@@ -75,8 +75,8 @@ export const mutateTemplate = async (
             });
           }
         },
-        SAVE_DEBOUNCE_TIME
-      )
+        SAVE_DEBOUNCE_TIME,
+      ),
     );
   }
 
@@ -89,6 +89,6 @@ export const mutateTemplate = async (
     setErrorData,
     parameterName,
     callback,
-    toolMode
+    toolMode,
   );
 };

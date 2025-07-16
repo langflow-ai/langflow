@@ -1,5 +1,5 @@
-import type { NodeDataType } from '@/types/flow';
-import { OutputParameter } from '.';
+import type { NodeDataType } from "@/types/flow";
+import { OutputParameter } from ".";
 
 export default function NodeOutputs({
   outputs,
@@ -22,13 +22,13 @@ export default function NodeOutputs({
   selectedOutput: any;
   handleSelectOutput: any;
 }) {
-  const hasLoopOutput = outputs.some(output => output.allows_loop);
-  const isConditionalRouter = data.type === 'ConditionalRouter';
+  const hasLoopOutput = outputs.some((output) => output.allows_loop);
+  const isConditionalRouter = data.type === "ConditionalRouter";
 
   // Separate outputs based on group_outputs field
   const groupedOutputs = outputs.filter((output: any) => output.group_outputs);
   const individualOutputs = outputs.filter(
-    (output: any) => !output.group_outputs
+    (output: any) => !output.group_outputs,
   );
 
   const shouldShowAllOutputs = hasLoopOutput || isConditionalRouter;
@@ -42,8 +42,9 @@ export default function NodeOutputs({
             output={output}
             outputs={outputs}
             idx={
-              data.node!.outputs?.findIndex(out => out.name === output.name) ??
-              idx
+              data.node!.outputs?.findIndex(
+                (out) => out.name === output.name,
+              ) ?? idx
             }
             lastOutput={idx === outputs.length - 1}
             data={data}
@@ -68,7 +69,7 @@ export default function NodeOutputs({
         outputs={[output] as any} // Pass only this output to avoid dropdown behavior
         idx={
           data.node!.outputs?.findIndex(
-            (out: any) => out.name === output.name
+            (out: any) => out.name === output.name,
           ) ?? idx
         }
         lastOutput={individualOutputs.length === 0}
@@ -88,7 +89,7 @@ export default function NodeOutputs({
 
     const getDisplayOutput = () => {
       const outputWithSelection = groupedOutputs.find(
-        output => output.name === selectedOutput?.name
+        (output) => output.name === selectedOutput?.name,
       );
       return outputWithSelection || groupedOutputs[0];
     };
@@ -102,7 +103,7 @@ export default function NodeOutputs({
         outputs={groupedOutputs}
         idx={
           data.node!.outputs?.findIndex(
-            out => out.name === displayOutput.name
+            (out) => out.name === displayOutput.name,
           ) ?? 0
         }
         lastOutput={true}

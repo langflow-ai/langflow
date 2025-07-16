@@ -1,36 +1,36 @@
-import { useUpdateNodeInternals } from '@xyflow/react';
-import { cloneDeep } from 'lodash';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
-import { useShallow } from 'zustand/react/shallow';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { usePostValidateComponentCode } from '@/controllers/API/queries/nodes/use-post-validate-component-code';
-import { CustomNodeStatus } from '@/customization/components/custom-NodeStatus';
-import UpdateComponentModal from '@/modals/updateComponentModal';
-import { useAlternate } from '@/shared/hooks/use-alternate';
-import type { FlowStoreType } from '@/types/zustand/flow';
-import { Button } from '../../components/ui/button';
-import { ICON_STROKE_WIDTH } from '../../constants/constants';
-import NodeToolbarComponent from '../../pages/FlowPage/components/nodeToolbarComponent';
-import { useChangeOnUnfocus } from '../../shared/hooks/use-change-on-unfocus';
-import useAlertStore from '../../stores/alertStore';
-import useFlowStore from '../../stores/flowStore';
-import useFlowsManagerStore from '../../stores/flowsManagerStore';
-import { useShortcutsStore } from '../../stores/shortcuts';
-import { useTypesStore } from '../../stores/typesStore';
-import type { OutputFieldType, VertexBuildTypeAPI } from '../../types/api';
-import type { NodeDataType } from '../../types/flow';
-import { scapedJSONStringfy } from '../../utils/reactflowUtils';
-import { classNames, cn } from '../../utils/utils';
-import { processNodeAdvancedFields } from '../helpers/process-node-advanced-fields';
-import useUpdateNodeCode from '../hooks/use-update-node-code';
-import NodeDescription from './components/NodeDescription';
-import NodeName from './components/NodeName';
-import NodeOutputs from './components/NodeOutputParameter/NodeOutputs';
-import NodeUpdateComponent from './components/NodeUpdateComponent';
-import { NodeIcon } from './components/nodeIcon';
-import RenderInputParameters from './components/RenderInputParameters';
-import { useBuildStatus } from './hooks/use-get-build-status';
+import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep } from "lodash";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
+import UpdateComponentModal from "@/modals/updateComponentModal";
+import { useAlternate } from "@/shared/hooks/use-alternate";
+import type { FlowStoreType } from "@/types/zustand/flow";
+import { Button } from "../../components/ui/button";
+import { ICON_STROKE_WIDTH } from "../../constants/constants";
+import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
+import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../stores/shortcuts";
+import { useTypesStore } from "../../stores/typesStore";
+import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
+import type { NodeDataType } from "../../types/flow";
+import { scapedJSONStringfy } from "../../utils/reactflowUtils";
+import { classNames, cn } from "../../utils/utils";
+import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
+import useUpdateNodeCode from "../hooks/use-update-node-code";
+import NodeDescription from "./components/NodeDescription";
+import NodeName from "./components/NodeName";
+import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
+import NodeUpdateComponent from "./components/NodeUpdateComponent";
+import { NodeIcon } from "./components/nodeIcon";
+import RenderInputParameters from "./components/RenderInputParameters";
+import { useBuildStatus } from "./hooks/use-get-build-status";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -48,37 +48,37 @@ function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
-  const [borderColor, setBorderColor] = useState<string>('');
+  const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
 
-  const types = useTypesStore(state => state.types);
-  const templates = useTypesStore(state => state.templates);
-  const deleteNode = useFlowStore(state => state.deleteNode);
-  const setNode = useFlowStore(state => state.setNode);
+  const types = useTypesStore((state) => state.types);
+  const templates = useTypesStore((state) => state.templates);
+  const deleteNode = useFlowStore((state) => state.deleteNode);
+  const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
-  const setErrorData = useAlertStore(state => state.setErrorData);
-  const takeSnapshot = useFlowsManagerStore(state => state.takeSnapshot);
-  const edges = useFlowStore(state => state.edges);
-  const setEdges = useFlowStore(state => state.setEdges);
-  const shortcuts = useShortcutsStore(state => state.shortcuts);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+  const edges = useFlowStore((state) => state.edges);
+  const setEdges = useFlowStore((state) => state.setEdges);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
-  const dismissedNodes = useFlowStore(state => state.dismissedNodes);
-  const addDismissedNodes = useFlowStore(state => state.addDismissedNodes);
+  const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
+  const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
-    state => state.removeDismissedNodes
+    (state) => state.removeDismissedNodes,
   );
   const dismissAll = useMemo(
     () => dismissedNodes.includes(data.id),
-    [dismissedNodes, data.id]
+    [dismissedNodes, data.id],
   );
 
   const showNode = data.showNode ?? true;
 
-  const getValidationStatus = useCallback(data => {
+  const getValidationStatus = useCallback((data) => {
     setValidationStatus(data);
     return null;
   }, []);
@@ -90,8 +90,8 @@ function GenericNode({
 
   const componentUpdate = useFlowStore(
     useShallow((state: FlowStoreType) =>
-      state.componentsToUpdate.find(component => component.id === data.id)
-    )
+      state.componentsToUpdate.find((component) => component.id === data.id),
+    ),
   );
 
   const {
@@ -108,7 +108,7 @@ function GenericNode({
     data?.id,
     data.node!,
     setNode,
-    updateNodeInternals
+    updateNodeInternals,
   );
 
   useEffect(() => {
@@ -149,25 +149,25 @@ function GenericNode({
                 const newNode = processNodeAdvancedFields(
                   resData,
                   edges,
-                  data.id
+                  data.id,
                 );
-                updateNodeCode(newNode, currentCode, 'code', type);
+                updateNodeCode(newNode, currentCode, "code", type);
                 removeDismissedNodes([data.id]);
                 setLoadingUpdate(false);
               }
             },
-            onError: error => {
+            onError: (error) => {
               setErrorData({
-                title: 'Error updating Component code',
+                title: "Error updating Component code",
                 list: [
-                  'There was an error updating the Component.',
-                  'If the error persists, please report it on our Discord or GitHub.',
+                  "There was an error updating the Component.",
+                  "If the error persists, please report it on our Discord or GitHub.",
                 ],
               });
               console.error(error);
               setLoadingUpdate(false);
             },
-          }
+          },
         );
       }
     },
@@ -180,7 +180,7 @@ function GenericNode({
       validateComponentCode,
       setErrorData,
       takeSnapshot,
-    ]
+    ],
   );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
@@ -189,20 +189,22 @@ function GenericNode({
     }
   }, [isOutdated, selected, handleUpdateCode]);
 
-  const update = useShortcutsStore(state => state.update);
+  const update = useShortcutsStore((state) => state.update);
   useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
 
   const isToolMode = useMemo(
     () =>
-      data.node?.outputs?.some(output => output.name === 'component_as_tool') ??
+      data.node?.outputs?.some(
+        (output) => output.name === "component_as_tool",
+      ) ??
       data.node?.tool_mode ??
       false,
-    [data.node?.outputs, data.node?.tool_mode]
+    [data.node?.outputs, data.node?.tool_mode],
   );
 
   const hasOutputs = useMemo(
     () => data.node?.outputs && data.node.outputs.length > 0,
-    [data.node?.outputs]
+    [data.node?.outputs],
   );
 
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -212,7 +214,7 @@ function GenericNode({
     value: editNameDescription,
     onChange: set,
     defaultValue: false,
-    shouldChangeValue: value => value === true,
+    shouldChangeValue: (value) => value === true,
     nodeRef,
     callback: toggleEditNameDescription,
   });
@@ -222,16 +224,16 @@ function GenericNode({
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
     () =>
       data.node?.outputs?.find(
-        output => output.name === data?.selected_output
-      ) || null
+        (output) => output.name === data?.selected_output,
+      ) || null,
   );
 
   const handleSelectOutput = useCallback(
-    output => {
+    (output) => {
       setSelectedOutput(output);
 
-      setEdges(eds => {
-        return eds.map(edge => {
+      setEdges((eds) => {
+        return eds.map((edge) => {
           if (edge.source === data.id && edge.data?.sourceHandle) {
             const sourceHandle = edge.data.sourceHandle;
             if (sourceHandle.name === output.name) {
@@ -255,17 +257,17 @@ function GenericNode({
         });
       });
 
-      setNode(data.id, oldNode => {
+      setNode(data.id, (oldNode) => {
         const newNode = cloneDeep(oldNode);
         if (newNode.data.node?.outputs) {
-          newNode.data.node.outputs.forEach(out => {
+          newNode.data.node.outputs.forEach((out) => {
             if (out.selected) {
               out.selected = undefined;
             }
           });
 
           const outputIndex = newNode.data.node.outputs.findIndex(
-            o => o.name === output.name
+            (o) => o.name === output.name,
           );
           if (outputIndex !== -1) {
             const outputTypes = output.types || [];
@@ -283,18 +285,18 @@ function GenericNode({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, setNode, setEdges, updateNodeInternals]
+    [data.id, setNode, setEdges, updateNodeInternals],
   );
 
   useEffect(() => {
     if (
       data?.selected_output ||
-      (data?.node?.outputs?.filter(output => !output.group_outputs)?.length ??
+      (data?.node?.outputs?.filter((output) => !output.group_outputs)?.length ??
         0) <= 1
     )
       return;
     handleSelectOutput(
-      data.node?.outputs?.find(output => output.selected) || null
+      data.node?.outputs?.find((output) => output.selected) || null,
     );
   }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
 
@@ -305,16 +307,16 @@ function GenericNode({
     editNameDescription && hasChangedNodeDescription;
 
   const hasDescription = useMemo(() => {
-    return data.node?.description && data.node?.description !== '';
+    return data.node?.description && data.node?.description !== "";
   }, [data.node?.description]);
 
   const selectedNodesCount = useMemo(() => {
-    return useFlowStore.getState().nodes.filter(node => node.selected).length;
+    return useFlowStore.getState().nodes.filter((node) => node.selected).length;
   }, [selected]);
 
   const shouldShowUpdateComponent = useMemo(
     () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
-    [isOutdated, hasBreakingChange, isUserEdited, dismissAll]
+    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
   );
 
   const memoizedNodeToolbarComponent = useMemo(() => {
@@ -322,18 +324,18 @@ function GenericNode({
       <>
         <div
           className={cn(
-            'absolute -top-12 left-1/2 z-50 -translate-x-1/2',
-            'transform transition-all duration-300 ease-out'
+            "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
+            "transform transition-all duration-300 ease-out",
           )}
         >
           <NodeToolbarComponent
             data={data}
-            deleteNode={id => {
+            deleteNode={(id) => {
               takeSnapshot();
               deleteNode(id);
             }}
-            setShowNode={show => {
-              setNode(data.id, old => ({
+            setShowNode={(show) => {
+              setNode(data.id, (old) => ({
                 ...old,
                 data: { ...old.data, showNode: show },
               }));
@@ -356,27 +358,29 @@ function GenericNode({
               setHasChangedNodeDescription(false);
             }}
             className={cn(
-              'nodrag absolute left-1/2 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md',
-              'transform transition-all duration-300 ease-out',
+              "nodrag absolute left-1/2 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md",
+              "transform transition-all duration-300 ease-out",
               showNode
-                ? 'top-2 translate-x-[10.4rem]'
-                : 'top-0 translate-x-[6.4rem]',
-              editedNameDescription ? 'bg-accent-emerald' : 'bg-zinc-foreground'
+                ? "top-2 translate-x-[10.4rem]"
+                : "top-0 translate-x-[6.4rem]",
+              editedNameDescription
+                ? "bg-accent-emerald"
+                : "bg-zinc-foreground",
             )}
             data-testid={
               editedNameDescription
-                ? 'save-name-description-button'
-                : 'edit-name-description-button'
+                ? "save-name-description-button"
+                : "edit-name-description-button"
             }
           >
             <ForwardedIconComponent
-              name={editedNameDescription ? 'Check' : 'PencilLine'}
+              name={editedNameDescription ? "Check" : "PencilLine"}
               strokeWidth={ICON_STROKE_WIDTH}
               className={cn(
                 editedNameDescription
-                  ? 'text-accent-emerald-foreground'
-                  : 'text-muted-foreground',
-                'icon-size'
+                  ? "text-accent-emerald-foreground"
+                  : "text-muted-foreground",
+                "icon-size",
               )}
             />
           </Button>
@@ -404,21 +408,21 @@ function GenericNode({
 
   const memoizedOnUpdateNode = useCallback(
     () => handleUpdateCode(true),
-    [handleUpdateCode]
+    [handleUpdateCode],
   );
   const memoizedSetDismissAll = useCallback(
     () => addDismissedNodes([data.id]),
-    [addDismissedNodes, data.id]
+    [addDismissedNodes, data.id],
   );
 
   return (
-    <div className={cn(shouldShowUpdateComponent ? 'relative -mt-10' : '')}>
+    <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
-          showNode ? 'w-80' : `w-48`,
-          'generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md',
-          !hasOutputs && 'pb-4'
+          showNode ? "w-80" : `w-48`,
+          "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
+          !hasOutputs && "pb-4",
         )}
       >
         {openUpdateModal && (
@@ -442,14 +446,14 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            'grid text-wrap leading-5',
-            showNode ? 'border-b' : 'relative'
+            "grid text-wrap leading-5",
+            showNode ? "border-b" : "relative",
           )}
         >
           <div
-            data-testid={'div-generic-node'}
+            data-testid={"div-generic-node"}
             className={cn(
-              'flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3'
+              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3",
             )}
           >
             <div
@@ -476,7 +480,7 @@ function GenericNode({
             </div>
             {!showNode && (
               <>
-                <div data-testid={`${showNode ? 'show' : 'hide'}-node-content`}>
+                <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
                   <MemoizedRenderInputParameters
                     data={data}
                     types={types}
@@ -519,7 +523,7 @@ function GenericNode({
               <MemoizedNodeDescription
                 description={data.node?.description}
                 charLimit={1000}
-                mdClassName={'dark:prose-invert'}
+                mdClassName={"dark:prose-invert"}
                 nodeId={data.id}
                 selected={selected}
                 editNameDescription={editNameDescription}
@@ -538,18 +542,18 @@ function GenericNode({
                 isToolMode={isToolMode}
                 showNode={showNode}
                 outputs={outputs}
-              />{' '}
+              />{" "}
               <div
                 className={classNames(
-                  Object.keys(data.node!.template).length < 1 ? 'hidden' : '',
-                  'flex-max-width justify-center'
+                  Object.keys(data.node!.template).length < 1 ? "hidden" : "",
+                  "flex-max-width justify-center",
                 )}
               >
-                {' '}
+                {" "}
               </div>
               <MemoizedNodeOutputs
                 outputs={outputs}
-                keyPrefix={'outputs'}
+                keyPrefix={"outputs"}
                 data={data}
                 types={types}
                 selected={selected ?? false}
