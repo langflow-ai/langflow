@@ -1,11 +1,11 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useState } from "react";
-import useAlertStore from "@/stores/alertStore";
-import type { FileType } from "@/types/file_management";
-import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
-import BaseModal from "../baseModal";
-import DragFilesComponent from "./components/dragFilesComponent";
-import RecentFilesComponent from "./components/recentFilesComponent";
+import { useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useEffect, useState } from 'react';
+import useAlertStore from '@/stores/alertStore';
+import type { FileType } from '@/types/file_management';
+import { ForwardedIconComponent } from '../../components/common/genericIconComponent';
+import BaseModal from '../baseModal';
+import DragFilesComponent from './components/dragFilesComponent';
+import RecentFilesComponent from './components/recentFilesComponent';
 
 export default function FileManagerModal({
   children,
@@ -28,18 +28,18 @@ export default function FileManagerModal({
 }): JSX.Element {
   const [internalOpen, internalSetOpen] = useState(false);
 
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setErrorData = useAlertStore(state => state.setErrorData);
 
   const queryClient = useQueryClient();
 
   useEffect(() => {
     queryClient.refetchQueries({
-      queryKey: ["useGetFilesV2"],
+      queryKey: ['useGetFilesV2'],
     });
   }, [internalOpen]);
 
   const [internalSelectedFiles, setInternalSelectedFiles] = useState<string[]>(
-    selectedFiles || [],
+    selectedFiles || []
   );
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function FileManagerModal({
 
   const handleUpload = (filesPaths: string[]) => {
     setInternalSelectedFiles(
-      isList ? [...internalSelectedFiles, ...filesPaths] : [filesPaths[0]],
+      isList ? [...internalSelectedFiles, ...filesPaths] : [filesPaths[0]]
     );
   };
 
@@ -61,7 +61,7 @@ export default function FileManagerModal({
         onSubmit={() => {
           if (internalSelectedFiles.length === 0) {
             setErrorData({
-              title: "Please select at least one file",
+              title: 'Please select at least one file',
             });
             return;
           }
@@ -104,7 +104,7 @@ export default function FileManagerModal({
         <BaseModal.Footer
           submit={{
             label: `Select files`,
-            dataTestId: "select-files-modal-button",
+            dataTestId: 'select-files-modal-button',
           }}
         ></BaseModal.Footer>
       </BaseModal>
