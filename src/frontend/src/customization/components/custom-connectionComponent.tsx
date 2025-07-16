@@ -1,7 +1,7 @@
 import ConnectionComponent, {
-  ConnectionComponentProps,
+  type ConnectionComponentProps,
 } from "@/components/core/parameterRenderComponent/components/connectionComponent";
-import { InputProps } from "@/components/core/parameterRenderComponent/types";
+import type { InputProps } from "@/components/core/parameterRenderComponent/types";
 
 const CustomConnectionComponent = ({
   tooltip = "",

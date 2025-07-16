@@ -46,6 +46,6 @@ const options = {
 
 fetch('${apiUrl}', options)
     .then(response => response.json())
-    .then(response => console.log(response))
+    .then(response => console.warn(response))
     .catch(err => console.error(err));`;
 }
