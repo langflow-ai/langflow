@@ -102,8 +102,11 @@ When represented as tabular data, the preceeding DataFrame is structured like th
 
 ## Message
 
-The `Message` object extends `Data` with fields and methods for chat and conversational flows.
-The `Message` data type is used to work with chat, conversational flows, or LLM (Large Language Model) input/output, because it provides a consistent structure for chat interactions.
+The `Message` data type extends `Data` with fields and methods for chat and conversational flows.
+
+The `Message` port in a component is represented by a blue circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#4f46e5', fill: '#4f46e5' }} />
+
+Use the `Message` data type to work with chat, conversational flows, or LLM (Large Language Model) input/output, because it provides a consistent structure for chat interactions.
 
 - **Schema:** [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py)
 
@@ -121,7 +124,7 @@ The `Message` data type is used to work with chat, conversational flows, or LLM 
 
 A conversational message appears in Langflow as a string, but it is also a structured object that wraps the message content with other metadata.
 
-For example, Langflow uses the string:
+For example, Langflow displays the string:
 
 ```
 "Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"
