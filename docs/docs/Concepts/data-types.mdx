@@ -1,0 +1,205 @@
+---
+title: Langflow data types
+slug: /data-types
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
+In Langflow, data types define the structure and flow of information between components.
+
+The most common types are **Data**, **Message**, and **DataFrame**.
+
+Data types are represented by [port colors](/concepts-components), which can be connected to circles of the same colors.
+
+## Data
+
+The `Data` data type represents structured data with a main text field and additional metadata. It uses a `text_key` to indicate the main text content.
+
+A `Data` port in a component is represented by a red circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#dc2626', fill: '#dc2626' }} />.
+
+`Data` can be serialized _to_ JSON, or created _from_ JSON or other dictionary data, but it's a structured object with validation and methods, not just a plain dictionary.
+
+- **Schema:** [`data.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/data.py)
+
+**Data object attributes:**
+- `data`: A Dictionary that stores key-value pairs.
+- `text_key`: Which key in `data` is considered the main text.
+- `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
+
+
+Here's an example of creating a Data object:
+
+```python
+data_obj = Data(
+    text_key="text",                    # Field 1
+    data={                              # Field 2 (the actual dict)
+        "text": "Hello world",
+        "name": "Charlie",
+        "age": 28
+    },
+    default_value=""                    # Field 3
+)
+```
+
+When serialized into JSON, the object appears as below:
+
+```json
+{
+  "text_key": "text",
+  "data": {
+    "text": "User Profile",
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  "default_value": ""
+}
+```
+
+## DataFrame
+
+The `DataFrame` data type is a pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html), which is similar to the tabular data of a CSV file.
+It inherits all pandas DataFrame functionality while providing seamless integration with Langflow's data types.
+
+A `DataFrame` port in a component is represented by a pink circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#ec4899', fill:'#ec4899' }} />.
+
+The Langflow DataFrame also includes convenience methods for working with Langflow's `Data` objects.
+
+- **Schema:** [`dataframe.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/dataframe.py)
+
+**Key features:**
+- **Full pandas compatibility:** All pandas DataFrame methods and functionality work as expected.
+- **Langflow integration:** Accepts lists of `Data` objects, dictionaries, or existing DataFrames.
+- **Convenience methods:** `to_data_list()`, `add_row()`, `add_rows()`, `to_lc_documents()`, `to_data()`, `to_message()`.
+- **Text key support:** Maintains `text_key` and `default_value` attributes for Data object compatibility.
+
+### DataFrame structure
+
+A tabular data structure with rows and columns. Keys are columns, and each dictionary in the list is a row.
+
+```json
+[
+  {
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  {
+    "name": "Alexandra Example",
+    "age": 34,
+    "email": "alexandra@example.com"
+  }
+]
+```
+
+When represented as tabular data, the preceeding DataFrame is structured like this, with the keys `name`, `age`, and `email`.
+
+| name | age | email |
+|------|-----|-------|
+| Charlie Lastname | 28 | charlie.lastname@example.com |
+| Alexandra Example | 34 | alexandra@example.com |
+
+## Message
+
+The `Message` object extends `Data` with fields and methods for chat and conversational flows. It is the standard type for chat history, LLM responses, and user input.
+
+- **Schema:** [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py)
+
+**Main attributes (in addition to those from Data):**
+- `text`: Main message content.
+- `sender`: "User" or "AI".
+- `sender_name`: Display name.
+- `session_id`: Chat session identifier.
+- `timestamp`: UTC timestamp.
+- `files`: List of file paths or images.
+- `content_blocks`: Rich content (text, media, code, etc.).
+- `category`: "message", "error", "warning", or "info".
+
+### Message structure example
+
+A string, such as:
+```
+"Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"
+```
+
+## View data types in flows
+
+A quick way to observe how the different data types in Langflow are presented is by using the **Type Convert** component in a basic flow.
+
+1. Connect a **Chat Input** component to a **Type Convert** component.
+    This converts the **Message** input from the **Chat Input** component into a Message, Data, or DataFrame type.
+2. To run the **Type Convert** component, click <Icon name="Play" aria-hidden="true"/> **Run component**.
+3. To inspect the **Type Convert** component's output, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output**.
+
+<Tabs groupId="Data type">
+  <TabItem value="Message" label="Message">
+    ```text
+    Input text
+    ````
+  </TabItem>
+
+  <TabItem value="Data" label="Data" default>
+```json
+{
+  "timestamp": "2025-07-15 20:56:20 UTC",
+  "sender": "User",
+  "sender_name": "User",
+  "session_id": "a0c7e888-4fd6-4242-b8c8-e761ad690aeb",
+  "text": "",
+  "files": [],
+  "error": false,
+  "edit": false,
+  "properties": {
+    "text_color": "",
+    "background_color": "",
+    "edited": false,
+    "source": {
+      "id": null,
+      "display_name": null,
+      "source": null
+    },
+    "icon": "",
+    "allow_markdown": false,
+    "positive_feedback": null,
+    "state": "complete",
+    "targets": []
+  },
+  "category": "message",
+  "content_blocks": [],
+  "id": "9da72da2-efbb-4ccd-90ad-b32429b0418e",
+  "flow_id": "a0c7e888-4fd6-4242-b8c8-e761ad690aeb",
+  "duration": null
+}
+```
+  </TabItem>
+  <TabItem value="DataFrame" label="DataFrame">
+```
+| Field | Value |
+|-------|-------|
+| timestamp | 2025-07-15 20:56:11 UTC |
+| sender | User |
+| sender_name | User |
+| session_id | a0c7e888-4fd6-4242-b8c8-e761ad690aeb |
+| text | (empty) |
+| files | [] |
+| error | False |
+| edit | False |
+| properties | text_color: '', background_color: '', edited: False, source: {id: None, display_name: None, source: None}, icon: '', allow_markdown: False, positive_feedback: None, state: 'complete', targets: [] |
+| category | message |
+| content_blocks | [] |
+| id | 341686eb-7a39-4b80-a90a-d8bf267815ef |
+| flow_id | a0c7e888-4fd6-4242-b8c8-e761ad690aeb |
+| duration | (empty) |
+```
+  </TabItem>
+
+</Tabs>
+
+## See also
+
+- [Custom Components](/components-custom-components)
+- [Pydantic Models](https://docs.pydantic.dev/latest/api/base_model/)
+- [pandas.DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html)
+
