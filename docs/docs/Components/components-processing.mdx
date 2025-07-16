@@ -9,7 +9,7 @@ Processing components process and transform data within a flow, like converting 
 
 ## Batch Run
 
-The **Batch Run** component runs a language model over **each row** of a [DataFrame](/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and an LLM response.
+The **Batch Run** component runs a language model over **each row** of a [DataFrame](/data-types#dataframe) text column and returns a new DataFrame with the original text and an LLM response.
 
 The response contains the following columns:
 
@@ -64,10 +64,10 @@ record_number: {batch_index}, name: {text_input}, summary: {model_response}
 
 ## Data operations
 
-This component performs operations on [Data](/concepts-objects#data-object) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
+This component performs operations on [Data](/data-types#data) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
 
-1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data Operations** component's input.
-All operations in the component require at least one [Data](/concepts-objects#data-object) input.
+1. To use this component in a flow, connect a component that outputs [Data](/data-types#data) to the **Data Operations** component's input.
+All operations in the component require at least one [Data](/data-types#data) input.
 2. In the **Operations** field, select the operation you want to perform.
 For example, send this request to the **Webhook** component.
 Replace `FLOW_ID` and `LANGFLOW_API_KEY` with the values from your deployment.
@@ -115,7 +115,7 @@ To add additional keys, click <Icon name="Plus" aria-hidden="True" /> **Add more
 ### Operations
 
 The component supports the following operations.
-All operations in the **Data operations** component require at least one [Data](/concepts-objects#data-object) input.
+All operations in the **Data operations** component require at least one [Data](/data-types#data) input.
 
 | Operation | Required Inputs | Info |
 |-----------|----------------|-------------|
@@ -134,7 +134,7 @@ All operations in the **Data operations** component require at least one [Data](
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The [Data](/concepts-objects#data-object) object to operate on. |
+| data | Data | The [Data](/data-types#data) object to operate on. |
 | operations | Operations | The operation to perform on the data. |
 | select_keys_input | Select Keys | A list of keys to select from the data. |
 | filter_key | Filter Key | The key to filter by. |
@@ -156,7 +156,7 @@ All operations in the **Data operations** component require at least one [Data](
 
 This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
 
-To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
+To use this component in a flow, connect a component that outputs [DataFrame](/data-types#dataframe) to the **DataFrame Operations** component.
 
 This example fetches JSON data from an API. The **Smart Filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
 
@@ -357,7 +357,7 @@ For an additional example of using the **Parser** component to format a DataFram
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| parsed_text | Parsed Text | The resulting formatted text as a [Message](/concepts-objects#message-object) object. |
+| parsed_text | Parsed Text | The resulting formatted text as a [Message](/data-types#message) object. |
 
 </details>
 
@@ -447,9 +447,9 @@ If you don't include the package imports in the chat, the Agent can still create
 
 ## Save file
 
-This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
+This component saves [DataFrames, Data, or Messages](/data-types#data) to various file formats.
 
-1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/concepts-objects) to the **Save to File** component's input.
+1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/data-types#data) to the **Save to File** component's input.
 The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
 
 ![Two Save-to File components connected to a webhook](/img/component-save-to-file.png)
@@ -562,8 +562,8 @@ The connected LLM creates a filter based on the instructions, and successfully e
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
-| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
+| filtered_data | Filtered Data | The filtered or transformed [Data object](/data-types#data). |
+| dataframe | DataFrame | The filtered data as a [DataFrame](/data-types#dataframe). |
 
 </details>
 
@@ -575,7 +575,7 @@ The **Split Text** component outputs **Chunks** or **DataFrame**.
 The **Chunks** output returns a list of individual text chunks.
 The **DataFrame** output returns a structured data format, with additional `text` and `metadata` columns applied.
 
-1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/concepts-objects) to the **Split Text** component's **Data** port.
+1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/data-types#data) to the **Split Text** component's **Data** port.
 This example uses the **URL** component, which is fetching JSON placeholder data.
 
 ![Split text component and chroma-db](/img/component-split-text.png)
@@ -625,7 +625,7 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_inputs | Input Documents | The data to split. The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
+| data_inputs | Input Documents | The data to split. The component accepts [Data](/data-types#data) or [DataFrame](/data-types#dataframe) objects. |
 | chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
 | chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
 | separator | Separator | The character to split on. Default: `newline`. |
@@ -635,8 +635,8 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| chunks | Chunks | A list of split text chunks as [Data](/concepts-objects#data-object) objects. |
-| dataframe | DataFrame | A list of split text chunks as [DataFrame](/concepts-objects#dataframe-object) objects. |
+| chunks | Chunks | A list of split text chunks as [Data](/data-types#data) objects. |
+| dataframe | DataFrame | A list of split text chunks as [DataFrame](/data-types#dataframe) objects. |
 
 </details>
 
@@ -686,7 +686,7 @@ For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS
 
 ## Type convert
 
-This component converts data types between different formats. It can transform data between [Data](/concepts-objects#data-object), [DataFrame](/concepts-objects#dataframe-object), and [Message](/concepts-objects#message-object) objects.
+This component converts data types between different formats. It can transform data between [Data](/data-types#data), [DataFrame](/data-types#dataframe), and [Message](/data-types#message) objects.
 
 * **Data**: A structured object that contains both text and metadata.
 ```json
@@ -772,7 +772,7 @@ This component is in **Legacy**, which means it is available for use but no long
 Instead, use the [Data operations](#data-operations) component.
 :::
 
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/data-types#message) and [Data](/data-types#data) objects, and can also create a new Data object from user-provided text.
 
 <details>
 <summary>Parameters</summary>
@@ -782,7 +782,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_value | Input | Objects to which Metadata should be added. |
-| text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
+| text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/data-types#data) object. Empty text entries are ignored. |
 | metadata | Metadata | Metadata to add to each object. |
 | remove_fields | Fields to Remove | Metadata fields to remove. |
 
@@ -801,7 +801,7 @@ This component is in **Legacy**, which means it is available for use but no long
 Prior to Langflow version 1.1.3, this component was named **Merge Data**.
 :::
 
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+This component combines multiple data sources into a single unified [Data](/data-types#data) object.
 
 The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
 
@@ -818,7 +818,7 @@ The component iterates through the input list of data objects, merging them into
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+| merged_data | Merged Data | A single [Data](/data-types#data) object containing the combined information from all input data objects. |
 
 </details>
 
@@ -831,7 +831,7 @@ This component is in **Legacy**, which means it is available for use but no long
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
 
-1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
+1. To use this component in a flow, connect two components that output [Messages](/data-types#message) to the **Combine Text** component's **First Text** and **Second Text** inputs.
 This example uses two **Text Input** components.
 
 ![Combine text component](/img/component-combine-text.png)
@@ -875,7 +875,7 @@ Here's the second part. We'll see how combining text works.
 This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
-This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
+This component dynamically creates a [Data](/data-types#data) object with a specified number of fields.
 
 <details>
 <summary>Parameters</summary>
@@ -891,7 +891,7 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
+| data | Data | A [Data](/data-types#data) object created with the specified fields and text key. |
 
 </details>
 
@@ -900,9 +900,9 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
-This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
+This component converts one or multiple [Data](/data-types#data) objects into a [DataFrame](/data-types#dataframe). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
 
-1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
+1. To use this component in a flow, connect a component that outputs [Data](/data-types#data) to the **Data to Dataframe** component's input.
 This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
 2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
 
@@ -977,7 +977,7 @@ This component is in **Legacy**, which means it is available for use but no long
 Instead, use the [Data operations](#data-operations) component.
 :::
 
-This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
+This component filters a [Data](/data-types#data) object based on a list of keys.
 
 <details>
 <summary>Parameters</summary>
@@ -1055,7 +1055,7 @@ The JSON cleaner component cleans JSON strings to ensure they are fully complian
 
 ### Message to data
 
-This component converts [Message](/concepts-objects#message-object) objects to [Data](/concepts-objects#data-object) objects.
+This component converts [Message](/data-types#message) objects to [Data](/data-types#data) objects.
 
 <details>
 <summary>Parameters</summary>
@@ -1117,14 +1117,14 @@ This component converts and extracts JSON fields using JQ queries.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Data object to filter ([Message](/concepts-objects#message-object) or [Data](/concepts-objects#data-object)). |
+| input_value | Input | Data object to filter ([Message](/data-types#message) or [Data](/data-types#data)). |
 | query | JQ Query | JQ Query to filter the data |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
+| filtered_data | Filtered Data | Filtered data as list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -1157,7 +1157,7 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
-This component selects a single [Data](/concepts-objects#data-object) item from a list.
+This component selects a single [Data](/data-types#data) item from a list.
 
 <details>
 <summary>Parameters</summary>
@@ -1173,7 +1173,7 @@ This component selects a single [Data](/concepts-objects#data-object) item from 
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object. |
+| selected_data | Selected Data | The selected [Data](/data-types#data) object. |
 
 </details>
 
