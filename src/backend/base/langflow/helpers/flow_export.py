@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 # Constants for code generation
@@ -47,7 +48,7 @@ def _generate_mermaid_diagram(
 
     mermaid_lines.append("    end")
     mermaid_text = "\n".join(mermaid_lines)
-    mermaid_file_path = os.path.join(dest_folder, MERMAID_FILENAME)
+    mermaid_file_path = Path(dest_folder) / MERMAID_FILENAME
     _write_file(mermaid_file_path, mermaid_text)
     return mermaid_file_path
 
@@ -316,15 +317,16 @@ if __name__ == '__main__':
     return code
 
 
-def _write_file(path: str, content: str) -> None:
+def _write_file(path: str | Path, content: str) -> None:
     """Write content to a file, creating directories if necessary."""
-    _ensure_dir(os.path.dirname(path))
+    path = Path(path)
+    _ensure_dir(path.parent)
     with open(path, "w", encoding="utf-8") as f:
         f.write(content.replace("\r\n", "\n"))
 
 
-def _ensure_dir(path: str) -> None:
-    os.makedirs(path, exist_ok=True)
+def _ensure_dir(path: str | Path) -> None:
+    Path(path).mkdir(parents=True, exist_ok=True)
 
 
 def _fix_node_id(node_id: str) -> str:
@@ -352,7 +354,7 @@ def _write_component_files(nodes: list[dict[str, Any]], dest_folder: str) -> dic
     Returns:
         Mapping of node IDs to their class names
     """
-    components_dir = os.path.join(dest_folder, COMPONENTS_DIR)
+    components_dir = Path(dest_folder) / COMPONENTS_DIR
     _ensure_dir(components_dir)
     node_id_to_class_name = {}
 
@@ -362,7 +364,7 @@ def _write_component_files(nodes: list[dict[str, Any]], dest_folder: str) -> dic
         if not code:
             continue
 
-        file_path = os.path.join(components_dir, f"{node_id}.py")
+        file_path = components_dir / f"{node_id}.py"
         _write_file(file_path, FILE_PREFIX + code)
 
         class_name = _extract_class_name_from_code(code)
@@ -459,19 +461,20 @@ def _write_main_file(
     execution_lines = _generate_execution_lines(flow_dict, nodes, input_map, chat_input_nodes)
     result_lines = _generate_result_lines(output_nodes, node_id_to_outputs)
     main_code = _compose_main_code(flow_dict, imports, execution_lines, result_lines)
-    _write_file(os.path.join(dest_folder, FLOW_FILENAME), main_code)
+    _write_file(Path(dest_folder) / FLOW_FILENAME, main_code)
 
 
 def _clean_destination_folder(dest_folder: str) -> None:
     """Remove all files and folders from the destination folder."""
-    if not os.path.exists(dest_folder):
+    dest_path = Path(dest_folder)
+    if not dest_path.exists():
         return
 
     for root, dirs, files in os.walk(dest_folder, topdown=False):
         for name in files:
-            os.remove(os.path.join(root, name))
+            (Path(root) / name).unlink()
         for name in dirs:
-            os.rmdir(os.path.join(root, name))
+            (Path(root) / name).rmdir()
 
 
 def export_flow_as_code(flow_dict: dict[str, Any], dest_folder: str) -> None:
