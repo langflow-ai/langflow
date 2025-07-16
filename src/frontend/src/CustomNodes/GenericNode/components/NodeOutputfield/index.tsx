@@ -38,16 +38,6 @@ import HandleRenderComponent from '../handleRenderComponent';
 import OutputComponent from '../OutputComponent';
 import OutputModal from '../outputModal';
 
-const _EyeIcon = memo(
-  ({ hidden, className }: { hidden: boolean; className: string }) => (
-    <IconComponent
-      className={className}
-      strokeWidth={ICON_STROKE_WIDTH}
-      name={hidden ? 'EyeOff' : 'Eye'}
-    />
-  )
-);
-
 const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
@@ -172,11 +162,6 @@ function NodeOutputField({
     );
   }, [flowPoolNode?.data?.outputs]);
 
-  const disabledOutput = useMemo(
-    () => edges.some(edge => edge.sourceHandle === scapedJSONStringfy(id)),
-    [edges, id]
-  );
-
   const looping = useMemo(() => {
     return edges.some(edge => {
       const targetHandleObject: targetHandleType = scapeJSONParse(
@@ -289,6 +274,7 @@ function NodeOutputField({
       colorName,
     ]
   );
+
 
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
