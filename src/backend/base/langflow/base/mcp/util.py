@@ -385,9 +385,8 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
 
 
 class MCPSessionManager:
-    """
-    Manages persistent MCP sessions with proper context manager lifecycle.
-    
+    """Manages persistent MCP sessions with proper context manager lifecycle.
+
     Fixed version that addresses the memory leak issue by:
     1. Session reuse based on server identity rather than unique context IDs
     2. Maximum session limits per server to prevent resource exhaustion
@@ -424,24 +423,24 @@ class MCPSessionManager:
         """Clean up sessions that have been idle for too long."""
         current_time = asyncio.get_event_loop().time()
         servers_to_remove = []
-        
+
         for server_key, server_data in self.sessions_by_server.items():
             sessions = server_data.get("sessions", {})
             sessions_to_remove = []
-            
+
             for session_id, session_info in sessions.items():
                 if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
                     sessions_to_remove.append(session_id)
-            
+
             # Clean up idle sessions
             for session_id in sessions_to_remove:
                 logger.info(f"Cleaning up idle session {session_id} for server {server_key}")
                 await self._cleanup_session_by_id(server_key, session_id)
-            
+
             # Remove server entry if no sessions left
             if not sessions:
                 servers_to_remove.append(server_key)
-        
+
         # Clean up empty server entries
         for server_key in servers_to_remove:
             del self.sessions_by_server[server_key]
@@ -462,7 +461,7 @@ class MCPSessionManager:
                 headers = str(sorted((connection_params.get("headers", {})).items()))
                 key_input = f"{url}|{headers}"
                 return f"sse_{hash(key_input)}"
-        
+
         # Fallback to a generic key
         return f"{transport_type}_{hash(str(connection_params))}"
 
@@ -479,76 +478,76 @@ class MCPSessionManager:
             return False
 
     async def get_session(self, context_id: str, connection_params, transport_type: str):
-        """
-        Get or create a session with improved reuse strategy.
-        
+        """Get or create a session with improved reuse strategy.
+
         The key insight is that we should reuse sessions based on the server
         identity (command + args for stdio, URL for SSE) rather than the context_id.
         This prevents creating a new subprocess for each unique context.
         """
         server_key = self._get_server_key(connection_params, transport_type)
-        
+
         # Ensure server entry exists
         if server_key not in self.sessions_by_server:
             self.sessions_by_server[server_key] = {"sessions": {}, "last_cleanup": asyncio.get_event_loop().time()}
-        
+
         server_data = self.sessions_by_server[server_key]
         sessions = server_data["sessions"]
-        
+
         # Try to find a healthy existing session
         for session_id, session_info in sessions.items():
             session = session_info["session"]
             task = session_info["task"]
-            
+
             # Check if session is still alive
             if not task.done():
                 # Update last used time
                 session_info["last_used"] = asyncio.get_event_loop().time()
-                
+
                 # Quick health check
                 if await self._validate_session_connectivity(session):
                     logger.debug(f"Reusing existing session {session_id} for server {server_key}")
                     return session
-                else:
-                    logger.info(f"Session {session_id} for server {server_key} failed health check, cleaning up")
-                    await self._cleanup_session_by_id(server_key, session_id)
+                logger.info(f"Session {session_id} for server {server_key} failed health check, cleaning up")
+                await self._cleanup_session_by_id(server_key, session_id)
             else:
                 # Task is done, clean up
                 logger.info(f"Session {session_id} for server {server_key} task is done, cleaning up")
                 await self._cleanup_session_by_id(server_key, session_id)
-        
+
         # Check if we've reached the maximum number of sessions for this server
         if len(sessions) >= MAX_SESSIONS_PER_SERVER:
             # Remove the oldest session
             oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
-            logger.info(f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}")
+            logger.info(
+                f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}"
+            )
             await self._cleanup_session_by_id(server_key, oldest_session_id)
-        
+
         # Create new session
-        import uuid
         session_id = f"{server_key}_{len(sessions)}"
         logger.info(f"Creating new session {session_id} for server {server_key}")
-        
+
         if transport_type == "stdio":
             session, task = await self._create_stdio_session(session_id, connection_params)
         elif transport_type == "sse":
             session, task = await self._create_sse_session(session_id, connection_params)
         else:
             raise ValueError(f"Unknown transport type: {transport_type}")
-        
+
         # Store session info
         sessions[session_id] = {
             "session": session,
             "task": task,
             "type": transport_type,
-            "last_used": asyncio.get_event_loop().time()
+            "last_used": asyncio.get_event_loop().time(),
         }
-        
+
         return session
 
     async def _create_stdio_session(self, session_id: str, connection_params):
         """Create a new stdio session as a background task to avoid context issues."""
         import asyncio
+
         from mcp.client.stdio import stdio_client
 
         # Create a future to get the session
@@ -566,6 +565,7 @@ class MCPSessionManager:
 
                         # Keep the session alive until cancelled
                         import anyio
+
                         event = anyio.Event()
                         try:
                             await event.wait()
@@ -588,18 +588,20 @@ class MCPSessionManager:
             if not task.done():
                 task.cancel()
                 import contextlib
+
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             self._background_tasks.discard(task)
             msg = f"Timeout waiting for STDIO session {session_id} to initialize"
             logger.error(msg)
             raise ValueError(msg) from timeout_err
-        
+
         return session, task
 
     async def _create_sse_session(self, session_id: str, connection_params):
         """Create a new SSE session as a background task to avoid context issues."""
         import asyncio
+
         from mcp.client.sse import sse_client
 
         # Create a future to get the session
@@ -622,6 +624,7 @@ class MCPSessionManager:
 
                         # Keep the session alive until cancelled
                         import anyio
+
                         event = anyio.Event()
                         try:
                             await event.wait()
@@ -644,20 +647,21 @@ class MCPSessionManager:
             if not task.done():
                 task.cancel()
                 import contextlib
+
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             self._background_tasks.discard(task)
             msg = f"Timeout waiting for SSE session {session_id} to initialize"
             logger.error(msg)
             raise ValueError(msg) from timeout_err
-        
+
         return session, task
 
     async def _cleanup_session_by_id(self, server_key: str, session_id: str):
         """Clean up a specific session by server key and session ID."""
         if server_key not in self.sessions_by_server:
             return
-        
+
         server_data = self.sessions_by_server[server_key]
         # Handle both old and new session structure
         if isinstance(server_data, dict) and "sessions" in server_data:
@@ -665,10 +669,10 @@ class MCPSessionManager:
         else:
             # Handle old structure where sessions were stored directly
             sessions = server_data
-        
+
         if session_id not in sessions:
             return
-        
+
         session_info = sessions[session_id]
         try:
             # Cancel the background task which will properly close the session
@@ -695,7 +699,7 @@ class MCPSessionManager:
                 await self._cleanup_task
             except asyncio.CancelledError:
                 pass
-        
+
         # Clean up all sessions
         for server_key in list(self.sessions_by_server.keys()):
             server_data = self.sessions_by_server[server_key]
@@ -705,13 +709,13 @@ class MCPSessionManager:
             else:
                 # Handle old structure where sessions were stored directly
                 sessions = server_data
-            
+
             for session_id in list(sessions.keys()):
                 await self._cleanup_session_by_id(server_key, session_id)
-        
+
         # Clear the sessions_by_server structure completely
         self.sessions_by_server.clear()
-        
+
         # Clear all background tasks
         for task in list(self._background_tasks):
             if not task.done():
@@ -722,22 +726,21 @@ class MCPSessionManager:
                     pass
 
     async def _cleanup_session(self, context_id: str):
-        """
-        Compatibility method for the old session cleanup interface.
-        
+        """Compatibility method for the old session cleanup interface.
+
         This method provides backward compatibility for client code that calls
         _cleanup_session(context_id) instead of the new _cleanup_session_by_id(server_key, session_id).
-        
+
         Since the new session manager doesn't maintain a context_id -> session mapping,
         we clean up all sessions that might be associated with this context.
         """
         # In the old system, context_id was used as the session key
         # In the new system, we need to find sessions that might be using this context
-        
+
         # The safest approach is to clean up all sessions since we can't reliably
         # map context_id to the specific session in the new structure
         logger.debug(f"Cleaning up sessions for context_id: {context_id}")
-        
+
         # For backward compatibility, we'll clean up all sessions
         # This is safe because:
         # 1. Sessions are designed to be recreated on demand

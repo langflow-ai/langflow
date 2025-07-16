@@ -57,7 +57,6 @@ def process_tracker():
         logger.exception("Error cleaning up child processes: %s", e)
 
 
-
 @pytest.mark.asyncio
 @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
 async def test_session_reuse_prevents_subprocess_leak(mcp_server_params, process_tracker):
@@ -122,7 +121,9 @@ async def test_session_cleanup_removes_subprocesses(mcp_server_params, process_t
         # Verify subprocess was cleaned up
         after_cleanup_count = len(process.children(recursive=True))
         # Allow some tolerance for cleanup timing and system processes
-        assert after_cleanup_count <= initial_count + 1, f"Subprocesses not cleaned up properly: {after_cleanup_count} vs {initial_count}"
+        assert after_cleanup_count <= initial_count + 1, (
+            f"Subprocesses not cleaned up properly: {after_cleanup_count} vs {initial_count}"
+        )
 
 
 @pytest.mark.asyncio

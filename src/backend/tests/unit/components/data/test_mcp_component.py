@@ -1,15 +1,11 @@
-"""
-Unit tests for MCP component with actual MCP servers.
+"""Unit tests for MCP component with actual MCP servers.
 
 This test suite validates the MCP component functionality using real MCP servers:
 - Everything server (stdio mode) - provides echo and other tools
 - DeepWiki server (SSE mode) - provides wiki-related tools
 """
 
-import asyncio
-import os
 import shutil
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.base.mcp.util import MCPSessionManager
