@@ -7,6 +7,8 @@ on:
         required: true
       ANTHROPIC_API_KEY:
         required: true
+      CODECOV_TOKEN:
+        required: false
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
@@ -70,20 +72,43 @@ jobs:
           timeout_minutes: 12
           max_attempts: 2
           command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-report=xml --cov-report=html"
+      - name: Debug token and context
+        if: matrix.python-version == '3.10'
+        run: |
+          echo "🔍 Workflow context:"
+          echo "  Repository: ${{ github.repository }}"
+          echo "  Actor: ${{ github.actor }}"
+          echo "  Event: ${{ github.event_name }}"
+          echo "  Base ref: ${{ github.base_ref }}"
+          echo "  Head ref: ${{ github.head_ref }}"
+          echo "  Is fork: ${{ github.event.pull_request.head.repo.fork }}"
+          echo ""
+          if [ -z "${{ secrets.CODECOV_TOKEN }}" ]; then
+            echo "❌ CODECOV_TOKEN is empty or not set"
+          else
+            echo "✅ CODECOV_TOKEN is available (length: ${#CODECOV_TOKEN})"
+          fi
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: matrix.python-version == '3.11' && matrix.group == 1
+        uses: codecov/codecov-action@v5
+        if: matrix.python-version == '3.10'
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          file: ./coverage.xml
+          slug: langflow-ai/langflow
+          files: ./coverage.xml
           flags: backend
-          name: backend-coverage
+          name: backend-coverage-group-${{ matrix.group }}
           fail_ci_if_error: false
           directory: ./
+          verbose: true
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
-        if: matrix.python-version == '3.11' && matrix.group == 1
+        if: matrix.python-version == '3.10'
         with:
-          name: backend-coverage-report
+          name: backend-coverage-report-group-${{ matrix.group }}
           path: |
             coverage.xml
             htmlcov/
