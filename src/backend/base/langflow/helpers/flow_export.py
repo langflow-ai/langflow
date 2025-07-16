@@ -42,9 +42,7 @@ def _generate_mermaid_diagram(
 
 
 def _topological_sort_nodes(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """
-    Return nodes sorted in topological order based on edges.
-    """
+    """Return nodes sorted in topological order based on edges."""
     node_id_map = {node["data"]["id"]: node for node in nodes}
 
     # Build node dependency map
@@ -261,8 +259,7 @@ def _fix_node_id(node_id: str) -> str:
 
 
 def _write_component_files(nodes: list[dict[str, Any]], dest_folder: str) -> dict[str, str]:
-    """
-    Write individual component files for each node.
+    """Write individual component files for each node.
 
     Args:
         nodes: List of node data from the flow
@@ -318,8 +315,7 @@ def _process_template_inputs(
     node: dict[str, Any],
     input_dict: dict[str, str],
 ) -> dict[str, str]:
-    """
-    Process template inputs for a node, handling environment variables and default values.
+    """Process template inputs for a node, handling environment variables and default values.
 
     Args:
         node: The node data containing template information
@@ -353,8 +349,7 @@ def _write_main_file(
     dest_folder: str,
     nodes: list[dict[str, Any]],
 ) -> None:
-    """
-    Generate the main flow execution file.
+    """Generate the main flow execution file.
 
     Args:
         edges: List of edge connections between nodes
@@ -375,8 +370,7 @@ def _write_main_file(
 
 
 def export_flow_as_code(flow_dict: dict[str, Any], dest_folder: str) -> None:
-    """
-    Main function to generate flow components, runner, and Mermaid diagram from JSON flow file.
+    """Main function to generate flow components, runner, and Mermaid diagram from JSON flow file.
 
     Args:
         flow_dict: flow JSON
