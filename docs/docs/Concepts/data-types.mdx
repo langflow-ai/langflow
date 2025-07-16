@@ -15,7 +15,7 @@ Data types are represented by [port colors](/concepts-components#port-colors), w
 
 The `Data` data type represents structured data with a main text field and additional metadata. The main text field is indicated by a `text_key`.
 
-Use `Data` when you want to pass key-value pairs between components.
+Use `Data` when to pass key-value pairs between components.
 
 A `Data` port in a component is represented by a red circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#dc2626', fill: '#dc2626' }} />.
 
@@ -28,7 +28,9 @@ A `Data` port in a component is represented by a red circle: <Icon name="Circle"
 - `text_key`: Which key in `data` is considered the main text.
 - `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
 
-Here's an example of creating a Data object:
+### Data structure
+
+A Data object stores key-value pairs within the `.data` attribute, where each key is a field name and its value can be any supported data type. `text_key` tells Langflow which key in the data dictionary should be considered the “main text” for that object.
 
 ```python
 data_obj = Data(
@@ -61,7 +63,7 @@ When serialized into JSON, the object appears as below:
 
 The `DataFrame` data type is a pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html), which is similar to the tabular data of a CSV file.
 
-Use `DataFrame` when you want to work with data containing multiple rows or records.
+Use `DataFrame` to work with data containing multiple rows or records.
 
 A `DataFrame` port in a component is represented by a pink circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#ec4899', fill:'#ec4899' }} />.
 
