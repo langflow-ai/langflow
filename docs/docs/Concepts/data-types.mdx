@@ -17,6 +17,8 @@ Data types are represented by [port colors](/concepts-components), which can be 
 
 The `Data` data type represents structured data with a main text field and additional metadata. The main text field is indicated by a `text_key`.
 
+Use `Data` when you want to pass key-value pairs between components.
+
 A `Data` port in a component is represented by a red circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#dc2626', fill: '#dc2626' }} />.
 
 `Data` can be serialized _to_ JSON, or created _from_ JSON or other dictionary data, but it's a structured object with validation and methods, not just a plain dictionary.
@@ -61,6 +63,8 @@ When serialized into JSON, the object appears as below:
 
 The `DataFrame` data type is a pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html), which is similar to the tabular data of a CSV file.
 
+Use `DataFrame` when you want to work with data containing multiple rows or records.
+
 A `DataFrame` port in a component is represented by a pink circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#ec4899', fill:'#ec4899' }} />.
 
 The Langflow DataFrame also includes convenience methods for working with Langflow's `Data` objects.
@@ -102,7 +106,8 @@ When represented as tabular data, the preceeding DataFrame is structured like th
 
 ## Message
 
-The `Message` object extends `Data` with fields and methods for chat and conversational flows. It is the standard type for chat history, LLM responses, and user input.
+The `Message` object extends `Data` with fields and methods for chat and conversational flows.
+The `Message` data type is used to work with chat, conversational flows, or LLM (Large Language Model) input/output, because it provides a consistent structure for chat interactions.
 
 - **Schema:** [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py)
 
@@ -118,7 +123,7 @@ The `Message` object extends `Data` with fields and methods for chat and convers
 
 ### Message structure
 
-A "message" in Langflow appears as a string, but it is also a structured object that wraps the message content with other metadata.
+A conversational message appears in Langflow as a string, but it is also a structured object that wraps the message content with other metadata.
 
 For example, Langflow uses the string:
 
@@ -144,7 +149,7 @@ The `text` field contains the string, while the other fields like `session_id` a
 
 ## View data types in flows
 
-A quick way to observe how the different data types in Langflow are presented is by using the **Type Convert** component in a basic flow.
+To observe how the different data types are presented in Langflow, use a **Type Convert** component.
 
 1. Connect a **Chat Input** component to a **Type Convert** component.
     This converts the **Message** input from the **Chat Input** component into a Message, Data, or DataFrame type.
