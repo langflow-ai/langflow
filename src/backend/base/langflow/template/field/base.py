@@ -188,8 +188,6 @@ class Output(BaseModel):
     name: str = Field(description="The name of the field.")
     """The name of the field."""
 
-
-
     display_name: str | None = Field(default=None)
     """The display name of the field."""
 
