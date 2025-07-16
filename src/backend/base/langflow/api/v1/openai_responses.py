@@ -34,8 +34,12 @@ def has_chat_input(flow_data: dict) -> bool:
     if not flow_data or "nodes" not in flow_data:
         return False
 
+    chat_types = {"ChatInput", "Chat Input"}
+
     for node in flow_data["nodes"]:
-        if node.get("data", {}).get("type") in ["ChatInput", "Chat Input"]:
+        data = node.get("data")
+        # Faster: skip dict creation, explicit None check, set-lookup
+        if data is not None and data.get("type") in chat_types:
             return True
     return False
 
