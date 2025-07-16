@@ -98,7 +98,8 @@ def _topological_sort_nodes(nodes: list[dict[str, Any]], edges: list[dict[str, A
         available_nodes = _find_available_nodes(node_map, processed_ids)
 
         if not available_nodes:
-            raise ValueError("Graph has cycles or disconnected components")
+            error_msg = "Graph has cycles or disconnected components"
+            raise ValueError(error_msg)
 
         for node_id, _ in available_nodes:
             sorted_nodes.append(node_id_map[node_id])
@@ -167,8 +168,7 @@ def _generate_component_call_lines(node_id: str, input_dict: dict[str, str]) -> 
         f"        components['{node_id}'],",
         "        {",
     ]
-    for input_item in input_items:
-        lines.append(f"            {input_item},")
+    lines.extend(f"            {input_item}," for input_item in input_items)
     lines.extend(["        }", "    )"])
     return lines
 
@@ -203,11 +203,11 @@ def _generate_function_signature_and_setup(flow_dict: dict[str, Any]) -> list[st
 def _generate_component_initialization_lines(nodes: list[dict[str, Any]]) -> list[str]:
     """Generate lines for initializing all components."""
     lines = ["    # Initialize all components"]
-    for node in nodes:
-        node_id = _fix_node_id(node["data"]["id"])
-        has_code = node["data"]["node"]["template"].get("code", {}).get("value")
-        if has_code:
-            lines.append(f"    components['{node_id}'] = _{node_id}(**global_state)")
+    lines.extend(
+        f"    components['{_fix_node_id(node['data']['id'])}'] = _{_fix_node_id(node['data']['id'])}(**global_state)"
+        for node in nodes
+        if node["data"]["node"]["template"].get("code", {}).get("value")
+    )
     return lines
 
 
@@ -272,7 +272,7 @@ def _compose_main_code(
     execution_lines: list[str],
     result_lines: list[str],
 ) -> str:
-    code = f"""{FILE_PREFIX}
+    return f"""{FILE_PREFIX}
 import asyncio
 import os
 import sys
@@ -314,14 +314,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     result = asyncio.run(run(**vars(args)))
 """
-    return code
 
 
 def _write_file(path: str | Path, content: str) -> None:
     """Write content to a file, creating directories if necessary."""
     path = Path(path)
     _ensure_dir(path.parent)
-    with open(path, "w", encoding="utf-8") as f:
+    with path.open("w", encoding="utf-8") as f:
         f.write(content.replace("\r\n", "\n"))
 
 
