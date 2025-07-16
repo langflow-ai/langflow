@@ -9,9 +9,7 @@ import Icon from "@site/src/components/icon";
 
 In Langflow, data types define the structure and flow of information between components.
 
-The most common types are **Data**, **Message**, and **DataFrame**.
-
-Data types are represented by [port colors](/concepts-components), which can be connected to circles of the same colors.
+Data types are represented by [port colors](/concepts-components#port-colors), which can be connected to circles of the same colors to exchange data of that type.
 
 ## Data
 
@@ -25,7 +23,7 @@ A `Data` port in a component is represented by a red circle: <Icon name="Circle"
 
 - **Schema:** [`data.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/data.py)
 
-**Data object attributes:**
+**Data attributes:**
 - `data`: A Dictionary that stores key-value pairs.
 - `text_key`: Which key in `data` is considered the main text.
 - `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
@@ -67,11 +65,9 @@ Use `DataFrame` when you want to work with data containing multiple rows or reco
 
 A `DataFrame` port in a component is represented by a pink circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#ec4899', fill:'#ec4899' }} />.
 
-The Langflow DataFrame also includes convenience methods for working with Langflow's `Data` objects.
-
 - **Schema:** [`dataframe.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/dataframe.py)
 
-**DataFrame object attributes**
+**DataFrame attributes**
 - **Full pandas compatibility:** All pandas DataFrame methods and functionality work as expected.
 - **Langflow integration:** Accepts lists of `Data` objects, dictionaries, or existing DataFrames.
 - **Convenience methods:** `to_data_list()`, `add_row()`, `add_rows()`, `to_lc_documents()`, `to_data()`, `to_message()`.
@@ -111,7 +107,7 @@ The `Message` data type is used to work with chat, conversational flows, or LLM 
 
 - **Schema:** [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py)
 
-**Main attributes (in addition to those from Data):**
+**Message attributes**
 - `text`: Main message content.
 - `sender`: "User" or "AI".
 - `sender_name`: Display name.
