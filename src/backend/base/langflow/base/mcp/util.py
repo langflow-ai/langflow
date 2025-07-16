@@ -30,6 +30,11 @@ HTTP_NOT_FOUND = 404
 HTTP_BAD_REQUEST = 400
 HTTP_INTERNAL_SERVER_ERROR = 500
 
+# MCP Session Manager constants
+MAX_SESSIONS_PER_SERVER = 5  # Maximum number of sessions per server to prevent resource exhaustion
+SESSION_IDLE_TIMEOUT = 300  # 5 minutes idle timeout for sessions
+SESSION_CLEANUP_INTERVAL = 60  # Cleanup interval in seconds
+
 
 def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
     """Sanitize a name for MCP usage by removing emojis, diacritics, and special characters.
@@ -380,170 +385,170 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
 
 
 class MCPSessionManager:
-    """Manages persistent MCP sessions with proper context manager lifecycle."""
+    """
+    Manages persistent MCP sessions with proper context manager lifecycle.
+    
+    Fixed version that addresses the memory leak issue by:
+    1. Session reuse based on server identity rather than unique context IDs
+    2. Maximum session limits per server to prevent resource exhaustion
+    3. Idle timeout for automatic session cleanup
+    4. Periodic cleanup of stale sessions
+    """
 
     def __init__(self):
-        self.sessions = {}  # context_id -> session_info
+        # Structure: server_key -> {"sessions": {session_id: session_info}, "last_cleanup": timestamp}
+        self.sessions_by_server = {}
         self._background_tasks = set()  # Keep references to background tasks
-        self._last_server_by_session = {}  # context_id -> server_name for tracking switches
+        self._cleanup_task = None
+        self._start_cleanup_task()
+
+    def _start_cleanup_task(self):
+        """Start the periodic cleanup task."""
+        if self._cleanup_task is None or self._cleanup_task.done():
+            self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
+            self._background_tasks.add(self._cleanup_task)
+            self._cleanup_task.add_done_callback(self._background_tasks.discard)
+
+    async def _periodic_cleanup(self):
+        """Periodically clean up idle sessions."""
+        while True:
+            try:
+                await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+                await self._cleanup_idle_sessions()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.warning(f"Error in periodic cleanup: {e}")
+
+    async def _cleanup_idle_sessions(self):
+        """Clean up sessions that have been idle for too long."""
+        current_time = asyncio.get_event_loop().time()
+        servers_to_remove = []
+        
+        for server_key, server_data in self.sessions_by_server.items():
+            sessions = server_data.get("sessions", {})
+            sessions_to_remove = []
+            
+            for session_id, session_info in sessions.items():
+                if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
+                    sessions_to_remove.append(session_id)
+            
+            # Clean up idle sessions
+            for session_id in sessions_to_remove:
+                logger.info(f"Cleaning up idle session {session_id} for server {server_key}")
+                await self._cleanup_session_by_id(server_key, session_id)
+            
+            # Remove server entry if no sessions left
+            if not sessions:
+                servers_to_remove.append(server_key)
+        
+        # Clean up empty server entries
+        for server_key in servers_to_remove:
+            del self.sessions_by_server[server_key]
+
+    def _get_server_key(self, connection_params, transport_type: str) -> str:
+        """Generate a consistent server key based on connection parameters."""
+        if transport_type == "stdio":
+            if hasattr(connection_params, "command"):
+                # Include command, args, and environment for uniqueness
+                command_str = f"{connection_params.command} {' '.join(connection_params.args or [])}"
+                env_str = str(sorted((connection_params.env or {}).items()))
+                key_input = f"{command_str}|{env_str}"
+                return f"stdio_{hash(key_input)}"
+        elif transport_type == "sse":
+            if isinstance(connection_params, dict) and "url" in connection_params:
+                # Include URL and headers for uniqueness
+                url = connection_params["url"]
+                headers = str(sorted((connection_params.get("headers", {})).items()))
+                key_input = f"{url}|{headers}"
+                return f"sse_{hash(key_input)}"
+        
+        # Fallback to a generic key
+        return f"{transport_type}_{hash(str(connection_params))}"
 
     async def _validate_session_connectivity(self, session) -> bool:
         """Validate that the session is actually usable by testing a simple operation."""
         try:
-            # Try to list tools as a connectivity test (this is a lightweight operation)
-            # Use a shorter timeout for the connectivity test to fail fast
             response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
-        except (asyncio.TimeoutError, ConnectionError, OSError, ValueError) as e:
-            logger.debug(f"Session connectivity test failed (standard error): {e}")
-            return False
-        except Exception as e:
-            # Handle MCP-specific errors that might not be in the standard list
-            error_str = str(e)
-            if (
-                "ClosedResourceError" in str(type(e))
-                or "Connection closed" in error_str
-                or "Connection lost" in error_str
-                or "Transport closed" in error_str
-                or "Stream closed" in error_str
-            ):
-                logger.debug(f"Session connectivity test failed (MCP connection error): {e}")
-                return False
-            # Re-raise unexpected errors
-            logger.warning(f"Unexpected error in connectivity test: {e}")
-            raise
-        else:
-            # Validate that we got a meaningful response
             if response is None:
-                logger.debug("Session connectivity test failed: received None response")
                 return False
-            try:
-                # Check if we can access the tools list (even if empty)
-                tools = getattr(response, "tools", None)
-                if tools is None:
-                    logger.debug("Session connectivity test failed: no tools attribute in response")
-                    return False
-            except (AttributeError, TypeError) as e:
-                logger.debug(f"Session connectivity test failed while validating response: {e}")
-                return False
-            else:
-                logger.debug(f"Session connectivity test passed: found {len(tools)} tools")
-                return True
+            tools = getattr(response, "tools", None)
+            return tools is not None
+        except Exception as e:
+            logger.debug(f"Session connectivity test failed: {e}")
+            return False
 
     async def get_session(self, context_id: str, connection_params, transport_type: str):
-        """Get or create a persistent session."""
-        # Extract server identifier from connection params for tracking
-        server_identifier = None
-        if transport_type == "stdio" and hasattr(connection_params, "command"):
-            server_identifier = f"stdio_{connection_params.command}"
-        elif transport_type == "sse" and isinstance(connection_params, dict) and "url" in connection_params:
-            server_identifier = f"sse_{connection_params['url']}"
-
-        # Check if we're switching servers for this context
-        server_switched = False
-        if context_id in self._last_server_by_session:
-            last_server = self._last_server_by_session[context_id]
-            if last_server != server_identifier:
-                server_switched = True
-                logger.info(f"Detected server switch for context {context_id}: {last_server} -> {server_identifier}")
-
-        # Update server tracking
-        if server_identifier:
-            self._last_server_by_session[context_id] = server_identifier
-
-        if context_id in self.sessions:
-            session_info = self.sessions[context_id]
-            # Check if session and background task are still alive
-            try:
-                session = session_info["session"]
-                task = session_info["task"]
-
-                # Break down the health check to understand why cleanup is triggered
-                task_not_done = not task.done()
-
-                # Additional check for stream health
-                stream_is_healthy = True
-                try:
-                    # Check if the session's write stream is still open
-                    if hasattr(session, "_write_stream"):
-                        write_stream = session._write_stream
-
-                        # Check for explicit closed state
-                        if hasattr(write_stream, "_closed") and write_stream._closed:
-                            stream_is_healthy = False
-                        # Check anyio stream state for send channels
-                        elif hasattr(write_stream, "_state") and hasattr(write_stream._state, "open_send_channels"):
-                            # Stream is healthy if there are open send channels
-                            stream_is_healthy = write_stream._state.open_send_channels > 0
-                        # Check for other stream closed indicators
-                        elif hasattr(write_stream, "is_closing") and callable(write_stream.is_closing):
-                            stream_is_healthy = not write_stream.is_closing()
-                        # If we can't determine state definitively, try a simple write test
-                        else:
-                            # For streams we can't easily check, assume healthy unless proven otherwise
-                            # The actual tool call will reveal if the stream is truly dead
-                            stream_is_healthy = True
-
-                except (AttributeError, TypeError) as e:
-                    # If we can't check stream health due to missing attributes,
-                    # assume it's healthy and let the tool call fail if it's not
-                    logger.debug(f"Could not check stream health for context_id {context_id}: {e}")
-                    stream_is_healthy = True
-
-                logger.debug(f"Session health check for context_id {context_id}:")
-                logger.debug(f"  - task_not_done: {task_not_done}")
-                logger.debug(f"  - stream_is_healthy: {stream_is_healthy}")
-
-                # For MCP ClientSession, we need both task and stream to be healthy
-                session_is_healthy = task_not_done and stream_is_healthy
-
-                logger.debug(f"  - session_is_healthy: {session_is_healthy}")
-
-                # If we switched servers, always recreate the session to avoid cross-server contamination
-                if server_switched:
-                    logger.info(f"Server switch detected for context_id {context_id}, forcing session recreation")
-                    session_is_healthy = False
-
-                # Always run connectivity test for sessions to ensure they're truly responsive
-                # This is especially important when switching between servers
-                elif session_is_healthy:
-                    logger.debug(f"Running connectivity test for context_id {context_id}")
-                    connectivity_ok = await self._validate_session_connectivity(session)
-                    logger.debug(f"  - connectivity_ok: {connectivity_ok}")
-                    if not connectivity_ok:
-                        session_is_healthy = False
-                        logger.info(
-                            f"Session for context_id {context_id} failed connectivity test, marking as unhealthy"
-                        )
-
-                if session_is_healthy:
-                    logger.debug(f"Session for context_id {context_id} is healthy and responsive, reusing")
+        """
+        Get or create a session with improved reuse strategy.
+        
+        The key insight is that we should reuse sessions based on the server
+        identity (command + args for stdio, URL for SSE) rather than the context_id.
+        This prevents creating a new subprocess for each unique context.
+        """
+        server_key = self._get_server_key(connection_params, transport_type)
+        
+        # Ensure server entry exists
+        if server_key not in self.sessions_by_server:
+            self.sessions_by_server[server_key] = {"sessions": {}, "last_cleanup": asyncio.get_event_loop().time()}
+        
+        server_data = self.sessions_by_server[server_key]
+        sessions = server_data["sessions"]
+        
+        # Try to find a healthy existing session
+        for session_id, session_info in sessions.items():
+            session = session_info["session"]
+            task = session_info["task"]
+            
+            # Check if session is still alive
+            if not task.done():
+                # Update last used time
+                session_info["last_used"] = asyncio.get_event_loop().time()
+                
+                # Quick health check
+                if await self._validate_session_connectivity(session):
+                    logger.debug(f"Reusing existing session {session_id} for server {server_key}")
                     return session
-
-                if not task_not_done:
-                    msg = f"Session for context_id {context_id} failed health check: background task is done"
-                    logger.info(msg)
-                elif not stream_is_healthy:
-                    msg = f"Session for context_id {context_id} failed health check: stream is closed"
-                    logger.info(msg)
-
-            except Exception as e:  # noqa: BLE001
-                msg = f"Session for context_id {context_id} is dead due to exception: {e}"
-                logger.info(msg)
-            # Session is dead, clean it up
-            await self._cleanup_session(context_id)
-
+                else:
+                    logger.info(f"Session {session_id} for server {server_key} failed health check, cleaning up")
+                    await self._cleanup_session_by_id(server_key, session_id)
+            else:
+                # Task is done, clean up
+                logger.info(f"Session {session_id} for server {server_key} task is done, cleaning up")
+                await self._cleanup_session_by_id(server_key, session_id)
+        
+        # Check if we've reached the maximum number of sessions for this server
+        if len(sessions) >= MAX_SESSIONS_PER_SERVER:
+            # Remove the oldest session
+            oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
+            logger.info(f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}")
+            await self._cleanup_session_by_id(server_key, oldest_session_id)
+        
         # Create new session
+        import uuid
+        session_id = f"{server_key}_{len(sessions)}"
+        logger.info(f"Creating new session {session_id} for server {server_key}")
+        
         if transport_type == "stdio":
-            return await self._create_stdio_session(context_id, connection_params)
-        if transport_type == "sse":
-            return await self._create_sse_session(context_id, connection_params)
-        msg = f"Unknown transport type: {transport_type}"
-        raise ValueError(msg)
+            session, task = await self._create_stdio_session(session_id, connection_params)
+        elif transport_type == "sse":
+            session, task = await self._create_sse_session(session_id, connection_params)
+        else:
+            raise ValueError(f"Unknown transport type: {transport_type}")
+        
+        # Store session info
+        sessions[session_id] = {
+            "session": session,
+            "task": task,
+            "type": transport_type,
+            "last_used": asyncio.get_event_loop().time()
+        }
+        
+        return session
 
-    async def _create_stdio_session(self, context_id: str, connection_params):
+    async def _create_stdio_session(self, session_id: str, connection_params):
         """Create a new stdio session as a background task to avoid context issues."""
         import asyncio
-
         from mcp.client.stdio import stdio_client
 
         # Create a future to get the session
@@ -561,15 +566,12 @@ class MCPSessionManager:
 
                         # Keep the session alive until cancelled
                         import anyio
-
                         event = anyio.Event()
                         try:
                             await event.wait()
                         except asyncio.CancelledError:
-                            # Session is being shut down
-                            msg = "Message is shutting down"
-                            logger.info(msg)
-            except Exception as e:  # noqa: BLE001
+                            logger.info(f"Session {session_id} is shutting down")
+            except Exception as e:
                 if not session_future.done():
                     session_future.set_exception(e)
 
@@ -580,28 +582,24 @@ class MCPSessionManager:
 
         # Wait for session to be ready
         try:
-            session = await asyncio.wait_for(session_future, timeout=10.0)  # 10 second timeout for session creation
+            session = await asyncio.wait_for(session_future, timeout=10.0)
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
                 task.cancel()
                 import contextlib
-
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             self._background_tasks.discard(task)
-            msg = f"Timeout waiting for STDIO session to initialize for context {context_id}"
+            msg = f"Timeout waiting for STDIO session {session_id} to initialize"
             logger.error(msg)
             raise ValueError(msg) from timeout_err
-        else:
-            # Store session info
-            self.sessions[context_id] = {"session": session, "task": task, "type": "stdio"}
-            return session
+        
+        return session, task
 
-    async def _create_sse_session(self, context_id: str, connection_params):
+    async def _create_sse_session(self, session_id: str, connection_params):
         """Create a new SSE session as a background task to avoid context issues."""
         import asyncio
-
         from mcp.client.sse import sse_client
 
         # Create a future to get the session
@@ -624,15 +622,12 @@ class MCPSessionManager:
 
                         # Keep the session alive until cancelled
                         import anyio
-
                         event = anyio.Event()
                         try:
                             await event.wait()
                         except asyncio.CancelledError:
-                            # Session is being shut down
-                            msg = "Message is shutting down"
-                            logger.info(msg)
-            except Exception as e:  # noqa: BLE001
+                            logger.info(f"Session {session_id} is shutting down")
+            except Exception as e:
                 if not session_future.done():
                     session_future.set_exception(e)
 
@@ -643,30 +638,38 @@ class MCPSessionManager:
 
         # Wait for session to be ready
         try:
-            session = await asyncio.wait_for(session_future, timeout=10.0)  # 10 second timeout for session creation
+            session = await asyncio.wait_for(session_future, timeout=10.0)
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
                 task.cancel()
                 import contextlib
-
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             self._background_tasks.discard(task)
-            msg = f"Timeout waiting for SSE session to initialize for context {context_id}"
+            msg = f"Timeout waiting for SSE session {session_id} to initialize"
             logger.error(msg)
             raise ValueError(msg) from timeout_err
-        else:
-            # Store session info
-            self.sessions[context_id] = {"session": session, "task": task, "type": "sse"}
-            return session
+        
+        return session, task
 
-    async def _cleanup_session(self, context_id: str):
-        """Clean up a session by cancelling its background task."""
-        if context_id not in self.sessions:
+    async def _cleanup_session_by_id(self, server_key: str, session_id: str):
+        """Clean up a specific session by server key and session ID."""
+        if server_key not in self.sessions_by_server:
             return
-
-        session_info = self.sessions[context_id]
+        
+        server_data = self.sessions_by_server[server_key]
+        # Handle both old and new session structure
+        if isinstance(server_data, dict) and "sessions" in server_data:
+            sessions = server_data["sessions"]
+        else:
+            # Handle old structure where sessions were stored directly
+            sessions = server_data
+        
+        if session_id not in sessions:
+            return
+        
+        session_info = sessions[session_id]
         try:
             # Cancel the background task which will properly close the session
             if "task" in session_info:
@@ -676,19 +679,71 @@ class MCPSessionManager:
                     try:
                         await task
                     except asyncio.CancelledError:
-                        logger.info(f"Issue cancelling task for context_id {context_id}")
-        except Exception as e:  # noqa: BLE001
-            logger.info(f"issue cleaning up mcp session: {e}")
+                        logger.info(f"Cancelled task for session {session_id}")
+        except Exception as e:
+            logger.warning(f"Error cleaning up session {session_id}: {e}")
         finally:
-            del self.sessions[context_id]
-            # Also clean up server tracking
-            if context_id in self._last_server_by_session:
-                del self._last_server_by_session[context_id]
+            # Remove from sessions dict
+            del sessions[session_id]
 
     async def cleanup_all(self):
         """Clean up all sessions."""
-        for context_id in list(self.sessions.keys()):
-            await self._cleanup_session(context_id)
+        # Cancel periodic cleanup task
+        if self._cleanup_task and not self._cleanup_task.done():
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+        
+        # Clean up all sessions
+        for server_key in list(self.sessions_by_server.keys()):
+            server_data = self.sessions_by_server[server_key]
+            # Handle both old and new session structure
+            if isinstance(server_data, dict) and "sessions" in server_data:
+                sessions = server_data["sessions"]
+            else:
+                # Handle old structure where sessions were stored directly
+                sessions = server_data
+            
+            for session_id in list(sessions.keys()):
+                await self._cleanup_session_by_id(server_key, session_id)
+        
+        # Clear the sessions_by_server structure completely
+        self.sessions_by_server.clear()
+        
+        # Clear all background tasks
+        for task in list(self._background_tasks):
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+    async def _cleanup_session(self, context_id: str):
+        """
+        Compatibility method for the old session cleanup interface.
+        
+        This method provides backward compatibility for client code that calls
+        _cleanup_session(context_id) instead of the new _cleanup_session_by_id(server_key, session_id).
+        
+        Since the new session manager doesn't maintain a context_id -> session mapping,
+        we clean up all sessions that might be associated with this context.
+        """
+        # In the old system, context_id was used as the session key
+        # In the new system, we need to find sessions that might be using this context
+        
+        # The safest approach is to clean up all sessions since we can't reliably
+        # map context_id to the specific session in the new structure
+        logger.debug(f"Cleaning up sessions for context_id: {context_id}")
+        
+        # For backward compatibility, we'll clean up all sessions
+        # This is safe because:
+        # 1. Sessions are designed to be recreated on demand
+        # 2. The old behavior was to clean up on disconnect anyway
+        # 3. Multiple contexts can share the same session in the new system
+        await self.cleanup_all()
 
 
 class MCPStdioClient:
