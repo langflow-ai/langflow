@@ -33,22 +33,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Templates",
-      items: [
-        'Templates/basic-prompting',
-        'Templates/simple-agent',
-        'Templates/blog-writer',
-        'Templates/document-qa',
-        'Templates/memory-chatbot',
-        'Templates/vector-store-rag',
-        'Templates/financial-report-parser',
-        'Templates/sequential-agent',
-        'Templates/travel-planning-agent',
-      ],
-    },
-    {
-      type: "category",
-      label: "Flows",
+      label: "Concepts",
       items: [
         {
           type: "doc",
@@ -56,30 +41,66 @@ module.exports = {
           label: "Use the visual editor"
         },
         {
-          type: "doc",
-          id: "Concepts/concepts-flows",
-          label: "Build flows"
+          type: "category",
+          label: "Create flows",
+          items: [
+            {
+              type: "doc",
+              id: "Concepts/concepts-flows",
+              label: "Build flows"
+            },
+            {
+              type: "category",
+              label: "Templates",
+              items: [
+                'Templates/basic-prompting',
+                'Templates/simple-agent',
+                'Templates/blog-writer',
+                'Templates/document-qa',
+                'Templates/memory-chatbot',
+                'Templates/vector-store-rag',
+                'Templates/financial-report-parser',
+                'Templates/sequential-agent',
+                'Templates/travel-planning-agent',
+              ],
+            },
+            {
+              type: "doc",
+              id: "Concepts/concepts-flows-import",
+              label: "Import and export flows"
+            },
+          ],
         },
         {
-          type: "doc",
-          id: "Concepts/concepts-publish",
-          label: "Run flows"
-        },
-        {
-          type: "doc",
-          id: "Concepts/concepts-flows-import",
-          label: "Import and export flows"
+          type: "category",
+          label: "Run flows",
+          items: [
+            {
+              type: "doc",
+              id: "Concepts/concepts-publish",
+              label: "Trigger flows with the Langflow API"
+            },
+            {
+              type: "doc",
+              id: "Develop/webhook",
+              label: "Trigger flows with webhooks"
+            },
+            // TODO: Add "Trigger flows with files".
+            // TODO: Separate concepts-publish.mdx into separate API + Embedded chat widget pages.
+            // TODO: Add MCP Server page.
+          ],
         },
         {
           type: "doc",
           id: "Concepts/concepts-playground",
-          label: "Use the Playground"
+          label: "Test flows in the Playground"
         },
         {
           type: "doc",
           id: "Concepts/concepts-voice-mode",
           label: "Use voice mode"
         },
+        //TODO: Combine voice mode with concepts-playground.mdx
         {
           type: "doc",
           id: "Concepts/concepts-objects",
@@ -90,27 +111,16 @@ module.exports = {
           id: "Concepts/concepts-file-management",
           label: "Manage files"
         },
-      ],
-    },
-    {
-      type: "category",
-      label: "Components",
-      items: [
-        "Concepts/concepts-components",
-        "Components/components-agents",
-        "Components/components-bundles",
-        "Components/components-custom-components",
-        "Components/components-data",
-        "Components/components-embedding-models",
-        "Components/components-helpers",
-        "Components/components-io",
-        "Components/components-logic",
-        "Components/components-memories",
-        "Components/components-models",
-        "Components/components-processing",
-        "Components/components-prompts",
-        "Components/components-tools",
-        "Components/components-vector-stores",
+        {
+          type: "doc",
+          id: "Develop/memory",
+          label: "Manage memory"
+        },
+        {
+          type: "doc",
+          id: "Develop/session-id",
+          label: "Use Session IDs"
+        },
       ],
     },
     {
@@ -163,34 +173,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Develop/memory",
-          label: "Memory management"
-        },
-        {
-          type: "doc",
-          id: "Develop/session-id",
-          label: "Session ID"
-        },
-        {
-          type: "doc",
           id: "Develop/logging",
           label: "Logging"
-        },
-        {
-          type: "doc",
-          id: "Develop/webhook",
-          label: "Webhook"
-        },
-        {
-          type: "category",
-          label: "Clients",
-          items: [
-            {
-              type: "doc",
-              id: "Develop/Clients/typescript-client",
-              label: "TypeScript Client"
-            }
-          ]
         },
       ],
     },
@@ -263,6 +247,27 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Components reference",
+      items: [
+        "Concepts/concepts-components",
+        "Components/components-agents",
+        "Components/components-bundles",
+        "Components/components-custom-components",
+        "Components/components-data",
+        "Components/components-embedding-models",
+        "Components/components-helpers",
+        "Components/components-io",
+        "Components/components-logic",
+        "Components/components-memories",
+        "Components/components-models",
+        "Components/components-processing",
+        "Components/components-prompts",
+        "Components/components-tools",
+        "Components/components-vector-stores",
+      ],
+    },
+    {
+      type: "category",
       label: "API reference",
       items: [
         {
@@ -314,6 +319,11 @@ module.exports = {
           type: "link",
           label: "Langflow API specification",
           href: "/api",
+        },
+        {
+          type: "doc",
+          id: "Develop/Clients/typescript-client",
+          label: "TypeScript Client"
         },
       ],
     },
