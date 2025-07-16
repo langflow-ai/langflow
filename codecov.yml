@@ -1,0 +1,59 @@
+codecov:
+  require_ci_to_pass: false
+  notify:
+    after_n_builds: 2  # Wait for both frontend and backend coverage reports
+
+coverage:
+  precision: 2
+  round: down
+  range: "30...100"
+
+  status:
+    project:
+      default:
+        target: 60%
+        threshold: 3%
+      backend:
+        target: 55%
+        threshold: 5%
+        flags:
+          - backend
+      frontend:
+        target: 70%
+        threshold: 2%
+        flags:
+          - frontend
+
+    patch:
+      default:
+        target: 70%
+        threshold: 3%
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+flags:
+  backend:
+    paths:
+      - src/backend/
+    carryforward: true
+  frontend:
+    paths:
+      - src/frontend/
+    carryforward: true
+
+ignore:
+  - "src/backend/base/langflow/alembic/**"
+  - "src/backend/tests/**"
+  - "src/frontend/tests/**"
+  - "src/frontend/test-results/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "**/node_modules/**"
+  - "**/coverage/**"
+  - "**/__init__.py"
+  - "**/migrations/**"

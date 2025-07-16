@@ -69,7 +69,25 @@ jobs:
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-report=xml --cov-report=html"
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.11' && matrix.group == 1
+        with:
+          file: ./coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+          directory: ./
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.11' && matrix.group == 1
+        with:
+          name: backend-coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 30
 
 
 

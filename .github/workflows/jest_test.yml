@@ -65,6 +65,15 @@ jobs:
           junitxml-title: Unit Test Results
           junitxml-path: src/frontend/test-results/junit.xml
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: src/frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+          directory: src/frontend/coverage/
+
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@v4
         if: always()
