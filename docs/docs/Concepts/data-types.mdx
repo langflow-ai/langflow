@@ -15,7 +15,7 @@ Data types are represented by [port colors](/concepts-components), which can be 
 
 ## Data
 
-The `Data` data type represents structured data with a main text field and additional metadata. It uses a `text_key` to indicate the main text content.
+The `Data` data type represents structured data with a main text field and additional metadata. The main text field is indicated by a `text_key`.
 
 A `Data` port in a component is represented by a red circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#dc2626', fill: '#dc2626' }} />.
 
@@ -27,7 +27,6 @@ A `Data` port in a component is represented by a red circle: <Icon name="Circle"
 - `data`: A Dictionary that stores key-value pairs.
 - `text_key`: Which key in `data` is considered the main text.
 - `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
-
 
 Here's an example of creating a Data object:
 
@@ -61,7 +60,6 @@ When serialized into JSON, the object appears as below:
 ## DataFrame
 
 The `DataFrame` data type is a pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html), which is similar to the tabular data of a CSV file.
-It inherits all pandas DataFrame functionality while providing seamless integration with Langflow's data types.
 
 A `DataFrame` port in a component is represented by a pink circle: <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#ec4899', fill:'#ec4899' }} />.
 
@@ -69,7 +67,7 @@ The Langflow DataFrame also includes convenience methods for working with Langfl
 
 - **Schema:** [`dataframe.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/dataframe.py)
 
-**Key features:**
+**DataFrame object attributes**
 - **Full pandas compatibility:** All pandas DataFrame methods and functionality work as expected.
 - **Langflow integration:** Accepts lists of `Data` objects, dictionaries, or existing DataFrames.
 - **Convenience methods:** `to_data_list()`, `add_row()`, `add_rows()`, `to_lc_documents()`, `to_data()`, `to_message()`.
@@ -77,7 +75,8 @@ The Langflow DataFrame also includes convenience methods for working with Langfl
 
 ### DataFrame structure
 
-A tabular data structure with rows and columns. Keys are columns, and each dictionary in the list is a row.
+A DataFrame has a tabular data structure with rows and columns.
+Keys are columns, and each dictionary in the list is a row.
 
 ```json
 [
@@ -117,12 +116,31 @@ The `Message` object extends `Data` with fields and methods for chat and convers
 - `content_blocks`: Rich content (text, media, code, etc.).
 - `category`: "message", "error", "warning", or "info".
 
-### Message structure example
+### Message structure
 
-A string, such as:
+A "message" in Langflow appears as a string, but it is also a structured object that wraps the message content with other metadata.
+
+For example, Langflow uses the string:
+
 ```
 "Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"
 ```
+
+The Langflow `Message` data type is actually a dictionary, like the example below.
+The `text` field contains the string, while the other fields like `session_id` and `timestamp` contain metadata.
+
+    ```json
+    {
+      "text": "Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com",
+      "sender": "User",
+      "sender_name": "Charlie Lastname",
+      "session_id": "some-session-id",
+      "timestamp": "2024-06-01T12:00:00Z",
+      "files": [],
+      "content_blocks": [],
+      "category": "message"
+    }
+    ```
 
 ## View data types in flows
 
