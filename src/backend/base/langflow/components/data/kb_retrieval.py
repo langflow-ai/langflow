@@ -2,6 +2,8 @@ from pathlib import Path
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, Output, StrInput
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
 KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
@@ -41,6 +43,12 @@ class KBRetrievalComponent(Component):
             method="retrieve_kb_info",
             info="Returns basic metadata of the selected knowledge base.",
         ),
+        Output(
+            name="kb_data",
+            display_name="Knowledge Base Data",
+            method="get_kb_data",
+            info="Returns the data from the selected knowledge base.",
+        ),
     ]
 
     def _get_knowledge_bases(self) -> list[str]:
@@ -65,18 +73,40 @@ class KBRetrievalComponent(Component):
 
         return build_config
 
-    def retrieve_kb_info(self) -> dict:
+    def retrieve_kb_info(self) -> DataFrame:
         """Retrieve basic metadata of the selected knowledge base.
 
-        Args:
-            knowledge_base: The name of the knowledge base to retrieve info from.
+        Returns:
+            A DataFrame containing basic metadata of the knowledge base.
+        """
+        data = Data(
+            name=self.knowledge_base,
+            description=f"Metadata for {self.knowledge_base}",
+            documents_count=0,
+        )
+        return DataFrame(data=[data])
+
+    def get_kb_data(self) -> DataFrame:
+        """Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.
 
         Returns:
-            A dictionary containing basic metadata of the knowledge base.
+            A DataFrame containing the data rows from the knowledge base.
         """
-        # Placeholder for actual retrieval logic
-        return {
-            "name": self.knowledge_base,
-            "description": f"Metadata for {self.knowledge_base}",
-            "documents_count": 0,
-        }
+        kb_root_path = Path(self.kb_root_path).expanduser()
+        kb_path = kb_root_path / self.knowledge_base
+
+        parquet_file = kb_path / "source.parquet"
+        if not parquet_file.exists():
+            msg = f"Parquet file not found: {parquet_file}"
+            raise ValueError(msg)
+        try:
+            import pandas as pd
+
+            parquet_df = pd.read_parquet(parquet_file).to_dict(orient="records")
+            # Convert each record (dict) to a Data object, then create a DataFrame from the list of Data
+            data_list = [Data(**record) for record in parquet_df]
+            return DataFrame(data=data_list)
+
+        except Exception as e:
+            msg = f"Failed to open Parquet file '{parquet_file}': {e}"
+            raise RuntimeError(msg) from e
