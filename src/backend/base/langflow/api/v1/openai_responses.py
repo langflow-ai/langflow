@@ -29,27 +29,26 @@ from .endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 router = APIRouter(tags=["OpenAI Responses API"])
 
 
-def has_chat_input(flow_data: dict) -> bool:
+def has_chat_input(flow_data: dict | None) -> bool:
     """Check if the flow has a chat input component."""
     if not flow_data or "nodes" not in flow_data:
         return False
 
-    for node in flow_data["nodes"]:
-        if node.get("data", {}).get("type") in ["ChatInput", "Chat Input"]:
-            return True
-    return False
+    return any(node.get("data", {}).get("type") in ["ChatInput", "Chat Input"] for node in flow_data["nodes"])
 
 
 async def run_flow_for_openai_responses(
     flow: FlowRead,
     request: OpenAIResponsesRequest,
     api_key_user: UserRead,
+    *,
     stream: bool = False,
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
     # Check if flow has chat input
     if not has_chat_input(flow.data):
-        raise ValueError("Flow must have a ChatInput component to be compatible with OpenAI Responses API")
+        msg = "Flow must have a ChatInput component to be compatible with OpenAI Responses API"
+        raise ValueError(msg)
 
     # Use previous_response_id as session_id for conversation continuity
     # If no previous_response_id, create a new session_id
@@ -135,7 +134,8 @@ async def run_flow_for_openai_responses(
                                                     tool_input = step.get("tool_input", {})
                                                     tool_output = step.get("output")
 
-                                                    # Only emit tool calls with explicit tool names and meaningful arguments
+                                                    # Only emit tool calls with explicit tool names and
+                                                    # meaningful arguments
                                                     if tool_name and tool_input and len(tool_input) > 0:
                                                         # Create unique identifier for this tool call
                                                         tool_signature = (
@@ -162,7 +162,10 @@ async def run_flow_for_openai_responses(
                                                                 "call_id": call_id,
                                                             },
                                                         }
-                                                        yield f"event: response.output_item.added\ndata: {json.dumps(tool_call_event)}\n\n"
+                                                        yield (
+                                                            f"event: response.output_item.added\n"
+                                                            f"data: {json.dumps(tool_call_event)}\n\n"
+                                                        )
 
                                                         # If there's output, send completion event
                                                         if tool_output is not None:
@@ -178,7 +181,10 @@ async def run_flow_for_openai_responses(
                                                                     "call_id": call_id,
                                                                 },
                                                             }
-                                                            yield f"event: response.output_item.done\ndata: {json.dumps(tool_done_event)}\n\n"
+                                                            yield (
+                                                                f"event: response.output_item.done\n"
+                                                                f"data: {json.dumps(tool_done_event)}\n\n"
+                                                            )
 
                                     # Extract text content for streaming (only AI responses)
                                     if (
@@ -212,7 +218,7 @@ async def run_flow_for_openai_responses(
                 yield f"data: {final_chunk.model_dump_json()}\n\n"
                 yield "data: [DONE]\n\n"
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error(f"Error in stream generator: {e}")
                 error_response = create_openai_error(
                     message=str(e),
@@ -356,9 +362,7 @@ async def create_response(
                 ),
             )
 
-        return result
-
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.error(f"Error processing OpenAI Responses request: {exc}")
 
         # Log telemetry for failed completion
@@ -378,3 +382,4 @@ async def create_response(
             type_="processing_error",
         )
         return OpenAIErrorResponse(error=error_response["error"])
+    return result
