@@ -8,7 +8,7 @@ on:
       ANTHROPIC_API_KEY:
         required: true
       CODECOV_TOKEN:
-        required: true
+        required: false
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"

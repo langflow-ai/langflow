@@ -4,7 +4,7 @@ on:
   workflow_call:
     secrets:
       CODECOV_TOKEN:
-        required: true
+        required: false
     inputs:
       ref:
         description: "(Optional) ref to checkout"
