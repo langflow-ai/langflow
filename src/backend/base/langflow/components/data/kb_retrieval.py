@@ -48,7 +48,7 @@ class KBRetrievalComponent(Component):
             display_name="Knowledge Base Data",
             method="get_kb_data",
             info="Returns the data from the selected knowledge base.",
-        ),  
+        ),
     ]
 
     def _get_knowledge_bases(self) -> list[str]:
@@ -101,6 +101,7 @@ class KBRetrievalComponent(Component):
             raise ValueError(msg)
         try:
             import pandas as pd
+
             parquet_df = pd.read_parquet(parquet_file).to_dict(orient="records")
             # Convert each record (dict) to a Data object, then create a DataFrame from the list of Data
             data_list = [Data(**record) for record in parquet_df]
@@ -109,4 +110,3 @@ class KBRetrievalComponent(Component):
         except Exception as e:
             msg = f"Failed to open Parquet file '{parquet_file}': {e}"
             raise RuntimeError(msg) from e
-
