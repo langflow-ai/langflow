@@ -280,9 +280,7 @@ class KBIngestionComponent(Component):
             return np.empty((0, 0)), []
 
         # Combine text from multiple columns
-        texts: list[str] = (
-            df_source[valid_cols].astype(str).agg(" ".join, axis=1).tolist()
-        )
+        texts: list[str] = df_source[valid_cols].astype(str).agg(" ".join, axis=1).tolist()
 
         # Generate embeddings using the model (following Embedding Model patterns)
         try:
@@ -292,13 +290,8 @@ class KBIngestionComponent(Component):
             elif hasattr(embedder, "embed"):
                 embeddings = np.array([embedder.embed(t) for t in texts])
             else:
-                msg = (
-                    "Embedding Model must expose `.embed_documents(list[str])` "
-                    "or `.embed(str)`."
-                )
-                raise AttributeError(
-                    msg
-                )
+                msg = "Embedding Model must expose `.embed_documents(list[str])` or `.embed(str)`."
+                raise AttributeError(msg)
 
             embed_index = [str(uuid.uuid4()) for _ in texts]
         except Exception as e:
@@ -309,8 +302,14 @@ class KBIngestionComponent(Component):
         else:
             return embeddings, embed_index
 
-    def _save_kb_files(self, kb_path: Path, df_source: pd.DataFrame, config_list: list[dict[str, Any]],
-                       embeddings: np.ndarray, embed_index: list[str]) -> None:
+    def _save_kb_files(
+        self,
+        kb_path: Path,
+        df_source: pd.DataFrame,
+        config_list: list[dict[str, Any]],
+        embeddings: np.ndarray,
+        embed_index: list[str],
+    ) -> None:
         """Save KB files using File Component storage patterns."""
         try:
             # Create directory (following File Component patterns)
@@ -353,10 +352,7 @@ class KBIngestionComponent(Component):
                 # Count words (split by whitespace)
                 total_words += col_data.str.split().str.len().fillna(0).sum()
 
-        return {
-            "word_count": int(total_words),
-            "char_count": int(total_chars)
-        }
+        return {"word_count": int(total_words), "char_count": int(total_chars)}
 
     def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:
         """Build detailed column metadata."""
@@ -365,12 +361,7 @@ class KBIngestionComponent(Component):
             "mapped_columns": len(config_list),
             "unmapped_columns": len(df_source.columns) - len(config_list),
             "columns": [],
-            "summary": {
-                "vectorized_columns": [],
-                "citation_columns": [],
-                "identifier_columns": [],
-                "data_types": {}
-            }
+            "summary": {"vectorized_columns": [], "citation_columns": [], "identifier_columns": [], "data_types": {}},
         }
 
         for config in config_list:
@@ -381,13 +372,15 @@ class KBIngestionComponent(Component):
             identifier = config.get("identifier") == "True" or config.get("identifier") is True
 
             # Add to columns list
-            metadata["columns"].append({
-                "name": col_name,
-                "data_type": data_type,
-                "vectorize": vectorize,
-                "citation": citation,
-                "identifier": identifier
-            })
+            metadata["columns"].append(
+                {
+                    "name": col_name,
+                    "data_type": data_type,
+                    "vectorize": vectorize,
+                    "citation": citation,
+                    "identifier": identifier,
+                }
+            )
 
             # Update summary
             if vectorize:
@@ -473,11 +466,7 @@ class KBIngestionComponent(Component):
         # Convert each row to a Data object
         for idx, row in df_source.iterrows():
             # Build content text from vectorized columns using list comprehension
-            content_parts = [
-                str(row[col])
-                for col in content_cols
-                if col in row and pd.notna(row[col])
-            ]
+            content_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
 
             page_content = " ".join(content_parts)
 
@@ -552,10 +541,7 @@ class KBIngestionComponent(Component):
 
             # Set status message
             vector_count = len(embeddings) if embeddings.size > 0 else 0
-            self.status = (
-                f"✅ KB **{self.kb_name}** saved · {len(df_source)} rows, "
-                f"{vector_count} embedded."
-            )
+            self.status = f"✅ KB **{self.kb_name}** saved · {len(df_source)} rows, {vector_count} embedded."
 
             return Data(data=meta)
 
@@ -569,6 +555,7 @@ class KBIngestionComponent(Component):
     def status_message(self) -> Message:
         """Return the human-readable status string."""
         return Message(text=self.status or "KB ingestion completed.")
+
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on provider selection."""
         if field_name == "embedding_provider":

@@ -103,7 +103,7 @@ if __name__ == "__main__":
         "The quick brown fox jumps over the lazy dog",
         "A quick brown dog runs fast",
         "The lazy cat sleeps all day",
-        "Brown animals are quick and fast"
+        "Brown animals are quick and fast",
     ]
 
     # Query terms
@@ -113,12 +113,12 @@ if __name__ == "__main__":
     tfidf_scores = compute_tfidf(docs, query)
     print("TF-IDF Scores:")
     for i, score in enumerate(tfidf_scores):
-        print(f"Document {i+1}: {score:.4f}")
+        print(f"Document {i + 1}: {score:.4f}")
 
-    print("\n" + "="*40 + "\n")
+    print("\n" + "=" * 40 + "\n")
 
     # Compute BM25 scores
     bm25_scores = compute_bm25(docs, query)
     print("BM25 Scores:")
     for i, score in enumerate(bm25_scores):
-        print(f"Document {i+1}: {score:.4f}")
+        print(f"Document {i + 1}: {score:.4f}")
