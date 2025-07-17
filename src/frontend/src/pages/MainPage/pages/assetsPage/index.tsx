@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import FilesTab from './components/FilesTab';
-import KnowledgeBasesTab from './components/KnowledgeBasesTab';
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FilesTab from "./components/FilesTab";
+import KnowledgeBasesTab from "./components/KnowledgeBasesTab";
 
 export const FilesPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [quickFilterText, setQuickFilterText] = useState('');
+  const [quickFilterText, setQuickFilterText] = useState("");
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -18,13 +18,13 @@ export const FilesPage = () => {
   // Determine current tab based on URL
   const getCurrentTab = () => {
     const path = location.pathname;
-    if (path.includes('/assets/knowledge-bases')) {
-      return 'knowledge-bases';
-    } else if (path.includes('/assets/files')) {
-      return 'files';
+    if (path.includes("/assets/knowledge-bases")) {
+      return "knowledge-bases";
+    } else if (path.includes("/assets/files")) {
+      return "files";
     } else {
       // Default to files tab for /assets root
-      return 'files';
+      return "files";
     }
   };
 
@@ -38,32 +38,32 @@ export const FilesPage = () => {
   // Handle tab change and update URL
   const handleTabChange = (value: string) => {
     setTabValue(value);
-    if (value === 'files') {
-      navigate('/assets/files', { replace: true });
-    } else if (value === 'knowledge-bases') {
-      navigate('/assets/knowledge-bases', { replace: true });
+    if (value === "files") {
+      navigate("/assets/files", { replace: true });
+    } else if (value === "knowledge-bases") {
+      navigate("/assets/knowledge-bases", { replace: true });
     }
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -114,12 +114,12 @@ export const FilesPage = () => {
                   Knowledge Bases
                 </TabsTrigger>
               </TabsList>
-              {tabValue === 'files' && (
+              {tabValue === "files" && (
                 <TabsContent value="files" className="flex h-full flex-col">
                   <FilesTab {...tabProps} />
                 </TabsContent>
               )}
-              {tabValue === 'knowledge-bases' && (
+              {tabValue === "knowledge-bases" && (
                 <TabsContent
                   value="knowledge-bases"
                   className="flex h-full flex-col"
