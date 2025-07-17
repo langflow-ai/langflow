@@ -22,7 +22,7 @@ import AuthModal from "@/modals/authModal";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import type { MCPSettingsType, AuthSettingsType } from "@/types/mcp";
+import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
 
@@ -85,7 +85,7 @@ const MemoizedCodeTag = memo(
         <span>{children}</span>
       </div>
     </div>
-  )
+  ),
 );
 MemoizedCodeTag.displayName = "MemoizedCodeTag";
 
@@ -151,7 +151,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
-      ?.name
+      ?.name,
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
@@ -160,7 +160,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
-    isLocalConnection ? "Auto install" : "JSON"
+    isLocalConnection ? "Auto install" : "JSON",
   );
 
   const handleOnNewValue = (value: any) => {
@@ -253,7 +253,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "Basic ${btoa(
           `${currentAuthSettings.username || "USERNAME"}:${
             currentAuthSettings.password || "PASSWORD"
-          }`
+          }`,
         )}",`;
       case "bearer":
         return `
@@ -284,8 +284,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-          ? "wsl"
-          : "uvx"
+            ? "wsl"
+            : "uvx"
       }",
       "args": [
         ${
@@ -294,9 +294,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-            ? `"uvx",
+              ? `"uvx",
         `
-            : ""
+              : ""
         }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
       ]
@@ -536,7 +536,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
                           });
                           setLoadingMCP(
-                            loadingMCP.filter((name) => name !== installer.name)
+                            loadingMCP.filter(
+                              (name) => name !== installer.name,
+                            ),
                           );
                         },
                         onError: (e) => {
@@ -545,10 +547,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             list: [e.message],
                           });
                           setLoadingMCP(
-                            loadingMCP.filter((name) => name !== installer.name)
+                            loadingMCP.filter(
+                              (name) => name !== installer.name,
+                            ),
                           );
                         },
-                      }
+                      },
                     );
                   }}
                 >
@@ -566,12 +570,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       installedMCP?.includes(installer.name)
                         ? "Check"
                         : loadingMCP.includes(installer.name)
-                        ? "Loader2"
-                        : "Plus"
+                          ? "Loader2"
+                          : "Plus"
                     }
                     className={cn(
                       "h-4 w-4",
-                      loadingMCP.includes(installer.name) && "animate-spin"
+                      loadingMCP.includes(installer.name) && "animate-spin",
                     )}
                   />
                 </Button>

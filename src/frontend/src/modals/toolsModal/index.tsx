@@ -37,7 +37,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
       isAction = false,
       setOpen,
     }: ToolsModalProps,
-    ref: ForwardedRef<AgGridReact>
+    ref: ForwardedRef<AgGridReact>,
   ) => {
     const handleSetOpen = (newOpen: boolean) => {
       if (setOpen) {
@@ -91,7 +91,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
         </BaseModal.Content>
       </BaseModal>
     );
-  }
+  },
 );
 
 export default ToolsModal;

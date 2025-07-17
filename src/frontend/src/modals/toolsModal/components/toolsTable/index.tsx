@@ -66,7 +66,7 @@ export default function ToolsTable({
           filter.some(
             (row) =>
               (row.display_name ?? row.name) ===
-              (node.data.display_name ?? node.data.name)
+              (node.data.display_name ?? node.data.name),
           )
         ) {
           node.setSelected(true);
@@ -95,8 +95,8 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-              ? sanitizeMcpName(display_name || row.name, 46)
-              : display_name
+                ? sanitizeMcpName(display_name || row.name, 46)
+                : display_name
           ).slice(0, 46);
 
           const processedDescription =
@@ -104,13 +104,13 @@ export default function ToolsTable({
             row.description !== row.display_description
               ? row.description
               : isAction
-              ? ""
-              : row.display_description;
+                ? ""
+                : row.display_description;
 
           return selectedRows?.some(
             (selected) =>
               (selected.display_name ?? selected.name) ===
-              (row.display_name ?? row.name)
+              (row.display_name ?? row.name),
           )
             ? {
                 ...row,
@@ -150,7 +150,7 @@ export default function ToolsTable({
               params.data.display_name !== ""
                 ? params.data.display_name
                 : params.data.name,
-              ["space_case"]
+              ["space_case"],
             )
           : params.data.display_name,
     },
@@ -173,11 +173,11 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-          ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
-          : parseString(params.data.tags.join(", "), [
-              "snake_case",
-              "uppercase",
-            ]),
+            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
+            : parseString(params.data.tags.join(", "), [
+                "snake_case",
+                "uppercase",
+              ]),
       cellClass: "text-muted-foreground",
     },
     {
@@ -196,7 +196,7 @@ export default function ToolsTable({
 
   const handleSidebarInputChange = (
     field: "name" | "description",
-    value: string
+    value: string,
   ) => {
     if (!focusedRow) return;
 
@@ -212,7 +212,7 @@ export default function ToolsTable({
       });
 
       const updatedData = data.map((row) =>
-        (row.display_name ?? row.name) === originalName ? updatedRow : row
+        (row.display_name ?? row.name) === originalName ? updatedRow : row,
       );
       setData(updatedData);
     }
@@ -224,7 +224,7 @@ export default function ToolsTable({
         display_name: value.title,
         name: key,
         description: value.description ?? null,
-      })
+      }),
     );
   }, [focusedRow]);
 

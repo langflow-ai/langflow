@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 import type { AuthSettingsType } from "@/types/mcp";
 import BaseModal from "../baseModal";
-import { Separator } from "@/components/ui/separator";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 
 interface AuthModalProps {
   open: boolean;
@@ -16,7 +16,7 @@ interface AuthModalProps {
 
 const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   const [authType, setAuthType] = useState<string>(
-    authSettings?.auth_type || "none"
+    authSettings?.auth_type || "none",
   );
   const [authFields, setAuthFields] = useState<{
     apiKey?: string;
