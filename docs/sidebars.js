@@ -102,18 +102,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Agents",
+      label: "Agents and MCP",
       items: [
         "Agents/agents",
         "Agents/agents-tools",
-      ],
-    },
-    {
-      type: "category",
-      label: "Model Context Protocol (MCP)",
-      items: [
-        "Concepts/mcp-server",
         "Components/mcp-client",
+        "Concepts/mcp-server",
         "Integrations/mcp-component-astra",
       ],
     },
