@@ -1,48 +1,48 @@
-import { lazy } from 'react';
+import { lazy } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
   Outlet,
   Route,
-} from 'react-router-dom';
-import { ProtectedAdminRoute } from './components/authorization/authAdminGuard';
-import { ProtectedRoute } from './components/authorization/authGuard';
-import { ProtectedLoginRoute } from './components/authorization/authLoginGuard';
-import { AuthSettingsGuard } from './components/authorization/authSettingsGuard';
-import ContextWrapper from './contexts';
-import CustomDashboardWrapperPage from './customization/components/custom-DashboardWrapperPage';
-import { CustomNavigate } from './customization/components/custom-navigate';
-import { BASENAME } from './customization/config-constants';
+} from "react-router-dom";
+import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
+import { ProtectedRoute } from "./components/authorization/authGuard";
+import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
+import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import ContextWrapper from "./contexts";
+import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
+import { CustomNavigate } from "./customization/components/custom-navigate";
+import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
-} from './customization/feature-flags';
-import { CustomRoutesStore } from './customization/utils/custom-routes-store';
-import { CustomRoutesStorePages } from './customization/utils/custom-routes-store-pages';
-import { AppAuthenticatedPage } from './pages/AppAuthenticatedPage';
-import { AppInitPage } from './pages/AppInitPage';
-import { AppWrapperPage } from './pages/AppWrapperPage';
-import FlowPage from './pages/FlowPage';
-import LoginPage from './pages/LoginPage';
-import FilesPage from './pages/MainPage/pages/assetsPage';
-import HomePage from './pages/MainPage/pages/homePage';
-import CollectionPage from './pages/MainPage/pages/main-page';
-import SettingsPage from './pages/SettingsPage';
-import ApiKeysPage from './pages/SettingsPage/pages/ApiKeysPage';
-import GeneralPage from './pages/SettingsPage/pages/GeneralPage';
-import GlobalVariablesPage from './pages/SettingsPage/pages/GlobalVariablesPage';
-import MCPServersPage from './pages/SettingsPage/pages/MCPServersPage';
-import MessagesPage from './pages/SettingsPage/pages/messagesPage';
-import ShortcutsPage from './pages/SettingsPage/pages/ShortcutsPage';
-import ViewPage from './pages/ViewPage';
+} from "./customization/feature-flags";
+import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
+import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
+import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
+import { AppInitPage } from "./pages/AppInitPage";
+import { AppWrapperPage } from "./pages/AppWrapperPage";
+import FlowPage from "./pages/FlowPage";
+import LoginPage from "./pages/LoginPage";
+import FilesPage from "./pages/MainPage/pages/assetsPage";
+import HomePage from "./pages/MainPage/pages/homePage";
+import CollectionPage from "./pages/MainPage/pages/main-page";
+import SettingsPage from "./pages/SettingsPage";
+import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
+import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
+import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
+import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
+import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import ViewPage from "./pages/ViewPage";
 
-const AdminPage = lazy(() => import('./pages/AdminPage'));
-const LoginAdminPage = lazy(() => import('./pages/AdminPage/LoginPage'));
-const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage'));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
+const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
-const PlaygroundPage = lazy(() => import('./pages/Playground'));
+const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
-const SignUp = lazy(() => import('./pages/SignUpPage'));
+const SignUp = lazy(() => import("./pages/SignUpPage"));
 
 const router = createBrowserRouter(
   createRoutesFromElements([
@@ -57,7 +57,7 @@ const router = createBrowserRouter(
       />
     </Route>,
     <Route
-      path={ENABLE_CUSTOM_PARAM ? '/:customParam?' : '/'}
+      path={ENABLE_CUSTOM_PARAM ? "/:customParam?" : "/"}
       element={
         <ContextWrapper key={2}>
           <Outlet />
@@ -79,7 +79,7 @@ const router = createBrowserRouter(
                 <Route path="" element={<CollectionPage />}>
                   <Route
                     index
-                    element={<CustomNavigate replace to={'flows'} />}
+                    element={<CustomNavigate replace to={"flows"} />}
                   />
                   {ENABLE_FILE_MANAGEMENT && (
                     <Route path="files" element={<FilesPage />} />
@@ -119,7 +119,7 @@ const router = createBrowserRouter(
                 <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index
-                    element={<CustomNavigate replace to={'general'} />}
+                    element={<CustomNavigate replace to={"general"} />}
                   />
                   <Route
                     path="global-variables"
@@ -190,7 +190,7 @@ const router = createBrowserRouter(
       <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
   ]),
-  { basename: BASENAME || undefined }
+  { basename: BASENAME || undefined },
 );
 
 export default router;

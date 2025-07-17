@@ -2,30 +2,30 @@ import type {
   ColDef,
   NewValueParams,
   SelectionChangedEvent,
-} from 'ag-grid-community';
-import type { AgGridReact } from 'ag-grid-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import ShadTooltip from '@/components/common/shadTooltipComponent';
-import CardsWrapComponent from '@/components/core/cardsWrapComponent';
-import TableComponent from '@/components/core/parameterRenderComponent/components/tableComponent';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import Loading from '@/components/ui/loading';
-import { useGetFilesV2 } from '@/controllers/API/queries/file-management';
-import { useDeleteFilesV2 } from '@/controllers/API/queries/file-management/use-delete-files';
-import { usePostRenameFileV2 } from '@/controllers/API/queries/file-management/use-put-rename-file';
-import { useCustomHandleBulkFilesDownload } from '@/customization/hooks/use-custom-handle-bulk-files-download';
-import { customPostUploadFileV2 } from '@/customization/hooks/use-custom-post-upload-file';
-import useUploadFile from '@/hooks/files/use-upload-file';
-import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
-import FilesContextMenuComponent from '@/modals/fileManagerModal/components/filesContextMenuComponent';
-import useAlertStore from '@/stores/alertStore';
-import { formatFileSize } from '@/utils/stringManipulation';
-import { FILE_ICONS } from '@/utils/styleUtils';
-import { cn } from '@/utils/utils';
-import { sortByDate } from '../../../utils/sort-flows';
-import DragWrapComponent from './dragWrapComponent';
+} from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import Loading from "@/components/ui/loading";
+import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
+import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
+import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
+import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/use-custom-handle-bulk-files-download";
+import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
+import useUploadFile from "@/hooks/files/use-upload-file";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
+import useAlertStore from "@/stores/alertStore";
+import { formatFileSize } from "@/utils/stringManipulation";
+import { FILE_ICONS } from "@/utils/styleUtils";
+import { cn } from "@/utils/utils";
+import { sortByDate } from "../../../utils/sort-flows";
+import DragWrapComponent from "./dragWrapComponent";
 
 interface FilesTabProps {
   quickFilterText: string;
@@ -48,8 +48,8 @@ const FilesTab = ({
 }: FilesTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
   const { data: files } = useGetFilesV2();
-  const setErrorData = useAlertStore(state => state.setErrorData);
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { mutate: rename } = usePostRenameFileV2();
@@ -66,8 +66,8 @@ const FilesTab = ({
   const handleOpenRename = (id: string, name: string) => {
     if (tableRef.current) {
       tableRef.current.api.startEditingCell({
-        rowIndex: files?.findIndex(file => file.id === id) ?? 0,
-        colKey: 'name',
+        rowIndex: files?.findIndex((file) => file.id === id) ?? 0,
+        colKey: "name",
       });
     }
   };
@@ -80,12 +80,12 @@ const FilesTab = ({
         files: files,
       });
       setSuccessData({
-        title: `File${filesIds.length > 1 ? 's' : ''} uploaded successfully`,
+        title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
       });
     } catch (error: any) {
       setErrorData({
-        title: 'Error uploading file',
-        list: [error.message || 'An error occurred while uploading the file'],
+        title: "Error uploading file",
+        list: [error.message || "An error occurred while uploading the file"],
       });
     }
   };
@@ -113,17 +113,17 @@ const FilesTab = ({
 
   const colDefs: ColDef[] = [
     {
-      headerName: 'Name',
-      field: 'name',
+      headerName: "Name",
+      field: "name",
       flex: 2,
       headerCheckboxSelection: true,
       checkboxSelection: true,
       editable: true,
-      filter: 'agTextColumnFilter',
+      filter: "agTextColumnFilter",
       cellClass:
-        'cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none',
-      cellRenderer: params => {
-        const type = params.data.path.split('.')[1]?.toLowerCase();
+        "cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
+      cellRenderer: (params) => {
+        const type = params.data.path.split(".")[1]?.toLowerCase();
         return (
           <div className="flex items-center gap-4 font-medium">
             {params.data.progress !== undefined &&
@@ -134,22 +134,22 @@ const FilesTab = ({
             ) : (
               <div className="file-icon pointer-events-none relative">
                 <ForwardedIconComponent
-                  name={FILE_ICONS[type]?.icon ?? 'File'}
+                  name={FILE_ICONS[type]?.icon ?? "File"}
                   className={cn(
-                    '-mx-[3px] h-6 w-6 shrink-0',
+                    "-mx-[3px] h-6 w-6 shrink-0",
                     params.data.progress !== undefined
-                      ? 'text-placeholder-foreground'
-                      : FILE_ICONS[type]?.color ?? undefined
+                      ? "text-placeholder-foreground"
+                      : (FILE_ICONS[type]?.color ?? undefined),
                   )}
                 />
               </div>
             )}
             <div
               className={cn(
-                'flex items-center gap-2 text-sm font-medium',
+                "flex items-center gap-2 text-sm font-medium",
                 params.data.progress !== undefined &&
                   params.data.progress === -1 &&
-                  'pointer-events-none text-placeholder-foreground'
+                  "pointer-events-none text-placeholder-foreground",
               )}
             >
               {params.value}.{type}
@@ -157,10 +157,10 @@ const FilesTab = ({
             {params.data.progress !== undefined &&
             params.data.progress === -1 ? (
               <span className="text-xs text-primary">
-                Upload failed,{' '}
+                Upload failed,{" "}
                 <span
                   className="cursor-pointer text-accent-pink-foreground underline"
-                  onClick={e => {
+                  onClick={(e) => {
                     e.stopPropagation();
                     if (params.data.file) {
                       uploadFileDirect({ file: params.data.file });
@@ -178,48 +178,48 @@ const FilesTab = ({
       },
     },
     {
-      headerName: 'Type',
-      field: 'path',
+      headerName: "Type",
+      field: "path",
       flex: 1,
-      filter: 'agTextColumnFilter',
+      filter: "agTextColumnFilter",
       editable: false,
-      valueFormatter: params => {
-        return params.value.split('.')[1]?.toUpperCase();
+      valueFormatter: (params) => {
+        return params.value.split(".")[1]?.toUpperCase();
       },
       cellClass:
-        'text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none',
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
     },
     {
-      headerName: 'Size',
-      field: 'size',
+      headerName: "Size",
+      field: "size",
       flex: 1,
-      valueFormatter: params => {
+      valueFormatter: (params) => {
         return formatFileSize(params.value);
       },
       editable: false,
       cellClass:
-        'text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none',
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
     },
     {
-      headerName: 'Modified',
-      field: 'updated_at',
-      valueFormatter: params => {
+      headerName: "Modified",
+      field: "updated_at",
+      valueFormatter: (params) => {
         return params.data.progress
-          ? ''
-          : new Date(params.value + 'Z').toLocaleString();
+          ? ""
+          : new Date(params.value + "Z").toLocaleString();
       },
       editable: false,
       flex: 1,
       resizable: false,
       cellClass:
-        'text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none',
+        "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
     },
     {
       maxWidth: 60,
       editable: false,
       resizable: false,
-      cellClass: 'cursor-default',
-      cellRenderer: params => {
+      cellClass: "cursor-default",
+      cellRenderer: (params) => {
         return (
           <div className="flex h-full cursor-default items-center justify-center">
             {!params.data.progress && (
@@ -252,30 +252,30 @@ const FilesTab = ({
       selectedFiles,
       setSuccessData,
       setErrorData,
-      setIsDownloading
+      setIsDownloading,
     );
   };
 
   const handleDelete = () => {
     deleteFiles(
       {
-        ids: selectedFiles.map(file => file.id),
+        ids: selectedFiles.map((file) => file.id),
       },
       {
-        onSuccess: data => {
+        onSuccess: (data) => {
           setSuccessData({ title: data.message });
           setQuantitySelected(0);
           setSelectedFiles([]);
         },
-        onError: error => {
+        onError: (error) => {
           setErrorData({
-            title: 'Error deleting files',
+            title: "Error deleting files",
             list: [
-              error.message || 'An error occurred while deleting the files',
+              error.message || "An error occurred while deleting the files",
             ],
           });
         },
-      }
+      },
     );
   };
 
@@ -314,8 +314,8 @@ const FilesTab = ({
               type="text"
               placeholder={`Search files...`}
               className="mr-2 w-full"
-              value={quickFilterText || ''}
-              onChange={event => {
+              value={quickFilterText || ""}
+              onChange={(event) => {
                 setQuickFilterText(event.target.value);
               }}
             />
@@ -344,7 +344,7 @@ const FilesTab = ({
                 suppressRowClickSelection={!isShiftPressed}
                 editable={[
                   {
-                    field: 'name',
+                    field: "name",
                     onUpdate: handleRename,
                     editableCell: true,
                   },
@@ -355,12 +355,12 @@ const FilesTab = ({
                 rowData={files.sort((a, b) => {
                   return sortByDate(
                     a.updated_at ?? a.created_at,
-                    b.updated_at ?? b.created_at
+                    b.updated_at ?? b.created_at,
                   );
                 })}
                 className={cn(
-                  'ag-no-border group w-full',
-                  isShiftPressed && quantitySelected > 0 && 'no-select-cells'
+                  "ag-no-border group w-full",
+                  isShiftPressed && quantitySelected > 0 && "no-select-cells",
                 )}
                 pagination
                 ref={tableRef}
@@ -368,22 +368,22 @@ const FilesTab = ({
                 gridOptions={{
                   stopEditingWhenCellsLoseFocus: true,
                   ensureDomOrder: true,
-                  colResizeDefault: 'shift',
+                  colResizeDefault: "shift",
                 }}
               />
 
               <div
                 className={cn(
-                  'pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity',
-                  selectedFiles.length > 0 ? 'opacity-100' : 'opacity-0'
+                  "pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity",
+                  selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
                 )}
               >
                 <div
                   className={cn(
-                    'ml-12 flex h-full flex-1 items-center justify-between bg-background',
+                    "ml-12 flex h-full flex-1 items-center justify-between bg-background",
                     selectedFiles.length > 0
-                      ? 'pointer-events-auto'
-                      : 'pointer-events-none'
+                      ? "pointer-events-auto"
+                      : "pointer-events-none",
                   )}
                 >
                   <span className="text-xs text-muted-foreground">
@@ -402,7 +402,7 @@ const FilesTab = ({
 
                     <DeleteConfirmationModal
                       onConfirm={handleDelete}
-                      description={'file' + (quantitySelected > 1 ? 's' : '')}
+                      description={"file" + (quantitySelected > 1 ? "s" : "")}
                     >
                       <Button
                         variant="destructive"

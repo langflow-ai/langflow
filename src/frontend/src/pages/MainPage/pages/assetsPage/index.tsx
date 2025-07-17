@@ -1,36 +1,36 @@
-import { useEffect, useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import FilesTab from './components/FilesTab';
-import KnowledgeBasesTab from './components/KnowledgeBasesTab';
+import { useEffect, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FilesTab from "./components/FilesTab";
+import KnowledgeBasesTab from "./components/KnowledgeBasesTab";
 
 export const FilesPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [quickFilterText, setQuickFilterText] = useState('');
-  const [tabValue, setTabValue] = useState('files');
+  const [quickFilterText, setQuickFilterText] = useState("");
+  const [tabValue, setTabValue] = useState("files");
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -81,12 +81,12 @@ export const FilesPage = () => {
                   Knowledge Bases
                 </TabsTrigger>
               </TabsList>
-              {tabValue === 'files' && (
+              {tabValue === "files" && (
                 <TabsContent value="files" className="flex h-full flex-col">
                   <FilesTab {...tabProps} />
                 </TabsContent>
               )}
-              {tabValue === 'knowledge-bases' && (
+              {tabValue === "knowledge-bases" && (
                 <TabsContent
                   value="knowledge-bases"
                   className="flex h-full flex-col"
