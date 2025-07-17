@@ -76,6 +76,7 @@ def detect_embedding_provider(kb_path: Path) -> str:
 
         except (OSError, json.JSONDecodeError) as _:
             import logging
+
             logging.exception("Error reading config file '%s'", config_file)
             continue
 
@@ -151,6 +152,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
                         schema_data = None
             except (ValueError, TypeError, OSError) as _:
                 import logging
+
                 logging.exception("Error reading schema file '%s'", schema_file)
 
         # Process source.parquet for text metrics
@@ -173,10 +175,12 @@ def get_kb_metadata(kb_path: Path) -> dict:
 
             except (OSError, ValueError, TypeError) as _:
                 import logging
+
                 logging.exception("Error processing source.parquet file '%s'", source_file)
 
     except Exception as _:
         import logging
+
         logging.exception("Exception occurred while extracting metadata from '%s'", kb_path)
 
     return metadata
@@ -221,6 +225,7 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
             except OSError as _:
                 # Log the exception and skip directories that can't be read
                 import logging
+
                 logging.exception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
 
