@@ -1,5 +1,5 @@
 ---
-title: Use the Playground
+title: Test flows in the Playground
 slug: /concepts-playground
 ---
 
@@ -17,20 +17,17 @@ The **Playground** allows you to quickly iterate over your flow's logic and beha
 ## Run a flow in the Playground
 
 To run a flow in the **Playground**, open the flow, and then click <Icon name="Play" aria-hidden="true"/> **Playground**.
-
-If your flow has a **Chat Input** component, enter a prompt to trigger the flow and start a chat session.
-
-If your flow requires another type of input, such as a webhook or file upload, [use the Langflow API to trigger the flow](/api-flows-run), and then open the **Playground** to review the chat history.
-
-![Playground window](/img/playground.png)
-
+Then, if your flow has a [**Chat Input** component](/components-io), enter a prompt or [use voice mode](/concepts-voice-mode) to trigger the flow and start a chat session.
 
 :::tip
-If there is no input field in the Playground, make sure your flow has an [Input component](/components-io) that is connected to the **Input** port of another component.
+If there is no message input field in the Playground, make sure your flow has a **Chat Input** component that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
 
-This is because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents.
-To be fully supported by the **Playground**'s chat interface, the flow must have **Chat Input**, **Language Model**, and **Chat Output** components.
+Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model** or **Agent**, and **Chat Output** components to be fully supported by the **Playground**'s chat interface
+
+For flows that require another type of input, such as a webhook event, file upload, or text input, you can [use the Langflow API to trigger the flow](/api-flows-run), and then open the **Playground** to review the LLM activity for the flow run, if applicable.
 :::
+
+![Playground window](/img/playground.png)
 
 <details>
 <summary>Playground mechanics</summary>
@@ -41,7 +38,7 @@ The `build` function allows components to execute logic at runtime. For example,
 
 </details>
 
-### Review Agent logic in the Playground
+### Review Agent logic
 
 If your flow has an **Agent** component, the **Playground** prints the tools used by the agent and the output from each tool.
 This helps you monitor the agent's tool use and understand the logic behind the agent's responses.

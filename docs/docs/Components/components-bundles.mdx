@@ -5,24 +5,57 @@ slug: /components-bundle-components
 
 import Icon from "@site/src/components/icon";
 
-Bundled components are based on standard Langflow functionality, so you add them to your flows and configure them in much the same way as the standard components.
-This documentation summarizes each bundled component and its parameters.
-For details about provider-specific aspects of bundled components, this documentation provides links to relevant component provider documentation.
+Bundled components are custom components that support specific third-party integrations with Langflow.
+Bundles are derived from the core Langflow components so you can add them to your flows and configure them in the same way as the core components.
 
-## Agent bundles
+Many Bundles are developed by third-party contributors to the Langflow codebase.
+Some providers contribute documentation with their bundles, whereas others document their bundles in their own documentation.
+Some bundles have no documentation.
 
-**Agents** use LLMs as a brain to analyze problems and select external tools.
+The Langflow documentation focuses on using bundles within flows.
+For that reason, it focuses on the Langflow-specific configuration steps for bundled components.
+For information about provider-specific features or APIs, see the provider's documentation.
 
-For more information, see [Agents](/agents).
+/*
+Legacy bundles:
 
-### CrewAI bundles
+Google -
+Gmail Loader
+Google Drive Loader
+Google Drive Search
+Google OAuth Token
 
-This bundle represents Agents of CrewAI allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
+LangChain -
+ConversationChain
+JsonAgent
+LLMCheckerChain
+LLMMathChain
+Natural Language to SQL
+Retrieval QA
+Self Query Retiever
+VectorStoreInfo
+VectorStoreRounterAgent
 
+Zep - Zep Chat Memory (only component in bundle)
+
+*/
+
+## Legacy bundles
+
+The following bundles contain only legacy components.
+This means that you can still use these components in your flows, but they are no longer maintained and they can be removed in future releases.
+
+### CrewAI
+
+The CrewAI bundle contains components based on the [**Agent** core component](/agents).
+
+These components represent CrewAI agents, allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
 For more information, see the [CrewAI agents documentation](https://docs.crewai.com/core-concepts/Agents/).
 
+All CrewAI components are considered legacy components, including the **Hierarchical Task** component, **Sequential Task** component, and the following components:
+
 <details>
-<summary>Parameters</summary>
+<summary>CrewAI Agent</summary>
 
 **Inputs**
 
@@ -47,14 +80,11 @@ For more information, see the [CrewAI agents documentation](https://docs.crewai.
 
 </details>
 
-#### Hierarchical Crew
+<details>
+<summary>Hierarchical Crew</summary>
 
 This component represents a group of agents managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
-
 For more information, see the [CrewAI hierarchical crew documentation](https://docs.crewai.com/how-to/Hierarchical/).
-
-<details>
-<summary>Parameters</summary>
 
 **Inputs**
 
@@ -79,14 +109,11 @@ For more information, see the [CrewAI hierarchical crew documentation](https://d
 
 </details>
 
-#### Sequential crew
+<details>
+<summary>Sequential Crew</summary>
 
 This component represents a group of agents with tasks that are executed sequentially. This component allows for the creation of a crew that performs tasks in a specific order.
-
 For more information, see the [CrewAI sequential crew documentation](https://docs.crewai.com/how-to/Sequential/).
-
-<details>
-<summary>Parameters</summary>
 
 **Inputs**
 
@@ -108,14 +135,11 @@ For more information, see the [CrewAI sequential crew documentation](https://doc
 
 </details>
 
-#### Sequential task agent
+<details>
+<summary>Sequential Task Agent</summary>
 
 This component creates a CrewAI Task and its associated Agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
-
 For more information, see the [CrewAI sequential agents documentation](https://docs.crewai.com/how-to/Sequential/).
-
-<details>
-<summary>Parameters</summary>
 
 **Inputs**
 
@@ -144,188 +168,73 @@ For more information, see the [CrewAI sequential agents documentation](https://d
 
 </details>
 
-### CSV Agent
+### Embedding Similarity
 
-This component creates a CSV agent from a CSV file and LLM.
+This component is considered legacy.
 
-For more information, see the [Langchain CSV agent documentation](https://python.langchain.com/api_reference/experimental/agents/langchain_experimental.agents.agent_toolkits.csv.base.create_csv_agent.html).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| path | File | The path to the CSV file. |
-| agent_type | String | The type of agent to create. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The CSV agent instance. |
-
-</details>
-
-### OpenAI Tools Agent
-
-This component creates an OpenAI Tools Agent.
-
-For more information, see the [Langchain OpenAI agent documentation](https://api.python.langchain.com/en/latest/agents/langchain.agents.openai_functions_agent.base.create_openai_functions_agent.html).
+This component calculates similarity scores for two embedding vectors.
 
 <details>
 <summary>Parameters</summary>
 
 **Inputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use. |
-| tools | List of Tools | The tools to give the agent access to. |
-| system_prompt | String | The system prompt to provide context to the agent. |
-| input_value | String | The user's input to the agent. |
-| memory | Memory | The memory for the agent to use for context persistence. |
-| max_iterations | Integer | The maximum number of iterations to allow the agent to execute. |
-| verbose | Boolean | This determines whether to print out the agent's intermediate steps. |
-| handle_parsing_errors | Boolean | This determines whether to handle parsing errors in the agent. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_vectors | Embedding Vectors | A list containing exactly two data objects with embedding vectors to compare. |
+| similarity_metric | Similarity Metric | Select the similarity metric to use. Options: "Cosine Similarity", "Euclidean Distance", "Manhattan Distance". |
 
 **Outputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The OpenAI Tools agent instance. |
-| output | String | The output from executing the agent on the input. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| similarity_data | Similarity Data | A data object containing the computed similarity score and additional information. |
 
 </details>
 
-### OpenAPI Agent
+### Text Embedder
 
-This component creates an agent for interacting with OpenAPI services.
+This component is considered legacy.
 
-For more information, see the [Langchain OpenAPI toolkit documentation](https://python.langchain.com/docs/integrations/tools/openapi/).
+This component generates embeddings for a given message using a specified embedding model.
 
 <details>
 <summary>Parameters</summary>
 
 **Inputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use. |
-| openapi_spec | String | The OpenAPI specification for the service. |
-| base_url | String | The base URL for the API. |
-| headers | Dict | The optional headers for API requests. |
-| agent_executor_kwargs | Dict | The optional parameters for the agent executor. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_model | Embedding Model | The embedding model to use for generating embeddings. |
+| message | Message | The message for which to generate embeddings. |
 
 **Outputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The OpenAPI agent instance. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embedding Data | A data object containing the original text and its embedding vector. |
 
 </details>
 
-### SQL Agent
 
-This component creates an agent for interacting with SQL databases.
 
-For more information, see the [Langchain SQL agent documentation](https://python.langchain.com/docs/tutorials/sql_qa/).
 
-<details>
-<summary>Parameters</summary>
 
-**Inputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use. |
-| database | Database | The SQL database connection. |
-| top_k | Integer | The number of results to return from a SELECT query. |
-| use_tools | Boolean | This determines whether to use tools for query execution. |
-| return_intermediate_steps | Boolean | This determines whether to return the agent's intermediate steps. |
-| max_iterations | Integer | The maximum number of iterations to run the agent. |
-| max_execution_time | Integer | The maximum execution time in seconds. |
-| early_stopping_method | String | The method to use for early stopping. |
-| verbose | Boolean | This determines whether to print the agent's thoughts. |
 
-**Outputs**
 
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The SQL agent instance. |
 
-</details>
 
-### Tool Calling Agent
-
-This component creates an agent for structured tool calling with various language models.
-
-For more information, see the [Langchain tool calling documentation](https://python.langchain.com/docs/concepts/tool_calling/).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use. |
-| tools | List[Tool] | The list of tools available to the agent. |
-| system_message | String | The system message to use for the agent. |
-| return_intermediate_steps | Boolean | This determines whether to return the agent's intermediate steps. |
-| max_iterations | Integer | The maximum number of iterations to run the agent. |
-| max_execution_time | Integer | The maximum execution time in seconds. |
-| early_stopping_method | String | The method to use for early stopping. |
-| verbose | Boolean | This determines whether to print the agent's thoughts. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The tool calling agent instance. |
-
-</details>
-
-### XML Agent
-
-This component creates an XML Agent using LangChain.
-
-The agent uses XML formatting for tool instructions to the Language Model.
-
-For more information, see the [Langchain XML Agent documentation](https://python.langchain.com/api_reference/langchain/agents/langchain.agents.xml.base.XMLAgent.html).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| user_prompt | String | The custom prompt template for the agent with XML formatting instructions. |
-| tools | List[Tool] | The list of tools available to the agent. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The XML Agent instance. |
-
-</details>
 
 ## Embedding models bundles
 
-Embedding model components in Langflow generate text embeddings using the selected Large Language Model.
-
-For more information, see [Embedding models](/components-embedding-models).
-
-For more information on a specific embedding model bundle, see the provider's documentation.
-
 ### AI/ML API
 
-This component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **AI/ML API** component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
 
 <details>
 <summary>Parameters</summary>
@@ -347,7 +256,11 @@ This component generates embeddings using the [AI/ML API](https://docs.aimlapi.c
 
 ### Amazon Bedrock Embeddings
 
-This component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Amazon Bedrock Embeddings** component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
 
 <details>
 <summary>Parameters</summary>
@@ -376,7 +289,7 @@ This component is deprecated as of Langflow version 1.1.2.
 Instead, use the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store).
 :::
 
-Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings.
+Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings through Astra DB's vectorize feature.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
 For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
@@ -404,7 +317,11 @@ For more information and instructions, see [Embedding Generation](https://docs.d
 
 ### Azure OpenAI Embeddings
 
-This component generates embeddings using Azure OpenAI models.
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Azure OpenAI Embeddings** component generates embeddings using Azure OpenAI models.
 
 <details>
 <summary>Parameters</summary>
@@ -429,7 +346,11 @@ This component generates embeddings using Azure OpenAI models.
 
 ### Cloudflare Workers AI Embeddings
 
-This component generates embeddings using [Cloudflare Workers AI models](https://developers.cloudflare.com/workers-ai/).
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Cloudflare Workers AI Embeddings** component generates embeddings using [Cloudflare Workers AI models](https://developers.cloudflare.com/workers-ai/).
 
 <details>
 <summary>Parameters</summary>
@@ -456,7 +377,11 @@ This component generates embeddings using [Cloudflare Workers AI models](https:/
 
 ### Cohere Embeddings
 
-This component is used to load embedding models from [Cohere](https://cohere.com/).
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Cohere Embeddings** component is used to load embedding models from [Cohere](https://cohere.com/).
 
 <details>
 <summary>Parameters</summary>
@@ -477,31 +402,13 @@ This component is used to load embedding models from [Cohere](https://cohere.com
 
 </details>
 
-### Embedding similarity
-
-This component computes selected forms of similarity between two embedding vectors.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embedding_vectors | Embedding Vectors | A list containing exactly two data objects with embedding vectors to compare. |
-| similarity_metric | Similarity Metric | Select the similarity metric to use. Options: "Cosine Similarity", "Euclidean Distance", "Manhattan Distance". |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| similarity_data | Similarity Data | A data object containing the computed similarity score and additional information. |
-
-</details>
-
 ### Google generative AI embeddings
 
-This component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Google Generative AI Embeddings** component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
 
 <details>
 <summary>Parameters</summary>
@@ -521,41 +428,13 @@ This component connects to Google's generative AI embedding service using the Go
 
 </details>
 
-### Hugging Face Embeddings
+### Hugging Face Embeddings Inference
 
-:::note
-This component is deprecated as of Langflow version 1.0.18.
-Instead, use the [Hugging Face Embeddings Inference component](#hugging-face-embeddings-inference).
-:::
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
 
-This component loads embedding models from HuggingFace.
-
-Use this component to generate embeddings using locally downloaded Hugging Face models. Ensure you have sufficient computational resources to run the models.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| Cache Folder | Cache Folder | The folder path to cache HuggingFace models. |
-| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process. |
-| Model Kwargs | Model Arguments | Additional arguments for the model. |
-| Model Name | Model Name | The name of the HuggingFace model to use. |
-| Multi Process | Multi-Process | Whether to use multiple processes. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embeddings | Embeddings | The generated embeddings. |
-
-</details>
-
-### Hugging Face embeddings inference
-
-This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/) and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate. Local inference models do not require an API key.
+The **Hugging Face Embeddings Inference** component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/) and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate. Local inference models do not require an API key.
 
 Use this component to create embeddings with Hugging Face's hosted models, or to connect to your own locally hosted models.
 
@@ -578,6 +457,8 @@ Use this component to create embeddings with Hugging Face's hosted models, or to
 
 </details>
 
+This component replaces the removed **Hugging Face Embeddings** component, which was deprecated in Langflow version 1.0.18.
+
 #### Connect the Hugging Face component to a local embeddings model
 
 To run an embeddings inference locally, see the [HuggingFace documentation](https://huggingface.co/docs/text-embeddings-inference/local_cpu).
@@ -593,7 +474,11 @@ There are two embeddings models in this flow that you can replace with **Hugging
 
 ### IBM watsonx embeddings
 
-This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **IBM watsonx.ai Embeddings** component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
 
 To use **IBM watsonx.ai** embeddings components, replace an embeddings component with the IBM watsonx.ai component in a flow.
 
@@ -643,7 +528,11 @@ The component automatically fetches and updates the list of available models fro
 
 ### LM Studio Embeddings
 
-This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **LM Studio Embeddings** component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
 
 <details>
 <summary>Parameters</summary>
@@ -667,7 +556,11 @@ This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) 
 
 ### MistralAI
 
-This component generates embeddings using [MistralAI](https://docs.mistral.ai/) models.
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **MistralAI Embeddings** component generates embeddings using [MistralAI](https://docs.mistral.ai/) models.
 
 <details>
 <summary>Parameters</summary>
@@ -693,7 +586,11 @@ This component generates embeddings using [MistralAI](https://docs.mistral.ai/) 
 
 ### NVIDIA
 
-This component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **NVIDIA Embeddings** component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
 
 <details>
 <summary>Parameters</summary>
@@ -717,7 +614,11 @@ This component generates embeddings using [NVIDIA models](https://docs.nvidia.co
 
 ### Ollama embeddings
 
-This component generates embeddings using [Ollama models](https://ollama.com/).
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Ollama Embeddings** component generates embeddings using [Ollama models](https://ollama.com/).
 
 For a list of Ollama embeddings models, see the [Ollama documentation](https://ollama.com/search?c=embedding).
 
@@ -755,7 +656,11 @@ For more information, see the [Ollama documentation](https://ollama.com/).
 
 ### OpenAI Embeddings
 
-This component is used to load embedding models from [OpenAI](https://openai.com/).
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **OpenAI Embeddings** component is used to load embedding models from [OpenAI](https://openai.com/).
 
 <details>
 <summary>Parameters</summary>
@@ -795,31 +700,13 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 
 </details>
 
-### Text embedder
+### Vertex AI Embeddings
 
-This component generates embeddings for a given message using a specified embedding model.
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embedding_model | Embedding Model | The embedding model to use for generating embeddings. |
-| message | Message | The message for which to generate embeddings. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embeddings | Embedding Data | A data object containing the original text and its embedding vector. |
-
-</details>
-
-### VertexAI Embeddings
-
-This component is a wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) [Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
+The **Vertex AI Embeddings** component is a wrapper around the [Google Vertex AI Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
 
 <details>
 <summary>Parameters</summary>

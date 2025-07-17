@@ -1,0 +1,193 @@
+---
+title: LangChain
+slug: /bundles-langchain
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **LangChain** bundle.
+
+## CSV Agent
+
+This component is based on the [**Agent** core component](/agents).
+
+This component creates a CSV agent from a CSV file and LLM.
+
+For more information, see the [Langchain CSV agent documentation](https://python.langchain.com/api_reference/experimental/agents/langchain_experimental.agents.agent_toolkits.csv.base.create_csv_agent.html).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use for the agent. |
+| path | File | The path to the CSV file. |
+| agent_type | String | The type of agent to create. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The CSV agent instance. |
+
+</details>
+
+## OpenAI Tools Agent
+
+This component is based on the [**Agent** core component](/agents).
+
+This component creates an OpenAI Tools Agent.
+
+For more information, see the [Langchain OpenAI agent documentation](https://api.python.langchain.com/en/latest/agents/langchain.agents.openai_functions_agent.base.create_openai_functions_agent.html).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use. |
+| tools | List of Tools | The tools to give the agent access to. |
+| system_prompt | String | The system prompt to provide context to the agent. |
+| input_value | String | The user's input to the agent. |
+| memory | Memory | The memory for the agent to use for context persistence. |
+| max_iterations | Integer | The maximum number of iterations to allow the agent to execute. |
+| verbose | Boolean | This determines whether to print out the agent's intermediate steps. |
+| handle_parsing_errors | Boolean | This determines whether to handle parsing errors in the agent. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The OpenAI Tools agent instance. |
+| output | String | The output from executing the agent on the input. |
+
+</details>
+
+## OpenAPI Agent
+
+This component is based on the [**Agent** core component](/agents).
+
+This component creates an agent for interacting with OpenAPI services.
+
+For more information, see the [Langchain OpenAPI toolkit documentation](https://python.langchain.com/docs/integrations/tools/openapi/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use. |
+| openapi_spec | String | The OpenAPI specification for the service. |
+| base_url | String | The base URL for the API. |
+| headers | Dict | The optional headers for API requests. |
+| agent_executor_kwargs | Dict | The optional parameters for the agent executor. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The OpenAPI agent instance. |
+
+</details>
+
+## SQL Agent
+
+This component is based on the [**Agent** core component](/agents).
+
+This component creates an agent for interacting with SQL databases.
+
+For more information, see the [Langchain SQL agent documentation](https://python.langchain.com/docs/tutorials/sql_qa/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use. |
+| database | Database | The SQL database connection. |
+| top_k | Integer | The number of results to return from a SELECT query. |
+| use_tools | Boolean | This determines whether to use tools for query execution. |
+| return_intermediate_steps | Boolean | This determines whether to return the agent's intermediate steps. |
+| max_iterations | Integer | The maximum number of iterations to run the agent. |
+| max_execution_time | Integer | The maximum execution time in seconds. |
+| early_stopping_method | String | The method to use for early stopping. |
+| verbose | Boolean | This determines whether to print the agent's thoughts. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The SQL agent instance. |
+
+</details>
+
+## Tool Calling Agent
+
+This component is based on the [**Agent** core component](/agents).
+
+This component creates an agent for structured tool calling with various language models.
+
+For more information, see the [Langchain tool calling documentation](https://python.langchain.com/docs/concepts/tool_calling/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use. |
+| tools | List[Tool] | The list of tools available to the agent. |
+| system_message | String | The system message to use for the agent. |
+| return_intermediate_steps | Boolean | This determines whether to return the agent's intermediate steps. |
+| max_iterations | Integer | The maximum number of iterations to run the agent. |
+| max_execution_time | Integer | The maximum execution time in seconds. |
+| early_stopping_method | String | The method to use for early stopping. |
+| verbose | Boolean | This determines whether to print the agent's thoughts. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The tool calling agent instance. |
+
+</details>
+
+## XML Agent
+
+This component is based on the [**Agent** core component](/agents).
+
+This component creates an XML Agent using LangChain.
+
+The agent uses XML formatting for tool instructions to the Language Model.
+
+For more information, see the [Langchain XML Agent documentation](https://python.langchain.com/api_reference/langchain/agents/langchain.agents.xml.base.XMLAgent.html).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use for the agent. |
+| user_prompt | String | The custom prompt template for the agent with XML formatting instructions. |
+| tools | List[Tool] | The list of tools available to the agent. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The XML Agent instance. |
+
+</details>

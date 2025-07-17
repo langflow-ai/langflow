@@ -1,0 +1,47 @@
+---
+title: NVIDIA components
+slug: /bundles-nvidia
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **NVIDIA** bundle.
+
+## NVIDIA
+
+This component generates text using NVIDIA LLMs.
+For more information, see [Integrate NVIDIA NIMs with Langflow](/integrations-nvidia-ingest-wsl2).
+
+## NVIDIA Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **NVIDIA Embeddings** component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
+
+### NVIDIA Embeddings component parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | String | Input parameter. The NVIDIA model to use for embeddings, such as `nvidia/nv-embed-v1`. |
+| base_url | String | Input parameter. The base URL for the NVIDIA API. Default: `https://integrate.api.nvidia.com/v1`. |
+| nvidia_api_key | SecretString | Input parameter. The API key for authenticating with NVIDIA's service. |
+| temperature | Float | Input parameter. The model temperature for embedding generation. Default: `0.1`. |
+| embeddings | Embeddings | Output parameter. An NVIDIAEmbeddings instance for generating embeddings. |
+
+## NVIDIA Rerank
+
+This component finds and reranks documents using the NVIDIA API.
+
+## NVIDIA Retriever Extraction
+
+This component uses the NVIDIA `nv-ingest` microservice for data ingestion, processing, and extraction of text files.
+For more information, see [Integrate NVIDIA Retriever Extraction with Langflow](/integrations-nvidia-ingest).
+
+## NVIDIA System-Assist
+
+This component requires a specific system environment.
+For information about this component, see [Integrate NVIDIA G-Assist with Langflow](/integrations-nvidia-g-assist).

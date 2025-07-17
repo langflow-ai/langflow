@@ -334,6 +334,7 @@ module.exports = {
               type: "category",
               label: "NVIDIA",
               items: [
+                "Components/bundles-nvidia",
                 {
                   type: "doc",
                   id: "Integrations/Nvidia/integrations-nvidia-ingest",
@@ -349,7 +350,7 @@ module.exports = {
                   id: "Integrations/Nvidia/integrations-nvidia-g-assist",
                   label: "NVIDIA G-Assist"
                 },
-                "Components/bundles-nvidia",
+                //NVIDIA System-Assist
               ],
             },
             "Components/bundles-olivya",
