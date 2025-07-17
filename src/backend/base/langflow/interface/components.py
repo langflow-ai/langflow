@@ -168,12 +168,11 @@ async def get_and_cache_all_types_dict(
             # Partial loading mode - just load component metadata
             logger.debug("Using partial component loading")
             component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
-        elif (
-            settings_service.settings.components_path
-            and BASE_COMPONENTS_PATH not in settings_service.settings.components_path
-        ):
-            # Traditional full loading
-            component_cache.all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
+        elif settings_service.settings.components_path:
+            # Traditional full loading - filter out base components path to only load custom components
+            custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
+            if custom_paths:
+                component_cache.all_types_dict = await aget_all_types_dict(custom_paths)
 
         # Log custom component loading stats
         components_dict = component_cache.all_types_dict or {}
