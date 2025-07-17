@@ -1,8 +1,6 @@
 import json
-import os
 from http import HTTPStatus
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
@@ -16,7 +14,7 @@ KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
 class KnowledgeBaseInfo(BaseModel):
     id: str
     name: str
-    embedding_provider: Optional[str] = "Unknown"
+    embedding_provider: str | None = "Unknown"
     size: int = 0
     words: int = 0
     characters: int = 0
@@ -51,7 +49,7 @@ def detect_embedding_provider(kb_path: Path) -> str:
         "Google": ["palm", "gecko", "google"],
         "Chroma": ["chroma"],
     }
-    
+
     # Check JSON config files for provider information
     for config_file in kb_path.glob("*.json"):
         try:
@@ -59,9 +57,9 @@ def detect_embedding_provider(kb_path: Path) -> str:
                 config_data = json.load(f)
                 if not isinstance(config_data, dict):
                     continue
-                    
+
                 config_str = json.dumps(config_data).lower()
-                
+
                 # Check for explicit provider fields first
                 provider_fields = ["embedding_provider", "provider", "embedding_model_provider"]
                 for field in provider_fields:
@@ -70,21 +68,21 @@ def detect_embedding_provider(kb_path: Path) -> str:
                         for provider, patterns in provider_patterns.items():
                             if any(pattern in provider_value for pattern in patterns):
                                 return provider
-                
+
                 # Check for model name patterns
                 for provider, patterns in provider_patterns.items():
                     if any(pattern in config_str for pattern in patterns):
                         return provider
-                        
+
         except Exception:
             continue
-    
+
     # Fallback to directory structure
     if (kb_path / "chroma").exists():
         return "Chroma"
-    elif (kb_path / "vectors.npy").exists():
+    if (kb_path / "vectors.npy").exists():
         return "Local"
-    
+
     return "Unknown"
 
 
@@ -93,18 +91,19 @@ def get_text_columns(df: pd.DataFrame, schema_data: list = None) -> list[str]:
     # First try schema-defined text columns
     if schema_data:
         text_columns = [
-            col["column_name"] for col in schema_data 
+            col["column_name"]
+            for col in schema_data
             if col.get("vectorize", False) and col.get("data_type") == "string"
         ]
         if text_columns:
             return [col for col in text_columns if col in df.columns]
-    
+
     # Fallback to common text column names
     common_names = ["text", "content", "document", "chunk"]
     text_columns = [col for col in df.columns if col.lower() in common_names]
     if text_columns:
         return text_columns
-    
+
     # Last resort: all string columns
     return [col for col in df.columns if df[col].dtype == "object"]
 
@@ -113,15 +112,15 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
     """Calculate total words and characters from text columns."""
     total_words = 0
     total_characters = 0
-    
+
     for col in text_columns:
         if col not in df.columns:
             continue
-            
+
         text_series = df[col].astype(str).fillna("")
         total_characters += text_series.str.len().sum()
         total_words += text_series.str.split().str.len().sum()
-    
+
     return int(total_words), int(total_characters)
 
 
@@ -134,11 +133,11 @@ def get_kb_metadata(kb_path: Path) -> dict:
         "avg_chunk_size": 0.0,
         "embedding_provider": "Unknown",
     }
-    
+
     try:
         # Detect embedding provider
         metadata["embedding_provider"] = detect_embedding_provider(kb_path)
-        
+
         # Read schema for text column information
         schema_data = None
         schema_file = kb_path / "schema.json"
@@ -150,31 +149,31 @@ def get_kb_metadata(kb_path: Path) -> dict:
                         schema_data = None
             except Exception:
                 pass
-        
+
         # Process source.parquet for text metrics
         source_file = kb_path / "source.parquet"
         if source_file.exists():
             try:
                 df = pd.read_parquet(source_file)
                 metadata["chunks"] = len(df)
-                
+
                 # Get text columns and calculate metrics
                 text_columns = get_text_columns(df, schema_data)
                 if text_columns:
                     words, characters = calculate_text_metrics(df, text_columns)
                     metadata["words"] = words
                     metadata["characters"] = characters
-                    
+
                     # Calculate average chunk size
                     if metadata["chunks"] > 0:
                         metadata["avg_chunk_size"] = round(characters / metadata["chunks"], 1)
-                        
+
             except Exception:
                 pass
-    
+
     except Exception:
         pass
-    
+
     return metadata
 
 
@@ -184,23 +183,23 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
     """List all available knowledge bases."""
     try:
         kb_root_path = get_kb_root_path()
-        
+
         if not kb_root_path.exists():
             return []
-        
+
         knowledge_bases = []
-        
+
         for kb_dir in kb_root_path.iterdir():
             if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                 continue
-            
+
             try:
                 # Get size of the directory
                 size = get_directory_size(kb_dir)
-                
+
                 # Get metadata from KB files
                 metadata = get_kb_metadata(kb_dir)
-                
+
                 kb_info = KnowledgeBaseInfo(
                     id=kb_dir.name,
                     name=kb_dir.name.replace("_", " ").replace("-", " ").title(),
@@ -211,23 +210,20 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
                     chunks=metadata["chunks"],
                     avg_chunk_size=metadata["avg_chunk_size"],
                 )
-                
+
                 knowledge_bases.append(kb_info)
-                
-            except Exception as e:
+
+            except Exception:
                 # Skip directories that can't be read
                 continue
-        
+
         # Sort by name alphabetically
         knowledge_bases.sort(key=lambda x: x.name)
-        
+
         return knowledge_bases
-        
+
     except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error listing knowledge bases: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error listing knowledge bases: {e!s}") from e
 
 
 @router.get("/{kb_name}", status_code=HTTPStatus.OK)
@@ -236,19 +232,16 @@ async def get_knowledge_base(kb_name: str) -> KnowledgeBaseInfo:
     try:
         kb_root_path = get_kb_root_path()
         kb_path = kb_root_path / kb_name
-        
+
         if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Knowledge base '{kb_name}' not found"
-            )
-        
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
         # Get size of the directory
         size = get_directory_size(kb_path)
-        
+
         # Get metadata from KB files
         metadata = get_kb_metadata(kb_path)
-        
+
         return KnowledgeBaseInfo(
             id=kb_name,
             name=kb_name.replace("_", " ").replace("-", " ").title(),
@@ -259,11 +252,8 @@ async def get_knowledge_base(kb_name: str) -> KnowledgeBaseInfo:
             chunks=metadata["chunks"],
             avg_chunk_size=metadata["avg_chunk_size"],
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error getting knowledge base '{kb_name}': {str(e)}"
-        ) from e 
+        raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
