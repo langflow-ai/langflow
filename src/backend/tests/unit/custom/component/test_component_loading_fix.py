@@ -1,6 +1,5 @@
 """Tests for the component loading fix that filters out BASE_COMPONENTS_PATH from custom components.
 
-This test suite validates that the fix for GitHub issue #8967 works correctly:
 - BASE_COMPONENTS_PATH is properly filtered out from custom components paths
 - Lazy loading mode works correctly
 - Custom components are loaded only from valid custom paths
@@ -222,9 +221,7 @@ class TestComponentLoadingFix:
             assert "custom_category" in result  # From custom components
 
     @pytest.mark.asyncio
-    async def test_component_merging_logic(
-        self, mock_settings_service, mock_langflow_components, mock_custom_components
-    ):
+    async def test_component_merging_logic(self, mock_settings_service, mock_langflow_components):
         """Test that langflow and custom components are properly merged."""
         # Setup
         mock_settings_service.settings.components_path = ["/custom/path1"]
@@ -324,16 +321,10 @@ class TestComponentLoadingFix:
         with (
             patch("langflow.interface.components.import_langflow_components", return_value=mock_langflow_components),
             patch("langflow.interface.components.aget_all_types_dict", side_effect=Exception("Custom loading failed")),
+            pytest.raises(Exception, match="Custom loading failed"),
         ):
-            # Execute the function - should not raise exception
-            try:
-                result = await get_and_cache_all_types_dict(mock_settings_service)
-                # Should fallback to langflow components only
-                assert "category1" in result
-                assert "category2" in result
-            except Exception as e:
-                # If it does raise, it should be the original exception
-                assert "Custom loading failed" in str(e)
+            # Execute the function - should raise exception when custom component loading fails
+            await get_and_cache_all_types_dict(mock_settings_service)
 
     @pytest.mark.asyncio
     async def test_base_components_path_constant_value(self):
@@ -430,7 +421,7 @@ class TestComponentLoadingFix:
     async def test_integration_with_real_base_components_path(self, mock_settings_service):
         """Integration test with real BASE_COMPONENTS_PATH to ensure filtering works."""
         # Setup with real BASE_COMPONENTS_PATH value
-        mock_settings_service.settings.components_path = [BASE_COMPONENTS_PATH, "/tmp/custom"]
+        mock_settings_service.settings.components_path = [BASE_COMPONENTS_PATH, "/custom/test"]
         mock_settings_service.settings.lazy_load_components = False
 
         # This test should work with real langflow components
@@ -439,7 +430,7 @@ class TestComponentLoadingFix:
             result = await get_and_cache_all_types_dict(mock_settings_service)
 
             # Verify BASE_COMPONENTS_PATH was filtered out
-            mock_aget_all_types_dict.assert_called_once_with(["/tmp/custom"])
+            mock_aget_all_types_dict.assert_called_once_with(["/custom/test"])
 
             # Verify we got real langflow components
             assert isinstance(result, dict)
