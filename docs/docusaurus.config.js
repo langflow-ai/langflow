@@ -203,7 +203,7 @@ const config = {
             ],
           },
           {
-            to: "/concepts-objects",
+            to: "/data-types",
             from: ["/guides-data-message", "/configuration-objects"],
           },
           {
@@ -325,6 +325,10 @@ const config = {
           {
             to: "/develop-application",
             from: "/develop-overview",
+          },
+          {
+            to: "/data-types",
+            from: "/concepts-objects",
           },
           // add more redirects like this
           // {
