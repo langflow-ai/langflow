@@ -133,7 +133,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                   </Label>
                   <Input
                     id="api-key"
-                    type="text"
+                    type="password"
                     placeholder="Enter API Key"
                     value={authFields.apiKey || ""}
                     onChange={(e) =>
