@@ -27,6 +27,7 @@ module.exports = {
             "Tutorials/chat-with-rag",
             "Tutorials/chat-with-files",
             "Tutorials/agent",
+            "Tutorials/mcp-tutorial",
           ],
         },
       ],
