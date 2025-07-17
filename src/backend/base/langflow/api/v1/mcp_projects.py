@@ -255,7 +255,7 @@ async def update_project_mcp_settings(
 
             # Update project-level auth settings
             if request.auth_settings:
-                project.auth_settings = request.auth_settings.model_dump()
+                project.auth_settings = request.auth_settings.model_dump(mode="json")
             else:
                 project.auth_settings = None
             session.add(project)

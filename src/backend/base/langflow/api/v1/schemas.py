@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SecretStr,
     field_serializer,
     field_validator,
     model_serializer,
@@ -443,11 +444,11 @@ class CancelFlowResponse(BaseModel):
 class AuthSettings(BaseModel):
     """Model representing authentication settings for MCP."""
 
-    auth_type: str = "none"
-    api_key: str | None = None
+    auth_type: Literal["none", "apikey", "userpass", "bearer", "iam"] = "none"
+    api_key: SecretStr | None = None
     username: str | None = None
-    password: str | None = None
-    bearer_token: str | None = None
+    password: SecretStr | None = None
+    bearer_token: SecretStr | None = None
     iam_endpoint: str | None = None
 
 
