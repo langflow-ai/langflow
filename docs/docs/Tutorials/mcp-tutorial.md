@@ -9,10 +9,19 @@ import TabItem from '@theme/TabItem';
 
 This tutorial shows you how to connect MCP tools to your applications using Langflow's [**MCP Tools**](/mcp-client) component.
 
-The [Model Context Protocol](https://modelcontextprotocol.io/), or MCP, helps agents integrate with LLMs.
-Langflow can be run as an [MCP client](/mcp-client) and [MCP server](/mcp-server).
-Running Langflow as an MCP server allows your flows to be used as tools by connected MCP clients.
-In this tutorial, you will use the Langflow **MCP Tools** component as a client to connect your flow to multiple MCP servers, and then connect a Python application to Langflow.
+The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) helps agents integrate with LLMs through _MCP clients_ and _MCP servers_.
+Specifically, MCP servers host tools that agents (MCP clients) use to complete specialized tasks.
+MCP servers are connected to MCP clients like Cursor.
+Then, you interact with the client, and the client uses tools from the connected servers as needed to complete your requests.
+
+You can run Langflow as an MCP client and an MCP server:
+
+* [Use Langflow as an MCP client](/mcp-client): When run as an MCP client, an **Agent** component in a Langflow flow can use connected components as tools to handle requests.
+You can use existing components as tools, and you can connect any MCP server to you flow to make that server's tools available to the agent.
+
+* [Use Langflow as an MCP server](/mcp-server): When run as an MCP server, your flows become tools that can be used by an MCP client, which could be an external client or another Langflow flow.
+
+In this tutorial, you will use the Langflow **MCP Tools** component to connect multiple MCP servers to your flow, and then you'll use a Python application to run your flow and chat with the agent programmatically.
 
 ## Prerequisites
 
@@ -25,8 +34,11 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
 ## Create an agentic flow
 
 1. In Langflow, click **New Flow**, and then select the [**Simple agent**](/simple-agent) template.
+
 2. In the **Agent** component, enter your OpenAI API key.
+
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
 3. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
 
     This query demonstrates how an LLM, by itself, might not have access to information or functions designed to address specialized queries. In this example, the default OpenAI model provides a vague response, although the agent does know the current date by using its internal `get_current_date` function.
