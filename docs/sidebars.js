@@ -27,6 +27,7 @@ module.exports = {
             "Tutorials/chat-with-rag",
             "Tutorials/chat-with-files",
             "Tutorials/agent",
+            "Tutorials/mcp-tutorial",
           ],
         },
       ],
@@ -356,7 +357,6 @@ module.exports = {
           type: 'category',
           label: 'Google',
           items: [
-            'Integrations/Google/integrations-setup-google-oauth-langflow',
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
             'Integrations/Google/integrations-google-big-query',
           ],

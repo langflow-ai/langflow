@@ -1,9 +1,9 @@
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
-import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { targetHandleType } from "@/types/flow";
+import type { APIClassType, InputFieldType } from "@/types/api";
+import type { targetHandleType } from "@/types/flow";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 
@@ -38,7 +38,7 @@ export function CustomParameterComponent({
 }) {
   const edges = useFlowStore((state) => state.edges);
 
-  let disabled =
+  const disabled =
     edges.some(
       (edge) =>
         edge.targetHandle ===

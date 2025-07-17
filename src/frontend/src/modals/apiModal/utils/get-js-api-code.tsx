@@ -59,7 +59,7 @@ ${headersSection}
 
 fetch('${apiUrl}', options)
     .then(response => response.json())
-    .then(response => console.log(response))
+    .then(response => console.warn(response))
     .catch(err => console.error(err));`;
   }
 
@@ -90,7 +90,7 @@ fetch('${apiUrl}', options)
 
     uploadSteps.push(`        // Step ${uploadSteps.length + 1}: Upload file for ChatInput ${nodeId}
         const { payload: chatPayload${index + 1}, boundary: chatBoundary${index + 1} } = createFormData('your_image_${index + 1}.jpg');
-        
+
         const chatUploadOptions${index + 1} = {
             hostname: '${hostname}',
             port: ${port},
@@ -102,7 +102,7 @@ fetch('${apiUrl}', options)
                 ...authHeaders
             }
         };
-        
+
         const chatUploadResult${index + 1} = await makeRequest(chatUploadOptions${index + 1}, chatPayload${index + 1});
         const ${varName} = chatUploadResult${index + 1}.file_path;
         console.log('ChatInput upload ${index + 1} successful! File path:', ${varName});`);
@@ -122,7 +122,7 @@ fetch('${apiUrl}', options)
 
     uploadSteps.push(`        // Step ${uploadSteps.length + 1}: Upload file for File/VideoFile ${nodeId}
         const { payload: filePayload${index + 1}, boundary: fileBoundary${index + 1} } = createFormData('your_file_${index + 1}.pdf');
-        
+
         const fileUploadOptions${index + 1} = {
             hostname: '${hostname}',
             port: ${port},
@@ -134,7 +134,7 @@ fetch('${apiUrl}', options)
                 ...authHeaders
             }
         };
-        
+
         const fileUploadResult${index + 1} = await makeRequest(fileUploadOptions${index + 1}, filePayload${index + 1});
         const ${varName} = fileUploadResult${index + 1}.path;
         console.log('File upload ${index + 1} successful! File path:', ${varName});`);
@@ -173,24 +173,24 @@ const httpModule = protocol === 'https:' ? require('https') : require('http');
 function createFormData(filePath) {
     const boundary = '----FormBoundary' + Date.now();
     const filename = path.basename(filePath);
-    
+
     if (!fs.existsSync(filePath)) {
         throw new Error(\`File not found: \${filePath}\`);
     }
-    
+
     const fileData = fs.readFileSync(filePath);
-    
+
     let data = '';
     data += \`--\${boundary}\\r\\n\`;
     data += \`Content-Disposition: form-data; name="file"; filename="\${filename}"\\r\\n\`;
     data += \`Content-Type: application/octet-stream\\r\\n\\r\\n\`;
-    
+
     const payload = Buffer.concat([
         Buffer.from(data, 'utf8'),
         fileData,
         Buffer.from(\`\\r\\n--\${boundary}--\\r\\n\`, 'utf8')
     ]);
-    
+
     return { payload, boundary };
 }
 
@@ -222,7 +222,7 @@ async function uploadAndExecuteFlow() {
     try {
         const apiKey = 'YOUR_API_KEY_HERE';
         const authHeaders = { 'x-api-key': apiKey };
-        
+
 ${uploadSteps.join("\n\n")}
 
         // Step ${uploadSteps.length + 1}: Execute flow with all file paths
@@ -235,7 +235,7 @@ ${uploadSteps.join("\n\n")}
 ${allTweaks}
             }
         });
-        
+
         const executeOptions = {
             hostname: '${hostname}',
             port: ${port},
@@ -247,11 +247,11 @@ ${allTweaks}
                 ...authHeaders
             }
         };
-        
+
         const result = await makeRequest(executeOptions, executePayload);
         console.log('Flow execution successful!');
         console.log(result);
-        
+
     } catch (error) {
         console.error('Error:', error.message);
     }

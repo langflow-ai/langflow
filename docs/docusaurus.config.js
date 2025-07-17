@@ -131,6 +131,27 @@ const config = {
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
     ["./src/plugins/segment", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
+    ["./src/plugins/scroll-tracking", {
+      segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY,
+      allowedInDev: true,
+      selectors: [
+        {
+          selector: 'h1, h2, h3, h4, h5, h6',
+          eventName: 'Docs.langflow.org - Heading Viewed',
+          properties: {
+            element_type: 'heading'
+          }
+        },
+        {
+          selector: '.ch-codeblock',
+          eventName: 'Docs.langflow.org - Codeblock Viewed',
+          properties: {
+            element_type: 'code',
+            language: 'helper:codeLanguage'
+          }
+        }
+      ]
+    }],
     [
       "@docusaurus/plugin-client-redirects",
       {
@@ -296,6 +317,10 @@ const config = {
           {
             to: "/concepts-publish",
             from: "/embedded-chat-widget",
+          },
+          {
+            to: "/components-data",
+            from: "/integrations-setup-google-oauth-langflow",
           },
           // add more redirects like this
           // {
