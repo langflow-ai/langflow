@@ -127,7 +127,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                   <Input
                     id="api-key"
                     type="text"
-                    placeholder="Placeholder"
+                    placeholder="Enter API Key"
                     value={authFields.apiKey || ""}
                     onChange={(e) =>
                       handleAuthFieldChange("apiKey", e.target.value)
@@ -145,7 +145,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                     <Input
                       id="username"
                       type="text"
-                      placeholder="Placeholder"
+                      placeholder="Enter Username"
                       value={authFields.username || ""}
                       onChange={(e) =>
                         handleAuthFieldChange("username", e.target.value)
@@ -159,7 +159,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Placeholder"
+                      placeholder="Enter Password"
                       value={authFields.password || ""}
                       onChange={(e) =>
                         handleAuthFieldChange("password", e.target.value)
@@ -180,7 +180,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                   <Input
                     id="bearer-token"
                     type="password"
-                    placeholder="Placeholder"
+                    placeholder="Enter Bearer Token"
                     value={authFields.bearerToken || ""}
                     onChange={(e) =>
                       handleAuthFieldChange("bearerToken", e.target.value)
@@ -201,7 +201,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                     <Input
                       id="iam-endpoint"
                       type="text"
-                      placeholder="Placeholder"
+                      placeholder="Enter IAM Endpoint"
                       value={authFields.iamEndpoint || ""}
                       onChange={(e) =>
                         handleAuthFieldChange("iamEndpoint", e.target.value)
@@ -215,7 +215,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Placeholder"
+                      placeholder="Enter API Key or Token"
                       value={authFields.apiKey || ""}
                       onChange={(e) =>
                         handleAuthFieldChange("apiKey", e.target.value)
