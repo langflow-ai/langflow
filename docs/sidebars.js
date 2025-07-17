@@ -83,8 +83,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Concepts/concepts-objects",
-          label: "Langflow objects"
+          id: "Concepts/data-types",
+          label: "Langflow data types"
         },
         {
           type: "doc",
