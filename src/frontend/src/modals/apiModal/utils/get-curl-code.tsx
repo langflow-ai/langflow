@@ -24,7 +24,9 @@ export function getCurlWebhookCode({
   format = "multiline",
 }: GetCodeType & { format?: "multiline" | "singleline" }) {
   const { protocol, host } = customGetHostProtocol();
-  const baseUrl = `${protocol}//${host}/api/v1/webhook/${endpointName || flowId}`;
+  const baseUrl = `${protocol}//${host}/api/v1/webhook/${
+    endpointName || flowId
+  }`;
   const authHeader = !isAuth ? `-H 'x-api-key: <your api key>'` : "";
 
   if (format === "singleline") {
@@ -50,11 +52,13 @@ export function getNewCurlCode({
   endpointName,
   processedPayload,
   platform,
+  shouldDisplayApiKey,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
   platform?: "unix" | "powershell";
+  shouldDisplayApiKey: boolean;
 }): { steps: { title: string; code: string }[] } | string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
@@ -80,7 +84,9 @@ export function getNewCurlCode({
       };
       const singleLinePayload = JSON.stringify(payloadWithSession);
       // PowerShell with here-string (most robust for complex JSON)
-      const authHeader = `     --header "x-api-key: YOUR_API_KEY_HERE" \``;
+      const authHeader = shouldDisplayApiKey
+        ? `     --header "x-api-key: YOUR_API_KEY_HERE" \``
+        : "";
 
       return `$jsonData = @'
 ${singleLinePayload}
@@ -88,7 +94,9 @@ ${singleLinePayload}
 
 curl.exe --request POST \`
      --url "${apiUrl}?stream=false" \`
-     --header "Content-Type: application/json" \`${authHeader ? "\n" + authHeader : ""}
+     --header "Content-Type: application/json" \`${
+       authHeader ? "\n" + authHeader : ""
+     }
      --data $jsonData`;
     } else {
       const payloadWithSession = {
@@ -101,11 +109,15 @@ curl.exe --request POST \`
         .map((line, index) => (index === 0 ? line : "         " + line))
         .join("\n\t\t");
 
-      const authHeader = `     --header "x-api-key: YOUR_API_KEY_HERE" \\ `;
+      const authHeader = shouldDisplayApiKey
+        ? `     --header "x-api-key: YOUR_API_KEY_HERE" \\ `
+        : "";
 
       return `curl --request POST \\
      --url '${apiUrl}?stream=false' \\
-     --header 'Content-Type: application/json' \\${authHeader ? "\n" + authHeader : ""}
+     --header 'Content-Type: application/json' \\${
+       authHeader ? "\n" + authHeader : ""
+     }
      --data '${unixFormattedPayload}'`;
     }
   }
@@ -126,21 +138,29 @@ curl.exe --request POST \`
       uploadCommands.push(
         `curl.exe --request POST \`
      --url "${baseUrl}/api/v1/files/upload/${flowId}" \`
-     --header "x-api-key: YOUR_API_KEY_HERE" \`
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
      --form "file=@your_image_${uploadCounter}.jpg"`,
       );
     } else {
       uploadCommands.push(
         `curl --request POST \\
      --url "${baseUrl}/api/v1/files/upload/${flowId}" \\
-     --header "x-api-key: YOUR_API_KEY_HERE" \\
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
      --form "file=@your_image_${uploadCounter}.jpg"`,
       );
     }
     const originalTweak = tweaks[nodeId];
     const modifiedTweak = { ...originalTweak };
-    modifiedTweak.files = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
-    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("\n").join("\n    ")}`;
+    modifiedTweak.files = [
+      `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`,
+    ];
+    const tweakEntry = `    "${nodeId}": ${JSON.stringify(
+      modifiedTweak,
+      null,
+      6,
+    )
+      .split("\n")
+      .join("\n    ")}`;
     tweakEntries.push(tweakEntry);
     uploadCounter++;
   });
@@ -151,14 +171,14 @@ curl.exe --request POST \`
       uploadCommands.push(
         `curl.exe --request POST \`
      --url "${baseUrl}/api/v2/files" \`
-     --header "x-api-key: YOUR_API_KEY_HERE" \`
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
      --form "file=@your_file_${uploadCounter}.pdf"`,
       );
     } else {
       uploadCommands.push(
         `curl --request POST \\
      --url "${baseUrl}/api/v2/files" \\
-     --header "x-api-key: YOUR_API_KEY_HERE" \\
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
      --form "file=@your_file_${uploadCounter}.pdf"`,
       );
     }
@@ -171,7 +191,13 @@ curl.exe --request POST \`
     } else if ("file_path" in originalTweak) {
       modifiedTweak.file_path = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
     }
-    const tweakEntry = `    "${nodeId}": ${JSON.stringify(modifiedTweak, null, 6).split("\n").join("\n    ")}`;
+    const tweakEntry = `    "${nodeId}": ${JSON.stringify(
+      modifiedTweak,
+      null,
+      6,
+    )
+      .split("\n")
+      .join("\n    ")}`;
     tweakEntries.push(tweakEntry);
     uploadCounter++;
   });
@@ -179,14 +205,18 @@ curl.exe --request POST \`
   // Add non-file tweaks
   Object.entries(nonFileTweaks).forEach(([nodeId, tweak]) => {
     tweakEntries.push(
-      `    "${nodeId}": ${JSON.stringify(tweak, null, 6).split("\n").join("\n    ")}`,
+      `    "${nodeId}": ${JSON.stringify(tweak, null, 6)
+        .split("\n")
+        .join("\n    ")}`,
     );
   });
 
   const allTweaks = tweakEntries.length > 0 ? tweakEntries.join(",\n") : "";
 
   if (detectedPlatform === "powershell") {
-    const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
+    const authHeader = shouldDisplayApiKey
+      ? ` -H "x-api-key: YOUR_API_KEY_HERE"`
+      : "";
 
     const uploadStep = uploadCommands.join("\n");
     const executeStep = `curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
@@ -207,13 +237,23 @@ ${allTweaks}
       ],
     };
   } else {
-    const authHeader = ` -H "x-api-key: YOUR_API_KEY_HERE"`;
+    const authHeader = shouldDisplayApiKey
+      ? ` -H "x-api-key: YOUR_API_KEY_HERE"`
+      : "";
 
     const uploadStep = uploadCommands.join("\n");
     const executeStep = `curl -X POST \\
   "${apiUrl}" \\
-  -H "Content-Type: application/json"${authHeader ? " \\\n " + authHeader : ""} \\
-  -d '{\n    "output_type": "${processedPayload.output_type || "chat"}",\n    "input_type": "${processedPayload.input_type || "chat"}",\n    "input_value": "${processedPayload.input_value || "Your message here"}",\n    "session_id": "YOUR_SESSION_ID_HERE",\n    "tweaks": {\n${allTweaks}\n    }\n  }'`;
+  -H "Content-Type: application/json"${
+    authHeader ? " \\\n " + authHeader : ""
+  } \\
+  -d '{\n    "output_type": "${
+    processedPayload.output_type || "chat"
+  }",\n    "input_type": "${
+    processedPayload.input_type || "chat"
+  }",\n    "input_value": "${
+    processedPayload.input_value || "Your message here"
+  }",\n    "session_id": "YOUR_SESSION_ID_HERE",\n    "tweaks": {\n${allTweaks}\n    }\n  }'`;
 
     // Return structured steps instead of concatenated string
     return {

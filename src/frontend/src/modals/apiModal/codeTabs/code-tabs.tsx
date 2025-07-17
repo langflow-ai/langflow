@@ -8,6 +8,7 @@ import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
@@ -87,18 +88,28 @@ export default function APITabsComponent() {
     )?.name || "macoslinux",
   );
 
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAutoLogin = useIsAutoLogin();
+  const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
+
   const tabsList = [
     {
       title: "Python",
       icon: "BWPython",
       language: "python",
-      code: getNewPythonApiCode(codeOptions),
+      code: getNewPythonApiCode({
+        ...codeOptions,
+        shouldDisplayApiKey,
+      }),
     },
     {
       title: "JavaScript",
       icon: "javascript",
       language: "javascript",
-      code: getNewJsApiCode(codeOptions),
+      code: getNewJsApiCode({
+        ...codeOptions,
+        shouldDisplayApiKey,
+      }),
     },
     {
       title: "cURL",
@@ -107,6 +118,7 @@ export default function APITabsComponent() {
       code: getNewCurlCode({
         ...codeOptions,
         platform: selectedPlatform === "windows" ? "powershell" : "unix",
+        shouldDisplayApiKey,
       }),
     },
   ];
@@ -119,7 +131,8 @@ export default function APITabsComponent() {
     }
 
     const currentTab = tabsList.find((tab) => tab.title === selectedTab);
-    const textToCopy = codeText || currentTab?.code;
+    const textToCopy =
+      codeText || (typeof currentTab?.code === "string" ? currentTab.code : "");
     if (textToCopy) {
       navigator.clipboard.writeText(textToCopy).then(() => {
         if (stepId) {
@@ -214,7 +227,9 @@ export default function APITabsComponent() {
                     >
                       <h4 className="mb-2 text-sm font-medium">{step.title}</h4>
                       <div
-                        className={`relative flex ${index === steps.length - 1 ? "h-full" : ""} w-full`}
+                        className={`relative flex ${
+                          index === steps.length - 1 ? "h-full" : ""
+                        } w-full`}
                       >
                         <Button
                           variant="ghost"
@@ -242,7 +257,9 @@ export default function APITabsComponent() {
                           wrapLongLines={true}
                           language={currentTab.language}
                           style={dark ? oneDark : oneLight}
-                          className={`!mt-0 ${index === steps.length - 1 ? "h-full" : ""} w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll`}
+                          className={`!mt-0 ${
+                            index === steps.length - 1 ? "h-full" : ""
+                          } w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll`}
                         >
                           {step.code}
                         </SyntaxHighlighter>

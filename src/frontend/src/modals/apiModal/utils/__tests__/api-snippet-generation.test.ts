@@ -91,10 +91,16 @@ describe("API Snippet Generation Utilities", () => {
         input_type: "chat",
         input_value: "Hello",
       },
+      shouldDisplayApiKey: true,
+    };
+
+    const noAuthOptions = {
+      ...baseOptions,
+      shouldDisplayApiKey: false,
     };
 
     describe("Python Code Generation", () => {
-      it("should generate basic Python code without files", () => {
+      it("should generate basic Python code with API key authentication", () => {
         const code = getNewPythonApiCode(baseOptions);
 
         // Check for required imports
@@ -103,6 +109,7 @@ describe("API Snippet Generation Utilities", () => {
 
         // Check for API key
         expect(code).toContain("api_key = 'YOUR_API_KEY_HERE'");
+        expect(code).toContain('headers = {"x-api-key": api_key}');
 
         // Check for session_id
         expect(code).toContain('payload["session_id"] = str(uuid.uuid4())');
@@ -111,7 +118,25 @@ describe("API Snippet Generation Utilities", () => {
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
 
-      it("should generate multi-step code for file uploads", () => {
+      it("should generate basic Python code without API key authentication", () => {
+        const code = getNewPythonApiCode(noAuthOptions);
+
+        // Check for required imports
+        expect(code).toContain("import requests");
+        expect(code).toContain("import uuid");
+
+        // Should not contain API key
+        expect(code).not.toContain("api_key = 'YOUR_API_KEY_HERE'");
+        expect(code).not.toContain('headers = {"x-api-key": api_key}');
+
+        // Check for session_id
+        expect(code).toContain('payload["session_id"] = str(uuid.uuid4())');
+
+        // Check for correct endpoint
+        expect(code).toContain("/api/v1/run/test-endpoint");
+      });
+
+      it("should generate multi-step code for file uploads with authentication", () => {
         const optionsWithFiles = {
           ...baseOptions,
           processedPayload: {
@@ -125,6 +150,34 @@ describe("API Snippet Generation Utilities", () => {
 
         const code = getNewPythonApiCode(optionsWithFiles);
 
+        // Check for API key in file upload sections
+        expect(code).toContain("api_key = 'YOUR_API_KEY_HERE'");
+        expect(code).toContain('headers = {"x-api-key": api_key}');
+
+        // Check for file upload steps
+        expect(code).toContain("/api/v1/files/upload/");
+        expect(code).toContain("/api/v2/files");
+        expect(code).toContain("with open");
+        expect(code).toContain('files={"file": f}');
+      });
+
+      it("should generate multi-step code for file uploads without authentication", () => {
+        const optionsWithFiles = {
+          ...noAuthOptions,
+          processedPayload: {
+            ...noAuthOptions.processedPayload,
+            tweaks: {
+              node1: { files: "chat_input.txt" },
+              node2: { path: ["file.pdf"] },
+            },
+          },
+        };
+
+        const code = getNewPythonApiCode(optionsWithFiles);
+
+        // Should not contain API key
+        expect(code).not.toContain("api_key = 'YOUR_API_KEY_HERE'");
+
         // Check for file upload steps
         expect(code).toContain("/api/v1/files/upload/");
         expect(code).toContain("/api/v2/files");
@@ -134,20 +187,35 @@ describe("API Snippet Generation Utilities", () => {
     });
 
     describe("JavaScript Code Generation", () => {
-      it("should generate basic JavaScript code without files", () => {
+      it("should generate basic JavaScript code with API key authentication", () => {
         const code = getNewJsApiCode(baseOptions);
 
         // Check for API key
         expect(code).toContain("const apiKey = 'YOUR_API_KEY_HERE'");
+        expect(code).toContain('"x-api-key": apiKey');
 
-        // Check for session_id (it's generated server-side, so just check it exists)
+        // Check for session_id
         expect(code).toContain("session_id");
 
         // Check for correct endpoint
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
 
-      it("should generate multi-step code for file uploads", () => {
+      it("should generate basic JavaScript code without API key authentication", () => {
+        const code = getNewJsApiCode(noAuthOptions);
+
+        // Should not contain API key
+        expect(code).not.toContain("const apiKey = 'YOUR_API_KEY_HERE'");
+        expect(code).not.toContain("'x-api-key': apiKey");
+
+        // Check for session_id
+        expect(code).toContain("session_id");
+
+        // Check for correct endpoint
+        expect(code).toContain("/api/v1/run/test-endpoint");
+      });
+
+      it("should generate multi-step code for file uploads with authentication", () => {
         const optionsWithFiles = {
           ...baseOptions,
           processedPayload: {
@@ -167,6 +235,42 @@ describe("API Snippet Generation Utilities", () => {
           "httpModule = protocol === 'https:' ? require('https') : require('http')",
         );
 
+        // Check for API key
+        expect(code).toContain("const apiKey = 'YOUR_API_KEY_HERE'");
+        expect(code).toContain("const authHeaders = { 'x-api-key': apiKey }");
+
+        // Check for file upload functions
+        expect(code).toContain("createFormData");
+        expect(code).toContain("makeRequest");
+
+        // Check for upload steps
+        expect(code).toContain("/api/v1/files/upload/");
+        expect(code).toContain("/api/v2/files");
+      });
+
+      it("should generate multi-step code for file uploads without authentication", () => {
+        const optionsWithFiles = {
+          ...noAuthOptions,
+          processedPayload: {
+            ...noAuthOptions.processedPayload,
+            tweaks: {
+              node1: { files: "chat_input.txt" },
+              node2: { path: ["file.pdf"] },
+            },
+          },
+        };
+
+        const code = getNewJsApiCode(optionsWithFiles);
+
+        // Check for required modules
+        expect(code).toContain("const fs = require('fs')");
+        expect(code).toContain(
+          "httpModule = protocol === 'https:' ? require('https') : require('http')",
+        );
+
+        // Should not contain API key
+        expect(code).not.toContain("const apiKey = 'YOUR_API_KEY_HERE'");
+
         // Check for file upload functions
         expect(code).toContain("createFormData");
         expect(code).toContain("makeRequest");
@@ -178,10 +282,10 @@ describe("API Snippet Generation Utilities", () => {
     });
 
     describe("cURL Code Generation", () => {
-      it("should generate Unix cURL code without files", () => {
+      it("should generate Unix cURL code with API key authentication", () => {
         const code = getNewCurlCode({ ...baseOptions, platform: "unix" });
 
-        // Check for API key (quotes may vary)
+        // Check for API key
         expect(code).toContain("x-api-key: YOUR_API_KEY_HERE");
 
         // Check for session_id placeholder
@@ -191,7 +295,20 @@ describe("API Snippet Generation Utilities", () => {
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
 
-      it("should generate PowerShell cURL code without files", () => {
+      it("should generate Unix cURL code without API key authentication", () => {
+        const code = getNewCurlCode({ ...noAuthOptions, platform: "unix" });
+
+        // Should not contain API key
+        expect(code).not.toContain("x-api-key: YOUR_API_KEY_HERE");
+
+        // Check for session_id placeholder
+        expect(code).toContain("YOUR_SESSION_ID_HERE");
+
+        // Check for correct endpoint
+        expect(code).toContain("/api/v1/run/test-endpoint");
+      });
+
+      it("should generate PowerShell cURL code with API key authentication", () => {
         const code = getNewCurlCode({ ...baseOptions, platform: "powershell" });
 
         // Check for API key
@@ -204,7 +321,23 @@ describe("API Snippet Generation Utilities", () => {
         expect(code).toContain("/api/v1/run/test-endpoint");
       });
 
-      it("should generate multi-step code for file uploads", () => {
+      it("should generate PowerShell cURL code without API key authentication", () => {
+        const code = getNewCurlCode({
+          ...noAuthOptions,
+          platform: "powershell",
+        });
+
+        // Should not contain API key
+        expect(code).not.toContain('--header "x-api-key: YOUR_API_KEY_HERE"');
+
+        // Check for session_id placeholder
+        expect(code).toContain("YOUR_SESSION_ID_HERE");
+
+        // Check for correct endpoint
+        expect(code).toContain("/api/v1/run/test-endpoint");
+      });
+
+      it("should generate multi-step code for file uploads with authentication", () => {
         const optionsWithFiles = {
           ...baseOptions,
           processedPayload: {
@@ -233,34 +366,78 @@ describe("API Snippet Generation Utilities", () => {
         expect(result.steps[0].code).toContain("/api/v1/files/upload/");
         expect(result.steps[0].code).toContain("/api/v2/files");
         expect(result.steps[0].code).toContain('--form "file=@');
+        expect(result.steps[0].code).toContain("x-api-key: YOUR_API_KEY_HERE");
 
         // Check step 2 (execute flow)
         expect(result.steps[1]).toHaveProperty("title");
         expect(result.steps[1].title).toContain("Execute");
         expect(result.steps[1]).toHaveProperty("code");
         expect(result.steps[1].code).toContain("/api/v1/run/test-endpoint");
+        expect(result.steps[1].code).toContain("x-api-key: YOUR_API_KEY_HERE");
+      });
+
+      it("should generate multi-step code for file uploads without authentication", () => {
+        const optionsWithFiles = {
+          ...noAuthOptions,
+          processedPayload: {
+            ...noAuthOptions.processedPayload,
+            tweaks: {
+              node1: { files: "chat_input.txt" },
+              node2: { path: ["file.pdf"] },
+            },
+          },
+        };
+
+        const result = getNewCurlCode({
+          ...optionsWithFiles,
+          platform: "unix",
+        }) as { steps: { title: string; code: string }[] };
+
+        // Check that it returns structured steps
+        expect(result).toHaveProperty("steps");
+        expect(Array.isArray(result.steps)).toBe(true);
+        expect(result.steps).toHaveLength(2);
+
+        // Check step 1 (upload files) - should not contain API key
+        expect(result.steps[0]).toHaveProperty("title");
+        expect(result.steps[0].title).toContain("Upload files");
+        expect(result.steps[0]).toHaveProperty("code");
+        expect(result.steps[0].code).toContain("/api/v1/files/upload/");
+        expect(result.steps[0].code).toContain("/api/v2/files");
+        expect(result.steps[0].code).toContain('--form "file=@');
+        expect(result.steps[0].code).not.toContain(
+          "x-api-key: YOUR_API_KEY_HERE",
+        );
+
+        // Check step 2 (execute flow) - should not contain API key
+        expect(result.steps[1]).toHaveProperty("title");
+        expect(result.steps[1].title).toContain("Execute");
+        expect(result.steps[1]).toHaveProperty("code");
+        expect(result.steps[1].code).toContain("/api/v1/run/test-endpoint");
+        expect(result.steps[1].code).not.toContain(
+          "x-api-key: YOUR_API_KEY_HERE",
+        );
       });
     });
 
     describe("Common Features", () => {
-      it("should always include API key in all generators", () => {
-        const pythonCode = getNewPythonApiCode(baseOptions);
-        const jsCode = getNewJsApiCode(baseOptions);
-        const curlResult = getNewCurlCode(baseOptions);
+      it("should conditionally include API key based on shouldDisplayApiKey parameter", () => {
+        const pythonCodeAuth = getNewPythonApiCode(baseOptions);
+        const pythonCodeNoAuth = getNewPythonApiCode(noAuthOptions);
+        const jsCodeAuth = getNewJsApiCode(baseOptions);
+        const jsCodeNoAuth = getNewJsApiCode(noAuthOptions);
+        const curlResultAuth = getNewCurlCode(baseOptions);
+        const curlResultNoAuth = getNewCurlCode(noAuthOptions);
 
-        expect(pythonCode).toContain("YOUR_API_KEY_HERE");
-        expect(jsCode).toContain("YOUR_API_KEY_HERE");
+        // With authentication
+        expect(pythonCodeAuth).toContain("YOUR_API_KEY_HERE");
+        expect(jsCodeAuth).toContain("YOUR_API_KEY_HERE");
+        expect(curlResultAuth).toContain("YOUR_API_KEY_HERE");
 
-        // Handle both string and object return types for cURL
-        if (typeof curlResult === "string") {
-          expect(curlResult).toContain("YOUR_API_KEY_HERE");
-        } else {
-          // For steps object, check that at least one step contains the API key
-          const hasApiKey = curlResult.steps.some((step) =>
-            step.code.includes("YOUR_API_KEY_HERE"),
-          );
-          expect(hasApiKey).toBe(true);
-        }
+        // Without authentication
+        expect(pythonCodeNoAuth).not.toContain("YOUR_API_KEY_HERE");
+        expect(jsCodeNoAuth).not.toContain("YOUR_API_KEY_HERE");
+        expect(curlResultNoAuth).not.toContain("YOUR_API_KEY_HERE");
       });
 
       it("should include session_id in all generators", () => {

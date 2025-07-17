@@ -14,10 +14,12 @@ export function getNewJsApiCode({
   flowId,
   endpointName,
   processedPayload,
+  shouldDisplayApiKey,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
+  shouldDisplayApiKey: boolean;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
@@ -38,15 +40,18 @@ export function getNewJsApiCode({
 
     const payloadString = JSON.stringify(processedPayload, null, 4);
 
-    const authSection = `const crypto = require('crypto');
+    const authSection = shouldDisplayApiKey
+      ? `const crypto = require('crypto');
 const apiKey = 'YOUR_API_KEY_HERE';
+`
+      : "";
 
-`;
-
-    const headersSection = `    headers: {
+    const headersSection = shouldDisplayApiKey
+      ? `    headers: {
         'Content-Type': 'application/json',
         "x-api-key": apiKey
-    },`;
+    },`
+      : "";
 
     return `${authSection}const payload = ${payloadString};
 payload.session_id = crypto.randomUUID();
@@ -73,10 +78,14 @@ fetch('${apiUrl}', options)
       flowId,
       endpointName,
       processedPayload: { ...processedPayload, tweaks: nonFileTweaks },
+      shouldDisplayApiKey,
     });
   }
 
-  const authSection = ``;
+  const authSection = shouldDisplayApiKey
+    ? `const apiKey = 'YOUR_API_KEY_HERE';
+const authHeaders = { 'x-api-key': apiKey };`
+    : "";
 
   // Build upload steps for each file component
   const uploadSteps: string[] = [];
@@ -88,8 +97,12 @@ fetch('${apiUrl}', options)
     const varName = `chatFilePath${index + 1}`;
     resultVariables.push(varName);
 
-    uploadSteps.push(`        // Step ${uploadSteps.length + 1}: Upload file for ChatInput ${nodeId}
-        const { payload: chatPayload${index + 1}, boundary: chatBoundary${index + 1} } = createFormData('your_image_${index + 1}.jpg');
+    uploadSteps.push(`        // Step ${
+      uploadSteps.length + 1
+    }: Upload file for ChatInput ${nodeId}
+        const { payload: chatPayload${index + 1}, boundary: chatBoundary${
+          index + 1
+        } } = createFormData('your_image_${index + 1}.jpg');
 
         const chatUploadOptions${index + 1} = {
             hostname: '${hostname}',
@@ -97,21 +110,31 @@ fetch('${apiUrl}', options)
             path: \`/api/v1/files/upload/\${FLOW_ID}\`,
             method: 'POST',
             headers: {
-                'Content-Type': \`multipart/form-data; boundary=\${chatBoundary${index + 1}}\`,
+                'Content-Type': \`multipart/form-data; boundary=\${chatBoundary${
+                  index + 1
+                }}\`,
                 'Content-Length': chatPayload${index + 1}.length,
                 ...authHeaders
             }
         };
 
-        const chatUploadResult${index + 1} = await makeRequest(chatUploadOptions${index + 1}, chatPayload${index + 1});
+        const chatUploadResult${
+          index + 1
+        } = await makeRequest(chatUploadOptions${index + 1}, chatPayload${
+          index + 1
+        });
         const ${varName} = chatUploadResult${index + 1}.file_path;
-        console.log('ChatInput upload ${index + 1} successful! File path:', ${varName});`);
+        console.log('ChatInput upload ${
+          index + 1
+        } successful! File path:', ${varName});`);
 
     const originalTweak = tweaks[nodeId];
     const modifiedTweak = { ...originalTweak };
-    modifiedTweak.files = varName;
+    modifiedTweak.files = [varName];
     tweakEntries.push(
-      `            "${nodeId}": ${JSON.stringify(modifiedTweak, null, 12).split("\n").join("\n            ")}`,
+      `            "${nodeId}": ${JSON.stringify(modifiedTweak, null, 12)
+        .split("\n")
+        .join("\n            ")}`,
     );
   });
 
@@ -120,8 +143,12 @@ fetch('${apiUrl}', options)
     const varName = `filePath${index + 1}`;
     resultVariables.push(varName);
 
-    uploadSteps.push(`        // Step ${uploadSteps.length + 1}: Upload file for File/VideoFile ${nodeId}
-        const { payload: filePayload${index + 1}, boundary: fileBoundary${index + 1} } = createFormData('your_file_${index + 1}.pdf');
+    uploadSteps.push(`        // Step ${
+      uploadSteps.length + 1
+    }: Upload file for File/VideoFile ${nodeId}
+        const { payload: filePayload${index + 1}, boundary: fileBoundary${
+          index + 1
+        } } = createFormData('your_file_${index + 1}.pdf');
 
         const fileUploadOptions${index + 1} = {
             hostname: '${hostname}',
@@ -129,15 +156,23 @@ fetch('${apiUrl}', options)
             path: '/api/v2/files',
             method: 'POST',
             headers: {
-                'Content-Type': \`multipart/form-data; boundary=\${fileBoundary${index + 1}}\`,
+                'Content-Type': \`multipart/form-data; boundary=\${fileBoundary${
+                  index + 1
+                }}\`,
                 'Content-Length': filePayload${index + 1}.length,
                 ...authHeaders
             }
         };
 
-        const fileUploadResult${index + 1} = await makeRequest(fileUploadOptions${index + 1}, filePayload${index + 1});
+        const fileUploadResult${
+          index + 1
+        } = await makeRequest(fileUploadOptions${index + 1}, filePayload${
+          index + 1
+        });
         const ${varName} = fileUploadResult${index + 1}.path;
-        console.log('File upload ${index + 1} successful! File path:', ${varName});`);
+        console.log('File upload ${
+          index + 1
+        } successful! File path:', ${varName});`);
 
     const originalTweak = tweaks[nodeId];
     const modifiedTweak = { ...originalTweak };
@@ -147,14 +182,18 @@ fetch('${apiUrl}', options)
       modifiedTweak.file_path = varName;
     }
     tweakEntries.push(
-      `            "${nodeId}": ${JSON.stringify(modifiedTweak, null, 12).split("\n").join("\n            ")}`,
+      `            "${nodeId}": ${JSON.stringify(modifiedTweak, null, 12)
+        .split("\n")
+        .join("\n            ")}`,
     );
   });
 
   // Add non-file tweaks
   Object.entries(nonFileTweaks).forEach(([nodeId, tweak]) => {
     tweakEntries.push(
-      `            "${nodeId}": ${JSON.stringify(tweak, null, 12).split("\n").join("\n            ")}`,
+      `            "${nodeId}": ${JSON.stringify(tweak, null, 12)
+        .split("\n")
+        .join("\n            ")}`,
     );
   });
 
@@ -219,9 +258,14 @@ function makeRequest(options, data) {
 }
 
 async function uploadAndExecuteFlow() {
-    try {
+    try {${
+      shouldDisplayApiKey
+        ? `
         const apiKey = 'YOUR_API_KEY_HERE';
-        const authHeaders = { 'x-api-key': apiKey };
+        const authHeaders = { 'x-api-key': apiKey };`
+        : `
+        const authHeaders = {};`
+    }
 
 ${uploadSteps.join("\n\n")}
 
@@ -229,7 +273,9 @@ ${uploadSteps.join("\n\n")}
         const executePayload = JSON.stringify({
             "output_type": "${processedPayload.output_type || "chat"}",
             "input_type": "${processedPayload.input_type || "chat"}",
-            "input_value": "${processedPayload.input_value || "Your message here"}",
+            "input_value": "${
+              processedPayload.input_value || "Your message here"
+            }",
             "session_id": crypto.randomUUID(),
             "tweaks": {
 ${allTweaks}
