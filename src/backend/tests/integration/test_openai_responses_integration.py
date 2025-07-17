@@ -6,6 +6,7 @@ import pathlib
 import pytest
 from dotenv import load_dotenv
 from httpx import AsyncClient
+from loguru import logger
 
 
 # Load environment variables from .env file
@@ -20,11 +21,11 @@ def load_env_vars():
 
     for env_path in possible_paths:
         if env_path.exists():
-            print(f"Loading environment variables from {env_path.absolute()}")
+            logger.info(f"Loading environment variables from {env_path.absolute()}")
             load_dotenv(env_path)
             return True
 
-    print("Warning: No .env file found. Using existing environment variables.")
+    logger.warning("No .env file found. Using existing environment variables.")
     return False
 
 
@@ -38,10 +39,10 @@ async def create_global_variable(client: AsyncClient, headers, name, value, vari
 
     response = await client.post("/api/v1/variables/", json=payload, headers=headers)
     if response.status_code != 201:
-        print(f"Failed to create global variable: {response.content}")
+        logger.error(f"Failed to create global variable: {response.content}")
         return False
 
-    print(f"Successfully created global variable: {name}")
+    logger.info(f"Successfully created global variable: {name}")
     return True
 
 
@@ -58,21 +59,20 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
     await create_global_variable(client, headers, "OPENAI_API_KEY", openai_api_key)
 
     # Load the Basic Prompting template
-    template_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "base",
-        "langflow",
-        "initial_setup",
-        "starter_projects",
-        "Basic Prompting.json",
+    template_path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent
+        / "base"
+        / "langflow"
+        / "initial_setup"
+        / "starter_projects"
+        / "Basic Prompting.json"
     )
 
-    with open(template_path) as f:
-        flow_data = json.load(f)
+    flow_data = await asyncio.to_thread(lambda: json.loads(pathlib.Path(template_path).read_text()))
 
     # Add the flow
     response = await client.post("/api/v1/flows/", json=flow_data, headers=headers)
-    print(f"Flow creation response: {response.status_code}")
+    logger.info(f"Flow creation response: {response.status_code}")
 
     assert response.status_code == 201
     flow = response.json()
@@ -87,21 +87,21 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
             builds = builds_response.json().get("vertex_builds", {})
             # Check if builds are complete
             all_valid = True
-            for node_id, build_list in builds.items():
+            for build_list in builds.values():
                 if not build_list or build_list[0].get("valid") is not True:
                     all_valid = False
                     break
 
             if all_valid and builds:
-                print(f"Flow builds completed successfully after {attempt + 1} attempts")
+                logger.info(f"Flow builds completed successfully after {attempt + 1} attempts")
                 break
 
         # Wait before polling again
         if attempt < max_attempts - 1:
-            print(f"Waiting for flow builds to complete (attempt {attempt + 1}/{max_attempts})...")
+            logger.info(f"Waiting for flow builds to complete (attempt {attempt + 1}/{max_attempts})...")
             await asyncio.sleep(1)
     else:
-        print("Warning: Flow builds polling timed out, proceeding anyway")
+        logger.warning("Flow builds polling timed out, proceeding anyway")
 
     return flow, headers
 
@@ -117,28 +117,28 @@ async def test_openai_responses_non_streaming(client: AsyncClient, created_api_k
 
     # Make the request
     response = await client.post("/api/v1/responses", json=payload, headers=headers)
-    print(f"Response status: {response.status_code}")
-    print(f"Response content: {response.content}")
+    logger.info(f"Response status: {response.status_code}")
+    logger.debug(f"Response content: {response.content}")
 
     # Handle potential errors
     if response.status_code != 200:
-        print(f"Error response: {response.content}")
+        logger.error(f"Error response: {response.content}")
         pytest.fail(f"Request failed with status {response.status_code}")
 
     try:
         data = response.json()
         if "error" in data:
-            print(f"Error in response: {data['error']}")
-            # Don't fail immediately, print more details for debugging
-            print(f"Full error details: {data}")
+            logger.error(f"Error in response: {data['error']}")
+            # Don't fail immediately, log more details for debugging
+            logger.error(f"Full error details: {data}")
             pytest.fail(f"Error in response: {data['error'].get('message', 'Unknown error')}")
 
         # Validate the response
         assert "id" in data
         assert "output" in data
-    except Exception as e:
-        print(f"Exception parsing response: {e}")
-        pytest.fail(f"Failed to parse response: {e}")
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Exception parsing response")
+        pytest.fail(f"Failed to parse response: {exc}")
 
 
 @pytest.mark.api_key_required
@@ -152,17 +152,17 @@ async def test_openai_responses_streaming(client: AsyncClient, created_api_key):
 
     # Make the request
     response = await client.post("/api/v1/responses", json=payload, headers=headers)
-    print(f"Response status: {response.status_code}")
+    logger.info(f"Response status: {response.status_code}")
 
     # Handle potential errors
     if response.status_code != 200:
-        print(f"Error response: {response.content}")
+        logger.error(f"Error response: {response.content}")
         pytest.fail(f"Request failed with status {response.status_code}")
 
     # For streaming, we should get a stream of server-sent events
     content = await response.aread()
     text_content = content.decode("utf-8")
-    print(f"Response content (first 200 chars): {text_content[:200]}")
+    logger.debug(f"Response content (first 200 chars): {text_content[:200]}")
 
     # Check that we got some SSE data events
     assert "data:" in text_content
@@ -170,7 +170,8 @@ async def test_openai_responses_streaming(client: AsyncClient, created_api_key):
     # Parse the events to validate structure and final [DONE] marker
     events = text_content.strip().split("\n\n")
     # The stream must end with the OpenAI '[DONE]' sentinel
-    assert events and events[-1].strip() == "data: [DONE]", "Stream did not end with [DONE] marker"
+    assert events, "No events in stream"
+    assert events[-1].strip() == "data: [DONE]", "Stream did not end with [DONE] marker"
 
     # Filter out the [DONE] marker to inspect JSON data events
     data_events = [evt for evt in events if evt.startswith("data:") and not evt.startswith("data: [DONE]")]
