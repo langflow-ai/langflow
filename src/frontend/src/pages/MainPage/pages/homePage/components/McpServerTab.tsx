@@ -226,10 +226,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   // Generate auth headers based on the authentication type
   const getAuthHeaders = () => {
-    if (isAutoLogin) return "";
-
     // If MCP auth is disabled, use the previous API key behavior
     if (!ENABLE_MCP_AUTH) {
+      if (isAutoLogin) return "";
       return `
         "--headers",
         "x-api-key",
