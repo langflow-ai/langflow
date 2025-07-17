@@ -228,6 +228,14 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const getAuthHeaders = () => {
     if (isAutoLogin) return "";
 
+    // If MCP auth is disabled, use the previous API key behavior
+    if (!ENABLE_MCP_AUTH) {
+      return `
+        "--headers",
+        "x-api-key",
+        "${apiKey || "YOUR_API_KEY"}",`;
+    }
+
     if (!currentAuthSettings || currentAuthSettings.auth_type === "none") {
       return "";
     }
@@ -357,7 +365,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           </div>
         </div>
         <div className="flex gap-4 items-center">
-          {!hasAuthentication && (
+          {ENABLE_MCP_AUTH && !hasAuthentication && (
             <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
               <ForwardedIconComponent
                 name="AlertTriangle"
@@ -366,17 +374,19 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               Public endpoint - no auth. Use only in dev or trusted envs.
             </span>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAuthModalOpen(true)}
-          >
-            <ForwardedIconComponent
-              name="Fingerprint"
-              className="h-4 w-4 shrink-0"
-            />
-            {hasAuthentication ? "Edit Auth" : "Add Auth"}
-          </Button>
+          {ENABLE_MCP_AUTH && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAuthModalOpen(true)}
+            >
+              <ForwardedIconComponent
+                name="Fingerprint"
+                className="h-4 w-4 shrink-0"
+              />
+              {hasAuthentication ? "Edit Auth" : "Add Auth"}
+            </Button>
+          )}
         </div>
       </div>
       <div className="flex flex-col justify-between gap-8 xl:flex-row">
@@ -570,12 +580,14 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           )}
         </div>
       </div>
-      <AuthModal
-        open={authModalOpen}
-        setOpen={setAuthModalOpen}
-        authSettings={currentAuthSettings}
-        onSave={handleAuthSave}
-      />
+      {ENABLE_MCP_AUTH && (
+        <AuthModal
+          open={authModalOpen}
+          setOpen={setAuthModalOpen}
+          authSettings={currentAuthSettings}
+          onSave={handleAuthSave}
+        />
+      )}
     </div>
   );
 };
