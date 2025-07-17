@@ -12,34 +12,43 @@ def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
     Returns:
         List of TF-IDF scores for each document
     """
-    # Tokenize documents (simple whitespace splitting)
+    # Tokenize documents (simple whitespace splitting) and lower once
     tokenized_docs = [doc.lower().split() for doc in documents]
     n_docs = len(documents)
 
-    # Calculate document frequency for each term
-    df = {}
-    for term in query_terms:
-        df[term] = sum(1 for doc in tokenized_docs if term.lower() in doc)
+    # Cache lowercased query_terms for speed
+    query_terms_lower = [term.lower() for term in query_terms]
+    query_term_set = set(query_terms_lower)
 
+    # Calculate document frequency for each query term in one pass
+    df = dict.fromkeys(query_terms_lower, 0)
+    for doc_tokens in tokenized_docs:
+        seen = set()
+        for token in doc_tokens:
+            if token in query_term_set:
+                seen.add(token)
+        for token in seen:
+            df[token] += 1
+
+    # Precompute idf for each term once
+    idf = {}
+    for term in query_terms_lower:
+        doc_freq = df[term]
+        idf[term] = math.log(n_docs / doc_freq) if doc_freq > 0 else 0
+
+    # Compute scores efficiently
     scores = []
-
     for doc_tokens in tokenized_docs:
         doc_score = 0.0
         doc_length = len(doc_tokens)
+        if doc_length == 0:
+            scores.append(0.0)
+            continue
         term_counts = Counter(doc_tokens)
-
-        for term in query_terms:
-            term_lower = term.lower()
-
-            # Term frequency (TF)
-            tf = term_counts[term_lower] / doc_length if doc_length > 0 else 0
-
-            # Inverse document frequency (IDF)
-            idf = math.log(n_docs / df[term]) if df[term] > 0 else 0
-
-            # TF-IDF score
-            doc_score += tf * idf
-
+        # Only iterate relevant query terms
+        for term in query_terms_lower:
+            tf = term_counts[term] / doc_length if term in term_counts else 0.0
+            doc_score += tf * idf[term]
         scores.append(doc_score)
 
     return scores
