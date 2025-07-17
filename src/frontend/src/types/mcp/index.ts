@@ -4,6 +4,7 @@ export type AuthSettingsType = {
   username?: string;
   password?: string;
   bearer_token?: string;
+  iam_endpoint?: string;
 };
 
 export type MCPSettingsType = {
