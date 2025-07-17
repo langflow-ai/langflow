@@ -16,7 +16,6 @@ import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
 import useAlertStore from '@/stores/alertStore';
 import { formatFileSize } from '@/utils/stringManipulation';
 import { cn } from '@/utils/utils';
-import { sortByDate } from '../../../utils/sort-flows';
 
 interface KnowledgeBasesTabProps {
   quickFilterText: string;
@@ -261,12 +260,7 @@ const KnowledgeBasesTab = ({
               rowSelection="multiple"
               onSelectionChanged={handleSelectionChanged}
               columnDefs={knowledgeBaseColDefs}
-              rowData={knowledgeBases.sort((a, b) => {
-                return sortByDate(
-                  a.updated_at ?? a.created_at,
-                  b.updated_at ?? b.created_at
-                );
-              })}
+              rowData={knowledgeBases}
               className={cn(
                 'ag-no-border group w-full',
                 isShiftPressed && quantitySelected > 0 && 'no-select-cells'
