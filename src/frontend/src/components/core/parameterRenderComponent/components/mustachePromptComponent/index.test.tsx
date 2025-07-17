@@ -10,10 +10,13 @@ describe("MustachePromptAreaComponent", () => {
           // escape HTML first
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
-          // highlight mustache variables {{variable}}
-          .replace(/\{\{(.+?)\}\}/g, (match, varName) => {
-            return `<span class="chat-message-highlight">{{${varName}}}</span>`;
-          })
+          // highlight only simple mustache variables {{variable_name}} - no complex syntax
+          .replace(
+            /\{\{([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\}\}/g,
+            (match, varName) => {
+              return `<span class="chat-message-highlight">{{${varName}}}</span>`;
+            },
+          )
           // preserve new-lines
           .replace(/\n/g, "<br />")
       );
@@ -49,11 +52,11 @@ describe("MustachePromptAreaComponent", () => {
       expect(result).toBe("Line 1<br />Line 2<br />Line 3");
     });
 
-    it("should handle complex mustache variables", () => {
+    it("should NOT highlight complex mustache syntax", () => {
       const input = "{{#if user}}Hello {{user.name}}{{/if}}";
       const result = applyMustacheHighlighting(input);
       expect(result).toBe(
-        '<span class="chat-message-highlight">{{#if user}}</span>Hello <span class="chat-message-highlight">{{user.name}}</span><span class="chat-message-highlight">{{/if}}</span>',
+        '{{#if user}}Hello <span class="chat-message-highlight">{{user.name}}</span>{{/if}}',
       );
     });
 
@@ -78,20 +81,80 @@ describe("MustachePromptAreaComponent", () => {
       expect(result).toBe("This is a plain string.");
     });
 
-    it("should handle variables with spaces", () => {
+    it("should NOT highlight variables with spaces", () => {
       const input = "Hello {{ name with spaces }}!";
       const result = applyMustacheHighlighting(input);
+      expect(result).toBe("Hello {{ name with spaces }}!");
+    });
+
+    it("should NOT highlight variables with invalid characters", () => {
+      const input = "Value: {{price-$100}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("Value: {{price-$100}}");
+    });
+
+    it("should handle variables with underscores", () => {
+      const input = "Value: {{price_100}}";
+      const result = applyMustacheHighlighting(input);
       expect(result).toBe(
-        'Hello <span class="chat-message-highlight">{{ name with spaces }}</span>!',
+        'Value: <span class="chat-message-highlight">{{price_100}}</span>',
       );
     });
 
-    it("should handle variables with special characters", () => {
-      const input = "Value: {{price_$100}}";
+    it("should handle dot notation variables", () => {
+      const input = "Hello {{user.name}} from {{company.address.city}}";
       const result = applyMustacheHighlighting(input);
       expect(result).toBe(
-        'Value: <span class="chat-message-highlight">{{price_$100}}</span>',
+        'Hello <span class="chat-message-highlight">{{user.name}}</span> from <span class="chat-message-highlight">{{company.address.city}}</span>',
       );
+    });
+
+    it("should reject variables starting with numbers", () => {
+      const input = "Value: {{123invalid}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("Value: {{123invalid}}");
+    });
+
+    it("should reject variables with hashtags (conditionals)", () => {
+      const input = "{{#each items}}Item{{/each}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("{{#each items}}Item{{/each}}");
+    });
+
+    it("should reject variables with forward slashes (closers)", () => {
+      const input = "{{/if}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("{{/if}}");
+    });
+
+    it("should reject variables with carets (inverted sections)", () => {
+      const input = "{{^isEmpty}}Not empty{{/isEmpty}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("{{^isEmpty}}Not empty{{/isEmpty}}");
+    });
+
+    it("should reject variables with ampersands (unescaped)", () => {
+      const input = "{{&unescaped}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("{{&unescaped}}");
+    });
+
+    it("should reject variables with dots at the start", () => {
+      const input = "{{.}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("{{.}}");
+    });
+
+    it("should reject empty variables", () => {
+      const input = "{{}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("{{}}");
+    });
+
+    it("should reject variables with special operators", () => {
+      const input = "{{>partial}} {{!comment}}";
+      const result = applyMustacheHighlighting(input);
+      expect(result).toBe("{{&gt;partial}} {{!comment}}");
     });
   });
 
@@ -135,14 +198,13 @@ describe("MustachePromptAreaComponent", () => {
       };
 
       const propsWithComplexValue = {
-        value: "{{#items}}Item: {{name}} - {{price}}{{/items}}",
+        value: "Item: {{name}} - {{price}}",
         field_name: "template",
         disabled: false,
         readonly: false,
       };
 
       expect(propsWithEmptyValue.value).toBe("");
-      expect(propsWithComplexValue.value).toContain("{{#items}}");
       expect(propsWithComplexValue.value).toContain("{{name}}");
       expect(propsWithComplexValue.value).toContain("{{price}}");
     });

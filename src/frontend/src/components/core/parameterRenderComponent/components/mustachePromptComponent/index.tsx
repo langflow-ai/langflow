@@ -28,10 +28,13 @@ export default function MustachePromptAreaComponent({
     // escape HTML first
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    // highlight mustache variables {{variable}}
-    .replace(/\{\{(.+?)\}\}/g, (match, varName) => {
-      return `<span class="chat-message-highlight">{{${varName}}}</span>`;
-    })
+    // highlight only simple mustache variables {{variable_name}} - no complex syntax
+    .replace(
+      /\{\{([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\}\}/g,
+      (match, varName) => {
+        return `<span class="chat-message-highlight">{{${varName}}}</span>`;
+      },
+    )
     // preserve new-lines
     .replace(/\n/g, "<br />");
 
