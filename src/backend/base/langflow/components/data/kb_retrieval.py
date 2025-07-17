@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from langflow.custom import Component
@@ -21,8 +20,7 @@ class KBRetrievalComponent(Component):
             options=[
                 str(d.name)
                 for d in Path(KNOWLEDGE_BASES_DIR).expanduser().iterdir()
-                if not d.name.startswith(".")
-                and d.is_dir()
+                if not d.name.startswith(".") and d.is_dir()
             ],
             refresh_button=True,
         ),
@@ -56,7 +54,7 @@ class KBRetrievalComponent(Component):
 
         return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
 
-    def update_build_config(self, build_config, field_value, field_name = None):
+    def update_build_config(self, build_config, field_value, field_name=None):
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
             build_config["inputs"]["knowledge_base"]["options"] = self._get_knowledge_bases()
