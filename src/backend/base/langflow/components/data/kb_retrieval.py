@@ -19,10 +19,10 @@ class KBRetrievalComponent(Component):
             display_name="Knowledge Base",
             info="Select the knowledge base to load files from.",
             options=[
-                str(d.name)
-                for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir()
-                if not d.name.startswith(".") and d.is_dir()
-            ] if KNOWLEDGE_BASES_ROOT_PATH.exists() else [],
+                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
+            ]
+            if KNOWLEDGE_BASES_ROOT_PATH.exists()
+            else [],
             refresh_button=True,
         ),
         StrInput(
