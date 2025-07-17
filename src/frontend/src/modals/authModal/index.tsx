@@ -78,8 +78,15 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   };
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="small-h-full">
-      <BaseModal.Header>Authentication</BaseModal.Header>
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      size="small-h-full"
+      className="p-4"
+    >
+      <BaseModal.Header>
+        <div className="flex items-center gap-2 text-base">Authentication</div>
+      </BaseModal.Header>
       <BaseModal.Content className="h-full" overflowHidden>
         <div className="flex items-center  gap-6 border rounded-md p-4 h-[180px]">
           {/* Left column - Radio buttons */}
