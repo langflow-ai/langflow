@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -25,22 +25,20 @@ from langflow.io import (
 )
 from langflow.schema import Message
 from langflow.schema.data import Data
+from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
-
-if TYPE_CHECKING:
-    from langflow.schema.dotdict import dotdict
 
 
 class KBIngestionComponent(Component):
     """Create or append to a Langflow Knowledge Base from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------
-    display_name = "Create KB / Ingest"
+    display_name = "Build KB"
     description = (
         "Takes a DataFrame, a column-level config table, and an Embedding Model handle, "
         "then writes a fully-formed Knowledge Base folder ready for retrieval."
     )
-    icon = "database"
+    icon = "folder"
     name = "KBIngestion"
 
     # ------ Inputs --------------------------------------------------------
