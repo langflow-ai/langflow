@@ -1,33 +1,33 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import SideBarFoldersButtonsComponent from '@/components/core/folderSidebarComponent/components/sideBarFolderButtons';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import { useDeleteFolders } from '@/controllers/API/queries/folders';
-import CustomEmptyPageCommunity from '@/customization/components/custom-empty-page';
-import CustomLoader from '@/customization/components/custom-loader';
-import { useCustomNavigate } from '@/customization/hooks/use-custom-navigate';
-import useAlertStore from '@/stores/alertStore';
-import useFlowsManagerStore from '@/stores/flowsManagerStore';
-import { useFolderStore } from '@/stores/foldersStore';
-import ModalsComponent from '../components/modalsComponent';
-import EmptyPageCommunity from './empty-page';
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { Outlet } from "react-router-dom";
+import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { useDeleteFolders } from "@/controllers/API/queries/folders";
+import CustomEmptyPageCommunity from "@/customization/components/custom-empty-page";
+import CustomLoader from "@/customization/components/custom-loader";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
+import ModalsComponent from "../components/modalsComponent";
+import EmptyPageCommunity from "./empty-page";
 
 export default function CollectionPage(): JSX.Element {
   const [openModal, setOpenModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
-  const setFolderToEdit = useFolderStore(state => state.setFolderToEdit);
+  const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useCustomNavigate();
-  const flows = useFlowsManagerStore(state => state.flows);
-  const examples = useFlowsManagerStore(state => state.examples);
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
-  const setErrorData = useAlertStore(state => state.setErrorData);
-  const folderToEdit = useFolderStore(state => state.folderToEdit);
-  const folders = useFolderStore(state => state.folders);
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const examples = useFlowsManagerStore((state) => state.examples);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const folderToEdit = useFolderStore((state) => state.folderToEdit);
+  const folders = useFolderStore((state) => state.folders);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    return () => queryClient.removeQueries({ queryKey: ['useGetFolder'] });
+    return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
   }, []);
 
   const { mutate } = useDeleteFolders();
@@ -40,17 +40,17 @@ export default function CollectionPage(): JSX.Element {
       {
         onSuccess: () => {
           setSuccessData({
-            title: 'Project deleted successfully.',
+            title: "Project deleted successfully.",
           });
-          navigate('/all');
+          navigate("/all");
         },
-        onError: err => {
+        onError: (err) => {
           console.error(err);
           setErrorData({
-            title: 'Error deleting project.',
+            title: "Error deleting project.",
           });
         },
-      }
+      },
     );
   };
 
@@ -64,12 +64,12 @@ export default function CollectionPage(): JSX.Element {
             handleChangeFolder={(id: string) => {
               navigate(`all/folder/${id}`);
             }}
-            handleDeleteFolder={item => {
+            handleDeleteFolder={(item) => {
               setFolderToEdit(item);
               setOpenDeleteFolderModal(true);
             }}
             handleFilesClick={() => {
-              navigate('assets');
+              navigate("assets");
             }}
           />
         )}
