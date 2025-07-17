@@ -162,6 +162,14 @@ tests: ## run unit, integration, coverage tests
 	make coverage
 
 ######################
+# TEMPLATE TESTING
+######################
+
+template_tests: ## run all starter project template tests
+	@echo 'Running Starter Project Template Tests...'
+	@uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v
+
+######################
 # CODE QUALITY
 ######################
 
