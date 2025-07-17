@@ -52,11 +52,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
+
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -64,32 +66,16 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+
       - name: Install the project
         run: uv sync
+
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
           max_attempts: 2
           command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-report=xml --cov-report=html"
-      - name: Debug token and context
-        if: matrix.python-version == '3.10'
-        run: |
-          echo "🔍 Workflow context:"
-          echo "  Repository: ${{ github.repository }}"
-          echo "  Actor: ${{ github.actor }}"
-          echo "  Event: ${{ github.event_name }}"
-          echo "  Base ref: ${{ github.base_ref }}"
-          echo "  Head ref: ${{ github.head_ref }}"
-          echo "  Is fork: ${{ github.event.pull_request.head.repo.fork }}"
-          echo ""
-          if [ -z "${{ secrets.CODECOV_TOKEN }}" ]; then
-            echo "❌ CODECOV_TOKEN is empty or not set"
-          else
-            echo "✅ CODECOV_TOKEN is available (length: ${#CODECOV_TOKEN})"
-          fi
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -101,7 +87,7 @@ jobs:
           name: backend-coverage-group-${{ matrix.group }}
           fail_ci_if_error: false
           directory: ./
-          verbose: true
+
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         if: matrix.python-version == '3.10'
@@ -111,7 +97,6 @@ jobs:
             coverage.xml
             htmlcov/
           retention-days: 30
-
 
 
   integration-tests:
