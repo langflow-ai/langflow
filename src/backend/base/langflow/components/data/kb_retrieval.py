@@ -9,7 +9,7 @@ KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
 class KBRetrievalComponent(Component):
     display_name = "Retrieve KB"
     description = "Load a particular knowledge base."
-    icon = "folder"
+    icon = "database"
     name = "KBRetrieval"
 
     inputs = [

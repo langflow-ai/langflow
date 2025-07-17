@@ -38,7 +38,7 @@ class KBIngestionComponent(Component):
         "Takes a DataFrame, a column-level config table, and an Embedding Model handle, "
         "then writes a fully-formed Knowledge Base folder ready for retrieval."
     )
-    icon = "folder"
+    icon = "database"
     name = "KBIngestion"
 
     # ------ Inputs --------------------------------------------------------
