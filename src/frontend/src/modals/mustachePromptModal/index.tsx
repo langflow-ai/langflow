@@ -1,9 +1,9 @@
 import Mustache from "mustache";
 import React, { useEffect, useRef, useState } from "react";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
-import IconComponent from "../../components/genericIconComponent";
-import SanitizedHTMLWrapper from "../../components/sanitizedHTMLWrapper";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
