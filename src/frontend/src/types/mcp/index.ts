@@ -1,3 +1,11 @@
+export type AuthSettingsType = {
+  auth_type: string;
+  api_key?: string;
+  username?: string;
+  password?: string;
+  bearer_token?: string;
+};
+
 export type MCPSettingsType = {
   id: string;
   mcp_enabled: boolean;
@@ -6,6 +14,11 @@ export type MCPSettingsType = {
   name?: string;
   description?: string;
   input_schema?: Record<string, any>;
+};
+
+export type MCPProjectResponseType = {
+  tools: MCPSettingsType[];
+  auth_settings?: AuthSettingsType;
 };
 
 export type MCPServerInfoType = {

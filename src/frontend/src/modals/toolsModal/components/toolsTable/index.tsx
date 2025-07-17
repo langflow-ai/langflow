@@ -17,6 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
+import type { AuthSettingsType } from "@/types/mcp";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
 
 export default function ToolsTable({
@@ -27,6 +28,8 @@ export default function ToolsTable({
   placeholder,
   open,
   handleOnNewValue,
+  authType,
+  authFields,
 }: {
   rows: any[];
   data: any[];
@@ -35,6 +38,13 @@ export default function ToolsTable({
   handleOnNewValue: handleOnNewValueType;
   isAction: boolean;
   placeholder: string;
+  authType: string;
+  authFields: {
+    apiKey?: string;
+    username?: string;
+    password?: string;
+    bearerToken?: string;
+  };
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
@@ -79,6 +89,15 @@ export default function ToolsTable({
 
   useEffect(() => {
     if (!open) {
+      // Prepare auth_settings from current authentication state
+      const auth_settings: AuthSettingsType = {
+        auth_type: authType,
+        api_key: authFields.apiKey || undefined,
+        username: authFields.username || undefined,
+        password: authFields.password || undefined,
+        bearer_token: authFields.bearerToken || undefined,
+      };
+
       handleOnNewValue({
         value: data.map((row) => {
           const name = parseString(row.name, [
@@ -125,6 +144,7 @@ export default function ToolsTable({
                 description: processedDescription,
               };
         }),
+        auth_settings,
       });
     }
   }, [open]);

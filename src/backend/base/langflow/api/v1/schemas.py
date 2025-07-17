@@ -440,6 +440,16 @@ class CancelFlowResponse(BaseModel):
     message: str
 
 
+class AuthSettings(BaseModel):
+    """Model representing authentication settings for MCP."""
+
+    auth_type: str = "none"
+    api_key: str | None = None
+    username: str | None = None
+    password: str | None = None
+    bearer_token: str | None = None
+
+
 class MCPSettings(BaseModel):
     """Model representing MCP settings for a flow."""
 
@@ -449,6 +459,21 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
+    auth_settings: AuthSettings | None = None
+
+
+class MCPProjectUpdateRequest(BaseModel):
+    """Request model for updating MCP project settings including auth."""
+
+    settings: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
+
+
+class MCPProjectResponse(BaseModel):
+    """Response model for MCP project tools with auth settings."""
+
+    tools: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
 
 
 class MCPInstallRequest(BaseModel):

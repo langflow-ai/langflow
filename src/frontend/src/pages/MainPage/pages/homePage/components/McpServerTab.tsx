@@ -14,6 +14,7 @@ import {
 } from "@/controllers/API/queries/mcp";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
+import { ENABLE_MCP_AUTH } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
@@ -134,8 +135,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { data: flowsMCP } = useGetFlowsMCP({ projectId });
+  const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+
+  // Extract tools and auth_settings from the response
+  const flowsMCP = mcpProjectData?.tools || [];
+  const currentAuthSettings = mcpProjectData?.auth_settings;
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
   });
@@ -156,14 +161,26 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     isLocalConnection ? "Auto install" : "JSON",
   );
 
-  const handleOnNewValue = (value) => {
-    const flowsMCPData: MCPSettingsType[] = value.value.map((flow) => ({
+  const handleOnNewValue = (value: any) => {
+    const flowsMCPData: MCPSettingsType[] = value.value.map((flow: any) => ({
       id: flow.id,
       action_name: flow.name,
       action_description: flow.description,
       mcp_enabled: flow.status,
     }));
-    patchFlowsMCP(flowsMCPData);
+
+    // Prepare the request with both settings and auth_settings
+    // If ENABLE_MCP_AUTH is false, always use "none" for auth_type
+    const finalAuthSettings = ENABLE_MCP_AUTH
+      ? currentAuthSettings
+      : { auth_type: "none" };
+
+    const requestData = {
+      settings: flowsMCPData,
+      auth_settings: finalAuthSettings,
+    };
+
+    patchFlowsMCP(requestData);
   };
 
   const flowsMCPData = flowsMCP?.map((flow) => ({
@@ -239,7 +256,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       .then((res) => {
         setApiKey(res["api_key"]);
       })
-      .catch((err) => {})
+      .catch(() => {})
       .finally(() => {
         setIsGeneratingApiKey(false);
       });
@@ -293,28 +310,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               editNode={false}
               isAction
               disabled={false}
+              authSettings={currentAuthSettings}
             />
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           <div className="flex flex-col">
             <div className="flex flex-row justify-start border-b border-border">
-              {[{ name: "Auto install" }, { name: "JSON" }].map(
-                (item, index) => (
-                  <Button
-                    unstyled
-                    key={item.name}
-                    className={`flex h-6 flex-row items-end gap-2 text-nowrap border-b-2 border-border border-b-transparent !py-1 font-medium ${
-                      selectedMode === item.name
-                        ? "border-b-2 border-black dark:border-b-white"
-                        : "text-muted-foreground hover:text-foreground"
-                    } px-3 py-2 text-[13px]`}
-                    onClick={() => setSelectedMode(item.name)}
-                  >
-                    <span>{item.name}</span>
-                  </Button>
-                ),
-              )}
+              {[{ name: "Auto install" }, { name: "JSON" }].map((item) => (
+                <Button
+                  unstyled
+                  key={item.name}
+                  className={`flex h-6 flex-row items-end gap-2 text-nowrap border-b-2 border-border border-b-transparent !py-1 font-medium ${
+                    selectedMode === item.name
+                      ? "border-b-2 border-black dark:border-b-white"
+                      : "text-muted-foreground hover:text-foreground"
+                  } px-3 py-2 text-[13px]`}
+                  onClick={() => setSelectedMode(item.name)}
+                >
+                  <span>{item.name}</span>
+                </Button>
+              ))}
             </div>
           </div>
           {selectedMode === "JSON" && (
@@ -325,10 +341,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   onValueChange={setSelectedPlatform}
                 >
                   <TabsList>
-                    {operatingSystemTabs.map((tab, index) => (
+                    {operatingSystemTabs.map((tab) => (
                       <TabsTrigger
                         className="flex items-center gap-2"
-                        key={index}
+                        key={tab.name}
                         value={tab.name}
                       >
                         <ForwardedIconComponent
@@ -394,6 +410,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               )}
               {autoInstallers.map((installer) => (
                 <Button
+                  key={installer.name}
                   variant="ghost"
                   className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
                   disabled={

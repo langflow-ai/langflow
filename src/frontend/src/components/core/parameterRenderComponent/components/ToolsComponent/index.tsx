@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import ToolsModal from "@/modals/toolsModal";
+import type { AuthSettingsType } from "@/types/mcp";
 import { cn, testIdCase } from "@/utils/utils";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Badge } from "../../../../ui/badge";
@@ -21,7 +22,10 @@ export default function ToolsComponent({
   icon,
   disabled = false,
   template,
-}: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element {
+  authSettings,
+}: InputProps<any[] | undefined, ToolsComponentType> & {
+  authSettings?: AuthSettingsType;
+}): JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const actions = value
     ?.filter((action) => action.status === true)
@@ -57,6 +61,7 @@ export default function ToolsComponent({
         handleOnNewValue={handleOnNewValue}
         title={title}
         icon={icon}
+        authSettings={authSettings}
       />
       <div
         className="relative flex w-full items-center gap-3"
