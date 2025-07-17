@@ -4,7 +4,7 @@ on:
   workflow_call:
     secrets:
       CODECOV_TOKEN:
-        required: false
+        required: true
     inputs:
       ref:
         description: "(Optional) ref to checkout"
@@ -80,10 +80,8 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          slug: langflow-ai/langflow
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: src/frontend/coverage/lcov.info
           flags: frontend
           name: frontend-coverage

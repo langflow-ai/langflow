@@ -8,7 +8,7 @@ on:
       ANTHROPIC_API_KEY:
         required: true
       CODECOV_TOKEN:
-        required: false
+        required: true
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
@@ -94,10 +94,8 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         if: matrix.python-version == '3.10'
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          slug: langflow-ai/langflow
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           flags: backend
           name: backend-coverage-group-${{ matrix.group }}
