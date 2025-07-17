@@ -17,9 +17,9 @@ def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
     n_docs = len(documents)
 
     # Calculate document frequency for each term
-    df = {}
+    document_frequencies = {}
     for term in query_terms:
-        df[term] = sum(1 for doc in tokenized_docs if term.lower() in doc)
+        document_frequencies[term] = sum(1 for doc in tokenized_docs if term.lower() in doc)
 
     scores = []
 
@@ -35,7 +35,7 @@ def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
             tf = term_counts[term_lower] / doc_length if doc_length > 0 else 0
 
             # Inverse document frequency (IDF)
-            idf = math.log(n_docs / df[term]) if df[term] > 0 else 0
+            idf = math.log(n_docs / document_frequencies[term]) if document_frequencies[term] > 0 else 0
 
             # TF-IDF score
             doc_score += tf * idf
@@ -65,9 +65,9 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
     avg_doc_length = sum(len(doc) for doc in tokenized_docs) / n_docs if n_docs > 0 else 0
 
     # Calculate document frequency for each term
-    df = {}
+    document_frequencies = {}
     for term in query_terms:
-        df[term] = sum(1 for doc in tokenized_docs if term.lower() in doc)
+        document_frequencies[term] = sum(1 for doc in tokenized_docs if term.lower() in doc)
 
     scores = []
 
@@ -83,7 +83,14 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
             tf = term_counts[term_lower]
 
             # Inverse document frequency (IDF)
-            idf = math.log((n_docs - df[term] + 0.5) / (df[term] + 0.5)) if df[term] > 0 else 0
+            idf = (
+                math.log(
+                    (n_docs - document_frequencies[term] + 0.5)
+                    / (document_frequencies[term] + 0.5)
+                )
+                if document_frequencies[term] > 0
+                else 0
+            )
 
             # BM25 score calculation
             numerator = tf * (k1 + 1)
@@ -94,31 +101,3 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
         scores.append(doc_score)
 
     return scores
-
-
-# Example usage
-if __name__ == "__main__":
-    # Sample documents
-    docs = [
-        "The quick brown fox jumps over the lazy dog",
-        "A quick brown dog runs fast",
-        "The lazy cat sleeps all day",
-        "Brown animals are quick and fast",
-    ]
-
-    # Query terms
-    query = ["quick", "brown"]
-
-    # Compute TF-IDF scores
-    tfidf_scores = compute_tfidf(docs, query)
-    print("TF-IDF Scores:")
-    for i, score in enumerate(tfidf_scores):
-        print(f"Document {i + 1}: {score:.4f}")
-
-    print("\n" + "=" * 40 + "\n")
-
-    # Compute BM25 scores
-    bm25_scores = compute_bm25(docs, query)
-    print("BM25 Scores:")
-    for i, score in enumerate(bm25_scores):
-        print(f"Document {i + 1}: {score:.4f}")
