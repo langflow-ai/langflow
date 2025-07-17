@@ -8,7 +8,7 @@ from langflow.template.utils import update_template_values
 
 
 class MustachePromptComponent(Component):
-    display_name: str = "Mustache Prompt"
+    display_name: str = "Prompt"
     description: str = "Create a prompt template with dynamic variables."
     icon = "prompts"
     trace_type = "prompt"
