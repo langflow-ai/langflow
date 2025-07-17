@@ -16,7 +16,7 @@ import {
 import {
   EDIT_TEXT_PLACEHOLDER,
   MAX_WORDS_HIGHLIGHT,
-  PROMPT_DIALOG_SUBTITLE,
+  MUSTACHE_PROMPT_DIALOG_SUBTITLE,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { PromptModalType } from "../../types/components";
@@ -194,7 +194,7 @@ export default function MustachePromptModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header description={PROMPT_DIALOG_SUBTITLE}>
+      <BaseModal.Header description={MUSTACHE_PROMPT_DIALOG_SUBTITLE}>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
             <span className="pr-2" data-testid="modal-title">
