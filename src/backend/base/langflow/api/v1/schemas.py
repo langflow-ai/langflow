@@ -448,6 +448,7 @@ class AuthSettings(BaseModel):
     username: str | None = None
     password: str | None = None
     bearer_token: str | None = None
+    iam_endpoint: str | None = None
 
 
 class MCPSettings(BaseModel):
