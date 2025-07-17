@@ -24,8 +24,11 @@ from langflow.base.tools.constants import (
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
-from langflow.graph.state.model import create_state_model
-from langflow.graph.utils import has_chat_output
+
+# Lazy import to avoid circular dependency
+# from langflow.graph.state.model import create_state_model
+# Lazy import to avoid circular dependency
+# from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -94,6 +97,7 @@ class PlaceholderGraph(NamedTuple):
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
+    selected_output: str | None = None
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
@@ -158,7 +162,39 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
-        self._set_output_required_inputs()
+
+    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
+        source_dict = {}
+        if id_:
+            source_dict["id"] = id_
+        if display_name:
+            source_dict["display_name"] = display_name
+        if source:
+            # Handle case where source is a ChatOpenAI and other models objects
+            if hasattr(source, "model_name"):
+                source_dict["source"] = source.model_name
+            elif hasattr(source, "model"):
+                source_dict["source"] = str(source.model)
+            else:
+                source_dict["source"] = str(source)
+        return Source(**source_dict)
+
+    def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
+        """Get the source vertex ID for an incoming edge that targets a specific parameter.
+
+        This method delegates to the underlying vertex to find an incoming edge that connects
+        to the specified target parameter.
+
+        Args:
+            target_param (str): The name of the target parameter to find an incoming edge for
+
+        Returns:
+            str | None: The ID of the source vertex if an incoming edge is found, None otherwise
+        """
+        if self._vertex is None:
+            msg = "Vertex not found. Please build the graph first."
+            raise ValueError(msg)
+        return self._vertex.get_incoming_edge_by_target_param(target_param)
 
     @property
     def enabled_tools(self) -> list[str] | None:
@@ -198,7 +234,7 @@ class Component(CustomComponent):
         """
         return {
             "_user_id": self.user_id,
-            "_session_id": self.session_id,
+            "_session_id": self.graph.session_id,
             "_tracing_service": self._tracing_service,
         }
 
@@ -265,6 +301,9 @@ class Component(CustomComponent):
         fields = {}
         for output in self._outputs_map.values():
             fields[output.name] = getattr(self, output.method)
+        # Lazy import to avoid circular dependency
+        from langflow.graph.state.model import create_state_model
+
         self._state_model = create_state_model(model_name=model_name, **fields)
         return self._state_model
 
@@ -450,7 +489,10 @@ class Component(CustomComponent):
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
-            self._inputs[input_.name] = deepcopy(input_)
+            try:
+                self._inputs[input_.name] = deepcopy(input_)
+            except TypeError:
+                self._inputs[input_.name] = input_
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.
@@ -519,7 +561,6 @@ class Component(CustomComponent):
             raise ValueError(msg)
         return_types = self._get_method_return_type(output.method)
         output.add_types(return_types)
-        output.set_selected()
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
@@ -625,6 +666,11 @@ class Component(CustomComponent):
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value) -> None:
+        # Special handling for Loop components: check if we're setting a loop-enabled output
+        if self._is_loop_connection(key, value):
+            self._process_loop_connection(key, value)
+            return
+
         input_ = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
         if isinstance(value, Component):
@@ -641,6 +687,69 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, input_)
         else:
             self._set_parameter_or_attribute(key, value)
+
+    def _is_loop_connection(self, key: str, value) -> bool:
+        """Check if this is a loop feedback connection.
+
+        A loop connection occurs when:
+        1. The key matches an output name of this component
+        2. That output has allows_loop=True
+        3. The value is a callable method from another component
+        """
+        # Check if key matches a loop-enabled output
+        if key not in self._outputs_map:
+            return False
+
+        output = self._outputs_map[key]
+        if not getattr(output, "allows_loop", False):
+            return False
+
+        # Check if value is a callable method from a Component
+        return callable(value) and self._inherits_from_component(value)
+
+    def _process_loop_connection(self, key: str, value) -> None:
+        """Process a loop feedback connection.
+
+        Creates a special edge that connects the source component's output
+        to this Loop component's loop-enabled output (not an input).
+        """
+        try:
+            self._method_is_valid_output(value)
+        except ValueError as e:
+            msg = f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
+            raise ValueError(msg) from e
+
+        source_component = value.__self__
+        self._components.append(source_component)
+        source_output = source_component.get_output_by_method(value)
+        target_output = self._outputs_map[key]
+
+        # Create special loop feedback edge
+        self._add_loop_edge(source_component, source_output, target_output)
+
+    def _add_loop_edge(self, source_component, source_output, target_output) -> None:
+        """Add a special loop feedback edge that targets an output instead of an input."""
+        self._edges.append(
+            {
+                "source": source_component._id,
+                "target": self._id,
+                "data": {
+                    "sourceHandle": {
+                        "dataType": source_component.name or source_component.__class__.__name__,
+                        "id": source_component._id,
+                        "name": source_output.name,
+                        "output_types": source_output.types,
+                    },
+                    "targetHandle": {
+                        # Special loop edge structure - targets an output, not an input
+                        "dataType": self.name or self.__class__.__name__,
+                        "id": self._id,
+                        "name": target_output.name,
+                        "output_types": target_output.types,
+                    },
+                },
+            }
+        )
 
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
@@ -768,7 +877,10 @@ class Component(CustomComponent):
 
     def _validate_outputs(self) -> None:
         # Raise Error if some rule isn't met
-        pass
+        if self.selected_output is not None and self.selected_output not in self._outputs_map:
+            output_names = ", ".join(list(self._outputs_map.keys()))
+            msg = f"selected_output '{self.selected_output}' is not valid. Must be one of: {output_names}"
+            raise ValueError(msg)
 
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
@@ -788,7 +900,9 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
-        return_type = get_type_hints(method)["return"]
+        return_type = get_type_hints(method).get("return")
+        if return_type is None:
+            return []
         extracted_return_types = self._extract_return_type(return_type)
         return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
 
@@ -831,13 +945,18 @@ class Component(CustomComponent):
                 continue
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
-            output.set_selected()
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
+
+        # Get the node dictionary and add selected_output if specified
+        node_dict = frontend_node.to_dict(keep_name=False)
+        if self.selected_output is not None:
+            node_dict["selected_output"] = self.selected_output
+
         return {
             "data": {
-                "node": frontend_node.to_dict(keep_name=False),
+                "node": node_dict,
                 "type": self.name or self.__class__.__name__,
                 "id": self._id,
             },
@@ -846,6 +965,11 @@ class Component(CustomComponent):
 
     def _validate_inputs(self, params: dict) -> None:
         # Params keys are the `name` attribute of the Input objects
+        """Validates and assigns input values from the provided parameters dictionary.
+
+        For each parameter matching a defined input, sets the input's value and updates the parameter
+        dictionary with the validated value.
+        """
         for key, value in params.copy().items():
             if key not in self._inputs:
                 continue
@@ -856,10 +980,16 @@ class Component(CustomComponent):
             params[input_.name] = input_.value
 
     def set_attributes(self, params: dict) -> None:
+        """Sets component attributes from the given parameters, preventing conflicts with reserved attribute names.
+
+        Raises:
+            ValueError: If a parameter name matches a reserved attribute not managed in _attributes and its
+            value differs from the current attribute value.
+        """
         self._validate_inputs(params)
         attributes = {}
         for key, value in params.items():
-            if key in self.__dict__ and value != getattr(self, key):
+            if key in self.__dict__ and key not in self._attributes and value != getattr(self, key):
                 msg = (
                     f"{self.__class__.__name__} defines an input parameter named '{key}' "
                     f"that is a reserved word and cannot be used."
@@ -963,14 +1093,53 @@ class Component(CustomComponent):
             self._append_tool_to_outputs_map()
 
     def _should_process_output(self, output):
+        """Determines whether a given output should be processed based on vertex edge configuration.
+
+        Returns True if the component has no vertex or outgoing edges, or if the output's name is among
+        the vertex's source edge names.
+        """
         if not self._vertex or not self._vertex.outgoing_edges:
             return True
         return output.name in self._vertex.edges_source_names
 
     def _get_outputs_to_process(self):
-        return (output for output in self._outputs_map.values() if self._should_process_output(output))
+        """Returns a list of outputs to process, ordered according to self.outputs.
+
+        Outputs are included only if they should be processed, as determined by _should_process_output.
+        First processes outputs in the order defined by self.outputs, then processes any remaining outputs
+        from _outputs_map that weren't in self.outputs.
+
+        Returns:
+            list: Outputs to be processed in the defined order.
+
+        Raises:
+            ValueError: If an output name in self.outputs is not present in _outputs_map.
+        """
+        result = []
+        processed_names = set()
+
+        # First process outputs in the order defined by self.outputs
+        for output in self.outputs:
+            output_obj = self._outputs_map.get(output.name, deepcopy(output))
+            if self._should_process_output(output_obj):
+                result.append(output_obj)
+                processed_names.add(output_obj.name)
+
+        # Then process any remaining outputs from _outputs_map
+        for name, output_obj in self._outputs_map.items():
+            if name not in processed_names and self._should_process_output(output_obj):
+                result.append(output_obj)
+
+        return result
 
     async def _get_output_result(self, output):
+        """Computes and returns the result for a given output, applying caching and output options.
+
+        If the output is cached and a value is already defined, returns the cached value. Otherwise,
+        invokes the associated output method asynchronously, applies output options, updates the cache,
+        and returns the result. Raises a ValueError if the output method is not defined, or a TypeError
+        if the method invocation fails.
+        """
         if output.cache and output.value != UNDEFINED:
             return output.value
 
@@ -997,7 +1166,29 @@ class Component(CustomComponent):
 
         return result
 
+    async def resolve_output(self, output_name: str) -> Any:
+        """Resolves and returns the value for a specified output by name.
+
+        If output caching is enabled and a value is already available, returns the cached value;
+        otherwise, computes and returns the output result. Raises a KeyError if the output name
+        does not exist.
+        """
+        output = self._outputs_map.get(output_name)
+        if output is None:
+            msg = (
+                f"Sorry, an output named '{output_name}' could not be found. "
+                "Please ensure that the output is correctly configured and try again."
+            )
+            raise KeyError(msg)
+        if output.cache and output.value != UNDEFINED:
+            return output.value
+        return await self._get_output_result(output)
+
     def _build_artifact(self, result):
+        """Builds an artifact dictionary containing a string representation, raw data, and type for a result.
+
+        The artifact includes a human-readable representation, the processed raw result, and its determined type.
+        """
         custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
             custom_repr = result
@@ -1179,7 +1370,20 @@ class Component(CustomComponent):
         }
 
     async def _build_tools_metadata_input(self):
-        tools = await self._get_tools()
+        try:
+            from langflow.io import ToolsInput
+        except ImportError as e:
+            msg = "Failed to import ToolsInput from langflow.io"
+            raise ImportError(msg) from e
+        placeholder = None
+        tools = []
+        try:
+            tools = await self._get_tools()
+            placeholder = "Loading actions..." if len(tools) == 0 else ""
+        except (TimeoutError, asyncio.TimeoutError):
+            placeholder = "Timeout loading actions"
+        except (ConnectionError, OSError, ValueError):
+            placeholder = "Error loading actions"
         # Always use the latest tool data
         tool_data = [self._build_tool_data(tool) for tool in tools]
         # print(tool_data)
@@ -1207,14 +1411,9 @@ class Component(CustomComponent):
                     item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
             self.tools_metadata = tool_data
 
-        try:
-            from langflow.io import ToolsInput
-        except ImportError as e:
-            msg = "Failed to import ToolsInput from langflow.io"
-            raise ImportError(msg) from e
-
         return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
+            placeholder=placeholder,
             display_name="Actions",
             info=TOOLS_METADATA_INFO,
             value=tool_data,
@@ -1255,12 +1454,18 @@ class Component(CustomComponent):
                 )
             )
 
+    def is_connected_to_chat_output(self) -> bool:
+        # Lazy import to avoid circular dependency
+        from langflow.graph.utils import has_chat_output
+
+        return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
-            and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+            and not self.is_connected_to_chat_output()
             and not isinstance(message, ErrorMessage)
         )
 
@@ -1321,7 +1526,14 @@ class Component(CustomComponent):
                     case "error":
                         self._event_manager.on_error(data=data_dict)
                     case "remove_message":
-                        self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        # Check if id exists in data_dict before accessing it
+                        if "id" in data_dict:
+                            self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        else:
+                            # If no id, try to get it from the message object or id_ parameter
+                            message_id = getattr(message, "id", None) or id_
+                            if message_id:
+                                self._event_manager.on_remove_message(data={"id": message_id})
                     case _:
                         self._event_manager.on_message(data=data_dict)
 

@@ -31,12 +31,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -66,8 +66,8 @@ test(
       );
 
       await page.getByText("Exit Anyway", { exact: true }).click();
-    } catch (error) {
-      console.log("Warning text not visible, skipping dialog confirmation");
+    } catch (_error) {
+      console.error("Warning text not visible, skipping dialog confirmation");
     }
 
     await page.getByText("Untitled document").first().click();
@@ -85,7 +85,7 @@ test(
     await page.keyboard.press("Escape");
     await page.locator('//*[@id="react-flow-id"]').click();
 
-    const lastNvidiaModel = page.getByTestId("modelsNVIDIA").last();
+    const lastNvidiaModel = page.getByTestId("nvidiaNVIDIA").last();
     await lastNvidiaModel.scrollIntoViewIfNeeded();
 
     try {
@@ -128,12 +128,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

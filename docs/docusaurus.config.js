@@ -130,6 +130,28 @@ const config = {
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
+    ["./src/plugins/segment", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
+    ["./src/plugins/scroll-tracking", {
+      segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY,
+      allowedInDev: true,
+      selectors: [
+        {
+          selector: 'h1, h2, h3, h4, h5, h6',
+          eventName: 'Docs.langflow.org - Heading Viewed',
+          properties: {
+            element_type: 'heading'
+          }
+        },
+        {
+          selector: '.ch-codeblock',
+          eventName: 'Docs.langflow.org - Codeblock Viewed',
+          properties: {
+            element_type: 'code',
+            language: 'helper:codeLanguage'
+          }
+        }
+      ]
+    }],
     [
       "@docusaurus/plugin-client-redirects",
       {
@@ -186,7 +208,10 @@ const config = {
           },
           {
             to: "/blog-writer",
-            from: ["/starter-projects-blog-writer", "/tutorials-blog-writer"],
+            from: [
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer",
+            ],
           },
           {
             to: "/memory-chatbot",
@@ -197,12 +222,16 @@ const config = {
           },
           {
             to: "/document-qa",
-            from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
+            from: [
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa",
+            ],
           },
           {
-            to: "/starter-projects-simple-agent",
+            to: "/simple-agent",
             from: [
               "/math-agent",
+              "/starter-projects-simple-agent",
               "/starter-projects-math-agent",
               "/tutorials-math-agent",
             ],
@@ -244,7 +273,10 @@ const config = {
           },
           {
             to: "/concepts-publish",
-            from: ["/concepts-api", "/workspace-api"],
+            from: [
+              "/concepts-api",
+              "/workspace-api",
+            ],
           },
           {
             to: "/components-custom-components",
@@ -259,10 +291,36 @@ const config = {
             from: "/integrations-mcp",
           },
           {
+            to: "/integrations-nvidia-g-assist",
+            from: "/integrations-nvidia-system-assist",
+          },
+          {
             to: "/deployment-kubernetes-dev",
-            from: [
-              "/deployment-kubernetes",
-            ],
+            from: "/deployment-kubernetes",
+          },
+          {
+            to: "/basic-prompting",
+            from: "/starter-projects-basic-prompting",
+          },
+          {
+            to: "/vector-store-rag",
+            from: "/starter-projects-vector-store-rag",
+          },
+          {
+            to: "/contributing-github-issues",
+            from: "/contributing-github-discussions",
+          },
+          {
+            to: "/agents",
+            from: "/agents-tool-calling-agent-component",
+          },
+          {
+            to: "/concepts-publish",
+            from: "/embedded-chat-widget",
+          },
+          {
+            to: "/components-data",
+            from: "/integrations-setup-google-oauth-langflow",
           },
           // add more redirects like this
           // {
@@ -292,8 +350,8 @@ const config = {
         hideOnScroll: true,
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs-light.svg",
+          srcDark: "img/lf-docs-dark.svg",
         },
         items: [
           // right
@@ -303,6 +361,8 @@ const config = {
             className: "header-github-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'github'
           },
           {
             position: "right",
@@ -310,6 +370,8 @@ const config = {
             className: "header-twitter-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'x'
           },
           {
             position: "right",
@@ -317,6 +379,8 @@ const config = {
             className: "header-discord-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'discord'
           },
         ],
       },
@@ -346,8 +410,8 @@ const config = {
       footer: {
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs-light.svg",
+          srcDark: "img/lf-docs-dark.svg",
           width: 160,
           height: 40,
         },

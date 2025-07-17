@@ -11,8 +11,7 @@ from loguru import logger
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.serialization import serialize
-from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
 from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
@@ -116,6 +115,13 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
 async def log_transaction(
     flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
 ) -> None:
+    """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
+
+    Serializes the source vertex's primitive parameters and result, handling pandas DataFrames as needed,
+    and records transaction details including inputs, outputs, status, error, and flow ID in the database.
+    If the flow ID is not provided, attempts to retrieve it from the source vertex's graph.
+    Logs warnings and errors on serialization or database failures.
+    """
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
             return
@@ -143,8 +149,8 @@ async def log_transaction(
         transaction = TransactionBase(
             vertex_id=source.id,
             target_id=target.id if target else None,
-            inputs=serialize(inputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            outputs=serialize(outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            inputs=serialize(inputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            outputs=serialize(outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
             status=status,
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
@@ -160,24 +166,35 @@ async def log_transaction(
 
 async def log_vertex_build(
     *,
-    flow_id: str,
+    flow_id: str | UUID,
     vertex_id: str,
     valid: bool,
     params: Any,
     data: ResultDataResponse | dict,
     artifacts: dict | None = None,
 ) -> None:
+    """Asynchronously logs a vertex build record to the database if vertex build storage is enabled.
+
+    Serializes the provided data and artifacts with configurable length and item limits before storing.
+    Converts parameters to string if present. Handles exceptions by logging errors.
+    """
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+        try:
+            if isinstance(flow_id, str):
+                flow_id = UUID(flow_id)
+        except ValueError:
+            msg = f"Invalid flow_id passed to log_vertex_build: {flow_id!r}(type: {type(flow_id)})"
+            raise ValueError(msg) from None
 
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
             valid=valid,
             params=str(params) if params else None,
-            data=serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            artifacts=serialize(artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            data=serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            artifacts=serialize(artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
         )
         async with session_getter(get_db_service()) as session:
             inserted = await crud_log_vertex_build(session, vertex_build)

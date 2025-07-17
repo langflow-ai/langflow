@@ -1,7 +1,7 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
-import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
+import { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
+import type { UtilityStoreType } from "@/types/zustand/utility";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   clientId: "",
@@ -27,6 +27,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   maxFileSizeUpload: 100 * 1024 * 1024, // 100MB in bytes
   setMaxFileSizeUpload: (maxFileSizeUpload: number) =>
     set({ maxFileSizeUpload: maxFileSizeUpload * 1024 * 1024 }),
+  serializationMaxItemsLength: 100,
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) =>
+    set({ serializationMaxItemsLength }),
   flowsPagination: {
     page: 1,
     size: 10,

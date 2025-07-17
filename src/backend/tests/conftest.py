@@ -17,7 +17,7 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
+from langflow.components.input_output import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
@@ -43,9 +43,10 @@ from tests.api_keys import get_openai_api_key
 load_dotenv()
 
 
-@pytest.fixture(autouse=True)
+# TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
+@pytest.fixture(autouse=False)
 def blockbuster(request):
-    if "benchmark" in request.keywords:
+    if "benchmark" in request.keywords or "no_blockbuster" in request.keywords:
         yield
     else:
         with blockbuster_ctx() as bb:
@@ -64,6 +65,7 @@ def blockbuster(request):
                 "io.TextIOWrapper.read",
             ]:
                 bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
+                # bb.functions[func].can_block_in("http/client.py", "_safe_read")
 
             (
                 bb.functions["os.stat"]
@@ -74,19 +76,34 @@ def blockbuster(request):
                 .can_block_in("rich/traceback.py", "_render_stack")
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
                 .can_block_in("langchain_core/runnables/utils.py", "get_function_nonlocals")
+                .can_block_in("alembic/versions", "_load_revisions")
+                .can_block_in("dotenv/main.py", "find_dotenv")
+                .can_block_in("alembic/script/base.py", "_load_revisions")
+                .can_block_in("alembic/env.py", "_do_run_migrations")
             )
 
-            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
+            for func in ["os.stat", "os.path.abspath", "os.scandir", "os.listdir"]:
                 bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+                bb.functions[func].can_block_in("dotenv/main.py", "find_dotenv")
+                bb.functions[func].can_block_in("pkgutil.py", "_iter_file_finder_modules")
 
             for func in ["os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
+
+            # Add os.stat to alembic/script/base.py _load_revisions
+            bb.functions["os.stat"].can_block_in("alembic/script/base.py", "_load_revisions")
 
             (
                 bb.functions["os.path.abspath"]
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
                 .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
+                .can_block_in("botocore/__init__.py", "__init__")
             )
+
+            bb.functions["socket.socket.connect"].can_block_in("urllib3/connection.py", "_new_conn")
+            bb.functions["ssl.SSLSocket.send"].can_block_in("ssl.py", "sendall")
+            bb.functions["ssl.SSLSocket.read"].can_block_in("ssl.py", "recv_into")
+
             yield bb
 
 
@@ -349,6 +366,16 @@ def json_loop_test():
 @pytest.fixture(autouse=True)
 def deactivate_tracing(monkeypatch):
     monkeypatch.setenv("LANGFLOW_DEACTIVATE_TRACING", "true")
+    yield
+    monkeypatch.undo()
+
+
+@pytest.fixture
+def use_noop_session(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
+    # Optionally patch the Settings object if needed
+    # from langflow.services.settings.base import Settings
+    # monkeypatch.setattr(Settings, "use_noop_database", True)
     yield
     monkeypatch.undo()
 

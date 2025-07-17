@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
@@ -17,7 +18,6 @@ import GeneralGlobalVariableModal from "@/shared/components/global-variable-moda
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
-import { useEffect, useRef, useState } from "react";
 import AudioSettingsHeader from "./components/header";
 import LanguageSelect from "./components/language-select";
 import MicrophoneSelect from "./components/microphone-select";
@@ -76,12 +76,13 @@ const SettingsVoiceModal = ({
   );
 
   const openaiVoices = useVoiceStore((state) => state.openaiVoices);
-  const [allVoices, setAllVoices] = useState<
-    {
-      name: string;
-      value: string;
-    }[]
-  >(openaiVoices);
+  const [allVoices, setAllVoices] =
+    useState<
+      {
+        name: string;
+        value: string;
+      }[]
+    >(openaiVoices);
 
   const saveButtonClicked = useRef(false);
 
@@ -218,7 +219,6 @@ const SettingsVoiceModal = ({
   };
 
   const handleOpenAIKeyChange = (value: string) => {
-    if (!value) return;
     setOpenaiApiKey(value);
   };
 
@@ -263,7 +263,7 @@ const SettingsVoiceModal = ({
         <DropdownMenuContent
           className="w-[324px] rounded-xl shadow-lg"
           sideOffset={18}
-          alignOffset={-54}
+          alignOffset={-60}
           align="end"
         >
           <div ref={popupRef} className="rounded-3xl">
@@ -291,7 +291,7 @@ const SettingsVoiceModal = ({
                     <>
                       <InputComponent
                         isObjectOption={false}
-                        password={false}
+                        password
                         nodeStyle
                         popoverWidth="16rem"
                         placeholder={getPlaceholder(

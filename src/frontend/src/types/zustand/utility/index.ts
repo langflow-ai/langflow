@@ -1,5 +1,5 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
+import type { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
   selectedItems: any[];
@@ -9,6 +9,7 @@ export type UtilityStoreType = {
   playgroundScrollBehaves: ScrollBehavior;
   setPlaygroundScrollBehaves: (behaves: ScrollBehavior) => void;
   maxFileSizeUpload: number;
+  setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
   flowsPagination: Pagination;
   setFlowsPagination: (pagination: Pagination) => void;
   tags: Tag[];
@@ -25,4 +26,6 @@ export type UtilityStoreType = {
   clientId: string;
   eventDelivery: EventDeliveryType;
   setEventDelivery: (eventDelivery: EventDeliveryType) => void;
+  serializationMaxItemsLength: number;
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
 };

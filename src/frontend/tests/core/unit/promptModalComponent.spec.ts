@@ -2,6 +2,136 @@ import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+
+// Helper function to verify prompt variables
+async function verifyPromptVariables(
+  page,
+  template: string,
+  expectedVars: string[],
+  isFirstTime = true,
+) {
+  await page.getByTestId("promptarea_prompt_template").click();
+
+  // Use different selectors based on whether this is the first time or a subsequent edit
+  if (isFirstTime) {
+    await page.getByTestId("modal-promptarea_prompt_template").fill(template);
+
+    // Verify the template is set correctly
+    const value = await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .inputValue();
+    expect(value).toBe(template);
+  } else {
+    // For subsequent edits, we need to click the edit button first
+    await page.getByRole("dialog").getByTestId("edit-prompt-sanitized").click();
+    await page.getByTestId("modal-promptarea_prompt_template").fill(template);
+
+    // Verify the template is set correctly
+    const value = await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .inputValue();
+    expect(value).toBe(template);
+  }
+
+  // Verify each expected variable has a badge
+  for (let i = 0; i < expectedVars.length; i++) {
+    const badgeText = await page.locator(`//*[@id="badge${i}"]`).innerText();
+    expect(badgeText).toBe(expectedVars[i]);
+  }
+
+  // Verify no extra badges exist
+  const extraBadge = await page
+    .locator(`//*[@id="badge${expectedVars.length}"]`)
+    .isVisible()
+    .catch(() => false);
+  expect(extraBadge).toBeFalsy();
+
+  await page.getByTestId("genericModalBtnSave").click();
+}
+
+test(
+  "PromptTemplateComponent - Variable Extraction",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
+      timeout: 3000,
+    });
+
+    await page
+      .locator('//*[@id="processingPrompt Template"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Test basic variable extraction (first time)
+    await verifyPromptVariables(page, "Hello {name}!", ["name"], true);
+
+    // Test multiple variables (subsequent edit)
+    await verifyPromptVariables(
+      page,
+      "Hi {name}, you are {age} years old",
+      ["name", "age"],
+      false,
+    );
+
+    // Test duplicate variables (should only show once)
+    await verifyPromptVariables(
+      page,
+      "Hello {name}! How are you {name}?",
+      ["name"],
+      false,
+    );
+
+    // Test escaped variables with {{}}
+    await verifyPromptVariables(
+      page,
+      "Escaped {{not_a_var}} but {real_var} works",
+      ["real_var"],
+      false,
+    );
+
+    // Test complex template
+    await verifyPromptVariables(
+      page,
+      "Hello {name}! Your score is {{4 + 5}}, age: {age}",
+      ["name", "age"],
+      false,
+    );
+
+    // Test multiline template
+    await verifyPromptVariables(
+      page,
+      `Multi-line with {var1}
+      and {var2} plus
+      {var3} at the end`,
+      ["var1", "var2", "var3"],
+      false,
+    );
+
+    // Final verification - check that the template persists
+    await page.getByTestId("div-generic-node").click();
+    await page.getByTestId("edit-button-modal").last().click();
+
+    const savedTemplate = await page
+      .locator('//*[@id="promptarea_prompt_edit_template"]')
+      .innerText();
+    expect(savedTemplate).toBe(
+      "Multi-line with {var1}\n      and {var2} plus\n      {var3} at the end",
+    );
+
+    // Close the final modal
+    await page.getByText("Close").last().click();
+  },
+);
+
 test(
   "PromptTemplateComponent",
   { tag: ["@release", "@workspace"] },
@@ -15,12 +145,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
-    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
       timeout: 3000,
     });
 
     await page
-      .locator('//*[@id="promptsPrompt"]')
+      .locator('//*[@id="processingPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -39,12 +169,12 @@ test(
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
     if (valueBadgeOne != "prompt") {
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
+    const valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
     if (valueBadgeTwo != "prompt1") {
       expect(false).toBeTruthy();
     }

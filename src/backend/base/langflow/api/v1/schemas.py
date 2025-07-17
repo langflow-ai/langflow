@@ -14,17 +14,16 @@ from pydantic import (
 )
 
 from langflow.graph.schema import RunOutputs
-from langflow.schema import dotdict
+from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
-from langflow.serialization import constants as serialization_constants
-from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from langflow.serialization.serialization import serialize
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.models.flow import FlowCreate, FlowRead
-from langflow.services.database.models.user import UserRead
-from langflow.services.settings.feature_flags import FeatureFlags
+from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.user.model import UserRead
+from langflow.services.settings.base import Settings
+from langflow.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from langflow.services.tracing.schema import Log
 
 
@@ -276,18 +275,28 @@ class ResultDataResponse(BaseModel):
     @field_serializer("results")
     @classmethod
     def serialize_results(cls, v):
-        """Serialize results with custom handling for special types and truncation."""
-        return serialize(v, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        """Serializes the results value with custom handling for special types and applies truncation limits.
+
+        Returns:
+            The serialized representation of the input value, truncated according to configured
+            maximum text length and item count.
+        """
+        return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
-        """Custom serializer for the entire model."""
+        """Serialize the entire model into a dictionary with truncation applied to large fields.
+
+        Returns:
+            dict: A dictionary representation of the model with serialized and truncated
+            results, outputs, logs, message, and artifacts.
+        """
         return {
             "results": self.serialize_results(self.results),
-            "outputs": serialize(self.outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "logs": serialize(self.logs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "message": serialize(self.message, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "artifacts": serialize(self.artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "outputs": serialize(self.outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "logs": serialize(self.logs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "message": serialize(self.message, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "artifacts": serialize(self.artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
             "timedelta": self.timedelta,
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
@@ -309,7 +318,16 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        """Serialize a ResultDataResponse object into a dictionary with enforced maximum text and item lengths.
+
+        Parameters:
+            data (ResultDataResponse): The data object to serialize.
+
+        Returns:
+            dict: The serialized representation of the data with truncation applied.
+        """
+        # return serialize(data, max_length=get_max_text_length())  TODO: Safe?
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class VerticesBuiltResponse(BaseModel):
@@ -377,8 +395,8 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
-    serialization_max_items_lenght: int = serialization_constants.MAX_ITEMS_LENGTH
-    serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH
+    serialization_max_items_length: int
+    serialization_max_text_length: int
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
@@ -388,6 +406,31 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "ConfigResponse":
+        """Create a ConfigResponse instance using values from a Settings object and global feature flags.
+
+        Parameters:
+            settings (Settings): The Settings object containing configuration values.
+
+        Returns:
+            ConfigResponse: An instance populated with configuration and feature flag values.
+        """
+        return cls(
+            feature_flags=FEATURE_FLAGS,
+            serialization_max_items_length=settings.max_items_length,
+            serialization_max_text_length=settings.max_text_length,
+            frontend_timeout=settings.frontend_timeout,
+            auto_saving=settings.auto_saving,
+            auto_saving_interval=settings.auto_saving_interval,
+            health_check_max_retries=settings.health_check_max_retries,
+            max_file_size_upload=settings.max_file_size_upload,
+            webhook_polling_interval=settings.webhook_polling_interval,
+            public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
+            public_flow_expiration=settings.public_flow_expiration,
+            event_delivery=settings.event_delivery,
+        )
 
 
 class CancelFlowResponse(BaseModel):
@@ -406,3 +449,7 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
+
+
+class MCPInstallRequest(BaseModel):
+    client: str

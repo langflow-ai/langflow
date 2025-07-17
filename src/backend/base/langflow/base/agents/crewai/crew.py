@@ -2,13 +2,9 @@ from collections.abc import Callable
 from typing import Any, cast
 
 import litellm
-from crewai import LLM, Agent, Crew, Process, Task
-from crewai.task import TaskOutput
-from crewai.tools.base_tool import Tool
-from langchain_core.agents import AgentAction, AgentFinish
 from pydantic import SecretStr
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data
@@ -45,7 +41,7 @@ def _find_api_key(model):
     return None
 
 
-def convert_llm(llm: Any, excluded_keys=None) -> LLM:
+def convert_llm(llm: Any, excluded_keys=None):
     """Converts a LangChain LLM object to a CrewAI-compatible LLM object.
 
     Args:
@@ -55,6 +51,12 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
     Returns:
         A CrewAI-compatible LLM object
     """
+    try:
+        from crewai import LLM
+    except ImportError as e:
+        msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
+        raise ImportError(msg) from e
+
     if not llm:
         return None
 
@@ -109,6 +111,12 @@ def convert_tools(tools):
     Returns:
         A CrewAI-compatible tools list.
     """
+    try:
+        from crewai.tools.base_tool import Tool
+    except ImportError as e:
+        msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
+        raise ImportError(msg) from e
+
     if not tools:
         return []
 
@@ -142,12 +150,12 @@ class BaseCrewComponent(Component):
     ]
 
     # Model properties to exclude when creating a CrewAI LLM object
-    manager_llm: LLM | None
+    manager_llm = None
 
-    def task_is_valid(self, task_data: Data, crew_type: Process) -> Task:
+    def task_is_valid(self, task_data: Data, crew_type) -> bool:
         return "task_type" in task_data and task_data.task_type == crew_type
 
-    def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
+    def get_tasks_and_agents(self, agents_list=None) -> tuple[list, list]:
         # Allow passing a custom list of agents
         if not agents_list:
             agents_list = self.agents or []
@@ -160,7 +168,7 @@ class BaseCrewComponent(Component):
 
         return self.tasks, agents_list
 
-    def get_manager_llm(self) -> LLM | None:
+    def get_manager_llm(self):
         if not self.manager_llm:
             return None
 
@@ -168,13 +176,19 @@ class BaseCrewComponent(Component):
 
         return self.manager_llm
 
-    def build_crew(self) -> Crew:
+    def build_crew(self):
         msg = "build_crew must be implemented in subclasses"
         raise NotImplementedError(msg)
 
     def get_task_callback(
         self,
     ) -> Callable:
+        try:
+            from crewai.task import TaskOutput
+        except ImportError as e:
+            msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
+            raise ImportError(msg) from e
+
         def task_callback(task_output: TaskOutput) -> None:
             vertex_id = self._vertex.id if self._vertex else self.display_name or self.__class__.__name__
             self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {vertex_id}")
@@ -184,7 +198,13 @@ class BaseCrewComponent(Component):
     def get_step_callback(
         self,
     ) -> Callable:
-        def step_callback(agent_output: AgentFinish | list[tuple[AgentAction, str]]) -> None:
+        try:
+            from langchain_core.agents import AgentFinish
+        except ImportError as e:
+            msg = "langchain_core is not installed. Please install it with `uv pip install langchain-core`."
+            raise ImportError(msg) from e
+
+        def step_callback(agent_output) -> None:
             id_ = self._vertex.id if self._vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages

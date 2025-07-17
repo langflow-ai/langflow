@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.4.2"
+    "version": "1.5.0.post1"
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
@@ -3689,6 +3689,71 @@
         }
       }
     },
+    "/api/v1/monitor/messages/sessions": {
+      "get": {
+        "tags": [
+          "Monitor"
+        ],
+        "summary": "Get Message Sessions",
+        "operationId": "get_message_sessions_api_v1_monitor_messages_sessions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Message Sessions Api V1 Monitor Messages Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/monitor/messages": {
       "get": {
         "tags": [
@@ -4862,37 +4927,6 @@
         ]
       }
     },
-    "/api/v1/voice/elevenlabs/voice_ids": {
-      "get": {
-        "tags": [
-          "Voice"
-        ],
-        "summary": "Get Elevenlabs Voice Ids",
-        "description": "Get available voice IDs from ElevenLabs API.",
-        "operationId": "get_elevenlabs_voice_ids_api_v1_voice_elevenlabs_voice_ids_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      }
-    },
     "/api/v1/mcp/sse": {
       "get": {
         "tags": [
@@ -4935,6 +4969,37 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/voice/elevenlabs/voice_ids": {
+      "get": {
+        "tags": [
+          "Voice"
+        ],
+        "summary": "Get Elevenlabs Voice Ids",
+        "description": "Get available voice IDs from ElevenLabs API.",
+        "operationId": "get_elevenlabs_voice_ids_api_v1_voice_elevenlabs_voice_ids_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
       }
     },
     "/api/v1/mcp/project/{project_id}": {
@@ -5185,6 +5250,122 @@
         "summary": "Handle Project Messages With Slash",
         "description": "Handle POST messages for a project-specific MCP server with trailing slash.",
         "operationId": "handle_project_messages_with_slash_api_v1_mcp_project__project_id___post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/install": {
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Install Mcp Config",
+        "description": "Install MCP server configuration for Cursor, Windsurf, or Claude.",
+        "operationId": "install_mcp_config_api_v1_mcp_project__project_id__install_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MCPInstallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/installed": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Check Installed Mcp Servers",
+        "description": "Check if MCP server configuration is installed for this project in Cursor, Windsurf, or Claude.",
+        "operationId": "check_installed_mcp_servers_api_v1_mcp_project__project_id__installed_get",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -5580,7 +5761,7 @@
           "Files"
         ],
         "summary": "Download File",
-        "description": "Download a file by its ID.",
+        "description": "Download a file by its ID or return its content as a string/bytes.\n\nArgs:\n    file_id: UUID of the file.\n    current_user: Authenticated user.\n    session: Database session.\n    storage_service: File storage service.\n    return_content: If True, return raw content (str) instead of StreamingResponse.\n\nReturns:\n    StreamingResponse for client downloads or str for internal use.",
         "operationId": "download_file_api_v2_files__file_id__get",
         "security": [
           {
@@ -5602,6 +5783,16 @@
               "type": "string",
               "format": "uuid",
               "title": "File Id"
+            }
+          },
+          {
+            "name": "return_content",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Return Content"
             }
           }
         ],
@@ -5715,6 +5906,286 @@
               "type": "string",
               "format": "uuid",
               "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/mcp/servers": {
+      "get": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Get Servers",
+        "description": "Get the list of available servers.",
+        "operationId": "get_servers_api_v2_mcp_servers_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "action_count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action Count"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/mcp/servers/{server_name}": {
+      "get": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Get Server Endpoint",
+        "description": "Get a specific server.",
+        "operationId": "get_server_endpoint_api_v2_mcp_servers__server_name__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Add Server",
+        "operationId": "add_server_api_v2_mcp_servers__server_name__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Server Config"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Update Server Endpoint",
+        "operationId": "update_server_endpoint_api_v2_mcp_servers__server_name__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Server Config"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Delete Server",
+        "operationId": "delete_server_api_v2_mcp_servers__server_name__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
             }
           }
         ],
@@ -6309,6 +6780,7 @@
           },
           "password": {
             "type": "string",
+            "format": "password",
             "title": "Password"
           },
           "scope": {
@@ -6336,6 +6808,7 @@
                 "type": "null"
               }
             ],
+            "format": "password",
             "title": "Client Secret"
           }
         },
@@ -6575,10 +7048,10 @@
           "feature_flags": {
             "$ref": "#/components/schemas/FeatureFlags"
           },
-          "serialization_max_items_lenght": {
+          "serialization_max_items_length": {
             "type": "integer",
-            "title": "Serialization Max Items Lenght",
-            "default": 100
+            "title": "Serialization Max Items Length",
+            "default": 1000
           },
           "serialization_max_text_length": {
             "type": "integer",
@@ -6836,7 +7309,15 @@
             "$ref": "#/components/schemas/SourceHandleDict"
           },
           "targetHandle": {
-            "$ref": "#/components/schemas/TargetHandleDict"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TargetHandleDict"
+              },
+              {
+                "$ref": "#/components/schemas/LoopTargetHandleDict"
+              }
+            ],
+            "title": "Targethandle"
           }
         },
         "type": "object",
@@ -8963,6 +9444,50 @@
         ],
         "title": "Log"
       },
+      "LoopTargetHandleDict": {
+        "properties": {
+          "dataType": {
+            "type": "string",
+            "title": "Datatype"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "output_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Output Types"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataType",
+          "id",
+          "name",
+          "output_types"
+        ],
+        "title": "LoopTargetHandleDict"
+      },
+      "MCPInstallRequest": {
+        "properties": {
+          "client": {
+            "type": "string",
+            "title": "Client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client"
+        ],
+        "title": "MCPInstallRequest"
+      },
       "MCPSettings": {
         "properties": {
           "id": {
@@ -9481,6 +10006,11 @@
           "allows_loop": {
             "type": "boolean",
             "title": "Allows Loop",
+            "default": false
+          },
+          "group_outputs": {
+            "type": "boolean",
+            "title": "Group Outputs",
             "default": false
           },
           "options": {

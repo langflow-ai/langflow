@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 async function toggleNodeState(page: Page, action: "minimize" | "expand") {
@@ -24,7 +24,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("text output");
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-text-output").click();

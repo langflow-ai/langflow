@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This component doesn't have slider needs updating
@@ -17,12 +17,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+    await page.waitForSelector('[data-testid="openaiOpenAI"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -31,7 +31,7 @@ test(
     await page.getByTestId("title-OpenAI").click();
     await page.getByTestId("code-button-modal").click();
 
-    let cleanCode = await extractAndCleanCode(page);
+    const cleanCode = await extractAndCleanCode(page);
 
     // Replace the multiline string in the code
     let newCode = cleanCode.replace(
@@ -53,8 +53,8 @@ test(
     );
 
     newCode = newCode.replace(
-      `from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput`,
-      `from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput, QueryInput`,
+      `from langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput`,
+      `from langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput, QueryInput`,
     );
 
     // make sure codes are different
@@ -129,7 +129,7 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     throw new Error("Could not find value attribute in the HTML");
   }
 
-  let codeContent = valueMatch[1]
+  const codeContent = valueMatch[1]
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")

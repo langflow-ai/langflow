@@ -16,6 +16,7 @@ frontend-tests:
 frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
+  - "**/jest_test.yml"
 docs:
   - "docs/**"
 
@@ -53,6 +54,8 @@ components:
   - "src/backend/base/langflow/utils/**"
   - "src/backend/base/langflow/custom/**"
   - "src/backend/base/langflow/components/**"
+  - "src/backend/base/langflow/initial_setup/**"
+  - "src/backend/base/langflow/serialization/**"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"

@@ -1,14 +1,14 @@
+import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management";
-import { FileType } from "@/types/file_management";
+import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
+import type { FileType } from "@/types/file_management";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
-import { useEffect, useState } from "react";
 import FilesContextMenuComponent from "../../../filesContextMenuComponent";
 
 export default function FileRendererComponent({
@@ -37,7 +37,7 @@ export default function FileRendererComponent({
     handleRename && setOpenRename(true);
   };
 
-  const { mutate: uploadFile } = usePostUploadFileV2();
+  const { mutate: uploadFile } = customPostUploadFileV2();
 
   useEffect(() => {
     setNewName(file.name);

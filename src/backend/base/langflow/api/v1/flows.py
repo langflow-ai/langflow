@@ -24,13 +24,18 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
-from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.flow.model import AccessTypeEnum, FlowHeader
+from langflow.services.database.models.flow.model import (
+    AccessTypeEnum,
+    Flow,
+    FlowCreate,
+    FlowHeader,
+    FlowRead,
+    FlowUpdate,
+)
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
-from langflow.services.settings.service import SettingsService
 from langflow.utils.compression import compress_response
 
 # build router
@@ -264,17 +269,10 @@ async def _read_flow(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
-    settings_service: SettingsService,
 ):
     """Read a flow."""
-    auth_settings = settings_service.auth_settings
-    stmt = select(Flow).where(Flow.id == flow_id)
-    if auth_settings.AUTO_LOGIN:
-        # If auto login is enable user_id can be current_user.id or None
-        # so write an OR
-        stmt = stmt.where(
-            (Flow.user_id == user_id) | (Flow.user_id == None)  # noqa: E711
-        )
+    stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == user_id)
+
     return (await session.exec(stmt)).first()
 
 
@@ -286,7 +284,7 @@ async def read_flow(
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    if user_flow := await _read_flow(session, flow_id, current_user.id, get_settings_service()):
+    if user_flow := await _read_flow(session, flow_id, current_user.id):
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")
 
@@ -321,7 +319,6 @@ async def update_flow(
             session=session,
             flow_id=flow_id,
             user_id=current_user.id,
-            settings_service=settings_service,
         )
 
         if not db_flow:
@@ -387,7 +384,6 @@ async def delete_flow(
         session=session,
         flow_id=flow_id,
         user_id=current_user.id,
-        settings_service=get_settings_service(),
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")

@@ -31,7 +31,7 @@ export const switchCaseModalSize = (size: string) => {
       height = "h-fit";
       break;
     case "medium-small-tall":
-      minWidth = "min-w-[50vw]";
+      minWidth = "w-[900px] max-w-[98vw]";
       height = "h-[70vh]";
       break;
     case "small-h-full":
@@ -57,7 +57,7 @@ export const switchCaseModalSize = (size: string) => {
     case "templates":
       minWidth = "w-[97vw] max-w-[1200px]";
       height =
-        "min-h-[700px] lg:min-h-0 h-[90vh] md:h-[80vh] lg:h-[50vw] lg:max-h-[620px]";
+        "min-h-[500px] h-[90vh] md:h-[85vh] lg:h-[80vh] lg:max-h-[620px] max-h-[90vh]";
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";

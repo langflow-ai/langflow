@@ -4,7 +4,7 @@ from langchain_community.utilities import SQLDatabase
 from sqlalchemy.exc import SQLAlchemyError
 
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.io import BoolInput, MessageTextInput, Output
+from langflow.io import BoolInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.cache.utils import CacheMiss
@@ -17,9 +17,8 @@ class SQLComponent(ComponentWithCache):
     """A sql component."""
 
     display_name = "SQL Database"
-    description = (
-        "Executes SQL queries on any SQLAlchemy-compatible database and returns the result as a structured dataframe."
-    )
+    description = "Executes SQL queries on SQLAlchemy-compatible databases."
+    documentation: str = "https://docs.langflow.org/components-data#sql-database"
     icon = "database"
     name = "SQLComponent"
     metadata = {"keywords": ["sql", "database", "query", "db", "fetch"]}
@@ -44,7 +43,7 @@ class SQLComponent(ComponentWithCache):
 
     inputs = [
         MessageTextInput(name="database_url", display_name="Database URL", required=True),
-        MessageTextInput(name="query", display_name="SQL Query", tool_mode=True, required=True),
+        MultilineInput(name="query", display_name="SQL Query", tool_mode=True, required=True),
         BoolInput(name="include_columns", display_name="Include Columns", value=True, tool_mode=True, advanced=True),
         BoolInput(
             name="add_error",

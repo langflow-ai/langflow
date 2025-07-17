@@ -1,8 +1,14 @@
 ---
-description: Rules and checklist for adding and using langflow component icons.
-globs: 
+description: "Rules for creating and implementing component icons in Langflow, covering both backend Python component icon attributes and frontend React icon implementation."
+globs:
+  - "src/frontend/src/icons/**/*"
+  - "src/frontend/src/icons/lazyIconImports.ts"
+  - "src/backend/**/*component*.py"
+  - "src/backend/**/components/**/*.py"
 alwaysApply: false
 ---
+
+
 # Component Icon Rules
 
 ## Purpose
@@ -13,12 +19,12 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 ## 1. Backend (Python) — Setting the Icon Name
 
 - **Where:** In your component class (e.g., in `src/backend/base/langflow/components/vectorstores/astradb.py`)
-- **How:**  
+- **How:**
   Set the `icon` attribute to a string matching the icon you want to use.
   ```python
   icon = "AstraDB"
   ```
-- **Tip:**  
+- **Tip:**
   The string must match the frontend icon mapping exactly (case-sensitive).
 
 ---
@@ -27,9 +33,9 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 
 ### a. Create the Icon Component
 
-- **Where:**  
+- **Where:**
   In a new directory for your icon, e.g., `src/frontend/src/icons/AstraDB/`.
-- **How:**  
+- **How:**
   - Add your SVG as a React component, e.g., `AstraSVG` in `AstraDB.jsx`.
     ```jsx
     const AstraSVG = (props) => (
@@ -42,7 +48,6 @@ To ensure consistent, clear, and functional icon usage for components, covering 
     ```
   - Create an `index.tsx` that exports your icon using `forwardRef`:
     ```tsx
-    import { useDarkStore } from "@/stores/darkStore";
     import React, { forwardRef } from "react";
     import AstraSVG from "./AstraDB";
 
@@ -50,53 +55,52 @@ To ensure consistent, clear, and functional icon usage for components, covering 
       SVGSVGElement,
       React.PropsWithChildren<{}>
     >((props, ref) => {
-      const isdark = useDarkStore((state) => state.dark).toString();
-      return <AstraSVG ref={ref} isdark={isdark} {...props} />;
+      return <AstraSVG ref={ref} isDark={isDark} {...props} />;
     });
     ```
 
 #### Supporting Light and Dark Mode Icons
 
 - **How:**
-  - In your SVG component (e.g., `AstraDB.jsx`), use the `isdark` prop to switch colors:
+  - In your SVG component (e.g., `AstraDB.jsx`), use the `isDark` prop to switch colors:
     ```jsx
     const AstraSVG = (props) => (
       <svg {...props}>
         <path
-          fill={stringToBool(props.isdark) ? "#ffffff" : "#0A0A0A"}
+          fill={props.isDark ? "#ffffff" : "#0A0A0A"}
           // ...
         />
       </svg>
     );
     ```
-  - The `isdark` prop is passed from the icon wrapper (see above) and should be used to toggle between light and dark color schemes.
+  - The `isDark` prop is passed from the icon wrapper (see above) and should be used to toggle between light and dark color schemes.
   - You can use a utility like `stringToBool` to ensure the prop is interpreted correctly.
 
 ### b. Add to Lazy Icon Imports
 
-- **Where:**  
+- **Where:**
   In `src/frontend/src/icons/lazyIconImports.ts`
-- **How:**  
+- **How:**
   Add an entry to the `lazyIconsMapping` object:
   ```ts
   AstraDB: () =>
     import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
   ```
-- **Tip:**  
+- **Tip:**
   The key (`AstraDB`) must match the string used in the backend.
 
 ---
 
 ## 3. Best Practices
 
-- **Naming:**  
+- **Naming:**
   Use clear, recognizable names (e.g., `"AstraDB"`, `"Postgres"`, `"OpenAI"`).
-- **Consistency:**  
+- **Consistency:**
   Always use the same icon name for the same service across backend and frontend.
-- **Missing Icon:**  
+- **Missing Icon:**
   If no icon exists, use a [lucide icon](https://lucide.dev/icons)
-- **Light/Dark Mode:**  
-  Always support both light and dark mode for custom icons by using the `isdark` prop in your SVG.
+- **Light/Dark Mode:**
+  Always support both light and dark mode for custom icons by using the `isDark` prop in your SVG.
 
 ---
 
@@ -106,7 +110,7 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 - [ ] In your Python component, set `icon = "YourIconName"`.
 - [ ] Create a new icon directory in `src/frontend/src/icons/YourIconName/`.
 - [ ] Add your SVG as a React component (e.g., `YourIconNameIcon.jsx`).
-- [ ] Create an `index.tsx` that exports your icon using `forwardRef` and passes the `isdark` prop.
+- [ ] Create an `index.tsx` that exports your icon using `forwardRef` and passes the `isDark` prop.
 - [ ] Add your icon to `lazyIconsMapping` in `src/frontend/src/icons/lazyIconImports.ts` with the exact same name.
 - [ ] Verify the icon appears correctly in the UI in both light and dark mode.
 - [ ] If no suitable icon exists, use a generic icon and request a new one if needed.
@@ -114,13 +118,13 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 ---
 
 **Example for AstraDB:**
-- Backend:  
+- Backend:
   ```python
   icon = "AstraDB"
   ```
-- Frontend:  
-  - `src/icons/AstraDB/AstraDB.jsx` (SVG as React component, uses `isdark` prop)
-  - `src/icons/AstraDB/index.tsx` (exports `AstraDBIcon` and passes `isdark`)
+- Frontend:
+  - `src/icons/AstraDB/AstraDB.jsx` (SVG as React component, uses `isDark` prop)
+  - `src/icons/AstraDB/index.tsx` (exports `AstraDBIcon` and passes `isDark`)
   - Add to `lazyIconImports.ts`:
     ```ts
     AstraDB: () =>

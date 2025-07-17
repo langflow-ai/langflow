@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { useRef } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../components/ui/input";
 import { classNames } from "../../../../../utils/utils";
@@ -23,27 +23,38 @@ const IOKeyPairInput = ({
     return Array.isArray(value) ? value : [value];
   };
 
-  const ref = useRef<any>([]);
-  ref.current =
-    !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
+  const [currentData, setCurrentData] = useState<any[]>(() => {
+    return !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
+  });
+
+  // Update internal state when external value changes
+  useEffect(() => {
+    const newData =
+      !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
+    setCurrentData(newData);
+  }, [value]);
 
   const handleChangeKey = (event, idx) => {
-    const oldKey = Object.keys(ref.current[idx])[0];
-    const updatedObj = { [event.target.value]: ref.current[idx][oldKey] };
-    ref.current[idx] = updatedObj;
-    onChange(ref.current);
+    const oldKey = Object.keys(currentData[idx])[0];
+    const updatedObj = { [event.target.value]: currentData[idx][oldKey] };
+    const newData = [...currentData];
+    newData[idx] = updatedObj;
+    setCurrentData(newData);
+    onChange(newData);
   };
 
   const handleChangeValue = (newValue, idx) => {
-    const key = Object.keys(ref.current[idx])[0];
-    ref.current[idx][key] = newValue;
-    onChange(ref.current);
+    const key = Object.keys(currentData[idx])[0];
+    const newData = [...currentData];
+    newData[idx] = { ...newData[idx], [key]: newValue };
+    setCurrentData(newData);
+    onChange(newData);
   };
 
   return (
     <>
       <div className={classNames("flex h-full flex-col gap-3")}>
-        {ref.current?.map((obj, index) => {
+        {currentData?.map((obj, index) => {
           return Object.keys(obj).map((key, idx) => {
             return (
               <div key={idx} className="flex w-full gap-2">
@@ -66,11 +77,13 @@ const IOKeyPairInput = ({
                   disabled={!isInputField}
                 />
 
-                {isList && isInputField && index === ref.current.length - 1 ? (
+                {isList && isInputField && index === currentData.length - 1 ? (
                   <button
+                    type="button"
                     onClick={() => {
-                      let newInputList = _.cloneDeep(ref.current);
+                      const newInputList = _.cloneDeep(currentData);
                       newInputList.push({ "": "" });
+                      setCurrentData(newInputList);
                       onChange(newInputList);
                     }}
                   >
@@ -81,9 +94,11 @@ const IOKeyPairInput = ({
                   </button>
                 ) : isList && isInputField ? (
                   <button
+                    type="button"
                     onClick={() => {
-                      let newInputList = _.cloneDeep(ref.current);
+                      const newInputList = _.cloneDeep(currentData);
                       newInputList.splice(index, 1);
+                      setCurrentData(newInputList);
                       onChange(newInputList);
                     }}
                   >

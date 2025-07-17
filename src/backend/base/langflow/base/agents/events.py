@@ -63,8 +63,14 @@ async def handle_on_chain_start(
         input_data = event["data"].get("input")
         if isinstance(input_data, dict) and "input" in input_data:
             # Cast the input_data to InputDict
+            input_message = input_data.get("input", "")
+            if isinstance(input_message, BaseMessage):
+                input_message = input_message.text()
+            elif not isinstance(input_message, str):
+                input_message = str(input_message)
+
             input_dict: InputDict = {
-                "input": str(input_data.get("input", "")),
+                "input": input_message,
                 "chat_history": input_data.get("chat_history", []),
             }
             text_content = TextContent(
@@ -97,6 +103,18 @@ def _extract_output_text(output: str | list) -> str:
         # If the item's type is "tool_use", return an empty string.
         # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
         if item.get("type") == "tool_use":
+            return ""
+    if isinstance(item, dict):
+        if "text" in item:
+            return item["text"]
+        # If the item's type is "tool_use", return an empty string.
+        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
+        if item.get("type") == "tool_use":
+            return ""
+        # This is a workaround to deal with function calling by Anthropic
+        # since the same data comes in the tool_output we don't need to stream it here
+        # although it would be nice to
+        if "partial_json" in item:
             return ""
     msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
     raise TypeError(msg)
@@ -149,7 +167,7 @@ async def handle_on_tool_start(
     tool_content = ToolContent(
         type="tool_use",
         name=tool_name,
-        input=tool_input,
+        tool_input=tool_input,
         output=None,
         error=None,
         header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
@@ -179,13 +197,35 @@ async def handle_on_tool_end(
     tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
-        tool_content.output = event["data"].get("output")
-        duration = _calculate_duration(start_time)
-        tool_content.duration = duration
-        tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
-
+        # Call send_message_method first to get the updated message structure
         agent_message = await send_message_method(message=agent_message)
-        new_start_time = perf_counter()  # Get new start time for next operation
+        new_start_time = perf_counter()
+
+        # Now find and update the tool content in the current message
+        duration = _calculate_duration(start_time)
+        tool_key = f"{tool_name}_{run_id}"
+
+        # Find the corresponding tool content in the updated message
+        updated_tool_content = None
+        if agent_message.content_blocks and agent_message.content_blocks[0].contents:
+            for content in agent_message.content_blocks[0].contents:
+                if (
+                    isinstance(content, ToolContent)
+                    and content.name == tool_name
+                    and content.tool_input == tool_content.tool_input
+                ):
+                    updated_tool_content = content
+                    break
+
+        # Update the tool content that's actually in the message
+        if updated_tool_content:
+            updated_tool_content.duration = duration
+            updated_tool_content.header = {"title": f"Executed **{updated_tool_content.name}**", "icon": "Hammer"}
+            updated_tool_content.output = event["data"].get("output")
+
+            # Update the map reference
+            tool_blocks_map[tool_key] = updated_tool_content
+
         return agent_message, new_start_time
     return agent_message, start_time
 

@@ -1,18 +1,21 @@
 import os
 from typing import Any
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from dotenv import load_dotenv
-from langflow.base.models.model_input_constants import MODEL_PROVIDERS_DICT
+from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
+from langflow.base.models.model_input_constants import (
+    MODEL_PROVIDERS,
+)
 from langflow.base.models.openai_constants import (
-    OPENAI_MODEL_NAMES,
+    OPENAI_CHAT_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
 )
 from langflow.components.agents.agent import AgentComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
+from langflow.services.database.session import NoopSession
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
@@ -20,7 +23,7 @@ from tests.unit.mock_language_model import MockLanguageModel
 # Load environment variables from .env file
 
 
-class TestAgentComponent(ComponentTestBaseWithoutClient):
+class TestAgentComponentWithoutClient(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         return AgentComponent
@@ -48,9 +51,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "system_prompt": "You are a helpful assistant.",
             "tools": [],
             "verbose": True,
-            "session_id": str(uuid4()),
-            "sender": MESSAGE_SENDER_AI,
-            "sender_name": MESSAGE_SENDER_NAME_AI,
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
@@ -64,7 +64,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["agent_llm"]["value"] == "OpenAI"
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
+        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
         assert "Custom" in updated_config["agent_llm"]["options"]
 
         # Verify model_name field is populated for OpenAI
@@ -82,7 +82,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["agent_llm"]["value"] == "Anthropic"
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
+        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
         assert "Anthropic" in updated_config["agent_llm"]["options"]
         assert updated_config["agent_llm"]["input_types"] == []
         options = updated_config["model_name"]["options"]
@@ -94,28 +94,16 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["agent_llm"]["value"] == "Custom"
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
+        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
         assert "Custom" in updated_config["agent_llm"]["options"]
         assert updated_config["agent_llm"]["input_types"] == ["LanguageModel"]
 
         # Verify model_name field is cleared for Custom
         assert "model_name" not in updated_config
 
-
-class TestAgentComponentWithClient(ComponentTestBaseWithClient):
-    @pytest.fixture
-    def component_class(self):
-        return AgentComponent
-
-    @pytest.fixture
-    def file_names_mapping(self):
-        return []
-
     @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
     async def test_agent_component_with_calculator(self):
-        # Mock inputs
-        load_dotenv()
-
         # Now you can access the environment variables
         api_key = os.getenv("OPENAI_API_KEY")
         tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
@@ -128,34 +116,180 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value=input_value,
             api_key=api_key,
-            model_name="gpt-4o",
+            model_name="gpt-4.1-nano",
             llm_type="OpenAI",
             temperature=temperature,
             _session_id=str(uuid4()),
         )
 
+        with (
+            patch.object(NoopSession, "add", new_callable=AsyncMock) as mock_add,
+            patch.object(NoopSession, "commit", new_callable=AsyncMock) as mock_commit,
+        ):
+            response = await agent.message_response()
+            assert mock_add.called
+            assert mock_commit.called
+        assert "4" in response.data.get("text")
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_component_with_all_openai_models(self):
+        # Mock inputs
+        api_key = os.getenv("OPENAI_API_KEY")
+        input_value = "What is 2 + 2?"
+
+        # Iterate over all OpenAI models
+        failed_models = {}
+        for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
+            try:
+                # Initialize the AgentComponent with mocked inputs
+                tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm=None,
+                    llm_type="OpenAI",
+                    temperature=0.1,
+                    _session_id=str(uuid4()),
+                )
+
+                response = await agent.message_response()
+                if "4" not in response.data.get("text"):
+                    failed_models[model_name] = f"Expected '4' in response but got: {response.data.get('text')}"
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
+
+        assert not failed_models, f"The following models failed the test: {failed_models}"
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_component_with_all_anthropic_models(self):
+        # Mock inputs
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        input_value = "What is 2 + 2?"
+
+        # Iterate over all Anthropic models
+        failed_models = {}
+
+        for model_name in ANTHROPIC_MODELS:
+            try:
+                # Initialize the AgentComponent with mocked inputs
+                tools = [CalculatorToolComponent().build_tool()]
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm="Anthropic",
+                    _session_id=str(uuid4()),
+                )
+
+                response = await agent.message_response()
+                response_text = response.data.get("text", "")
+
+                if "4" not in response_text:
+                    failed_models[model_name] = f"Expected '4' in response but got: {response_text}"
+
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
+
+        assert not failed_models, "The following models failed the test:\n" + "\n".join(
+            f"{model}: {error}" for model, error in failed_models.items()
+        )
+
+
+class TestAgentComponentWithClient(ComponentTestBaseWithClient):
+    @pytest.fixture
+    def component_class(self):
+        return AgentComponent
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_component_with_calculator(self):
+        api_key = os.getenv("OPENAI_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]
+        input_value = "What is 2 + 2?"
+
+        temperature = 0.1
+
+        # Initialize the AgentComponent with mocked inputs
+        agent = AgentComponent(
+            tools=tools,
+            input_value=input_value,
+            api_key=api_key,
+            model_name="gpt-4o",
+            agent_llm="OpenAI",
+            temperature=temperature,
+            _session_id=str(uuid4()),
+        )
         response = await agent.message_response()
         assert "4" in response.data.get("text")
 
     @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
     async def test_agent_component_with_all_openai_models(self):
-        # Mock inputs
-        load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")
-        tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
         input_value = "What is 2 + 2?"
 
         # Iterate over all OpenAI models
-        for model_name in OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
-            # Initialize the AgentComponent with mocked inputs
-            agent = AgentComponent(
-                tools=tools,
-                input_value=input_value,
-                api_key=api_key,
-                model_name=model_name,
-                llm_type="OpenAI",
-                _session_id=str(uuid4()),
-            )
+        failed_models = {}
+        for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
+            try:
+                tools = [CalculatorToolComponent().build_tool()]
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm="OpenAI",
+                    _session_id=str(uuid4()),
+                )
+                response = await agent.message_response()
+                if "4" not in response.data.get("text"):
+                    failed_models[model_name] = f"Expected '4' in response but got: {response.data.get('text')}"
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
 
-            response = await agent.message_response()
-            assert "4" in response.data.get("text"), f"Failed for model: {model_name}"
+        assert not failed_models, f"The following models failed the test: {failed_models}"
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_component_with_all_anthropic_models(self):
+        # Mock inputs
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        input_value = "What is 2 + 2?"
+
+        # Iterate over all Anthropic models
+        failed_models = {}
+
+        for model_name in ANTHROPIC_MODELS:
+            try:
+                # Initialize the AgentComponent with mocked inputs
+                tools = [CalculatorToolComponent().build_tool()]
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm="Anthropic",
+                    _session_id=str(uuid4()),
+                )
+
+                response = await agent.message_response()
+                response_text = response.data.get("text", "")
+
+                if "4" not in response_text:
+                    failed_models[model_name] = f"Expected '4' in response but got: {response_text}"
+
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
+
+        assert not failed_models, "The following models failed the test:\n" + "\n".join(
+            f"{model}: {error}" for model, error in failed_models.items()
+        )
