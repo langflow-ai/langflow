@@ -231,6 +231,10 @@ Documentation = "https://docs.langflow.org"
 
 # Optional dependencies for uv
 [project.optional-dependencies]
+docling = [
+    "docling>=2.36.1",
+]
+
 audio = [
     "webrtcvad>=2.0.10",
 ]

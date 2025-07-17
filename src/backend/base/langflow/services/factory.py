@@ -20,7 +20,7 @@ class ServiceFactory:
         self.dependencies = infer_service_types(self, import_all_services_into_a_dict())
 
     def create(self, *args, **kwargs) -> "Service":
-        raise self.service_class(*args, **kwargs)
+        return self.service_class(*args, **kwargs)
 
 
 def hash_factory(factory: ServiceFactory) -> str:

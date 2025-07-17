@@ -33,6 +33,7 @@ import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import OptionalDependenciesPage from "./pages/SettingsPage/pages/OptionalDependenciesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
 
@@ -126,6 +127,7 @@ const router = createBrowserRouter(
                     element={<GlobalVariablesPage />}
                   />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
+                  <Route path="optional-dependencies" element={<OptionalDependenciesPage />} />
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
                     path="general/:scrollId?"
