@@ -24,7 +24,7 @@ class KnowledgeBaseInfo(BaseModel):
 
 def get_kb_root_path() -> Path:
     """Get the knowledge bases root path."""
-    return Path(KNOWLEDGE_BASES_DIR).expanduser()
+    return _KB_ROOT_PATH
 
 
 def get_directory_size(path: Path) -> int:
@@ -257,3 +257,6 @@ async def get_knowledge_base(kb_name: str) -> KnowledgeBaseInfo:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
+
+
+_KB_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
