@@ -13,6 +13,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import { useLogout } from "./use-post-logout";
+import { IS_CLERK_AUTH } from "@/clerk/constants";
 
 export interface AutoLoginResponse {
   frontend_timeout: number;
@@ -51,7 +52,10 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
       const error = e as AxiosError;
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
-        if (!isLoginPage) {
+        const status = error.response?.status;
+         if (status === 400 && IS_CLERK_AUTH) {
+          console.log("[AutoLogin] Clerk login - skipping logout on 400");
+        } else if (!isLoginPage) {
           await handleAutoLoginError();
         }
       }

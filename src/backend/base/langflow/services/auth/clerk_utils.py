@@ -7,7 +7,7 @@ import httpx
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwk, jwt
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.backend.base.langflow.logging.logger import logger
+from langflow.logging.logger import logger
 
 from langflow.services.database.models.user import User, UserCreate
 from langflow.services.database.models.user.crud import get_user_by_id

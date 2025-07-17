@@ -33,7 +33,7 @@ import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage"
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
-import { LoginPage, SignUp, LoginAdminPage } from "./clerk/login-pages";
+import { LoginPage, SignUpPage, LoginAdminPage } from "./clerk/login-pages";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
@@ -168,7 +168,7 @@ const router = createBrowserRouter(
             path="signup"
             element={
               <ProtectedLoginRoute>
-                <SignUp />
+                <SignUpPage />
               </ProtectedLoginRoute>
             }
           />
