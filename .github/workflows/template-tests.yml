@@ -4,13 +4,11 @@ on:
   push:
     paths:
       - 'src/backend/base/langflow/initial_setup/starter_projects/**'
-      - 'src/backend/base/langflow/template/**'
       - 'src/backend/tests/unit/template/test_starter_projects.py'
       - '.github/workflows/template-tests.yml'
   pull_request:
     paths:
       - 'src/backend/base/langflow/initial_setup/starter_projects/**'
-      - 'src/backend/base/langflow/template/**'
       - 'src/backend/tests/unit/template/test_starter_projects.py'
       - '.github/workflows/template-tests.yml'
 
