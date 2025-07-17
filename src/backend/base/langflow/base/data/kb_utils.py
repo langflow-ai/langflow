@@ -12,34 +12,50 @@ def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
     Returns:
         List of TF-IDF scores for each document
     """
-    # Tokenize documents (simple whitespace splitting)
-    tokenized_docs = [doc.lower().split() for doc in documents]
-    n_docs = len(documents)
+    # Lowercase query terms once
+    query_terms_lc = [term.lower() for term in query_terms]
+    query_terms_set = set(query_terms_lc)
 
-    # Calculate document frequency for each term
-    document_frequencies = {}
-    for term in query_terms:
-        document_frequencies[term] = sum(1 for doc in tokenized_docs if term.lower() in doc)
+    # Tokenize documents (simple whitespace splitting) and lowercase all at once
+    tokenized_docs = []
+    token_sets = []
+    for doc in documents:
+        tokens = doc.lower().split()
+        tokenized_docs.append(tokens)
+        token_sets.append(set(tokens))
+
+    n_docs = len(tokenized_docs)
+
+    # Calculate document frequency for each query term (single pass over docs)
+    document_frequencies = dict.fromkeys(query_terms_lc, 0)
+    for token_set in token_sets:
+        for term in query_terms_set:
+            if term in token_set:
+                document_frequencies[term] += 1
+
+    # Precompute IDF values for all query terms
+    idf_values = {}
+    for term in query_terms_lc:
+        df = document_frequencies[term]
+        idf = math.log(n_docs / df) if df > 0 else 0
+        idf_values[term] = idf
 
     scores = []
+    for tokens in tokenized_docs:
+        doc_len = len(tokens)
+        if doc_len == 0:
+            scores.append(0.0)
+            continue
+        # Build freq dict quickly for doc
+        term_counts = {}
+        for token in tokens:
+            if token in query_terms_set:
+                term_counts[token] = term_counts.get(token, 0) + 1
 
-    for doc_tokens in tokenized_docs:
         doc_score = 0.0
-        doc_length = len(doc_tokens)
-        term_counts = Counter(doc_tokens)
-
-        for term in query_terms:
-            term_lower = term.lower()
-
-            # Term frequency (TF)
-            tf = term_counts[term_lower] / doc_length if doc_length > 0 else 0
-
-            # Inverse document frequency (IDF)
-            idf = math.log(n_docs / document_frequencies[term]) if document_frequencies[term] > 0 else 0
-
-            # TF-IDF score
-            doc_score += tf * idf
-
+        for term in query_terms_lc:
+            tf = term_counts.get(term, 0) / doc_len
+            doc_score += tf * idf_values[term]
         scores.append(doc_score)
 
     return scores
