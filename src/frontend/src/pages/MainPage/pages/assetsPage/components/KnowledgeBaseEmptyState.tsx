@@ -1,4 +1,4 @@
-import CreateKnowledgeBaseButton from './CreateKnowledgeBaseButton';
+import CreateKnowledgeBaseButton from "./CreateKnowledgeBaseButton";
 
 interface KnowledgeBaseEmptyStateProps {
   onCreateKnowledgeBase?: () => void;

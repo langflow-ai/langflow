@@ -1,7 +1,7 @@
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import ShadTooltip from '@/components/common/shadTooltipComponent';
-import { Button } from '@/components/ui/button';
-import useAlertStore from '@/stores/alertStore';
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
+import useAlertStore from "@/stores/alertStore";
 
 interface CreateKnowledgeBaseButtonProps {
   onCreateKnowledgeBase?: () => void;
@@ -10,7 +10,7 @@ interface CreateKnowledgeBaseButtonProps {
 const CreateKnowledgeBaseButton = ({
   onCreateKnowledgeBase,
 }: CreateKnowledgeBaseButtonProps) => {
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleClick = () => {
     if (onCreateKnowledgeBase) {
@@ -18,7 +18,7 @@ const CreateKnowledgeBaseButton = ({
     } else {
       // TODO: Implement create knowledge base functionality
       setSuccessData({
-        title: 'Knowledge Base creation coming soon!',
+        title: "Knowledge Base creation coming soon!",
       });
     }
   };

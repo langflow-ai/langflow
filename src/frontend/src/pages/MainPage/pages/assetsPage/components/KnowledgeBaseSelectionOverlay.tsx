@@ -1,8 +1,8 @@
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
-import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
-import useAlertStore from '@/stores/alertStore';
-import { cn } from '@/utils/utils';
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
 
 interface KnowledgeBaseSelectionOverlayProps {
   selectedFiles: any[];
@@ -19,7 +19,7 @@ const KnowledgeBaseSelectionOverlay = ({
   onDelete,
   onClearSelection,
 }: KnowledgeBaseSelectionOverlayProps) => {
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleExport = () => {
     if (onExport) {
@@ -27,7 +27,7 @@ const KnowledgeBaseSelectionOverlay = ({
     } else {
       // TODO: Implement knowledge base export functionality
       setSuccessData({
-        title: 'Knowledge Base export coming soon!',
+        title: "Knowledge Base export coming soon!",
       });
     }
   };
@@ -38,7 +38,7 @@ const KnowledgeBaseSelectionOverlay = ({
     } else {
       // TODO: Implement knowledge base delete functionality
       setSuccessData({
-        title: 'Knowledge Base(s) deleted successfully!',
+        title: "Knowledge Base(s) deleted successfully!",
       });
     }
     onClearSelection();
@@ -47,16 +47,16 @@ const KnowledgeBaseSelectionOverlay = ({
   return (
     <div
       className={cn(
-        'pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity',
-        selectedFiles.length > 0 ? 'opacity-100' : 'opacity-0'
+        "pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity",
+        selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
       )}
     >
       <div
         className={cn(
-          'ml-12 flex h-full flex-1 items-center justify-between bg-background',
+          "ml-12 flex h-full flex-1 items-center justify-between bg-background",
           selectedFiles.length > 0
-            ? 'pointer-events-auto'
-            : 'pointer-events-none'
+            ? "pointer-events-auto"
+            : "pointer-events-none",
         )}
       >
         <span className="text-xs text-muted-foreground">
@@ -74,7 +74,7 @@ const KnowledgeBaseSelectionOverlay = ({
 
           <DeleteConfirmationModal
             onConfirm={handleDelete}
-            description={'knowledge base' + (quantitySelected > 1 ? 's' : '')}
+            description={"knowledge base" + (quantitySelected > 1 ? "s" : "")}
           >
             <Button
               variant="destructive"

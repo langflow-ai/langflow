@@ -1,16 +1,16 @@
-import type { NewValueParams, SelectionChangedEvent } from 'ag-grid-community';
-import type { AgGridReact } from 'ag-grid-react';
-import { useRef } from 'react';
-import TableComponent from '@/components/core/parameterRenderComponent/components/tableComponent';
-import { Input } from '@/components/ui/input';
-import Loading from '@/components/ui/loading';
-import { useGetKnowledgeBases } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
-import useAlertStore from '@/stores/alertStore';
-import { cn } from '@/utils/utils';
-import { createKnowledgeBaseColumns } from '../config/knowledgeBaseColumns';
-import CreateKnowledgeBaseButton from './CreateKnowledgeBaseButton';
-import KnowledgeBaseEmptyState from './KnowledgeBaseEmptyState';
-import KnowledgeBaseSelectionOverlay from './KnowledgeBaseSelectionOverlay';
+import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useRef } from "react";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Input } from "@/components/ui/input";
+import Loading from "@/components/ui/loading";
+import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
+import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
+import CreateKnowledgeBaseButton from "./CreateKnowledgeBaseButton";
+import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
+import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
 
 interface KnowledgeBasesTabProps {
   quickFilterText: string;
@@ -32,8 +32,8 @@ const KnowledgeBasesTab = ({
   isShiftPressed,
 }: KnowledgeBasesTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
-  const setErrorData = useAlertStore(state => state.setErrorData);
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   // Fetch knowledge bases from API
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
@@ -41,15 +41,15 @@ const KnowledgeBasesTab = ({
   // Handle errors
   if (error) {
     setErrorData({
-      title: 'Failed to load knowledge bases',
-      list: [error?.message || 'An unknown error occurred'],
+      title: "Failed to load knowledge bases",
+      list: [error?.message || "An unknown error occurred"],
     });
   }
 
   const handleRename = (params: NewValueParams<any, any>) => {
     // TODO: Implement knowledge base rename functionality
     setSuccessData({
-      title: 'Knowledge Base renamed successfully!',
+      title: "Knowledge Base renamed successfully!",
     });
   };
 
@@ -99,8 +99,8 @@ const KnowledgeBasesTab = ({
             type="text"
             placeholder="Search knowledge bases..."
             className="mr-2 w-full"
-            value={quickFilterText || ''}
-            onChange={event => {
+            value={quickFilterText || ""}
+            onChange={(event) => {
               setQuickFilterText(event.target.value);
             }}
           />
@@ -123,7 +123,7 @@ const KnowledgeBasesTab = ({
             suppressRowClickSelection={!isShiftPressed}
             editable={[
               {
-                field: 'name',
+                field: "name",
                 onUpdate: handleRename,
                 editableCell: true,
               },
@@ -133,8 +133,8 @@ const KnowledgeBasesTab = ({
             columnDefs={columnDefs}
             rowData={knowledgeBases}
             className={cn(
-              'ag-no-border group w-full',
-              isShiftPressed && quantitySelected > 0 && 'no-select-cells'
+              "ag-no-border group w-full",
+              isShiftPressed && quantitySelected > 0 && "no-select-cells",
             )}
             pagination
             ref={tableRef}
@@ -142,7 +142,7 @@ const KnowledgeBasesTab = ({
             gridOptions={{
               stopEditingWhenCellsLoseFocus: true,
               ensureDomOrder: true,
-              colResizeDefault: 'shift',
+              colResizeDefault: "shift",
             }}
           />
 
