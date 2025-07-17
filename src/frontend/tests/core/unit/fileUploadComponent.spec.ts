@@ -324,6 +324,16 @@ test(
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
       await page
+        .getByTestId("handle-file-shownode-raw content-right")
+        .first()
+        .click();
+
+      await page
+        .getByTestId("handle-chatoutput-noshownode-inputs-target")
+        .first()
+        .click();
+
+      await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
       await page.getByTestId("icon-MoreHorizontal").last().click();
@@ -363,7 +373,7 @@ test(
 
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
-    const fileContent = fs.readFileSync(testFilePath);
+    const _fileContent = fs.readFileSync(testFilePath);
 
     await awaitBootstrapTest(page);
 
@@ -686,7 +696,7 @@ test(
 
     // Open the file management modal
     await page.getByTestId("button_open_file_management").click();
-    console.log(pngFileName);
+    console.warn(pngFileName);
 
     // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${pngFileName}`)).toHaveClass(

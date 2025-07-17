@@ -1,7 +1,7 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
-import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
+import { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
+import type { UtilityStoreType } from "@/types/zustand/utility";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   clientId: "",

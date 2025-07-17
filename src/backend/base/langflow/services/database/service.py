@@ -27,6 +27,7 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
+from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
@@ -184,14 +185,17 @@ class DatabaseService(Service):
 
     @asynccontextmanager
     async def with_session(self):
-        async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            # Start of Selection
-            try:
-                yield session
-            except exc.SQLAlchemyError as db_exc:
-                logger.error(f"Database error during session scope: {db_exc}")
-                await session.rollback()
-                raise
+        if self.settings_service.settings.use_noop_database:
+            yield NoopSession()
+        else:
+            async with AsyncSession(self.engine, expire_on_commit=False) as session:
+                # Start of Selection
+                try:
+                    yield session
+                except exc.SQLAlchemyError as db_exc:
+                    logger.error(f"Database error during session scope: {db_exc}")
+                    await session.rollback()
+                    raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""

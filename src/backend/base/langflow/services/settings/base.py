@@ -126,6 +126,10 @@ class Settings(BaseSettings):
     - echo: Enable SQL query logging (development only)
     """
 
+    use_noop_database: bool = False
+    """If True, disables all database operations and uses a no-op session.
+    Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
+
     # cache configuration
     cache_type: Literal["async", "redis", "memory", "disk"] = "async"
     """The cache type can be 'async' or 'redis'."""
@@ -267,6 +271,13 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    @field_validator("use_noop_database", mode="before")
+    @classmethod
+    def set_use_noop_database(cls, value):
+        if value:
+            logger.info("Running with NOOP database session. All DB operations are disabled.")
+        return value
 
     @field_validator("event_delivery", mode="before")
     @classmethod
