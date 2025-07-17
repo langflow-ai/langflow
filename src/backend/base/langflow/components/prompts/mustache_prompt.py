@@ -14,7 +14,7 @@ class MustachePromptComponent(Component):
     trace_type = "prompt"
 
     inputs = [
-        PromptInput(name="template", display_name="Template", field_type=FieldTypes.MUSTACHE),
+        PromptInput(name="template", display_name="Template", field_type=FieldTypes.MUSTACHE_PROMPT),
     ]
 
     outputs = [
