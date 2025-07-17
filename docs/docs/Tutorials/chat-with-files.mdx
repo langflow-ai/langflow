@@ -19,7 +19,7 @@ The main focus of this tutorial is to show you how to provide files as input to 
 - [A Langflow API key](/configuration-api-keys)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
 
-    This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
+This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
 ## Create a flow that accepts file input
 
