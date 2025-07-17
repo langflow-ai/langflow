@@ -84,10 +84,7 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
 
             # Inverse document frequency (IDF)
             idf = (
-                math.log(
-                    (n_docs - document_frequencies[term] + 0.5)
-                    / (document_frequencies[term] + 0.5)
-                )
+                math.log((n_docs - document_frequencies[term] + 0.5) / (document_frequencies[term] + 0.5))
                 if document_frequencies[term] > 0
                 else 0
             )
