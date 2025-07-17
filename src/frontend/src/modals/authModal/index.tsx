@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import type { AuthSettingsType } from "@/types/mcp";
+import { AUTH_METHODS_ARRAY } from "@/utils/mcpUtils";
 import BaseModal from "../baseModal";
 
 interface AuthModalProps {
@@ -92,13 +93,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
           {/* Left column - Radio buttons */}
           <div className="flex flex-col flex-1">
             <RadioGroup value={authType} onValueChange={handleAuthTypeChange}>
-              {[
-                { id: "none", label: "None" },
-                { id: "apikey", label: "API Key" },
-                { id: "userpass", label: "Username & Password" },
-                { id: "bearer", label: "Bearer Token" },
-                { id: "iam", label: "IAM" },
-              ].map((option) => (
+              {AUTH_METHODS_ARRAY.map((option) => (
                 <div key={option.id} className="flex items-center space-x-2">
                   <RadioGroupItem value={option.id} id={option.id} />
                   <Label

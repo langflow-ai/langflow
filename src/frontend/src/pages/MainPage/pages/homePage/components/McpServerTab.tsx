@@ -23,6 +23,7 @@ import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
+import { AUTH_METHODS } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
 
@@ -363,30 +364,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             </a>
           </div>
         </div>
-        <div className="flex gap-4 items-center">
-          {ENABLE_MCP_AUTH && !hasAuthentication && (
-            <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
-              <ForwardedIconComponent
-                name="AlertTriangle"
-                className="h-4 w-4 shrink-0"
-              />
-              Public endpoint - no auth. Use only in dev or trusted envs.
-            </span>
-          )}
-          {ENABLE_MCP_AUTH && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAuthModalOpen(true)}
-            >
-              <ForwardedIconComponent
-                name="Fingerprint"
-                className="h-4 w-4 shrink-0"
-              />
-              {hasAuthentication ? "Edit Auth" : "Add Auth"}
-            </Button>
-          )}
-        </div>
       </div>
       <div className="flex flex-col justify-between gap-8 xl:flex-row">
         <div className="w-full xl:w-2/5">
@@ -420,6 +397,43 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+          {ENABLE_MCP_AUTH && (
+            <div className="flex justify-between">
+              <span className="flex gap-2 items-center">
+                Auth:
+                {!hasAuthentication ? (
+                  <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
+                    <ForwardedIconComponent
+                      name="AlertTriangle"
+                      className="h-4 w-4 shrink-0"
+                    />
+                    None (public)
+                  </span>
+                ) : (
+                  <span className="text-accent-emerald-foreground flex gap-2 text-mmd items-center">
+                    <ForwardedIconComponent
+                      name="Check"
+                      className="h-4 w-4 shrink-0"
+                    />
+                    {AUTH_METHODS[
+                      currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
+                    ]?.label || currentAuthSettings.auth_type}
+                  </span>
+                )}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAuthModalOpen(true)}
+              >
+                <ForwardedIconComponent
+                  name="Fingerprint"
+                  className="h-4 w-4 shrink-0"
+                />
+                {hasAuthentication ? "Edit Auth" : "Add Auth"}
+              </Button>
+            </div>
+          )}
           <div className="flex flex-col">
             <div className="flex flex-row justify-start border-b border-border">
               {[{ name: "Auto install" }, { name: "JSON" }].map((item) => (
