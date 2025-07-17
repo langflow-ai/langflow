@@ -226,6 +226,10 @@ class Settings(BaseSettings):
     """If set to True, tracing will be deactivated."""
     max_transactions_to_keep: int = 3000
     """The maximum number of transactions to keep in the database."""
+    transaction_cleanup_probability: float = Field(default=0.5, ge=0.0, le=1.0)
+    """The probability (0.0 to 1.0) of performing transaction cleanup during logging.
+    Default is 0.5 (50%). Set to 0.0 to disable inline cleanup entirely, or 1.0 to always cleanup.
+    Lower values reduce deadlock frequency but may allow more transactions to accumulate."""
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
     max_vertex_builds_per_vertex: int = 2
