@@ -76,7 +76,7 @@ export function getNewCurlCode({
     if (detectedPlatform === "powershell") {
       const payloadWithSession = {
         ...processedPayload,
-        session_id: "$(New-Guid).Guid",
+        session_id: "YOUR_SESSION_ID_HERE",
       };
       const singleLinePayload = JSON.stringify(payloadWithSession);
       // PowerShell with here-string (most robust for complex JSON)
@@ -93,7 +93,7 @@ curl.exe --request POST \`
     } else {
       const payloadWithSession = {
         ...processedPayload,
-        session_id: "$(uuidgen || cat /proc/sys/kernel/random/uuid)",
+        session_id: "YOUR_SESSION_ID_HERE",
       };
       // Unix-like systems (Linux, Mac, WSL2)
       const unixFormattedPayload = JSON.stringify(payloadWithSession, null, 2)
@@ -193,7 +193,7 @@ curl.exe --request POST \`
   "output_type": "${processedPayload.output_type || "chat"}",
   "input_type": "${processedPayload.input_type || "chat"}",
   "input_value": "${processedPayload.input_value || "Your message here"}",
-  "session_id": "'$(New-Guid).Guid'",
+  "session_id": "YOUR_SESSION_ID_HERE",
   "tweaks": {
 ${allTweaks}
   }
@@ -213,15 +213,7 @@ ${allTweaks}
     const executeStep = `curl -X POST \\
   "${apiUrl}" \\
   -H "Content-Type: application/json"${authHeader ? " \\\n " + authHeader : ""} \\
-  -d '{
-    "output_type": "${processedPayload.output_type || "chat"}",
-    "input_type": "${processedPayload.input_type || "chat"}",
-    "input_value": "${processedPayload.input_value || "Your message here"}",
-    "session_id": "'$(uuidgen || cat /proc/sys/kernel/random/uuid)'",
-    "tweaks": {
-${allTweaks}
-    }
-  }'`;
+  -d '{\n    "output_type": "${processedPayload.output_type || "chat"}",\n    "input_type": "${processedPayload.input_type || "chat"}",\n    "input_value": "${processedPayload.input_value || "Your message here"}",\n    "session_id": "YOUR_SESSION_ID_HERE",\n    "tweaks": {\n${allTweaks}\n    }\n  }'`;
 
     // Return structured steps instead of concatenated string
     return {

@@ -184,10 +184,8 @@ describe("API Snippet Generation Utilities", () => {
         // Check for API key (quotes may vary)
         expect(code).toContain("x-api-key: YOUR_API_KEY_HERE");
 
-        // Check for session_id with Unix UUID generation
-        expect(code).toContain(
-          "$(uuidgen || cat /proc/sys/kernel/random/uuid)",
-        );
+        // Check for session_id placeholder
+        expect(code).toContain("YOUR_SESSION_ID_HERE");
 
         // Check for correct endpoint
         expect(code).toContain("/api/v1/run/test-endpoint");
@@ -199,8 +197,8 @@ describe("API Snippet Generation Utilities", () => {
         // Check for API key
         expect(code).toContain('--header "x-api-key: YOUR_API_KEY_HERE"');
 
-        // Check for session_id with PowerShell UUID generation
-        expect(code).toContain("$(New-Guid).Guid");
+        // Check for session_id placeholder
+        expect(code).toContain("YOUR_SESSION_ID_HERE");
 
         // Check for correct endpoint
         expect(code).toContain("/api/v1/run/test-endpoint");
