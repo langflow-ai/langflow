@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.416f77d8.js" defer="defer"></script>
-<script src="/assets/js/main.0e1b5a24.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.b5204e6b.js" defer="defer"></script>
+<script src="/assets/js/main.5570ad66.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -54,7 +54,7 @@ For more information, see <a href="/install-custom-dependencies#langflow-desktop
 The <strong>Docling</strong> component loads the document, and the <strong>ExportDoclingDocument</strong> component converts the DoclingDocument into the format you select. This example converts the document to Markdown, with images represented as placeholders.
 The <strong>Split Text</strong> component will split the Markdown into chunks for the vector database to store in the next part of the flow.</li>
 <li>Connect a <a href="/components-vector-stores#chroma-db"><strong>Chroma DB</strong></a> component to the <strong>Split text</strong> component&#x27;s <strong>Chunks</strong> output.</li>
-<li>Connect an <a href="/components-embedding-models"><strong>Embedding Model</strong></a> to Chroma&#x27;s <strong>Embedding</strong> port, and a <strong>Chat Output</strong> component to view the extracted <a href="/concepts-objects#dataframe-object">DataFrame</a>.</li>
+<li>Connect an <a href="/components-embedding-models"><strong>Embedding Model</strong></a> to Chroma&#x27;s <strong>Embedding</strong> port, and a <strong>Chat Output</strong> component to view the extracted <a href="/data-types#dataframe">DataFrame</a>.</li>
 <li>Add your OpenAI API key to the Embedding Model.</li>
 </ol>
 <p>The flow looks like this:</p>
