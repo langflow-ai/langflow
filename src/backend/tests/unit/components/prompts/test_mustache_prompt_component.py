@@ -85,20 +85,76 @@ class TestMustachePromptComponent(ComponentTestBaseWithClient):
         assert isinstance(result, Message)
         assert result.text == ""
 
-    async def test_build_prompt_complex_mustache(self, component_class):
-        """Test mustache prompt with complex mustache syntax."""
+    async def test_build_prompt_dot_notation_variables(self, component_class):
+        """Test mustache prompt with dot notation variables."""
         component = component_class(
-            template="{{#show_greeting}}Hello {{name}}!{{/show_greeting}} {{#show_age}}You are {{age}}.{{/show_age}}",
-            name="Charlie",
-            age="30",
-            show_greeting=True,
-            show_age=False,
+            template="Hello {{user.name}}! You work at {{company.name}}.",
+            user={"name": "Charlie"},
+            company={"name": "Acme Corp"},
         )
         result = await component.build_prompt()
 
         assert isinstance(result, Message)
-        # Only greeting should show, age section should be hidden
-        assert result.text == "Hello Charlie! "
+        assert result.text == "Hello Charlie! You work at Acme Corp."
+
+    async def test_build_prompt_rejects_complex_mustache(self, component_class):
+        """Test that complex mustache syntax is rejected."""
+        # Test conditional syntax
+        component = component_class(
+            template="{{#show_greeting}}Hello {{name}}!{{/show_greeting}}",
+            name="World",
+            show_greeting=True,
+        )
+        with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
+            await component.build_prompt()
+
+        # Test inverted section
+        component = component_class(
+            template="{{^is_empty}}Not empty{{/is_empty}}",
+            is_empty=False,
+        )
+        with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
+            await component.build_prompt()
+
+        # Test unescaped variable
+        component = component_class(
+            template="{{&unescaped_html}}",
+            unescaped_html="<script>alert('test')</script>",
+        )
+        with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
+            await component.build_prompt()
+
+        # Test partial
+        component = component_class(
+            template="{{>header}}",
+            header="Header content",
+        )
+        with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
+            await component.build_prompt()
+
+    async def test_build_prompt_rejects_invalid_variables(self, component_class):
+        """Test that invalid variable names are rejected."""
+        # Test variable with spaces
+        component = component_class(
+            template="Hello {{ name with spaces }}!",
+            name="World",
+        )
+        with pytest.raises(ValueError, match="Invalid mustache variable"):
+            await component.build_prompt()
+
+        # Test variable starting with number
+        component = component_class(
+            template="Value: {{123invalid}}",
+        )
+        with pytest.raises(ValueError, match="Invalid mustache variable"):
+            await component.build_prompt()
+
+        # Test variable with special characters
+        component = component_class(
+            template="Price: {{price-$100}}",
+        )
+        with pytest.raises(ValueError, match="Invalid mustache variable"):
+            await component.build_prompt()
 
     async def test_build_prompt_with_special_characters(self, component_class):
         """Test mustache prompt with special characters in variables."""

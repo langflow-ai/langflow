@@ -1,3 +1,4 @@
+import pytest
 from langflow.components.prompts.mustache_prompt import MustachePromptComponent
 from langflow.schema.message import Message
 
@@ -64,32 +65,33 @@ async def test_mustache_prompt_empty_template():
     assert outputs["prompt"].text == ""
 
 
-async def test_mustache_prompt_complex_mustache_logic():
-    """Test mustache prompt with conditional logic."""
-    template = (
-        "{{#show_greeting}}Hello {{name}}!{{/show_greeting}}{{#show_age}} You are {{age}} years old.{{/show_age}}"
-    )
-    outputs = await run_single_component(MustachePromptComponent, inputs={"template": template})
+async def test_mustache_prompt_simple_variables_only():
+    """Test that only simple variables are processed, not complex syntax."""
+    # Note: This test verifies that the backend still processes all mustache syntax
+    # but the frontend will only highlight simple variables
+    template = "Hello {{name}}!"
+    outputs = await run_single_component(MustachePromptComponent, inputs={"template": template, "name": "World"})
 
     assert isinstance(outputs["prompt"], Message)
-    # Without variables, the template should render as is (but sections without variables are false)
-    assert outputs["prompt"].text == ""
+    # Backend still processes all mustache syntax
+    assert outputs["prompt"].text == "Hello World!"
 
 
-async def test_mustache_prompt_with_lists():
-    """Test mustache prompt with list iteration."""
-    outputs = await run_single_component(
-        MustachePromptComponent,
-        inputs={"template": "Shopping list:\n{{#items}}- {{.}}\n{{/items}}", "items": ["apples", "bananas", "oranges"]},
-    )
-
-    assert isinstance(outputs["prompt"], Message)
-    expected = "Shopping list:\n- apples\n- bananas\n- oranges\n"
-    assert outputs["prompt"].text == expected
+async def test_mustache_prompt_rejects_list_syntax():
+    """Test that mustache list iteration syntax is rejected."""
+    with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
+        await run_single_component(
+            MustachePromptComponent,
+            inputs={
+                "template": "Shopping list:\n{{#items}}- {{.}}\n{{/items}}",
+                "items": ["apples", "bananas", "oranges"],
+            },
+        )
 
 
 async def test_mustache_prompt_with_objects():
-    """Test mustache prompt with object properties."""
+    """Test mustache prompt with object properties (dot notation)."""
+    # Note: Dot notation variables like {{user.name}} are still supported
     outputs = await run_single_component(
         MustachePromptComponent,
         inputs={
@@ -123,32 +125,28 @@ async def test_mustache_prompt_with_newlines():
     assert outputs["prompt"].text == expected
 
 
-async def test_mustache_prompt_with_boolean_values():
-    """Test mustache prompt with boolean values."""
-    outputs = await run_single_component(
-        MustachePromptComponent,
-        inputs={
-            "template": "{{#is_admin}}Admin privileges enabled{{/is_admin}}{{^is_admin}}Regular user{{/is_admin}}",
-            "is_admin": True,
-        },
-    )
-
-    assert isinstance(outputs["prompt"], Message)
-    assert outputs["prompt"].text == "Admin privileges enabled"
+async def test_mustache_prompt_rejects_boolean_conditionals():
+    """Test that mustache conditional syntax is rejected."""
+    with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
+        await run_single_component(
+            MustachePromptComponent,
+            inputs={
+                "template": "{{#is_admin}}Admin privileges enabled{{/is_admin}}{{^is_admin}}Regular user{{/is_admin}}",
+                "is_admin": True,
+            },
+        )
 
 
-async def test_mustache_prompt_with_inverted_section():
-    """Test mustache prompt with inverted section (^)."""
-    outputs = await run_single_component(
-        MustachePromptComponent,
-        inputs={
-            "template": "{{#has_items}}Items available{{/has_items}}{{^has_items}}No items available{{/has_items}}",
-            "has_items": False,
-        },
-    )
-
-    assert isinstance(outputs["prompt"], Message)
-    assert outputs["prompt"].text == "No items available"
+async def test_mustache_prompt_rejects_inverted_section():
+    """Test that mustache inverted section syntax is rejected."""
+    with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
+        await run_single_component(
+            MustachePromptComponent,
+            inputs={
+                "template": "{{#has_items}}Items available{{/has_items}}{{^has_items}}No items available{{/has_items}}",
+                "has_items": False,
+            },
+        )
 
 
 async def test_mustache_prompt_with_html_escaping():
