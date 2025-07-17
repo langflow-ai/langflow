@@ -281,9 +281,9 @@ class KBIngestionComponent(Component):
 
         # Combine text from multiple columns
         texts: list[str] = [
-            " | ".join(
-                [str(row[col]) for col in valid_cols if pd.notna(row[col])]
-            ) if any(pd.notna(row[col]) for col in valid_cols) else ""
+            " | ".join([str(row[col]) for col in valid_cols if pd.notna(row[col])])
+            if any(pd.notna(row[col]) for col in valid_cols)
+            else ""
             for _, row in df_source.iterrows()
         ]
 
