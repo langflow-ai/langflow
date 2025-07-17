@@ -224,6 +224,47 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const apiUrl = customGetMCPUrl(projectId);
 
+  // Generate auth headers based on the authentication type
+  const getAuthHeaders = () => {
+    if (isAutoLogin) return "";
+
+    if (!currentAuthSettings || currentAuthSettings.auth_type === "none") {
+      return "";
+    }
+
+    switch (currentAuthSettings.auth_type) {
+      case "apikey":
+        return `
+        "--headers",
+        "x-api-key",
+        "${currentAuthSettings.api_key || "YOUR_API_KEY"}",`;
+      case "userpass":
+        return `
+        "--headers",
+        "Authorization",
+        "Basic ${btoa(
+          `${currentAuthSettings.username || "USERNAME"}:${
+            currentAuthSettings.password || "PASSWORD"
+          }`
+        )}",`;
+      case "bearer":
+        return `
+        "--headers",
+        "Authorization",
+        "Bearer ${currentAuthSettings.bearer_token || "YOUR_BEARER_TOKEN"}",`;
+      case "iam":
+        return `
+        "--headers",
+        "x-api-key",
+        "${currentAuthSettings.api_key || "YOUR_IAM_TOKEN"}",
+        "--headers",
+        "x-iam-endpoint",
+        "${currentAuthSettings.iam_endpoint || "YOUR_IAM_ENDPOINT"}",`;
+      default:
+        return "";
+    }
+  };
+
   const MCP_SERVER_JSON = `{
   "mcpServers": {
     "lf-${parseString(folderName ?? "project", [
@@ -248,14 +289,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             ? `"uvx",
         `
             : ""
-        }"mcp-proxy",${
-    isAutoLogin
-      ? ""
-      : `
-        "--headers",
-        "x-api-key",
-        "${apiKey || "YOUR_API_KEY"}",`
-  }
+        }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
       ]
     }
