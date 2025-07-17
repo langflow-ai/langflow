@@ -31,6 +31,7 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_USER,
 )
 from langflow.utils.image import create_image_content_dict
+from langflow.utils.mustache_security import safe_mustache_render
 
 if TYPE_CHECKING:
     from langflow.schema.dataframe import DataFrame
@@ -240,6 +241,13 @@ class Message(Data):
         return cls(prompt=prompt_json)
 
     def format_text(self, template_format="f-string"):
+        if template_format == "mustache":
+            # Use our secure mustache renderer
+            variables_with_str_values = dict_values_to_string(self.variables)
+            formatted_prompt = safe_mustache_render(self.template, variables_with_str_values)
+            self.text = formatted_prompt
+            return formatted_prompt
+        # Use langchain's template for other formats
         prompt_template = PromptTemplate.from_template(self.template, template_format=template_format)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
