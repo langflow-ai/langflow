@@ -76,7 +76,7 @@ class KBIngestionComponent(Component):
                     "display_name": "Vectorize",
                     "type": "boolean",
                     "description": "Create embeddings for this column",
-                    "default": "False",
+                    "default": False,
                     "edit_mode": EditMode.INLINE,
                 },
                 {
@@ -84,7 +84,7 @@ class KBIngestionComponent(Component):
                     "display_name": "Citation",
                     "type": "boolean",
                     "description": "Use this column for citation/reference",
-                    "default": "False",
+                    "default": False,
                     "edit_mode": EditMode.INLINE,
                 },
                 {
@@ -92,7 +92,7 @@ class KBIngestionComponent(Component):
                     "display_name": "Identifier",
                     "type": "boolean",
                     "description": "Use this column as unique identifier",
-                    "default": "False",
+                    "default": False,
                     "edit_mode": EditMode.INLINE,
                 },
             ],
@@ -100,9 +100,9 @@ class KBIngestionComponent(Component):
                 {
                     "column_name": "content",
                     "data_type": "string",
-                    "vectorize": "True",
-                    "citation": "False",
-                    "identifier": "False",
+                    "vectorize": True,
+                    "citation": False,
+                    "identifier": False,
                 }
             ],
         ),

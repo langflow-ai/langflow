@@ -64,6 +64,10 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
     # Calculate average document length
     avg_doc_length = sum(len(doc) for doc in tokenized_docs) / n_docs if n_docs > 0 else 0
 
+    # Handle edge case where all documents are empty
+    if avg_doc_length == 0:
+        return [0.0] * n_docs
+
     # Calculate document frequency for each term
     document_frequencies = {}
     for term in query_terms:
