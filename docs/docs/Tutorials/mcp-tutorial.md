@@ -171,44 +171,54 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
 ## Add a geolocation server
 
-The [Toolkit MCP Server](https://github.com/cyanheads/toolkit-mcp-server) includes multiple MCP servers for network monitoring, including IP geolocation. It isn't extremely precise, but it doesn't require an API key. The tool returns the IP geolocation of the **Langflow server**, so if your server is deployed elsewhere, consider alternative approaches for getting user-specific location data, such as browser geolocation APIs.
+The [Toolkit MCP server](https://github.com/cyanheads/toolkit-mcp-server) includes multiple MCP tools for network monitoring, including IP geolocation. It isn't extremely precise, but it doesn't require an API key.
 
-This MCP server can be started with [npx](https://docs.npmjs.com/cli/v8/commands/npx), which downloads and runs the [Node registry package](https://www.npmjs.com/package/@cyanheads/toolkit-mcp-server) with one command without installing the package locally.
+Note that this tool returns the IP geolocation of your Langflow server, so if your server is deployed remotely, consider alternative approaches for getting user-specific location data, such as browser geolocation APIs.
 
-1. To add the Toolkit MCP Server to your flow, drag another MCP Tools component to your existing flow, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
-2. Click **Add Server**.
-    In the **STDIO** pane, enter the following:
+This MCP server can be started with one [npx](https://docs.npmjs.com/cli/v8/commands/npx) command, which downloads and runs the [Toolkit MCP server Node registry package](https://www.npmjs.com/package/@cyanheads/toolkit-mcp-server) without installing the package locally.
 
-    - **Name:** `ip_geolocation`
-    - **Command:** `npx @cyanheads/toolkit-mcp-server`
+To add the Toolkip MCP server to your flow, do the following:
 
-    When the **Actions** list populates, the server is ready.
+1. Add another **MCP Tools** component to your flow, click the component, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
 
-3. In the **MCP Tools** component, enable **Tool Mode**, and then connect the **Toolset** port to the **Agent** component's **Tools** port.
+2. Select **STDIO**.
 
-    At this point, the flow has an additional `ip_geolocation` MCP tools component connected to the Agent.
+3. For **Name**, enter `ip_geolocation`.
+
+    :::tip
+    The tool name and description help the agent select tools.
+    If your agent is struggling to select tools, make sure the names and descriptions are clear and human-readable.
+    :::
+
+4. For **Command**, enter `npx @cyanheads/toolkit-mcp-server`.
+
+5. Click **Add Server**, and then wait for the **Actions** list to populate. This means that the MCP server successfully connected.
+
+6. Click the **MCP Tools** component, enable **Tool Mode** in the component's header menu, and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
+
+    Your flow now has an additional **MCP Tools** component for a total of five components.
 
     ![An agent component connected to MCP weather and geolocation servers](/img/tutorial-mcp-geolocation.png)
 
 ## Create a Python application that connects to Langflow
 
 At this point, you can open the **Playground** and ask about the weather in your current location to test the IP geolocation tool.
-However, the IP geolocation MCP server is most useful in an application where you or your users want to ask about the weather from different places around the world, depending on the Langflow server's location.
+However, geolocation tools are most useful in applications where you or your users want to ask about the weather from different places around the world.
 
 In the last part of this tutorial, you'll learn how to use the Langflow API to run a flow in a script.
+This could be part of a larger application, such as a mobile app where users want to know if the weather is good for a particular sport.
 
-When you use the Langflow API to run a flow, you can change some aspects of the flow without changing your code.
+When you use the Langflow API to run a flow, you can change some aspects of the flow without changing the code.
 For example, you can add more MCP servers to your flow in Langflow, and then use the same script to run the flow.
 You can use the same input or a new input that prompts the agent to use other tools.
 
-1. To construct a Python application to connect to your flow, gather the following information:
+1. For this tutorial's Python script, gather the following information:
 
     * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
     * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
     * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/configuration-api-keys).
 
-2. Copy the following script into a Python file, and then replace the placeholders with the information you gathered in the previous step.
-    This code contains modifications to the `input_value` to ask about the weather in the user's location, and some parsing code to extract just the message from Langflow's response.
+2. Copy the following script into a Python file, and then replace the placeholders with the information you gathered in the previous step:
 
     ```python
     import requests
@@ -247,22 +257,23 @@ You can use the same input or a new input that prompts the agent to use other to
         print(f"Error extracting message from response: {e}")
     ```
 
+    Notice that this script uses a different prompt than the previous **Playground** examples.
+    In this script, the `input_value` asks about the weather in the user's current location without providing any hints about the user's location, such as a particular city.
+
+    Additionally, this script includes parsing code to extract the LLM's reply from the entire Langflow API response.
+    You will want to use similar extraction in your own applications because the Langflow API response includes metadata and other information that isn't relevant to the reply passed to the user.
+
 3.  Save and run the script to send the request and test the flow.
-    The application identifies your approximate location with `geolocation`, and then retrieves the weather in that location with `weather`.
 
-    <details closed>
-    <summary>Response</summary>
+    The agent uses the `ip_geolocation` tool to detect the requester's location, and then it uses the `weather` tool to retrieve weather information for that location.
+    For example:
 
-    The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
-
-    If you are using a VPN or a similar service, the `geolocation` tool might use the simulated location rather than your actual location.
-
-    ```
+    ```text
     The weather in Waynesboro, Pennsylvania, is currently overcast with a temperature of 23.0°C (about 73.4°F).
     If you need more details or have any other questions, feel free to ask!
     ```
 
-    </details>
+    Remember, the `ip_geolocation` tool used in this tutorial uses your Langflow server's location, which can be different from your actual location.
 
 ## Next steps
 
