@@ -90,22 +90,26 @@ def get_text_columns(df: pd.DataFrame, schema_data: list = None) -> list[str]:
     """Get the text columns to analyze for word/character counts."""
     # First try schema-defined text columns
     if schema_data:
+        # Collect the schema-defined text columns
         text_columns = [
             col["column_name"]
             for col in schema_data
             if col.get("vectorize", False) and col.get("data_type") == "string"
         ]
         if text_columns:
-            return [col for col in text_columns if col in df.columns]
+            df_cols_set = set(df.columns)
+            # Filter only columns present in the dataframe
+            return [col for col in text_columns if col in df_cols_set]
 
-    # Fallback to common text column names
-    common_names = ["text", "content", "document", "chunk"]
-    text_columns = [col for col in df.columns if col.lower() in common_names]
+    # Fallback to common text column names (case-insensitive, set for O(1) lookup)
+    common_names_set = {"text", "content", "document", "chunk"}
+    # Build a list of columns whose lowercased names match any in the common_names_set
+    text_columns = [col for col in df.columns if col.lower() in common_names_set]
     if text_columns:
         return text_columns
 
-    # Last resort: all string columns
-    return [col for col in df.columns if df[col].dtype == "object"]
+    # Last resort: all string columns (optimized using select_dtypes)
+    return list(df.select_dtypes(include=["object"]).columns)
 
 
 def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[int, int]:
