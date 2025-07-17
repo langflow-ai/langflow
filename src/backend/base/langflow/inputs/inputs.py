@@ -582,30 +582,35 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
     """Represents a multiselect input field.
 
     This class represents a multiselect input field and provides functionality for handling multiselect values.
-    It inherits from the `BaseInputMixin`, `ListableInputMixin` and `DropDownMixin` classes.
+    It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `DropDownMixin` classes.
 
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.TEXT.
-        options (Optional[Union[list[str], Callable]]): List of options for the field. Only used when is_list=True.
-            Default is None.
+        options (list[str]): List of options for the field. Only used when is_list=True. Defaults to empty list.
+        value (list[str]): The selected values. Defaults to empty list. Must always be a list of strings.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
     is_list: bool = Field(default=True, serialization_alias="list")
     combobox: CoalesceBool = False
+    value: list[str] = Field(default_factory=list)
 
-    @field_validator("value")
+    @field_validator("value", mode="before")
     @classmethod
     def validate_value(cls, v: Any, _info):
-        # Check if value is a list of dicts
+        # Ensure value is a list of strings; handle None safely during custom node construction.
+        if v is None:
+            return []
+
         if not isinstance(v, list):
-            msg = f"MultiselectInput value must be a list. Value: '{v}'"
-            raise ValueError(msg)  # noqa: TRY004
+            msg = f"MultiselectInput value must be a list. Got: {type(v)}"
+            raise TypeError(msg)
+
         for item in v:
             if not isinstance(item, str):
-                msg = f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string"
-                raise ValueError(msg)  # noqa: TRY004
+                msg = f"MultiselectInput value must be a list of strings. Item {item!r} is of type {type(item)}"
+                raise TypeError(msg)
         return v
 
 
