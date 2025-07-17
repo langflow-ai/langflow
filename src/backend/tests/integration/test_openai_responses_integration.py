@@ -127,11 +127,16 @@ async def test_openai_responses_non_streaming(client: AsyncClient, created_api_k
 
     try:
         data = response.json()
-        if "error" in data:
+        if "error" in data and data["error"] is not None:
             logger.error(f"Error in response: {data['error']}")
             # Don't fail immediately, log more details for debugging
             logger.error(f"Full error details: {data}")
-            pytest.fail(f"Error in response: {data['error'].get('message', 'Unknown error')}")
+            error_msg = "Unknown error"
+            if isinstance(data.get("error"), dict):
+                error_msg = data["error"].get("message", "Unknown error")
+            elif data.get("error"):
+                error_msg = str(data["error"])
+            pytest.fail(f"Error in response: {error_msg}")
 
         # Validate the response
         assert "id" in data
