@@ -43,7 +43,7 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
 
     This query demonstrates how an LLM, by itself, might not have access to information or functions designed to address specialized queries. In this example, the default OpenAI model provides a vague response, although the agent does know the current date by using its internal `get_current_date` function.
 
-    ```
+    ```text
     Today is July 11, 2025.
     To determine if it's safe to go hiking in the Adirondacks today, you should check the current weather conditions, trail advisories, and any local alerts (such as bear activity or flooding).
     Would you like a detailed weather forecast or information on trail conditions for the Adirondacks today?
@@ -148,7 +148,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     Ideally, the agent's response will be more specific than the previous response because of the additional context provided by the weather MCP server.
     For example:
 
-    ```
+    ```text
     The current weather in Lake Placid, a central location in the Adirondacks,
     is foggy with a temperature of 17.2°C (about 63°F).
     If you plan to go hiking today, be cautious as fog can reduce visibility
