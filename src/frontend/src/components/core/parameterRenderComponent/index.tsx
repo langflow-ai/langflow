@@ -17,6 +17,7 @@ import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
 import McpComponent from "./components/mcpComponent";
 import MultiselectComponent from "./components/multiselectComponent";
+import MustachePromptAreaComponent from "./components/mustachePromptComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
 import SortableListComponent from "./components/sortableListComponent";
@@ -187,6 +188,15 @@ export function ParameterRenderComponent({
             readonly={!!nodeClass.flow}
             field_name={name}
             id={`promptarea_${id}`}
+          />
+        );
+      case "mustache":
+        return (
+          <MustachePromptAreaComponent
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`mustachepromptarea_${id}`}
           />
         );
       case "code":
