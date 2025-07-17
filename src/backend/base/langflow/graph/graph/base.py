@@ -1685,14 +1685,15 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
-                await log_vertex_build(
-                    flow_id=self.flow_id or "",
-                    vertex_id=result.vertex.id,
-                    valid=result.valid,
-                    params=result.params,
-                    data=result.result_dict,
-                    artifacts=result.artifacts,
-                )
+                if self.flow_id is not None:
+                    await log_vertex_build(
+                        flow_id=self.flow_id,
+                        vertex_id=result.vertex.id,
+                        valid=result.valid,
+                        params=result.params,
+                        data=result.result_dict,
+                        artifacts=result.artifacts,
+                    )
 
                 vertices.append(result.vertex)
             else:

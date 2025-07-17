@@ -24,8 +24,11 @@ from langflow.base.tools.constants import (
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
-from langflow.graph.state.model import create_state_model
-from langflow.graph.utils import has_chat_output
+
+# Lazy import to avoid circular dependency
+# from langflow.graph.state.model import create_state_model
+# Lazy import to avoid circular dependency
+# from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -301,6 +304,9 @@ class Component(CustomComponent):
         fields = {}
         for output in self._outputs_map.values():
             fields[output.name] = getattr(self, output.method)
+        # Lazy import to avoid circular dependency
+        from langflow.graph.state.model import create_state_model
+
         self._state_model = create_state_model(model_name=model_name, **fields)
         return self._state_model
 
@@ -897,7 +903,9 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
-        return_type = get_type_hints(method)["return"]
+        return_type = get_type_hints(method).get("return")
+        if return_type is None:
+            return []
         extracted_return_types = self._extract_return_type(return_type)
         return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
 
@@ -1450,6 +1458,9 @@ class Component(CustomComponent):
             )
 
     def is_connected_to_chat_output(self) -> bool:
+        # Lazy import to avoid circular dependency
+        from langflow.graph.utils import has_chat_output
+
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 
     def _is_database_available(self) -> bool:

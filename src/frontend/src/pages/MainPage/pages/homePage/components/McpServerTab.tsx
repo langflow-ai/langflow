@@ -1,3 +1,6 @@
+import { memo, type ReactNode, useCallback, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
@@ -11,18 +14,15 @@ import {
 } from "@/controllers/API/queries/mcp";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
+import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
-import { useIsLocalConnection } from "@/hooks/useIsLocalConnection";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { MCPSettingsType } from "@/types/mcp";
+import type { MCPSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
-import { memo, ReactNode, useCallback, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 
 // Define interface for MemoizedCodeTag props
 interface MemoizedCodeTagProps {
@@ -150,7 +150,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
   // Check if the current connection is local
-  const isLocalConnection = useIsLocalConnection();
+  const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
     isLocalConnection ? "Auto install" : "JSON",

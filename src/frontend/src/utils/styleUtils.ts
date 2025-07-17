@@ -1,10 +1,10 @@
-import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { GradientSave } from "@/icons/GradientSparkles";
-import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
+import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, any>();
 
@@ -271,6 +271,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "HuggingFace", name: "huggingface", icon: "HuggingFace" },
   { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
+  { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "LMStudio", name: "lmstudio", icon: "LMStudio" },
@@ -525,7 +526,7 @@ export const getNodeIcon = async (name: string) => {
   if (dynamicIconImports[lucideIconName]) {
     try {
       return cacheAndReturn(lazy(dynamicIconImports[lucideIconName]));
-    } catch (e) {
+    } catch (_e) {
       // Fall through to next option
     }
   }
