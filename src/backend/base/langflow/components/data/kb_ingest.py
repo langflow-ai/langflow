@@ -280,7 +280,12 @@ class KBIngestionComponent(Component):
             return np.empty((0, 0)), []
 
         # Combine text from multiple columns
-        texts: list[str] = df_source[valid_cols].astype(str).agg(" ".join, axis=1).tolist()
+        texts: list[str] = [
+            " | ".join(
+                [str(row[col]) for col in valid_cols if pd.notna(row[col])]
+            ) if any(pd.notna(row[col]) for col in valid_cols) else ""
+            for _, row in df_source.iterrows()
+        ]
 
         # Generate embeddings using the model (following Embedding Model patterns)
         try:
