@@ -69,4 +69,5 @@ class RunFlowComponent(RunFlowBaseComponent):
             tweaks=tweaks,
             user_id=str(self.user_id),
             session_id=self.graph.session_id or self.session_id,
+            event_manager=self._event_manager,
         )
