@@ -605,12 +605,12 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
 
         if not isinstance(v, list):
             msg = f"MultiselectInput value must be a list. Got: {type(v)}"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         for item in v:
             if not isinstance(item, str):
                 msg = f"MultiselectInput value must be a list of strings. Item {item!r} is of type {type(item)}"
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
         return v
 
 
