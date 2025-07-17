@@ -1,28 +1,14 @@
-from fastapi import Depends
-from sqlmodel import Session
-
-from langflow.services.deps import get_session
 from langflow.utils.version import get_version_info
 
 from .model import Flow
 
 
-def get_flow_by_id(session: Session = Depends(get_session), flow_id: str | None = None) -> Flow | None:
-    """Get flow by id."""
-
-    if flow_id is None:
-        msg = "Flow id is required."
-        raise ValueError(msg)
-
-    return session.get(Flow, flow_id)
-
-
 def get_webhook_component_in_flow(flow_data: dict):
     """Get webhook component in flow data."""
-
-    for node in flow_data.get("nodes", []):
-        if "Webhook" in node.get("id"):
-            return node
+    if "nodes" in flow_data:
+        for node in flow_data.get("nodes", []):
+            if "Webhook" in node.get("id"):
+                return node
     return None
 
 

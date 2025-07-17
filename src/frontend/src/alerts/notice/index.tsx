@@ -1,13 +1,16 @@
-import { CustomLink } from "@/customization/components/custom-link";
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import { NoticeAlertType } from "../../types/alerts";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { CustomLink } from "@/customization/components/custom-link";
+import IconComponent from "../../components/common/genericIconComponent";
+import type { NoticeAlertType } from "../../types/alerts";
 
 export default function NoticeAlert({
   title,
-  link = "",
+  list = [],
   id,
+  link,
   removeAlert,
 }: NoticeAlertType): JSX.Element {
   const [show, setShow] = useState(true);
@@ -21,6 +24,14 @@ export default function NoticeAlert({
       }, 5000);
     }
   }, [id, removeAlert, show]);
+
+  const handleClick = () => {
+    setShow(false);
+    setTimeout(() => {
+      removeAlert(id);
+    }, 500);
+  };
+
   return (
     <Transition
       show={show}
@@ -32,10 +43,7 @@ export default function NoticeAlert({
       leaveTo={"transform translate-x-[-100%]"}
     >
       <div
-        onClick={() => {
-          setShow(false);
-          removeAlert(id);
-        }}
+        onClick={handleClick}
         className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
       >
         <div className="flex">
@@ -51,15 +59,13 @@ export default function NoticeAlert({
               {title}
             </p>
             <p className="mt-3 text-sm md:ml-6 md:mt-0">
-              {link !== "" ? (
+              {link && (
                 <CustomLink
                   to={link}
                   className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
                 >
                   Details
                 </CustomLink>
-              ) : (
-                <></>
               )}
             </p>
           </div>

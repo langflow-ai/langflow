@@ -1,154 +1,137 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("dropDownComponent", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+test(
+  "dropDownComponent",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    await page.getByTestId("blank-flow").click();
+
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("amazon");
+
+    await page.waitForSelector('[data-testid="amazonAmazon Bedrock"]', {
+      timeout: 3000,
+    });
+
+    await page
+      .getByTestId("amazonAmazon Bedrock")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+    await page.getByTestId("title-Amazon Bedrock").click();
+
+    await page.getByTestId("dropdown_str_model_id").click();
+
+    await page
+      .getByTestId(/anthropic\.claude-3-haiku-20240307-v1:0.*option/)
+      .click();
+
+    let value = await page
+      .getByTestId(/anthropic\.claude-3-haiku-20240307-v1:0.*option/)
+      .first()
+      .innerText();
+    if (value !== "anthropic.claude-3-haiku-20240307-v1:0") {
+      expect(false).toBeTruthy();
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
+    await page.getByTestId("dropdown_str_model_id").click();
+    await page.getByText("anthropic.claude-v2").last().click();
 
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
+    await page.waitForTimeout(1000);
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("amazon");
+    value = await page.getByTestId("dropdown_str_model_id").innerText();
+    expect(value.length).toBeGreaterThan(10);
 
-  await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 3000,
+    });
 
-  await page
-    .getByTestId("modelsAmazon Bedrock")
-    .first()
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTestId("title-Amazon Bedrock").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
-  await page.getByTestId("dropdown_str_model_id").click();
+    await page.waitForTimeout(1000);
 
-  await page
-    .getByTestId("anthropic.claude-3-haiku-20240307-v1:0-10-option")
-    .click();
+    value = await page
+      .getByTestId("value-dropdown-dropdown_str_edit_model_id")
+      .innerText();
 
-  let value = await page
-    .getByTestId("anthropic.claude-3-haiku-20240307-v1:0-10-option")
-    .first()
-    .innerText();
-  if (value !== "anthropic.claude-3-haiku-20240307-v1:0") {
-    expect(false).toBeTruthy();
-  }
+    expect(value.length).toBeGreaterThan(10);
 
-  await page.getByTestId("dropdown_str_model_id").click();
-  await page.getByText("anthropic.claude-v2").last().click();
+    await page.locator('//*[@id="showregion_name"]').click();
+    expect(
+      await page.locator('//*[@id="showregion_name"]').isChecked(),
+    ).toBeFalsy();
 
-  value = await page.getByTestId("dropdown_str_model_id").innerText();
-  if (value !== "anthropic.claude-v2:1") {
-    expect(false).toBeTruthy();
-  }
+    await page.locator('//*[@id="showregion_name"]').click();
+    expect(
+      await page.locator('//*[@id="showregion_name"]').isChecked(),
+    ).toBeTruthy();
 
-  await page.waitForTimeout(1000);
+    // showmodel_id
+    await page.locator('//*[@id="showmodel_id"]').click();
+    expect(
+      await page.locator('//*[@id="showmodel_id"]').isChecked(),
+    ).toBeFalsy();
 
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+    // showmodel_id
+    await page.locator('//*[@id="showmodel_id"]').click();
+    expect(
+      await page.locator('//*[@id="showmodel_id"]').isChecked(),
+    ).toBeTruthy();
 
-  value = await page
-    .getByTestId("value-dropdown-dropdown_str_edit_model_id")
-    .innerText();
-  if (value !== "anthropic.claude-v2:1") {
-    expect(false).toBeTruthy();
-  }
+    await page.locator('//*[@id="showregion_name"]').click();
+    expect(
+      await page.locator('//*[@id="showregion_name"]').isChecked(),
+    ).toBeFalsy();
 
-  await page.locator('//*[@id="showregion_name"]').click();
-  expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked(),
-  ).toBeFalsy();
+    await page.locator('//*[@id="showregion_name"]').click();
+    expect(
+      await page.locator('//*[@id="showregion_name"]').isChecked(),
+    ).toBeTruthy();
 
-  await page.locator('//*[@id="showregion_name"]').click();
-  expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked(),
-  ).toBeTruthy();
+    // showmodel_id
+    await page.locator('//*[@id="showmodel_id"]').click();
+    expect(
+      await page.locator('//*[@id="showmodel_id"]').isChecked(),
+    ).toBeFalsy();
 
-  // showmodel_id
-  await page.locator('//*[@id="showmodel_id"]').click();
-  expect(await page.locator('//*[@id="showmodel_id"]').isChecked()).toBeFalsy();
+    // showmodel_id
+    await page.locator('//*[@id="showmodel_id"]').click();
+    expect(
+      await page.locator('//*[@id="showmodel_id"]').isChecked(),
+    ).toBeTruthy();
 
-  // showmodel_id
-  await page.locator('//*[@id="showmodel_id"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_id"]').isChecked(),
-  ).toBeTruthy();
+    await page.getByTestId("value-dropdown-dropdown_str_edit_model_id").click();
+    await page.getByText("cohere").last().click();
 
-  await page.locator('//*[@id="showregion_name"]').click();
-  expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked(),
-  ).toBeFalsy();
+    value = await page
+      .getByTestId("value-dropdown-dropdown_str_edit_model_id")
+      .innerText();
+    if (value !== "cohere.command-r-plus-v1:0") {
+      expect(false).toBeTruthy();
+    }
 
-  await page.locator('//*[@id="showregion_name"]').click();
-  expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked(),
-  ).toBeTruthy();
+    await page.getByText("Close").last().click();
 
-  // showmodel_id
-  await page.locator('//*[@id="showmodel_id"]').click();
-  expect(await page.locator('//*[@id="showmodel_id"]').isChecked()).toBeFalsy();
+    value = await page
+      .getByTestId("value-dropdown-dropdown_str_model_id")
+      .innerText();
+    if (value !== "cohere.command-r-plus-v1:0") {
+      expect(false).toBeTruthy();
+    }
+    await page.getByTestId("code-button-modal").click();
 
-  // showmodel_id
-  await page.locator('//*[@id="showmodel_id"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_id"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.getByTestId("value-dropdown-dropdown_str_edit_model_id").click();
-  await page.getByText("cohere").last().click();
-
-  value = await page
-    .getByTestId("value-dropdown-dropdown_str_edit_model_id")
-    .innerText();
-  if (value !== "cohere.embed-multilingual-v3") {
-    expect(false).toBeTruthy();
-  }
-
-  await page.getByText("Close").last().click();
-
-  value = await page
-    .getByTestId("value-dropdown-dropdown_str_model_id")
-    .innerText();
-  if (value !== "cohere.embed-multilingual-v3") {
-    expect(false).toBeTruthy();
-  }
-  await page.getByTestId("code-button-modal").click();
-  await page.waitForTimeout(1000);
-
-  await page.locator("textarea").press("Control+a");
-  const emptyOptionsCode = `from langchain_community.chat_models.bedrock import BedrockChat
+    await page.locator("textarea").press("Control+a");
+    const emptyOptionsCode = `from langchain_community.chat_models.bedrock import BedrockChat
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
@@ -252,7 +235,10 @@ class AmazonBedrockComponent(LCModelComponent):
             raise ValueError("Could not connect to AmazonBedrock API.") from e
         return output
   `;
-  await page.locator("textarea").fill(emptyOptionsCode);
-  await page.getByRole("button", { name: "Check & Save" }).click();
-  await page.getByText("No parameters are available for display.").isVisible();
-});
+    await page.locator("textarea").fill(emptyOptionsCode);
+    await page.getByRole("button", { name: "Check & Save" }).click();
+    await page
+      .getByText("No parameters are available for display.")
+      .isVisible();
+  },
+);

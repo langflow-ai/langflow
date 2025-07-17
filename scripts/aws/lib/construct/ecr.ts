@@ -19,7 +19,7 @@ export class EcrRepository extends Construct {
     super(scope, id)
 
     const imagePlatform = props.arch == ecs.CpuArchitecture.ARM64 ? Platform.LINUX_ARM64 : Platform.LINUX_AMD64
-    const backendPath = path.join(__dirname, "../../../../../", "langflow")
+    const backendPath = path.join(__dirname, "../../../../", "docker")
     const excludeDir = ['node_modules','.git', 'cdk.out']
     const LifecycleRule = {
       tagStatus: ecr.TagStatus.ANY,

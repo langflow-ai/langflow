@@ -1,141 +1,51 @@
-import { GetCodeType } from "@/types/tweaks";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 
 /**
- * Function to generate JavaScript code for interfacing with an API using the LangflowClient class.
- * @param {string} flowId - The id of the flow.
- * @param {boolean} isAuth - Whether the API requires authentication.
- * @param {any[]} tweaksBuildedObject - Customizations applied to the flow.
- * @param {string} [endpointName] - Optional endpoint name.
- * @returns {string} - The JavaScript code as a string.
+ * Generates JavaScript code for making API calls to a Langflow endpoint.
+ *
+ * @param {Object} params - The parameters for generating the API code
+ * @param {string} params.flowId - The ID of the flow to run
+ * @param {string} params.endpointName - The endpoint name for the flow
+ * @param {Object} params.processedPayload - The pre-processed payload object
+ * @returns {string} Generated JavaScript code as a string
  */
-export default function getJsApiCode({
+export function getNewJsApiCode({
   flowId,
-  isAuth,
-  tweaksBuildedObject,
   endpointName,
-}: GetCodeType): string {
-  let tweaksString = "{}";
-  if (tweaksBuildedObject)
-    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
+  processedPayload,
+}: {
+  flowId: string;
+  endpointName: string;
+  processedPayload: any;
+}): string {
+  const { protocol, host } = customGetHostProtocol();
+  const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  return `class LangflowClient {
-    constructor(baseURL, apiKey) {
-        this.baseURL = baseURL;
-        this.apiKey = apiKey;
-    }
-  
-    async post(endpoint, body, headers = {"Content-Type": "application/json"}) {
-      if (this.apiKey) {
-            headers["Authorization"] = \`Bearer \${this.apiKey}\`;
-        }
-        const url = \`\${this.baseURL}\${endpoint}\`;
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(body)
-            });
-  
-            const responseMessage = await response.json();
-            if (!response.ok) {
-                throw new Error(\`\${response.status} \${response.statusText} - \${JSON.stringify(responseMessage)}\`);
-            }
-            return responseMessage;
-        } catch (error) {
-            console.error(\`Error during POST request: \${error.message}\`);
-            throw error;
-        }
-    }
-  
-    async initiateSession(flowId, inputValue, inputType = 'chat', outputType = 'chat', stream = false, tweaks = {}) {
-        const endpoint = \`/api/v1/run/\${flowId}?stream=\${stream}\`;
-        return this.post(endpoint, { input_value: inputValue, input_type: inputType, output_type: outputType, tweaks: tweaks });
-    }
-  
-    async handleStream(streamUrl, onUpdate, onClose, onError) {
-      try {
-        const response = await fetch(streamUrl);
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+  // Add session_id to payload
+  const payloadWithSession = {
+    ...processedPayload,
+    session_id: "user_1", // Optional: Use session tracking if needed
+  };
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            onClose('Stream closed');
-            break;
-          }
-          const chunk = decoder.decode(value);
-          const lines = chunk.split(\'\\n\').filter(line => line.trim() !== '');
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                onUpdate(data);
-              } catch (error) {
-                console.error('Error parsing JSON:', error);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Stream Error:', error);
-        onError(error);
-      }
-    }
-  
-    async runFlow(flowIdOrName, inputValue, inputType = 'chat', outputType = 'chat', tweaks, stream = false, onUpdate, onClose, onError) {
-        try {
-            const initResponse = await this.initiateSession(flowIdOrName, inputValue, inputType, outputType, stream, tweaks);
-            if (stream && initResponse?.outputs?.[0]?.outputs?.[0]?.artifacts?.stream_url) {
-                const streamUrl = this.baseURL + initResponse.outputs[0].outputs[0].artifacts.stream_url;
-                console.log(\`Streaming from: \${streamUrl}\`);
-                this.handleStream(streamUrl, onUpdate, onClose, onError);
-            }
-            return initResponse;
-        } catch (error) {
-          onError('Error initiating session');
-        }
-    }
-  }
-  
-  async function main(inputValue, inputType = 'chat', outputType = 'chat', stream = false) {
-    const flowIdOrName = '${endpointName || flowId}';
-    const langflowClient = new LangflowClient('${window.location.protocol}//${window.location.host}',
-          ${isAuth ? "'your-api-key'" : "null"});
-    const tweaks = ${tweaksString};
-  
-    try {
-        const response = await langflowClient.runFlow(
-            flowIdOrName,
-            inputValue,
-            inputType,
-            outputType,
-            tweaks,
-            stream,
-            (data) => console.log("Received:", data.chunk), // onUpdate
-            (message) => console.log("Stream Closed:", message), // onClose
-            (error) => console.error("Stream Error:", error) // onError
-        );
-  
-        if (!stream && response) {
-            const flowOutputs = response.outputs[0];
-            const firstComponentOutputs = flowOutputs.outputs[0];
-            const output = firstComponentOutputs.outputs.message;
-  
-            console.log("Final Output:", output.message.text);
-        }
-    } catch (error) {
-        console.error('Main Error:', error.message);
-    }
-  }
-  
-  const args = process.argv.slice(2);
-  main(
-    args[0], // inputValue
-    args[1], // inputType
-    args[2], // outputType
-    args[3] === 'true' // streaming
-  );
-  `;
+  const payloadString = JSON.stringify(payloadWithSession, null, 4);
+
+  return `// Get API key from environment variable
+if (!process.env.LANGFLOW_API_KEY) {
+    throw new Error('LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.');
+}
+
+const payload = ${payloadString};
+
+const options = {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',\n        "x-api-key": process.env.LANGFLOW_API_KEY
+    },
+    body: JSON.stringify(payload)
+};
+
+fetch('${apiUrl}', options)
+    .then(response => response.json())
+    .then(response => console.warn(response))
+    .catch(err => console.error(err));`;
 }

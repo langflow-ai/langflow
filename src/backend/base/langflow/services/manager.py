@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import importlib
 import inspect
 from typing import TYPE_CHECKING
@@ -20,49 +19,39 @@ class NoFactoryRegisteredError(Exception):
 
 
 class ServiceManager:
-    """
-    Manages the creation of different services.
-    """
+    """Manages the creation of different services."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.services: dict[str, Service] = {}
-        self.factories = {}
+        self.factories: dict[str, ServiceFactory] = {}
         self.register_factories()
         self.keyed_lock = KeyedMemoryLockManager()
 
-    def register_factories(self):
+    def register_factories(self) -> None:
         for factory in self.get_factories():
             try:
                 self.register_factory(factory)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception(f"Error initializing {factory}")
 
     def register_factory(
         self,
         service_factory: ServiceFactory,
-    ):
-        """
-        Registers a new factory with dependencies.
-        """
-
+    ) -> None:
+        """Registers a new factory with dependencies."""
         service_name = service_factory.service_class.name
         self.factories[service_name] = service_factory
 
     def get(self, service_name: ServiceType, default: ServiceFactory | None = None) -> Service:
-        """
-        Get (or create) a service by its name.
-        """
-
+        """Get (or create) a service by its name."""
         with self.keyed_lock.lock(service_name):
             if service_name not in self.services:
                 self._create_service(service_name, default)
 
         return self.services[service_name]
 
-    def _create_service(self, service_name: ServiceType, default: ServiceFactory | None = None):
-        """
-        Create a new service given its name, handling dependencies.
-        """
+    def _create_service(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
+        """Create a new service given its name, handling dependencies."""
         logger.debug(f"Create service {service_name}")
         self._validate_service_creation(service_name, default)
 
@@ -71,6 +60,9 @@ class ServiceManager:
         if factory is None and default is not None:
             self.register_factory(default)
             factory = default
+        if factory is None:
+            msg = f"No factory registered for {service_name}"
+            raise NoFactoryRegisteredError(msg)
         for dependency in factory.dependencies:
             if dependency not in self.services:
                 self._create_service(dependency)
@@ -82,36 +74,28 @@ class ServiceManager:
         self.services[service_name] = self.factories[service_name].create(**dependent_services)
         self.services[service_name].set_ready()
 
-    def _validate_service_creation(self, service_name: ServiceType, default: ServiceFactory | None = None):
-        """
-        Validate whether the service can be created.
-        """
+    def _validate_service_creation(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
+        """Validate whether the service can be created."""
         if service_name not in self.factories and default is None:
             msg = f"No factory registered for the service class '{service_name.name}'"
             raise NoFactoryRegisteredError(msg)
 
-    def update(self, service_name: ServiceType):
-        """
-        Update a service by its name.
-        """
+    def update(self, service_name: ServiceType) -> None:
+        """Update a service by its name."""
         if service_name in self.services:
             logger.debug(f"Update service {service_name}")
             self.services.pop(service_name, None)
             self.get(service_name)
 
-    async def teardown(self):
-        """
-        Teardown all the services.
-        """
-        for service in self.services.values():
+    async def teardown(self) -> None:
+        """Teardown all the services."""
+        for service in list(self.services.values()):
             if service is None:
                 continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                result = service.teardown()
-                if asyncio.iscoroutine(result):
-                    await result
-            except Exception as exc:
+                await service.teardown()
+            except Exception as exc:  # noqa: BLE001
                 logger.exception(exc)
         self.services = {}
         self.factories = {}
@@ -147,21 +131,17 @@ class ServiceManager:
 service_manager = ServiceManager()
 
 
-def initialize_settings_service():
-    """
-    Initialize the settings manager.
-    """
+def initialize_settings_service() -> None:
+    """Initialize the settings manager."""
     from langflow.services.settings import factory as settings_factory
 
     service_manager.register_factory(settings_factory.SettingsServiceFactory())
 
 
-def initialize_session_service():
-    """
-    Initialize the session manager.
-    """
+def initialize_session_service() -> None:
+    """Initialize the session manager."""
     from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.session import factory as session_service_factory
 
     initialize_settings_service()
 

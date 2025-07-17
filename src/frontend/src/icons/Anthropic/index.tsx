@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import SvgAnthropicBox from "./AnthropicBox";
+import SvgAnthropicBox from "./Anthropic";
 
 export const AnthropicIcon = forwardRef<
   SVGSVGElement,

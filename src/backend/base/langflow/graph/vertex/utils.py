@@ -7,9 +7,7 @@ if TYPE_CHECKING:
 
 
 def build_clean_params(target: Vertex) -> dict:
-    """
-    Cleans the parameters of the target vertex.
-    """
+    """Cleans the parameters of the target vertex."""
     # Removes all keys that the values aren't python types like str, int, bool, etc.
     params = {
         key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)

@@ -1,4 +1,4 @@
-import { IVarHighlightType } from "../../../types/components";
+import type { IVarHighlightType } from "../../../types/components";
 
 export default function varHighlightHTML({
   name,

@@ -1,37 +1,53 @@
 import pytest
+from langflow.components.processing import PythonREPLComponent
 
-from langflow.components.tools.PythonREPLTool import PythonREPLToolComponent
-from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template
-
-
-@pytest.fixture
-def client():
-    pass
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 
-def test_python_repl_tool_template():
-    python_repl_tool = PythonREPLToolComponent()
-    component = Component(_code=python_repl_tool._code)
-    frontend_node, _ = build_custom_component_template(component)
-    assert "outputs" in frontend_node
-    output_names = [output["name"] for output in frontend_node["outputs"]]
-    assert "api_run_model" in output_names
-    assert "api_build_tool" in output_names
-    assert all(output["types"] != [] for output in frontend_node["outputs"])
+class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        return PythonREPLComponent
 
-    # Additional assertions specific to PythonREPLToolComponent
-    input_names = [input_["name"] for input_ in frontend_node["template"].values() if isinstance(input_, dict)]
-    # assert "input_value" in input_names
-    assert "name" in input_names
-    assert "description" in input_names
-    assert "global_imports" in input_names
+    @pytest.fixture
+    def default_kwargs(self):
+        return {
+            "global_imports": "math",
+            "python_code": "print('Hello, World!')",
+        }
 
-    global_imports_input = next(
-        input_
-        for input_ in frontend_node["template"].values()
-        if isinstance(input_, dict) and input_["name"] == "global_imports"
-    )
-    assert global_imports_input["type"] == "str"
-    # assert global_imports_input["combobox"] is True
-    assert global_imports_input["value"] == "math"
+    @pytest.fixture
+    def file_names_mapping(self):
+        # Component not yet released, mark all versions as non-existent
+        return [
+            {"version": "1.0.17", "module": "tools", "file_name": DID_NOT_EXIST},
+            {"version": "1.0.18", "module": "tools", "file_name": DID_NOT_EXIST},
+            {"version": "1.0.19", "module": "tools", "file_name": DID_NOT_EXIST},
+            {"version": "1.1.0", "module": "tools", "file_name": DID_NOT_EXIST},
+            {"version": "1.1.1", "module": "tools", "file_name": DID_NOT_EXIST},
+        ]
+
+    def test_component_initialization(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
+        frontend_node = component.to_frontend_node()
+        node_data = frontend_node["data"]["node"]
+
+        # Test template fields
+        template = node_data["template"]
+        assert "global_imports" in template
+        assert "python_code" in template
+
+        # Test global_imports configuration
+        global_imports = template["global_imports"]
+        assert global_imports["type"] == "str"
+        assert global_imports["value"] == "math"
+        assert global_imports["required"] is True
+
+        # Test python_code configuration
+        python_code = template["python_code"]
+        assert python_code["type"] == "code"
+        assert python_code["value"] == "print('Hello, World!')"
+        assert python_code["required"] is True
+
+        # Test base configuration
+        assert "Data" in node_data["base_classes"]

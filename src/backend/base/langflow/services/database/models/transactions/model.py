@@ -1,12 +1,10 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from pydantic import field_serializer, field_validator
+from sqlmodel import JSON, Column, Field, SQLModel
 
-if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import Flow
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 
 
 class TransactionBase(SQLModel):
@@ -17,7 +15,7 @@ class TransactionBase(SQLModel):
     outputs: dict | None = Field(default=None, sa_column=Column(JSON))
     status: str = Field(nullable=False)
     error: str | None = Field(default=None)
-    flow_id: UUID = Field(foreign_key="flow.id")
+    flow_id: UUID = Field()
 
     # Needed for Column(JSON)
     class Config:
@@ -32,13 +30,36 @@ class TransactionBase(SQLModel):
             value = UUID(value)
         return value
 
+    @field_serializer("inputs")
+    def serialize_inputs(self, data) -> dict:
+        """Serialize the transaction's input data with enforced limits on text length and item count.
 
-class TransactionTable(TransactionBase, table=True):  # type: ignore
+        Parameters:
+            data (dict): The input data to be serialized.
+
+        Returns:
+            dict: The serialized input data with applied constraints.
+        """
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+
+    @field_serializer("outputs")
+    def serialize_outputs(self, data) -> dict:
+        """Serialize the outputs dictionary with enforced limits on text length and item count.
+
+        Parameters:
+            data (dict): The outputs data to serialize.
+
+        Returns:
+            dict: The serialized outputs dictionary with applied constraints.
+        """
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+
+
+class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "transaction"
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
-    flow: "Flow" = Relationship(back_populates="transactions")
 
 
 class TransactionReadResponse(TransactionBase):
-    transaction_id: UUID
+    id: UUID = Field(alias="transaction_id")
     flow_id: UUID

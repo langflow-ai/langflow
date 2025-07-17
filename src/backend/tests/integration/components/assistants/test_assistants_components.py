@@ -1,11 +1,17 @@
 import pytest
+from langflow.components.datastax import (
+    AssistantsCreateAssistant,
+    AssistantsCreateThread,
+    AssistantsGetAssistantName,
+    AssistantsListAssistants,
+    AssistantsRun,
+)
+
 from tests.integration.utils import run_single_component
 
 
 @pytest.mark.api_key_required
 async def test_list_assistants():
-    from langflow.components.astra_assistants import AssistantsListAssistants
-
     results = await run_single_component(
         AssistantsListAssistants,
         inputs={},
@@ -14,10 +20,7 @@ async def test_list_assistants():
 
 
 @pytest.mark.api_key_required
-@pytest.mark.asyncio
 async def test_create_assistants():
-    from langflow.components.astra_assistants import AssistantsCreateAssistant
-
     results = await run_single_component(
         AssistantsCreateAssistant,
         inputs={
@@ -36,8 +39,6 @@ async def test_create_assistants():
 
 @pytest.mark.api_key_required
 async def test_create_thread():
-    from langflow.components.astra_assistants import AssistantsCreateThread
-
     results = await run_single_component(
         AssistantsCreateThread,
         inputs={},
@@ -48,8 +49,6 @@ async def test_create_thread():
 
 
 async def get_assistant_name(assistant_id):
-    from langflow.components.astra_assistants import AssistantsGetAssistantName
-
     results = await run_single_component(
         AssistantsGetAssistantName,
         inputs={
@@ -60,8 +59,6 @@ async def get_assistant_name(assistant_id):
 
 
 async def run_assistant(assistant_id, thread_id):
-    from langflow.components.astra_assistants import AssistantsRun
-
     results = await run_single_component(
         AssistantsRun,
         inputs={

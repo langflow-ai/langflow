@@ -1,14 +1,11 @@
 import pickle
-from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import pytest
-
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 
-
-@pytest.fixture
-def client():
-    pass
+if TYPE_CHECKING:
+    from collections import defaultdict
 
 
 @pytest.fixture
@@ -28,7 +25,7 @@ def data():
 def test_to_dict(data):
     result = RunnableVerticesManager.from_dict(data).to_dict()
 
-    assert all(key in result.keys() for key in data.keys())
+    assert all(key in result for key in data)
 
 
 def test_from_dict(data):
@@ -69,7 +66,7 @@ def test_pickle(data):
     manager = RunnableVerticesManager.from_dict(data)
 
     binary = pickle.dumps(manager)
-    result = pickle.loads(binary)
+    result = pickle.loads(binary)  # noqa: S301
 
     assert result.run_map == manager.run_map
     assert result.run_predecessors == manager.run_predecessors
@@ -93,8 +90,9 @@ def test_is_vertex_runnable(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "A"
     is_active = True
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -103,8 +101,9 @@ def test_is_vertex_runnable__wrong_is_active(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "A"
     is_active = False
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -113,8 +112,9 @@ def test_is_vertex_runnable__wrong_vertices_to_run(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "D"
     is_active = True
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -123,8 +123,9 @@ def test_is_vertex_runnable__wrong_run_predecessors(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "C"
     is_active = True
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -132,8 +133,9 @@ def test_is_vertex_runnable__wrong_run_predecessors(data):
 def test_are_all_predecessors_fulfilled(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "A"
+    is_loop = False
 
-    result = manager.are_all_predecessors_fulfilled(vertex_id)
+    result = manager.are_all_predecessors_fulfilled(vertex_id, is_loop=is_loop)
 
     assert result is True
 
@@ -141,8 +143,9 @@ def test_are_all_predecessors_fulfilled(data):
 def test_are_all_predecessors_fulfilled__wrong(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "D"
+    is_loop = False
 
-    result = manager.are_all_predecessors_fulfilled(vertex_id)
+    result = manager.are_all_predecessors_fulfilled(vertex_id, is_loop=is_loop)
 
     assert result is False
 
@@ -163,8 +166,8 @@ def test_build_run_map(data):
 
     manager.build_run_map(predecessor_map, vertices_to_run)
 
-    assert all(v in manager.run_map.keys() for v in ["Z", "X", "Y"])
-    assert "W" not in manager.run_map.keys()
+    assert all(v in manager.run_map for v in ["Z", "X", "Y"])
+    assert "W" not in manager.run_map
 
 
 def test_update_vertex_run_state(data):
@@ -172,7 +175,7 @@ def test_update_vertex_run_state(data):
     vertex_id = "C"
     is_runnable = True
 
-    manager.update_vertex_run_state(vertex_id, is_runnable)
+    manager.update_vertex_run_state(vertex_id, is_runnable=is_runnable)
 
     assert vertex_id in manager.vertices_to_run
 
@@ -182,7 +185,7 @@ def test_update_vertex_run_state__bad_case(data):
     vertex_id = "C"
     is_runnable = False
 
-    manager.update_vertex_run_state(vertex_id, is_runnable)
+    manager.update_vertex_run_state(vertex_id, is_runnable=is_runnable)
 
     assert vertex_id not in manager.vertices_being_run
 

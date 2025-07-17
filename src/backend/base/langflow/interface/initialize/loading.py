@@ -10,23 +10,23 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
-from langflow.services.deps import get_tracing_service
+from langflow.schema.data import Data
+from langflow.services.deps import get_tracing_service, session_scope
 
 if TYPE_CHECKING:
-    from langflow.custom import Component, CustomComponent
+    from langflow.custom.custom_component.component import Component
+    from langflow.custom.custom_component.custom_component import CustomComponent
     from langflow.events.event_manager import EventManager
     from langflow.graph.vertex.base import Vertex
 
 
-async def instantiate_class(
+def instantiate_class(
     vertex: Vertex,
     user_id=None,
     event_manager: EventManager | None = None,
 ) -> Any:
-    """Instantiate class from module type and key, and params"""
-
+    """Instantiate class from module type and key, and params."""
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
@@ -43,6 +43,7 @@ async def instantiate_class(
         _parameters=custom_params,
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
+        _id=vertex.id,
     )
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)
@@ -53,11 +54,15 @@ async def get_instance_results(
     custom_component,
     custom_params: dict,
     vertex: Vertex,
+    *,
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
-    custom_params = update_params_with_load_from_db_fields(
-        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars
+    custom_params = await update_params_with_load_from_db_fields(
+        custom_component,
+        custom_params,
+        vertex.load_from_db_fields,
+        fallback_to_env_vars=fallback_to_env_vars,
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -77,7 +82,7 @@ def get_params(vertex_params):
 
 
 def convert_params_to_sets(params):
-    """Convert certain params to sets"""
+    """Convert certain params to sets."""
     if "allowed_special" in params:
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
@@ -102,46 +107,38 @@ def convert_kwargs(params):
     return params
 
 
-def update_params_with_load_from_db_fields(
+async def update_params_with_load_from_db_fields(
     custom_component: CustomComponent,
     params,
     load_from_db_fields,
+    *,
     fallback_to_env_vars=False,
 ):
-    # For each field in load_from_db_fields, we will check if it's in the params
-    # and if it is, we will get the value from the custom_component.keys(name)
-    # and update the params with the value
-    for field in load_from_db_fields:
-        if field in params:
+    async with session_scope() as session:
+        for field in load_from_db_fields:
+            if field not in params or not params[field]:
+                continue
+
             try:
+                key = await custom_component.get_variable(name=params[field], field=field, session=session)
+            except ValueError as e:
+                if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
+                    raise
+                logger.debug(str(e))
                 key = None
-                try:
-                    key = custom_component.variables(params[field], field)
-                except ValueError as e:
-                    # check if "User id is not set" is in the error message, this is an internal bug
-                    if "User id is not set" in str(e):
-                        raise e
-                    logger.debug(str(e))
-                if fallback_to_env_vars and key is None:
-                    var = os.getenv(params[field])
-                    if var is None:
-                        msg = f"Environment variable {params[field]} is not set."
-                        raise ValueError(msg)
-                    key = var
+
+            if fallback_to_env_vars and key is None:
+                key = os.getenv(params[field])
+                if key:
                     logger.info(f"Using environment variable {params[field]} for {field}")
-                if key is None:
-                    logger.warning(f"Could not get value for {field}. Setting it to None.")
+                else:
+                    logger.error(f"Environment variable {params[field]} is not set.")
 
-                params[field] = key
+            params[field] = key if key is not None else None
+            if key is None:
+                logger.warning(f"Could not get value for {field}. Setting it to None.")
 
-            except TypeError as exc:
-                raise exc
-
-            except Exception:
-                logger.exception(f"Failed to get value for {field} from custom component. Setting it to None.")
-                params[field] = None
-
-    return params
+        return params
 
 
 async def build_component(

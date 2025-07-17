@@ -1,5 +1,5 @@
-from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.schema.data import Data
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
@@ -23,7 +23,7 @@ class BaseMemoryComponent(CustomComponent):
             "session_id": {
                 "display_name": "Session ID",
                 "info": "Session ID of the chat history.",
-                "input_types": ["Text"],
+                "input_types": ["Message"],
             },
             "order": {
                 "options": ["Ascending", "Descending"],
@@ -45,5 +45,5 @@ class BaseMemoryComponent(CustomComponent):
 
     def add_message(
         self, sender: str, sender_name: str, text: str, session_id: str, metadata: dict | None = None, **kwargs
-    ):
+    ) -> None:
         raise NotImplementedError

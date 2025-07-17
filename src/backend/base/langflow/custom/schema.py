@@ -4,9 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class ClassCodeDetails(BaseModel):
-    """
-    A dataclass for storing details about a class.
-    """
+    """A dataclass for storing details about a class."""
 
     name: str
     doc: str | None = None
@@ -17,9 +15,7 @@ class ClassCodeDetails(BaseModel):
 
 
 class CallableCodeDetails(BaseModel):
-    """
-    A dataclass for storing details about a callable.
-    """
+    """A dataclass for storing details about a callable."""
 
     name: str
     doc: str | None = None
@@ -30,9 +26,7 @@ class CallableCodeDetails(BaseModel):
 
 
 class MissingDefault:
-    """
-    A class to represent a missing default value.
-    """
+    """A class to represent a missing default value."""
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "MISSING"

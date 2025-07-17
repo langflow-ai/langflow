@@ -1,16 +1,16 @@
 import os
-import pytest
 
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.output_parsers.OutputParser import OutputParserComponent
-from langflow.components.prompts.Prompt import PromptComponent
+import pytest
+from langflow.components.helpers import OutputParserComponent
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from langflow.components.processing import PromptComponent
+
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
 
-@pytest.mark.asyncio
 @pytest.mark.api_key_required
 async def test_csv_output_parser_openai():
-    format_instructions = ComponentInputHandle(
+    format_instructions_ = ComponentInputHandle(
         clazz=OutputParserComponent,
         inputs={},
         output_name="format_instructions",
@@ -24,7 +24,7 @@ async def test_csv_output_parser_openai():
         clazz=PromptComponent,
         inputs={
             "template": "List the first five positive integers.\n\n{format_instructions}",
-            "format_instructions": format_instructions,
+            "format_instructions": format_instructions_,
         },
         output_name="prompt",
     )

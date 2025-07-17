@@ -2,6 +2,7 @@ import ast
 import contextlib
 import inspect
 import traceback
+from itertools import starmap
 from pathlib import Path
 from typing import Any
 
@@ -31,8 +32,7 @@ def find_class_ast_node(class_obj):
         return None, []
 
     # Read the source code from the file
-    with Path(source_file).open() as file:
-        source_code = file.read()
+    source_code = Path(source_file).read_text(encoding="utf-8")
 
     # Parse the source code into an AST
     tree = ast.parse(source_code)
@@ -57,14 +57,10 @@ def imports_key(*args, **kwargs):
 
 
 class CodeParser:
-    """
-    A parser for Python source code, extracting code details.
-    """
+    """A parser for Python source code, extracting code details."""
 
     def __init__(self, code: str | type) -> None:
-        """
-        Initializes the parser with the provided code.
-        """
+        """Initializes the parser with the provided code."""
         self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         if isinstance(code, type):
             if not inspect.isclass(code):
@@ -88,8 +84,8 @@ class CodeParser:
         }
 
     def get_tree(self):
-        """
-        Parses the provided code to validate its syntax.
+        """Parses the provided code to validate its syntax.
+
         It tries to parse the code into an abstract syntax tree (AST).
         """
         try:
@@ -103,17 +99,12 @@ class CodeParser:
         return tree
 
     def parse_node(self, node: ast.stmt | ast.AST) -> None:
-        """
-        Parses an AST node and updates the data
-        dictionary with the relevant information.
-        """
-        if handler := self.handlers.get(type(node)):  # type: ignore
-            handler(node)  # type: ignore
+        """Parses an AST node and updates the data dictionary with the relevant information."""
+        if handler := self.handlers.get(type(node)):
+            handler(node)  # type: ignore[operator]
 
     def parse_imports(self, node: ast.Import | ast.ImportFrom) -> None:
-        """
-        Extracts "imports" from the code, including aliases.
-        """
+        """Extracts "imports" from the code, including aliases."""
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.asname:
@@ -128,15 +119,11 @@ class CodeParser:
                     self.data["imports"].append((node.module, alias.name))
 
     def parse_functions(self, node: ast.FunctionDef) -> None:
-        """
-        Extracts "functions" from the code.
-        """
+        """Extracts "functions" from the code."""
         self.data["functions"].append(self.parse_callable_details(node))
 
     def parse_arg(self, arg, default):
-        """
-        Parses an argument and its default value.
-        """
+        """Parses an argument and its default value."""
         arg_dict = {"name": arg.arg, "default": default}
         if arg.annotation:
             arg_dict["type"] = ast.unparse(arg.annotation)
@@ -144,7 +131,8 @@ class CodeParser:
 
     # @cachedmethod(operator.attrgetter("cache"))
     def construct_eval_env(self, return_type_str: str, imports) -> dict:
-        """
+        """Constructs an evaluation environment.
+
         Constructs an evaluation environment with the necessary imports for the return type,
         taking into account module aliases.
         """
@@ -161,13 +149,11 @@ class CodeParser:
                 if " as " in module:
                     module, alias = module.split(" as ")
                 if module in return_type_str or (alias and alias in return_type_str):
-                    exec(f"import {module} as {alias if alias else module}", eval_env)
+                    exec(f"import {module} as {alias or module}", eval_env)
         return eval_env
 
     def parse_callable_details(self, node: ast.FunctionDef) -> dict[str, Any]:
-        """
-        Extracts details from a single function or method node.
-        """
+        """Extracts details from a single function or method node."""
         return_type = None
         if node.returns:
             return_type_str = ast.unparse(node.returns)
@@ -175,7 +161,7 @@ class CodeParser:
 
             # Handle cases where the type is not found in the constructed environment
             with contextlib.suppress(NameError):
-                return_type = eval(return_type_str, eval_env)
+                return_type = eval(return_type_str, eval_env)  # noqa: S307
 
         func = CallableCodeDetails(
             name=node.name,
@@ -189,9 +175,7 @@ class CodeParser:
         return func.model_dump()
 
     def parse_function_args(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
-        """
-        Parses the arguments of a function or method node.
-        """
+        """Parses the arguments of a function or method node."""
         args = []
 
         args += self.parse_positional_args(node)
@@ -204,9 +188,7 @@ class CodeParser:
         return args
 
     def parse_positional_args(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
-        """
-        Parses the positional arguments of a function or method node.
-        """
+        """Parses the positional arguments of a function or method node."""
         num_args = len(node.args.args)
         num_defaults = len(node.args.defaults)
         num_missing_defaults = num_args - num_defaults
@@ -218,12 +200,10 @@ class CodeParser:
 
         defaults = missing_defaults + default_values
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults, strict=True)]
+        return list(starmap(self.parse_arg, zip(node.args.args, defaults, strict=True)))
 
     def parse_varargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
-        """
-        Parses the *args argument of a function or method node.
-        """
+        """Parses the *args argument of a function or method node."""
         args = []
 
         if node.args.vararg:
@@ -232,19 +212,15 @@ class CodeParser:
         return args
 
     def parse_keyword_args(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
-        """
-        Parses the keyword-only arguments of a function or method node.
-        """
+        """Parses the keyword-only arguments of a function or method node."""
         kw_defaults = [None] * (len(node.args.kwonlyargs) - len(node.args.kw_defaults)) + [
             ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        return [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults, strict=True)]
+        return list(starmap(self.parse_arg, zip(node.args.kwonlyargs, kw_defaults, strict=True)))
 
     def parse_kwargs(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
-        """
-        Parses the **kwargs argument of a function or method node.
-        """
+        """Parses the **kwargs argument of a function or method node."""
         args = []
 
         if node.args.kwarg:
@@ -253,15 +229,11 @@ class CodeParser:
         return args
 
     def parse_function_body(self, node: ast.FunctionDef) -> list[str]:
-        """
-        Parses the body of a function or method node.
-        """
+        """Parses the body of a function or method node."""
         return [ast.unparse(line) for line in node.body]
 
     def parse_return_statement(self, node: ast.FunctionDef) -> bool:
-        """
-        Parses the return statement of a function or method node, including nested returns.
-        """
+        """Parses the return statement of a function or method node, including nested returns."""
 
         def has_return(node):
             if isinstance(node, ast.Return):
@@ -283,20 +255,14 @@ class CodeParser:
         return any(has_return(child) for child in node.body)
 
     def parse_assign(self, stmt):
-        """
-        Parses an Assign statement and returns a dictionary
-        with the target's name and value.
-        """
+        """Parses an Assign statement and returns a dictionary with the target's name and value."""
         for target in stmt.targets:
             if isinstance(target, ast.Name):
                 return {"name": target.id, "value": ast.unparse(stmt.value)}
         return None
 
     def parse_ann_assign(self, stmt):
-        """
-        Parses an AnnAssign statement and returns a dictionary
-        with the target's name, value, and annotation.
-        """
+        """Parses an AnnAssign statement and returns a dictionary with the target's name, value, and annotation."""
         if isinstance(stmt.target, ast.Name):
             return {
                 "name": stmt.target.id,
@@ -306,33 +272,29 @@ class CodeParser:
         return None
 
     def parse_function_def(self, stmt):
-        """
-        Parses a FunctionDef statement and returns the parsed
-        method and a boolean indicating if it's an __init__ method.
+        """Parse a FunctionDef statement.
+
+        Parse a FunctionDef statement and return the parsed method and a boolean indicating if it's an __init__ method.
         """
         method = self.parse_callable_details(stmt)
         return (method, True) if stmt.name == "__init__" else (method, False)
 
     def get_base_classes(self):
-        """
-        Returns the base classes of the custom component class.
-        """
+        """Returns the base classes of the custom component class."""
         try:
             bases = self.execute_and_inspect_classes(self.code)
-        except Exception as e:
+        except Exception:
             # If the code cannot be executed, return an empty list
             bases = []
-            raise e
+            raise
         return bases
 
     def parse_classes(self, node: ast.ClassDef) -> None:
-        """
-        Extracts "classes" from the code, including inheritance and init methods.
-        """
+        """Extracts "classes" from the code, including inheritance and init methods."""
         bases = self.get_base_classes()
         nodes = []
         for base in bases:
-            if base.__name__ == node.name or base.__name__ in ["CustomComponent", "Component", "BaseComponent"]:
+            if base.__name__ == node.name or base.__name__ in {"CustomComponent", "Component", "BaseComponent"}:
                 continue
             try:
                 class_node, import_nodes = find_class_ast_node(base)
@@ -341,7 +303,7 @@ class CodeParser:
                 for import_node in import_nodes:
                     self.parse_imports(import_node)
                 nodes.append(class_node)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error finding base class node")
         nodes.insert(0, node)
         class_details = ClassCodeDetails(
@@ -356,7 +318,7 @@ class CodeParser:
             self.process_class_node(_node, class_details)
         self.data["classes"].append(class_details.model_dump())
 
-    def process_class_node(self, node, class_details):
+    def process_class_node(self, node, class_details) -> None:
         for stmt in node.body:
             if isinstance(stmt, ast.Assign):
                 if attr := self.parse_assign(stmt):
@@ -372,9 +334,7 @@ class CodeParser:
                     class_details.methods.append(method)
 
     def parse_global_vars(self, node: ast.Assign) -> None:
-        """
-        Extracts global variables from the code.
-        """
+        """Extracts global variables from the code."""
         global_var = {
             "targets": [t.id if hasattr(t, "id") else ast.dump(t) for t in node.targets],
             "value": ast.unparse(node.value),
@@ -393,9 +353,7 @@ class CodeParser:
         return bases
 
     def parse_code(self) -> dict[str, Any]:
-        """
-        Runs all parsing operations and returns the resulting data.
-        """
+        """Runs all parsing operations and returns the resulting data."""
         tree = self.get_tree()
 
         for node in ast.walk(tree):

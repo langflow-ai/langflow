@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionPageCreator(LCToolComponent):
@@ -81,7 +81,7 @@ class NotionPageCreator(LCToolComponent):
         }
 
         try:
-            response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data)
+            response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:

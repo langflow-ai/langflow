@@ -1,96 +1,87 @@
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     get_current_active_superuser,
-    get_current_active_user,
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
 
 @router.post("/", response_model=UserRead, status_code=201)
-def add_user(
+async def add_user(
     user: UserCreate,
-    session: Session = Depends(get_session),
-    settings_service=Depends(get_settings_service),
+    session: DbSession,
 ) -> User:
-    """
-    Add a new user to the database.
-    """
+    """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
-        new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
+        new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-        folder = create_default_folder_if_it_doesnt_exist(session, new_user.id)
+        await session.commit()
+        await session.refresh(new_user)
+        folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
-            raise HTTPException(status_code=500, detail="Error creating default folder")
+            raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
-        session.rollback()
+        await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     return new_user
 
 
 @router.get("/whoami", response_model=UserRead)
-def read_current_user(
-    current_user: User = Depends(get_current_active_user),
+async def read_current_user(
+    current_user: CurrentActiveUser,
 ) -> User:
-    """
-    Retrieve the current user's data.
-    """
+    """Retrieve the current user's data."""
     return current_user
 
 
-@router.get("/", response_model=UsersResponse)
-def read_all_users(
+@router.get("/", dependencies=[Depends(get_current_active_superuser)])
+async def read_all_users(
+    *,
     skip: int = 0,
     limit: int = 10,
-    _: Session = Depends(get_current_active_superuser),
-    session: Session = Depends(get_session),
+    session: DbSession,
 ) -> UsersResponse:
-    """
-    Retrieve a list of users from the database with pagination.
-    """
+    """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
-    users = session.exec(query).fetchall()
+    users = (await session.exec(query)).fetchall()
 
-    count_query = select(func.count()).select_from(User)  # type: ignore
-    total_count = session.exec(count_query).first()
+    count_query = select(func.count()).select_from(User)
+    total_count = (await session.exec(count_query)).first()
 
     return UsersResponse(
-        total_count=total_count,  # type: ignore
+        total_count=total_count,
         users=[UserRead(**user.model_dump()) for user in users],
     )
 
 
 @router.patch("/{user_id}", response_model=UserRead)
-def patch_user(
+async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: CurrentActiveUser,
+    session: DbSession,
 ) -> User:
-    """
-    Update an existing user's data.
-    """
-
-    update_password = user_update.password is not None and user_update.password != ""
+    """Update an existing user's data."""
+    update_password = bool(user_update.password)
 
     if not user.is_superuser and user_update.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
@@ -102,23 +93,21 @@ def patch_user(
             raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_password_hash(user_update.password)
 
-    if user_db := get_user_by_id(session, user_id):
+    if user_db := await get_user_by_id(session, user_id):
         if not update_password:
             user_update.password = user_db.password
-        return update_user(user_db, user_update, session)
+        return await update_user(user_db, user_update, session)
     raise HTTPException(status_code=404, detail="User not found")
 
 
 @router.patch("/{user_id}/reset-password", response_model=UserRead)
-def reset_password(
+async def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
-    user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
+    user: CurrentActiveUser,
+    session: DbSession,
 ) -> User:
-    """
-    Reset a user's password.
-    """
+    """Reset a user's password."""
     if user_id != user.id:
         raise HTTPException(status_code=400, detail="You can't change another user's password")
 
@@ -128,31 +117,30 @@ def reset_password(
         raise HTTPException(status_code=400, detail="You can't use your current password")
     new_password = get_password_hash(user_update.password)
     user.password = new_password
-    session.commit()
-    session.refresh(user)
+    await session.commit()
+    await session.refresh(user)
 
     return user
 
 
-@router.delete("/{user_id}", response_model=dict)
-def delete_user(
+@router.delete("/{user_id}")
+async def delete_user(
     user_id: UUID,
-    current_user: User = Depends(get_current_active_superuser),
-    session: Session = Depends(get_session),
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSession,
 ) -> dict:
-    """
-    Delete a user from the database.
-    """
+    """Delete a user from the database."""
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    user_db = session.exec(select(User).where(User.id == user_id)).first()
+    stmt = select(User).where(User.id == user_id)
+    user_db = (await session.exec(stmt)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
-    session.delete(user_db)
-    session.commit()
+    await session.delete(user_db)
+    await session.commit()
 
     return {"detail": "User deleted"}

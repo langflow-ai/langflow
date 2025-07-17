@@ -14,12 +14,19 @@ export enum FormatterType {
   text = "text",
   number = "number",
   json = "json",
+  boolean = "boolean",
 }
 
-export type ColumnField = {
-  display_name: string;
+export interface ColumnField {
   name: string;
+  display_name: string;
   sortable: boolean;
   filterable: boolean;
   formatter?: FormatterType;
-};
+  description?: string;
+  disable_edit?: boolean;
+  default?: any;
+  edit_mode?: "modal" | "inline" | "popover";
+  hidden?: boolean;
+  options?: string[];
+}

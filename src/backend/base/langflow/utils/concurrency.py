@@ -8,12 +8,10 @@ from platformdirs import user_cache_dir
 
 
 class KeyedMemoryLockManager:
-    """
-    A manager for acquiring and releasing memory locks based on a key
-    """
+    """A manager for acquiring and releasing memory locks based on a key."""
 
-    def __init__(self):
-        self.locks = {}
+    def __init__(self) -> None:
+        self.locks: dict[str, threading.Lock] = {}
         self.global_lock = threading.Lock()
 
     def _get_lock(self, key: str):
@@ -33,16 +31,14 @@ class KeyedMemoryLockManager:
 
 
 class KeyedWorkerLockManager:
-    """
-    A manager for acquiring locks between workers based on a key
-    """
+    """A manager for acquiring locks between workers based on a key."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.locks_dir = Path(user_cache_dir("langflow"), ensure_exists=True) / "worker_locks"
 
-    def _validate_key(self, key: str) -> bool:
-        """
-        Validate that the string only contains alphanumeric characters and underscores.
+    @staticmethod
+    def _validate_key(key: str) -> bool:
+        """Validate that the string only contains alphanumeric characters and underscores.
 
         Parameters:
         s (str): The string to validate.

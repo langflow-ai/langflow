@@ -1,48 +1,77 @@
+import importlib
 import json
 import warnings
 from abc import abstractmethod
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import BaseOutputParser
 
 from langflow.base.constants import STREAM_INFO_TEXT
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageInput, MessageTextInput
-from langflow.inputs.inputs import BoolInput, InputTypes
+from langflow.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
+from langflow.utils.constants import MESSAGE_SENDER_AI
+
+# Enabled detailed thinking for NVIDIA reasoning models.
+#
+# Models are trained with this exact string. Do not update.
+DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
 
 
 class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
+    metadata = {
+        "keywords": [
+            "model",
+            "llm",
+            "language model",
+            "large language model",
+        ],
+    }
 
     # Optional output parser to pass to the runnable. Subclasses may allow the user to input an `output_parser`
     output_parser: BaseOutputParser | None = None
 
     _base_inputs: list[InputTypes] = [
         MessageInput(name="input_value", display_name="Input"),
-        MessageTextInput(
+        MultilineInput(
             name="system_message",
             display_name="System Message",
             info="System message to pass to the model.",
-            advanced=True,
+            advanced=False,
         ),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
     ]
 
     outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Model Response", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def _get_exception_message(self, e: Exception):
         return str(e)
 
-    def _validate_outputs(self):
+    def supports_tool_calling(self, model: LanguageModel) -> bool:
+        try:
+            # Check if the bind_tools method is the same as the base class's method
+            if model.bind_tools is BaseChatModel.bind_tools:
+                return False
+
+            def test_tool(x: int) -> int:
+                return x
+
+            model_with_tool = model.bind_tools([test_tool])
+            return hasattr(model_with_tool, "tools") and len(model_with_tool.tools) > 0
+        except (AttributeError, TypeError, ValueError):
+            return False
+
+    def _validate_outputs(self) -> None:
         # At least these two outputs must be defined
         required_output_methods = ["text_response", "build_model"]
         output_names = [output.name for output in self.outputs]
@@ -54,21 +83,19 @@ class LCModelComponent(Component):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
-    def text_response(self) -> Message:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
+    async def text_response(self) -> Message:
         output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
+        result = await self.get_chat_result(
+            runnable=output, stream=self.stream, input_value=self.input_value, system_message=self.system_message
+        )
         self.status = result
         return result
 
-    def get_result(self, runnable: LLM, stream: bool, input_value: str):
-        """
-        Retrieves the result from the output of a Runnable object.
+    def get_result(self, *, runnable: LLM, stream: bool, input_value: str):
+        """Retrieves the result from the output of a Runnable object.
 
         Args:
-            output (Runnable): The output object to retrieve the result from.
+            runnable (Runnable): The runnable to retrieve the result from.
             stream (bool): Indicates whether to use streaming or invocation mode.
             input_value (str): The input value to pass to the output object.
 
@@ -82,15 +109,15 @@ class LCModelComponent(Component):
                 message = runnable.invoke(input_value)
                 result = message.content if hasattr(message, "content") else message
                 self.status = result
-            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
+
+        return result
 
     def build_status_message(self, message: AIMessage):
-        """
-        Builds a status message from an AIMessage object.
+        """Builds a status message from an AIMessage object.
 
         Args:
             message (AIMessage): The AIMessage object to build the status message from.
@@ -133,23 +160,61 @@ class LCModelComponent(Component):
                     }
                 }
             else:
-                status_message = f"Response: {content}"  # type: ignore
+                status_message = f"Response: {content}"  # type: ignore[assignment]
         else:
-            status_message = f"Response: {message.content}"  # type: ignore
+            status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
-    def get_chat_result(
+    async def get_chat_result(
         self,
+        *,
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,
         system_message: str | None = None,
-    ):
+    ) -> Message:
+        # NVIDIA reasoning models use detailed thinking
+        if getattr(self, "detailed_thinking", False):
+            system_message = DETAILED_THINKING_PREFIX + (system_message or "")
+
+        return await self._get_chat_result(
+            runnable=runnable,
+            stream=stream,
+            input_value=input_value,
+            system_message=system_message,
+        )
+
+    async def _get_chat_result(
+        self,
+        *,
+        runnable: LanguageModel,
+        stream: bool,
+        input_value: str | Message,
+        system_message: str | None = None,
+    ) -> Message:
+        """Get chat result from a language model.
+
+        This method handles the core logic of getting a response from a language model,
+        including handling different input types, streaming, and error handling.
+
+        Args:
+            runnable (LanguageModel): The language model to use for generating responses
+            stream (bool): Whether to stream the response
+            input_value (str | Message): The input to send to the model
+            system_message (str | None, optional): System message to prepend. Defaults to None.
+
+        Returns:
+            The model response, either as a Message object or raw content
+
+        Raises:
+            ValueError: If the input message is empty or if there's an error during model invocation
+        """
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
             raise ValueError(msg)
         system_message_added = False
+        message = None
         if input_value:
             if isinstance(input_value, Message):
                 with warnings.catch_warnings():
@@ -171,11 +236,13 @@ class LCModelComponent(Component):
         if system_message and not system_message_added:
             messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
+        lf_message = None
         try:
-            if self.output_parser is not None:
-                runnable = runnable | self.output_parser
+            # TODO: Depreciated Feature to be removed in upcoming release
+            if hasattr(self, "output_parser") and self.output_parser is not None:
+                runnable |= self.output_parser
 
-            runnable = runnable.with_config(  # type: ignore
+            runnable = runnable.with_config(
                 {
                     "run_name": self.display_name,
                     "project_name": self.get_project_name(),
@@ -183,9 +250,10 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                return runnable.stream(inputs)  # type: ignore
-            message = runnable.invoke(inputs)  # type: ignore
-            result = message.content if hasattr(message, "content") else message
+                lf_message, result = await self._handle_stream(runnable, inputs)
+            else:
+                message = runnable.invoke(inputs)
+                result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
                 self.status = status_message
@@ -194,14 +262,114 @@ class LCModelComponent(Component):
                 self.status = result
             else:
                 self.status = result
-            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
-            raise e
+            raise
+        return lf_message or Message(text=result)
+
+    async def _handle_stream(self, runnable, inputs):
+        """Handle streaming responses from the language model.
+
+        Args:
+            runnable: The language model configured for streaming
+            inputs: The inputs to send to the model
+
+        Returns:
+            tuple: (Message object if connected to chat output, model result)
+        """
+        lf_message = None
+        if self.is_connected_to_chat_output():
+            # Add a Message
+            if hasattr(self, "graph"):
+                session_id = self.graph.session_id
+            elif hasattr(self, "_session_id"):
+                session_id = self._session_id
+            else:
+                session_id = None
+            model_message = Message(
+                text=runnable.stream(inputs),
+                sender=MESSAGE_SENDER_AI,
+                sender_name="AI",
+                properties={"icon": self.icon, "state": "partial"},
+                session_id=session_id,
+            )
+            model_message.properties.source = self._build_source(self._id, self.display_name, self)
+            lf_message = await self.send_message(model_message)
+            result = lf_message.text
+        else:
+            message = runnable.invoke(inputs)
+            result = message.content if hasattr(message, "content") else message
+        return lf_message, result
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        """Implement this method to build the model."""
+
+    def get_llm(self, provider_name: str, model_info: dict[str, dict[str, str | list[InputTypes]]]) -> LanguageModel:
+        """Get LLM model based on provider name and inputs.
+
+        Args:
+            provider_name: Name of the model provider (e.g., "OpenAI", "Azure OpenAI")
+            inputs: Dictionary of input parameters for the model
+            model_info: Dictionary of model information
+
+        Returns:
+            Built LLM model instance
         """
-        Implement this method to build the model.
+        try:
+            if provider_name not in [model.get("display_name") for model in model_info.values()]:
+                msg = f"Unknown model provider: {provider_name}"
+                raise ValueError(msg)
+
+            # Find the component class name from MODEL_INFO in a single iteration
+            component_info, module_name = next(
+                ((info, key) for key, info in model_info.items() if info.get("display_name") == provider_name),
+                (None, None),
+            )
+            if not component_info:
+                msg = f"Component information not found for {provider_name}"
+                raise ValueError(msg)
+            component_inputs = component_info.get("inputs", [])
+            # Get the component class from the models module
+            # Ensure component_inputs is a list of the expected types
+            if not isinstance(component_inputs, list):
+                component_inputs = []
+
+            import warnings
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+                )
+                warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+                models_module = importlib.import_module("langflow.components.models")
+                component_class = getattr(models_module, str(module_name))
+                component = component_class()
+
+            return self.build_llm_model_from_inputs(component, component_inputs)
+        except Exception as e:
+            msg = f"Error building {provider_name} language model"
+            raise ValueError(msg) from e
+
+    def build_llm_model_from_inputs(
+        self, component: Component, inputs: list[InputTypes], prefix: str = ""
+    ) -> LanguageModel:
+        """Build LLM model from component and inputs.
+
+        Args:
+            component: LLM component instance
+            inputs: Dictionary of input parameters for the model
+            prefix: Prefix for the input names
+        Returns:
+            Built LLM model instance
         """
+        # Ensure prefix is a string
+        prefix = prefix or ""
+        # Filter inputs to only include valid component input names
+        input_data = {
+            str(component_input.name): getattr(self, f"{prefix}{component_input.name}", None)
+            for component_input in inputs
+        }
+
+        return component.set(**input_data).build_model()

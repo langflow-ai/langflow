@@ -19,6 +19,7 @@ jobs:
     strategy:
       matrix:
         python-version:
+          - "3.13"
           - "3.12"
           - "3.11"
           - "3.10"
@@ -29,13 +30,17 @@ jobs:
           ref: ${{ inputs.branch || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Run Mypy
         run: |
           uv run mypy --namespace-packages -p "langflow"
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+

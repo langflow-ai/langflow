@@ -1,11 +1,10 @@
-import tempfile
-from pathlib import Path
-
+import aiofiles
+import anyio
 import pytest
 
 
 @pytest.fixture(autouse=True)
-def check_openai_api_key_in_environment_variables():
+def _check_openai_api_key_in_environment_variables():
     pass
 
 
@@ -17,22 +16,23 @@ async def test_webhook_endpoint(client, added_webhook_test):
     endpoint_name = added_webhook_test["endpoint_name"]
     endpoint = f"api/v1/webhook/{endpoint_name}"
     # Create a temporary file
-    with tempfile.TemporaryDirectory() as tmp:
-        file_path = Path(tmp) / "test_file.txt"
+    async with aiofiles.tempfile.TemporaryDirectory() as tmp:
+        file_path = anyio.Path(tmp) / "test_file.txt"
 
         payload = {"path": str(file_path)}
 
         response = await client.post(endpoint, json=payload)
         assert response.status_code == 202
-        assert file_path.exists()
-
-    assert not file_path.exists()
+        # Wait a few seconds for the file to be created
+        assert await file_path.exists(), f"File {file_path} does not exist"
+    file_does_not_exist = not await file_path.exists()
+    assert file_does_not_exist, f"File {file_path} still exists"
 
     # Send an invalid payload
     payload = {"invalid_key": "invalid_value"}
     response = await client.post(endpoint, json=payload)
     assert response.status_code == 202
-    assert not file_path.exists()
+    assert not await file_path.exists(), f"File {file_path} should not exist"
 
 
 async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_api_key):
@@ -51,7 +51,6 @@ async def test_webhook_with_random_payload(client, added_webhook_test):
     endpoint_name = added_webhook_test["endpoint_name"]
     endpoint = f"api/v1/webhook/{endpoint_name}"
     # Just test that "Random Payload" returns 202
-    # returns 202
     response = await client.post(
         endpoint,
         json="Random Payload",

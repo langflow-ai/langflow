@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import httpx
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.store.schema import ListComponentResponse
@@ -18,11 +19,10 @@ async def update_components_with_user_data(
     components: list["ListComponentResponse"],
     store_service: "StoreService",
     store_api_key: str,
+    *,
     liked: bool,
 ):
-    """
-    Updates the components with the user data (liked_by_user and in_users_collection)
-    """
+    """Updates the components with the user data (liked_by_user and in_users_collection)."""
     component_ids = [str(component.id) for component in components]
     if liked:
         # If liked is True, this means all we got were liked_by_user components
@@ -41,13 +41,15 @@ async def update_components_with_user_data(
 
 
 # Get the latest released version of langflow (https://pypi.org/project/langflow/)
-def get_lf_version_from_pypi():
+async def get_lf_version_from_pypi():
     try:
-        response = httpx.get("https://pypi.org/pypi/langflow/json")
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://pypi.org/pypi/langflow/json")
         if response.status_code != httpx.codes.OK:
             return None
         return response.json()["info"]["version"]
-    except Exception:
+    except Exception:  # noqa: BLE001
+        logger.opt(exception=True).debug("Error getting the latest version of langflow from PyPI")
         return None
 
 

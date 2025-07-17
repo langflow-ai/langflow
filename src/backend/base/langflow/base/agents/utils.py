@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -14,7 +15,10 @@ from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
-from langflow.schema import Data
+from langflow.logging import logger
+from langflow.schema.data import Data
+from langflow.services.cache.base import CacheService
+from langflow.services.cache.utils import CacheMiss
 
 from .default_prompts import XML_AGENT_PROMPT
 
@@ -36,8 +40,7 @@ class AgentSpec(BaseModel):
 
 
 def data_to_messages(data: list[Data]) -> list[BaseMessage]:
-    """
-    Convert a list of data to a list of messages.
+    """Convert a list of data to a list of messages.
 
     Args:
         data (List[Data]): The data to convert.
@@ -69,9 +72,9 @@ def validate_and_create_openai_tools_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: ChatPromptTemplate,
-    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
+    _tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: bool | list[str] = True,
+    _stop_sequence: bool | list[str] = True,
 ):
     return create_openai_tools_agent(
         llm=llm,
@@ -84,9 +87,9 @@ def validate_and_create_tool_calling_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
     prompt: ChatPromptTemplate,
-    tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
+    _tools_renderer: Callable[[list[BaseTool]], str] = render_text_description,
     *,
-    stop_sequence: bool | list[str] = True,
+    _stop_sequence: bool | list[str] = True,
 ):
     return create_tool_calling_agent(
         llm=llm,
@@ -142,3 +145,61 @@ AGENTS: dict[str, AgentSpec] = {
 
 def get_agents_list():
     return list(AGENTS.keys())
+
+
+def safe_cache_get(cache: CacheService, key, default=None):
+    """Safely get a value from cache, handling CacheMiss objects."""
+    try:
+        value = cache.get(key)
+        if isinstance(value, CacheMiss):
+            return default
+    except (AttributeError, KeyError, TypeError):
+        return default
+    else:
+        return value
+
+
+def safe_cache_set(cache: CacheService, key, value):
+    """Safely set a value in cache, handling potential errors."""
+    try:
+        cache.set(key, value)
+    except (AttributeError, TypeError) as e:
+        logger.warning(f"Failed to set cache key '{key}': {e}")
+
+
+def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
+    """If any key looks nested (contains a dot or "[index]"), rebuild the.
+
+    full nested structure; otherwise return flat as is.
+    """
+    # Quick check: do we have any nested keys?
+    if not any(re.search(r"\.|\[\d+\]", key) for key in flat):
+        return flat
+
+    # Otherwise, unflatten into dicts/lists
+    nested: dict[str, Any] = {}
+    array_re = re.compile(r"^(.+)\[(\d+)\]$")
+
+    for key, val in flat.items():
+        parts = key.split(".")
+        cur = nested
+        for i, part in enumerate(parts):
+            m = array_re.match(part)
+            # Array segment?
+            if m:
+                name, idx = m.group(1), int(m.group(2))
+                lst = cur.setdefault(name, [])
+                # Ensure list is big enough
+                while len(lst) <= idx:
+                    lst.append({})
+                if i == len(parts) - 1:
+                    lst[idx] = val
+                else:
+                    cur = lst[idx]
+            # Normal object key
+            elif i == len(parts) - 1:
+                cur[part] = val
+            else:
+                cur = cur.setdefault(part, {})
+
+    return nested

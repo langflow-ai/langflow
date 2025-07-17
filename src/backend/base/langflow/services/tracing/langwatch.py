@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, cast
 
-import nanoid  # type: ignore
+import nanoid
 from loguru import logger
+from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
@@ -30,31 +32,35 @@ class LangWatchTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
 
         try:
-            self._ready = self.setup_langwatch()
+            self._ready: bool = self.setup_langwatch()
             if not self._ready:
                 return
 
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
             )
+            self.trace.__enter__()
             self.spans: dict[str, ContextSpan] = {}
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
+            name_without_id = project_name if name_without_id == "None" else name_without_id
             self.trace.root_span.update(
                 # nanoid to make the span_id globally unique, which is required for LangWatch for now
                 span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",
                 name=name_without_id,
                 type="workflow",
             )
-        except Exception:
-            logger.opt(exception=True).debug("Error setting up LangWatch tracer")
+        except Exception:  # noqa: BLE001
+            logger.debug("Error setting up LangWatch tracer")
             self._ready = False
 
     @property
     def ready(self):
         return self._ready
 
-    def setup_langwatch(self):
+    def setup_langwatch(self) -> bool:
+        if "LANGWATCH_API_KEY" not in os.environ:
+            return False
         try:
             import langwatch
 
@@ -64,6 +70,7 @@ class LangWatchTracer(BaseTracer):
             return False
         return True
 
+    @override
     def add_trace(
         self,
         trace_id: str,
@@ -72,7 +79,7 @@ class LangWatchTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         # If user is not using session_id, then it becomes the same as flow_id, but
@@ -99,6 +106,7 @@ class LangWatchTracer(BaseTracer):
         self.trace.set_current_span(span)
         self.spans[trace_id] = span
 
+    @override
     def end_trace(
         self,
         trace_id: str,
@@ -106,7 +114,7 @@ class LangWatchTracer(BaseTracer):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ):
+    ) -> None:
         if not self._ready:
             return
         if self.spans.get(trace_id):
@@ -118,12 +126,12 @@ class LangWatchTracer(BaseTracer):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
         self.trace.root_span.end(
-            input=self._convert_to_langwatch_types(inputs),
-            output=self._convert_to_langwatch_types(outputs),
+            input=self._convert_to_langwatch_types(inputs) if self.trace.root_span.input is None else None,
+            output=self._convert_to_langwatch_types(outputs) if self.trace.root_span.output is None else None,
             error=error,
         )
 
@@ -131,7 +139,10 @@ class LangWatchTracer(BaseTracer):
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
         if self.trace.api_key or self._client.api_key:
-            self.trace.deferred_send_spans()
+            try:
+                self.trace.__exit__(None, None, None)
+            except ValueError:  # ignoring token was created in a different Context errors
+                return
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values
@@ -149,24 +160,22 @@ class LangWatchTracer(BaseTracer):
         from langflow.schema.message import BaseMessage, Message
 
         if isinstance(value, dict):
-            for key, _value in value.copy().items():
-                _value = self._convert_to_langwatch_type(_value)
-                value[key] = _value
+            value = {key: self._convert_to_langwatch_type(val) for key, val in value.items()}
         elif isinstance(value, list):
             value = [self._convert_to_langwatch_type(v) for v in value]
         elif isinstance(value, Message):
             if "prompt" in value:
                 prompt = value.load_lc_prompt()
                 if len(prompt.input_variables) == 0 and all(isinstance(m, BaseMessage) for m in prompt.messages):
-                    value = langchain_messages_to_chat_messages([cast(list[BaseMessage], prompt.messages)])
+                    value = langchain_messages_to_chat_messages([cast("list[BaseMessage]", prompt.messages)])
                 else:
-                    value = cast(dict, value.load_lc_prompt())
+                    value = cast("dict", value.load_lc_prompt())
             elif value.sender:
                 value = langchain_message_to_chat_message(value.to_lc_message())
             else:
-                value = cast(dict, value.to_lc_document())
+                value = cast("dict", value.to_lc_document())
         elif isinstance(value, Data):
-            value = cast(dict, value.to_lc_document())
+            value = cast("dict", value.to_lc_document())
         return value
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:

@@ -7,7 +7,21 @@ on:
         required: true
       STORE_API_KEY:
         required: true
+      ANTHROPIC_API_KEY:
+        required: true
+      TAVILY_API_KEY:
+        required: true
     inputs:
+      suites:
+        description: "Test suites to run (JSON array)"
+        required: false
+        type: string
+        default: "[]"
+      release:
+        description: "Whether this is a release build"
+        required: false
+        type: boolean
+        default: false
       tests_folder:
         description: "(Optional) Tests to run"
         required: false
@@ -19,6 +33,16 @@ on:
         type: string
   workflow_dispatch:
     inputs:
+      suites:
+        description: "Test suites to run (JSON array)"
+        required: false
+        type: string
+        default: "[]"
+      release:
+        description: "Whether this is a release build"
+        required: false
+        type: boolean
+        default: false
       tests_folder:
         description: "(Optional) Tests to run"
         required: false
@@ -27,101 +51,277 @@ on:
 
 env:
   NODE_VERSION: "21"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
   # Define the directory where Playwright browsers will be installed.
-  # Adjust if your project uses a different path.
+  # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
+  PLAYWRIGHT_VERSION: "1.49.1" # Add explicit version for cache key
 
 jobs:
-  setup-and-test:
-    name: Playwright Tests - Group ${{ matrix.shardIndex }}
+  determine-test-suite:
+    name: Determine Test Suites and Shard Distribution
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.setup-matrix.outputs.matrix }}
+      test_grep: ${{ steps.set-matrix.outputs.test_grep }}
+      suites: ${{ steps.set-matrix.outputs.suites }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: .github/changes-filter.yaml
+
+      - name: Determine Test Suites from Changes
+        id: set-matrix
+        run: |
+          # Start with input suites if provided, otherwise empty array
+          echo "Changes filter output: $(echo '${{ toJSON(steps.filter.outputs) }}')"
+          SUITES='${{ inputs.suites }}'
+          echo "Initial suites: $SUITES"
+          TEST_GREP=""
+          echo "Inputs Release: ${{ inputs.release }}"
+          RELEASE="${{ inputs.release || 'false' }}"
+          echo "Release build: $RELEASE"
+
+          # Only set to release if it's explicitly a release build
+          if [[ "$RELEASE" == "true" ]]; then
+            SUITES='["release"]'
+            echo "Release build detected - setting suites to: $SUITES"
+            # grep pattern for release is the @release tag - run all tests
+            TEST_GREP="--grep=\"@release\""
+          else
+            # If input suites were not provided, determine based on changes
+            if [[ "$SUITES" == "[]" ]]; then
+              echo "No input suites provided - determining from changes"
+              SUITES='[]'  # Ensure we start with a valid JSON array
+              TAGS=()
+              # Add suites and tags based on changed files
+              if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["components"]')
+                TAGS+=("@components")
+                echo "Added components suite"
+              fi
+              if [[ "${{ steps.filter.outputs.starter-projects }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["starter-projects"]')
+                TAGS+=("@starter-projects")
+                echo "Added starter-projects suite"
+              fi
+              if [[ "${{ steps.filter.outputs.workspace }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["workspace"]')
+                TAGS+=("@workspace")
+                echo "Added workspace suite"
+              fi
+              if [[ "${{ steps.filter.outputs.api }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["api"]')
+                TAGS+=("@api")
+                echo "Added api suite"
+              fi
+              if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["database"]')
+                TAGS+=("@database")
+                echo "Added database suite"
+              fi
+              if [[ "${{ steps.filter.outputs.development }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["development"]')
+                TAGS+=("@development")
+                echo "Added development suite"
+              fi
+
+              # Create grep pattern if we have tags
+              if [ ${#TAGS[@]} -gt 0 ]; then
+                # Join tags with | for OR logic
+                REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
+                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
+              fi
+            else
+              # Process input suites to tags
+              # First ensure SUITES is valid JSON
+              if ! echo "$SUITES" | jq -e . > /dev/null 2>&1; then
+                echo "Warning: Input suites is not valid JSON, attempting to fix"
+                # Try to fix common issues like missing quotes
+                if [[ "$SUITES" == "[development]" ]]; then
+                  SUITES='["development"]'
+                elif [[ "$SUITES" =~ ^\[(.*)\]$ ]]; then
+                  # Extract items and add quotes
+                  ITEMS="${BASH_REMATCH[1]}"
+                  QUOTED_ITEMS=$(echo "$ITEMS" | sed 's/\([^,]*\)/"\1"/g')
+                  SUITES="[$QUOTED_ITEMS]"
+                fi
+                echo "Fixed suites: $SUITES"
+              fi
+
+              TAGS=()
+              if echo "$SUITES" | jq -e 'contains(["components"])' > /dev/null; then
+                TAGS+=("@components")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["starter-projects"])' > /dev/null; then
+                TAGS+=("@starter-projects")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["workspace"])' > /dev/null; then
+                TAGS+=("@workspace")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["api"])' > /dev/null; then
+                TAGS+=("@api")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["database"])' > /dev/null; then
+                TAGS+=("@database")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["development"])' > /dev/null; then
+                TAGS+=("@development")
+              fi
+
+              if [ ${#TAGS[@]} -gt 0 ]; then
+                # Join tags with | for OR logic
+                REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
+                TEST_GREP="--grep \"${REGEX_PATTERN}\""
+              fi
+            fi
+          fi
+
+          # Ensure compact JSON output
+          SUITES=$(echo "$SUITES" | jq -c '.')
+
+          echo "Final test suites to run: $SUITES"
+          echo "Test grep pattern: $TEST_GREP"
+          # Ensure proper JSON formatting for matrix output
+          echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
+          echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
+          echo "suites=$SUITES" >> $GITHUB_OUTPUT
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: Calculate Test Shards Distribution
+        id: setup-matrix
+        run: |
+          cd src/frontend
+
+          # Get the test count using playwright's built-in grep
+          if [ -n "${{ steps.set-matrix.outputs.test_grep }}" ]; then
+            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} ${{ steps.set-matrix.outputs.test_grep }} --list | wc -l)
+          else
+            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} --list | wc -l)
+          fi
+
+          echo "Total tests to run: $TEST_COUNT"
+
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 40
+          SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
+          if [ $SHARD_COUNT -lt 1 ]; then
+            SHARD_COUNT=1
+          elif [ $SHARD_COUNT -gt 40 ]; then
+            SHARD_COUNT=40
+          fi
+
+          # Create the matrix combinations string
+          MATRIX_COMBINATIONS=""
+          for i in $(seq 1 $SHARD_COUNT); do
+            if [ $i -gt 1 ]; then
+              MATRIX_COMBINATIONS="$MATRIX_COMBINATIONS,"
+            fi
+            MATRIX_COMBINATIONS="$MATRIX_COMBINATIONS{\"shardIndex\": $i, \"shardTotal\": $SHARD_COUNT}"
+          done
+
+          echo "matrix={\"include\":[$MATRIX_COMBINATIONS]}" >> "$GITHUB_OUTPUT"
+
+  setup-and-test:
+    name: Playwright Tests - Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+    runs-on: ubuntu-latest
+    if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
+    needs: determine-test-suite
     strategy:
       fail-fast: false
-      matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        shardTotal: [10]
+      matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix) }}
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
       SEARCH_API_KEY: "${{ secrets.SEARCH_API_KEY }}"
       ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
+      ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
+      TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
+      LANGFLOW_DEACTIVE_TRACING: "true"
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # If ref is passed as input, checkout that ref
-          # else checkout the default ref
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Node.js
+      - name: Setup Node.js Environment
         uses: actions/setup-node@v4
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./src/frontend
 
-      - name: Cache Node.js dependencies
+      # Cache Playwright browsers using a composite key
+      - name: Cache Playwright Browsers
+        id: cache-playwright
         uses: actions/cache@v4
-        id: npm-cache
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
           restore-keys: |
-            ${{ runner.os }}-node-
+            playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
 
-      - name: Install Node.js dependencies
+      - name: Install Playwright Browser Dependencies
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
         run: |
-          cd src/frontend
-          npm ci
-        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-      - name: Get Playwright version
-        run: echo "PLAYWRIGHT_VERSION=$(jq '.devDependencies["@playwright/test"]' src/frontend/package.json -r)" >> $GITHUB_ENV
-      - name: Cache Playwright binaries
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
-
-      - name: Install Frontend dependencies
-        run: |
-          cd src/frontend
-          npm ci
-
-      - name: Install Playwright's browser binaries
-        run: |
-          cd src/frontend
-          npx playwright install --with-deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-      - name: Install Playwright's dependencies
-        run: |
-          cd src/frontend
-          npx playwright install-deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+          cd ./src/frontend
+          npx playwright install --with-deps chromium
 
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
-      - name: Install the project
-        run: uv sync --dev
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
 
-      - name: create .env
+      - name: Install Python Dependencies
+        run: uv sync --extra audio
+
+      - name: Configure Environment Variables
         run: |
           touch .env
           echo "${{ secrets.ENV_VARS }}" > .env
 
-      - name: Run Playwright Tests
+      - name: Execute Playwright Tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
           max_attempts: 2
           command: |
             cd src/frontend
-            npx playwright test ${{ inputs.tests_folder }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+            echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list --retries=3
+            # echo command before running
+            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3"
 
-      - name: Upload blob report to GitHub Actions Artifacts
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2 --retries=3
+
+      - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -129,7 +329,7 @@ jobs:
           path: src/frontend/blob-report
           retention-days: 1
 
-      - name: Minimize uv cache
+      - name: Cleanup UV Cache
         run: uv cache prune --ci
 
   merge-reports:

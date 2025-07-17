@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import DropdownInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import DropdownInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionSearch(LCToolComponent):
@@ -104,7 +104,7 @@ class NotionSearch(LCToolComponent):
             "sort": {"direction": sort_direction, "timestamp": "last_edited_time"},
         }
 
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
         response.raise_for_status()
 
         results = response.json()

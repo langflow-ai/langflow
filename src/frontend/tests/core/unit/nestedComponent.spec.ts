@@ -1,106 +1,82 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("NestedComponent", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+test(
+  "user should be able to use nested component",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("alter metadata");
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+    await addLegacyComponents(page);
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("api request");
+    await page.waitForTimeout(500);
 
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("dataAPI Request")
-    .first()
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.click('//*[@id="react-flow-id"]');
-
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-
-  await page.getByTestId("dict_nesteddict_headers").first().click();
-  await page
-    .getByText("{")
-    .last()
-    .hover()
-    .then(async () => {
-      await page.locator(".json-view--edit").first().click();
-      await page.locator(".json-view--input").first().fill("keytest");
-      await page.locator(".json-view--edit").first().click();
-
-      await page.locator(".json-view--edit").first().click();
-      await page.locator(".json-view--input").first().fill("keytest1");
-      await page.locator(".json-view--edit").first().click();
-
-      await page.locator(".json-view--edit").first().click();
-      await page.locator(".json-view--input").first().fill("keytest2");
-      await page.locator(".json-view--edit").first().click();
+    await page.waitForSelector('[data-testid="processingAlter Metadata"]', {
+      timeout: 3000,
     });
 
-  await page
-    .locator(".json-view--pair")
-    .first()
-    .hover()
-    .then(async () => {
-      await page.locator(".json-view--edit").nth(2).click();
-      await page.locator(".json-view--null").first().fill("proptest1");
-      await page.locator(".json-view--edit").nth(2).click();
+    await page
+      .getByTestId("processingAlter Metadata")
+      .hover()
+      .then(async () => {
+        await page.getByTestId("add-component-button-alter-metadata").click();
+      });
+
+    await adjustScreenView(page);
+
+    await page.getByTestId("dict_nesteddict_metadata").first().click();
+    await page.getByText("{}").last().clear();
+
+    await page
+      .getByRole("textbox")
+      .last()
+      .fill(
+        '{"keytest": "proptest", "keytest1": "proptest1", "keytest2": "proptest2"}',
+      );
+
+    await page.getByTitle("Switch to tree mode (current mode: text)").click();
+    expect(await page.getByText("keytest", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("keytest1", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("keytest2", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest1", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest2", { exact: true }).count()).toBe(1);
+
+    await page.getByText("Save").last().click();
+
+    await page.getByTestId("div-generic-node").click();
+
+    await page.getByTestId("edit-button-modal").last().click();
+
+    await page.getByTestId("edit_dict_nesteddict_edit_metadata").last().click();
+    await page.getByTitle("Switch to tree mode (current mode: text)").click();
+    await page.waitForSelector(".jse-bracket", {
+      timeout: 3000,
     });
 
-  await page.getByText("Save").last().click();
+    expect(await page.getByText("keytest", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("keytest1", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("keytest2", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest1", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest2", { exact: true }).count()).toBe(1);
 
-  await page.getByTestId("div-generic-node").click();
+    await page
+      .getByText("proptest", { exact: true })
+      .last()
+      .click({ button: "right" });
+    await page.getByText("Remove").last().click();
 
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
-
-  await page.getByTestId("dict_nesteddict_edit_headers").first().click();
-
-  expect(await page.getByText("keytest", { exact: true }).count()).toBe(1);
-  expect(await page.getByText("keytest1", { exact: true }).count()).toBe(1);
-  expect(await page.getByText("keytest2", { exact: true }).count()).toBe(1);
-  expect(await page.getByText("proptest1").count()).toBe(1);
-
-  await page
-    .locator(".json-view--pair")
-    .first()
-    .hover()
-    .then(async () => {
-      await page.locator(".json-view--edit").nth(3).click();
-      await page.locator(".json-view--edit").nth(2).click();
-    });
-
-  expect(await page.getByText("keytest", { exact: true }).count()).toBe(0);
-  expect(await page.getByText("proptest1").count()).toBe(0);
-});
+    expect(await page.getByText("keytest", { exact: true }).count()).toBe(0);
+    expect(await page.getByText("proptest", { exact: true }).count()).toBe(0);
+  },
+);

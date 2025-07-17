@@ -41,9 +41,7 @@ class MustachePromptComponent(Component):
         return frontend_node
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        """
-        This function is called after the code validation is done.
-        """
+        """Called after code validation."""
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         template = frontend_node["template"]["template"]["value"]
         # Kept it duplicated for backwards compatibility

@@ -1,29 +1,32 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from httpx import AsyncClient
-
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
+from sqlmodel import select
 
 
 @pytest.fixture
-def super_user(client):
+async def super_user(client):  # noqa: ARG001
     settings_manager = get_settings_service()
     auth_settings = settings_manager.auth_settings
-    with session_getter(get_db_service()) as session:
-        return create_super_user(
-            db=session,
+    async with session_getter(get_db_service()) as db:
+        return await create_super_user(
+            db=db,
             username=auth_settings.SUPERUSER,
             password=auth_settings.SUPERUSER_PASSWORD,
         )
 
 
 @pytest.fixture
-async def super_user_headers(client: AsyncClient, super_user):
+async def super_user_headers(
+    client: AsyncClient,
+    super_user,  # noqa: ARG001
+):
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     login_data = {
@@ -38,38 +41,58 @@ async def super_user_headers(client: AsyncClient, super_user):
 
 
 @pytest.fixture
-def deactivated_user():
-    with session_getter(get_db_service()) as session:
+async def deactivated_user(client):  # noqa: ARG001
+    async with session_getter(get_db_service()) as session:
         user = User(
             username="deactivateduser",
             password=get_password_hash("testpassword"),
             is_active=False,
             is_superuser=False,
-            last_login_at=datetime.now(),
+            last_login_at=datetime.now(tz=timezone.utc),
         )
         session.add(user)
-        session.commit()
-        session.refresh(user)
+        await session.commit()
+        await session.refresh(user)
     return user
 
 
-@pytest.mark.api_key_required
-async def test_user_waiting_for_approval(client: AsyncClient):
+async def test_user_waiting_for_approval(client):
+    username = "waitingforapproval"
+    password = "testpassword"  # noqa: S105
+
+    # Debug: Check if the user already exists
+    async with session_getter(get_db_service()) as session:
+        stmt = select(User).where(User.username == username)
+        existing_user = (await session.exec(stmt)).first()
+        if existing_user:
+            pytest.fail(
+                f"User {username} already exists before the test. Database URL: {get_db_service().database_url}"
+            )
+
     # Create a user that is not active and has never logged in
-    with session_getter(get_db_service()) as session:
+    async with session_getter(get_db_service()) as session:
         user = User(
-            username="waitingforapproval",
-            password=get_password_hash("testpassword"),
+            username=username,
+            password=get_password_hash(password),
             is_active=False,
             last_login_at=None,
         )
         session.add(user)
-        session.commit()
+        await session.commit()
 
     login_data = {"username": "waitingforapproval", "password": "testpassword"}
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 400
     assert response.json()["detail"] == "Waiting for approval"
+
+    # Debug: Check if the user still exists after the test
+    async with session_getter(get_db_service()) as session:
+        stmt = select(User).where(User.username == username)
+        existing_user = (await session.exec(stmt)).first()
+        if existing_user:
+            pass
+        else:
+            pytest.fail(f"User {username} does not exist after the test. This is unexpected.")
 
 
 @pytest.mark.api_key_required
@@ -80,7 +103,8 @@ async def test_deactivated_user_cannot_login(client: AsyncClient, deactivated_us
     assert response.json()["detail"] == "Inactive user", response.text
 
 
-async def test_deactivated_user_cannot_access(client: AsyncClient, deactivated_user, logged_in_headers):
+@pytest.mark.usefixtures("deactivated_user")
+async def test_deactivated_user_cannot_access(client: AsyncClient, logged_in_headers):
     # Assuming the headers for deactivated_user
     response = await client.get("api/v1/users/", headers=logged_in_headers)
     assert response.status_code == 403, response.status_code
@@ -116,15 +140,15 @@ async def test_data_consistency_after_delete(client: AsyncClient, test_user, sup
 @pytest.mark.api_key_required
 async def test_inactive_user(client: AsyncClient):
     # Create a user that is not active and has a last_login_at value
-    with session_getter(get_db_service()) as session:
+    async with session_getter(get_db_service()) as session:
         user = User(
             username="inactiveuser",
             password=get_password_hash("testpassword"),
             is_active=False,
-            last_login_at=datetime(2023, 1, 1, 0, 0, 0),
+            last_login_at=datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
         )
         session.add(user)
-        session.commit()
+        await session.commit()
 
     login_data = {"username": "inactiveuser", "password": "testpassword"}
     response = await client.post("api/v1/login", data=login_data)
@@ -133,22 +157,8 @@ async def test_inactive_user(client: AsyncClient):
 
 
 @pytest.mark.api_key_required
-async def test_add_user(client: AsyncClient, test_user):
+def test_add_user(test_user):
     assert test_user["username"] == "testuser"
-
-
-# This is not used in the Frontend at the moment
-# def test_read_current_user(client: TestClient, active_user):
-#     # First we need to login to get the access token
-#     login_data = {"username": "testuser", "password": "testpassword"}
-#     response = await client.post("api/v1/login", data=login_data)
-#     assert response.status_code == 200
-
-#     headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-
-#     response = await client.get("api/v1/user", headers=headers)
-#     assert response.status_code == 200, response.json()
-#     assert response.json()["username"] == "testuser"
 
 
 @pytest.mark.api_key_required
@@ -186,7 +196,7 @@ async def test_patch_user(client: AsyncClient, active_user, logged_in_headers):
 async def test_patch_reset_password(client: AsyncClient, active_user, logged_in_headers):
     user_id = active_user.id
     update_data = UserUpdate(
-        password="newpassword",
+        password="newpassword",  # noqa: S106
     )
 
     response = await client.patch(
@@ -202,7 +212,8 @@ async def test_patch_reset_password(client: AsyncClient, active_user, logged_in_
 
 
 @pytest.mark.api_key_required
-async def test_patch_user_wrong_id(client: AsyncClient, active_user, logged_in_headers):
+@pytest.mark.usefixtures("active_user")
+async def test_patch_user_wrong_id(client: AsyncClient, logged_in_headers):
     user_id = "wrong_id"
     update_data = UserUpdate(
         username="newname",
@@ -226,7 +237,8 @@ async def test_delete_user(client: AsyncClient, test_user, super_user_headers):
 
 
 @pytest.mark.api_key_required
-async def test_delete_user_wrong_id(client: AsyncClient, test_user, super_user_headers):
+@pytest.mark.usefixtures("test_user")
+async def test_delete_user_wrong_id(client: AsyncClient, super_user_headers):
     user_id = "wrong_id"
     response = await client.delete(f"/api/v1/users/{user_id}", headers=super_user_headers)
     assert response.status_code == 422

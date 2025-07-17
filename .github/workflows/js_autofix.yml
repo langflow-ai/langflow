@@ -37,9 +37,9 @@ jobs:
           cd src/frontend
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-      - name: Run Prettier
+      - name: Run Biome
         run: |
           cd src/frontend
           npm run format
 
-      - uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a
+      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef

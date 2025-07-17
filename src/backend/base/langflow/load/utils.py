@@ -5,9 +5,12 @@ import httpx
 from langflow.services.database.models.flow.model import FlowBase
 
 
+class UploadError(Exception):
+    """Raised when an error occurs during the upload process."""
+
+
 def upload(file_path: str, host: str, flow_id: str):
-    """
-    Upload a file to Langflow and return the file path.
+    """Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
@@ -18,24 +21,24 @@ def upload(file_path: str, host: str, flow_id: str):
         dict: A dictionary containing the file path.
 
     Raises:
-        Exception: If an error occurs during the upload process.
+        UploadError: If an error occurs during the upload process.
     """
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
         with Path(file_path).open("rb") as file:
             response = httpx.post(url, files={"file": file})
-            if response.status_code in (httpx.codes.OK, httpx.codes.CREATED):
+            if response.status_code in {httpx.codes.OK, httpx.codes.CREATED}:
                 return response.json()
-            msg = f"Error uploading file: {response.status_code}"
-            raise Exception(msg)
     except Exception as e:
         msg = f"Error uploading file: {e}"
-        raise Exception(msg) from e
+        raise UploadError(msg) from e
+
+    msg = f"Error uploading file: {response.status_code}"
+    raise UploadError(msg)
 
 
 def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
-    """
-    Upload a file to Langflow and return the file path.
+    """Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
@@ -49,25 +52,27 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
         dict: A dictionary containing the file path and any tweaks that were applied.
 
     Raises:
-        Exception: If an error occurs during the upload process.
+        UploadError: If an error occurs during the upload process.
     """
-    if not tweaks:
-        tweaks = {}
     try:
         response = upload(file_path, host, flow_id)
-        if response["file_path"]:
-            for component in components:
-                if isinstance(component, str):
-                    tweaks[component] = {"path": response["file_path"]}
-                else:
-                    msg = f"Component ID or name must be a string. Got {type(component)}"
-                    raise ValueError(msg)
-            return tweaks
-        msg = "Error uploading file"
-        raise ValueError(msg)
     except Exception as e:
         msg = f"Error uploading file: {e}"
-        raise ValueError(msg) from e
+        raise UploadError(msg) from e
+
+    if not tweaks:
+        tweaks = {}
+    if response["file_path"]:
+        for component in components:
+            if isinstance(component, str):
+                tweaks[component] = {"path": response["file_path"]}
+            else:
+                msg = f"Error uploading file: component ID or name must be a string. Got {type(component)}"
+                raise UploadError(msg)
+        return tweaks
+
+    msg = "Error uploading file"
+    raise UploadError(msg)
 
 
 def get_flow(url: str, flow_id: str):
@@ -82,7 +87,7 @@ def get_flow(url: str, flow_id: str):
         dict: A dictionary containing the details of the flow.
 
     Raises:
-        Exception: If an error occurs during the retrieval process.
+        UploadError: If an error occurs during the retrieval process.
     """
     try:
         flow_url = f"{url}/api/v1/flows/{flow_id}"
@@ -90,8 +95,32 @@ def get_flow(url: str, flow_id: str):
         if response.status_code == httpx.codes.OK:
             json_response = response.json()
             return FlowBase(**json_response).model_dump()
-        msg = f"Error retrieving flow: {response.status_code}"
-        raise Exception(msg)
     except Exception as e:
         msg = f"Error retrieving flow: {e}"
-        raise Exception(msg) from e
+        raise UploadError(msg) from e
+
+
+def replace_tweaks_with_env(tweaks: dict, env_vars: dict) -> dict:
+    """Replace keys in the tweaks dictionary with their corresponding environment variable values.
+
+    This function recursively traverses the tweaks dictionary and replaces any string keys
+    with their values from the provided environment variables. If a key's value is a dictionary,
+    the function will call itself to handle nested dictionaries.
+
+    Args:
+        tweaks (dict): A dictionary containing keys that may correspond to environment variable names.
+        env_vars (dict): A dictionary of environment variables where keys are variable names
+                         and values are their corresponding values.
+
+    Returns:
+        dict: The updated tweaks dictionary with keys replaced by their environment variable values.
+    """
+    for key, value in tweaks.items():
+        if isinstance(value, dict):
+            # Recursively replace in nested dictionaries
+            tweaks[key] = replace_tweaks_with_env(value, env_vars)
+        elif isinstance(value, str):
+            env_value = env_vars.get(value)  # Get the value from the provided environment variables
+            if env_value is not None:
+                tweaks[key] = env_value
+    return tweaks

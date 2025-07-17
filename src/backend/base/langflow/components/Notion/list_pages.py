@@ -3,12 +3,13 @@ from typing import Any
 
 import requests
 from langchain.tools import StructuredTool
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionListPages(LCToolComponent):
@@ -108,7 +109,7 @@ class NotionListPages(LCToolComponent):
                 return f"Invalid JSON format for query: {e}"
 
         try:
-            response = requests.post(url, headers=headers, json=query_payload)
+            response = requests.post(url, headers=headers, json=query_payload, timeout=10)
             response.raise_for_status()
             results = response.json()
             return results["results"]
@@ -116,5 +117,6 @@ class NotionListPages(LCToolComponent):
             return f"Error querying Notion database: {e}"
         except KeyError:
             return "Unexpected response format from Notion API"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error querying Notion database")
             return f"An unexpected error occurred: {e}"

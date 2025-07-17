@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v5.0.0
     hooks:
       - id: check-case-conflict
       - id: end-of-file-fixer
@@ -13,13 +13,23 @@ repos:
       - id: trailing-whitespace
   - repo: local
     hooks:
-      - id: ruff-check
+      - id: ruff
         name: ruff check
+        entry: uv run ruff check
         language: system
-        entry: bash -c "uv run ruff check"
-        types: [file, python]
+        types_or: [python, pyi]
+        args: [--fix]
       - id: ruff-format
         name: ruff format
+        entry: uv run ruff format
         language: system
-        entry: bash -c "uv run ruff format"
-        types: [file, python]
+        types_or: [python, pyi]
+        args: [--config, pyproject.toml]
+  - repo: local
+    hooks:
+      - id: local-biome-check
+        name: biome check
+        entry: bash -c 'cd src/frontend && npx @biomejs/biome check --write --files-ignore-unknown=true --no-errors-on-unmatched --diagnostic-level=error'
+        language: system
+        types: [text]
+        files: "\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"

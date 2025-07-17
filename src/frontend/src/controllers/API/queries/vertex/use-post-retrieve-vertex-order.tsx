@@ -1,6 +1,6 @@
-import { useMutationFunctionType } from "@/types/api";
-import { AxiosRequestConfig } from "axios";
-import { ReactFlowJsonObject } from "reactflow";
+import type { ReactFlowJsonObject } from "@xyflow/react";
+import type { AxiosRequestConfig } from "axios";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -62,7 +62,11 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<
   const mutation = mutate(
     ["usePostRetrieveVertexOrder"],
     postRetrieveVertexOrder,
-    options,
+    {
+      ...options,
+      retry: 0,
+      retryDelay: 0,
+    },
   );
 
   return mutation;

@@ -1,6 +1,6 @@
-class dotdict(dict):
-    """
-    dotdict allows accessing dictionary elements using dot notation (e.g., dict.key instead of dict['key']).
+class dotdict(dict):  # noqa: N801
+    """dotdict allows accessing dictionary elements using dot notation (e.g., dict.key instead of dict['key']).
+
     It automatically converts nested dictionaries into dotdict instances, enabling dot notation on them as well.
 
     Note:
@@ -11,8 +11,7 @@ class dotdict(dict):
     """
 
     def __getattr__(self, attr):
-        """
-        Override dot access to behave like dictionary lookup. Automatically convert nested dicts to dotdicts.
+        """Override dot access to behave like dictionary lookup. Automatically convert nested dicts to dotdicts.
 
         Args:
             attr (str): Attribute to access.
@@ -28,14 +27,14 @@ class dotdict(dict):
             if isinstance(value, dict) and not isinstance(value, dotdict):
                 value = dotdict(value)
                 self[attr] = value  # Update self to nest dotdict for future accesses
-            return value
         except KeyError as e:
             msg = f"'dotdict' object has no attribute '{attr}'"
             raise AttributeError(msg) from e
+        else:
+            return value
 
-    def __setattr__(self, key, value):
-        """
-        Override attribute setting to work as dictionary item assignment.
+    def __setattr__(self, key, value) -> None:
+        """Override attribute setting to work as dictionary item assignment.
 
         Args:
             key (str): The key under which to store the value.
@@ -45,9 +44,8 @@ class dotdict(dict):
             value = dotdict(value)
         self[key] = value
 
-    def __delattr__(self, key):
-        """
-        Override attribute deletion to work as dictionary item deletion.
+    def __delattr__(self, key) -> None:
+        """Override attribute deletion to work as dictionary item deletion.
 
         Args:
             key (str): The key of the item to delete from the dictionary.
@@ -62,8 +60,7 @@ class dotdict(dict):
             raise AttributeError(msg) from e
 
     def __missing__(self, key):
-        """
-        Handle missing keys by returning an empty dotdict. This allows chaining access without raising KeyError.
+        """Handle missing keys by returning an empty dotdict. This allows chaining access without raising KeyError.
 
         Args:
             key: The missing key.

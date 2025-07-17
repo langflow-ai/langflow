@@ -1,22 +1,30 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.graph.schema import RunOutputs
-from langflow.graph.utils import serialize_field
-from langflow.schema import dotdict
+from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.models.flow import FlowCreate, FlowRead
-from langflow.services.database.models.user import UserRead
+from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.user.model import UserRead
+from langflow.services.settings.base import Settings
+from langflow.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from langflow.services.tracing.schema import Log
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):
@@ -93,7 +101,7 @@ class ChatMessage(BaseModel):
 
     is_bot: bool = False
     message: str | None | dict = None
-    chatKey: str | None = None
+    chat_key: str | None = Field(None, serialization_alias="chatKey")
     type: str = "human"
 
 
@@ -109,7 +117,7 @@ class ChatResponse(ChatMessage):
     @field_validator("type")
     @classmethod
     def validate_message_type(cls, v):
-        if v not in ["start", "stream", "end", "error", "info", "file"]:
+        if v not in {"start", "stream", "end", "error", "info", "file"}:
             msg = "type must be start, stream, end, error, info, or file"
             raise ValueError(msg)
         return v
@@ -134,7 +142,7 @@ class FileResponse(ChatMessage):
     @field_validator("data_type")
     @classmethod
     def validate_data_type(cls, v):
-        if v not in ["image", "csv"]:
+        if v not in {"image", "csv"}:
             msg = "data_type must be image or csv"
             raise ValueError(msg)
         return v
@@ -154,12 +162,12 @@ class FlowListRead(BaseModel):
 
 class FlowListReadWithFolderName(BaseModel):
     flows: list[FlowRead]
-    name: str
+    folder_name: str
     description: str
 
 
 class InitResponse(BaseModel):
-    flowId: str
+    flow_id: str = Field(serialization_alias="flowId")
 
 
 class BuiltResponse(BaseModel):
@@ -169,7 +177,7 @@ class BuiltResponse(BaseModel):
 class UploadFileResponse(BaseModel):
     """Upload file response schema."""
 
-    flowId: str
+    flow_id: str = Field(serialization_alias="flowId")
     file_path: Path
 
 
@@ -196,6 +204,7 @@ class UpdateCustomComponentRequest(CustomComponentRequest):
     field: str
     field_value: str | int | float | bool | dict | list | None = None
     template: dict
+    tool_mode: bool = False
 
     def get_template(self):
         return dotdict(self.template)
@@ -266,9 +275,32 @@ class ResultDataResponse(BaseModel):
     @field_serializer("results")
     @classmethod
     def serialize_results(cls, v):
-        if isinstance(v, dict):
-            return {key: serialize_field(val) for key, val in v.items()}
-        return serialize_field(v)
+        """Serializes the results value with custom handling for special types and applies truncation limits.
+
+        Returns:
+            The serialized representation of the input value, truncated according to configured
+            maximum text length and item count.
+        """
+        return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
+
+    @model_serializer(mode="plain")
+    def serialize_model(self) -> dict:
+        """Serialize the entire model into a dictionary with truncation applied to large fields.
+
+        Returns:
+            dict: A dictionary representation of the model with serialized and truncated
+            results, outputs, logs, message, and artifacts.
+        """
+        return {
+            "results": self.serialize_results(self.results),
+            "outputs": serialize(self.outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "logs": serialize(self.logs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "message": serialize(self.message, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "artifacts": serialize(self.artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "timedelta": self.timedelta,
+            "duration": self.duration,
+            "used_frozen_result": self.used_frozen_result,
+        }
 
 
 class VertexBuildResponse(BaseModel):
@@ -286,8 +318,16 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
-        return truncate_long_strings(data_dict)
+        """Serialize a ResultDataResponse object into a dictionary with enforced maximum text and item lengths.
+
+        Parameters:
+            data (ResultDataResponse): The data object to serialize.
+
+        Returns:
+            dict: The serialized representation of the data with truncation applied.
+        """
+        # return serialize(data, max_length=get_max_text_length())  TODO: Safe?
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class VerticesBuiltResponse(BaseModel):
@@ -297,6 +337,7 @@ class VerticesBuiltResponse(BaseModel):
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
     input_value: str | None = None
+    session: str | None = None
     type: InputType | None = Field(
         "any",
         description="Defines on which components the input value should be applied. "
@@ -310,9 +351,16 @@ class InputValueRequest(BaseModel):
                 {
                     "components": ["components_id", "Component Name"],
                     "input_value": "input_value",
+                    "session": "session_id",
                 },
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
+                {
+                    "components": ["Component Name"],
+                    "input_value": "input_value",
+                    "session": "session_id",
+                },
+                {"input_value": "input_value", "session": "session_id"},
                 {"type": "chat", "input_value": "input_value"},
                 {"type": "json", "input_value": '{"key": "value"}'},
             ]
@@ -346,8 +394,62 @@ class FlowDataRequest(BaseModel):
 
 
 class ConfigResponse(BaseModel):
+    feature_flags: FeatureFlags
+    serialization_max_items_length: int
+    serialization_max_text_length: int
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+    webhook_polling_interval: int
+    public_flow_cleanup_interval: int
+    public_flow_expiration: int
+    event_delivery: Literal["polling", "streaming", "direct"]
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "ConfigResponse":
+        """Create a ConfigResponse instance using values from a Settings object and global feature flags.
+
+        Parameters:
+            settings (Settings): The Settings object containing configuration values.
+
+        Returns:
+            ConfigResponse: An instance populated with configuration and feature flag values.
+        """
+        return cls(
+            feature_flags=FEATURE_FLAGS,
+            serialization_max_items_length=settings.max_items_length,
+            serialization_max_text_length=settings.max_text_length,
+            frontend_timeout=settings.frontend_timeout,
+            auto_saving=settings.auto_saving,
+            auto_saving_interval=settings.auto_saving_interval,
+            health_check_max_retries=settings.health_check_max_retries,
+            max_file_size_upload=settings.max_file_size_upload,
+            webhook_polling_interval=settings.webhook_polling_interval,
+            public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
+            public_flow_expiration=settings.public_flow_expiration,
+            event_delivery=settings.event_delivery,
+        )
+
+
+class CancelFlowResponse(BaseModel):
+    """Response model for flow build cancellation."""
+
+    success: bool
+    message: str
+
+
+class MCPSettings(BaseModel):
+    """Model representing MCP settings for a flow."""
+
+    id: UUID
+    mcp_enabled: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+    name: str | None = None
+    description: str | None = None
+
+
+class MCPInstallRequest(BaseModel):
+    client: str

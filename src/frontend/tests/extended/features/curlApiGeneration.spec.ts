@@ -1,30 +1,22 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("curl_api_generation", async ({ page, context }) => {
-  await page.goto("/");
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+test(
+  "curl_api_generation",
+  { tag: ["@release", "@api", "@workspace"] },
+  async ({ page, context }) => {
+    await awaitBootstrapTest(page);
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
-  await page.getByText("API", { exact: true }).click();
-  await page.getByRole("tab", { name: "cURL" }).click();
-  await page.getByTestId("icon-Copy").last().click();
-  const handle = await page.evaluateHandle(() =>
-    navigator.clipboard.readText(),
-  );
-  const clipboardContent = await handle.jsonValue();
-  expect(clipboardContent.length).toBeGreaterThan(0);
-});
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByTestId("publish-button").click();
+    await page.getByTestId("api-access-item").click();
+    await page.getByTestId("api_tab_curl").click();
+    await page.getByTestId("icon-Copy").last().click();
+    const handle = await page.evaluateHandle(() =>
+      navigator.clipboard.readText(),
+    );
+    const clipboardContent = await handle.jsonValue();
+    expect(clipboardContent.length).toBeGreaterThan(0);
+  },
+);

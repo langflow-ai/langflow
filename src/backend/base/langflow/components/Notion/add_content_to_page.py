@@ -4,13 +4,14 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from langchain.tools import StructuredTool
+from loguru import logger
 from markdown import markdown
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 MIN_ROWS_IN_TABLE = 3
 
@@ -73,7 +74,7 @@ class AddContentToPage(LCToolComponent):
                 "children": blocks,
             }
 
-            response = requests.patch(url, headers=headers, json=data)
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
 
             return response.json()
@@ -82,7 +83,8 @@ class AddContentToPage(LCToolComponent):
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error adding content to Notion page")
             return f"Error: An unexpected error occurred while adding content to Notion page. {e}"
 
     def process_node(self, node):
@@ -94,7 +96,7 @@ class AddContentToPage(LCToolComponent):
                     heading_level = text.count("#", 0, 6)
                     heading_text = text[heading_level:].strip()
                     if heading_level in range(3):
-                        blocks.append(self.create_block(f"heading_{heading_level+1}", heading_text))
+                        blocks.append(self.create_block(f"heading_{heading_level + 1}", heading_text))
                 else:
                     blocks.append(self.create_block("paragraph", text))
         elif node.name == "h1":
@@ -214,7 +216,7 @@ class AddContentToPage(LCToolComponent):
             block_type: {},
         }
 
-        if block_type in [
+        if block_type in {
             "paragraph",
             "heading_1",
             "heading_2",
@@ -222,7 +224,7 @@ class AddContentToPage(LCToolComponent):
             "bulleted_list_item",
             "numbered_list_item",
             "quote",
-        ]:
+        }:
             block[block_type]["rich_text"] = [
                 {
                     "type": "text",

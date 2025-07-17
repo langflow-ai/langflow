@@ -1,4 +1,4 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.message import Message
@@ -58,7 +58,12 @@ class VectaraRagComponent(Component):
         StrInput(name="vectara_customer_id", display_name="Vectara Customer ID", required=True),
         StrInput(name="vectara_corpus_id", display_name="Vectara Corpus ID", required=True),
         SecretStrInput(name="vectara_api_key", display_name="Vectara API Key", required=True),
-        MessageTextInput(name="search_query", display_name="Search Query", info="The query to receive an answer on."),
+        MessageTextInput(
+            name="search_query",
+            display_name="Search Query",
+            info="The query to receive an answer on.",
+            tool_mode=True,
+        ),
         FloatInput(
             name="lexical_interpolation",
             display_name="Hybrid Search Factor",

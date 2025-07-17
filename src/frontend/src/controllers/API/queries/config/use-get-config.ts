@@ -1,7 +1,12 @@
+import axios from "axios";
+import {
+  DEFAULT_POLLING_INTERVAL,
+  DEFAULT_TIMEOUT,
+} from "@/constants/constants";
+import { EventDeliveryType } from "@/constants/enums";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import axios from "axios";
-import { useQueryFunctionType } from "../../../../types/api";
+import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -12,6 +17,10 @@ export interface ConfigResponse {
   auto_saving_interval: number;
   health_check_max_retries: number;
   max_file_size_upload: number;
+  feature_flags: Record<string, any>;
+  webhook_polling_interval: number;
+  serialization_max_items_length: number;
+  event_delivery: EventDeliveryType;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -27,6 +36,14 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   const setMaxFileSizeUpload = useUtilityStore(
     (state) => state.setMaxFileSizeUpload,
   );
+  const setSerializationMaxItemsLength = useUtilityStore(
+    (state) => state.setSerializationMaxItemsLength,
+  );
+  const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
+  const setWebhookPollingInterval = useUtilityStore(
+    (state) => state.setWebhookPollingInterval,
+  );
+  const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
 
   const { query } = UseRequestProcessor();
 
@@ -36,13 +53,19 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     if (data) {
       const timeoutInMilliseconds = data.frontend_timeout
         ? data.frontend_timeout * 1000
-        : 30000;
+        : DEFAULT_TIMEOUT;
       axios.defaults.baseURL = "";
       axios.defaults.timeout = timeoutInMilliseconds;
       setAutoSaving(data.auto_saving);
       setAutoSavingInterval(data.auto_saving_interval);
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
+      setFeatureFlags(data.feature_flags);
+      setSerializationMaxItemsLength(data.serialization_max_items_length);
+      setWebhookPollingInterval(
+        data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
+      );
+      setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
     }
     return data;
   };

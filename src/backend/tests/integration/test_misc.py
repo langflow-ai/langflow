@@ -2,15 +2,14 @@ from uuid import uuid4
 
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
-
+from httpx import AsyncClient
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.load import run_flow_from_json
+from langflow.load.load import arun_flow_from_json
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_success(client: TestClient, starter_project, created_api_key):
+async def test_run_flow_with_caching_success(client: AsyncClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
     payload = {
@@ -28,7 +27,7 @@ async def test_run_flow_with_caching_success(client: TestClient, starter_project
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
+async def test_run_flow_with_caching_invalid_flow_id(client: AsyncClient, created_api_key):
     invalid_flow_id = uuid4()
     headers = {"x-api-key": created_api_key.api_key}
     payload = {"input_value": "", "input_type": "text", "output_type": "text", "tweaks": {}, "stream": False}
@@ -40,7 +39,7 @@ async def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
+async def test_run_flow_with_caching_invalid_input_format(client: AsyncClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
     payload = {"input_value": {"key": "value"}, "input_type": "text", "output_type": "text", "tweaks": {}}
@@ -79,10 +78,9 @@ async def test_run_with_inputs_and_outputs(client, starter_project, created_api_
 
 @pytest.mark.noclient
 @pytest.mark.api_key_required
-def test_run_flow_from_json_object():
-    """Test loading a flow from a json file and applying tweaks"""
-    _, projects = zip(*load_starter_projects())
-    project = [project for project in projects if "Basic Prompting" in project["name"]][0]
-    results = run_flow_from_json(project, input_value="test", fallback_to_env_vars=True)
+async def test_run_flow_from_json_object():
+    """Test loading a flow from a json file and applying tweaks."""
+    project = next(project for _, project in await load_starter_projects() if "Basic Prompting" in project["name"])
+    results = await arun_flow_from_json(project, input_value="test", fallback_to_env_vars=True)
     assert results is not None
     assert all(isinstance(result, RunOutputs) for result in results)

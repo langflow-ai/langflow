@@ -1,12 +1,19 @@
-import { NodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
+import type { AllNodeType } from "@/types/flow";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 
-export const getNodesWithDefaultValue = (nodes: NodeType[]) => {
-  const filteredNodes: NodeType[] = [];
+export const getNodesWithDefaultValue = (
+  nodes: AllNodeType[],
+  oldTweaks: {
+    [key: string]: {
+      [key: string]: any;
+    };
+  },
+) => {
+  const filteredNodes: AllNodeType[] = [];
 
   nodes.forEach((node) => {
-    if (node?.data?.node?.template) {
+    if (node?.data?.node?.template && node?.type === "genericNode") {
       const templateKeys = Object.keys(node.data.node.template).filter(
         (templateField) =>
           templateField.charAt(0) !== "_" &&
@@ -20,6 +27,8 @@ export const getNodesWithDefaultValue = (nodes: NodeType[]) => {
       if (newNode?.data?.node?.template) {
         newNode.data.node.template = templateKeys.reduce((acc, key) => {
           acc[key] = cloneDeep(node?.data?.node?.template[key]);
+          acc[key].advanced =
+            node.id in oldTweaks && key in oldTweaks[node.id] ? false : true;
           return acc;
         }, {});
       }

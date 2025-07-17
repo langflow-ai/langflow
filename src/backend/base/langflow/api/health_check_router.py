@@ -1,12 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from loguru import logger
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import select
 
-from langflow.services.database.models.flow import Flow
-from langflow.services.deps import get_chat_service, get_session
+from langflow.api.utils import DbSession
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import get_chat_service
 
 health_check_router = APIRouter(tags=["Health Check"])
 
@@ -35,28 +36,28 @@ async def health():
 
 # /health_check evaluates key services
 # It's a reliable health check for a langflow instance
-@health_check_router.get("/health_check", response_model=HealthResponse)
+@health_check_router.get("/health_check")
 async def health_check(
-    session: Session = Depends(get_session),
-):
+    session: DbSession,
+) -> HealthResponse:
     response = HealthResponse()
     # use a fixed valid UUId that UUID collision is very unlikely
     user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"
     try:
         # Check database to query a bogus flow
         stmt = select(Flow).where(Flow.id == uuid.uuid4())
-        session.exec(stmt).first()
+        (await session.exec(stmt)).first()
         response.db = "ok"
-    except Exception as e:
-        logger.exception(e)
+    except Exception:  # noqa: BLE001
+        logger.exception("Error checking database")
 
     try:
         chat = get_chat_service()
         await chat.set_cache("health_check", str(user_id))
         await chat.get_cache("health_check")
         response.chat = "ok"
-    except Exception as e:
-        logger.exception(e)
+    except Exception:  # noqa: BLE001
+        logger.exception("Error checking chat service")
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())

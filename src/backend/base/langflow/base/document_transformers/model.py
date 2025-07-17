@@ -3,9 +3,9 @@ from typing import Any
 
 from langchain_core.documents import BaseDocumentTransformer
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.utils.util import build_loader_repr_from_data
 
 
@@ -36,12 +36,8 @@ class LCDocumentTransformerComponent(Component):
 
     @abstractmethod
     def get_data_input(self) -> Any:
-        """
-        Get the data input.
-        """
+        """Get the data input."""
 
     @abstractmethod
     def build_document_transformer(self) -> BaseDocumentTransformer:
-        """
-        Build the text splitter.
-        """
+        """Build the text splitter."""

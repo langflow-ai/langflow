@@ -1,19 +1,17 @@
-import pytest
-from pydantic import BaseModel
+from typing import TYPE_CHECKING
 
-from langflow.components.helpers.Memory import MemoryComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.graph import Graph
+import pytest
+from langflow.components.helpers.memory import MemoryComponent
+from langflow.components.input_output import ChatInput, ChatOutput
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from langflow.components.processing import PromptComponent
+from langflow.components.processing.converter import TypeConverterComponent
+from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.graph.graph.state_model import create_state_model_from_graph
 
-
-@pytest.fixture
-def client():
-    pass
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 def test_graph_state_model():
@@ -25,9 +23,13 @@ AI: """
     memory_component = MemoryComponent(_id="chat_memory")
     memory_component.set(session_id=session_id)
     chat_input = ChatInput(_id="chat_input")
+    type_converter = TypeConverterComponent(_id="type_converter")
+    type_converter.set(input_data=memory_component.retrieve_messages_dataframe)
     prompt_component = PromptComponent(_id="prompt")
     prompt_component.set(
-        template=template, user_message=chat_input.message_response, context=memory_component.retrieve_messages_as_text
+        template=template,
+        user_message=chat_input.message_response,
+        context=type_converter.convert_to_message,
     )
     openai_component = OpenAIModelComponent(_id="openai")
     openai_component.set(
@@ -40,13 +42,14 @@ AI: """
 
     graph = Graph(chat_input, chat_output)
 
-    GraphStateModel = create_state_model_from_graph(graph)
-    assert GraphStateModel.__name__ == "GraphStateModel"
-    assert list(GraphStateModel.model_computed_fields.keys()) == [
+    graph_state_model = create_state_model_from_graph(graph)
+    assert graph_state_model.__name__ == "GraphStateModel"
+    assert list(graph_state_model.model_computed_fields.keys()) == [
         "chat_input",
         "chat_output",
         "openai",
         "prompt",
+        "type_converter",
         "chat_memory",
     ]
 
@@ -62,12 +65,9 @@ def test_graph_functional_start_graph_state_update():
     # Now iterate through the graph
     # and check that the graph is running
     # correctly
-    GraphStateModel = create_state_model_from_graph(graph)
-    graph_state_model = GraphStateModel()
+    graph_state_model = create_state_model_from_graph(graph)()
     ids = ["chat_input", "chat_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -80,21 +80,18 @@ def test_graph_functional_start_graph_state_update():
 
 def test_graph_state_model_serialization():
     chat_input = ChatInput(_id="chat_input")
-    chat_input.set(input_value="Test Sender Name")
+    chat_input.set(input_value="Test Sender Name", should_store_message=False)
     chat_output = ChatOutput(input_value="test", _id="chat_output")
-    chat_output.set(sender_name=chat_input.message_response)
+    chat_output.set(sender_name=chat_input.message_response, should_store_message=False)
 
     graph = Graph(chat_input, chat_output)
     graph.prepare()
     # Now iterate through the graph
     # and check that the graph is running
     # correctly
-    GraphStateModel = create_state_model_from_graph(graph)
-    graph_state_model = GraphStateModel()
+    graph_state_model = create_state_model_from_graph(graph)()
     ids = ["chat_input", "chat_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -118,8 +115,7 @@ def test_graph_state_model_json_schema():
     graph = Graph(chat_input, chat_output)
     graph.prepare()
 
-    GraphStateModel = create_state_model_from_graph(graph)
-    graph_state_model: BaseModel = GraphStateModel()
+    graph_state_model: BaseModel = create_state_model_from_graph(graph)()
     json_schema = graph_state_model.model_json_schema(mode="serialization")
 
     # Test main schema structure

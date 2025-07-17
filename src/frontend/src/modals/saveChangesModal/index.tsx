@@ -1,7 +1,7 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import Loading from "@/components/ui/loading";
 import { truncate } from "lodash";
 import { useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import Loading from "@/components/ui/loading";
 import ConfirmationModal from "../confirmationModal";
 
 export function SaveChangesModal({
@@ -45,7 +45,7 @@ export function SaveChangesModal({
     >
       <ConfirmationModal.Content>
         {autoSave ? (
-          <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-gray-100 px-4 py-2 text-gray-800 dark:bg-gray-900/40 dark:text-gray-100">
+          <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-muted px-4 py-2 text-muted-foreground">
             <Loading className="h-5 w-5" />
             Saving your changes...
           </div>
@@ -58,8 +58,9 @@ export function SaveChangesModal({
             Unsaved changes will be permanently lost.{" "}
             <a
               target="_blank"
-              className="underline"
-              href="https://docs.langflow.org/configuration-auto-saving"
+              className="text-secondary underline"
+              href="https://docs.langflow.org/configuration-auto-save"
+              rel="noopener"
             >
               Enable auto-saving
             </a>{" "}

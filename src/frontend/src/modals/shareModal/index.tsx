@@ -1,10 +1,10 @@
-import { useGetTagsQuery } from "@/controllers/API/queries/store";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { cloneDeep } from "lodash";
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import EditFlowSettings from "../../components/editFlowSettingsComponent";
-import IconComponent from "../../components/genericIconComponent";
-import { TagsSelector } from "../../components/tagsSelectorComponent";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { useUtilityStore } from "@/stores/utilityStore";
+import IconComponent from "../../components/common/genericIconComponent";
+import { TagsSelector } from "../../components/common/tagsSelectorComponent";
+import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import {
@@ -15,7 +15,7 @@ import {
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { useStoreStore } from "../../stores/storeStore";
-import { FlowType } from "../../types/flow";
+import type { FlowType } from "../../types/flow";
 import {
   downloadNode,
   removeApiKeys,
@@ -59,7 +59,7 @@ export default function ShareModal({
     { id: string; name: string }[]
   >([]);
   const saveFlow = useSaveFlow();
-  const { data, isFetching } = useGetTagsQuery();
+  const tags = useUtilityStore((state) => state.tags);
 
   const [loadingNames, setLoadingNames] = useState(false);
 
@@ -114,7 +114,7 @@ export default function ShareModal({
     if (!update)
       saveFlowStore(
         flow!,
-        getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        getTagsIds(selectedTags, cloneDeep(tags) ?? []),
         sharePublic,
       ).then(successShare, (err) => {
         setErrorData({
@@ -125,7 +125,7 @@ export default function ShareModal({
     else
       updateFlowStore(
         flow!,
-        getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        getTagsIds(selectedTags, cloneDeep(tags) ?? []),
         sharePublic,
         unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
@@ -146,7 +146,7 @@ export default function ShareModal({
     downloadNode(component);
   };
 
-  let modalConfirmation = useMemo(() => {
+  const modalConfirmation = useMemo(() => {
     return (
       <>
         <ConfirmationModal
@@ -221,35 +221,42 @@ export default function ShareModal({
           />
         </BaseModal.Header>
         <BaseModal.Content>
-          <div className="w-full rounded-lg border border-border p-4">
-            <EditFlowSettings name={name} description={description} />
-          </div>
-          <div className="mt-3 flex h-8 w-full">
-            <TagsSelector
-              tags={data ?? []}
-              loadingTags={isFetching}
-              disabled={false}
-              selectedTags={selectedTags}
-              setSelectedTags={setSelectedTags}
-            />
-          </div>
-          <div className="mb-2 mt-5 flex items-center space-x-2">
-            <Checkbox
-              id="public"
-              checked={sharePublic}
-              onCheckedChange={(event: boolean) => {
-                setSharePublic(event);
-              }}
-              data-testid="public-checkbox"
-            />
-            <label htmlFor="public" className="export-modal-save-api text-sm">
-              Set {nameComponent} status to public
-            </label>
-          </div>
-          <span className="text-xs text-destructive">
-            <b>Attention:</b> API keys in specified fields are automatically
-            removed upon sharing.
-          </span>
+          {open && (
+            <>
+              <div className="w-full rounded-lg border border-border p-4">
+                <EditFlowSettings name={name} description={description} />
+              </div>
+              <div className="mt-3 flex h-8 w-full">
+                <TagsSelector
+                  tags={tags ?? []}
+                  loadingTags={false}
+                  disabled={false}
+                  selectedTags={selectedTags}
+                  setSelectedTags={setSelectedTags}
+                />
+              </div>
+              <div className="mb-2 mt-5 flex items-center space-x-2">
+                <Checkbox
+                  id="public"
+                  checked={sharePublic}
+                  onCheckedChange={(event: boolean) => {
+                    setSharePublic(event);
+                  }}
+                  data-testid="public-checkbox"
+                />
+                <label
+                  htmlFor="public"
+                  className="export-modal-save-api text-sm"
+                >
+                  Set {nameComponent} status to public
+                </label>
+              </div>
+              <span className="text-xs text-destructive">
+                <b>Attention:</b> API keys in specified fields are automatically
+                removed upon sharing.
+              </span>
+            </>
+          )}
         </BaseModal.Content>
 
         <BaseModal.Footer

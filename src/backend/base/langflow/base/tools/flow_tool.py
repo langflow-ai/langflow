@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.tools import BaseTool, ToolException
 from loguru import logger
+from typing_extensions import override
 
 from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
-from langflow.graph.graph.base import Graph  # cannot be a part of TYPE_CHECKING   # noqa: TCH001
-from langflow.graph.vertex.base import Vertex  # cannot be a part of TYPE_CHECKING  # noqa: TCH001
+from langflow.graph.graph.base import Graph  # cannot be a part of TYPE_CHECKING   # noqa: TC001
+from langflow.graph.vertex.base import Vertex  # cannot be a part of TYPE_CHECKING  # noqa: TC001
 from langflow.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
 from langflow.utils.async_helpers import run_until_complete
 
@@ -22,6 +23,7 @@ class FlowTool(BaseTool):
     graph: Graph | None = None
     flow_id: str | None = None
     user_id: str | None = None
+    session_id: str | None = None
     inputs: list[Vertex] = []
     get_final_results_only: bool = True
 
@@ -30,7 +32,10 @@ class FlowTool(BaseTool):
         schema = self.get_input_schema()
         return schema.schema()["properties"]
 
-    def get_input_schema(self, config: RunnableConfig | None = None) -> type[BaseModel]:
+    @override
+    def get_input_schema(  # type: ignore[misc]
+        self, config: RunnableConfig | None = None
+    ) -> type[BaseModel]:
         """The tool's input schema."""
         if self.args_schema is not None:
             return self.args_schema
@@ -55,9 +60,11 @@ class FlowTool(BaseTool):
 
         run_outputs = run_until_complete(
             run_flow(
+                graph=self.graph,
                 tweaks={key: {"input_value": value} for key, value in tweaks.items()},
                 flow_id=self.flow_id,
                 user_id=self.user_id,
+                session_id=self.session_id,
             )
         )
         if not run_outputs:
@@ -68,12 +75,11 @@ class FlowTool(BaseTool):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
+                    data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)
 
     def validate_inputs(self, args_names: list[dict[str, str]], args: Any, kwargs: Any):
         """Validate the inputs."""
-
         if len(args) > 0 and len(args) != len(args_names):
             msg = "Number of positional arguments does not match the number of inputs. Pass keyword arguments instead."
             raise ToolException(msg)
@@ -101,8 +107,8 @@ class FlowTool(BaseTool):
         """Use the tool asynchronously."""
         tweaks = self.build_tweaks_dict(args, kwargs)
         try:
-            run_id = self.graph.run_id if self.graph else None
-        except Exception:
+            run_id = self.graph.run_id if hasattr(self, "graph") and self.graph else None
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning("Failed to set run_id")
             run_id = None
         run_outputs = await run_flow(
@@ -110,6 +116,8 @@ class FlowTool(BaseTool):
             flow_id=self.flow_id,
             user_id=self.user_id,
             run_id=run_id,
+            session_id=self.session_id,
+            graph=self.graph,
         )
         if not run_outputs:
             return "No output"
@@ -119,5 +127,5 @@ class FlowTool(BaseTool):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
+                    data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)

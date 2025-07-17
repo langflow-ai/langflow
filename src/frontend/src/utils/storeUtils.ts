@@ -1,6 +1,6 @@
+import type { Node } from "@xyflow/react";
 import { cloneDeep, uniqueId } from "lodash";
-import { Node } from "reactflow";
-import { FlowType, NodeDataType } from "../types/flow";
+import type { FlowType, NodeDataType } from "../types/flow";
 import { isInputNode, isOutputNode } from "./reactflowUtils";
 
 export default function cloneFLowWithParent(
@@ -9,7 +9,7 @@ export default function cloneFLowWithParent(
   is_component: boolean,
   keepId = false,
 ) {
-  let childFLow = cloneDeep(flow);
+  const childFLow = cloneDeep(flow);
   childFLow.parent = parent;
   if (!keepId) {
     childFLow.id = "";
@@ -21,12 +21,12 @@ export default function cloneFLowWithParent(
 }
 
 export function getInputsAndOutputs(nodes: Node[]) {
-  let inputs: {
+  const inputs: {
     type: string;
     id: string;
     displayName: string;
   }[] = [];
-  let outputs: {
+  const outputs: {
     type: string;
     id: string;
     displayName: string;

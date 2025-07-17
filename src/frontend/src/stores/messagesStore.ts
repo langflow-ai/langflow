@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import { MessagesStoreType } from "../types/zustand/messages";
+import type { MessagesStoreType } from "../types/zustand/messages";
 
 export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
+  displayLoadingMessage: false,
   deleteSession: (id) => {
     set((state) => {
       const updatedMessages = state.messages.filter(
@@ -10,15 +11,19 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       return { messages: updatedMessages };
     });
   },
-  columns: [],
-  setColumns: (columns) => {
-    set(() => ({ columns: columns }));
-  },
   messages: [],
   setMessages: (messages) => {
     set(() => ({ messages: messages }));
   },
   addMessage: (message) => {
+    const existingMessage = get().messages.find((msg) => msg.id === message.id);
+    if (existingMessage) {
+      get().updateMessagePartial(message);
+      return;
+    }
+    if (message.sender === "Machine") {
+      set(() => ({ displayLoadingMessage: false }));
+    }
     set(() => ({ messages: [...get().messages, message] }));
   },
   removeMessage: (message) => {
@@ -32,6 +37,35 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
         msg.id === message.id ? message : msg,
       ),
     }));
+  },
+  updateMessagePartial: (message) => {
+    // search for the message and update it
+    // look for the message list backwards to find the message faster
+    set((state) => {
+      const updatedMessages = [...state.messages];
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        if (state.messages[i].id === message.id) {
+          updatedMessages[i] = { ...updatedMessages[i], ...message };
+          break;
+        }
+      }
+      return { messages: updatedMessages };
+    });
+  },
+  updateMessageText: (id, chunk) => {
+    set((state) => {
+      const updatedMessages = [...state.messages];
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        if (state.messages[i].id === id) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            text: updatedMessages[i].text + chunk,
+          };
+          break;
+        }
+      }
+      return { messages: updatedMessages };
+    });
   },
   clearMessages: () => {
     set(() => ({ messages: [] }));

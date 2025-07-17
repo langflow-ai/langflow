@@ -2,10 +2,9 @@ export const SvgRedis = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     xmlnsXlink="http://www.w3.org/1999/xlink"
-    width="35"
-    height="35"
     version="1"
     viewBox="0 0 750 750"
+    {...props}
   >
     <defs>
       <filter id="959fca5e72" width="100%" height="100%" x="0%" y="0%">

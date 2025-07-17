@@ -1,19 +1,15 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import pytest
-from pydantic.fields import FieldInfo
+from langflow.components.input_output import ChatInput
+from langflow.inputs.inputs import DropdownInput, FileInput, IntInput, NestedDictInput, StrInput
+from langflow.io.schema import create_input_schema
 
-from langflow.components.inputs.ChatInput import ChatInput
-
-
-@pytest.fixture
-def client():
-    pass
+if TYPE_CHECKING:
+    from pydantic.fields import FieldInfo
 
 
 def test_create_input_schema():
-    from langflow.io.schema import create_input_schema
-
     schema = create_input_schema(ChatInput.inputs)
     assert schema.__name__ == "InputSchema"
 
@@ -21,9 +17,6 @@ def test_create_input_schema():
 class TestCreateInputSchema:
     # Single input type is converted to list and processed correctly
     def test_single_input_type_conversion(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field")
         schema = create_input_schema([input_instance])
         assert schema.__name__ == "InputSchema"
@@ -31,9 +24,6 @@ class TestCreateInputSchema:
 
     # Multiple input types are processed and included in the schema
     def test_multiple_input_types(self):
-        from langflow.inputs.inputs import IntInput, StrInput
-        from langflow.io.schema import create_input_schema
-
         inputs = [StrInput(name="str_field"), IntInput(name="int_field")]
         schema = create_input_schema(inputs)
         assert schema.__name__ == "InputSchema"
@@ -42,9 +32,6 @@ class TestCreateInputSchema:
 
     # Fields are correctly created with appropriate types and attributes
     def test_fields_creation_with_correct_types_and_attributes(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field", info="Test Info", required=True)
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -53,18 +40,12 @@ class TestCreateInputSchema:
 
     # Schema model is created and returned successfully
     def test_schema_model_creation(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field")
         schema = create_input_schema([input_instance])
         assert schema.__name__ == "InputSchema"
 
     # Default values are correctly assigned to fields
     def test_default_values_assignment(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field", value="default_value")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -72,16 +53,11 @@ class TestCreateInputSchema:
 
     # Empty list of inputs is handled without errors
     def test_empty_list_of_inputs(self):
-        from langflow.io.schema import create_input_schema
-
         schema = create_input_schema([])
         assert schema.__name__ == "InputSchema"
 
     # Input with missing optional attributes (e.g., display_name, info) is processed correctly
     def test_missing_optional_attributes(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -90,9 +66,6 @@ class TestCreateInputSchema:
 
     # Input with is_list attribute set to True is processed correctly
     def test_is_list_attribute_processing(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field", is_list=True)
         schema = create_input_schema([input_instance])
         field_info: FieldInfo = schema.model_fields["test_field"]
@@ -100,9 +73,6 @@ class TestCreateInputSchema:
 
     # Input with options attribute is processed correctly
     def test_options_attribute_processing(self):
-        from langflow.inputs.inputs import DropdownInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = DropdownInput(name="test_field", options=["option1", "option2"])
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -110,9 +80,6 @@ class TestCreateInputSchema:
 
     # Non-standard field types are handled correctly
     def test_non_standard_field_types_handling(self):
-        from langflow.inputs.inputs import FileInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = FileInput(name="file_field")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["file_field"]
@@ -120,9 +87,6 @@ class TestCreateInputSchema:
 
     # Inputs with mixed required and optional fields are processed correctly
     def test_mixed_required_optional_fields_processing(self):
-        from langflow.inputs.inputs import IntInput, StrInput
-        from langflow.io.schema import create_input_schema
-
         inputs = [
             StrInput(name="required_field", required=True),
             IntInput(name="optional_field", required=False),
@@ -136,9 +100,6 @@ class TestCreateInputSchema:
 
     # Inputs with complex nested structures are handled correctly
     def test_complex_nested_structures_handling(self):
-        from langflow.inputs.inputs import NestedDictInput
-        from langflow.io.schema import create_input_schema
-
         nested_input = NestedDictInput(name="nested_field", value={"key": "value"})
         schema = create_input_schema([nested_input])
 
@@ -149,9 +110,6 @@ class TestCreateInputSchema:
 
     # Creating a schema from a single input type
     def test_single_input_type_replica(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field")
         schema = create_input_schema([input_instance])
         assert schema.__name__ == "InputSchema"
@@ -159,18 +117,12 @@ class TestCreateInputSchema:
 
     # Creating a schema from a list of input types
     def test_passing_input_type_directly(self):
-        from langflow.inputs.inputs import IntInput, StrInput
-        from langflow.io.schema import create_input_schema
-
         inputs = StrInput(name="str_field"), IntInput(name="int_field")
         with pytest.raises(TypeError):
             create_input_schema(inputs)
 
     # Handling input types with options correctly
     def test_options_handling(self):
-        from langflow.inputs.inputs import DropdownInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = DropdownInput(name="test_field", options=["option1", "option2"])
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -178,19 +130,13 @@ class TestCreateInputSchema:
 
     # Handling input types with is_list attribute correctly
     def test_is_list_handling(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field", is_list=True)
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
-        assert field_info.annotation == list[str]  # type: ignore
+        assert field_info.annotation == list[str]
 
     # Converting FieldTypes to corresponding Python types
     def test_field_types_conversion(self):
-        from langflow.inputs.inputs import IntInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = IntInput(name="int_field")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["int_field"]
@@ -198,9 +144,6 @@ class TestCreateInputSchema:
 
     # Setting default values for non-required fields
     def test_default_values_for_non_required_fields(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field", value="default_value")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -208,9 +151,6 @@ class TestCreateInputSchema:
 
     # Handling input types with missing attributes
     def test_missing_attributes_handling(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field")
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -221,9 +161,6 @@ class TestCreateInputSchema:
 
     # Handling input types with None as default value
     def test_none_default_value_handling(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test_field", value=None)
         schema = create_input_schema([input_instance])
         field_info = schema.model_fields["test_field"]
@@ -231,9 +168,6 @@ class TestCreateInputSchema:
 
     # Handling input types with special characters in names
     def test_special_characters_in_names_handling(self):
-        from langflow.inputs.inputs import StrInput
-        from langflow.io.schema import create_input_schema
-
         input_instance = StrInput(name="test@field#name")
         schema = create_input_schema([input_instance])
         assert "test@field#name" in schema.model_fields

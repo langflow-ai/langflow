@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-Idea from https://github.com/streamlit/streamlit/blob/4841cf91f1c820a392441092390c4c04907f9944/scripts/pypi_nightly_create_tag.py
-"""
+"""Idea from https://github.com/streamlit/streamlit/blob/4841cf91f1c820a392441092390c4c04907f9944/scripts/pypi_nightly_create_tag.py."""
 
 import sys
 
@@ -14,8 +12,10 @@ PYPI_LANGFLOW_NIGHTLY_URL = "https://pypi.org/pypi/langflow-nightly/json"
 PYPI_LANGFLOW_BASE_URL = "https://pypi.org/pypi/langflow-base/json"
 PYPI_LANGFLOW_BASE_NIGHTLY_URL = "https://pypi.org/pypi/langflow-base-nightly/json"
 
+ARGUMENT_NUMBER = 2
 
-def get_latest_published_version(build_type: str, is_nightly: bool) -> Version:
+
+def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Version:
     import requests
 
     url = ""
@@ -24,13 +24,15 @@ def get_latest_published_version(build_type: str, is_nightly: bool) -> Version:
     elif build_type == "main":
         url = PYPI_LANGFLOW_NIGHTLY_URL if is_nightly else PYPI_LANGFLOW_URL
     else:
-        raise ValueError(f"Invalid build type: {build_type}")
+        msg = f"Invalid build type: {build_type}"
+        raise ValueError(msg)
 
-    res = requests.get(url)
+    res = requests.get(url, timeout=10)
     try:
         version_str = res.json()["info"]["version"]
     except Exception as e:
-        raise RuntimeError("Got unexpected response from PyPI", e)
+        msg = "Got unexpected response from PyPI"
+        raise RuntimeError(msg) from e
     return Version(version_str)
 
 
@@ -74,8 +76,9 @@ def create_tag(build_type: str):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise Exception("Specify base or main")
+    if len(sys.argv) != ARGUMENT_NUMBER:
+        msg = "Specify base or main"
+        raise ValueError(msg)
 
     build_type = sys.argv[1]
     tag = create_tag(build_type)

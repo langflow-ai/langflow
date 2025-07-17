@@ -12,6 +12,7 @@
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+    font-family: Inter, system-ui, sans-serif;
   }
 }
 
@@ -80,7 +81,7 @@
     @apply w-full truncate pr-1 text-xs text-foreground;
   }
   .side-bar-components-div-form {
-    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring bg-white px-3 py-1 text-sm;
+    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring px-3 py-1 text-sm;
   }
   .side-bar-components-border {
     @apply cursor-grab rounded-l-md border-l-8;
@@ -96,9 +97,6 @@
   }
   .extra-side-bar-save-disable {
     @apply text-muted-foreground;
-  }
-  .extra-side-bar-save-disable:hover {
-    @apply hover:text-accent-foreground;
   }
   .side-bar-button-size {
     @apply h-5 w-5;
@@ -147,12 +145,7 @@
     bottom: -10px;
     left: -10px;
     right: -10px;
-    background: rgba(
-      255,
-      255,
-      255,
-      0.5
-    ); /* Reduced opacity for better readability */
+    background: rgba(255, 255, 255, 0.5); /* Reduced opacity for better readability */
     border-radius: 10px;
     pointer-events: none;
   }
@@ -176,7 +169,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    @apply form-input block w-full truncate rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -193,7 +186,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .input-edit-node {
@@ -222,7 +215,7 @@
     @apply w-6 fill-build-trigger stroke-build-trigger stroke-1;
   }
   .message-button-position {
-    @apply fixed bottom-4 right-4;
+    @apply fixed right-4 top-20;
   }
   .message-button-icon {
     @apply fill-medium-indigo stroke-medium-indigo stroke-1;
@@ -231,14 +224,14 @@
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
   .parent-disclosure-arrangement {
-    @apply flex w-full select-none items-center justify-between bg-background pl-5 pr-3 py-3;
+    @apply flex w-full select-none items-center justify-between bg-background py-3 pl-5 pr-3;
   }
   .components-disclosure-arrangement {
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-arrangement-child {
     /* different color than the non child */
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-primary-foreground px-3 py-2;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
@@ -321,19 +314,7 @@
     @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
   }
   .generic-node-div {
-    @apply relative flex flex-col justify-center bg-background transition-all;
-  }
-  .generic-node-div-title {
-    @apply flex w-full items-center gap-2 border-b bg-muted p-5;
-  }
-  .generic-node-title-arrangement {
-    @apply flex-max-width items-center truncate;
-  }
-  .generic-node-icon {
-    @apply h-8 w-8 rounded;
-  }
-  .generic-node-tooltip-div {
-    @apply ml-2 flex w-full truncate;
+    @apply flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
@@ -376,7 +357,7 @@
     @apply border-none ring ring-[#751C1C];
   }
   .building-status {
-    @apply border-none ring;
+    @apply border-blue-400;
   }
   .status-build-animation {
     @apply opacity-0;
@@ -548,7 +529,7 @@
     @apply flex justify-between;
   }
   .edit-flow-span {
-    @apply ml-10 animate-pulse text-status-red;
+    @apply ml-8 text-mmd font-normal text-status-red;
   }
 
   .float-component-pointer {
@@ -556,11 +537,13 @@
   }
 
   .header-menu-bar {
-    @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
+    @apply flex items-center rounded-md py-1 text-sm font-medium;
   }
+
   .header-menu-bar-display {
     @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
+
   .header-menu-flow-name {
     @apply flex-1 truncate;
   }
@@ -569,8 +552,9 @@
   }
 
   .header-arrangement {
-    @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
+    @apply flex-max-width h-[53px] items-center justify-between border-b border-border;
   }
+
   .header-start-display {
     @apply flex items-center gap-2;
   }
@@ -581,8 +565,9 @@
     @apply ml-auto mr-2 flex items-center gap-5;
   }
   .header-github-link-box {
-    @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;
+    @apply inline-flex h-8 items-center justify-center rounded-md border border-input px-2 pr-0;
   }
+
   .header-waitlist-link-box {
     @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
@@ -598,16 +583,12 @@
   .header-github-link:hover {
     @apply hover:bg-accent hover:text-accent-foreground;
   }
-  .header-github-display {
-    @apply -mr-px ml-1 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm;
-  }
   .header-notifications-box {
     @apply fixed left-0 top-0 h-screen w-screen;
   }
   .header-notifications {
     @apply absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive;
   }
-
   .input-component-div {
     @apply pointer-events-none relative cursor-not-allowed;
   }
@@ -767,7 +748,7 @@
     @apply flex-max-width mt-2 h-full;
   }
   .code-area-modal-editor-box {
-    @apply h-[300px] w-full rounded-lg border-[1px] border-ring custom-scroll;
+    @apply h-[300px] w-full rounded-lg border border-ring custom-scroll;
   }
 
   .edit-node-modal-variable {
@@ -780,7 +761,7 @@
     @apply flex-max-width h-fit max-h-[400px];
   }
   .edit-node-modal-box {
-    @apply w-full rounded-lg border-[1px] border-input bg-background;
+    @apply w-full rounded-lg border border-input bg-background;
   }
   .edit-node-modal-table {
     @apply flex h-fit flex-col gap-5;
@@ -913,13 +894,13 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center;
+    @apply flex h-full flex-col overflow-hidden;
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
-    @apply -mt-1 h-full w-full px-4 pb-4;
+    @apply h-full w-full;
   }
   .api-modal-accordion-display {
     @apply mt-2 flex h-full w-full;
@@ -939,7 +920,7 @@
     @apply bg-input text-center text-primary dark:bg-gray-700 dark:text-gray-300;
   }
   .form-modal-lock-false {
-    @apply bg-white text-primary;
+    @apply text-primary;
   }
   .code-highlight {
     @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
@@ -949,13 +930,13 @@
     @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
   .form-modal-lockchat {
-    @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-0 sm:text-sm;
   }
   .form-modal-send-icon-position {
     @apply absolute bottom-2 right-4;
   }
   .form-modal-send-button {
-    @apply rounded-md p-2 px-1 transition-all duration-300;
+    @apply rounded-md p-1.5 px-2.5;
   }
   .form-modal-lock-icon {
     @apply ml-1 mr-1 h-5 w-5 animate-pulse;
@@ -1089,7 +1070,7 @@
     @apply flex-max-width h-full flex-col transition-all;
   }
   .ace-editor {
-    @apply h-full w-full rounded-lg border-[1px] border-border custom-scroll;
+    @apply h-full w-full rounded-lg border border-border custom-scroll;
   }
   .ace-editor-save-btn {
     @apply flex-max-width h-fit justify-end;
@@ -1107,7 +1088,7 @@
   }
 
   .chat-message-highlight {
-    @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
+    @apply rounded-md bg-indigo-100 px-0 font-semibold dark:bg-indigo-900;
   }
 
   .field-invalid {
@@ -1178,5 +1159,323 @@
   }
   .color-option-container {
     @apply w-fit;
+  }
+
+  .x-gradient {
+    @apply stroke-[url(#x-gradient)] bg-blend-hard-light;
+  }
+
+  .button-run-bg {
+    @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm bg-transparent hover:bg-muted;
+  }
+
+  .show-node-icon {
+    @apply absolute inset-x-6;
+  }
+
+  .disabled-state {
+    @apply pointer-events-none bg-secondary text-input;
+  }
+
+  .background-fade-input {
+    @apply absolute right-[0.9px] h-6 w-7 bg-background;
+  }
+
+  .gradient-fade-input {
+    @apply absolute right-7 h-6 w-12 rounded-l-xl;
+  }
+
+  .background-fade-input-edit-node {
+    @apply absolute right-[0.9px] h-4 w-7 bg-background;
+  }
+
+  .gradient-fade-input-edit-node {
+    @apply absolute right-7 h-4 w-12 rounded-l-xl bg-background;
+  }
+
+  .fade-top-position {
+    @apply top-[-35px];
+  }
+  .icon-top-position {
+    @apply top-[-30px];
+  }
+  .edit-node-icon-top-position {
+    @apply top-[-23px];
+  }
+  .popover-input {
+    @apply h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:border-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .beta-badge {
+    @apply flex h-6 w-11 items-center justify-center rounded-lg bg-accent-pink p-2 text-center text-xs font-medium text-accent-pink-foreground;
+  }
+
+  .icon-size {
+    @apply h-[18px] w-[18px];
+  }
+
+  .hit-area-icon {
+    @apply h-7 w-7 rounded-md;
+  }
+
+  .hit-area-hover {
+    @apply transition-colors duration-200 hover:bg-muted hover:text-foreground;
+  }
+
+  .node-toolbar-buttons {
+    @apply flex w-max items-center gap-1 rounded-lg text-foreground;
+  }
+
+  .last-output-border {
+    @apply rounded-b-[12.5px];
+  }
+
+  .toolbar-wrapper {
+    @apply flex h-10 items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
+  }
+
+  .playground-btn-flow-toolbar {
+    @apply relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-normal transition-all duration-500 ease-in-out;
+  }
+
+  .input-slider-text {
+    @apply absolute right-3 w-14 -translate-y-3.5 cursor-text rounded-sm px-2 py-[1px] text-center hover:ring-[1px] hover:ring-slider-input-border;
+  }
+
+  .cursor-pointer,
+  .cursor-default,
+  .cursor-not-allowed,
+  label,
+  button {
+    @apply select-none;
+  }
+
+  .btn-add-input-list {
+    @apply flex h-6 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
+  }
+
+  .btn-playground-actions {
+    @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
+  }
+
+  .no-focus-visible {
+    @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
+    --tw-ring-offset-width: none !important;
+    --tw-ring-shadow: none !important;
+    --tw-ring-offset-shadow: none !important;
+    --tw-ring-color: none !important;
+  }
+
+  .helper-lines {
+    @apply pointer-events-none absolute left-0 top-0 z-10 h-full w-full;
+  }
+
+  .helper-line {
+    stroke: hsl(var(--primary));
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.3));
+  }
+
+  .helper-line.horizontal {
+    stroke: hsl(var(--primary));
+  }
+
+  .helper-line.vertical {
+    stroke: hsl(var(--primary));
+  }
+}
+
+/* Gradient background */
+.text-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  justify-content: center;
+  align-items: center;
+}
+
+.deploy-dropdown-item {
+  @apply cursor-pointer rounded-none px-3 py-2 text-[13px] font-normal;
+}
+
+:root {
+  --color-bg1: rgb(255, 255, 255);
+  --color1: 255, 50, 118;
+  --color2: 244, 128, 255;
+  --color3: 117, 40, 252;
+  --color-interactive: 140, 100, 255;
+  --circle-size: 50%;
+  --blending: hard-light;
+}
+
+.dark {
+  --color-bg1: rgb(0, 0, 0);
+  --color1: 255, 50, 118;
+  --color2: 244, 128, 255;
+  --color3: 117, 40, 252;
+  --color-interactive: 140, 100, 255;
+  --circle-size: 60%;
+  --blending: hard-light;
+}
+
+@keyframes moveInCircle {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.gradient-bg {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  overflow: hidden;
+  background:
+    url(data:image/png;base64,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),
+    var(--color-bg1);
+  top: 0;
+  left: 0;
+  background-blend-mode: overlay;
+
+  svg {
+    display: none;
+  }
+
+  .gradients-container {
+    filter: url(#lf-balls) blur(40px);
+    width: 100%;
+    height: 100%;
+  }
+
+  .g1 {
+    position: absolute;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color1), 0.8) 0,
+        rgba(var(--color1), 0) 50%
+      )
+      no-repeat;
+    mix-blend-mode: var(--blending);
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 10%;
+    right: 20%;
+    transform-origin: 50% 100%;
+    animation: moveInCircle 10s linear infinite;
+    opacity: 1;
+  }
+
+  .g2 {
+    position: absolute;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color2), 0.8) 0,
+        rgba(var(--color2), 0) 50%
+      )
+      no-repeat;
+    mix-blend-mode: var(--blending);
+
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 10%;
+    left: 10%;
+
+    transform-origin: 50% 100%;
+    animation: moveInCircle 12s linear infinite;
+
+    opacity: 1;
+  }
+
+  .g3 {
+    position: absolute;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color3), 0.8) 0,
+        rgba(var(--color3), 0) 50%
+      )
+      no-repeat;
+    mix-blend-mode: var(--blending);
+
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 10%;
+    right: 30%;
+
+    transform-origin: 50% 100%;
+    animation: moveInCircle 11s linear infinite;
+
+    opacity: 1;
+  }
+
+  .g4 {
+    position: absolute;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color1), 0.8) 0,
+        rgba(var(--color1), 0) 50%
+      )
+      no-repeat;
+    mix-blend-mode: var(--blending);
+
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 5%;
+    right: 50%;
+
+    transform-origin: 50% 20%;
+    animation: moveInCircle 12s reverse linear infinite;
+
+    opacity: 0.7;
+  }
+
+  .g5 {
+    position: absolute;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color2), 0.8) 0,
+        rgba(var(--color2), 0) 50%
+      )
+      no-repeat;
+    mix-blend-mode: var(--blending);
+
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 10%;
+    left: 30%;
+
+    transform-origin: 50% 20%;
+    animation: moveInCircle 11s reverse linear infinite;
+    opacity: 1;
+  }
+
+  .g6 {
+    position: absolute;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color3), 0.8) 0,
+        rgba(var(--color3), 0) 50%
+      )
+      no-repeat;
+    mix-blend-mode: var(--blending);
+
+    width: var(--circle-size);
+    height: var(--circle-size);
+    top: 10%;
+    right: 10%;
+
+    transform-origin: 50% 20%;
+    animation: moveInCircle 10s reverse linear infinite;
+
+    opacity: 1;
   }
 }

@@ -19,10 +19,10 @@ PREFIX = "langflow_cache"
 
 
 class CacheMiss:
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<CACHE_MISS>"
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
 
@@ -40,7 +40,7 @@ def create_cache_folder(func):
 
 
 @create_cache_folder
-def clear_old_cache_files(max_cache_size: int = 3):
+def clear_old_cache_files(max_cache_size: int = 3) -> None:
     cache_dir = Path(tempfile.gettempdir()) / PREFIX
     cache_files = list(cache_dir.glob("*.dill"))
 
@@ -78,12 +78,12 @@ def filter_json(json_data):
 
 @create_cache_folder
 def save_binary_file(content: str, file_name: str, accepted_types: list[str]) -> str:
-    """
-    Save a binary file to the specified folder.
+    """Save a binary file to the specified folder.
 
     Args:
         content: The content of the file as a bytes object.
         file_name: The name of the file, including its extension.
+        accepted_types: A list of accepted file types.
 
     Returns:
         The path to the saved file.
@@ -104,16 +104,14 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
     file_path = cache_path / file_name
 
     # Save the binary content to the file
-    with file_path.open("wb") as file:
-        file.write(decoded_bytes)
+    file_path.write_bytes(decoded_bytes)
 
     return str(file_path)
 
 
 @create_cache_folder
 def save_uploaded_file(file: UploadFile, folder_name):
-    """
-    Save an uploaded file to the specified folder with a hash of its content as the file name.
+    """Save an uploaded file to the specified folder with a hash of its content as the file name.
 
     Args:
         file: The uploaded file object.
@@ -157,7 +155,7 @@ def save_uploaded_file(file: UploadFile, folder_name):
     return file_path
 
 
-def update_build_status(cache_service, flow_id: str, status: "BuildStatus"):
+def update_build_status(cache_service, flow_id: str, status: "BuildStatus") -> None:
     cached_flow = cache_service[flow_id]
     if cached_flow is None:
         msg = f"Flow {flow_id} not found in cache"

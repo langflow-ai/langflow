@@ -1,10 +1,10 @@
-from langflow.utils.util_strings import truncate_long_strings
-from langflow.utils.constants import MAX_TEXT_LENGTH
 import pytest
+from langflow.serialization.constants import MAX_TEXT_LENGTH
+from langflow.utils.util_strings import truncate_long_strings
 
 
 @pytest.mark.parametrize(
-    "input_data, max_length, expected",
+    ("input_data", "max_length", "expected"),
     [
         # Test case 1: Simple string truncation
         ({"key": "a" * 100}, 10, {"key": "a" * 10 + "..."}),
@@ -74,7 +74,7 @@ def test_truncate_long_strings_in_place_modification():
 def test_truncate_long_strings_invalid_input():
     input_string = "not a dict or list"
     result = truncate_long_strings(input_string, 10)
-    assert result == input_string  # The function should return the input unchanged
+    assert result == "not a dict..."  # The function should truncate the string
 
 
 # Updated test for negative max_length

@@ -1,41 +1,80 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/universal
 {
   "name": "Langflow Dev Container",
-  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/python:3.10",
-
-  // Features to add to the dev container. More info: https://containers.dev/features.
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile"
+  },
   "features": {
     "ghcr.io/devcontainers/features/node": {},
-    "ghcr.io/devcontainers-contrib/features/poetry": {}
+    "ghcr.io/dhoeric/features/hadolint:1": {}
   },
-
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
-
-  // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "make install_frontend && make install_backend",
-
-  "containerEnv": {
-    "POETRY_VIRTUALENVS_IN_PROJECT": "true"
-  },
-
-  // Configure tool-specific properties.
+  "postCreateCommand": "sudo chown -R langflow .venv .mypy_cache src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend && make install_frontend && make install_backend",
   "customizations": {
     "vscode": {
       "extensions": [
+        "charliermarsh.ruff",
+        "njpwerner.autodocstring",
+        "oderwat.indent-rainbow",
+        "exiasr.hadolint",
         "actboy168.tasks",
         "GitHub.copilot",
         "ms-python.python",
-        "sourcery.sourcery",
         "eamodio.gitlens",
         "ms-vscode.makefile-tools",
         "GitHub.vscode-pull-request-github"
-      ]
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/bin/zsh"
+          }
+        }
+      }
     }
-  }
-
-  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  // "remoteUser": "root"
+  },
+  "remoteUser": "langflow",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [7860, 3000],
+  "containerEnv": {
+    "FRONTEND_START_FLAGS": "--host"
+  },
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolderBasename}-frontend-node_modules",
+      "target": "/workspace/src/frontend/node_modules",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-frontend-build",
+      "target": "/workspace/src/frontend/build",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-backend-frontend",
+      "target": "/workspace/src/backend/base/langflow/frontend",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-venv",
+      "target": "/workspace/.venv",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-mypy-cache",
+      "target": "/workspace/.mypy_cache",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-dist",
+      "target": "/workspace/dist",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-backend-dist",
+      "target": "/workspace/src/backend/base/dist",
+      "type": "volume"
+    }
+  ]
 }

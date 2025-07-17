@@ -9,7 +9,7 @@ from langflow.base.document_transformers.model import LCDocumentTransformerCompo
 class LCTextSplitterComponent(LCDocumentTransformerComponent):
     trace_type = "text_splitter"
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["text_splitter"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
@@ -25,6 +25,4 @@ class LCTextSplitterComponent(LCDocumentTransformerComponent):
 
     @abstractmethod
     def build_text_splitter(self) -> TextSplitter:
-        """
-        Build the text splitter.
-        """
+        """Build the text splitter."""

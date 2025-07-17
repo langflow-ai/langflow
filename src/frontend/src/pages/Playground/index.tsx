@@ -1,72 +1,106 @@
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
-import { useStoreStore } from "@/stores/storeStore";
-import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { getComponent } from "../../controllers/API";
-import IOModal from "../../modals/IOModal";
+import { v4 as uuid } from "uuid";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
+import { CustomIOModal } from "@/customization/components/custom-new-modal";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import cloneFLowWithParent from "../../utils/storeUtils";
-
+import { getInputsAndOutputs } from "../../utils/storeUtils";
 export default function PlaygroundPage() {
-  const flows = useFlowsManagerStore((state) => state.flows);
+  useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const setClientId = useUtilityStore((state) => state.setClientId);
 
   const { id } = useParams();
-  async function getFlowData() {
-    const res = await getComponent(id!);
-    const newFlow = cloneFLowWithParent(res, res.id, false, true);
-    return newFlow;
-  }
+  const { mutateAsync: getFlow } = useGetFlow();
 
   const navigate = useCustomNavigate();
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const getTypes = useTypesStore((state) => state.getTypes);
-  const types = useTypesStore((state) => state.types);
+  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
 
-  // Set flow tab id
+  async function getFlowData() {
+    try {
+      const flow = await getFlow({ id: id!, public: true });
+      return flow;
+    } catch (error: any) {
+      console.error(error);
+      navigate("/");
+    }
+  }
+
   useEffect(() => {
-    const awaitgetTypes = async () => {
-      if (flows && currentFlowId === "") {
-        const isAnExistingFlow = flows.find((flow) => flow.id === id);
-
-        if (!isAnExistingFlow) {
-          if (validApiKey) {
-            getFlowData().then((flow) => {
-              setCurrentFlow(flow);
-            });
-          } else {
-            navigate("/");
-          }
+    const initializeFlow = async () => {
+      setIsLoading(true);
+      if (currentFlowId === "") {
+        const flow = await getFlowData();
+        if (flow) {
+          setCurrentFlow(flow);
+        } else {
+          navigate("/");
         }
-        setCurrentFlow(isAnExistingFlow);
-      } else if (!flows) {
-        setIsLoading(true);
-        await refreshFlows(undefined);
-        if (!types || Object.keys(types).length === 0) await getTypes();
-        setIsLoading(false);
       }
     };
-    awaitgetTypes();
-  }, [id, flows, validApiKey]);
+
+    initializeFlow();
+    setIsLoading(false);
+  }, [id]);
 
   useEffect(() => {
     if (id) track("Playground Page Loaded", { flowId: id });
+    setPlaygroundPage(true);
+  }, []);
+
+  useEffect(() => {
+    document.title = currentSavedFlow?.name || "Langflow";
+    if (currentSavedFlow?.data) {
+      const { inputs, outputs } = getInputsAndOutputs(
+        currentSavedFlow?.data?.nodes || [],
+      );
+      if (
+        (inputs.length === 0 && outputs.length === 0) ||
+        currentSavedFlow?.access_type !== "PUBLIC"
+      ) {
+        // redirect to the home page
+        navigate("/");
+      }
+    }
+  }, [currentSavedFlow]);
+
+  useEffect(() => {
+    // Get client ID from cookie or create new one
+    const clientId = getCookie("client_id");
+    if (!clientId) {
+      const newClientId = uuid();
+      const cookieOptions: CookieOptions = {
+        secure: window.location.protocol === "https:",
+        sameSite: "Strict",
+      };
+      setCookie("client_id", newClientId, cookieOptions);
+      setClientId(newClientId);
+    } else {
+      setClientId(clientId);
+    }
   }, []);
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
       {currentSavedFlow && (
-        <IOModal open={true} setOpen={() => {}} isPlayground>
+        <CustomIOModal
+          open={true}
+          setOpen={() => {}}
+          isPlayground
+          playgroundPage
+        >
           <></>
-        </IOModal>
+        </CustomIOModal>
       )}
     </div>
   );

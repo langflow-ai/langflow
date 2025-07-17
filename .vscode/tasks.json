@@ -24,7 +24,7 @@
     {
       "label": "Test",
       "type": "shell",
-      "command": "make tests"
+      "command": "make unit_tests"
     },
     // make lint
     {
@@ -43,6 +43,12 @@
       "label": "Install",
       "type": "shell",
       "command": "make install_backend && make install_frontend"
+    },
+    // install backend
+    {
+      "label": "Install Backend",
+      "type": "shell",
+      "command": "make install_backend EXTRA_ARGS='--extra audio'"
     }
   ]
 }

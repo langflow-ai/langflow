@@ -26,6 +26,7 @@ _INVALID_CHARACTERS = {
 }
 
 _INVALID_NAMES = {
+    "code",
     "input_variables",
     "output_parser",
     "partial_variables",
@@ -87,7 +88,7 @@ def _check_variable(var, invalid_chars, wrong_variables, empty_variables):
     return wrong_variables, empty_variables
 
 
-def _check_for_errors(input_variables, fixed_variables, wrong_variables, empty_variables):
+def _check_for_errors(input_variables, fixed_variables, wrong_variables, empty_variables) -> None:
     if any(var for var in input_variables if var not in fixed_variables):
         error_message = (
             f"Error: Input variables contain invalid characters or formats. \n"
@@ -122,7 +123,7 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
-def validate_prompt(prompt_template: str, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
+def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
     if is_mustache:
         input_variables = extract_input_variables_from_prompt(prompt_template)
     else:
@@ -163,7 +164,7 @@ def get_old_custom_fields(custom_fields, name):
     return old_custom_fields
 
 
-def add_new_variables_to_template(input_variables, custom_fields, template, name):
+def add_new_variables_to_template(input_variables, custom_fields, template, name) -> None:
     for variable in input_variables:
         try:
             template_field = DefaultPromptField(name=variable, display_name=variable)
@@ -178,11 +179,10 @@ def add_new_variables_to_template(input_variables, custom_fields, template, name
                 custom_fields[name].append(variable)
 
         except Exception as exc:
-            logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def remove_old_variables_from_template(old_custom_fields, input_variables, custom_fields, template, name):
+def remove_old_variables_from_template(old_custom_fields, input_variables, custom_fields, template, name) -> None:
     for variable in old_custom_fields:
         if variable not in input_variables:
             try:
@@ -194,11 +194,10 @@ def remove_old_variables_from_template(old_custom_fields, input_variables, custo
                 template.pop(variable, None)
 
             except Exception as exc:
-                logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def update_input_variables_field(input_variables, template):
+def update_input_variables_field(input_variables, template) -> None:
     if "input_variables" in template:
         template["input_variables"]["value"] = input_variables
 

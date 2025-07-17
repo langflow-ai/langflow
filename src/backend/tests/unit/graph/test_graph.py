@@ -2,7 +2,6 @@ import copy
 import json
 
 import pytest
-
 from langflow.graph import Graph
 from langflow.graph.graph.utils import (
     find_last_node,
@@ -20,11 +19,6 @@ from langflow.initial_setup.setup import load_starter_projects
 
 # now we have three types of graph:
 # BASIC_EXAMPLE_PATH, COMPLEX_EXAMPLE_PATH, OPENAPI_EXAMPLE_PATH
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 @pytest.fixture
@@ -64,7 +58,7 @@ def sample_nodes():
 
 
 def get_node_by_type(graph, node_type: type[Vertex]) -> Vertex | None:
-    """Get a node by type"""
+    """Get a node by type."""
     return next((node for node in graph.vertices if isinstance(node, node_type)), None)
 
 
@@ -85,8 +79,8 @@ def test_invalid_node_types():
         ],
         "edges": [],
     }
-    with pytest.raises(Exception):
-        g = Graph()
+    g = Graph()
+    with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
 
 
@@ -136,10 +130,10 @@ def test_process_flow_one_group(one_grouped_chat_json_flow):
     node_data = group_node["data"]["node"]
     assert node_data.get("flow") is not None
     template_data = node_data["template"]
-    assert any("openai_api_key" in key for key in template_data.keys())
+    assert any("openai_api_key" in key for key in template_data)
     # Get the openai_api_key dict
     openai_api_key = next(
-        (template_data[key] for key in template_data.keys() if "openai_api_key" in key),
+        (template_data[key] for key in template_data if "openai_api_key" in key),
         None,
     )
     assert openai_api_key is not None
@@ -186,9 +180,9 @@ def test_process_flow_vector_store_grouped(vector_store_grouped_json_flow):
 
     for idx, expected_keyword in enumerate(expected_keywords):
         for key, value in expected_keyword.items():
-            assert (
-                value in edges[idx][key].split("-")[0]
-            ), f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
+            assert value in edges[idx][key].split("-")[0], (
+                f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
+            )
 
 
 def test_update_template(sample_template, sample_nodes):
@@ -224,8 +218,7 @@ def test_update_target_handle_proxy():
         }
     }
     g_nodes = [{"id": "some_id", "data": {"node": {"flow": None}}}]
-    group_node_id = "group_id"
-    updated_edge = update_target_handle(new_edge, g_nodes, group_node_id)
+    updated_edge = update_target_handle(new_edge, g_nodes)
     assert updated_edge["data"]["targetHandle"] == new_edge["data"]["targetHandle"]
 
 
@@ -263,9 +256,13 @@ def test_update_source_handle():
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 
 
-def test_serialize_graph():
-    starter_projects = load_starter_projects()
-    data = starter_projects[0][1]["data"]
+async def test_serialize_graph():
+    # Get the actual starter projects and directly await the result
+    starter_projects = await load_starter_projects()
+    project_data = starter_projects[0][1]
+    data = project_data["data"]
+
+    # Create and test the graph
     graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
     serialized = graph.dumps()

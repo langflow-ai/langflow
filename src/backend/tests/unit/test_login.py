@@ -1,9 +1,8 @@
 import pytest
-from sqlalchemy.exc import IntegrityError
-
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
 from langflow.services.deps import session_scope
+from sqlalchemy.exc import IntegrityError
 
 
 @pytest.fixture
@@ -19,9 +18,9 @@ def test_user():
 async def test_login_successful(client, test_user):
     # Adding the test user to the database
     try:
-        with session_scope() as session:
+        async with session_scope() as session:
             session.add(test_user)
-            session.commit()
+            await session.commit()
     except IntegrityError:
         pass
 
@@ -36,10 +35,10 @@ async def test_login_unsuccessful_wrong_username(client):
     assert response.json()["detail"] == "Incorrect username or password"
 
 
-async def test_login_unsuccessful_wrong_password(client, test_user, session):
+async def test_login_unsuccessful_wrong_password(client, test_user, async_session):
     # Adding the test user to the database
-    session.add(test_user)
-    session.commit()
+    async_session.add(test_user)
+    await async_session.commit()
 
     response = await client.post("api/v1/login", data={"username": "testuser", "password": "wrongpassword"})
     assert response.status_code == 401

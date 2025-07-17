@@ -1,4 +1,4 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Embeddings
 from langflow.io import Output
 
@@ -7,10 +7,10 @@ class LCEmbeddingsModel(Component):
     trace_type = "embedding"
 
     outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
+        Output(display_name="Embedding Model", name="embeddings", method="build_embeddings"),
     ]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["build_embeddings"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:

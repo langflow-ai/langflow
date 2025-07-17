@@ -1,73 +1,57 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("User must be able to stop building from inside Playground", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+test(
+  "User must be able to stop building from inside Playground",
+  { tag: ["@release", "@api"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.getByTestId("blank-flow").click();
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 3000,
+    });
 
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 1000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom");
+    await page.getByTestId("sidebar-custom-component-button").click();
+    await page.getByTitle("fit view").click();
 
-  await page.waitForTimeout(1000);
+    await page.getByTestId("sidebar-search-input").click();
+    await page.waitForTimeout(500);
+    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.waitForTimeout(500);
 
-  await page
-    .locator('//*[@id="helpersCustom Component"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
+      timeout: 3000,
+    });
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+    await page
+      .getByTestId("input_outputChat Output")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 400, y: 400 },
+      });
 
-  await page.waitForTimeout(1000);
+    await adjustScreenView(page);
 
-  await page
-    .getByTestId("outputsChat Output")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.getByTestId("div-generic-node").nth(1).click();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+    await page.getByTestId("more-options-modal").click();
 
-  await page.getByTestId("div-generic-node").nth(0).click();
+    await page.getByTestId("expand-button-modal").click();
 
-  await page.getByTestId("code-button-modal").nth(0).click();
+    await page.getByTestId("div-generic-node").nth(0).click();
 
-  const waitTimeoutCode = `
+    await page.getByTestId("code-button-modal").nth(0).click();
+
+    const waitTimeoutCode = `
 # from langflow.field_typing import Data
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
@@ -78,7 +62,7 @@ from langflow.schema.message import Message
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
 
@@ -96,64 +80,53 @@ class CustomComponent(Component):
         sleep(60)
         return data`;
 
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-  let control = "Control";
+    await page.locator(".ace_content").click();
+    await page.keyboard.press(`ControlOrMeta+A`);
+    await page.locator("textarea").fill(waitTimeoutCode);
 
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
+    await page.getByText("Check & Save").last().click();
 
-  await page.locator(".ace_content").click();
-  await page.keyboard.press(`${control}+A`);
-  await page.locator("textarea").fill(waitTimeoutCode);
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
-  await page.getByText("Check & Save").last().click();
+    //connection 1
+    const elementCustomComponentOutput = await page
+      .getByTestId("handle-customcomponent-shownode-output-right")
+      .first();
 
-  await page.waitForTimeout(1000);
+    await elementCustomComponentOutput.hover();
+    await page.mouse.down();
+    const elementChatOutput = await page
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
+      .first();
+    await elementChatOutput.hover();
+    await page.mouse.up();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+    await page.waitForSelector('[data-testid="button_run_chat output"]', {
+      timeout: 3000,
+    });
 
-  //connection 1
-  const elementCustomComponentOutput = await page
-    .getByTestId("handle-customcomponent-shownode-output-right")
-    .first();
+    await page.getByTestId("button_run_chat output").click();
 
-  await elementCustomComponentOutput.hover();
-  await page.mouse.down();
-  const elementChatOutput = await page
-    .getByTestId("handle-chatoutput-shownode-text-left")
-    .first();
-  await elementChatOutput.hover();
-  await page.mouse.up();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
-  await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="button-stop"]', {
+      timeout: 30000,
+    });
 
-  await page.getByTestId("button_run_chat output").click();
+    const elements = await page.$$('[data-testid="button-stop"]');
 
-  await page.waitForTimeout(1000);
+    if (elements.length > 0) {
+      const lastElement = elements[elements.length - 1];
+      await lastElement.waitForElementState("visible");
+    }
 
-  await page.getByText("Playground", { exact: true }).last().click();
+    expect(await page.getByTestId("button-stop").last()).toBeVisible();
 
-  await page.waitForTimeout(1000);
+    await page.getByTestId("button-stop").last().click();
 
-  await page.waitForSelector('[data-testid="icon-Square"]', {
-    timeout: 30000,
-  });
-
-  const elements = await page.$$('[data-testid="icon-Square"]');
-
-  if (elements.length > 0) {
-    const lastElement = elements[elements.length - 1];
-    await lastElement.waitForElementState("visible");
-  }
-
-  expect(await page.getByTestId("icon-Square").last()).toBeVisible();
-
-  await page.getByTestId("icon-Square").last().click();
-
-  await page.waitForSelector("text=build stopped", { timeout: 30000 });
-  expect(await page.getByText("build stopped").isVisible()).toBeTruthy();
-});
+    await page.waitForSelector("text=build stopped", { timeout: 30000 });
+    expect(await page.getByText("build stopped").isVisible()).toBeTruthy();
+  },
+);

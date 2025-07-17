@@ -1,4 +1,4 @@
-import { useMutationFunctionType } from "@/types/api";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -26,8 +26,13 @@ export const usePostUploadFlowToFolder: useMutationFunctionType<
 
   const mutation = mutate(["usePostUploadFlowToFolder"], uploadFlowToFolderFn, {
     ...options,
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+    onSettled: (res) => {
+      queryClient.refetchQueries({
+        queryKey: ["useGetFolders"],
+      });
+      queryClient.refetchQueries({
+        queryKey: ["useGetFolder"],
+      });
     },
   });
 

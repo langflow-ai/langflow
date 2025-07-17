@@ -1,177 +1,129 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("user should be able to download a flow or a component", async ({
-  page,
-}) => {
-  await page.goto("/");
+test(
+  "user should be able to download a flow or a component",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await adjustScreenView(page);
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByTestId("more-options-modal").click();
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    await page.getByTestId("icon-SaveAll").first().click();
+
+    if (await page.getByTestId("replace-button").isVisible()) {
+      await page.getByTestId("replace-button").click();
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 100000,
+    });
 
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    const exitButton = await page.getByText("Exit", { exact: true }).count();
 
-  await page.waitForSelector('[title="fit view"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-
-  await page.getByText("Chat Input", { exact: true }).click();
-  await page.getByTestId("more-options-modal").click();
-
-  await page.getByTestId("icon-SaveAll").first().click();
-  await page.waitForTimeout(1000);
-
-  if (await page.getByTestId("replace-button").isVisible()) {
-    await page.getByTestId("replace-button").click();
-  }
-
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-    timeout: 100000,
-  });
-
-  const exitButton = await page.getByText("Exit", { exact: true }).count();
-
-  if (exitButton > 0) {
-    await page.getByText("Exit", { exact: true }).click();
-  }
-
-  await page.getByTestId("icon-ChevronLeft").last().click();
-  await page.getByRole("checkbox").nth(1).click();
-  await page.getByTestId("icon-FileDown").last().click();
-  await page.waitForTimeout(1000);
-  await page.getByText("Items exported successfully").isVisible();
-
-  await page.getByText("Flows", { exact: true }).click();
-  await page.getByRole("checkbox").nth(1).click();
-  await page.getByTestId("icon-FileDown").last().click();
-  await page.waitForTimeout(1000);
-  await page.getByText("Items exported successfully").isVisible();
-
-  await page.getByText("Components", { exact: true }).click();
-  await page.getByRole("checkbox").nth(1).click();
-  await page.getByTestId("icon-FileDown").last().click();
-  await page.waitForTimeout(1000);
-  await page.getByText("Components exported successfully").isVisible();
-});
-
-test("user should be able to upload a flow or a component", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    if (exitButton > 0) {
+      await page.getByText("Exit", { exact: true }).click();
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  await page.getByTestId("upload-folder-button").last().click();
-});
+    await page.getByTestId("icon-ChevronLeft").last().click();
+    await page.getByTestId("home-dropdown-menu").nth(0).click();
+    await page.getByTestId("btn-download-json").last().click();
+    await page.getByText("Export").first().isVisible();
+    await page.getByTestId("modal-export-button").isVisible();
+    await page.getByTestId("modal-export-button").click();
+    await expect(page.getByText(/.*exported successfully/)).toBeVisible({
+      timeout: 10000,
+    });
 
-test("user should be able to duplicate a flow or a component", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+    await page.getByText("Flows", { exact: true }).click();
+    await page.getByTestId("home-dropdown-menu").nth(0).click();
+    await page.getByTestId("btn-download-json").last().click();
+    await page.getByText("Export").first().isVisible();
+    await page.getByTestId("modal-export-button").isVisible();
+    await page.getByTestId("modal-export-button").click();
+    await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
+      timeout: 10000,
+    });
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    if (await page.getByText("Components").first().isVisible()) {
+      await page.getByText("Components", { exact: true }).click();
+      await page.getByTestId("home-dropdown-menu").nth(0).click();
+      await page.getByTestId("btn-download-json").last().click();
+      await expect(
+        page.getByText(/.*exported successfully/).last(),
+      ).toBeVisible({
+        timeout: 10000,
+      });
     }
-  } catch (error) {
-    modalCount = 0;
-  }
+  },
+);
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+test(
+  "user should be able to upload a flow or a component",
+  { tag: ["@release", "@api", "@workspace"] },
+  async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
+    const countEmptyButton = await page
+      .getByTestId("new_project_btn_empty_page")
+      .count();
+    if (countEmptyButton > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+    await page.getByTestId("upload-project-button").last().click();
+  },
+);
 
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForSelector('[title="fit view"]', {
-    timeout: 100000,
-  });
+test(
+  "user should be able to duplicate a flow or a component",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await adjustScreenView(page);
 
-  await page.getByText("Chat Input", { exact: true }).click();
-  await page.getByTestId("more-options-modal").click();
+    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByTestId("more-options-modal").click();
 
-  await page.getByTestId("icon-SaveAll").first().click();
-  await page.waitForTimeout(1000);
+    await page.getByTestId("icon-SaveAll").first().click();
 
-  if (await page.getByTestId("replace-button").isVisible()) {
-    await page.getByTestId("replace-button").click();
-  }
+    if (await page.getByTestId("replace-button").isVisible()) {
+      await page.getByTestId("replace-button").click();
+    }
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-    timeout: 100000,
-  });
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 100000,
+    });
 
-  const exitButton = await page.getByText("Exit", { exact: true }).count();
+    const exitButton = await page.getByText("Exit", { exact: true }).count();
 
-  if (exitButton > 0) {
-    await page.getByText("Exit", { exact: true }).click();
-  }
+    if (exitButton > 0) {
+      await page.getByText("Exit", { exact: true }).click();
+    }
 
-  const replaceButton = await page.getByTestId("replace-button").isVisible();
+    const replaceButton = await page.getByTestId("replace-button").isVisible();
 
-  if (replaceButton) {
-    await page.getByTestId("replace-button").click();
-  }
+    if (replaceButton) {
+      await page.getByTestId("replace-button").click();
+    }
 
-  await page.getByTestId("icon-ChevronLeft").last().click();
-  await page.getByRole("checkbox").nth(1).click();
+    await page.getByTestId("icon-ChevronLeft").last().click();
+    await page.getByTestId("home-dropdown-menu").nth(1).click();
+    await page.getByTestId("btn-duplicate-flow").last().click();
 
-  await page.getByTestId("icon-Copy").last().click();
-  await page.waitForTimeout(1000);
-  await page.getByText("Items duplicated successfully").isVisible();
-});
+    await expect(page.getByText("Flow duplicated successfully")).toBeVisible({
+      timeout: 10000,
+    });
+  },
+);

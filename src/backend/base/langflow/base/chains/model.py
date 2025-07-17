@@ -1,5 +1,5 @@
-from langflow.custom import Component
-from langflow.template import Output
+from langflow.custom.custom_component.component import Component
+from langflow.template.field.base import Output
 
 
 class LCChainComponent(Component):
@@ -7,7 +7,7 @@ class LCChainComponent(Component):
 
     outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["invoke_chain"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
