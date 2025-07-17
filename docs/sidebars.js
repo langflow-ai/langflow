@@ -90,12 +90,7 @@ module.exports = {
         {
           type: "doc",
           id: "Concepts/concepts-playground",
-          label: "Test flows in the Playground"
-        },
-        {
-          type: "doc",
-          id: "Concepts/concepts-voice-mode",
-          label: "Use voice mode"
+          label: "Test flows"
         },
         {
           type: "doc",
@@ -173,6 +168,11 @@ module.exports = {
             "Integrations/integrations-opik",
             "Contributing/contributing-telemetry",
           ],
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-voice-mode",
+          label: "Use voice mode"
         },
         {
           type: "doc",
