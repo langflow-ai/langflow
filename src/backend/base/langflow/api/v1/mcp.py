@@ -10,7 +10,7 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
 
 from langflow.api.utils import CurrentActiveMCPUser
-from langflow.api.v1.mcp_support import (
+from langflow.api.v1.mcp_utils import (
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
@@ -20,14 +20,10 @@ from langflow.api.v1.mcp_support import (
 )
 from langflow.services.deps import get_settings_service
 
-# Common MCP utilities now imported from mcp_projects.py
-
-
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 server = Server("langflow-mcp-server")
 
-# Context variable now imported from mcp_projects.py
 
 # Define constants
 MAX_RETRIES = 2

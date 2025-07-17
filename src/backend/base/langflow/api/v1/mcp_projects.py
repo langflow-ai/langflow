@@ -21,7 +21,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveMCPUser
-from langflow.api.v1.mcp_support import (
+from langflow.api.v1.mcp_utils import (
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
@@ -35,16 +35,12 @@ from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, session_scope
 
-# Common MCP utilities now imported from mcp_support.py
-
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 # Create project-specific context variable
 current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx", default=None)
-# current_user_ctx is now imported from mcp_support.py
 
 # Create a mapping of project-specific SSE transports
 project_sse_transports = {}
