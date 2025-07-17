@@ -74,7 +74,9 @@ def detect_embedding_provider(kb_path: Path) -> str:
                     if any(pattern in config_str for pattern in patterns):
                         return provider
 
-        except Exception:
+        except (OSError, json.JSONDecodeError) as _:
+            import logging
+            logging.exception("Error reading config file '%s'", config_file)
             continue
 
     # Fallback to directory structure
@@ -86,7 +88,7 @@ def detect_embedding_provider(kb_path: Path) -> str:
     return "Unknown"
 
 
-def get_text_columns(df: pd.DataFrame, schema_data: list = None) -> list[str]:
+def get_text_columns(df: pd.DataFrame, schema_data: list | None = None) -> list[str]:
     """Get the text columns to analyze for word/character counts."""
     # First try schema-defined text columns
     if schema_data:
@@ -126,7 +128,7 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
 
 def get_kb_metadata(kb_path: Path) -> dict:
     """Extract metadata from a knowledge base directory."""
-    metadata = {
+    metadata: dict[str, float | int | str] = {
         "chunks": 0,
         "words": 0,
         "characters": 0,
@@ -147,32 +149,35 @@ def get_kb_metadata(kb_path: Path) -> dict:
                     schema_data = json.load(f)
                     if not isinstance(schema_data, list):
                         schema_data = None
-            except Exception:
-                pass
+            except (ValueError, TypeError, OSError) as _:
+                import logging
+                logging.exception("Error reading schema file '%s'", schema_file)
 
         # Process source.parquet for text metrics
         source_file = kb_path / "source.parquet"
         if source_file.exists():
             try:
-                df = pd.read_parquet(source_file)
-                metadata["chunks"] = len(df)
+                source_chunks = pd.DataFrame(pd.read_parquet(source_file))
+                metadata["chunks"] = len(source_chunks)
 
                 # Get text columns and calculate metrics
-                text_columns = get_text_columns(df, schema_data)
+                text_columns = get_text_columns(source_chunks, schema_data)
                 if text_columns:
-                    words, characters = calculate_text_metrics(df, text_columns)
+                    words, characters = calculate_text_metrics(source_chunks, text_columns)
                     metadata["words"] = words
                     metadata["characters"] = characters
 
                     # Calculate average chunk size
-                    if metadata["chunks"] > 0:
-                        metadata["avg_chunk_size"] = round(characters / metadata["chunks"], 1)
+                    if int(metadata["chunks"]) > 0:
+                        metadata["avg_chunk_size"] = round(int(characters) / int(metadata["chunks"]), 1)
 
-            except Exception:
-                pass
+            except (OSError, ValueError, TypeError) as _:
+                import logging
+                logging.exception("Error processing source.parquet file '%s'", source_file)
 
-    except Exception:
-        pass
+    except Exception as _:
+        import logging
+        logging.exception("Exception occurred while extracting metadata from '%s'", kb_path)
 
     return metadata
 
@@ -213,17 +218,19 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
 
                 knowledge_bases.append(kb_info)
 
-            except Exception:
-                # Skip directories that can't be read
+            except OSError as _:
+                # Log the exception and skip directories that can't be read
+                import logging
+                logging.exception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
 
         # Sort by name alphabetically
         knowledge_bases.sort(key=lambda x: x.name)
 
-        return knowledge_bases
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing knowledge bases: {e!s}") from e
+    else:
+        return knowledge_bases
 
 
 @router.get("/{kb_name}", status_code=HTTPStatus.OK)
