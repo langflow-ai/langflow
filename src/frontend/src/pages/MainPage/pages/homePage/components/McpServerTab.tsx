@@ -18,10 +18,11 @@ import { ENABLE_MCP_AUTH } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
+import AuthModal from "@/modals/authModal";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import type { MCPSettingsType } from "@/types/mcp";
+import type { MCPSettingsType, AuthSettingsType } from "@/types/mcp";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
 
@@ -84,7 +85,7 @@ const MemoizedCodeTag = memo(
         <span>{children}</span>
       </div>
     </div>
-  ),
+  )
 );
 MemoizedCodeTag.displayName = "MemoizedCodeTag";
 
@@ -132,6 +133,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -149,7 +151,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
-      ?.name,
+      ?.name
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
@@ -158,7 +160,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
-    isLocalConnection ? "Auto install" : "JSON",
+    isLocalConnection ? "Auto install" : "JSON"
   );
 
   const handleOnNewValue = (value: any) => {
@@ -178,6 +180,24 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     const requestData = {
       settings: flowsMCPData,
       auth_settings: finalAuthSettings,
+    };
+
+    patchFlowsMCP(requestData);
+  };
+
+  const handleAuthSave = (authSettings: AuthSettingsType) => {
+    // Update the current flows with the new auth settings
+    const flowsMCPData: MCPSettingsType[] =
+      flowsMCP?.map((flow) => ({
+        id: flow.id,
+        action_name: flow.action_name,
+        action_description: flow.action_description,
+        mcp_enabled: flow.mcp_enabled,
+      })) || [];
+
+    const requestData = {
+      settings: flowsMCPData,
+      auth_settings: authSettings,
     };
 
     patchFlowsMCP(requestData);
@@ -206,8 +226,18 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
-    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, MAX_MCP_SERVER_NAME_LENGTH - 4)}": {
-      "command": "${selectedPlatform === "windows" ? "cmd" : selectedPlatform === "wsl" ? "wsl" : "uvx"}",
+    "lf-${parseString(folderName ?? "project", [
+      "snake_case",
+      "no_blank",
+      "lowercase",
+    ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH - 4)}": {
+      "command": "${
+        selectedPlatform === "windows"
+          ? "cmd"
+          : selectedPlatform === "wsl"
+          ? "wsl"
+          : "uvx"
+      }",
       "args": [
         ${
           selectedPlatform === `windows`
@@ -215,17 +245,17 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
+            : ""
         }"mcp-proxy",${
-          isAutoLogin
-            ? ""
-            : `
+    isAutoLogin
+      ? ""
+      : `
         "--headers",
         "x-api-key",
         "${apiKey || "YOUR_API_KEY"}",`
-        }
+  }
         "${apiUrl}"
       ]
     }
@@ -264,23 +294,56 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
 
+  // Check if authentication is configured (not "none")
+  const hasAuthentication =
+    currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
+
   return (
     <div>
-      <div className="pb-2 text-sm font-medium" data-testid="mcp-server-title">
-        MCP Server
-      </div>
-      <div className="pb-4 text-mmd text-muted-foreground">
-        Access your Project's flows as Tools within a MCP Server. Learn more in
-        our
-        <a
-          className="text-accent-pink-foreground"
-          href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {" "}
-          Projects as MCP Servers guide.
-        </a>
+      <div className="flex justify-between gap-4 items-start">
+        <div>
+          <div
+            className="pb-2 text-sm font-medium"
+            data-testid="mcp-server-title"
+          >
+            MCP Server
+          </div>
+          <div className="pb-4 text-mmd text-muted-foreground">
+            Access your Project's flows as Tools within a MCP Server. Learn more
+            in our
+            <a
+              className="text-accent-pink-foreground"
+              href={MCP_SERVER_DEPLOY_TUTORIAL_LINK}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {" "}
+              Projects as MCP Servers guide.
+            </a>
+          </div>
+        </div>
+        <div className="flex gap-4 items-center">
+          {!hasAuthentication && (
+            <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
+              <ForwardedIconComponent
+                name="AlertTriangle"
+                className="h-4 w-4 shrink-0"
+              />
+              Public endpoint - no auth. Use only in dev or trusted envs.
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAuthModalOpen(true)}
+          >
+            <ForwardedIconComponent
+              name="Fingerprint"
+              className="h-4 w-4 shrink-0"
+            />
+            {hasAuthentication ? "Edit Auth" : "Add Auth"}
+          </Button>
+        </div>
       </div>
       <div className="flex flex-col justify-between gap-8 xl:flex-row">
         <div className="w-full xl:w-2/5">
@@ -310,7 +373,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               editNode={false}
               isAction
               disabled={false}
-              authSettings={currentAuthSettings}
             />
           </div>
         </div>
@@ -430,9 +492,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
                           });
                           setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
+                            loadingMCP.filter((name) => name !== installer.name)
                           );
                         },
                         onError: (e) => {
@@ -441,12 +501,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             list: [e.message],
                           });
                           setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
+                            loadingMCP.filter((name) => name !== installer.name)
                           );
                         },
-                      },
+                      }
                     );
                   }}
                 >
@@ -464,12 +522,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       installedMCP?.includes(installer.name)
                         ? "Check"
                         : loadingMCP.includes(installer.name)
-                          ? "Loader2"
-                          : "Plus"
+                        ? "Loader2"
+                        : "Plus"
                     }
                     className={cn(
                       "h-4 w-4",
-                      loadingMCP.includes(installer.name) && "animate-spin",
+                      loadingMCP.includes(installer.name) && "animate-spin"
                     )}
                   />
                 </Button>
@@ -478,6 +536,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           )}
         </div>
       </div>
+      <AuthModal
+        open={authModalOpen}
+        setOpen={setAuthModalOpen}
+        authSettings={currentAuthSettings}
+        onSave={handleAuthSave}
+      />
     </div>
   );
 };
