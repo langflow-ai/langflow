@@ -344,10 +344,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     <div>
       <div className="flex justify-between gap-4 items-start">
         <div>
-          <div
-            className="pb-2 text-sm font-medium"
-            data-testid="mcp-server-title"
-          >
+          <div className="pb-2 font-medium" data-testid="mcp-server-title">
             MCP Server
           </div>
           <div className="pb-4 text-mmd text-muted-foreground">
@@ -366,23 +363,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         </div>
       </div>
       <div className="flex flex-col justify-between gap-8 xl:flex-row">
-        <div className="w-full xl:w-2/5">
-          <div className="flex flex-row justify-between">
-            <ShadTooltip
-              content="Flows in this project can be exposed as callable MCP tools."
-              side="right"
-            >
-              <div className="flex items-center text-mmd font-medium hover:cursor-help">
-                Flows/Tools
-                <ForwardedIconComponent
-                  name="info"
-                  className="ml-1.5 h-4 w-4 text-muted-foreground"
-                  aria-hidden="true"
-                />
-              </div>
-            </ShadTooltip>
-          </div>
-          <div className="flex flex-row flex-wrap gap-2 pt-2">
+        <div className="w-full xl:w-3/5">
+          <div className="flex flex-row flex-wrap gap-2">
             <ToolsComponent
               value={flowsMCPData}
               title="MCP Server Tools"
@@ -434,7 +416,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               </Button>
             </div>
           )}
-          <div className="flex flex-col">
+          <div className={cn("flex flex-col", !ENABLE_MCP_AUTH && "mt-2")}>
             <div className="flex flex-row justify-start border-b border-border">
               {[{ name: "Auto install" }, { name: "JSON" }].map((item) => (
                 <Button
