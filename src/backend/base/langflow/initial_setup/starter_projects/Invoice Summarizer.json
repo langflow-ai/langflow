@@ -305,7 +305,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "ac7bebb9ed88",
+              "code_hash": "6f74e04e39d5",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -877,7 +877,7 @@
             "key": "ChatInput",
             "legacy": false,
             "metadata": {
-              "code_hash": "9a4038b06a62",
+              "code_hash": "192913db3453",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,

@@ -229,7 +229,7 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "b61405ff011f",
-              "module": "langflow.components.search.arxiv.ArXivComponent"
+              "module": "langflow.components.arxiv.arxiv.ArXivComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -389,7 +389,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "ac7bebb9ed88",
+              "code_hash": "6f74e04e39d5",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -700,7 +700,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "9a4038b06a62",
+              "code_hash": "192913db3453",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -1036,7 +1036,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "556209520650",
+              "module": "langflow.components.processing.parser.ParserComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1209,7 +1212,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "bdfc76fb0527",
+              "code_hash": "5b234f78c942",
               "module": "langflow.components.logic.loop.LoopComponent"
             },
             "minimized": false,
@@ -1622,7 +1625,7 @@
             "key": "TypeConverterComponent",
             "legacy": false,
             "metadata": {
-              "code_hash": "3e25778aa819",
+              "code_hash": "38e56a852063",
               "module": "langflow.components.processing.converter.TypeConverterComponent"
             },
             "minimized": false,

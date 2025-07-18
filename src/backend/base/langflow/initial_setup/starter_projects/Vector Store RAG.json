@@ -320,7 +320,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "9a4038b06a62",
+              "code_hash": "192913db3453",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -794,7 +794,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "0ba6d157674c",
+              "code_hash": "dbf2e9d2319d",
               "module": "langflow.components.processing.split_text.SplitTextComponent"
             },
             "output_types": [],
@@ -1083,7 +1083,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "ac7bebb9ed88",
+              "code_hash": "6f74e04e39d5",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -1401,7 +1401,7 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "2691dee277c9",
-              "module": "langflow.components.embeddings.openai.OpenAIEmbeddingsComponent"
+              "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
             "outputs": [
@@ -1937,7 +1937,7 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "2691dee277c9",
-              "module": "langflow.components.embeddings.openai.OpenAIEmbeddingsComponent"
+              "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
             "outputs": [
@@ -2709,7 +2709,7 @@
             "icon": "AstraDB",
             "legacy": false,
             "metadata": {
-              "code_hash": "95887517298c",
+              "code_hash": "38a337e89ff4",
               "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
@@ -3485,7 +3485,7 @@
             "icon": "AstraDB",
             "legacy": false,
             "metadata": {
-              "code_hash": "95887517298c",
+              "code_hash": "38a337e89ff4",
               "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,

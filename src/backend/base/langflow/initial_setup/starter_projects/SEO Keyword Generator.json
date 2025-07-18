@@ -562,7 +562,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "ac7bebb9ed88",
+              "code_hash": "6f74e04e39d5",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
