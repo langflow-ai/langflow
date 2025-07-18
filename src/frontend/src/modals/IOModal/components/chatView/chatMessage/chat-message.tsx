@@ -2,6 +2,7 @@ import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
+import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
@@ -16,7 +17,6 @@ import useAlertStore from "../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
 import { ErrorView } from "./components/content-view";
-import { MarkdownField } from "./components/edit-message";
 import EditMessageField from "./components/edit-message-field";
 import FileCardWrapper from "./components/file-card-wrapper";
 import { EditMessageButton } from "./components/message-options";
@@ -359,7 +359,7 @@ export default function ChatMessage({
                                 onCancel={() => setEditMessage(false)}
                               />
                             ) : (
-                              <MarkdownField
+                              <CustomMarkdownField
                                 isAudioMessage={isAudioMessage}
                                 chat={chat}
                                 isEmpty={isEmpty}
