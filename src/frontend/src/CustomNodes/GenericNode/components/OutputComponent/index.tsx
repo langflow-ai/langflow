@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,23 +59,25 @@ export default function OutputComponent({
   );
 
   const hasLoopOutput = outputs?.some?.((output) => output.allows_loop);
-  const hasGroupOutputs = outputs?.some?.((output) => output.group_outputs);
   const isConditionalRouter = nodeType === "ConditionalRouter";
   const hasOutputs = outputs.length > 1;
-  const refButton = useRef<HTMLButtonElement>(null);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+  // Check if all outputs have group_outputs: true AND there are multiple outputs
+  const allOutputsGrouped = outputs?.every?.((output) => output.group_outputs);
+  const hasMultipleGroupedOutputs = hasOutputs && allOutputsGrouped;
 
   const shouldShowDropdown =
-    hasOutputs && !hasLoopOutput && !hasGroupOutputs && !isConditionalRouter;
+    hasMultipleGroupedOutputs && !hasLoopOutput && !isConditionalRouter;
 
   return (
     <div>
       {shouldShowDropdown ? (
-        <Popover>
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
               unstyled
               role="combobox"
-              ref={refButton}
               className="no-focus-visible group flex items-center gap-2"
               data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
             >
@@ -93,7 +95,7 @@ export default function OutputComponent({
             align="end"
             className="noflow nowheel nopan nodelete nodrag w-full min-w-[200px] max-w-[250px] p-0"
           >
-            <Command>
+            <Command value="">
               <CommandList>
                 <CommandGroup defaultChecked={false} className="p-0">
                   {outputs.map((output) => (
@@ -103,6 +105,7 @@ export default function OutputComponent({
                       className="cursor-pointer justify-between rounded-none px-3 py-2"
                       onSelect={() => {
                         handleSelectOutput && handleSelectOutput(output);
+                        setIsPopoverOpen(false);
                       }}
                       value={output.name}
                     >

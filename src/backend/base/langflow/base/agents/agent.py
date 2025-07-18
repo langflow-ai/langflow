@@ -70,7 +70,7 @@ class LCAgentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
+        Output(display_name="Agent", name="agent", method="build_agent", tool_mode=False),
         Output(display_name="Response", name="response", method="message_response"),
     ]
 

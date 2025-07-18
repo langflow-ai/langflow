@@ -393,7 +393,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -546,7 +546,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -698,7 +698,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -829,7 +829,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -980,7 +980,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -1093,7 +1093,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -1225,7 +1225,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -1396,7 +1396,7 @@
               {
                 "cache": true,
                 "display_name": "Data",
-                "hidden": true,
+                
                 "method": "run_model",
                 "name": "example_output",
                 "selected": "Data",
@@ -1557,7 +1557,7 @@
                 "cache": true,
                 "display_name": "Agent",
                 "group_outputs": false,
-                "hidden": true,
+                
                 "method": "build_agent",
                 "name": "agent",
                 "options": null,
@@ -2488,7 +2488,7 @@
               {
                 "cache": true,
                 "display_name": "Tool Data",
-                "hidden": true,
+                
                 "method": "generate_tool_data",
                 "name": "tool_data",
                 "selected": "Data",

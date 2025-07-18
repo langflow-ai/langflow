@@ -136,10 +136,10 @@ class AstraAssistantManager(ComponentWithCache):
 
     outputs = [
         Output(display_name="Assistant Response", name="assistant_response", method="get_assistant_response"),
-        Output(display_name="Tool output", name="tool_output", method="get_tool_output", hidden=True),
-        Output(display_name="Thread Id", name="output_thread_id", method="get_thread_id", hidden=True),
-        Output(display_name="Assistant Id", name="output_assistant_id", method="get_assistant_id", hidden=True),
-        Output(display_name="Vector Store Id", name="output_vs_id", method="get_vs_id", hidden=True),
+        Output(display_name="Tool output", name="tool_output", method="get_tool_output"),
+        Output(display_name="Thread Id", name="output_thread_id", method="get_thread_id"),
+        Output(display_name="Assistant Id", name="output_assistant_id", method="get_assistant_id"),
+        Output(display_name="Vector Store Id", name="output_vs_id", method="get_vs_id"),
     ]
 
     def __init__(self, **kwargs) -> None:

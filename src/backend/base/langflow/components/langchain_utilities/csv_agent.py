@@ -61,7 +61,7 @@ class CSVAgentComponent(LCAgentComponent):
 
     outputs = [
         Output(display_name="Response", name="response", method="build_agent_response"),
-        Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
+        Output(display_name="Agent", name="agent", method="build_agent", tool_mode=False),
     ]
 
     def _path(self) -> str:

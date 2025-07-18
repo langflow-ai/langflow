@@ -9,10 +9,8 @@ export default function NodeOutputs({
   selected,
   showNode,
   isToolMode,
-  showHiddenOutputs,
   selectedOutput,
   handleSelectOutput,
-  hasExistingHiddenOutputs = false,
 }: {
   outputs: any;
   keyPrefix: string;
@@ -21,28 +19,24 @@ export default function NodeOutputs({
   selected: boolean;
   showNode: boolean;
   isToolMode: boolean;
-  showHiddenOutputs: boolean;
   selectedOutput: any;
   handleSelectOutput: any;
-  hasExistingHiddenOutputs?: boolean;
 }) {
   const hasLoopOutput = outputs.some((output) => output.allows_loop);
-  const hasGroupOutputs = outputs.some((output) => output.group_outputs);
   const isConditionalRouter = data.type === "ConditionalRouter";
-  const hasHiddenOutputs = outputs.some((output) => output.hidden);
 
-  const shouldShowAllOutputs =
-    hasLoopOutput || hasGroupOutputs || isConditionalRouter || hasHiddenOutputs;
+  // Separate outputs based on group_outputs field
+  const groupedOutputs = outputs.filter((output: any) => output.group_outputs);
+  const individualOutputs = outputs.filter(
+    (output: any) => !output.group_outputs,
+  );
+
+  const shouldShowAllOutputs = hasLoopOutput || isConditionalRouter;
 
   if (shouldShowAllOutputs) {
-    const outputsToRender =
-      keyPrefix === "hidden"
-        ? outputs.filter((output) => output.hidden)
-        : outputs.filter((output) => !output.hidden);
-
     return (
       <>
-        {outputsToRender?.map((output, idx) => (
+        {outputs?.map((output, idx) => (
           <OutputParameter
             key={`${keyPrefix}-${output.name}-${idx}`}
             output={output}
@@ -52,69 +46,81 @@ export default function NodeOutputs({
                 (out) => out.name === output.name,
               ) ?? idx
             }
-            lastOutput={idx === outputsToRender.length - 1}
+            lastOutput={idx === outputs.length - 1}
             data={data}
             types={types}
             selected={selected}
             showNode={showNode}
             isToolMode={isToolMode}
-            showHiddenOutputs={showHiddenOutputs}
             handleSelectOutput={handleSelectOutput}
-            hidden={
-              keyPrefix === "hidden"
-                ? showHiddenOutputs
-                  ? output.hidden
-                  : true
-                : false
-            }
           />
         ))}
       </>
     );
   }
 
-  const getDisplayOutput = () => {
-    const filteredOutputs =
-      keyPrefix === "hidden"
-        ? outputs.filter((output) => output.hidden)
-        : outputs.filter((output) => !output.hidden);
-
-    const outputWithSelection = filteredOutputs.find(
-      (output) => output.name === selectedOutput?.name,
-    );
-
-    return outputWithSelection || filteredOutputs[0];
+  // Handle individual outputs (group_outputs: false)
+  const renderIndividualOutputs = () => {
+    // @ts-ignore - Type compatibility issue with filtered array
+    return individualOutputs.map((output: any, idx: number) => (
+      <OutputParameter
+        key={`${keyPrefix}-individual-${output.name}-${idx}`}
+        output={output}
+        outputs={[output] as any} // Pass only this output to avoid dropdown behavior
+        idx={
+          data.node!.outputs?.findIndex(
+            (out: any) => out.name === output.name,
+          ) ?? idx
+        }
+        lastOutput={individualOutputs.length === 0}
+        data={data}
+        types={types}
+        selected={selected}
+        showNode={showNode}
+        isToolMode={isToolMode}
+        handleSelectOutput={handleSelectOutput}
+      />
+    ));
   };
 
-  const displayOutput = getDisplayOutput();
+  // Handle grouped outputs (group_outputs: true) - show as dropdown
+  const renderGroupedOutputs = () => {
+    if (groupedOutputs.length === 0) return null;
 
-  if (!displayOutput) return null;
+    const getDisplayOutput = () => {
+      const outputWithSelection = groupedOutputs.find(
+        (output) => output.name === selectedOutput?.name,
+      );
+      return outputWithSelection || groupedOutputs[0];
+    };
+
+    const displayOutput = getDisplayOutput();
+
+    return (
+      <OutputParameter
+        key={`${keyPrefix}-grouped-${displayOutput.name}`}
+        output={displayOutput}
+        outputs={groupedOutputs}
+        idx={
+          data.node!.outputs?.findIndex(
+            (out) => out.name === displayOutput.name,
+          ) ?? 0
+        }
+        lastOutput={true}
+        data={data}
+        types={types}
+        selected={selected}
+        handleSelectOutput={handleSelectOutput}
+        showNode={showNode}
+        isToolMode={isToolMode}
+      />
+    );
+  };
 
   return (
-    <OutputParameter
-      key={`${keyPrefix}-${displayOutput.name}`}
-      output={displayOutput}
-      outputs={outputs}
-      idx={
-        data.node!.outputs?.findIndex(
-          (out) => out.name === displayOutput.name,
-        ) ?? 0
-      }
-      lastOutput={!hasExistingHiddenOutputs}
-      data={data}
-      types={types}
-      selected={selected}
-      handleSelectOutput={handleSelectOutput}
-      showNode={showNode}
-      isToolMode={isToolMode}
-      showHiddenOutputs={showHiddenOutputs}
-      hidden={
-        keyPrefix === "hidden"
-          ? showHiddenOutputs
-            ? displayOutput.hidden
-            : true
-          : false
-      }
-    />
+    <>
+      {renderIndividualOutputs()}
+      {renderGroupedOutputs()}
+    </>
   );
 }
