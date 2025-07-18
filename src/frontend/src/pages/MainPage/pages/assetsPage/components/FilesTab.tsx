@@ -12,7 +12,6 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
@@ -25,56 +24,35 @@ import useAlertStore from "@/stores/alertStore";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
-import { sortByDate } from "../../utils/sort-flows";
-import DragWrapComponent from "./components/dragWrapComponent";
+import { sortByDate } from "../../../utils/sort-flows";
+import DragWrapComponent from "./dragWrapComponent";
 
-export const FilesPage = () => {
+interface FilesTabProps {
+  quickFilterText: string;
+  setQuickFilterText: (text: string) => void;
+  selectedFiles: any[];
+  setSelectedFiles: (files: any[]) => void;
+  quantitySelected: number;
+  setQuantitySelected: (quantity: number) => void;
+  isShiftPressed: boolean;
+}
+
+const FilesTab = ({
+  quickFilterText,
+  setQuickFilterText,
+  selectedFiles,
+  setSelectedFiles,
+  quantitySelected,
+  setQuantitySelected,
+  isShiftPressed,
+}: FilesTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
   const { data: files } = useGetFilesV2();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-
-  const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
-  const [quantitySelected, setQuantitySelected] = useState(0);
-  const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Shift") {
-        setIsShiftPressed(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Shift") {
-        setIsShiftPressed(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
-
-  const handleSelectionChanged = (event: SelectionChangedEvent) => {
-    const selectedRows = event.api.getSelectedRows();
-    setSelectedFiles(selectedRows);
-    if (selectedRows.length > 0) {
-      setQuantitySelected(selectedRows.length);
-    } else {
-      setTimeout(() => {
-        setQuantitySelected(0);
-      }, 300);
-    }
-  };
-
   const { mutate: rename } = usePostRenameFileV2();
-
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
   const { handleBulkDownload } = useCustomHandleBulkFilesDownload();
 
@@ -119,7 +97,19 @@ export const FilesPage = () => {
       setQuantitySelected(0);
       setSelectedFiles([]);
     }
-  }, [files]);
+  }, [files, setQuantitySelected, setSelectedFiles]);
+
+  const handleSelectionChanged = (event: SelectionChangedEvent) => {
+    const selectedRows = event.api.getSelectedRows();
+    setSelectedFiles(selectedRows);
+    if (selectedRows.length > 0) {
+      setQuantitySelected(selectedRows.length);
+    } else {
+      setTimeout(() => {
+        setQuantitySelected(0);
+      }, 300);
+    }
+  };
 
   const colDefs: ColDef[] = [
     {
@@ -185,8 +175,8 @@ export const FilesPage = () => {
             )}
           </div>
         );
-      }, //This column will be twice as wide as the others
-    }, //This column will be twice as wide as the others
+      },
+    },
     {
       headerName: "Type",
       field: "path",
@@ -306,187 +296,151 @@ export const FilesPage = () => {
             className="h-4 w-4"
           />
           <span className="hidden whitespace-nowrap font-semibold md:inline">
-            Upload
+            Upload Files
           </span>
         </Button>
       </ShadTooltip>
     );
-  }, [uploadFile]);
-
-  const [quickFilterText, setQuickFilterText] = useState("");
+  }, []);
 
   return (
-    <div
-      className="flex h-full w-full flex-col overflow-y-auto"
-      data-testid="cards-wrapper"
-    >
-      <div className="flex h-full w-full flex-col xl:container">
-        <div className="flex flex-1 flex-col justify-start px-5 pt-10">
-          <div className="flex h-full flex-col justify-start">
-            <div
-              className="flex items-center pb-8 text-xl font-semibold"
-              data-testid="mainpage_title"
-            >
-              <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-                <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
-                  <SidebarTrigger>
-                    <ForwardedIconComponent
-                      name="PanelLeftOpen"
-                      aria-hidden="true"
-                      className=""
-                    />
-                  </SidebarTrigger>
-                </div>
-              </div>
-              My Files
-            </div>
-            {files && files.length !== 0 ? (
-              <div className="flex justify-between">
-                <div className="flex w-full xl:w-5/12">
-                  <Input
-                    icon="Search"
-                    data-testid="search-store-input"
-                    type="text"
-                    placeholder={`Search files...`}
-                    className="mr-2 w-full"
-                    value={quickFilterText || ""}
-                    onChange={(event) => {
-                      setQuickFilterText(event.target.value);
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  {UploadButtonComponent}
-                  {/* <ImportButtonComponent /> */}
-                </div>
-              </div>
-            ) : (
-              <></>
-            )}
-
-            <div className="flex h-full flex-col py-4">
-              {!files || !Array.isArray(files) ? (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Loading />
-                </div>
-              ) : files.length > 0 ? (
-                <DragWrapComponent onFileDrop={onFileDrop}>
-                  <div className="relative h-full">
-                    <TableComponent
-                      rowHeight={45}
-                      headerHeight={45}
-                      cellSelection={false}
-                      tableOptions={{
-                        hide_options: true,
-                      }}
-                      suppressRowClickSelection={!isShiftPressed}
-                      editable={[
-                        {
-                          field: "name",
-                          onUpdate: handleRename,
-                          editableCell: true,
-                        },
-                      ]}
-                      rowSelection="multiple"
-                      onSelectionChanged={handleSelectionChanged}
-                      columnDefs={colDefs}
-                      rowData={files.sort((a, b) => {
-                        return sortByDate(
-                          a.updated_at ?? a.created_at,
-                          b.updated_at ?? b.created_at,
-                        );
-                      })}
-                      className={cn(
-                        "ag-no-border group w-full",
-                        isShiftPressed &&
-                          quantitySelected > 0 &&
-                          "no-select-cells",
-                      )}
-                      pagination
-                      ref={tableRef}
-                      quickFilterText={quickFilterText}
-                      gridOptions={{
-                        stopEditingWhenCellsLoseFocus: true,
-                        ensureDomOrder: true,
-                        colResizeDefault: "shift",
-                      }}
-                    />
-
-                    <div
-                      className={cn(
-                        "pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity",
-                        selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "ml-12 flex h-full flex-1 items-center justify-between bg-background",
-                          selectedFiles.length > 0
-                            ? "pointer-events-auto"
-                            : "pointer-events-none",
-                        )}
-                      >
-                        <span className="text-xs text-muted-foreground">
-                          {quantitySelected} selected
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="iconMd"
-                            onClick={handleDownload}
-                            loading={isDownloading}
-                            data-testid="bulk-download-btn"
-                          >
-                            <ForwardedIconComponent name="Download" />
-                          </Button>
-
-                          <DeleteConfirmationModal
-                            onConfirm={handleDelete}
-                            description={
-                              "file" + (quantitySelected > 1 ? "s" : "")
-                            }
-                          >
-                            <Button
-                              variant="destructive"
-                              size="iconMd"
-                              className="px-2.5 !text-mmd"
-                              loading={isDeleting}
-                              data-testid="bulk-delete-btn"
-                            >
-                              <ForwardedIconComponent name="Trash2" />
-                              Delete
-                            </Button>
-                          </DeleteConfirmationModal>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </DragWrapComponent>
-              ) : (
-                <CardsWrapComponent
-                  onFileDrop={onFileDrop}
-                  dragMessage="Drop files to upload"
-                >
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
-                    <div className="flex flex-col items-center gap-2">
-                      <h3 className="text-2xl font-semibold">No files</h3>
-                      <p className="text-lg text-secondary-foreground">
-                        Upload files or import from your preferred cloud.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {UploadButtonComponent}
-                      {/* <ImportButtonComponent /> */}
-                    </div>
-                  </div>
-                </CardsWrapComponent>
-              )}
-            </div>
+    <div className="flex h-full flex-col">
+      {files && files.length !== 0 ? (
+        <div className="flex justify-between">
+          <div className="flex w-full xl:w-5/12">
+            <Input
+              icon="Search"
+              data-testid="search-store-input"
+              type="text"
+              placeholder={`Search files...`}
+              className="mr-2 w-full"
+              value={quickFilterText || ""}
+              onChange={(event) => {
+                setQuickFilterText(event.target.value);
+              }}
+            />
           </div>
+          <div className="flex items-center gap-2">{UploadButtonComponent}</div>
         </div>
+      ) : (
+        <></>
+      )}
+
+      <div className="flex h-full flex-col py-4">
+        {!files || !Array.isArray(files) ? (
+          <div className="flex h-full w-full items-center justify-center">
+            <Loading />
+          </div>
+        ) : files.length > 0 ? (
+          <DragWrapComponent onFileDrop={onFileDrop}>
+            <div className="relative h-full">
+              <TableComponent
+                rowHeight={45}
+                headerHeight={45}
+                cellSelection={false}
+                tableOptions={{
+                  hide_options: true,
+                }}
+                suppressRowClickSelection={!isShiftPressed}
+                editable={[
+                  {
+                    field: "name",
+                    onUpdate: handleRename,
+                    editableCell: true,
+                  },
+                ]}
+                rowSelection="multiple"
+                onSelectionChanged={handleSelectionChanged}
+                columnDefs={colDefs}
+                rowData={files.sort((a, b) => {
+                  return sortByDate(
+                    a.updated_at ?? a.created_at,
+                    b.updated_at ?? b.created_at,
+                  );
+                })}
+                className={cn(
+                  "ag-no-border group w-full",
+                  isShiftPressed && quantitySelected > 0 && "no-select-cells",
+                )}
+                pagination
+                ref={tableRef}
+                quickFilterText={quickFilterText}
+                gridOptions={{
+                  stopEditingWhenCellsLoseFocus: true,
+                  ensureDomOrder: true,
+                  colResizeDefault: "shift",
+                }}
+              />
+
+              <div
+                className={cn(
+                  "pointer-events-none absolute top-1.5 z-50 flex h-8 w-full transition-opacity",
+                  selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
+                )}
+              >
+                <div
+                  className={cn(
+                    "ml-12 flex h-full flex-1 items-center justify-between bg-background",
+                    selectedFiles.length > 0
+                      ? "pointer-events-auto"
+                      : "pointer-events-none",
+                  )}
+                >
+                  <span className="text-xs text-muted-foreground">
+                    {quantitySelected} selected
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="iconMd"
+                      onClick={handleDownload}
+                      loading={isDownloading}
+                      data-testid="bulk-download-btn"
+                    >
+                      <ForwardedIconComponent name="Download" />
+                    </Button>
+
+                    <DeleteConfirmationModal
+                      onConfirm={handleDelete}
+                      description={"file" + (quantitySelected > 1 ? "s" : "")}
+                    >
+                      <Button
+                        variant="destructive"
+                        size="iconMd"
+                        className="px-2.5 !text-mmd"
+                        loading={isDeleting}
+                        data-testid="bulk-delete-btn"
+                      >
+                        <ForwardedIconComponent name="Trash2" />
+                        Delete
+                      </Button>
+                    </DeleteConfirmationModal>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DragWrapComponent>
+        ) : (
+          <CardsWrapComponent
+            onFileDrop={onFileDrop}
+            dragMessage="Drop files to upload"
+          >
+            <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
+              <div className="flex flex-col items-center gap-2">
+                <h3 className="text-2xl font-semibold">No files</h3>
+                <p className="text-lg text-secondary-foreground">
+                  Upload files or import from your preferred cloud.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {UploadButtonComponent}
+              </div>
+            </div>
+          </CardsWrapComponent>
+        )}
       </div>
     </div>
   );
 };
 
-export default FilesPage;
+export default FilesTab;

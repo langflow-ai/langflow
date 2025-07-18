@@ -70,7 +70,7 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath =
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
-  const checkPathFiles = pathname.includes("files");
+  const checkPathFiles = pathname.includes("assets");
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId && !checkPathFiles) {
@@ -477,7 +477,7 @@ const SideBarFoldersButtonsComponent = ({
               className="text-sm"
             >
               <ForwardedIconComponent name="File" className="h-4 w-4" />
-              My Files
+              Assets
             </SidebarMenuButton>
           </div>
         </SidebarFooter>
