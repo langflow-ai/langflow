@@ -58,17 +58,16 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
     await create_global_variable(client, headers, "OPENAI_API_KEY", openai_api_key)
 
     # Load the Simple Agent template
-    template_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "base",
-        "langflow",
-        "initial_setup",
-        "starter_projects",
-        "Simple Agent.json",
+    template_path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent
+        / "base"
+        / "langflow"
+        / "initial_setup"
+        / "starter_projects"
+        / "Simple Agent.json"
     )
 
-    with open(template_path) as f:
-        flow_data = json.load(f)
+    flow_data = await asyncio.to_thread(lambda: json.loads(pathlib.Path(template_path).read_text()))
 
     # Add the flow
     response = await client.post("/api/v1/flows/", json=flow_data, headers=headers)
@@ -83,7 +82,7 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
         if builds_response.status_code == 200:
             builds = builds_response.json().get("vertex_builds", {})
             all_valid = True
-            for node_id, build_list in builds.items():
+            for build_list in builds.values():
                 if not build_list or build_list[0].get("valid") is not True:
                     all_valid = False
                     break
@@ -300,12 +299,14 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
             logger.error("❌ Our API did not produce function call events")
             pytest.fail("Our API should produce function call events when OpenAI does")
     else:
-        logger.info("ℹ️  No function calls were made by OpenAI")
+        logger.info("No function calls were made by OpenAI")
 
     logger.info("📊 Test Summary:")
     logger.info(f"  OpenAI events: {len(openai_parsed)}")
     logger.info(f"  Our events: {len(our_parsed)}")
     logger.info(f"  OpenAI function events: {len(openai_actual_tool_events)}")
     logger.info(f"  Our function events: {len(our_function_events)}")
-    compatibility_result = "✅ PASS" if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else "❌ FAIL"
+    compatibility_result = (
+        "✅ PASS" if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else "❌ FAIL"
+    )
     logger.info(f"  Format compatibility: {compatibility_result}")

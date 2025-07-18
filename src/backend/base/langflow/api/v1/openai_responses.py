@@ -175,7 +175,10 @@ async def run_flow_for_openai_responses(
                                                                 "item_id": tool_id,
                                                                 "output_index": 0,
                                                             }
-                                                            yield f"event: response.function_call_arguments.delta\ndata: {json.dumps(arg_delta_event)}\n\n"
+                                                            yield (
+                                                                f"event: response.function_call_arguments.delta\n"
+                                                                f"data: {json.dumps(arg_delta_event)}\n\n"
+                                                            )
 
                                                         # Send function call arguments done event
                                                         arg_done_event = {
@@ -184,7 +187,10 @@ async def run_flow_for_openai_responses(
                                                             "item_id": tool_id,
                                                             "output_index": 0,
                                                         }
-                                                        yield f"event: response.function_call_arguments.done\ndata: {json.dumps(arg_done_event)}\n\n"
+                                                        yield (
+                                                            f"event: response.function_call_arguments.done\n"
+                                                            f"data: {json.dumps(arg_done_event)}\n\n"
+                                                        )
 
                                                         # If there's output, send completion event
                                                         if tool_output is not None:
@@ -194,7 +200,7 @@ async def run_flow_for_openai_responses(
                                                                     "id": tool_id,
                                                                     "type": "function_call",  # Match OpenAI format
                                                                     "status": "completed",
-                                                                    "arguments": arguments_str,  # Include final arguments
+                                                                    "arguments": arguments_str,  # Include final args
                                                                     "call_id": call_id,
                                                                     "name": tool_name,
                                                                 },
