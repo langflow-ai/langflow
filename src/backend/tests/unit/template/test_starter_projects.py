@@ -1,64 +1,29 @@
-"""Simple tests for starter project templates.
+"""Comprehensive tests for starter project templates.
 
 Tests all JSON templates in the starter_projects folder to ensure they:
 1. Are valid JSON
 2. Have required structure (nodes, edges)
 3. Don't have basic security issues
+4. Can be built into working flows
 
-Can also be run as a script: python test_starter_projects.py
+Validates that templates work correctly and prevent unexpected breakage.
 """
 
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
+
+# Import langflow validation utilities
+from langflow.utils.template_validation import (
+    validate_flow_can_build,
+    validate_template_structure,
+)
 
 
 def get_starter_projects_path() -> Path:
     """Get path to starter projects directory."""
     return Path("src/backend/base/langflow/initial_setup/starter_projects")
-
-
-def validate_template_structure(template_data: dict[str, Any], filename: str) -> list[str]:
-    """Validate basic template structure. Returns list of errors."""
-    errors = []
-
-    # Handle wrapped format
-    data = template_data.get("data", template_data)
-
-    # Check required fields
-    if "nodes" not in data:
-        errors.append(f"{filename}: Missing 'nodes' field")
-    elif not isinstance(data["nodes"], list):
-        errors.append(f"{filename}: 'nodes' must be a list")
-
-    if "edges" not in data:
-        errors.append(f"{filename}: Missing 'edges' field")
-    elif not isinstance(data["edges"], list):
-        errors.append(f"{filename}: 'edges' must be a list")
-
-    # Check nodes have required fields
-    for i, node in enumerate(data.get("nodes", [])):
-        if "id" not in node:
-            errors.append(f"{filename}: Node {i} missing 'id'")
-        if "data" not in node:
-            errors.append(f"{filename}: Node {i} missing 'data'")
-
-    return errors
-
-
-def check_security_issues(template_data: dict[str, Any], filename: str) -> list[str]:
-    """Check for basic security issues. Returns list of critical issues."""
-    critical_patterns = ["__import__", "eval(", "exec(", "compile(", "os.system", "subprocess"]
-    issues = []
-
-    template_str = json.dumps(template_data).lower()
-    for pattern in critical_patterns:
-        if pattern in template_str:
-            issues.append(f"{filename}: Contains potentially dangerous pattern: {pattern}")  # noqa: PERF401
-
-    return issues
 
 
 class TestStarterProjects:
@@ -100,3 +65,20 @@ class TestStarterProjects:
         if all_errors:
             error_msg = "\n".join(all_errors)
             pytest.fail(f"Template structure errors:\n{error_msg}")
+
+    def test_all_templates_can_build_flow(self):
+        """Test all templates can be built into working flows."""
+        path = get_starter_projects_path()
+        templates = list(path.glob("*.json"))
+
+        all_errors = []
+        for template_file in templates:
+            with template_file.open(encoding="utf-8") as f:
+                template_data = json.load(f)
+
+            errors = validate_flow_can_build(template_data, template_file.name)
+            all_errors.extend(errors)
+
+        if all_errors:
+            error_msg = "\n".join(all_errors)
+            pytest.fail(f"Flow build errors:\n{error_msg}")
