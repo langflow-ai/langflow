@@ -138,6 +138,7 @@ async def arun_flow_from_json(
     output_component: str | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
+    log_rotation: str | None = None,
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
@@ -155,6 +156,7 @@ async def arun_flow_from_json(
         output_component (Optional[str], optional): The specific component to output. Defaults to None.
         log_level (Optional[str], optional): The log level to use. Defaults to None.
         log_file (Optional[str], optional): The log file to write logs to. Defaults to None.
+        log_rotation (Optional[str], optional): The log rotation to use. Defaults to None.
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
@@ -172,6 +174,7 @@ async def arun_flow_from_json(
         tweaks=tweaks,
         log_level=log_level,
         log_file=log_file,
+        log_rotation=log_rotation,
         env_file=env_file,
         cache=cache,
         disable_logs=disable_logs,
@@ -200,6 +203,7 @@ def run_flow_from_json(
     output_component: str | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
+    log_rotation: str | None = None,
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
@@ -221,6 +225,7 @@ def run_flow_from_json(
         output_component (Optional[str], optional): The specific component to output. Defaults to None.
         log_level (Optional[str], optional): The log level to use. Defaults to None.
         log_file (Optional[str], optional): The log file to write logs to. Defaults to None.
+        log_rotation (Optional[str], optional): The log rotation to use. Defaults to None.
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
@@ -241,6 +246,7 @@ def run_flow_from_json(
             output_component=output_component,
             log_level=log_level,
             log_file=log_file,
+            log_rotation=log_rotation,
             env_file=env_file,
             cache=cache,
             disable_logs=disable_logs,
