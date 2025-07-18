@@ -93,7 +93,7 @@ class TestMetadataInTemplateBuilders:
     @patch("langflow.custom.utils.CustomComponentFrontendNode")
     def test_build_template_adds_metadata_with_module(self, mock_frontend_class):
         """Test that build_custom_component_template adds metadata when module_name is provided."""
-        from langflow.custom.custom_component.custom_component import CustomComponent
+        from langflow.custom.custom_component.component import Component
         from langflow.custom.utils import build_custom_component_template
 
         # Setup mock frontend node
@@ -103,9 +103,9 @@ class TestMetadataInTemplateBuilders:
         mock_frontend_class.return_value = mock_frontend
 
         # Create test component
-        test_component = Mock(spec=CustomComponent)
-        test_component.__class__.__name__ = "CustomTestComponent"
-        test_component._code = "class CustomTestComponent: pass"
+        test_component = Mock(spec=Component)
+        test_component.__class__.__name__ = "TestComponent"
+        test_component._code = "class TestComponent: pass"
         test_component.template_config = {"display_name": "Test"}
         test_component.get_function_entrypoint_args = []
         test_component._get_function_entrypoint_return_type = []
