@@ -440,14 +440,10 @@ def add_code_field_to_build_config(build_config: dict, raw_code: str):
 
 def get_module_name_from_display_name(display_name: str):
     """Get the module name from the display name."""
-    # Convert display name to snake_case for Python module name
-    # e.g., "Custom Component" -> "custom_component"
-    # Remove extra spaces and convert to lowercase
-    cleaned_name = re.sub(r"\s+", " ", display_name.strip())
-    # Replace spaces with underscores and convert to lowercase
-    module_name = cleaned_name.replace(" ", "_").lower()
-    # Remove any non-alphanumeric characters except underscores
-    return re.sub(r"[^a-z0-9_]", "", module_name)
+    # Remove leading/trailing whitespace, collapse multiple spaces to a single underscore and lowercase
+    name = "_".join(display_name.strip().split()).lower()
+    # Remove any non-alphanumeric characters except underscores (fast precompiled regex)
+    return _remove_non_alphanum.sub("", name)
 
 
 def build_custom_component_template_from_inputs(
@@ -852,3 +848,5 @@ async def load_custom_component(component_name: str, components_paths: list[str]
 
 
 _COMPONENT_TYPE_NAMES = {"Component", "CustomComponent"}
+
+_remove_non_alphanum = re.compile(r"[^a-z0-9_]+")
