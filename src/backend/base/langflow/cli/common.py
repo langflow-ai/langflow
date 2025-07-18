@@ -293,7 +293,7 @@ def prepare_graph(graph, verbose_print):
         raise typer.Exit(1) from e
 
 
-def execute_graph_with_capture(graph, input_value: str | None):
+async def execute_graph_with_capture(graph, input_value: str | None):
     """Execute a graph and capture output.
 
     Args:
@@ -320,7 +320,7 @@ def execute_graph_with_capture(graph, input_value: str | None):
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = list(graph.start(inputs))
+        results = [result async for result in graph.async_start(inputs)]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()
