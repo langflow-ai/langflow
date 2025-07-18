@@ -97,6 +97,7 @@ async def run_flow_for_openai_responses(
 
                 tool_call_counter = 0
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
+                previous_content = ""  # Track content already sent to calculate deltas
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -216,7 +217,15 @@ async def run_flow_for_openai_responses(
                                         and text != request.input
                                         and sender_name == "Agent"
                                     ):
-                                        content = text
+                                        # Calculate delta: only send newly generated content
+                                        if text.startswith(previous_content):
+                                            content = text[len(previous_content) :]
+                                            previous_content = text
+                                        else:
+                                            # If text doesn't start with previous content, send full text
+                                            # This handles cases where the content might be reset
+                                            content = text
+                                            previous_content = text
 
                         except (json.JSONDecodeError, UnicodeDecodeError):
                             continue

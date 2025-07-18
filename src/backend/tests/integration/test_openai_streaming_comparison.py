@@ -275,6 +275,37 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
     for i, event in enumerate(our_parsed[:3]):
         logger.debug(f"  {i}: {json.dumps(event, indent=2)[:200]}...")
 
+    # Check delta content for duplicates/accumulation
+    logger.info("Checking delta content for proper streaming:")
+    delta_contents = []
+    for i, event in enumerate(our_parsed):
+        if event.get("object") == "response.chunk" and "delta" in event:
+            delta_content = event["delta"].get("content", "")
+            if delta_content:  # Only track non-empty content
+                delta_contents.append(delta_content)
+                logger.info(f"  Delta {i}: '{delta_content}'")
+
+    # Check for accumulated content (bad) vs incremental content (good)
+    if len(delta_contents) > 1:
+        logger.info("Analyzing delta content patterns:")
+        accumulated_pattern = True
+        for i in range(1, len(delta_contents)):
+            if not delta_contents[i].startswith(delta_contents[i - 1]):
+                accumulated_pattern = False
+                break
+
+        if accumulated_pattern:
+            logger.error("❌ DETECTED ACCUMULATED CONTENT PATTERN (BAD)")
+            logger.error("Each delta contains the full accumulated message instead of just new content")
+            logger.error("Example:")
+            for i, content in enumerate(delta_contents[:3]):
+                logger.error(f"  Delta {i}: '{content}'")
+        else:
+            logger.success("✅ DETECTED INCREMENTAL CONTENT PATTERN (GOOD)")
+            logger.success("Each delta contains only new content")
+    else:
+        logger.info("Not enough delta content to analyze pattern")
+
     if openai_actual_tool_events:
         logger.info("OpenAI tool call example:")
         logger.debug(f"  {json.dumps(openai_actual_tool_events[0], indent=2)}")
