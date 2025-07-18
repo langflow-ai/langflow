@@ -166,7 +166,7 @@ async def run_flow_for_openai_responses(
                                                             f"data: {json.dumps(tool_call_event)}\n\n"
                                                         )
 
-                                                        
+
                                                         # Send function call arguments as delta events (like OpenAI)
                                                         arguments_str = json.dumps(tool_input)
                                                         for char in arguments_str:
@@ -177,7 +177,7 @@ async def run_flow_for_openai_responses(
                                                                 "output_index": 0
                                                             }
                                                             yield f"event: response.function_call_arguments.delta\ndata: {json.dumps(arg_delta_event)}\n\n"
-                                                        
+
                                                         # Send function call arguments done event
                                                         arg_done_event = {
                                                             "type": "response.function_call_arguments.done",
@@ -186,7 +186,7 @@ async def run_flow_for_openai_responses(
                                                             "output_index": 0
                                                         }
                                                         yield f"event: response.function_call_arguments.done\ndata: {json.dumps(arg_done_event)}\n\n"
-                                                        
+
                                                         # If there's output, send completion event
                                                         if tool_output is not None:
                                                             tool_done_event = {
