@@ -1,10 +1,9 @@
-import { useTypesStore } from "@/stores/typesStore";
-import { iconExists, nodeColors } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
 import { useEffect, useState } from "react";
-
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useTypesStore } from "@/stores/typesStore";
+import { iconExists, nodeColors } from "@/utils/styleUtils";
 import IconComponent from "../../../../components/common/genericIconComponent";
 
 export function NodeIcon({

@@ -76,6 +76,10 @@ def blockbuster(request):
                 .can_block_in("rich/traceback.py", "_render_stack")
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
                 .can_block_in("langchain_core/runnables/utils.py", "get_function_nonlocals")
+                .can_block_in("alembic/versions", "_load_revisions")
+                .can_block_in("dotenv/main.py", "find_dotenv")
+                .can_block_in("alembic/script/base.py", "_load_revisions")
+                .can_block_in("alembic/env.py", "_do_run_migrations")
             )
 
             for func in ["os.stat", "os.path.abspath", "os.scandir", "os.listdir"]:
@@ -362,6 +366,16 @@ def json_loop_test():
 @pytest.fixture(autouse=True)
 def deactivate_tracing(monkeypatch):
     monkeypatch.setenv("LANGFLOW_DEACTIVATE_TRACING", "true")
+    yield
+    monkeypatch.undo()
+
+
+@pytest.fixture
+def use_noop_session(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
+    # Optionally patch the Settings object if needed
+    # from langflow.services.settings.base import Settings
+    # monkeypatch.setattr(Settings, "use_noop_database", True)
     yield
     monkeypatch.undo()
 

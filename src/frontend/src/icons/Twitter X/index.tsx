@@ -1,5 +1,6 @@
+import type React from "react";
+import { forwardRef } from "react";
 import { useDarkStore } from "@/stores/darkStore";
-import React, { forwardRef } from "react";
 import TwitterXSVG from "./TwitterX.jsx";
 
 export const TwitterXIcon = forwardRef<
