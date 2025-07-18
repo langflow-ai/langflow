@@ -7,6 +7,7 @@ import httpx
 import pytest
 from dotenv import load_dotenv
 from httpx import AsyncClient
+from loguru import logger
 
 
 # Load environment variables from .env file
@@ -20,11 +21,11 @@ def load_env_vars():
 
     for env_path in possible_paths:
         if env_path.exists():
-            print(f"Loading environment variables from {env_path.absolute()}")
+            logger.info(f"Loading environment variables from {env_path.absolute()}")
             load_dotenv(env_path)
             return True
 
-    print("Warning: No .env file found. Using existing environment variables.")
+    logger.warning("No .env file found. Using existing environment variables.")
     return False
 
 
@@ -38,10 +39,10 @@ async def create_global_variable(client: AsyncClient, headers, name, value, vari
 
     response = await client.post("/api/v1/variables/", json=payload, headers=headers)
     if response.status_code != 201:
-        print(f"Failed to create global variable: {response.content}")
+        logger.error(f"Failed to create global variable: {response.content}")
         return False
 
-    print(f"Successfully created global variable: {name}")
+    logger.info(f"Successfully created global variable: {name}")
     return True
 
 
@@ -128,7 +129,7 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
         pytest.skip("OPENAI_API_KEY environment variable not set")
 
     # === Test OpenAI's raw HTTP streaming format ===
-    print("\n=== Testing OpenAI API Raw HTTP Format ===")
+    logger.info("=== Testing OpenAI API Raw HTTP Format ===")
 
     async with httpx.AsyncClient() as openai_client:
         openai_payload = {"model": "gpt-4o-mini", "input": input_msg, "tools": tools, "stream": True}
@@ -139,9 +140,9 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
             json=openai_payload,
         )
 
-        print(f"OpenAI status: {openai_response.status_code}")
+        logger.info(f"OpenAI status: {openai_response.status_code}")
         if openai_response.status_code != 200:
-            print(f"OpenAI error: {openai_response.text}")
+            logger.error(f"OpenAI error: {openai_response.text}")
             pytest.skip("OpenAI API request failed")
 
         # Parse OpenAI's raw SSE stream
@@ -152,7 +153,7 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
         openai_data_events = [evt for evt in openai_events if "data: " in evt and not evt.startswith("data: [DONE]")]
 
     # === Test Our API's streaming format ===
-    print("\n=== Testing Our API Format ===")
+    logger.info("=== Testing Our API Format ===")
 
     flow, headers = await load_and_prepare_flow(client, created_api_key)
 
@@ -198,23 +199,23 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
                     continue
 
     # === Analysis ===
-    print("\nEvent counts:")
-    print(f"  OpenAI: {len(openai_parsed)} events")
-    print(f"  Our API: {len(our_parsed)} events")
+    logger.info("Event counts:")
+    logger.info(f"  OpenAI: {len(openai_parsed)} events")
+    logger.info(f"  Our API: {len(our_parsed)} events")
 
     # Check for tool call events with detailed logging
-    print("\nDetailed OpenAI event analysis:")
+    logger.info("Detailed OpenAI event analysis:")
     output_item_added_events = [e for e in openai_parsed if e.get("type") == "response.output_item.added"]
-    print(f"  Found {len(output_item_added_events)} 'response.output_item.added' events")
+    logger.info(f"  Found {len(output_item_added_events)} 'response.output_item.added' events")
 
     for i, event in enumerate(output_item_added_events):
         item = event.get("item", {})
         item_type = item.get("type", "unknown")
-        print(f"    Event {i}: item.type = '{item_type}'")
-        print(f"    Event {i}: item keys = {list(item.keys())}")
+        logger.info(f"    Event {i}: item.type = '{item_type}'")
+        logger.info(f"    Event {i}: item keys = {list(item.keys())}")
         if "name" in item:
-            print(f"    Event {i}: item.name = '{item.get('name')}'")
-        print(f"    Event {i}: full item = {json.dumps(item, indent=6)}")
+            logger.info(f"    Event {i}: item.name = '{item.get('name')}'")
+        logger.debug(f"    Event {i}: full item = {json.dumps(item, indent=6)}")
 
     openai_tool_events = [
         e
@@ -227,18 +228,18 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
         if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "function_call"
     ]
 
-    print("\nDetailed Our API event analysis:")
+    logger.info("Detailed Our API event analysis:")
     our_output_item_added_events = [e for e in our_parsed if e.get("type") == "response.output_item.added"]
-    print(f"  Found {len(our_output_item_added_events)} 'response.output_item.added' events")
+    logger.info(f"  Found {len(our_output_item_added_events)} 'response.output_item.added' events")
 
     for i, event in enumerate(our_output_item_added_events):
         item = event.get("item", {})
         item_type = item.get("type", "unknown")
-        print(f"    Event {i}: item.type = '{item_type}'")
-        print(f"    Event {i}: item keys = {list(item.keys())}")
+        logger.info(f"    Event {i}: item.type = '{item_type}'")
+        logger.info(f"    Event {i}: item keys = {list(item.keys())}")
         if "name" in item:
-            print(f"    Event {i}: item.name = '{item.get('name')}'")
-        print(f"    Event {i}: full item = {json.dumps(item, indent=6)}")
+            logger.info(f"    Event {i}: item.name = '{item.get('name')}'")
+        logger.debug(f"    Event {i}: full item = {json.dumps(item, indent=6)}")
 
     our_function_events = [
         e
@@ -246,42 +247,42 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
         if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "function_call"
     ]
 
-    print("\nTool call detection results:")
-    print(f"  OpenAI tool_call events: {len(openai_tool_events)}")
-    print(f"  OpenAI function_call events: {len(openai_function_events)}")
-    print(f"  Our function_call events: {len(our_function_events)}")
+    logger.info("Tool call detection results:")
+    logger.info(f"  OpenAI tool_call events: {len(openai_tool_events)}")
+    logger.info(f"  OpenAI function_call events: {len(openai_function_events)}")
+    logger.info(f"  Our function_call events: {len(our_function_events)}")
 
     # Use the correct event type for OpenAI (function_call vs tool_call)
     openai_actual_tool_events = openai_function_events if openai_function_events else openai_tool_events
 
-    print("\nFunction call events:")
-    print(f"  OpenAI: {len(openai_actual_tool_events)} function call events")
-    print(f"  Our API: {len(our_function_events)} function call events")
+    logger.info("Function call events:")
+    logger.info(f"  OpenAI: {len(openai_actual_tool_events)} function call events")
+    logger.info(f"  Our API: {len(our_function_events)} function call events")
 
     # Show event types
     openai_types = {e.get("type", e.get("object", "unknown")) for e in openai_parsed}
     our_types = {e.get("type", e.get("object", "unknown")) for e in our_parsed}
 
-    print("\nEvent types:")
-    print(f"  OpenAI: {sorted(openai_types)}")
-    print(f"  Our API: {sorted(our_types)}")
+    logger.info("Event types:")
+    logger.info(f"  OpenAI: {sorted(openai_types)}")
+    logger.info(f"  Our API: {sorted(our_types)}")
 
     # Print sample events for debugging
-    print("\nSample OpenAI events:")
+    logger.info("Sample OpenAI events:")
     for i, event in enumerate(openai_parsed[:3]):
-        print(f"  {i}: {json.dumps(event, indent=2)[:200]}...")
+        logger.debug(f"  {i}: {json.dumps(event, indent=2)[:200]}...")
 
-    print("\nSample Our events:")
+    logger.info("Sample Our events:")
     for i, event in enumerate(our_parsed[:3]):
-        print(f"  {i}: {json.dumps(event, indent=2)[:200]}...")
+        logger.debug(f"  {i}: {json.dumps(event, indent=2)[:200]}...")
 
     if openai_actual_tool_events:
-        print("\nOpenAI tool call example:")
-        print(f"  {json.dumps(openai_actual_tool_events[0], indent=2)}")
+        logger.info("OpenAI tool call example:")
+        logger.debug(f"  {json.dumps(openai_actual_tool_events[0], indent=2)}")
 
     if our_function_events:
-        print("\nOur function call example:")
-        print(f"  {json.dumps(our_function_events[0], indent=2)}")
+        logger.info("Our function call example:")
+        logger.debug(f"  {json.dumps(our_function_events[0], indent=2)}")
 
     # === Validation ===
 
@@ -291,21 +292,20 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
 
     # Check if both APIs produced function call events
     if len(openai_actual_tool_events) > 0:
-        print("\n✅ OpenAI produced function call events")
+        logger.success("✅ OpenAI produced function call events")
         if len(our_function_events) > 0:
-            print("✅ Our API also produced function call events")
-            print("✅ Both APIs support function call streaming")
+            logger.success("✅ Our API also produced function call events")
+            logger.success("✅ Both APIs support function call streaming")
         else:
-            print("❌ Our API did not produce function call events")
+            logger.error("❌ Our API did not produce function call events")
             pytest.fail("Our API should produce function call events when OpenAI does")
     else:
-        print("ℹ️  No function calls were made by OpenAI")
+        logger.info("ℹ️  No function calls were made by OpenAI")
 
-    print("\n📊 Test Summary:")
-    print(f"  OpenAI events: {len(openai_parsed)}")
-    print(f"  Our events: {len(our_parsed)}")
-    print(f"  OpenAI function events: {len(openai_actual_tool_events)}")
-    print(f"  Our function events: {len(our_function_events)}")
-    print(
-        f"  Format compatibility: {'✅ PASS' if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else '❌ FAIL'}"
-    )
+    logger.info("📊 Test Summary:")
+    logger.info(f"  OpenAI events: {len(openai_parsed)}")
+    logger.info(f"  Our events: {len(our_parsed)}")
+    logger.info(f"  OpenAI function events: {len(openai_actual_tool_events)}")
+    logger.info(f"  Our function events: {len(our_function_events)}")
+    compatibility_result = "✅ PASS" if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else "❌ FAIL"
+    logger.info(f"  Format compatibility: {compatibility_result}")
