@@ -1946,7 +1946,7 @@ export const createNewFlow = (
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
-    name: flow?.name ? flow.name : "Untitled document",
+    name: flow?.name ? flow.name : "New Flow",
     data: flowData,
     id: "",
     icon: flow?.icon ?? undefined,
