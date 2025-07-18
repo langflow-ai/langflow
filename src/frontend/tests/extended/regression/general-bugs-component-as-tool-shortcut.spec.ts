@@ -17,19 +17,19 @@ test(
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
     await page
-      .getByTestId("promptsPrompt")
+      .getByTestId("processingPrompt Template")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-prompt").click();
+        await page.getByTestId("add-component-button-prompt-template").click();
       });
 
-    await page.waitForSelector('[data-testid="title-Prompt"]', {
+    await page.waitForSelector('[data-testid="title-Prompt Template"]', {
       timeout: 3000,
     });
 
     expect(await page.getByText("Toolset", { exact: true }).count()).toBe(0);
 
-    await page.getByTestId("title-Prompt").click();
+    await page.getByTestId("title-Prompt Template").click();
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     await page.waitForSelector('text="Toolset"', {
@@ -39,7 +39,7 @@ test(
       await page.getByText("Toolset", { exact: true }).count(),
     ).toBeGreaterThan(0);
 
-    await page.getByTestId("title-Prompt").click();
+    await page.getByTestId("title-Prompt Template").click();
 
     await page.waitForSelector('[data-testid="code-button-modal"]', {
       timeout: 3000,
@@ -47,8 +47,8 @@ test(
 
     await page.getByTestId("code-button-modal").click();
 
-    let code = await extractAndCleanCode(page);
-    let updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
+    const code = await extractAndCleanCode(page);
+    const updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
 
     expect(updatedCode).not.toBe(code);
 
@@ -61,11 +61,11 @@ test(
     // check if the response is 200
     expect(customComponentResponse?.status()).toBe(200);
 
-    await page.waitForSelector('[data-testid="title-Prompt"]', {
+    await page.waitForSelector('[data-testid="title-Prompt Template"]', {
       timeout: 3000,
     });
 
-    await page.getByTestId("title-Prompt").click();
+    await page.getByTestId("title-Prompt Template").click();
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     expect(await page.getByText("Toolset", { exact: true }).count()).toBe(0);

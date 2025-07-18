@@ -1,11 +1,11 @@
+import { memo, useState } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
-import { memo, useState } from "react";
-import { CategoryGroupProps } from "../../types";
+import type { CategoryGroupProps } from "../../types";
 import { CategoryDisclosure } from "../categoryDisclouse";
 
 export const CategoryGroup = memo(function CategoryGroup({

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 test(
   "user should be able to edit tools",
   { tag: ["@release", "@components"] },
@@ -40,7 +41,7 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=actions", { timeout: 30000 });
+    await page.waitForSelector("text=tools", { timeout: 30000 });
 
     await page.getByTestId("button_open_actions").click();
 
