@@ -49,8 +49,8 @@ withEventDeliveryModes(
         timeout: 180000,
         state: "hidden",
       });
-    } catch (error) {
-      console.log("Timeout error");
+    } catch (_error) {
+      console.error("Timeout error");
       test.skip(true, "Timeout error");
     }
 
