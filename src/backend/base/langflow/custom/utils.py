@@ -563,14 +563,17 @@ def build_custom_component_template(
 
         if module_name:
             frontend_node.metadata["module"] = module_name
+        else:
+            module_name = get_module_name_from_display_name(frontend_node.display_name)
+            frontend_node.metadata["module"] = f"custom_components.{module_name}"
 
-            # Generate code hash for cache invalidation and debugging
-            try:
-                code_hash = _generate_code_hash(custom_component._code, module_name)
-                if code_hash:
-                    frontend_node.metadata["code_hash"] = code_hash
-            except Exception as exc:  # noqa: BLE001
-                logger.error(f"Error generating code hash for {custom_component.__class__.__name__}: {exc}")
+        # Generate code hash for cache invalidation and debugging
+        try:
+            code_hash = _generate_code_hash(custom_component._code, module_name)
+            if code_hash:
+                frontend_node.metadata["code_hash"] = code_hash
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Error generating code hash for {custom_component.__class__.__name__}: {exc}")
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
