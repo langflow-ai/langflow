@@ -1,9 +1,9 @@
+import type React from "react";
 import {
   ENABLE_IMAGE_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
 } from "@/customization/feature-flags";
-import { FilePreviewType } from "@/types/components";
-import React from "react";
+import type { FilePreviewType } from "@/types/components";
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
