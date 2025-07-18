@@ -9,6 +9,7 @@ Tests all JSON templates in the starter_projects folder to ensure they:
 Validates that templates work correctly and prevent unexpected breakage.
 """
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -110,13 +111,55 @@ class TestStarterProjects:
         templates = list(path.glob("*.json"))
 
         all_errors = []
-        for template_file in templates:
-            with template_file.open(encoding="utf-8") as f:
-                template_data = json.load(f)
 
-            errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
-            all_errors.extend(errors)
+        # Process templates in chunks to avoid timeout issues
+        chunk_size = 5
+        template_chunks = [templates[i : i + chunk_size] for i in range(0, len(templates), chunk_size)]
 
+        for chunk in template_chunks:
+            for template_file in chunk:
+                try:
+                    with template_file.open(encoding="utf-8") as f:
+                        template_data = json.load(f)
+
+                    errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
+                    all_errors.extend(errors)
+
+                except (ValueError, TypeError, KeyError, AttributeError, OSError, json.JSONDecodeError) as e:
+                    error_msg = f"{template_file.name}: Unexpected error during validation: {e!s}"
+                    all_errors.append(error_msg)
+
+            # Brief pause between chunks to avoid overwhelming the system
+            await asyncio.sleep(0.5)
+
+        # All templates must pass - no failures allowed
         if all_errors:
             error_msg = "\n".join(all_errors)
-            pytest.fail(f"Flow execution errors:\n{error_msg}")
+            pytest.fail(f"Template execution errors:\n{error_msg}")
+
+    @pytest.mark.asyncio
+    async def test_basic_templates_flow_execution(self, client, logged_in_headers):
+        """Test basic templates can execute successfully."""
+        path = get_starter_projects_path()
+
+        # Only test basic templates that should reliably work
+        basic_templates = ["Basic Prompting.json", "Basic Prompt Chaining.json"]
+
+        all_errors = []
+        for template_name in basic_templates:
+            template_file = path / template_name
+            if template_file.exists():
+                try:
+                    with template_file.open(encoding="utf-8") as f:
+                        template_data = json.load(f)
+
+                    errors = await validate_flow_execution(client, template_data, template_name, logged_in_headers)
+                    all_errors.extend(errors)
+
+                except (ValueError, TypeError, KeyError, AttributeError, OSError, json.JSONDecodeError) as e:
+                    all_errors.append(f"{template_name}: Unexpected error during validation: {e!s}")
+
+        # All basic templates must pass - no failures allowed
+        if all_errors:
+            error_msg = "\n".join(all_errors)
+            pytest.fail(f"Basic template execution errors:\n{error_msg}")
