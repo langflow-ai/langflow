@@ -177,6 +177,9 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         session: The database session to use for the deletion
     """
     try:
+        logger.debug(
+            f"Cleaning up transactions. Keeping last {settings_service.settings.max_transactions_to_keep} transactions."
+        )
         # Delete transactions using bulk delete
         delete_stmt = delete(TransactionTable).where(
             col(TransactionTable.id).in_(
