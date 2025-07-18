@@ -307,5 +307,7 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
     logger.info(f"  Our events: {len(our_parsed)}")
     logger.info(f"  OpenAI function events: {len(openai_actual_tool_events)}")
     logger.info(f"  Our function events: {len(our_function_events)}")
-    compatibility_result = "✅ PASS" if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else "❌ FAIL"
+    compatibility_result = (
+        "✅ PASS" if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else "❌ FAIL"
+    )
     logger.info(f"  Format compatibility: {compatibility_result}")
