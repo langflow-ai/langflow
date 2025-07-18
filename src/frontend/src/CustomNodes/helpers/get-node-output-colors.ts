@@ -1,5 +1,5 @@
-import { OutputFieldType } from "../../types/api";
-import { NodeDataType } from "../../types/flow";
+import type { OutputFieldType } from "../../types/api";
+import type { NodeDataType } from "../../types/flow";
 import { nodeColors } from "../../utils/styleUtils";
 
 export function getNodeOutputColors(
