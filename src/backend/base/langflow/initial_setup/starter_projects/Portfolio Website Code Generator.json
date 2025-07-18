@@ -191,7 +191,10 @@
             "key": "TextInput",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "efdcba3771af",
+              "module": "langflow.components.input_output.text.TextInputComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -307,7 +310,10 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -759,7 +765,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ad2a6f4552c0",
+              "module": "langflow.components.processing.structured_output.StructuredOutputComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
