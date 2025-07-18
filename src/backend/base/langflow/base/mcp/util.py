@@ -21,6 +21,7 @@ from sqlmodel import select
 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service
+import contextlib
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
@@ -695,10 +696,8 @@ class MCPSessionManager:
         # Cancel periodic cleanup task
         if self._cleanup_task and not self._cleanup_task.done():
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         # Clean up all sessions
         for server_key in list(self.sessions_by_server.keys()):
@@ -720,10 +719,8 @@ class MCPSessionManager:
         for task in list(self._background_tasks):
             if not task.done():
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
     async def _cleanup_session(self, context_id: str):
         """Compatibility method for the old session cleanup interface.
