@@ -56,37 +56,37 @@ The following updates are included in this version:
     The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
     For more information, see [API keys](/configuration-api-keys).
 
-- New Language Model and Embedding Model components
+- Centralized **Language Model** and **Embedding Model** components
 
-    The **Language Model** and **Embedding Model** components have been promoted to be the main components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment without swapping out single-provider components.
-    The single-provider components are still available for your flows in the components sidebar under [Bundles](/components-bundle-components).
-    For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-models) components.
+    The [**Language Model**](/components-models) and [**Embedding Model**](/components-embedding-models) components are now core components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment with different models without swapping out single-provider components.
+    Find them in the **Components** menu in the **Models** category.
 
-- MCP one-click installation
+    The single-provider components are still available for your flows in the **Components** menu in the [**Bundles**](/components-bundle-components) section.
 
-    In the **MCP server** page, click **Auto install** to install your Langflow MCP server to MCP clients with just one click.
+- MCP server one-click installation
+
+    On your Langflow project's **MCP server** page, click **Auto install** to install your Langflow MCP server to MCP clients with just one click.
     The option to install with a JSON configuration file is available for macOS, Windows, and WSL.
-    For more information, see [MCP server](/mcp-server).
+    For more information, see [Use Langflow as an MCP server](/mcp-server).
 
 - MCP server management
 
-    Add, remove, and edit your MCP servers in the **MCP Tools** and **Settings** page.
-    For more information, see [MCP client](/mcp-client).
+    You can now add, remove, and edit your MCP servers in the **MCP Tools** components and through your Langflow **Settings** page.
+    For more information, see [Use Langflow as an MCP client](/mcp-client).
 
 - Input schema replaces temporary overrides
 
     The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow's code snippets, providing ready-to-use templates for making requests in your preferred programming language.
 
-- Tools category is now legacy
+- Tool components are redistributed
 
-    All components in the **Tools** category are now **Legacy** or have moved to [Bundles](/components-bundle-components).
+    All components in the **Tools** category were moved to other core component categories, [bundles](/components-bundle-components), or marked as legacy.
 
-    The [MCP Tools](/mcp-client) component is available in the components sidebar under **Agents**.
+    The [**MCP Tools** component](/mcp-client) is now under the **Agents** core components category.
 
-    Many of the **Tools** components performed the same functions, like web search and API requests, so we combined this functionality into single components:
+    Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/components-data#web-search) and the [**News Search** component](/components-data#news-search).
 
-    * To replace legacy search components, use the [Web search](/components-data#web-search) component.
-    * To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
+    For more information, see the [Tools components](/components-tools) page.
 
 - Stability improvements
 

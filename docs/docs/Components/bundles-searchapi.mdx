@@ -1,8 +1,19 @@
+---
+title: SearchApi components
+slug: /bundles-searchapi
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **SearchApi** bundle.
+
 ## Search API
 
 This component calls the `searchapi.io` API. It can be used to search the web for information.
 
-For more information, see the [SearchAPI documentation](https://www.searchapi.io/docs/google).
+For more information, see the [SearchApi documentation](https://www.searchapi.io/docs/google).
 
 <details>
 <summary>Parameters</summary>
@@ -12,7 +23,7 @@ For more information, see the [SearchAPI documentation](https://www.searchapi.io
 | Name | Type | Description |
 |------|------|-------------|
 | engine | String | The search engine to use. Default: `google`. |
-| api_key | SecretString | The API key for authenticating with SearchAPI. |
+| api_key | SecretString | The API key for authenticating with SearchApi. |
 | input_value | String | The search query or input for the API call. |
 | search_params | Dict | Additional parameters for customizing the search. |
 

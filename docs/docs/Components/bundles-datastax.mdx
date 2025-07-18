@@ -1,6 +1,15 @@
+---
+title: DataStax components
+slug: /bundles-datastax
+---
 
+import Icon from "@site/src/components/icon";
 
-### AstraDBChatMemory Component
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **DataStax** bundle.
+
+### Astra DB Chat Memory
 
 This component creates an `AstraDBChatMessageHistory` instance, which stores and retrieves chat messages using Astra DB, a cloud-native database service.
 
@@ -135,7 +144,7 @@ The **Data** output is used when directly querying Astra DB, while the **Tool** 
 
 </details>
 
-### Astra DB vectorize
+### Astra DB Vectorize
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
@@ -168,7 +177,7 @@ For more information and instructions, see [Embedding Generation](https://docs.d
 
 </details>
 
-### CassandraChatMemory Component
+### Cassandra Chat Memory
 
 This component creates a `CassandraChatMessageHistory` instance, enabling storage and retrieval of chat messages using Apache Cassandra or DataStax Astra DB.
 
