@@ -2,12 +2,14 @@ from .model_metadata import create_model_metadata
 
 # Unified model metadata - single source of truth
 CEREBRAS_MODELS_DETAILED = [
-  # Cerebras Models
+    # Cerebras Models
     create_model_metadata(provider="🧠 Cerebras", name="llama-4-scout-17b-16e-instruct", icon="🧠", tool_calling=True),
     create_model_metadata(provider="🧠 Cerebras", name="llama3.1-8b", icon="🧠", tool_calling=True),
     create_model_metadata(provider="🧠 Cerebras", name="llama-3.3-70b", icon="🧠", tool_calling=True),
     create_model_metadata(provider="🧠 Cerebras", name="qwen-3-32b", icon="🧠", tool_calling=True),
-    create_model_metadata(provider="🧠 Cerebras", name="deepseek-r1-distill-llama-70b", icon="🧠", tool_calling=True, preview=True),
+    create_model_metadata(
+        provider="🧠 Cerebras", name="deepseek-r1-distill-llama-70b", icon="🧠", tool_calling=True, preview=True
+    ),
 ]
 
 CEREBRAS_CHAT_MODEL_NAMES = [
@@ -23,7 +25,6 @@ CEREBRAS_REASONING_MODEL_NAMES = [
     for metadata in CEREBRAS_MODELS_DETAILED
     if metadata.get("reasoning", False) and not metadata.get("not_supported", False)
 ]
-
 
 
 # Backwards compatibility

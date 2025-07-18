@@ -1,15 +1,15 @@
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
+from langchain_cerebras import ChatCerebras
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
-from langchain_cerebras import ChatCerebras
 
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
+from langflow.base.models.cerebras_constants import CEREBRAS_CHAT_MODEL_NAMES, CEREBRAS_REASONING_MODEL_NAMES
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
-from langflow.base.models.cerebras_constants import CEREBRAS_CHAT_MODEL_NAMES,CEREBRAS_REASONING_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput
@@ -29,11 +29,16 @@ class LanguageModelComponent(LCModelComponent):
         DropdownInput(
             name="provider",
             display_name="Model Provider",
-            options=["OpenAI", "Anthropic", "Google","🧠 Cerebras"],
+            options=["OpenAI", "Anthropic", "Google", "🧠 Cerebras"],
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "GoogleGenerativeAI"},{"icon" : "🧠"}],
+            options_metadata=[
+                {"icon": "OpenAI"},
+                {"icon": "Anthropic"},
+                {"icon": "GoogleGenerativeAI"},
+                {"icon": "🧠"},
+            ],
         ),
         DropdownInput(
             name="model_name",
@@ -131,7 +136,6 @@ class LanguageModelComponent(LCModelComponent):
                 streaming=stream,
                 api_key=self.api_key,
             )
-
 
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)

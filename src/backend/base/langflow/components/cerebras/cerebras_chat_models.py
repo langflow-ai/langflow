@@ -2,14 +2,13 @@ from typing import Any
 
 # from langchain_openai import ChatOpenAI
 from langchain_cerebras import ChatCerebras
-
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.model import LCModelComponent
 from langflow.base.models.cerebras_constants import (
     CEREBRAS_CHAT_MODEL_NAMES,
     CEREBRAS_REASONING_MODEL_NAMES,
 )
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -109,7 +108,7 @@ class CerebrasModelComponent(LCModelComponent):
             "max_retries": self.max_retries,
             "timeout": self.timeout,
         }
-        
+
         # TODO: Revisit if/once parameters are supported for reasoning models
         unsupported_params_for_reasoning_models = ["temperature", "seed"]
 
