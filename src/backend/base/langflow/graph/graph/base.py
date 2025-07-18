@@ -117,7 +117,7 @@ class Graph:
         self.parent_child_map: dict[str, list[str]] = defaultdict(list)
         self._run_queue: deque[str] = deque()
         self._first_layer: list[str] = []
-        self._lock = asyncio.Lock()
+        self._lock = None  # Lazy initialization
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
@@ -141,6 +141,13 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
+
+    @property
+    def lock(self):
+        """Lazy initialization of asyncio.Lock to avoid event loop binding issues."""
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     @property
     def context(self) -> dotdict:
@@ -376,6 +383,12 @@ class Graph:
                 for key, value in config["output"].items():
                     setattr(output, key, value)
 
+    def _reset_all_output_values(self) -> None:
+        for vertex in self.vertices:
+            if vertex.custom_component is None:
+                continue
+            vertex.custom_component._reset_all_output_values()
+
     def start(
         self,
         inputs: list[dict] | None = None,
@@ -394,6 +407,8 @@ class Graph:
         Returns:
             Generator yielding results from graph execution
         """
+        self.prepare()
+        self._reset_all_output_values()
         if self.is_cyclic and max_iterations is None:
             msg = "You must specify a max_iterations if the graph is cyclic"
             raise ValueError(msg)
@@ -1034,6 +1049,8 @@ class Graph:
         else:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
+        # Recreate the lock after unpickling
+        self._lock = None  # Lazy initialization
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         self.tracing_service = get_tracing_service()
         self.set_run_id(self._run_id)
@@ -1335,7 +1352,7 @@ class Graph:
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
-            self._lock, vertex=vertex_build_result.vertex, cache=False
+            self.lock, vertex=vertex_build_result.vertex, cache=False
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
