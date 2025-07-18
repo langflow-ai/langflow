@@ -143,7 +143,7 @@ In the context of creating and running flows, component code does the following:
 * Passes results to the next component in the flow.
 
 All components inherit from a base `Component` class that defines the component's interface and behavior.
-For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
+For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [`LCTextSplitterComponent`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
 
 Each component's code includes definitions for inputs and outputs, which are represented in the **Workspace** as [component ports](/concepts-components#component-ports).
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.

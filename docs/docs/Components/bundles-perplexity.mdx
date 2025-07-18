@@ -1,0 +1,28 @@
+### Perplexity
+
+This component generates text using Perplexity's language models.
+
+For more information, see [Perplexity documentation](https://perplexity.ai/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_name | String | The name of the Perplexity model to use. Options include various Llama 3.1 models. |
+| max_output_tokens | Integer | The maximum number of tokens to generate. |
+| api_key | SecretString | The Perplexity API Key for authentication. |
+| temperature | Float | Controls randomness in the output. Default: 0.75. |
+| top_p | Float | The maximum cumulative probability of tokens to consider when sampling (advanced). |
+| n | Integer | Number of chat completions to generate for each prompt (advanced). |
+| top_k | Integer | Number of top tokens to consider for top-k sampling. Must be positive (advanced). |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatPerplexity configured with the specified parameters. |
+
+</details>

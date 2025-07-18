@@ -1,0 +1,96 @@
+### IBM watsonx.ai
+
+This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
+
+To use **IBM watsonx.ai** model components, replace a model component with the IBM watsonx.ai component in a flow.
+
+An example flow looks like the following:
+
+![IBM watsonx model component in a basic prompting flow](/img/component-watsonx-model.png)
+
+The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
+For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/chat/ibm_watsonx/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| url | String | The base URL of the watsonx API. |
+| project_id | String | Your watsonx Project ID. |
+| api_key | SecretString | Your IBM watsonx API Key. |
+| model_name | String | The name of the watsonx model to use. Options are dynamically fetched from the API. |
+| max_tokens | Integer | The maximum number of tokens to generate. Default: `1000`. |
+| stop_sequence | String | The sequence where generation should stop. |
+| temperature | Float | Controls randomness in the output. Default: `0.1`. |
+| top_p | Float | Controls nucleus sampling, which limits the model to tokens whose probability is below the `top_p` value. Range: Default: `0.9`. |
+| frequency_penalty | Float | Controls frequency penalty. A positive value decreases the probability of repeating tokens, and a negative value increases the probability. Range: Default: `0.5`. |
+| presence_penalty | Float | Controls presence penalty. A positive value increases the likelihood of new topics being introduced. Default: `0.3`. |
+| seed | Integer | A random seed for the model. Default: `8`. |
+| logprobs | Boolean | Whether to return log probabilities of output tokens or not. Default: `True`. |
+| top_logprobs | Integer | The number of most likely tokens to return at each position. Default: `3`. |
+| logit_bias | String | A JSON string of token IDs to bias or suppress. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of [ChatWatsonx](https://python.langchain.com/docs/integrations/chat/ibm_watsonx/) configured with the specified parameters. |
+
+</details>
+
+### IBM watsonx.ai Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **IBM watsonx.ai Embeddings** component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
+
+To use **IBM watsonx.ai** embeddings components, replace an embeddings component with the IBM watsonx.ai component in a flow.
+
+An example document processing flow looks like the following:
+
+![IBM watsonx embeddings model loading a chroma-db with split text](/img/component-watsonx-embeddings-chroma.png)
+
+This flow loads a PDF file from local storage and splits the text into chunks.
+
+The **IBM watsonx** embeddings component converts the text chunks into embeddings, which are then stored in a Chroma DB vector store.
+
+The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
+For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/text_embedding/ibm_watsonx/).
+
+#### Default models
+
+The component supports several default models with the following vector dimensions:
+
+- `sentence-transformers/all-minilm-l12-v2`: 384-dimensional embeddings
+- `ibm/slate-125m-english-rtrvr-v2`: 768-dimensional embeddings
+- `ibm/slate-30m-english-rtrvr-v2`: 768-dimensional embeddings
+- `intfloat/multilingual-e5-large`: 1024-dimensional embeddings
+
+The component automatically fetches and updates the list of available models from your watsonx.ai instance when you provide your API endpoint and credentials.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| url | watsonx API Endpoint | The base URL of the API. |
+| project_id | watsonx project id | The project ID for your watsonx.ai instance. |
+| api_key | API Key | The API Key to use for the model. |
+| model_name | Model Name | The name of the embedding model to use. |
+| truncate_input_tokens | Truncate Input Tokens | The maximum number of tokens to process. Default: `200`. |
+| input_text | Include the original text in the output | Determines if the original text is included in the output. Default: `True`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | An instance for generating embeddings using watsonx.ai. |
+
+</details>

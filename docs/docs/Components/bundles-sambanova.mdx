@@ -1,0 +1,29 @@
+
+
+
+### SambaNova
+
+This component generates text using SambaNova LLMs.
+
+For more information, see [Sambanova Cloud documentation](https://cloud.sambanova.ai/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| sambanova_url | String | Base URL path for API requests. Default: `https://api.sambanova.ai/v1/chat/completions`. |
+| sambanova_api_key | SecretString | Your SambaNova API Key. |
+| model_name | String | The name of the Sambanova model to use. Options include various Llama models. |
+| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.07. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of SambaNova model configured with the specified parameters. |
+
+</details>

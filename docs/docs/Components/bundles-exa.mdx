@@ -1,0 +1,23 @@
+## Exa Search
+
+This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| metaphor_api_key | SecretString | An API key for Exa Search. |
+| use_autoprompt | Boolean | Whether to use the autoprompt feature. Default: true. |
+| search_num_results | Integer | The number of results to return for search. Default: 5. |
+| similar_num_results | Integer | The number of similar results to return. Default: 5. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| tools | List[Tool] | A list of search tools provided by the toolkit. |
+
+</details>

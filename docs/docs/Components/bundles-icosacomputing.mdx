@@ -1,0 +1,25 @@
+## Combinatorial Reasoner
+
+This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. For more information, see [Icosa computing](https://www.icosacomputing.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| prompt | String | The input to run CR on. |
+| openai_api_key | SecretString | An OpenAI API key for authentication. |
+| username | String | A username for Icosa API authentication. |
+| password | SecretString | A password for Icosa API authentication. |
+| model_name | String | The OpenAI LLM to use for reason generation. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| optimized_prompt | Message | A message object containing the optimized prompt. |
+| reasons | List[String] | A list of the selected reasons that are embedded in the optimized prompt. |
+
+</details>

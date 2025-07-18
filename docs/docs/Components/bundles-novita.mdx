@@ -1,0 +1,28 @@
+### Novita AI
+
+This component generates text using Novita AI's language models.
+
+For more information, see [Novita AI documentation](https://novita.ai/docs/model-api/reference/llm/llm.html?utm_source=github_langflow&utm_medium=github_readme&utm_campaign=link).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Your Novita AI API Key. |
+| model | String | The id of the Novita AI model to use. |
+| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| top_p | Float | Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
+| frequency_penalty | Float | Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
+| presence_penalty | Float | Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of Novita AI model configured with the specified parameters. |
+
+</details>

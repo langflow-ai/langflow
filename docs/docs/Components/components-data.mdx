@@ -249,7 +249,7 @@ The latest content is returned in a structured DataFrame, with the key columns `
 
 </details>
 
-## SQL database
+## SQL Database
 
 This component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/).
 It supports any SQLAlchemy-compatible database, including PostgreSQL, MySQL, SQLite, and others.
@@ -480,101 +480,7 @@ For more information, see [Trigger flows with webhooks](/webhook).
 
 </details>
 
-## Legacy components
+## See also
 
-Legacy components are available for use but are no longer supported.
-
-### Gmail Loader
-
-:::warning Legacy Google OAuth Components
-Google OAuth Components are in **Legacy**, which means they are available for use but no longer in active development as of Langflow 1.4.0.
-They may not work in newer versions of Langflow.
-To connect your flows to Google OAuth services, use [Composio](/integrations-composio).
-:::
-
-This component loads emails from Gmail using provided credentials and filters.
-
-For more information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Input       | Type             | Description                                                                          |
-| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | A JSON string containing OAuth 2.0 access token information for service account access. |
-| label_ids   | MessageTextInput | A comma-separated list of label IDs to filter emails.                                |
-| max_results | MessageTextInput | The maximum number of emails to load.                                                |
-
-**Outputs**
-
-| Output | Type | Description       |
-| ------ | ---- | ----------------- |
-| data   | Data | The loaded email data. |
-
-</details>
-
-### Google Drive Loader
-
-:::warning Legacy Google OAuth Components
-Google OAuth Components are in **Legacy**, which means they are available for use but no longer in active development as of Langflow 1.4.0.
-They may not work in newer versions of Langflow.
-To connect your flows to Google OAuth services, use [Composio](/integrations-composio).
-:::
-
-For more information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Input       | Type             | Description                                                                          |
-| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | A JSON string containing OAuth 2.0 access token information for service account access. |
-| document_id | MessageTextInput | A single Google Drive document ID.                                                   |
-
-**Outputs**
-
-| Output | Type | Description          |
-| ------ | ---- | -------------------- |
-| docs   | Data | The loaded document data. |
-
-</details>
-
-### Google Drive Search
-
-:::warning Legacy Google OAuth Components
-Google OAuth Components are in **Legacy**, which means they are available for use but no longer in active development as of Langflow 1.4.0.
-They may not work in newer versions of Langflow.
-To connect your flows to Google OAuth services, use [Composio](/integrations-composio).
-:::
-
-This component searches Google Drive files using provided credentials and query parameters.
-
-For more information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Input          | Type             | Description                                                                          |
-| -------------- | ---------------- | ------------------------------------------------------------------------------------ |
-| token_string   | SecretStrInput   | A JSON string containing OAuth 2.0 access token information for service account access. |
-| query_item     | DropdownInput    | The field to query.                                                                  |
-| valid_operator | DropdownInput    | The operator to use in the query.                                                    |
-| search_term    | MessageTextInput | The value to search for in the specified query item.                                 |
-| query_string   | MessageTextInput | The query string used for searching.                      |
-
-**Outputs**
-
-| Output     | Type      | Description                                     |
-| ---------- | --------- | ----------------------------------------------- |
-| doc_urls   | List[str] | The URLs of the found documents.                |
-| doc_ids    | List[str] | The IDs of the found documents.                 |
-| doc_titles | List[str] | The titles of the found documents.              |
-| Data       | Data      | The document titles and URLs in a structured format. |
-
-</details>
+- [Google components](/bundles-google)
+- [Composio components](/integrations-composio)

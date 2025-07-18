@@ -1,0 +1,57 @@
+### LM Studio
+
+This component generates text using LM Studio's local language models.
+
+For more information, see [LM Studio documentation](https://lmstudio.ai/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| base_url | String | The URL where LM Studio is running. Default: `"http://localhost:1234"`. |
+| max_tokens | Integer | Maximum number of tokens to generate in the response. Default: `512`. |
+| temperature | Float | Controls randomness in the output. Range: `[0.0, 2.0]`. Default: `0.7`. |
+| top_p | Float | Controls diversity via nucleus sampling. Range: `[0.0, 1.0]`. Default: `1.0`. |
+| stop | List[String] | List of strings that stop generation when encountered. |
+| stream | Boolean | Whether to stream the response. Default: `False`. |
+| presence_penalty | Float | Penalizes repeated tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+| frequency_penalty | Float | Penalizes frequent tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of LMStudio configured with the specified parameters. |
+
+</details>
+
+### LM Studio Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **LM Studio Embeddings** component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| model | Model | The LM Studio model to use for generating embeddings. |
+| base_url | LM Studio Base URL | The base URL for the LM Studio API. |
+| api_key | LM Studio API Key | The API key for authentication with LM Studio. |
+| temperature | Model Temperature | The temperature setting for the model. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings. |
+
+</details>

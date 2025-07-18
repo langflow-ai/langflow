@@ -1,0 +1,31 @@
+
+
+### xAI
+
+This component generates text using xAI models like [Grok](https://x.ai/grok).
+
+For more information, see the [xAI documentation](https://x.ai/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | Maximum number of tokens to generate. Set to `0` for unlimited. Range: `0-128000`. |
+| model_kwargs | Dictionary | Additional keyword arguments for the model. |
+| json_mode | Boolean | If `True`, outputs JSON regardless of passing a schema. |
+| model_name | String | The xAI model to use. Default: `grok-2-latest`. |
+| base_url | String | Base URL for API requests. Default: `https://api.x.ai/v1`. |
+| api_key | SecretString | Your xAI API key for authentication. |
+| temperature | Float | Controls randomness in the output. Range: `[0.0, 2.0]`. Default: `0.1`. |
+| seed | Integer | Controls reproducibility of the job. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
+
+</details>

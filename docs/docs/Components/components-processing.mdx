@@ -361,9 +361,11 @@ For an additional example of using the **Parser** component to format a DataFram
 
 </details>
 
-## Python interpreter
+## Python Interpreter
 
 This component allows you to execute Python code with imported packages.
+
+### Use the Python Interpreter in a flow
 
 1. To use this component in a flow,in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
 At least one import is required.
@@ -427,21 +429,53 @@ Output:
 
 If you don't include the package imports in the chat, the Agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the Python interpreter component in the **Global Imports** field.
 
+### Python Interpreter parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| global_imports | String | Input parameter. A comma-separated list of modules to import globally, such as `math,pandas,numpy`. |
+| python_code | Code | Input parameter. The Python code to execute. Only modules specified in Global Imports can be used. |
+| results | Data | Output parameter. The output of the executed Python code, including any printed results or errors. |
+
+### Legacy Python components
+
+As of Langflow version 1.5, the **Python Interpreter** component replaces the following legacy Python components.
+You can still use these components in your flows, but they are no longer supported and can be removed in a future release.
+
 <details>
-<summary>Parameters</summary>
+<summary>Python REPL</summary>
 
-**Inputs**
+This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
 
-| Name | Type | Description |
-|------|------|-------------|
-| global_imports | String | A comma-separated list of modules to import globally, such as `math,pandas,numpy`. |
-| python_code | Code | The Python code to execute. Only modules specified in Global Imports can be used. |
-
-**Outputs**
+It accepts the following parameters:
 
 | Name | Type | Description |
 |------|------|-------------|
-| results | Data | The output of the executed Python code, including any printed results or errors. |
+| name | String | Input parameter. The name of the tool. Default: `python_repl`. |
+| description | String | Input parameter. A description of the tool's functionality. |
+| global_imports | List[String] | Input parameter. A list of modules to import globally. Default: `math`. |
+| tool | Tool | Output parameter. A Python REPL tool for use in LangChain. |
+
+</details>
+
+<details>
+<summary>Python Code Structured</summary>
+
+This component creates a structured tool from Python code using a dataclass.
+
+The component dynamically updates its configuration based on the provided Python code, allowing for custom function arguments and descriptions.
+
+It accepts the following parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| tool_code | String | Input parameter. The Python code for the tool's dataclass. |
+| tool_name | String | Input parameter. The name of the tool. |
+| tool_description | String | Input parameter. The description of the tool. |
+| return_direct | Boolean | Input parameter. Whether to return the function output directly. |
+| tool_function | String | Input parameter. The selected function for the tool. |
+| global_variables | Dict | Input parameter. Global variables or data for the tool. |
+| result_tool | Tool | Output parameter. A structured tool created from the Python code. |
 
 </details>
 
@@ -567,7 +601,7 @@ The connected LLM creates a filter based on the instructions, and successfully e
 
 </details>
 
-## Split text
+## Split Text
 
 This component splits text into chunks based on specified criteria. It's ideal for chunking data to be tokenized and embedded into vector databases.
 
@@ -639,6 +673,10 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 | dataframe | DataFrame | A list of split text chunks as [DataFrame](/data-types#dataframe) objects. |
 
 </details>
+
+### Other text splitters
+
+- [LangChain text splitter components](/bundles-langchain#text-splitters)
 
 ## Structured output
 

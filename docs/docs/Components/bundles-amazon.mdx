@@ -1,0 +1,57 @@
+### Amazon Bedrock
+
+This component generates text using Amazon Bedrock LLMs.
+
+For more information, see [Amazon Bedrock documentation](https://docs.aws.amazon.com/bedrock).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_id | String | The ID of the Amazon Bedrock model to use. Options include various models. |
+| aws_access_key | SecretString | AWS Access Key for authentication. |
+| aws_secret_key | SecretString | AWS Secret Key for authentication. |
+| aws_session_token | SecretString | The session key for your AWS account.
+| credentials_profile_name | String | Name of the AWS credentials profile to use. |
+| region_name | String | AWS region name. Default: `us-east-1`. |
+| model_kwargs | Dictionary | Additional keyword arguments for the model. |
+| endpoint_url | String | Custom endpoint URL for the Bedrock service. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatBedrock configured with the specified parameters. |
+
+</details>
+
+### Amazon Bedrock Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Amazon Bedrock Embeddings** component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| credentials_profile_name | String | The name of the AWS credentials profile in `~/.aws/credentials` or `~/.aws/config`, which has access keys or role information. |
+| model_id | String | The ID of the model to call, such as `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API. |
+| endpoint_url | String | The URL to set a specific service endpoint other than the default AWS endpoint. |
+| region_name | String | The AWS region to use, such as `us-west-2`. Falls back to the `AWS_DEFAULT_REGION` environment variable or region specified in `~/.aws/config` if not provided. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Amazon Bedrock. |
+
+</details>

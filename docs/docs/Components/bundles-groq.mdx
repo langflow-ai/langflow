@@ -1,0 +1,44 @@
+### Groq
+
+This component generates text using Groq's language models.
+
+1. To use this component in a flow, connect it as a **Model** in a flow like the [Basic prompting flow](/basic-prompting), or select it as the **Model Provider** if you're using an **Agent** component.
+
+![Groq component in a basic prompting flow](/img/component-groq.png)
+
+2. In the **Groq API Key** field, paste your Groq API key.
+The Groq model component automatically retrieves a list of the latest models.
+To refresh your list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+3. In the **Model** field, select the model you want to use for your LLM.
+This example uses [llama-3.1-8b-instant](https://console.groq.com/docs/model/llama-3.1-8b-instant), which Groq recommends for real-time conversational interfaces.
+4. In the **Prompt** component, enter:
+```text
+You are a helpful assistant who supports their claims with sources.
+```
+5. Click **Playground** and ask your Groq LLM a question.
+The responses include a list of sources.
+
+For more information, see the [Groq documentation](https://groq.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| groq_api_key | SecretString | API key for the Groq API. |
+| groq_api_base | String | Base URL path for API requests. Default: `https://api.groq.com`. |
+| max_tokens | Integer | The maximum number of tokens to generate. |
+| temperature | Float | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.1`. |
+| n | Integer | Number of chat completions to generate for each prompt. |
+| model_name | String | The name of the Groq model to use. Options are dynamically fetched from the Groq API. |
+| tool_mode_enabled | Bool | If enabled, the component only displays models that work with tools. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatGroq configured with the specified parameters. |
+
+</details>

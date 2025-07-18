@@ -1,0 +1,24 @@
+## Bing Search API
+
+This component allows you to call the Bing Search API.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| bing_subscription_key | SecretString | A Bing API subscription key. |
+| input_value | String | The search query input. |
+| bing_search_url | String | A custom Bing Search URL. |
+| k | Integer | The number of search results to return. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| results | List[Data] | A list of search results. |
+| tool | Tool | A Bing Search tool for use in LangChain. |
+
+</details>

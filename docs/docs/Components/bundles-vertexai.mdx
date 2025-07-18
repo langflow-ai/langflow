@@ -1,0 +1,68 @@
+
+
+### VertexAI
+
+This component generates text using Vertex AI LLMs.
+
+For more information, see [Google Vertex AI documentation](https://cloud.google.com/vertex-ai).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| credentials | File | JSON credentials file. Leave empty to fall back to environment variables. File type: JSON. |
+| model_name | String | The name of the Vertex AI model to use. Default: "gemini-1.5-pro". |
+| project | String | The project ID (advanced). |
+| location | String | The location for the Vertex AI API. Default: "us-central1" (advanced). |
+| max_output_tokens | Integer | The maximum number of tokens to generate (advanced). |
+| max_retries | Integer | Maximum number of retries for API calls. Default: 1 (advanced). |
+| temperature | Float | Controls randomness in the output. Default: 0.0. |
+| top_k | Integer | The number of highest probability vocabulary tokens to keep for top-k-filtering (advanced). |
+| top_p | Float | The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling. Default: 0.95 (advanced). |
+| verbose | Boolean | Whether to print verbose output. Default: False (advanced). |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatVertexAI configured with the specified parameters. |
+
+</details>
+
+### Vertex AI Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Vertex AI Embeddings** component is a wrapper around the [Google Vertex AI Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| credentials | Credentials | The default custom credentials to use. |
+| location | String | The default location to use when making API calls. Default: `us-central1`. |
+| max_output_tokens | Integer | The token limit determines the maximum amount of text output from one prompt. Default: `128`. |
+| model_name | String | The name of the Vertex AI large language model. Default: `text-bison`. |
+| project | String | The default GCP project to use when making Vertex API calls. |
+| request_parallelism | Integer | The amount of parallelism allowed for requests issued to VertexAI models. Default: `5`. |
+| temperature | Float | Tunes the degree of randomness in text generations. Should be a non-negative value. Default: `0`. |
+| top_k | Integer | How the model selects tokens for output. The next token is selected from the top `k` tokens. Default: `40`. |
+| top_p | Float | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value. Default: `0.95`. |
+| tuned_model_name | String | The name of a tuned model. If provided, `model_name` is ignored. |
+| verbose | Boolean | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug. Default: `False`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using VertexAI. |
+
+</details>

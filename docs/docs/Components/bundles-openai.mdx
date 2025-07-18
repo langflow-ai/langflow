@@ -1,0 +1,74 @@
+### OpenAI
+
+This component generates text using OpenAI's language models.
+
+For more information, see [OpenAI documentation](https://beta.openai.com/docs/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Your OpenAI API Key. |
+| model | String | The name of the OpenAI model to use. Options include "gpt-3.5-turbo" and "gpt-4". |
+| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| top_p | Float | Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
+| frequency_penalty | Float | Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
+| presence_penalty | Float | Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of OpenAI model configured with the specified parameters. |
+
+</details>
+
+### OpenAI Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **OpenAI Embeddings** component is used to load embedding models from [OpenAI](https://openai.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| OpenAI API Key | String | The API key to use for accessing the OpenAI API. |
+| Default Headers | Dict | The default headers for the HTTP requests. |
+| Default Query | NestedDict | The default query parameters for the HTTP requests. |
+| Allowed Special | List | The special tokens allowed for processing. Default: `[]`. |
+| Disallowed Special | List | The special tokens disallowed for processing. Default: `["all"]`. |
+| Chunk Size | Integer | The chunk size for processing. Default: `1000`. |
+| Client | Any | The HTTP client for making requests. |
+| Deployment | String | The deployment name for the model. Default: `text-embedding-3-small`. |
+| Embedding Context Length | Integer | The length of embedding context. Default: `8191`. |
+| Max Retries | Integer | The maximum number of retries for failed requests. Default: `6`. |
+| Model | String | The name of the model to use. Default: `text-embedding-3-small`. |
+| Model Kwargs | NestedDict | Additional keyword arguments for the model. |
+| OpenAI API Base | String | The base URL of the OpenAI API. |
+| OpenAI API Type | String | The type of the OpenAI API. |
+| OpenAI API Version | String | The version of the OpenAI API. |
+| OpenAI Organization | String | The organization associated with the API key. |
+| OpenAI Proxy | String | The proxy server for the requests. |
+| Request Timeout | Float | The timeout for the HTTP requests. |
+| Show Progress Bar | Boolean | Whether to show a progress bar for processing. Default: `False`. |
+| Skip Empty | Boolean | Whether to skip empty inputs. Default: `False`. |
+| TikToken Enable | Boolean | Whether to enable TikToken. Default: `True`. |
+| TikToken Model Name | String | The name of the TikToken model. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using OpenAI. |
+
+</details>

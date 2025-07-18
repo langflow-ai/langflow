@@ -1,0 +1,26 @@
+## Search API
+
+This component calls the `searchapi.io` API. It can be used to search the web for information.
+
+For more information, see the [SearchAPI documentation](https://www.searchapi.io/docs/google).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| engine | String | The search engine to use. Default: `google`. |
+| api_key | SecretString | The API key for authenticating with SearchAPI. |
+| input_value | String | The search query or input for the API call. |
+| search_params | Dict | Additional parameters for customizing the search. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| data | List[Data] | A list of Data objects containing search results. |
+| tool | Tool | A Tool object for use in LangChain workflows. |
+
+</details>

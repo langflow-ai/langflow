@@ -1,0 +1,62 @@
+### MistralAI
+
+This component generates text using MistralAI LLMs.
+
+For more information, see [Mistral AI documentation](https://docs.mistral.ai/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens (advanced). |
+| model_name | String | The name of the Mistral AI model to use. Options include `open-mixtral-8x7b`, `open-mixtral-8x22b`, `mistral-small-latest`, `mistral-medium-latest`, `mistral-large-latest`, and `codestral-latest`. Default: `codestral-latest`. |
+| mistral_api_base | String | The base URL of the Mistral API. Defaults to `https://api.mistral.ai/v1` (advanced). |
+| api_key | SecretString | The Mistral API Key to use for authentication. |
+| temperature | Float | Controls randomness in the output. Default: 0.5. |
+| max_retries | Integer | Maximum number of retries for API calls. Default: 5 (advanced). |
+| timeout | Integer | Timeout for API calls in seconds. Default: 60 (advanced). |
+| max_concurrent_requests | Integer | Maximum number of concurrent API requests. Default: 3 (advanced). |
+| top_p | Float | Nucleus sampling parameter. Default: 1 (advanced). |
+| random_seed | Integer | Seed for random number generation. Default: 1 (advanced). |
+| safe_mode | Boolean | Enables safe mode for content generation (advanced). |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatMistralAI configured with the specified parameters. |
+
+</details>
+
+### Mistral AI Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **MistralAI Embeddings** component generates embeddings using [MistralAI](https://docs.mistral.ai/) models.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | String | The MistralAI model to use. Default: "mistral-embed". |
+| mistral_api_key | SecretString | The API key for authenticating with MistralAI. |
+| max_concurrent_requests | Integer | The maximum number of concurrent API requests. Default: 64. |
+| max_retries | Integer | The maximum number of retry attempts for failed requests. Default: 5. |
+| timeout | Integer | The request timeout in seconds. Default: 120. |
+| endpoint | String | The custom API endpoint URL. Default: `https://api.mistral.ai/v1/`). |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | A MistralAIEmbeddings instance for generating embeddings. |
+
+</details>

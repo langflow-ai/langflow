@@ -301,9 +301,9 @@ module.exports = {
               type: 'category',
               label: 'Google',
               items: [
+                "Components/bundles-google",
                 "Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow",
                 "Integrations/Google/integrations-google-big-query",
-                "Components/bundles-google",
               ],
             },
             "Components/bundles-groq",
@@ -350,7 +350,6 @@ module.exports = {
                   id: "Integrations/Nvidia/integrations-nvidia-g-assist",
                   label: "NVIDIA G-Assist"
                 },
-                //NVIDIA System-Assist
               ],
             },
             "Components/bundles-olivya",

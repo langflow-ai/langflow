@@ -1,0 +1,52 @@
+### Cohere
+
+This component generates text using Cohere's language models.
+
+For more information, see the [Cohere documentation](https://cohere.ai/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| Cohere API Key | SecretString | Your Cohere API key. |
+| Max Tokens | Integer | Specifies the maximum number of tokens to generate. Defaults to `256`. |
+| Temperature | Float | Specifies the sampling temperature. Defaults to `0.75`. |
+| Input Value | String | Specifies the input text for text generation. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of the Cohere model configured with the specified parameters. |
+
+</details>
+
+### Cohere Embeddings
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Cohere Embeddings** component is used to load embedding models from [Cohere](https://cohere.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| cohere_api_key | String | The API key required to authenticate with the Cohere service. |
+| model | String | The language model used for embedding text documents and performing queries. Default: `embed-english-v2.0`. |
+| truncate | Boolean | Whether to truncate the input text to fit within the model's constraints. Default: `False`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using Cohere. |
+
+</details>

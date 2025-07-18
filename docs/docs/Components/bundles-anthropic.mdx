@@ -1,0 +1,27 @@
+### Anthropic
+
+This component allows the generation of text using Anthropic Chat and Language models.
+
+For more information, see the [Anthropic documentation](https://docs.anthropic.com/en/docs/welcome).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. Default: `4096`. |
+| model | String | The name of the Anthropic model to use. Options include various Claude 3 models. |
+| anthropic_api_key | SecretString | Your Anthropic API key for authentication. |
+| temperature | Float | Controls randomness in the output. Default: `0.1`. |
+| anthropic_api_url | String | Endpoint of the Anthropic API. Defaults to `https://api.anthropic.com` if not specified (advanced). |
+| prefill | String | Prefill text to guide the model's response (advanced). |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatAnthropic configured with the specified parameters. |
+
+</details>

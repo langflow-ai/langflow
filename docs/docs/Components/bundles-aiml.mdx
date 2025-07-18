@@ -1,0 +1,53 @@
+### AIML
+
+This component creates a ChatOpenAI model instance using the AI/ML API.
+
+For more information, see the [AI/ML API Langflow integration documentation](https://docs.aimlapi.com/integrations/langflow).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. Range: 0-128000. |
+| model_kwargs | Dictionary | Additional keyword arguments for the model. |
+| model_name | String | The name of the AIML model to use. Options are predefined in `AIML_CHAT_MODELS`. |
+| aiml_api_base | String | The base URL of the AIML API. Defaults to `https://api.aimlapi.com`. |
+| api_key | SecretString | The AIML API Key to use for the model. |
+| temperature | Float | Controls randomness in the output. Default: `0.1`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
+
+</details>
+
+### AI/ML API
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **AI/ML API** component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_name | String | The name of the AI/ML embedding model to use. |
+| aiml_api_key | SecretString | The API key required for authenticating with the AI/ML service. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance of `AIMLEmbeddingsImpl` for generating embeddings. |
+
+</details>

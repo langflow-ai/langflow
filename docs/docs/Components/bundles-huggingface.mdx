@@ -1,0 +1,86 @@
+### Hugging Face API
+
+This component sends requests to the Hugging Face API to generate text using the model specified in the **Model ID** field.
+
+The Hugging Face API is a hosted inference API for models hosted on Hugging Face, and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate.
+
+In this example based on the [Basic prompting flow](/basic-prompting), the **Hugging Face API** model component replaces the **Open AI** model. By selecting different hosted models, you can see how different models return different results.
+
+1. Create a [Basic prompting flow](/basic-prompting).
+
+2. Replace the **OpenAI** model component with a **Hugging Face API** model component.
+
+3. In the **Hugging Face API** component, add your Hugging Face API token to the **API Token** field.
+
+4. Open the **Playground** and ask a question to the model, and see how it responds.
+
+5. Try different models, and see how they perform differently.
+
+For more information, see the [Hugging Face documentation](https://huggingface.co/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_id | String | The model ID from Hugging Face Hub. For example, "gpt2", "facebook/bart-large". |
+| huggingfacehub_api_token | SecretString | Your Hugging Face API token for authentication. |
+| temperature | Float | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| max_new_tokens | Integer | Maximum number of tokens to generate. Default: 512. |
+| top_p | Float | Nucleus sampling parameter. Range: [0.0, 1.0]. Default: 0.95. |
+| top_k | Integer | Top-k sampling parameter. Default: 50. |
+| model_kwargs | Dictionary | Additional keyword arguments to pass to the model. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of HuggingFaceHub configured with the specified parameters. |
+
+</details>
+
+### Hugging Face Embeddings Inference
+
+Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
+The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
+You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+
+The **Hugging Face Embeddings Inference** component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/) and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate. Local inference models do not require an API key.
+
+Use this component to create embeddings with Hugging Face's hosted models, or to connect to your own locally hosted models.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| API Key | API Key | The API key for accessing the Hugging Face Inference API. |
+| API URL | API URL | The URL of the Hugging Face Inference API. |
+| Model Name | Model Name | The name of the model to use for embeddings. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings. |
+
+</details>
+
+This component replaces the removed **Hugging Face Embeddings** component, which was deprecated in Langflow version 1.0.18.
+
+#### Connect the Hugging Face component to a local embeddings model
+
+To run an embeddings inference locally, see the [HuggingFace documentation](https://huggingface.co/docs/text-embeddings-inference/local_cpu).
+
+To connect the local Hugging Face model to the **Hugging Face embeddings inference** component and use it in a flow, follow these steps:
+
+1. Create a [Vector store RAG flow](/vector-store-rag).
+There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
+2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
+3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
+4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model. **The **API Key** field is not required for local inference.**
+5. Run the flow. The local inference models generate embeddings for the input text.

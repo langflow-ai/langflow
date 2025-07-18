@@ -1,0 +1,47 @@
+## Wikidata
+
+This component performs a search using the Wikidata API.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| query | String | The text query for similarity search on Wikidata. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| data | List[Data] | The search results from Wikidata API as a list of Data objects. |
+| text | Message | The search results formatted as a text message. |
+
+</details>
+
+## Wikipedia API
+
+This component creates a tool for searching and retrieving information from Wikipedia.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| input_value | String | The search query input. |
+| lang | String | The language code for Wikipedia. Default: `en`. |
+| k | Integer | The number of results to return. |
+| load_all_available_meta | Boolean | Whether to load all available metadata. |
+| doc_content_chars_max | Integer | The maximum number of characters for document content. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| results | List[Data] | A list of Wikipedia search results. |
+| tool | Tool | A Wikipedia search tool for use in LangChain. |
+
+</details>

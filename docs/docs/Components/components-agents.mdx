@@ -3,9 +3,10 @@ title: Agents
 slug: /components-agents
 ---
 
-# Agent components in Langflow
+Langflow's **Agent** and **MCP Tools** components are critical for building agentic flows.
+These components define the behavior and capabilities of AI agents in your flows.
 
-Agent components define the behavior and capabilities of AI agents in your flow.
+## How agents work
 
 Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
 
@@ -15,125 +16,54 @@ Agents become aware of tools through tool registration where the agent is provid
 
 The agent then uses a connected LLM to reason through the problem to decide which tool is best for the job.
 
-## Use an agent in a flow
+## Sample agentic flows
 
-The [simple agent starter project](/simple-agent) uses an [agent component](#agent-component) connected to URL and Calculator tools to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use. Tools are connected to agent components at the **Tools** port.
+The [**Simple agent starter flow** template](/simple-agent) demonstrates a basic agentic flow in Langflow.
 
-![Simple agent starter flow](/img/starter-flow-simple-agent.png)
+This template has an [**Agent** component](#agent-component) that is connected to two other components as tools through the agent's **Tools** port.
+The LLM specified in the **Agent** component's settings can use its own built-in functionality as well as the functionality provided by the connected tools when generating responses.
 
-For a multi-agent example see [Create a flow with an agent](/agents).
+For a multi-agent example see [Use an agent as a tool](/agents-tools#use-an-agent-as-a-tool).
 
 ## Agent component {#agent-component}
 
-This component creates an agent that can use tools to answer questions and perform tasks based on given instructions.
+The **Agent** component is the primary agent actor in your agentic flows.
+This component uses an LLM integration to respond to input, such as a chat message or file upload.
 
-The component includes an LLM model integration, a system message prompt, and a **Tools** port to connect tools to extend its capabilities.
+The agent can use the tools already available in the base LLM model as well as additional tools that you connect to the **Agent** component's **Tools** port.
 
-For more information on this component, see the [Agent documentation](/agents).
+You can connect any Langflow component as a tool, including other **Agent** components and MCP servers through the [**MCP Tools** component](#mcp-connection).
+For more information and examples, see [Use Langflow agents](/agents) and [Configure tools for agents](/agents-tools).
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent_llm | Dropdown | The provider of the language model that the agent uses to generate responses. Options include OpenAI and other providers or Custom. |
-| system_prompt | String | The system prompt provides initial instructions and context to guide the agent's behavior. |
-| tools | List | The list of tools available for the agent to use. This field is optional and can be empty. |
-| input_value | String | The input task or question for the agent to process. |
-| add_current_date_tool | Boolean | When true this adds a tool to the agent that returns the current date. |
-| memory | Memory | An optional memory configuration for maintaining conversation history. |
-| max_iterations | Integer | The maximum number of iterations the agent can perform. |
-| handle_parsing_errors | Boolean | This determines whether to handle parsing errors during agent execution. |
-| verbose | Boolean | This enables verbose output for detailed logging. |
-
-**Outputs**
+### Agent component parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| response | Message | The agent's response to the given input task. |
+| agent_llm | Dropdown | Input parameter. The provider of the language model that the agent uses to generate responses. Options include OpenAI and other providers or Custom. |
+| system_prompt | String | Input parameter. The system prompt provides initial instructions and context to guide the agent's behavior. |
+| tools | List | Input parameter. The list of tools available for the agent to use. This field is optional and can be empty. |
+| input_value | String | Input parameter. The input task or question for the agent to process. |
+| add_current_date_tool | Boolean | Input parameter. When true this adds a tool to the agent that returns the current date. |
+| memory | Memory | Input parameter. An optional memory configuration for maintaining conversation history. |
+| max_iterations | Integer | Input parameter. The maximum number of iterations the agent can perform. |
+| handle_parsing_errors | Boolean | Input parameter. This determines whether to handle parsing errors during agent execution. |
+| verbose | Boolean | Input parameter. This enables verbose output for detailed logging. |
+| response | Message | Output parameter. The agent's response to the given input task. |
 
-</details>
+## MCP Tools component {#mcp-connection}
 
-## MCP tools {#mcp-connection}
+The **MCP Tools** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's functions as tools for Langflow agents to use to respond to input.
 
-:::important
-Prior to Langflow 1.5, this component was named **MCP connection**.
-:::
+In addition to connecting to any of the many MCP servers available online and your own custom-built MCP servers, you can also leverage your own Langflow flows as MCP tools by connecting to the MCP server for a [Langflow project](/concepts-flows#projects).
+To do this, use the **MCP Tools** component's [SSE mode](/mcp-client#mcp-sse-mode) to connect to your Langflow MCP server at the `/api/v1/mcp/sse` endpoint.
 
-The **MCP tools** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
+For more information, see [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server).
 
-In addition to being an MCP client that can leverage MCP servers, the **MCP tools** component's [SSE mode](/mcp-client#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-flows#projects) as tools within a flow.
+### Earlier versions of the MCP Tools component
 
-For more information, see [MCP client](/mcp-client).
+* In Langflow version 1.5, the **MCP Connection** component was renamed to the **MCP Tools** component.
+* In Langflow version 1.3, the **MCP Tools (stdio)** and **MCP Tools (SSE)** components were deprecated and replaced by the unified **MCP Connection** component, which was later renamed to **MCP Tools**.
 
-## Legacy components
+## See also
 
-**Legacy** components are available for use but are no longer supported.
-
-### JSON Agent
-
-This component creates a JSON agent from a JSON or YAML file and an LLM.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| path | File | The path to the JSON or YAML file. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The JSON agent instance. |
-
-</details>
-
-### Vector Store Agent
-
-This component creates a Vector Store Agent using LangChain.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| vectorstore | VectorStoreInfo | The vector store information for the agent to use. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The Vector Store Agent instance. |
-
-</details>
-
-### Vector Store Router Agent
-
-This component creates a Vector Store Router Agent using LangChain.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| vectorstores | List[VectorStoreInfo] | The list of vector store information for the agent to route between. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The Vector Store Router Agent instance. |
-
-</details>
+* [Legacy LangChain components](/bundles-langchain#legacy-langchain-components)

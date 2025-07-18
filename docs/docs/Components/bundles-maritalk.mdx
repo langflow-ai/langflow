@@ -1,0 +1,26 @@
+### MariTalk
+
+This component generates text using MariTalk LLMs.
+
+For more information, see [MariTalk documentation](https://www.maritalk.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | The maximum number of tokens to generate. Set to `0` for unlimited tokens. Default: `512`. |
+| model_name | String | The name of the MariTalk model to use. Options: `sabia-2-small`, `sabia-2-medium`. Default: `sabia-2-small`. |
+| api_key | SecretString | The MariTalk API Key to use for authentication. |
+| temperature | Float | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.5`. |
+| endpoint_url | String | The MariTalk API endpoint. Default: `https://api.maritalk.com`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatMariTalk configured with the specified parameters. |
+
+</details>

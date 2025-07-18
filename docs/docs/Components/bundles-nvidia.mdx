@@ -12,7 +12,21 @@ This page describes the components that are available in the **NVIDIA** bundle.
 ## NVIDIA
 
 This component generates text using NVIDIA LLMs.
-For more information, see [Integrate NVIDIA NIMs with Langflow](/integrations-nvidia-ingest-wsl2).
+For more information about NVIDIA LLMs, see the [NVIDIA AI documentation](https://developer.nvidia.com/generative-ai).
+
+For an example of this component in a flow, see [Integrate NVIDIA NIMs with Langflow](/integrations-nvidia-ingest-wsl2).
+
+### NVIDIA component parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to `0` for unlimited tokens (advanced). |
+| model_name | String | Input parameter. The name of the NVIDIA model to use. Default: `mistralai/mixtral-8x7b-instruct-v0.1`. |
+| base_url | String | Input parameter. The base URL of the NVIDIA API. Default: `https://integrate.api.nvidia.com/v1`. |
+| nvidia_api_key | SecretString | Input parameter. The NVIDIA API Key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
+| seed | Integer | Input parameter. The seed controls the reproducibility of the job (advanced). Default: `1`. |
+| model | LanguageModel | Output parameter. An instance of ChatNVIDIA configured with the specified parameters. |
 
 ## NVIDIA Embeddings
 

@@ -1,0 +1,25 @@
+## Glean Search API
+
+This component allows you to call the Glean Search API.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| glean_api_url | String | The URL of the Glean API. |
+| glean_access_token | SecretString | An access token for Glean API authentication. |
+| query | String | The search query input. |
+| page_size | Integer | The number of results per page. Default: 10. |
+| request_options | Dict | Additional options for the API request. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| results | List[Data] | A list of search results. |
+| tool | Tool | A Glean Search tool for use in LangChain. |
+
+</details>
