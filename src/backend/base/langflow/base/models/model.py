@@ -230,14 +230,19 @@ class LCModelComponent(Component):
                             system_message_added = True
                         runnable = prompt | runnable
                     elif self.image:
-                        content_parts = []
-                        image_part = {
-                            "type": "image_url",
-                            "image_url": self.image,
-                        }
-                        text_part = {"type": "text", "text": input_value.text}
-                        content_parts.append(image_part)
-                        content_parts.append(text_part)
+                        # Ensure image is in proper data URL format
+                        image_url = self.image
+                        if not image_url.startswith("data:"):
+                            # Assume it's raw base64 and add appropriate prefix
+                            image_url = f"data:image/jpeg;base64,{image_url}"
+
+                        content_parts = [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": image_url},
+                            },
+                            {"type": "text", "text": input_value.text},
+                        ]
                         messages.append(HumanMessage(content=content_parts))
                     else:
                         messages.append(input_value.to_lc_message())
