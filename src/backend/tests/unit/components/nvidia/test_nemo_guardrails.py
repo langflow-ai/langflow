@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.components.nvidia.nemo_guardrails import NVIDIANeMoGuardrailsComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -29,7 +30,7 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
         return []
 
     def test_component_initialization(self, component_class):
-        """Test that the component initializes with correct default values"""
+        """Test that the component initializes with correct default values."""
         component = component_class()
         assert component.display_name == "NeMo Guardrails"
         assert component.description is not None
@@ -38,7 +39,7 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert component.beta is True
 
     def test_generate_rails_config(self, component_class, default_kwargs):
-        """Test YAML configuration generation with different rail combinations"""
+        """Test YAML configuration generation with different rail combinations."""
         component = component_class(**default_kwargs)
 
         # Test with default rails
@@ -55,8 +56,8 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
 
     @patch("langflow.components.nvidia.nemo_guardrails.RailsConfig")
     @patch("langflow.components.nvidia.nemo_guardrails.RunnableRails")
-    def test_build_model(self, mock_runnable_rails, mock_rails_config, component_class, default_kwargs):
-        """Test model building with different configurations"""
+    def test_build_model(self, mock_runnable_rails, component_class, default_kwargs):
+        """Test model building with different configurations."""
         component = component_class(**default_kwargs)
 
         # Test with default configuration
@@ -72,7 +73,7 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
 
     @patch("requests.get")
     def test_get_models(self, mock_get, component_class, default_kwargs):
-        """Test retrieval of available models from NVIDIA API"""
+        """Test retrieval of available models from NVIDIA API."""
         component = component_class(**default_kwargs)
 
         # Mock successful API response
@@ -88,7 +89,7 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert "openai/gpt-3.5-turbo-instruct" in models
 
     def test_update_build_config(self, component_class, default_kwargs):
-        """Test updating build configuration with model list"""
+        """Test updating build configuration with model list."""
         component = component_class(**default_kwargs)
         build_config = {"self_check_model_name": {"options": [], "value": ""}}
 
@@ -97,12 +98,12 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
             assert len(updated_config["self_check_model_name"]["options"]) == 2
 
     def test_error_handling(self, component_class, default_kwargs):
-        """Test error handling in various scenarios"""
+        """Test error handling in various scenarios."""
         component = component_class(**default_kwargs)
 
         # Test invalid YAML content
         component.yaml_content = "invalid: yaml: content:"
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid YAML syntax"):
             component.build_model()
 
         # Test missing API key
