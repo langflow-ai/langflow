@@ -8,10 +8,10 @@ import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
-import { tabsArrayType } from "@/types/tabs";
 import { hasStreaming } from "@/utils/reactflowUtils";
 import { getOS } from "@/utils/utils";
 import { useDarkStore } from "../../../stores/darkStore";
@@ -34,7 +34,8 @@ const operatingSystemTabs = [
 ];
 
 export default function APITabsComponent() {
-  const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [isCopied, setIsCopied] = useState<Boolean>(false);
+  const [copiedStep, setCopiedStep] = useState<string | null>(null);
   const endpointName = useFlowStore(
     useShallow((state) => state.currentFlow?.endpoint_name),
   );
@@ -87,18 +88,28 @@ export default function APITabsComponent() {
     )?.name || "macoslinux",
   );
 
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAutoLogin = useIsAutoLogin();
+  const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
+
   const tabsList = [
     {
       title: "Python",
       icon: "BWPython",
       language: "python",
-      code: getNewPythonApiCode(codeOptions),
+      code: getNewPythonApiCode({
+        ...codeOptions,
+        shouldDisplayApiKey,
+      }),
     },
     {
       title: "JavaScript",
       icon: "javascript",
       language: "javascript",
-      code: getNewJsApiCode(codeOptions),
+      code: getNewJsApiCode({
+        ...codeOptions,
+        shouldDisplayApiKey,
+      }),
     },
     {
       title: "cURL",
@@ -107,31 +118,41 @@ export default function APITabsComponent() {
       code: getNewCurlCode({
         ...codeOptions,
         platform: selectedPlatform === "windows" ? "powershell" : "unix",
+        shouldDisplayApiKey,
       }),
     },
   ];
 
   const [selectedTab, setSelectedTab] = useState("Python");
 
-  const copyToClipboard = () => {
+  const copyToClipboard = (codeText?: string, stepId?: string) => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
     }
 
     const currentTab = tabsList.find((tab) => tab.title === selectedTab);
-    if (currentTab) {
-      navigator.clipboard.writeText(currentTab.code).then(() => {
-        setIsCopied(true);
-
-        setTimeout(() => {
-          setIsCopied(false);
-        }, 2000);
+    const textToCopy =
+      codeText || (typeof currentTab?.code === "string" ? currentTab.code : "");
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        if (stepId) {
+          setCopiedStep(stepId);
+          setTimeout(() => {
+            setCopiedStep(null);
+          }, 2000);
+        } else {
+          setIsCopied(true);
+          setTimeout(() => {
+            setIsCopied(false);
+          }, 2000);
+        }
       });
     }
   };
 
   useEffect(() => {
     setIsCopied(false);
+    setCopiedStep(null);
   }, [selectedTab, selectedPlatform]);
 
   const currentTab = tabsList.find((tab) => tab.title === selectedTab);
@@ -180,40 +201,110 @@ export default function APITabsComponent() {
         )}
 
         {/* Code content */}
-        {currentTab && (
-          <div className="api-modal-tabs-content overflow-hidden">
-            <div className="relative flex h-full w-full">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={copyToClipboard}
-                data-testid="btn-copy-code"
-                className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
-              >
-                {isCopied ? (
-                  <IconComponent
-                    name="Check"
-                    className="h-5 w-5 text-muted-foreground"
-                  />
-                ) : (
-                  <IconComponent
-                    name="Copy"
-                    className="!h-5 !w-5 text-muted-foreground"
-                  />
-                )}
-              </Button>
-              <SyntaxHighlighter
-                showLineNumbers={true}
-                wrapLongLines={true}
-                language={currentTab.language}
-                style={dark ? oneDark : oneLight}
-                className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
-              >
-                {currentTab.code}
-              </SyntaxHighlighter>
-            </div>
-          </div>
-        )}
+        {currentTab &&
+          (() => {
+            // Work directly with structured data - no parsing needed
+            const codeData = currentTab.code;
+            const hasSteps =
+              typeof codeData === "object" &&
+              codeData !== null &&
+              "steps" in codeData;
+
+            if (hasSteps) {
+              const steps = (
+                codeData as { steps: { title: string; code: string }[] }
+              ).steps;
+              return (
+                <div className="api-modal-tabs-content flex h-full flex-col gap-4 overflow-auto">
+                  {steps.map((step, index) => (
+                    <div
+                      key={index}
+                      className={
+                        index === steps.length - 1
+                          ? "flex flex-1 flex-col overflow-hidden"
+                          : ""
+                      }
+                    >
+                      <h4 className="mb-2 text-sm font-medium">{step.title}</h4>
+                      <div
+                        className={`relative flex ${
+                          index === steps.length - 1 ? "h-full" : ""
+                        } w-full`}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            copyToClipboard(step.code, `step${index + 1}`)
+                          }
+                          data-testid={`btn-copy-step${index + 1}`}
+                          className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
+                        >
+                          {copiedStep === `step${index + 1}` ? (
+                            <IconComponent
+                              name="Check"
+                              className="h-5 w-5 text-muted-foreground"
+                            />
+                          ) : (
+                            <IconComponent
+                              name="Copy"
+                              className="!h-5 !w-5 text-muted-foreground"
+                            />
+                          )}
+                        </Button>
+                        <SyntaxHighlighter
+                          showLineNumbers={index > 0}
+                          wrapLongLines={true}
+                          language={currentTab.language}
+                          style={dark ? oneDark : oneLight}
+                          className={`!mt-0 ${
+                            index === steps.length - 1 ? "h-full" : ""
+                          } w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll`}
+                        >
+                          {step.code}
+                        </SyntaxHighlighter>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            } else {
+              return (
+                <div className="api-modal-tabs-content overflow-hidden">
+                  <div className="relative flex h-full w-full">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => copyToClipboard()}
+                      data-testid="btn-copy-code"
+                      className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
+                    >
+                      {isCopied ? (
+                        <IconComponent
+                          name="Check"
+                          className="h-5 w-5 text-muted-foreground"
+                        />
+                      ) : (
+                        <IconComponent
+                          name="Copy"
+                          className="!h-5 !w-5 text-muted-foreground"
+                        />
+                      )}
+                    </Button>
+                    <SyntaxHighlighter
+                      showLineNumbers={true}
+                      wrapLongLines={true}
+                      language={currentTab.language}
+                      style={dark ? oneDark : oneLight}
+                      className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+                    >
+                      {currentTab.code}
+                    </SyntaxHighlighter>
+                  </div>
+                </div>
+              );
+            }
+          })()}
       </div>
     </div>
   );
