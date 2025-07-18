@@ -18,7 +18,6 @@ import pytest
 # Import langflow validation utilities
 from langflow.utils.template_validation import (
     validate_flow_can_build,
-    validate_flow_endpoint,
     validate_flow_execution,
     validate_template_structure,
 )
@@ -97,7 +96,7 @@ class TestStarterProjects:
             with template_file.open(encoding="utf-8") as f:
                 template_data = json.load(f)
 
-            errors = await validate_flow_endpoint(client, template_data, template_file.name, logged_in_headers)
+            errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
             all_errors.extend(errors)
 
         if all_errors:
