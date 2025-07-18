@@ -35,7 +35,7 @@ test(
           .click();
       }
     } catch (e) {
-      console.log(e);
+      console.error(e);
     }
 
     await expect(page.getByTestId("voice-assistant-container")).toBeVisible();
