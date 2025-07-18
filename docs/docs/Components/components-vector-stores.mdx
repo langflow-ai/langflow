@@ -22,7 +22,7 @@ This vector data can then be retrieved for workloads like Retrieval Augmented Ge
 ![Embedding data into a vector store](/img/vector-store-document-ingestion.png)
 
 The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search.
-The results are output from the vector database component as a [Data](/concepts-objects) object and parsed into text.
+The results are output from the vector database component as a [Data](/data-types#data) object and parsed into text.
 This text fills the `{context}` variable in the **Prompt** component, which informs the **Open AI model** component's responses.
 
 ![Retrieval from a vector store](/img/vector-store-retrieval.png)
@@ -63,7 +63,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | The Astra DB vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -123,7 +123,7 @@ Avoid common keywords associated with the user's subject matter.
 1. Keywords: features, data, attributes, characteristics
 2. Question: What characteristics can be identified in my data?
 ```
-8. To view the [DataFrame](/concepts-objects#dataframe-object) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
+8. To view the [DataFrame](/data-types#dataframe) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 The DataFrame is passed to a **Parser** component, which parses the contents of the **Keywords** column into a string.
 
     This string of comma-separated words is passed to the **Lexical Terms** port of the **Astra DB** component.
@@ -168,7 +168,7 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | The Graph RAG vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -244,7 +244,7 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | The Cassandra Graph vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -299,7 +299,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | Name           | Type          | Description                    |
 |----------------|---------------|--------------------------------|
 | vector_store   | Chroma        | The Chroma vector store instance.  |
-| search_results | List[Data]    | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.    |
+| search_results | List[Data]    | The results of the similarity search as a list of [Data](/data-types#data) objects.    |
 
 </details>
 
@@ -412,7 +412,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | Name | Type | Description |
 |------|------|-------------|
 | vector_store | Chroma | A local Chroma vector store instance configured with the specified parameters. |
-| search_results | List[Data](/concepts-objects#data-object) | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
+| search_results | List[Data](/data-types#data) | The results of the similarity search as a list of [Data](/data-types#data) objects.  |
 
 </details>
 
@@ -444,7 +444,7 @@ For more information, see the [Elasticsearch documentation](https://www.elastic.
 | Name | Type | Description |
 |------|------|-------------|
 | vector_store | ElasticsearchStore | The Elasticsearch vector store instance. |
-| search_results | List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
+| search_results | List[Data] | The results of the similarity search as a list of [Data](/data-types#data) objects.  |
 
 </details>
 
@@ -473,7 +473,7 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | The FAISS vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -502,7 +502,7 @@ For an example flow, see the **Graph RAG** template.
 
 | Name | Type | Description |
 |------|------|-------------|
-| search_results | List[Data] | Results of the graph-based document retrieval as a list of [Data](/concepts-objects#data-object) objects. |
+| search_results | List[Data] | Results of the graph-based document retrieval as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -555,7 +555,7 @@ To use the HCD vector store for embeddings ingestion, connect it to an embedding
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
 | vector_store  | HyperConvergedDatabaseVectorStore | The HCD vector store instance. |
-| search_results| List[Data]   | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
+| search_results| List[Data]   | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
 
 </details>
 
@@ -627,7 +627,7 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 | Name          | Type                   | Description                               |
 | ------------- | ---------------------- | ----------------------------------------- |
 | vector_store  | MongoDBAtlasVectorSearch| The MongoDB Atlas vector store instance.       |
-| search_results| List[Data]             | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
+| search_results| List[Data]             | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
 
 </details>
 
@@ -661,7 +661,7 @@ For more information, see [Opensearch documentation](https://opensearch.org/plat
 | Name          | Type                   | Description                                 |
 | ------------- |------------------------|---------------------------------------------|
 | vector_store  | OpenSearchVectorSearch | OpenSearch vector store instance            |
-| search_results| List[Data]             | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.                 |
+| search_results| List[Data]             | The results of the similarity search as a list of [Data](/data-types#data) objects.                 |
 
 </details>
 
@@ -689,7 +689,7 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | The PGVector vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -720,7 +720,7 @@ For more information, see the [Pinecone documentation](https://docs.pinecone.io/
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | The Pinecone vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -758,7 +758,7 @@ For more information, see the [Qdrant documentation](https://qdrant.tech/documen
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
 | vector_store  | Qdrant   | A Qdrant vector store instance.              |
-| search_results| List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.             |
+| search_results| List[Data] | The results of the similarity search as a list of [Data](/data-types#data) objects.             |
 
 </details>
 
@@ -788,7 +788,7 @@ For more information, see the [Redis documentation](https://redis.io/docs/latest
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
 | vector_store  | Redis    | Redis vector store instance               |
-| search_results| List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.              |
+| search_results| List[Data] | The results of the similarity search as a list of [Data](/data-types#data) objects.              |
 
 </details>
 
@@ -818,7 +818,7 @@ For more information, see the [Supabase documentation](https://supabase.com/docs
 | Name          | Type               | Description                               |
 | ------------- | ------------------ | ----------------------------------------- |
 | vector_store  | SupabaseVectorStore | A Supabase vector store instance.            |
-| search_results| List[Data]          | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
+| search_results| List[Data]          | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
 
 </details>
 
@@ -849,7 +849,7 @@ For more information, see the [Upstash documentation](https://upstash.com/docs/i
 | Name          | Type             | Description                               |
 | ------------- | ---------------- | ----------------------------------------- |
 | vector_store  | UpstashVectorStore| An Upstash vector store instance.             |
-| search_results| List[Data]        | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
+| search_results| List[Data]        | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
 
 </details>
 
@@ -878,7 +878,7 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 | Name          | Type              | Description                               |
 | ------------- | ----------------- | ----------------------------------------- |
 | vector_store  | VectaraVectorStore | Vectara vector store instance.             |
-| search_results| List[Data]         | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.               |
+| search_results| List[Data]         | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
 
 </details>
 
@@ -905,7 +905,7 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
-| search_results | List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
+| search_results | List[Data] | The results of the similarity search as a list of [Data](/data-types#data) objects.  |
 
 </details>
 
@@ -964,6 +964,6 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
-| search_results | List[Data] | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects.  |
+| search_results | List[Data] | The results of the similarity search as a list of [Data](/data-types#data) objects.  |
 
 </details>

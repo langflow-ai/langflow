@@ -1,0 +1,298 @@
+---
+title: Langflow data types
+slug: /data-types
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
+Langflow components are designed to accept and produce specific types of inputs and outputs.
+Input and output data types define the structure and flow of information between components.
+Understanding these structures helps you build applications that provide valid input and correctly anticipate the output format.
+
+[Component ports](/concepts-components#component-ports) represent the data types that each component can send and receive.
+Some data types are self-evident from the fields they are attached to; for example, a **System Message** field accepts [message data](#message).
+[Port colors](/concepts-components#port-colors) also indicate the port's data type.
+For example **Data** ports, represented by <Icon name="Circle" size="16" aria-label="Red data port" style={{ color: '#dc2626', fill: '#dc2626' }} />, either accept or emit [structured data objects](#data).
+
+When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.
+
+:::tip
+In the visual editor, hover over a port to see connection details for that port.
+:::
+
+## Data
+
+**Data** ports <Icon name="Circle" size="16" aria-label="Red data port" style={{ color: '#dc2626', fill: '#dc2626' }} /> accept or produce the `Data` type, which is a structured data object, like a JSON payload that you might send to an API.
+This data type is used to pass key-value pairs between components, such as user profiles, settings, or other structured information.
+
+`Data` objects include a primary text field, indicated by a `text_key`, and additional metadata.
+
+### Schema and attributes
+
+The schema is defined in [`data.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/data.py).
+
+The following attributes are available:
+
+- `data`: A dictionary that stores key-value pairs.
+- `text_key`: The key in `data` that is considered the primary text value.
+- `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
+
+### Data structure
+
+A `Data` object stores key-value pairs within the `.data` attribute, where each key is a field name and its value can be any supported data type. `text_key` tells Langflow which key in the data dictionary is the primary text value for that object.
+
+```python
+data_obj = Data(
+    text_key="text",            # Field 1
+    data={                      # Field 2 (the actual dict)
+        "text": "Hello world",
+        "name": "Charlie",
+        "age": 28
+    },
+    default_value=""            # Field 3
+)
+```
+
+`Data` objects can be serialized to JSON, created from JSON, or created from other dictionary data.
+However, the resulting `Data` object is a structured object with validation and methods, not a plain dictionary.
+
+For example, when serialized into JSON, the previous example becomes the following JSON object:
+
+```json
+{
+  "text_key": "text",
+  "data": {
+    "text": "User Profile",
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  "default_value": ""
+}
+```
+
+## DataFrame
+
+**DataFrame** ports <Icon name="Circle" size="16" aria-label="Pink dataframe port" style={{ color: '#ec4899', fill:'#ec4899' }} /> accept or produce [pandas DataFrames](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html), which are similar to the tabular CSV data.
+
+Use the `DataFrame` type to work with data containing multiple rows or records.
+
+### Schema and attributes
+
+The schema is defined in [`dataframe.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/dataframe.py).
+
+The following attributes are available:
+
+- **Full pandas compatibility**: All pandas DataFrame methods and functionality are supported
+
+- **Langflow integration**: Accepts lists of [`Data` objects](#data), dictionaries, or existing DataFrames.
+
+- **Convenience methods**:
+   - `to_data_list()`
+   - `add_row()`
+   - `add_rows()`
+   - `to_lc_documents()`
+   - `to_data()`
+   - `to_message()`
+
+- **Text key support**: Maintains `text_key` and `default_value` attributes for [`Data` object](#data) compatibility.
+
+### DataFrame structure
+
+A DataFrame has a tabular data structure with rows and columns.
+Keys are columns, and each object in the array is a row.
+
+```json
+[
+  {
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  {
+    "name": "Alexandra Example",
+    "age": 34,
+    "email": "alexandra@example.com"
+  }
+]
+```
+
+When represented as tabular data, the preceding DataFrame object is structured as follows:
+
+```text
+| name | age | email |
+|------|-----|-------|
+| Charlie Lastname | 28 | charlie.lastname@example.com |
+| Alexandra Example | 34 | alexandra@example.com |
+```
+
+## Embeddings
+
+**Embeddings** ports <Icon name="Circle" size="16" aria-label="Emerald embeddings port" style={{ color: '#10b981', fill: '#10b981' }} /> handle vector embeddings to support functions like similarity search.
+
+For example, the **Embedding Model** component outputs `embeddings` data that you can connect to an **Embedding** input port on a vector store component.
+
+## LanguageModel
+
+`LanguageModel` output is a specific type of output that can be produced by **Language Model** components.
+When enabled, the component's output port changes from a **Message** port to a **Language Model** port <Icon name="Circle" size="16" aria-label="Fuchsia language model port" style={{ color: '#c026d3', fill: '#c026d3' }} />
+For more information, see [Use the LanguageModel output](/components-models#use-the-languagemodel-output).
+
+## Memory
+
+**Memory** ports <Icon name="Circle" size="16" aria-label="Orange memory port" style={{ color: '#f97316', fill: '#f97316' }} /> are available for components that store or retrieve chat memory.
+
+## Message
+
+**Message** ports <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> accept or produce `Message` data, which extends the [`Data` type](#data) with additional fields and methods for text input typically used in chat flows.
+
+The `Message` data type provides a consistent structure for chat interactions, and it is ideal for flows like chatbots, conversational analysis, and other LLM input and output.
+
+### Schema and attributes
+
+The schema is defined in [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py).
+
+The following attributes are available:
+
+- `text`: Main message content
+- `sender`: `"User"` or `"AI"`
+- `sender_name`: Display name for sender
+- `session_id`: Chat session identifier
+- `timestamp`: UTC timestamp of the message
+- `files`: List of file paths or images included with the message
+- `content_blocks`: Handles rich content input, such as text, media, or code
+- `category`: `"message"`, `"error"`, `"warning"`, or `"info"`.
+
+### Message structure
+
+`Message` content appears in Langflow logs, GUI outputs, and the **Playground** as the `text` string alone, but this text is actually extracted from the complete structured `Message` object.
+
+For example, the output string `"Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"` is extracted from the following `Message` object:
+
+```json
+{
+  "text": "Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com",
+  "sender": "User",
+  "sender_name": "Charlie Lastname",
+  "session_id": "some-session-id",
+  "timestamp": "2024-06-01T12:00:00Z",
+  "files": [],
+  "content_blocks": [],
+  "category": "message"
+}
+```
+
+### Text I/O components don't treat Message data as conversations
+
+[**Text Input**](/components-io#text-input) and [**Text Output**](/components-io#text-output) components have `Message` ports, but they _don't_ support conversational chat in the same way as **Chat Input** components.
+
+When a **Text Input** component receives `Message` data, the input isn't handled in the same way that it is when passed to a **Chat Input** component in a chat flow.
+Instead, the text is treated as a static string input, not as part of an ongoing conversation.
+
+The same is true for the **Text Output** component, which produces simple string output, rather than a response to a conversation.
+
+## Tool
+
+**Tool** ports <Icon name="Circle" size="16" aria-label="Cyan tool port" style={{ color: '#06b6d4', fill: '#06b6d4' }} /> connect tools to an **Agent** component.
+
+Tools can be other components where you enabled **Tool Mode** or they can be the dedicated **MCP Tools** component.
+
+For more information, see [Configure tools for agents](/agents-tools) and [Use Langflow as an MCP client](/mcp-client).
+
+## Unknown or multiple types
+
+If a port can accept or produce multiple data types, it is represented by the gray port icon <Icon name="Circle" size="16" aria-label="Gray unknown port" style={{ color: '#9CA3AF', fill: '#9CA3AF' }} />.
+
+Hover over the port to see the accepted or produced data types.
+
+## View data types in flows
+
+In Langflow, you can use <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the output of individual components.
+This can help you learn about the different data type and debug problems with invalid or malformed inputs and output.
+
+The following example shows how to inspect the output of a **Type Convert** component, which can convert `Message`, `Data`, or `DataFrame` input into `Message`, `Data`, or `DataFrame` output:
+
+1. Create a flow, and then connect a **Chat Input** component to a **Type Convert** component.
+
+2. In the **Chat Input** component, enter some text for the type converter to process.
+
+3. On the **Type Convert** component, click <Icon name="Play" aria-hidden="true"/> **Run component**, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output**.
+
+    The default output is `Message` data, which is the same as the input coming from the **Chat Input** component.
+    To see the `Message` data converted to `Data` or `DataFrame`, change the **Output Type** on the **Type Convert** component, and then rerun the component.
+
+    <Tabs groupId="Data type">
+      <TabItem value="Message" label="Message" default>
+
+    ```text
+    Input text
+    ```
+
+      </TabItem>
+      <TabItem value="Data" label="Data">
+
+    ```json
+    {
+      "timestamp": "2025-07-15 20:56:20 UTC",
+      "sender": "User",
+      "sender_name": "User",
+      "session_id": "a0c7e888-4fd6-4242-b8c8-e761ad690aeb",
+      "text": "",
+      "files": [],
+      "error": false,
+      "edit": false,
+      "properties": {
+        "text_color": "",
+        "background_color": "",
+        "edited": false,
+        "source": {
+          "id": null,
+          "display_name": null,
+          "source": null
+        },
+        "icon": "",
+        "allow_markdown": false,
+        "positive_feedback": null,
+        "state": "complete",
+        "targets": []
+      },
+      "category": "message",
+      "content_blocks": [],
+      "id": "9da72da2-efbb-4ccd-90ad-b32429b0418e",
+      "flow_id": "a0c7e888-4fd6-4242-b8c8-e761ad690aeb",
+      "duration": null
+    }
+    ```
+
+      </TabItem>
+      <TabItem value="DataFrame" label="DataFrame">
+
+    ```text
+    | Field | Value |
+    |-------|-------|
+    | timestamp | 2025-07-15 20:56:11 UTC |
+    | sender | User |
+    | sender_name | User |
+    | session_id | a0c7e888-4fd6-4242-b8c8-e761ad690aeb |
+    | text | (empty) |
+    | files | [] |
+    | error | False |
+    | edit | False |
+    | properties | text_color: '', background_color: '', edited: False, source: {id: None, display_name: None, source: None}, icon: '', allow_markdown: False, positive_feedback: None, state: 'complete', targets: [] |
+    | category | message |
+    | content_blocks | [] |
+    | id | 341686eb-7a39-4b80-a90a-d8bf267815ef |
+    | flow_id | a0c7e888-4fd6-4242-b8c8-e761ad690aeb |
+    | duration | (empty) |
+    ```
+
+      </TabItem>
+    </Tabs>
+
+## See also
+
+- [Custom Components](/components-custom-components)
+- [Pydantic Models](https://docs.pydantic.dev/latest/api/base_model/)
+- [pandas.DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html)
