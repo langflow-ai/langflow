@@ -42,34 +42,23 @@ module.exports = {
           label: "Use the visual editor"
         },
         {
+          type: "doc",
+          id: "Concepts/concepts-flows",
+          label: "Build flows"
+        },
+        {
           type: "category",
-          label: "Create flows",
+          label: "Flow templates",
           items: [
-            {
-              type: "doc",
-              id: "Concepts/concepts-flows",
-              label: "Build flows"
-            },
-            {
-              type: "category",
-              label: "Templates",
-              items: [
-                'Templates/basic-prompting',
-                'Templates/simple-agent',
-                'Templates/blog-writer',
-                'Templates/document-qa',
-                'Templates/memory-chatbot',
-                'Templates/vector-store-rag',
-                'Templates/financial-report-parser',
-                'Templates/sequential-agent',
-                'Templates/travel-planning-agent',
-              ],
-            },
-            {
-              type: "doc",
-              id: "Concepts/concepts-flows-import",
-              label: "Import and export flows"
-            },
+            'Templates/basic-prompting',
+            'Templates/simple-agent',
+            'Templates/blog-writer',
+            'Templates/document-qa',
+            'Templates/memory-chatbot',
+            'Templates/vector-store-rag',
+            'Templates/financial-report-parser',
+            'Templates/sequential-agent',
+            'Templates/travel-planning-agent',
           ],
         },
         {
@@ -95,8 +84,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Concepts/data-types",
-          label: "Langflow data types"
+          id: "Concepts/concepts-flows-import",
+          label: "Import and export flows"
         },
       ],
     },
@@ -159,6 +148,11 @@ module.exports = {
             "Integrations/integrations-opik",
             "Contributing/contributing-telemetry",
           ],
+        },
+        {
+          type: "doc",
+          id: "Concepts/data-types",
+          label: "Use Langflow data types"
         },
         {
           type: "doc",
