@@ -227,7 +227,10 @@
             "icon": "arXiv",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "b61405ff011f",
+              "module": "langflow.components.arxiv.arxiv.ArXivComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -385,7 +388,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -693,7 +699,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1027,7 +1036,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "556209520650",
+              "module": "langflow.components.processing.parser.ParserComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1199,7 +1211,10 @@
             "icon": "infinity",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "5b234f78c942",
+              "module": "langflow.components.logic.loop.LoopComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1609,7 +1624,10 @@
             "icon": "repeat",
             "key": "TypeConverterComponent",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "38e56a852063",
+              "module": "langflow.components.processing.converter.TypeConverterComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

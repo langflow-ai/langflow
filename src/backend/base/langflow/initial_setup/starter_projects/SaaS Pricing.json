@@ -115,7 +115,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -366,7 +369,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -708,7 +714,10 @@
             "key": "CalculatorComponent",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3139fe9e04a5",
+              "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

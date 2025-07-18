@@ -231,7 +231,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -544,7 +547,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1882,7 +1888,10 @@
             "icon": "binary",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "93faf11517da",
+              "module": "langflow.components.models.embedding_model.EmbeddingModelComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2172,7 +2181,10 @@
             "icon": "FAISS",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ed38680af3a6",
+              "module": "langflow.components.vectorstores.faiss.FaissVectorStoreComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2505,7 +2517,10 @@
             "key": "MCPTools",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "d134bdfe1fc3",
+              "module": "langflow.components.agents.mcp_component.MCPToolsComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

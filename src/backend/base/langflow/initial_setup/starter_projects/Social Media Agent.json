@@ -143,7 +143,10 @@
             "icon": "Apify",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "233d7ef687d5",
+              "module": "langflow.components.apify.apify_actor.ApifyActorsComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -346,7 +349,10 @@
             "icon": "Apify",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "233d7ef687d5",
+              "module": "langflow.components.apify.apify_actor.ApifyActorsComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -636,7 +642,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -948,7 +957,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [

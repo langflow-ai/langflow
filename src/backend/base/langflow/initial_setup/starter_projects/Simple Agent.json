@@ -190,7 +190,10 @@
             "key": "CalculatorComponent",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3139fe9e04a5",
+              "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -345,7 +348,10 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -660,7 +666,10 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1515,7 +1524,10 @@
             "icon": "layout-template",
             "key": "URLComponent",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "a81817a7f244",
+              "module": "langflow.components.data.url.URLComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

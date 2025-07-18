@@ -102,7 +102,10 @@
             "icon": "ScrapeGraph",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "cdea312e9de9",
+              "module": "langflow.components.scrapegraph.scrapegraph_search_api.ScrapeGraphSearchApi"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -273,7 +276,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -584,7 +590,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [

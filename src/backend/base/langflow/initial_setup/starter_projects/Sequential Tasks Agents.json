@@ -1447,7 +1447,10 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "name": "",
             "output_types": [],
             "outputs": [
@@ -1582,7 +1585,10 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "name": "",
             "output_types": [],
             "outputs": [
@@ -1720,7 +1726,10 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "name": "",
             "output_types": [],
             "outputs": [
@@ -1900,7 +1909,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -2787,7 +2799,10 @@
             "frozen": false,
             "icon": "trending-up",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "e17c98e16912",
+              "module": "langflow.components.yahoosearch.yahoo.YfinanceComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2998,7 +3013,10 @@
             "icon": "calculator",
             "key": "CalculatorComponent",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3139fe9e04a5",
+              "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -3152,7 +3170,10 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6843645056d9",
+              "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -3549,7 +3570,10 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
