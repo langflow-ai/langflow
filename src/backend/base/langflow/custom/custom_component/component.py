@@ -1467,6 +1467,7 @@ class Component(CustomComponent):
             and not (self._vertex.is_output or self._vertex.is_input)
             and not self.is_connected_to_chat_output()
             and not isinstance(message, ErrorMessage)
+            and message.sender != "hil"
         )
 
     async def send_message(self, message: Message, id_: str | None = None):
