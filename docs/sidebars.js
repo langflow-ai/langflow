@@ -244,23 +244,34 @@ module.exports = {
       label: "Components reference",
       items: [
         "Concepts/concepts-components",
-        //TODO: Break all components into individual pages
         {
           type: "category",
           label: "Core components",
           items: [
-            "Components/components-agents",
-            "Components/components-data",
-            "Components/components-embedding-models",
-            "Components/components-helpers",
             "Components/components-io",
-            "Components/components-logic",
-            "Components/components-memories",
-            "Components/components-models",
-            "Components/components-processing",
-            "Components/components-prompts",
-            "Components/components-tools",
+            "Components/components-agents",
+            {
+              type: "category",
+              label: "Models",
+              items: [
+                "Components/components-models",
+                "Components/components-embedding-models",
+              ]
+            },
+            "Components/components-data",
             "Components/components-vector-stores",
+            {
+              type: "category",
+              label: "Processing",
+              items: [
+                "Components/components-processing",
+                "Components/components-prompts",
+              ]
+            },
+            "Components/components-logic",
+            "Components/components-helpers",
+            "Components/components-tools",
+            "Components/components-memories",
           ],
         },
         {
@@ -381,6 +392,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Develop/Clients/typescript-client",
+          label: "Use the TypeScript client"
+        },
+        {
+          type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
         },
@@ -423,11 +439,6 @@ module.exports = {
           type: "link",
           label: "Langflow API specification",
           href: "/api",
-        },
-        {
-          type: "doc",
-          id: "Develop/Clients/typescript-client",
-          label: "TypeScript Client"
         },
       ],
     },
