@@ -1,4 +1,11 @@
-from langchain_community.vectorstores import PGVector
+try:
+    from langchain_community.vectorstores import PGVector
+except ImportError as e:
+    msg = (
+        "PGVector is an optional dependency. Install with `uv pip install 'langflow[pgvector]'` or refer to the "
+        "documentation on how to install optional dependencies."
+    )
+    raise ImportError(msg) from e
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data

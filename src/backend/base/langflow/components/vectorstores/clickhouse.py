@@ -69,8 +69,8 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             import clickhouse_connect
         except ImportError as e:
             msg = (
-                "Failed to import Clickhouse dependencies. "
-                "Install it using `uv pip install langflow[clickhouse-connect] --pre`"
+                "Clickhouse is an optional dependency. Install with `uv pip install 'langflow[clickhouse]'` or refer to the "
+                "documentation on how to install optional dependencies."
             )
             raise ImportError(msg) from e
 

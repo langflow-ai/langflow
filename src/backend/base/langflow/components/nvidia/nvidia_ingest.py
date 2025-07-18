@@ -21,8 +21,8 @@ class NvidiaIngestComponent(BaseFileComponent):
         VALID_EXTENSIONS = ["pdf", "docx", "pptx", "jpeg", "png", "svg", "tiff", "txt"]
     except ImportError:
         msg = (
-            "NVIDIA Retriever Extraction (nv-ingest) dependencies missing. "
-            "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
+            "NVIDIA Retriever Extraction (nv-ingest) is an optional dependency. Install with `uv pip install 'langflow[nv-ingest]'` or refer to the "
+            "documentation on how to install optional dependencies."
         )
         VALID_EXTENSIONS = [msg]
 
@@ -161,8 +161,8 @@ class NvidiaIngestComponent(BaseFileComponent):
             from nv_ingest_client.client import Ingestor
         except ImportError as e:
             msg = (
-                "NVIDIA Retriever Extraction (nv-ingest) dependencies missing. "
-                "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
+                "NVIDIA Retriever Extraction (nv-ingest) is an optional dependency. Install with `uv pip install 'langflow[nv-ingest]'` or refer to the "
+                "documentation on how to install optional dependencies."
             )
             raise ImportError(msg) from e
 
