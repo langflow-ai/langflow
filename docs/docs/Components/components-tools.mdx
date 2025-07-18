@@ -3,16 +3,41 @@ title: Tools
 slug: /components-tools
 ---
 
-import Icon from "@site/src/components/icon";
+In Langflow version 1.5, the **Tools** category was deprecated.
 
-The **Tools** category was removed from the **Components** menu in Langflow version 1.5.
+All components that were in this category were replaced by other components or moved to other categories in the **Components** menu.
 
-You can find the components that previous belonged to this category in the following locations:
+:::important
+Many components in the **Tools** category are legacy components.
+You can use these components in your flows, but they are no longer maintained and may be removed in a future release.
 
-* The [**Calculator** component](/components-helpers#calculator) moved to the **Helpers** core components.
-* The [**MCP Tools** component](/components-agents#mcp-connection) moved to the **Agents** core components.
-* The [**Python Interpreter** component](/components-processing#python-interpreter) replaces the **Python REPL** and **Python Code Structured** components.
-* All other components were moved to one of the following bundles:
+It is recommended that you replace all legacy components with the replacement components described on this page.
+:::
+
+## Calculator Tool component
+
+The **Calculator Tool** component is a legacy component.
+Replace this component with the [**Calculator** component](/components-helpers#calculator) in the **Helpers** category.
+
+## MCP Connection component
+
+This component was moved to the **Agents** category and renamed to the [**MCP Tools** component](/components-agents#mcp-connection)
+
+## Python tools
+
+The **Python REPL** and **Python Code Structured** components are legacy components.
+Replace these components with the [**Python Interpreter** component](/components-processing#python-interpreter) in the **Processing** category.
+
+## Search and API request tools
+
+Many tool components performed basic API calls to public archives or search APIs.
+All such components in the **Tools** category are legacy components.
+
+You have two options for replacing these components:
+
+* Use the generic [**Data** components](/components-data) for search and API calls, such as the [**Web Search**](/components-data#web-search) and [**News Search**](/components-data#news-search) components.
+
+* Use the provider-specific search and API components in the **Bundles** category:
     * [arXive bundle](/bundles-arxiv)
     * [Bing bundle](/bundles-bing)
     * [DataStax bundle](/bundles-datastax)
@@ -23,12 +48,18 @@ You can find the components that previous belonged to this category in the follo
     * [Icosa Computing bundle](/bundles-icosacomputing)
     * [LangChain bundle](/bundles-langchain)
     * [SearchApi bundle](/bundles-searchapi)
+    * [SerpApi bundle](/bundles-serpapi)
+    * [Tavily bundle](/bundles-talivy)
     * [Wikipedia bundle](/bundles-wikipedia)
+    * [yfinance bundle](/bundles-yfinance)
 
-<!-- Removed?
-## SearXNG Search Tool
+### SearXNG Search Tool
+
+The **SearXNG Search Tool** component is a legacy component.
+Replace this component with a [**Data** component](/components-data) or another metasearch provider's [bundle](/components-bundle-components).
 
 This component creates a tool for searching using SearXNG, a metasearch engine.
+It accepts the following parameters:
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -37,4 +68,3 @@ This component creates a tool for searching using SearXNG, a metasearch engine.
 | categories | List[String] | Input parameter. The categories to search in. |
 | language | String | Input parameter. The language for the search results. |
 | result_tool | Tool | Output parameter. A SearXNG search tool for use in LangChain. |
--->

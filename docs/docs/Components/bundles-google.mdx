@@ -17,7 +17,7 @@ For information about this component and example usage, see [Integrate Google Bi
 
 This component generates text using [Google Generative AI models](https://cloud.google.com/vertex-ai/docs/).
 
-### Google Generative AI component parameters
+### Google Generative AI parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -38,7 +38,7 @@ You can use the following bundled component if the **Embedding Model** core comp
 
 The **Google Generative AI Embeddings** component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
 
-### Google Generative AI Embeddings component parameters
+### Google Generative AI Embeddings parameters
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -50,7 +50,7 @@ The **Google Generative AI Embeddings** component connects to Google's generativ
 
 This component allows you to call the Google Search API.
 
-### Google Search API component parameters
+### Google Search API parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -65,7 +65,7 @@ This component allows you to call the Google Search API.
 
 This component allows you to call the Serper.dev Google Search API.
 
-### Google Serper API component parameters
+### Google Serper API parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -74,6 +74,10 @@ This component allows you to call the Serper.dev Google Search API.
 | k | Integer | Input parameter. The number of search results to return. |
 | results | List[Data] | Output parameter. A list of search results. |
 | tool | Tool | Output parameter. A Google Serper search tool for use in LangChain. |
+
+## Google Vertex AI
+
+For information about Vertex AI components, see the [Vertex AI bundle](/bundles-vertexai) and [Integrate Google Cloud Vertex AI with Langflow](/integrations-setup-google-cloud-vertex-ai-langflow).
 
 ## Legacy Google components
 
@@ -140,5 +144,4 @@ This component searches Google Drive files using provided credentials and query 
 ## See also
 
 - [Composio components](/integrations-composio)
-- [Integrate Google Cloud Vertex AI with Langflow](/integrations-setup-google-cloud-vertex-ai-langflow)
 - [Vertex AI components](/bundles-vertexai)

@@ -3,34 +3,55 @@ title: Memories
 slug: /components-memories
 ---
 
-<!-- Message History is under Helpers -->
-<!-- Message Store is under Helpers and legacy -->
+In Langflow version 1.5, the **Memory** category was removed.
 
-Components in the **Memories** category are moved to [Bundles](/components-bundle-components) as of Langflow 1.5.
+All components that were in this category were replaced by other components or moved to other categories in the **Components** menu.
 
-**Bundles** are third-party components grouped by provider.
+:::important
+Some components that were in the **Memory** category are legacy components.
+You can use these components in your flows, but they are no longer maintained and may be removed in a future release.
 
-For more information on bundled components, see the component provider's documentation.
+It is recommended that you replace all legacy components with the replacement components described on this page.
+:::
 
-## Use a memory component in a flow
+## Message History
 
-Memory components store and retrieve chat messages by `session_id`.
+The [**Message History** component](/components-helpers#message-history) was moved to the **Helpers** category.
+This component combines the functionality of the legacy **Chat History** and **Message Store** components.
 
-They are distinct from vector store components, because they are built specifically for storing and retrieving chat messages from external databases.
+## Message Store
 
-Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/components-agents) to access external memory for persistence and context retention.
+The **Message Store** component is a legacy component.
+The functionality provided by this component is available in the **Message History** component.
+Replace this component with the [**Message History** component](/components-helpers#message-history).
 
-This example flow stores and retrieves chat history with an **Redis Chat Memory** component connected to **Store Message** and **Message history** components.
+## Provider-specific chat memory components
 
-The **Store Message** helper component stores chat memories as [Data](/data-types#data) objects, and the **Message History** helper component retrieves chat messages as [Data](/data-types#data) objects or strings.
-
-![Sample Flow storing Message history in Redis](/img/component-message-history-external-memory.png)
-
-## See also
+Provider-specific components were moved to the **Bundles** category:
 
 - [**Mem0 Chat Memory** component](/bundles-mem0)
 - [**Redis Chat Memory** component](/bundles-redis)
 - [**Cassandra Chat Memory** component](/bundles-datastax#cassandra-chat-memory)
 - [**Astra DB Chat Memory** component](/bundles-datastax#astra-db-chat-memory)
-- [**Zep Chat Memory** component](/components-bundle-components#zep-bundle)
 
+### Zep Chat Memory
+
+The **Zep Chat Memory** component is a legacy component.
+Replace this component with the [**Message History** component](/components-helpers#message-history).
+
+<details>
+<summary>Zep Chat Memory</summary>
+
+This component creates a `ZepChatMessageHistory` instance, enabling storage and retrieval of chat messages using Zep, a memory server for LLMs.
+
+It accepts the following parameters:
+
+| Name          | Type          | Description                                               |
+|---------------|---------------|-----------------------------------------------------------|
+| url           | MessageText   | Input parameter. The URL of the Zep instance. Required. |
+| api_key       | SecretString  | Input parameter. The API Key for authentication with the Zep instance. |
+| api_base_path | Dropdown      | Input parameter. The API version to use. Options include api/v1 or api/v2. |
+| session_id    | MessageText   | Input parameter. The unique identifier for the chat session. Optional. |
+| message_history | BaseChatMessageHistory  | Output parameter. An instance of ZepChatMessageHistory for the session. |
+
+</details>
