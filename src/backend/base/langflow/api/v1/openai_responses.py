@@ -155,17 +155,16 @@ async def run_flow_for_openai_responses(
                                                             "item": {
                                                                 "id": tool_id,
                                                                 "type": "function_call",  # OpenAI uses "function_call"
-                                                                "status": "in_progress",   # OpenAI includes status
+                                                                "status": "in_progress",  # OpenAI includes status
                                                                 "name": tool_name,
-                                                                "arguments": "",           # Start with empty, build via deltas
-                                                                "call_id": call_id
-                                                            }
+                                                                "arguments": "",  # Start with empty, build via deltas
+                                                                "call_id": call_id,
+                                                            },
                                                         }
                                                         yield (
                                                             f"event: response.output_item.added\n"
                                                             f"data: {json.dumps(tool_call_event)}\n\n"
                                                         )
-
 
                                                         # Send function call arguments as delta events (like OpenAI)
                                                         arguments_str = json.dumps(tool_input)
@@ -174,7 +173,7 @@ async def run_flow_for_openai_responses(
                                                                 "type": "response.function_call_arguments.delta",
                                                                 "delta": char,
                                                                 "item_id": tool_id,
-                                                                "output_index": 0
+                                                                "output_index": 0,
                                                             }
                                                             yield f"event: response.function_call_arguments.delta\ndata: {json.dumps(arg_delta_event)}\n\n"
 
@@ -183,7 +182,7 @@ async def run_flow_for_openai_responses(
                                                             "type": "response.function_call_arguments.done",
                                                             "arguments": arguments_str,
                                                             "item_id": tool_id,
-                                                            "output_index": 0
+                                                            "output_index": 0,
                                                         }
                                                         yield f"event: response.function_call_arguments.done\ndata: {json.dumps(arg_done_event)}\n\n"
 
@@ -193,12 +192,12 @@ async def run_flow_for_openai_responses(
                                                                 "type": "response.output_item.done",
                                                                 "item": {
                                                                     "id": tool_id,
-                                                                    "type": "function_call",    # Match OpenAI format
+                                                                    "type": "function_call",  # Match OpenAI format
                                                                     "status": "completed",
                                                                     "arguments": arguments_str,  # Include final arguments
                                                                     "call_id": call_id,
-                                                                    "name": tool_name
-                                                                }
+                                                                    "name": tool_name,
+                                                                },
                                                             }
                                                             yield (
                                                                 f"event: response.output_item.done\n"

@@ -27,17 +27,14 @@ def load_env_vars():
     print("Warning: No .env file found. Using existing environment variables.")
     return False
 
+
 # Load environment variables at module import time
 load_env_vars()
 
+
 async def create_global_variable(client: AsyncClient, headers, name, value, variable_type="credential"):
     """Create a global variable in Langflow."""
-    payload = {
-        "name": name,
-        "value": value,
-        "type": variable_type,
-        "default_fields": []
-    }
+    payload = {"name": name, "value": value, "type": variable_type, "default_fields": []}
 
     response = await client.post("/api/v1/variables/", json=payload, headers=headers)
     if response.status_code != 201:
@@ -46,6 +43,7 @@ async def create_global_variable(client: AsyncClient, headers, name, value, vari
 
     print(f"Successfully created global variable: {name}")
     return True
+
 
 async def load_and_prepare_flow(client: AsyncClient, created_api_key):
     """Load Simple Agent flow and wait for it to be ready."""
@@ -61,7 +59,11 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
     # Load the Simple Agent template
     template_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "base", "langflow", "initial_setup", "starter_projects", "Simple Agent.json"
+        "base",
+        "langflow",
+        "initial_setup",
+        "starter_projects",
+        "Simple Agent.json",
     )
 
     with open(template_path) as f:
@@ -75,10 +77,7 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
     # Poll for flow builds to complete
     max_attempts = 10
     for attempt in range(max_attempts):
-        builds_response = await client.get(
-            f"/api/v1/monitor/builds?flow_id={flow['id']}",
-            headers=headers
-        )
+        builds_response = await client.get(f"/api/v1/monitor/builds?flow_id={flow['id']}", headers=headers)
 
         if builds_response.status_code == 200:
             builds = builds_response.json().get("vertex_builds", {})
@@ -96,11 +95,10 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
 
     return flow, headers
 
+
 @pytest.mark.api_key_required
 @pytest.mark.integration
-async def test_openai_streaming_format_comparison(
-    client: AsyncClient, created_api_key
-):
+async def test_openai_streaming_format_comparison(client: AsyncClient, created_api_key):
     """Compare raw HTTP streaming formats between OpenAI and our API."""
     # Test input
     input_msg = "What is 25 + 17? Use your calculator tool."
@@ -116,11 +114,11 @@ async def test_openai_streaming_format_comparison(
                 "properties": {
                     "expression": {
                         "type": "string",
-                        "description": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20')."
+                        "description": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
                     }
                 },
-                "required": ["expression"]
-            }
+                "required": ["expression"],
+            },
         }
     ]
 
@@ -133,20 +131,12 @@ async def test_openai_streaming_format_comparison(
     print("\n=== Testing OpenAI API Raw HTTP Format ===")
 
     async with httpx.AsyncClient() as openai_client:
-        openai_payload = {
-            "model": "gpt-4o-mini",
-            "input": input_msg,
-            "tools": tools,
-            "stream": True
-        }
+        openai_payload = {"model": "gpt-4o-mini", "input": input_msg, "tools": tools, "stream": True}
 
         openai_response = await openai_client.post(
             "https://api.openai.com/v1/responses",
-            headers={
-                "Authorization": f"Bearer {openai_api_key}",
-                "Content-Type": "application/json"
-            },
-            json=openai_payload
+            headers={"Authorization": f"Bearer {openai_api_key}", "Content-Type": "application/json"},
+            json=openai_payload,
         )
 
         print(f"OpenAI status: {openai_response.status_code}")
@@ -166,11 +156,7 @@ async def test_openai_streaming_format_comparison(
 
     flow, headers = await load_and_prepare_flow(client, created_api_key)
 
-    our_payload = {
-        "model": flow["id"],
-        "input": input_msg,
-        "stream": True
-    }
+    our_payload = {"model": flow["id"], "input": input_msg, "stream": True}
 
     our_response = await client.post("/api/v1/responses", json=our_payload, headers=headers)
     assert our_response.status_code == 200
@@ -230,8 +216,16 @@ async def test_openai_streaming_format_comparison(
             print(f"    Event {i}: item.name = '{item.get('name')}'")
         print(f"    Event {i}: full item = {json.dumps(item, indent=6)}")
 
-    openai_tool_events = [e for e in openai_parsed if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "tool_call"]
-    openai_function_events = [e for e in openai_parsed if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "function_call"]
+    openai_tool_events = [
+        e
+        for e in openai_parsed
+        if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "tool_call"
+    ]
+    openai_function_events = [
+        e
+        for e in openai_parsed
+        if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "function_call"
+    ]
 
     print("\nDetailed Our API event analysis:")
     our_output_item_added_events = [e for e in our_parsed if e.get("type") == "response.output_item.added"]
@@ -246,7 +240,11 @@ async def test_openai_streaming_format_comparison(
             print(f"    Event {i}: item.name = '{item.get('name')}'")
         print(f"    Event {i}: full item = {json.dumps(item, indent=6)}")
 
-    our_function_events = [e for e in our_parsed if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "function_call"]
+    our_function_events = [
+        e
+        for e in our_parsed
+        if e.get("type") == "response.output_item.added" and e.get("item", {}).get("type") == "function_call"
+    ]
 
     print("\nTool call detection results:")
     print(f"  OpenAI tool_call events: {len(openai_tool_events)}")
@@ -308,4 +306,6 @@ async def test_openai_streaming_format_comparison(
     print(f"  Our events: {len(our_parsed)}")
     print(f"  OpenAI function events: {len(openai_actual_tool_events)}")
     print(f"  Our function events: {len(our_function_events)}")
-    print(f"  Format compatibility: {'✅ PASS' if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else '❌ FAIL'}")
+    print(
+        f"  Format compatibility: {'✅ PASS' if len(our_function_events) > 0 or len(openai_actual_tool_events) == 0 else '❌ FAIL'}"
+    )
