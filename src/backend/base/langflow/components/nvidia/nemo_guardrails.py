@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any
 
@@ -12,6 +13,7 @@ from langflow.field_typing import LanguageModel
 from langflow.inputs import BoolInput, DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput
 from langflow.io import HandleInput, MultilineInput
 from langflow.schema.dotdict import dotdict
+from langflow.schema.message import MESSAGE_SENDER_AI, AIMessage, Message
 
 # Apply nest_asyncio to allow sync code in async contexts
 nest_asyncio.apply()
@@ -61,6 +63,33 @@ DEFAULT_OFF_TOPIC_MESSAGE = (
     "I apologize, but I can only discuss topics related to [your specific domain/topic]. "
     "Is there something else I can help you with?"
 )
+
+
+class GuardrailsLanguageModel:
+    """Wrapper class that makes RunnableRails properly implement the LanguageModel interface."""
+
+    def __init__(self, runnable_rails: RunnableRails):
+        self._runnable_rails = runnable_rails
+
+    def invoke(self, inputs, **kwargs):
+        """Delegate to the underlying RunnableRails."""
+        return self._runnable_rails.invoke(inputs, **kwargs)
+
+    def stream(self, inputs, **kwargs):
+        """Delegate to the underlying RunnableRails."""
+        return self._runnable_rails.stream(inputs, **kwargs)
+
+    def with_config(self, config, **kwargs):
+        """Delegate to the underlying RunnableRails."""
+        return GuardrailsLanguageModel(self._runnable_rails.with_config(config, **kwargs))
+
+    def bind_tools(self, tools, **kwargs):
+        """Delegate to the underlying RunnableRails."""
+        return GuardrailsLanguageModel(self._runnable_rails.bind_tools(tools, **kwargs))
+
+    def __getattr__(self, name):
+        """Delegate any other attributes to the underlying RunnableRails."""
+        return getattr(self._runnable_rails, name)
 
 
 class NVIDIANeMoGuardrailsComponent(LCModelComponent):
@@ -403,7 +432,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             error_message = "Invalid YAML syntax"
             raise ValueError(error_message) from e
 
-            # Create Colang content if topic control is enabled
+        # Create Colang content if topic control is enabled
         colang_content = None
         if "topic control" in self.rails:
             colang_content = f"""
@@ -412,8 +441,96 @@ define bot refuse to respond
 """
 
         config = RailsConfig.from_content(yaml_content=yaml_content, colang_content=colang_content)
+        runnable_rails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
 
-        return RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
+        # Return the wrapped version that properly implements LanguageModel
+        return GuardrailsLanguageModel(runnable_rails)
+
+    async def text_response(self) -> Message:
+        """Custom text_response method for NeMo Guardrails that properly handles input_value and system_message."""
+        output = self.build_model()
+
+        # Prepare the input for RunnableRails
+        # RunnableRails expects a dictionary with 'input' key containing the user message
+        input_text = ""
+
+        # Add system message if provided
+        if self.system_message:
+            input_text += f"System: {self.system_message}\n\n"
+
+        # Add user input
+        if self.input_value:
+            if isinstance(self.input_value, Message):
+                input_text += self.input_value.text
+            else:
+                input_text += str(self.input_value)
+
+        if not input_text.strip():
+            msg = "The message you want to send to the model is empty."
+            raise ValueError(msg)
+
+        # Create the input dictionary that RunnableRails expects
+        input_dict = {"input": input_text}
+
+        try:
+            # Configure the model with callbacks and metadata
+            output = output.with_config(
+                {
+                    "run_name": self.display_name,
+                    "project_name": self.get_project_name(),
+                    "callbacks": self.get_langchain_callbacks(),
+                }
+            )
+
+            lf_message = None  # Initialize lf_message
+            message = None  # Initialize message
+
+            if self.stream:
+                # Handle streaming
+                if self.is_connected_to_chat_output():
+                    # Add a Message for streaming
+                    if hasattr(self, "graph"):
+                        session_id = self.graph.session_id
+                    elif hasattr(self, "_session_id"):
+                        session_id = self._session_id
+                    else:
+                        session_id = None
+
+                    model_message = Message(
+                        text=output.stream(input_dict),
+                        sender=MESSAGE_SENDER_AI,
+                        sender_name="AI",
+                        properties={"icon": self.icon, "state": "partial"},
+                        session_id=session_id,
+                    )
+                    model_message.properties.source = self._build_source(self._id, self.display_name, self)
+                    lf_message = await self.send_message(model_message)
+                    result = lf_message.text
+                else:
+                    # Non-chat streaming
+                    message = output.invoke(input_dict)
+                    result = message.content if hasattr(message, "content") else message
+            else:
+                # Non-streaming
+                message = output.invoke(input_dict)
+                result = message.content if hasattr(message, "content") else message
+
+            # Set status
+            if isinstance(message, AIMessage):
+                status_message = self.build_status_message(message)
+                self.status = status_message
+            elif isinstance(result, dict):
+                result = json.dumps(message, indent=4)
+                self.status = result
+            else:
+                self.status = result
+
+        except Exception as e:
+            if message := self._get_exception_message(e):
+                raise ValueError(message) from e
+            raise
+
+        return lf_message or Message(text=result)
 
     def get_models(self) -> list[str]:
         """Get available models from NVIDIA API that are suitable for self-check tasks."""
@@ -443,7 +560,8 @@ define bot refuse to respond
                 if model_id in known_good_models:
                     suitable_models.append(model_id)
         except (requests.RequestException, requests.HTTPError):
-            logging.exception("Error getting model names")
+            logger = logging.getLogger(__name__)
+            logger.exception("Error getting model names")
             # Let the UI handle the empty list case
             return []
         else:
