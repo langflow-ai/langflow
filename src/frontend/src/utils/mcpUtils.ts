@@ -1,5 +1,26 @@
 import { MCPServerType } from "@/types/mcp";
 
+export enum AuthMethodId {
+  NONE = "none",
+  API_KEY = "apikey",
+  USERNAME_PASSWORD = "userpass",
+  BEARER = "bearer",
+  IAM = "iam",
+}
+
+export const AUTH_METHODS = {
+  [AuthMethodId.NONE]: { id: AuthMethodId.NONE, label: "None" },
+  [AuthMethodId.API_KEY]: { id: AuthMethodId.API_KEY, label: "API Key" },
+  [AuthMethodId.USERNAME_PASSWORD]: {
+    id: AuthMethodId.USERNAME_PASSWORD,
+    label: "Username & Password",
+  },
+  [AuthMethodId.BEARER]: { id: AuthMethodId.BEARER, label: "Bearer Token" },
+  [AuthMethodId.IAM]: { id: AuthMethodId.IAM, label: "IAM" },
+} as const;
+
+export const AUTH_METHODS_ARRAY = Object.values(AUTH_METHODS);
+
 /**
  * Extracts all MCP servers from a JSON string or object.
  * Supports:
