@@ -4,6 +4,8 @@ This module provides validation functions to ensure template integrity and preve
 unexpected breakage in starter project templates.
 """
 
+import asyncio
+import json
 import uuid
 from typing import Any
 
@@ -101,3 +103,223 @@ def validate_template_comprehensive(template_data: dict[str, Any], filename: str
         "structure_errors": validate_template_structure(template_data, filename),
         "build_errors": validate_flow_can_build(template_data, filename),
     }
+
+
+async def validate_flow_endpoint(
+    client, template_data: dict[str, Any], filename: str, headers: dict[str, str]
+) -> list[str]:
+    """Validate flow using the validate endpoint.
+
+    Args:
+        client: AsyncClient for API requests
+        template_data: The template data to validate
+        filename: Name of the template file for error reporting
+        headers: Authorization headers for API requests
+
+    Returns:
+        List of validation errors, empty if validation passes
+    """
+    errors = []
+
+    try:
+        # Extract code fields from template for validation
+        data = template_data.get("data", template_data)
+
+        for node in data.get("nodes", []):
+            node_data = node.get("data", {})
+            node_template = node_data.get("node", {}).get("template", {})
+
+            # Look for code-related fields in the node template
+            for field_data in node_template.values():
+                if isinstance(field_data, dict) and field_data.get("type") == "code":
+                    code_value = field_data.get("value", "")
+                    if code_value and isinstance(code_value, str):
+                        # Validate the code using the validate endpoint
+                        response = await client.post("api/v1/validate/code", json={"code": code_value}, headers=headers)
+
+                        if response.status_code != 200:  # noqa: PLR2004
+                            errors.append(f"{filename}: Validate endpoint failed with status {response.status_code}")
+                            continue
+
+                        validation_result = response.json()
+
+                        # Check for import errors
+                        if validation_result.get("imports", {}).get("errors"):
+                            errors.extend(
+                                [
+                                    f"{filename}: Import error in node {node_data.get('id', 'unknown')}: {error}"
+                                    for error in validation_result["imports"]["errors"]
+                                ]
+                            )
+
+                        # Check for function errors
+                        if validation_result.get("function", {}).get("errors"):
+                            errors.extend(
+                                [
+                                    f"{filename}: Function error in node {node_data.get('id', 'unknown')}: {error}"
+                                    for error in validation_result["function"]["errors"]
+                                ]
+                            )
+
+    except (ValueError, TypeError, KeyError, AttributeError) as e:
+        errors.append(f"{filename}: Endpoint validation failed: {e!s}")
+
+    return errors
+
+
+async def validate_flow_execution(
+    client, template_data: dict[str, Any], filename: str, headers: dict[str, str]
+) -> list[str]:
+    """Validate flow execution by building and running the flow.
+
+    Args:
+        client: AsyncClient for API requests
+        template_data: The template data to validate
+        filename: Name of the template file for error reporting
+        headers: Authorization headers for API requests
+
+    Returns:
+        List of execution errors, empty if execution succeeds
+    """
+    errors = []
+
+    try:
+        # Create a flow from the template
+        create_response = await client.post("api/v1/flows/", json=template_data, headers=headers)
+
+        if create_response.status_code != 201:  # noqa: PLR2004
+            errors.append(f"{filename}: Failed to create flow: {create_response.status_code}")
+            return errors
+
+        flow_id = create_response.json()["id"]
+
+        try:
+            # Build the flow
+            build_response = await client.post(f"api/v1/build/{flow_id}/flow", json={}, headers=headers)
+
+            if build_response.status_code != 200:  # noqa: PLR2004
+                errors.append(f"{filename}: Failed to build flow: {build_response.status_code}")
+                return errors
+
+            job_id = build_response.json()["job_id"]
+
+            # Get build events to validate execution
+            events_headers = {**headers, "Accept": "application/x-ndjson"}
+            events_response = await client.get(f"api/v1/build/{job_id}/events", headers=events_headers)
+
+            if events_response.status_code != 200:  # noqa: PLR2004
+                errors.append(f"{filename}: Failed to get build events: {events_response.status_code}")
+                return errors
+
+            # Validate the event stream
+            await _validate_event_stream(events_response, job_id, filename, errors)
+
+        finally:
+            # Clean up the flow
+            await client.delete(f"api/v1/flows/{flow_id}", headers=headers)
+
+    except (ValueError, TypeError, KeyError, AttributeError) as e:
+        errors.append(f"{filename}: Flow execution validation failed: {e!s}")
+
+    return errors
+
+
+async def _validate_event_stream(response, job_id: str, filename: str, errors: list[str]) -> None:
+    """Validate the event stream from flow execution.
+
+    Args:
+        response: The response object with event stream
+        job_id: The job ID to verify in events
+        filename: Name of the template file for error reporting
+        errors: List to append errors to
+    """
+    try:
+        vertices_sorted_seen = False
+        end_event_seen = False
+        vertex_count = 0
+
+        async def process_events():
+            nonlocal vertices_sorted_seen, end_event_seen, vertex_count
+
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+
+                try:
+                    parsed = json.loads(line)
+                except json.JSONDecodeError:
+                    errors.append(f"{filename}: Invalid JSON in event stream: {line}")
+                    continue
+
+                # Verify job_id in events
+                if "job_id" in parsed and parsed["job_id"] != job_id:
+                    errors.append(f"{filename}: Job ID mismatch in event stream")
+                    continue
+
+                event_type = parsed.get("event")
+
+                if event_type == "vertices_sorted":
+                    vertices_sorted_seen = True
+                    if not parsed.get("data", {}).get("ids"):
+                        errors.append(f"{filename}: Missing vertex IDs in vertices_sorted event")
+
+                elif event_type == "end_vertex":
+                    vertex_count += 1
+                    if not parsed.get("data", {}).get("build_data"):
+                        errors.append(f"{filename}: Missing build_data in end_vertex event")
+
+                elif event_type == "end":
+                    end_event_seen = True
+
+                elif event_type == "error":
+                    error_msg = parsed.get("data", {}).get("error", "Unknown error")
+                    errors.append(f"{filename}: Flow execution error: {error_msg}")
+
+        # Process events with timeout
+        await asyncio.wait_for(process_events(), timeout=10.0)
+
+        # Validate we saw required events
+        if not vertices_sorted_seen:
+            errors.append(f"{filename}: Missing vertices_sorted event in execution")
+        if not end_event_seen:
+            errors.append(f"{filename}: Missing end event in execution")
+        if vertex_count == 0:
+            errors.append(f"{filename}: No vertices executed in flow")
+
+    except asyncio.TimeoutError:
+        errors.append(f"{filename}: Flow execution timeout")
+    except (ValueError, TypeError, KeyError, AttributeError) as e:
+        errors.append(f"{filename}: Event stream validation failed: {e!s}")
+
+
+async def validate_template_comprehensive_async(
+    client, template_data: dict[str, Any], filename: str, headers: dict[str, str], *, include_execution: bool = False
+) -> dict[str, list[str]]:
+    """Run comprehensive async validation on a template.
+
+    Args:
+        client: AsyncClient for API requests
+        template_data: The template data to validate
+        filename: Name of the template file for error reporting
+        headers: Authorization headers for API requests
+        include_execution: Whether to include actual flow execution validation
+
+    Returns:
+        Dictionary with validation results:
+        {
+            "structure_errors": [...],
+            "build_errors": [...],
+            "endpoint_errors": [...],
+            "execution_errors": [...] (if include_execution=True)
+        }
+    """
+    results = {
+        "structure_errors": validate_template_structure(template_data, filename),
+        "build_errors": validate_flow_can_build(template_data, filename),
+        "endpoint_errors": await validate_flow_endpoint(client, template_data, filename, headers),
+    }
+
+    if include_execution:
+        results["execution_errors"] = await validate_flow_execution(client, template_data, filename, headers)
+
+    return results

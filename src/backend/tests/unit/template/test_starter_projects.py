@@ -17,6 +17,8 @@ import pytest
 # Import langflow validation utilities
 from langflow.utils.template_validation import (
     validate_flow_can_build,
+    validate_flow_endpoint,
+    validate_flow_execution,
     validate_template_structure,
 )
 
@@ -82,3 +84,39 @@ class TestStarterProjects:
         if all_errors:
             error_msg = "\n".join(all_errors)
             pytest.fail(f"Flow build errors:\n{error_msg}")
+
+    @pytest.mark.asyncio
+    async def test_all_templates_validate_endpoint(self, client, logged_in_headers):
+        """Test all templates using the validate endpoint."""
+        path = get_starter_projects_path()
+        templates = list(path.glob("*.json"))
+
+        all_errors = []
+        for template_file in templates:
+            with template_file.open(encoding="utf-8") as f:
+                template_data = json.load(f)
+
+            errors = await validate_flow_endpoint(client, template_data, template_file.name, logged_in_headers)
+            all_errors.extend(errors)
+
+        if all_errors:
+            error_msg = "\n".join(all_errors)
+            pytest.fail(f"Endpoint validation errors:\n{error_msg}")
+
+    @pytest.mark.asyncio
+    async def test_all_templates_flow_execution(self, client, logged_in_headers):
+        """Test all templates can execute successfully."""
+        path = get_starter_projects_path()
+        templates = list(path.glob("*.json"))
+
+        all_errors = []
+        for template_file in templates:
+            with template_file.open(encoding="utf-8") as f:
+                template_data = json.load(f)
+
+            errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
+            all_errors.extend(errors)
+
+        if all_errors:
+            error_msg = "\n".join(all_errors)
+            pytest.fail(f"Flow execution errors:\n{error_msg}")
