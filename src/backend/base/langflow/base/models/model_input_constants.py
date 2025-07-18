@@ -11,6 +11,8 @@ from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.sambanova.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
+from langflow.components.cerebras.cerebras_chat_models import CerebrasModelComponent
+
 
 
 class ModelProvidersDict(TypedDict):
@@ -112,6 +114,17 @@ def _get_openai_inputs_and_fields():
     return openai_inputs, create_input_fields_dict(openai_inputs, "")
 
 
+def _get_cerebras_inputs_and_fields():
+    try:
+        from langflow.components.cerebras.cerebras_chat_models import CerebrasModelComponent
+
+        cerebras_inputs = get_filtered_inputs(CerebrasModelComponent)
+    except ImportError as e:
+        msg = "Cerebras is not installed. Please install it with `pip install langchain-cerebras`."
+        raise ImportError(msg) from e
+    return cerebras_inputs, create_input_fields_dict(cerebras_inputs, "")
+
+
 def _get_azure_inputs_and_fields():
     try:
         from langflow.components.azure.azure_openai import AzureChatOpenAIComponent
@@ -193,6 +206,21 @@ try:
     }
 except ImportError:
     pass
+
+# Try to add each provider
+try:
+    cerebras_inputs, cerebras_fields = _get_cerebras_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["🧠 Cerebras"] = {
+        "fields": cerebras_fields,
+        "inputs": cerebras_inputs,
+        "prefix": "",
+        "component_class": CerebrasModelComponent(),
+        "icon": "🧠",
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
 
 try:
     azure_inputs, azure_fields = _get_azure_inputs_and_fields()

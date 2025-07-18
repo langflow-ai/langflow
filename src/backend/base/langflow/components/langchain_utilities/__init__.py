@@ -25,6 +25,7 @@ from .vector_store_info import VectorStoreInfoComponent
 from .vector_store_router import VectorStoreRouterAgentComponent
 from .xml_agent import XMLAgentComponent
 
+
 __all__ = [
     "CSVAgentComponent",
     "CharacterTextSplitterComponent",

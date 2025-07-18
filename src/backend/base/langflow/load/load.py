@@ -135,7 +135,10 @@ async def arun_flow_from_json(
     cache: str | None = None,
     disable_logs: bool | None = True,
     fallback_to_env_vars: bool = False,
+    stream: bool = False,  # <- new argument
+
 ) -> list[RunOutputs]:
+    
     """Run a flow from a JSON file or dictionary.
 
     Args:
@@ -159,7 +162,7 @@ async def arun_flow_from_json(
     """
     if tweaks is None:
         tweaks = {}
-    tweaks["stream"] = False
+    tweaks["stream"] = stream #False
     graph = await aload_flow_from_json(
         flow=flow,
         tweaks=tweaks,
