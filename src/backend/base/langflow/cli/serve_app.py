@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, FastAPI
@@ -306,7 +307,7 @@ async def run_flow_generator_for_serve(
         # For the serve app, we'll use execute_graph_with_capture with streaming
         # Note: This is a simplified version. In a full implementation, you might want
         # to integrate with the full Langflow streaming pipeline from endpoints.py
-        results, logs = execute_graph_with_capture(graph, input_request.input_value)
+        results, logs = await execute_graph_with_capture(graph, input_request.input_value)
         result_data = extract_result_data(results, logs)
 
         # Send the final result
@@ -400,7 +401,8 @@ def create_multi_serve_app(
             request: RunRequest,
         ) -> RunResponse:
             try:
-                results, logs = execute_graph_with_capture(graph, request.input_value)
+                graph_copy = deepcopy(graph)
+                results, logs = await execute_graph_with_capture(graph_copy, request.input_value)
                 result_data = extract_result_data(results, logs)
 
                 # Debug logging
