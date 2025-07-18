@@ -95,7 +95,6 @@ def validate_template_comprehensive(template_data: dict[str, Any], filename: str
         Dictionary with validation results:
         {
             "structure_errors": [...],
-            "security_issues": [...],
             "build_errors": [...]
         }
     """
@@ -103,7 +102,6 @@ def validate_template_comprehensive(template_data: dict[str, Any], filename: str
         "structure_errors": validate_template_structure(template_data, filename),
         "build_errors": validate_flow_can_build(template_data, filename),
     }
-
 
 async def validate_flow_endpoint(
     client, template_data: dict[str, Any], filename: str, headers: dict[str, str]
