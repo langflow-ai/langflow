@@ -5,7 +5,7 @@ from typing import Any
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
-from langflow.api.v1.schemas import UpdateCustomComponentRequest
+from langflow.api.v1.schemas import CustomComponentRequest, UpdateCustomComponentRequest
 from langflow.components.agents.agent import AgentComponent
 from langflow.custom.utils import build_custom_component_template
 
@@ -106,3 +106,89 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     assert response.status_code == status.HTTP_200_OK
     assert "template" in result
     assert "model_name" not in result["template"]
+
+
+async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
+    """Test that the /custom_component endpoint returns metadata with module and code_hash."""
+    component_code = """
+from langflow.custom import Component
+from langflow.inputs.inputs import MessageTextInput
+from langflow.template.field.base import Output
+
+class TestMetadataComponent(Component):
+    display_name = "Test Metadata Component"
+    description = "Test component for metadata"
+
+    inputs = [
+        MessageTextInput(display_name="Input", name="input_value"),
+    ]
+    outputs = [
+        Output(display_name="Output", name="output", method="process_input"),
+    ]
+
+    def process_input(self) -> str:
+        return f"Processed: {self.input_value}"
+"""
+
+    request = CustomComponentRequest(code=component_code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert "data" in result
+    assert "type" in result
+
+    # Verify metadata is present in the response
+    frontend_node = result["data"]
+    assert "metadata" in frontend_node, "Frontend node should contain metadata"
+
+    metadata = frontend_node["metadata"]
+    assert "module" in metadata, "Metadata should contain module field"
+    assert "code_hash" in metadata, "Metadata should contain code_hash field"
+
+    # Verify metadata values
+    assert isinstance(metadata["module"], str), "Module should be a string"
+    expected_module = "custom_components.test_metadata_component"
+    assert metadata["module"] == expected_module, "Module should be auto-generated from display_name"
+
+    assert isinstance(metadata["code_hash"], str), "Code hash should be a string"
+    assert len(metadata["code_hash"]) == 12, "Code hash should be 12 characters long"
+    assert all(c in "0123456789abcdef" for c in metadata["code_hash"]), "Code hash should be hexadecimal"
+
+
+async def test_custom_component_endpoint_metadata_consistency(client: AsyncClient, logged_in_headers: dict):
+    """Test that the same component code produces consistent metadata."""
+    component_code = """
+from langflow.custom import Component
+from langflow.template.field.base import Output
+
+class ConsistencyTestComponent(Component):
+    display_name = "Consistency Test"
+
+    outputs = [
+        Output(display_name="Output", name="output", method="get_result"),
+    ]
+
+    def get_result(self) -> str:
+        return "consistent result"
+"""
+
+    # Make two identical requests
+    request = CustomComponentRequest(code=component_code)
+
+    response1 = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+    result1 = response1.json()
+
+    response2 = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+    result2 = response2.json()
+
+    # Both requests should succeed
+    assert response1.status_code == status.HTTP_200_OK
+    assert response2.status_code == status.HTTP_200_OK
+
+    # Metadata should be identical
+    metadata1 = result1["data"]["metadata"]
+    metadata2 = result2["data"]["metadata"]
+
+    assert metadata1["module"] == metadata2["module"], "Module names should be consistent"
+    assert metadata1["code_hash"] == metadata2["code_hash"], "Code hashes should be consistent for identical code"
