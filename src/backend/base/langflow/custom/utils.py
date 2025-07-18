@@ -33,31 +33,28 @@ from langflow.utils import validate
 from langflow.utils.util import get_base_classes
 
 
-def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str | None:
+def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:
     """Generate a hash of the component source code.
 
     Args:
         source_code: The source code string
-        modname: The module name for fallback identification
-        class_name: The class name for fallback identification
+        modname: The module name for context
+        class_name: The class name for context
 
     Returns:
-        SHA256 hash of the source code, or None if unable to process
-    """
-    try:
-        if not source_code:
-            # Fallback: hash the module name + class name as a weak identifier
-            fallback_str = f"{modname}.{class_name}"
-            return hashlib.sha256(fallback_str.encode("utf-8")).hexdigest()[:12]
+        SHA256 hash of the source code
 
-        # Generate SHA256 hash of the source code
-        return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]  # First 12 chars for brevity
-    except (UnicodeEncodeError, TypeError, ValueError) as e:
-        # Handle encoding, type, or value errors during hashing
-        logger.debug(f"Could not generate hash for {class_name} in {modname}: {e}")
-        # Fallback: hash the module name + class name as a weak identifier
-        fallback_str = f"{modname}.{class_name}"
-        return hashlib.sha256(fallback_str.encode("utf-8")).hexdigest()[:12]
+    Raises:
+        ValueError: If source_code is empty or None
+        UnicodeEncodeError: If source_code cannot be encoded
+        TypeError: If source_code is not a string
+    """
+    if not source_code:
+        msg = f"Empty source code for {class_name} in {modname}"
+        raise ValueError(msg)
+
+    # Generate SHA256 hash of the source code
+    return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]  # First 12 chars for brevity
 
 
 class UpdateBuildConfigError(Exception):
