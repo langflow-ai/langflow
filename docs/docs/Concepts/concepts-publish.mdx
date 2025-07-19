@@ -1,5 +1,5 @@
 ---
-title: Run flows
+title: Trigger flows with the Langflow API
 slug: /concepts-publish
 ---
 
@@ -81,6 +81,25 @@ Changes to a flow's **Input Schema** are saved exclusively as tweaks for that fl
 These tweaks don't change the flow parameters set in the **Workspace**, and they don't apply to other flows.
 
 Adding tweaks through the **Input Schema** can help you troubleshoot formatting issues with tweaks that you manually added to Langflow API requests.
+
+For example, the following curl command includes a tweak that disables the **Store Messages** setting in a flow's **Chat Input** component:
+
+```bash
+curl --request POST \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
+  --data '{
+  "input_value": "Text to input to the flow",
+  "output_type": "chat",
+  "input_type": "chat",
+  "tweaks": {
+    "ChatInput-4WKag": {
+      "should_store_message": false
+    }
+  }
+}'
+```
 
 ### Use a flow ID alias
 
@@ -504,7 +523,9 @@ export class AppComponent {
 
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to generate responses.
 
-You can also use Langflow as an MCP client, and you can serve your flows as tools to a Langflow MCP client.
+In addition to serving flows through Langflow MCP servers, you can use Langflow as an MCP client to access any MCP server, including Langflow MCP servers.
+
+Interactions with Langflow MCP servers happen through the Langflow API's `/mcp` endpoints.
 
 For more information, see [Use Langflow as an MCP server](/mcp-server) and [Use Langflow as an MCP client](/mcp-client).
 

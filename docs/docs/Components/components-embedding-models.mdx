@@ -5,70 +5,103 @@ slug: /components-embedding-models
 
 import Icon from "@site/src/components/icon";
 
-:::important
-In [Langflow version 1.5](/release-notes), the singular **Embedding model** component replaces many provider-specific embedding models components. Any provider-specific embedding model components that weren't incorporated into the singular component were moved to [**Bundles**](/components-bundle-components).
-:::
-
 The Langflow **Embedding Model** core component generates text embeddings using the selected Large Language Model (LLM).
+
 The **Embedding Model** core component supports many providers and models.
 It is appropriate for most text-based embedding model use cases in Langflow.
-For additional providers and models, see [Bundles](/components-bundle-components).
 
-## Use an Embedding Model component in a flow
+If your provider or model isn't supported by the core **Embedding Model** component, additional single-provider embedding model components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
 
-Create a semantic search system with the **Embedding model** component.
+## Use the Embedding Model component in a flow
 
-1. Add the **Embedding model** component to your flow.
-   The default model is OpenAI's `text-embedding-3-small`, which is a balanced model, based on [OpenAI's recommendations](https://platform.openai.com/docs/guides/embeddings#embedding-models).
-2. In the **OpenAI API Key** field, enter your OpenAI API key.
+This example shows how to use the **Embedding Model** component in a flow by creating a semantic search system.
+This flow loads a text file, splits the text into chunks, generates embeddings for each chunk, and then loads the chunks and embeddings into a vector store. The input and output components allow a user to query the vector store through a chat interface.
+
+![A semantic search flow that uses Embedding Model, File, Split Text, Chroma DB, Chat Input, and Chat Output components](/img/component-embedding-models-add-chat.png)
+
+1. Create a flow, add a **File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
+
+2. Add an **Embedding Model** component, and then provide a valid OpenAI API key.
+
+    By default, the **Embedding Model** component uses an OpenAI model.
+    If you want to use a different provider or model, edit the **Provider**, **Model**, and **API Key** fields accordingly.
+
+    You can enter the API key directly or select a Langflow global variable that references your API key.
+
 3. Add a [**Split Text** component](/components-processing#split-text) to your flow.
-   This component splits your input text into smaller chunks to be processed into embeddings.
-4. Add a [Chroma DB](/components-vector-stores#chroma-db) vector store component to your flow.
-   This component stores your text embeddings for later retrieval.
-5. Connect the **Split Text** component's **Chunks** output to the **Chroma DB** component's **Ingest Data** input.
-6. Connect the **Embedding model** component's **Embeddings** output to the **Chroma DB** component's **Embeddings** input.
+This component splits text input into smaller chunks to be processed into embeddings.
 
-This flow loads a file from the File loader, splits the text, and embeds the split text into the local Chroma vector store using the `text-embedding-3-small` model.
+4. Add a [**Vector Store** component](/components-vector-stores), such as the **Chroma DB** component, to your flow, and then configure the component to connect to your vector store database.
+This component stores the generated embeddings so they can be used for similarity search.
 
-![Embeddings connected to Chroma DB vector store with a file loader and a split text component](/img/component-embedding-models.png)
+5. Connect the components:
 
-To query the vector store, include [Chat Input](/components-io#chat-input) and [Chat Output](/components-io#chat-output) components.
+    * Connect the **File** component's **Loaded Files** output to the **Split Text** component's **Data or DataFrame** input.
+    * Connect the **Split Text** component's **Chunks** output to the **Vector Store** component's **Ingest Data** input.
+    * Connect the **Embedding Model** component's **Embeddings** output to the **Vector Store** component's **Embedding** input.
 
-7. Connect a [Chat Input](/components-io#chat-input) component to the **Search Query** input of the Chroma DB vector store.
-8. Connect a [Chat Output](/components-io#chat-output) component to the **Search Results** port of the Chroma DB vector store.
+6. To query the vector store, add [**Chat Input/Output** components](/components-io#chat-io):
 
-Your flow looks like the following:
-![A simple semantic search flow using Embedding model](/img/component-embedding-models-add-chat.png)
+    * Connect the **Chat Input** component to the **Vector Store** component's **Search Query** input.
+    * Connect the **Vector Store** component's **Search Results** output to the **Chat Output** component.
 
-9. Open the **Playground** and enter a search query.
-The Playground returns the most semantically similar text chunks.
+7. Click **Playground**, and then enter a search query to retrieve text chunks that are most semantically similar to your query.
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
+## Embedding Model parameters
 
 | Name | Display Name | Type | Description |
 |------|--------------|------|-------------|
-| provider | Model Provider | Dropdown | Select the embedding model provider. |
-| model | Model Name | Dropdown | Select the embedding model to use.|
-| api_key | OpenAI API Key | SecretString | The API key required for authenticating with the provider. |
-| api_base | API Base URL | String | Base URL for the API. Leave empty for default. |
-| dimensions | Dimensions | Integer | The number of dimensions for the output embeddings. |
-| chunk_size | Chunk Size | Integer | The size of text chunks to process. Default: `1000`. |
-| request_timeout | Request Timeout | Float | Timeout for API requests |
-| max_retries | Max Retries | Integer | Maximum number of retry attempts. Default: `3`. |
-| show_progress_bar | Show Progress Bar | Boolean | Whether to display a progress bar during embedding generation. |
-| model_kwargs | Model Kwargs | Dictionary | Additional keyword arguments to pass to the model. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| embeddings | Embeddings | An instance for generating embeddings using the selected provider. |
-
-</details>
+| provider | Model Provider | List | Input parameter. Select the embedding model provider. |
+| model | Model Name | List | Input parameter. Select the embedding model to use.|
+| api_key | OpenAI API Key | Secret[String] | Input parameter. The API key required for authenticating with the provider. |
+| api_base | API Base URL | String | Input parameter. Base URL for the API. Leave empty for default. |
+| dimensions | Dimensions | Integer | Input parameter. The number of dimensions for the output embeddings. |
+| chunk_size | Chunk Size | Integer | Input parameter. The size of text chunks to process. Default: `1000`. |
+| request_timeout | Request Timeout | Float | Input parameter. Timeout for API requests. |
+| max_retries | Max Retries | Integer | Input parameter. Maximum number of retry attempts. Default: `3`. |
+| show_progress_bar | Show Progress Bar | Boolean | Input parameter. Whether to display a progress bar during embedding generation. |
+| model_kwargs | Model Kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
+| embeddings | Embeddings | Output parameter. An instance for generating embeddings using the selected provider. |
 
 ## Additional embedding model components
 
 If your provider or model isn't supported by the core **Embedding Model** component, additional single-provider embedding model components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+
+## Legacy embedding components
+
+The following components are legacy components.
+You can still use them in your flows, but they are no longer maintained and they can be removed in future releases.
+
+<details>
+<summary>Embedding Similarity</summary>
+
+The **Embedding Similarity** component is replaced by built-in similarity search functionality in [**Vector Store** components](/components-vector-stores).
+
+This component calculates similarity scores for two embedding vectors.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_vectors | Embedding Vectors | Input parameter. A list containing exactly two data objects with embedding vectors to compare. |
+| similarity_metric | Similarity Metric | Input parameter. Select the similarity metric to use. Options: "Cosine Similarity", "Euclidean Distance", "Manhattan Distance". |
+| similarity_data | Similarity Data | Output parameter. A data object containing the computed similarity score and additional information. |
+
+</details>
+
+<details>
+<summary>Text Embedder</summary>
+
+The **Text Embedder** component is replaced by the **Embedding Model** component.
+
+This component generates embeddings for a given message using a specified embedding model.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_model | Embedding Model | Input parameter. The embedding model to use for generating embeddings. |
+| message | Message | Input parameter. The message for which to generate embeddings. |
+| embeddings | Embedding Data | Output parameter. A data object containing the original text and its embedding vector. |
+
+</details>

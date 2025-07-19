@@ -8,7 +8,7 @@ In Langflow version 1.5, the **Tools** category was deprecated.
 All components that were in this category were replaced by other components or moved to other categories in the **Components** menu.
 
 :::important
-Many components in the **Tools** category are legacy components.
+Many components that were in the **Tools** category are legacy components.
 You can use these components in your flows, but they are no longer maintained and may be removed in a future release.
 
 It is recommended that you replace all legacy components with the replacement components described on this page.
@@ -53,7 +53,8 @@ You have two options for replacing these components:
     * [Wikipedia bundle](/bundles-wikipedia)
     * [yfinance bundle](/bundles-yfinance)
 
-### SearXNG Search Tool
+<details>
+<summary>SearXNG Search Tool</summary>
 
 The **SearXNG Search Tool** component is a legacy component.
 Replace this component with a [**Data** component](/components-data) or another metasearch provider's [bundle](/components-bundle-components).
@@ -68,3 +69,5 @@ It accepts the following parameters:
 | categories | List[String] | Input parameter. The categories to search in. |
 | language | String | Input parameter. The language for the search results. |
 | result_tool | Tool | Output parameter. A SearXNG search tool for use in LangChain. |
+
+</details>

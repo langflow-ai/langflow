@@ -3,34 +3,15 @@ title: Prompt Template
 slug: /components-prompts
 ---
 
-A prompt is a structured input to a language model that instructs the model how to handle user inputs and variables.
+Use the **Prompt Template** core component to create a _prompt_ that supplies instructions and context to an LLM or agent, separate from other input like chat messages and file uploads.
 
-The **Prompt Template** core component creates prompt templates with custom fields and dynamic variables for providing your models structured, repeatable prompts.
+Prompts are structured input that use natural language, fixed values, and dynamic variables to provide baseline context for the LLM.
+For example:
 
-Prompts are a combination of natural language and variables created with curly braces.
-
-## Use variables with a Prompt Template component
-
-The [**Basic prompting starter flow** template](/basic-prompting) use a **Prompt Template** component to structure prompts for an LLM.
-
-The flow template's default prompt in the **Prompt Template** component is `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
-
-This prompt creates a role for your LLM's chat interactions, but it doesn't include variables that you may find useful when templating prompts.
-
-To further modify the prompt template, click **Prompt Template** component, and then edit the **Template** field to use variables.
-
-The following example uses a `{context}` variable to give the LLM access to embedded vector data and refine the response:
-
-```text
-Given the context
-{context}
-Answer the question
-{user_question}
-```
-
-When you add variables to a prompt template, a new field is added to the component for each variable.
-These fields can be connected to other components to receive input to populate specific variables in the prompt.
-This helps automate prompting and make your templates more dynamic.
+* Define a consistent structure for user queries, making it easier for the LLM to understand and respond appropriately.
+* Define a specific output format for the LLM, such as JSON or structured text.
+* Define a role for the LLM, such as `You are a helpful assistant` or `You are an expert in microbiology`.
+* Allow the LLM to reference chat memory.
 
 The **Prompt Template** component can also output variable instructions to other components later in the flow.
 
@@ -38,8 +19,44 @@ The **Prompt Template** component can also output variable instructions to other
 
 | Name     | Display Name   | Description                                                       |
 |----------|----------------|-------------------------------------------------------------------|
-| template | Template       | Input parameter. Create a prompt template with dynamic variables. |
+| template | Template       | Input parameter. Create a prompt template with dynamic variables (`{VARIABLE_NAME}`). |
 | prompt   | Prompt Message | Output parameter. The built prompt message returned by the `build_prompt` method. |
+
+## Define variables in prompts
+
+Variables in a **Prompt Template** component dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from other components, Langflow global variables, or fixed input.
+
+For example, with the [**Message History**](/components-message-history) component, you can use a `{memory}` variable to pass chat history to the prompt.
+
+The following steps demonstrate how to add variables to a **Prompt Template** component:
+
+1. Create a flow based on the [**Basic prompting** template](/basic-prompting).
+
+    This template already has a **Prompt Template** component, but the template only contains natural language instructions: `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
+
+    This prompt defines a role for the LLM's chat interactions, but it doesn't include variables that help you create prompts that adapt dynamically to changing contexts, such as different users and environments.
+
+2. Click the **Prompt Template** component, and then add some variables to the **Template** field.
+
+    Variables are declared by wrapping the variable name in curly braces, like `{variable_name}`.
+    For example, the following template creates `context` and `user_question` variables:
+
+    ```text
+    Given the context
+    {context}
+    Answer the question
+    {user_question}
+    ```
+
+4. Click **Check & Save** to save the template.
+
+    After adding the variables to the template, new fields are added to the **Prompt Template** component for each variable.
+
+5. Provide input for the variable fields:
+
+   * Connect the fields to other components to pass the output from those components to the variables.
+   * Use Langflow global variables.
+   * Enter fixed values directly into the fields.
 
 ## See also
 

@@ -137,8 +137,8 @@ For example, the **Embedding Model** component outputs `embeddings` data that yo
 ## LanguageModel
 
 `LanguageModel` output is a specific type of output that can be produced by **Language Model** components.
-When enabled, the component's output port changes from a **Message** port to a **Language Model** port <Icon name="Circle" size="16" aria-label="Fuchsia language model port" style={{ color: '#c026d3', fill: '#c026d3' }} />
-For more information, see [Use the LanguageModel output](/components-models#use-the-languagemodel-output).
+When enabled, the component's output port changes from a **Message** port to a **Language Model** port <Icon name="Circle" size="16" aria-label="Fuchsia language model port" style={{ color: '#c026d3', fill: '#c026d3' }} />.
+For more information, see [Language Model output types](/components-models#language-model-output-types).
 
 ## Memory
 
@@ -148,28 +148,26 @@ For more information, see [Use the LanguageModel output](/components-models#use-
 
 **Message** ports <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> accept or produce `Message` data, which extends the [`Data` type](#data) with additional fields and methods for text input typically used in chat flows.
 
-The `Message` data type provides a consistent structure for chat interactions, and it is ideal for flows like chatbots, conversational analysis, and other LLM input and output.
+This data type is used by many components.
 
-### Schema and attributes
+:::tip
+Components that accept or produce `Message` data may not include all attributes in the incoming or outgoing `Message` data.
+As long as the data is compatible with the `Message` schema, it can be valid.
 
-The schema is defined in [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py).
+When building flows, focus on the fields shown on each component in the visual editor, rather than the data types passed between components.
+The details of a particular data type are often only relevant when you are debugging a flow or component that isn't producing the expected output.
 
-The following attributes are available:
+For example, a **Chat Input** component only requires the content of the **Input Text** (`input_value`) field.
+The component then constructs a complete `Message` object before passing the data to other components in the flow.
+:::
 
-- `text`: Main message content
-- `sender`: `"User"` or `"AI"`
-- `sender_name`: Display name for sender
-- `session_id`: Chat session identifier
-- `timestamp`: UTC timestamp of the message
-- `files`: List of file paths or images included with the message
-- `content_blocks`: Handles rich content input, such as text, media, or code
-- `category`: `"message"`, `"error"`, `"warning"`, or `"info"`.
+### Schema, structure, and attributes
 
-### Message structure
+The `Message` schema is defined in [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py).
+Some `Message` attributes have their own schema definitions, such as [`content_block.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/content_block.py).
 
-`Message` content appears in Langflow logs, GUI outputs, and the **Playground** as the `text` string alone, but this text is actually extracted from the complete structured `Message` object.
-
-For example, the output string `"Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"` is extracted from the following `Message` object:
+`Message` data is structured as a JSON object.
+For example:
 
 ```json
 {
@@ -184,14 +182,39 @@ For example, the output string `"Name: Charlie Lastname, Age: 28, Email: charlie
 }
 ```
 
-### Text I/O components don't treat Message data as conversations
+The attributes included in a specific `Message` object depend on the context, including the component type, flow activity, and whether the message is a query or response.
+Some common attributes include the following:
 
-[**Text Input**](/components-io#text-input) and [**Text Output**](/components-io#text-output) components have `Message` ports, but they _don't_ support conversational chat in the same way as **Chat Input** components.
+- `text`: The main message content.
+- `sender`: Identifies the originator of a chat message as either `User` or `Language Model`.
+- `sender_name`: The display name for the sender. Defaults to `User` or `Language Model`.
+- `session_id`: The chat [session identifier](/session-id).
+- `flow_id`: The ID of the flow that the message is associated with. `flow_id` and `session_id` are the same if the flow doesn't use custom session IDs.
+- `timestamp`: The UTC timestamp that the message was sent.
+- `files`: A list of file paths or images included with the message
+- `content_blocks`: Container for rich content input, such as text, media, or code. Also contains error message information if the LLM can't process the input.
+- `category`: `"message"`, `"error"`, `"warning"`, or `"info"`.
 
-When a **Text Input** component receives `Message` data, the input isn't handled in the same way that it is when passed to a **Chat Input** component in a chat flow.
-Instead, the text is treated as a static string input, not as part of an ongoing conversation.
+Not all attributes are required, and some components accept message-compatible input, such as raw text input.
+The strictness depends on the component.
 
-The same is true for the **Text Output** component, which produces simple string output, rather than a response to a conversation.
+### Message data in Input/Output components
+
+In flows with [**Chat Input/Output** components](/components-io#chat-io), `Message` data provides a consistent structure for chat interactions, and it is ideal for chatbots, conversational analysis, and other use cases based on a dialog with an LLM or agent.
+In these flows, the **Playground** chat interface prints only the `Message` attributes that are relevant to the conversation, such as `text`, `files`, and error messages from `content_blocks`.
+To see all `Message` attributes, inspect the message logs in the **Playground**.
+
+In flows with [**Text Input/Output** components](/components-io#text-io), `Message` data is used to pass simple text strings without the chat-related metadata.
+These components handle `Message` data as independent text strings, not as part of an ongoing conversation.
+For this reason, a flow with only **Text Input/Output** components isn't compatible with the **Playground**.
+For more information, see [Input/Output components](/components-io).
+
+When using the Langflow API, the response includes the `Message` object along with other response data from the flow run.
+Langflow API responses can be extremely verbose, so your applications must include code to extract relevant data from the response to return to the user.
+For an example, see the [Langflow quickstart](/get-started-quickstart).
+
+Additionally, input sent to the input port of input/output components does _not_ need to be a complete `Message` object because the component constructs the `Message` object that is then passed to other components in the flow or returned as flow output.
+In fact, some components should not receive a complete `Message` object because some attributes, like `timestamp` should be added by the component for accuracy.
 
 ## Tool
 

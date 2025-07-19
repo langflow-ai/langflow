@@ -54,6 +54,9 @@ In the **Playground** sidebar, find the chat session you want to review, click <
 
 ![Playground logs](/img/messages-logs.png)
 
+Message logs break apart the [`Message` data](/data-types#message) for each chat message.
+Click any cell in the message logs to view the full contents of that cell.
+
 ### Modify memories in the Playground
 
 To help debug and test your flows, you can edit or delete individual messages in [message logs](#view-chat-history).
@@ -170,7 +173,7 @@ curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
 
 :::important
 The **Shareable Playground** is for testing purposes only.
-The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [Run flows](/concepts-publish).
+The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [Trigger flows with the Langflow API](/concepts-publish).
 
 The **Shareable Playground** isn't available in Langflow Desktop.
 :::
@@ -191,5 +194,5 @@ This window's URL is the flow's **Shareable Playground** address, such as `https
 ## See also
 
 - [Use voice mode](/concepts-voice-mode)
-- [Run flows](/concepts-publish)
+- [Trigger flows with the Langflow API](/concepts-publish)
 - [Session ID](/session-id)
