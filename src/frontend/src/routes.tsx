@@ -24,7 +24,7 @@ import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
-import FilesPage from "./pages/MainPage/pages/filesPage";
+import FilesPage from "./pages/MainPage/pages/assetsPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";

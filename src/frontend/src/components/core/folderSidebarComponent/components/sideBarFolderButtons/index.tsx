@@ -477,7 +477,7 @@ const SideBarFoldersButtonsComponent = ({
               className="text-sm"
             >
               <ForwardedIconComponent name="File" className="h-4 w-4" />
-              My Files
+              Assets
             </SidebarMenuButton>
           </div>
         </SidebarFooter>
