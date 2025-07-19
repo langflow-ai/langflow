@@ -12,13 +12,10 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.helpers.custom import format_type
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from langflow.type_extraction.type_extraction import extract_inner_type
-from langflow.utils import validate
-from langflow.utils.util import get_base_classes
 from loguru import logger
 from pydantic import BaseModel
 
@@ -31,6 +28,7 @@ from lfx.custom.directory_reader.utils import (
 )
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import MissingDefault
+from lfx.utils import format_type, get_base_classes, validate
 
 
 def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:

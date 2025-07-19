@@ -20,13 +20,6 @@ from langflow.base.tools.constants import (
     TOOLS_METADATA_INPUT_NAME,
 )
 from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool
-
-# Lazy import to avoid circular dependency
-# from lfx.graph.state.model import create_state_model
-# Lazy import to avoid circular dependency
-# from lfx.graph.utils import has_chat_output
-from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
@@ -35,11 +28,15 @@ from langflow.schema.properties import Source
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
-from langflow.utils.async_helpers import run_until_complete
-from langflow.utils.util import find_closest_match
 from pydantic import BaseModel, ValidationError
 
 from lfx.custom.tree_visitor import RequiredInputsVisitor
+
+# Lazy import to avoid circular dependency
+# from lfx.graph.state.model import create_state_model
+# Lazy import to avoid circular dependency
+# from lfx.graph.utils import has_chat_output
+from lfx.utils import find_closest_match, format_type, run_until_complete
 
 from .custom_component import CustomComponent
 
@@ -48,6 +45,7 @@ if TYPE_CHECKING:
 
     from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
+    from langflow.field_typing import Tool
     from langflow.inputs.inputs import InputTypes
     from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType

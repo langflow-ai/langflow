@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.tools import BaseTool, ToolException
-from lfx.graph.graph.base import Graph  # cannot be a part of TYPE_CHECKING
-from lfx.graph.vertex.base import Vertex  # cannot be a part of TYPE_CHECKING
 from loguru import logger
 from typing_extensions import override
 
@@ -14,6 +12,8 @@ from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.vertex.base import Vertex
     from pydantic.v1 import BaseModel
 
 

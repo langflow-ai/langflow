@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-from langflow.utils import validate
 from loguru import logger
 
 from lfx.custom.attributes import ATTR_FUNC_MAPPING
 from lfx.custom.code_parser.code_parser import CodeParser
 from lfx.custom.eval import eval_custom_component_code
+from lfx.utils import validate
 
 if TYPE_CHECKING:
     from uuid import UUID
