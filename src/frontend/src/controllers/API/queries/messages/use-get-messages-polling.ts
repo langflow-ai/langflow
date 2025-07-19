@@ -1,7 +1,7 @@
-import { useMessagesStore } from "@/stores/messagesStore";
-import { UseMutationResult } from "@tanstack/react-query";
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useRef } from "react";
+import { useMessagesStore } from "@/stores/messagesStore";
 import {
   extractColumnsFromRows,
   prepareSessionIdForAPI,
@@ -96,7 +96,7 @@ export const useGetMessagesPollingMutation = (
     payload: MessagesQueryParams,
   ): Promise<MessagesResponse> => {
     const requestId = payload.id || "default";
-    const sessionId = payload.session_id;
+    const _sessionId = payload.session_id;
 
     if (requestInProgressRef.current[requestId]) {
       return Promise.reject("Request already in progress");

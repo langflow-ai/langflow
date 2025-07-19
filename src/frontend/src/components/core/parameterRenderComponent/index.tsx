@@ -1,14 +1,13 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
+import { useMemo } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { useMemo } from "react";
-import ToolsComponent from "./components/ToolsComponent";
+import type { APIClassType, InputFieldType } from "@/types/api";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -22,8 +21,9 @@ import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
+import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
-import { InputProps, NodeInfoType } from "./types";
+import type { InputProps, NodeInfoType } from "./types";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -91,7 +91,7 @@ export function ParameterRenderComponent({
             />
           );
         }
-        if (!!templateData.options) {
+        if (templateData.options) {
           return (
             <MultiselectComponent
               {...baseInputProps}
@@ -241,7 +241,7 @@ export function ParameterRenderComponent({
             limit={templateData?.limit}
           />
         );
-      case "connect":
+      case "connect": {
         const link =
           templateData?.options?.find(
             (option: any) => option?.name === templateValue,
@@ -261,6 +261,7 @@ export function ParameterRenderComponent({
             connectionLink={link as string}
           />
         );
+      }
       case "tab":
         return (
           <TabComponent

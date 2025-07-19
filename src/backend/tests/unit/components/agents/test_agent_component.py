@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -14,6 +15,7 @@ from langflow.base.models.openai_constants import (
 from langflow.components.agents.agent import AgentComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
+from langflow.services.database.session import NoopSession
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
@@ -21,7 +23,7 @@ from tests.unit.mock_language_model import MockLanguageModel
 # Load environment variables from .env file
 
 
-class TestAgentComponent(ComponentTestBaseWithoutClient):
+class TestAgentComponentWithoutClient(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         return AgentComponent
@@ -99,16 +101,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # Verify model_name field is cleared for Custom
         assert "model_name" not in updated_config
 
-
-class TestAgentComponentWithClient(ComponentTestBaseWithClient):
-    @pytest.fixture
-    def component_class(self):
-        return AgentComponent
-
-    @pytest.fixture
-    def file_names_mapping(self):
-        return []
-
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
     async def test_agent_component_with_calculator(self):
@@ -124,13 +116,19 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             tools=tools,
             input_value=input_value,
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
+            model_name="gpt-4.1-nano",
+            llm_type="OpenAI",
             temperature=temperature,
             _session_id=str(uuid4()),
         )
 
-        response = await agent.message_response()
+        with (
+            patch.object(NoopSession, "add", new_callable=AsyncMock) as mock_add,
+            patch.object(NoopSession, "commit", new_callable=AsyncMock) as mock_commit,
+        ):
+            response = await agent.message_response()
+            assert mock_add.called
+            assert mock_commit.called
         assert "4" in response.data.get("text")
 
     @pytest.mark.api_key_required
@@ -141,22 +139,122 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
         input_value = "What is 2 + 2?"
 
         # Iterate over all OpenAI models
-        failed_models = []
+        failed_models = {}
         for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
-            # Initialize the AgentComponent with mocked inputs
-            tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
-            agent = AgentComponent(
-                tools=tools,
-                input_value=input_value,
-                api_key=api_key,
-                model_name=model_name,
-                agent_llm="OpenAI",
-                _session_id=str(uuid4()),
-            )
+            try:
+                # Initialize the AgentComponent with mocked inputs
+                tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm=None,
+                    llm_type="OpenAI",
+                    temperature=0.1,
+                    _session_id=str(uuid4()),
+                )
 
-            response = await agent.message_response()
-            if "4" not in response.data.get("text"):
-                failed_models.append(model_name)
+                response = await agent.message_response()
+                if "4" not in response.data.get("text"):
+                    failed_models[model_name] = f"Expected '4' in response but got: {response.data.get('text')}"
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
+
+        assert not failed_models, f"The following models failed the test: {failed_models}"
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_component_with_all_anthropic_models(self):
+        # Mock inputs
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        input_value = "What is 2 + 2?"
+
+        # Iterate over all Anthropic models
+        failed_models = {}
+
+        for model_name in ANTHROPIC_MODELS:
+            try:
+                # Initialize the AgentComponent with mocked inputs
+                tools = [CalculatorToolComponent().build_tool()]
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm="Anthropic",
+                    _session_id=str(uuid4()),
+                )
+
+                response = await agent.message_response()
+                response_text = response.data.get("text", "")
+
+                if "4" not in response_text:
+                    failed_models[model_name] = f"Expected '4' in response but got: {response_text}"
+
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
+
+        assert not failed_models, "The following models failed the test:\n" + "\n".join(
+            f"{model}: {error}" for model, error in failed_models.items()
+        )
+
+
+class TestAgentComponentWithClient(ComponentTestBaseWithClient):
+    @pytest.fixture
+    def component_class(self):
+        return AgentComponent
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_component_with_calculator(self):
+        api_key = os.getenv("OPENAI_API_KEY")
+        tools = [CalculatorToolComponent().build_tool()]
+        input_value = "What is 2 + 2?"
+
+        temperature = 0.1
+
+        # Initialize the AgentComponent with mocked inputs
+        agent = AgentComponent(
+            tools=tools,
+            input_value=input_value,
+            api_key=api_key,
+            model_name="gpt-4o",
+            agent_llm="OpenAI",
+            temperature=temperature,
+            _session_id=str(uuid4()),
+        )
+        response = await agent.message_response()
+        assert "4" in response.data.get("text")
+
+    @pytest.mark.api_key_required
+    @pytest.mark.no_blockbuster
+    async def test_agent_component_with_all_openai_models(self):
+        api_key = os.getenv("OPENAI_API_KEY")
+        input_value = "What is 2 + 2?"
+
+        # Iterate over all OpenAI models
+        failed_models = {}
+        for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
+            try:
+                tools = [CalculatorToolComponent().build_tool()]
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm="OpenAI",
+                    _session_id=str(uuid4()),
+                )
+                response = await agent.message_response()
+                if "4" not in response.data.get("text"):
+                    failed_models[model_name] = f"Expected '4' in response but got: {response.data.get('text')}"
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
 
         assert not failed_models, f"The following models failed the test: {failed_models}"
 

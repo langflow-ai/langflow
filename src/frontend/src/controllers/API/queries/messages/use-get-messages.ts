@@ -1,8 +1,8 @@
+import { keepPreviousData } from "@tanstack/react-query";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
 import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { keepPreviousData } from "@tanstack/react-query";
-import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useQueryFunctionType } from "../../../../types/api";
+import type { useQueryFunctionType } from "../../../../types/api";
 import {
   extractColumnsFromRows,
   prepareSessionIdForAPI,

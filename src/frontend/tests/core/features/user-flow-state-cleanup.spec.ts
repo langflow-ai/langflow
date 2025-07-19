@@ -101,7 +101,7 @@ test(
 
     try {
       await page.getByTestId("new_project_btn_empty_page").click();
-    } catch (error) {
+    } catch (_error) {
       await page.getByText("New Flow", { exact: true }).click();
     }
 
