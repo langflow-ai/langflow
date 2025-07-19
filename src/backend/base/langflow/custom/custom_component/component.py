@@ -26,9 +26,9 @@ from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
 
 # Lazy import to avoid circular dependency
-# from langflow.graph.state.model import create_state_model
+# from lfx.graph.state.model import create_state_model
 # Lazy import to avoid circular dependency
-# from langflow.graph.utils import has_chat_output
+# from lfx.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -46,10 +46,11 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from lfx.graph.edge.schema import EdgeData
+    from lfx.graph.vertex.base import Vertex
+
     from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
-    from langflow.graph.edge.schema import EdgeData
-    from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
     from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType
@@ -302,7 +303,7 @@ class Component(CustomComponent):
         for output in self._outputs_map.values():
             fields[output.name] = getattr(self, output.method)
         # Lazy import to avoid circular dependency
-        from langflow.graph.state.model import create_state_model
+        from lfx.graph.state.model import create_state_model
 
         self._state_model = create_state_model(model_name=model_name, **fields)
         return self._state_model
@@ -1456,7 +1457,7 @@ class Component(CustomComponent):
 
     def is_connected_to_chat_output(self) -> bool:
         # Lazy import to avoid circular dependency
-        from langflow.graph.utils import has_chat_output
+        from lfx.graph.utils import has_chat_output
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 

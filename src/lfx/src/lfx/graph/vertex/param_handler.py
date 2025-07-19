@@ -9,16 +9,16 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 from loguru import logger
 
-from langflow.schema.data import Data
-from langflow.services.deps import get_storage_service
-from langflow.services.storage.service import StorageService
-from langflow.utils.constants import DIRECT_TYPES
-from langflow.utils.util import unescape_string
+from lfx.schema.data import Data
+from lfx.services.deps import get_storage_service
+from lfx.services.storage.service import StorageService
+from lfx.utils.constants import DIRECT_TYPES
+from lfx.utils.util import unescape_string
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import CycleEdge
-    from langflow.graph.vertex.base import Vertex
-    from langflow.services.storage.service import StorageService
+    from lfx.graph.edge.base import CycleEdge
+    from lfx.graph.vertex.base import Vertex
+    from lfx.services.storage.service import StorageService
 
 
 class ParameterHandler:

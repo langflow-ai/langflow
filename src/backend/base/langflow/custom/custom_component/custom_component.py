@@ -22,9 +22,9 @@ from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.vertex.base import Vertex
 
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.vertex.base import Vertex
     from langflow.schema.dotdict import dotdict
     from langflow.schema.schema import OutputValue
     from langflow.services.storage.service import StorageService

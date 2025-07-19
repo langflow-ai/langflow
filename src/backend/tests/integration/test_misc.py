@@ -3,9 +3,10 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.load.load import arun_flow_from_json
+
+from lfx.graph.schema import RunOutputs
 
 
 @pytest.mark.api_key_required

@@ -15,9 +15,10 @@ from langflow.services.deps import get_settings_service, session_scope
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.schema import RunOutputs
-    from langflow.graph.vertex.base import Vertex
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.schema import RunOutputs
+    from lfx.graph.vertex.base import Vertex
+
     from langflow.schema.data import Data
 
 INPUT_TYPE_MAP = {
@@ -46,7 +47,8 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
 async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
 ) -> Graph:
-    from langflow.graph.graph.base import Graph
+    from lfx.graph.graph.base import Graph
+
     from langflow.processing.process import process_tweaks
 
     if not flow_id and not flow_name:
@@ -318,7 +320,7 @@ async def generate_unique_flow_name(flow_name, user_id, session):
 
 def json_schema_from_flow(flow: Flow) -> dict:
     """Generate JSON schema from flow input nodes."""
-    from langflow.graph.graph.base import Graph
+    from lfx.graph.graph.base import Graph
 
     # Get the flow's data which contains the nodes and their configurations
     flow_data = flow.data or {}

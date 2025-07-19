@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from lfx.graph.graph.schema import GraphDump
 
-from langflow.graph.graph.schema import GraphDump
 from langflow.services.auth.utils import get_current_active_user
 
 router = APIRouter(prefix="/starter-projects", tags=["Flows"])

@@ -1,5 +1,7 @@
 from textwrap import dedent
 
+from lfx.graph import Graph
+
 from langflow.components.data import FileComponent
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.models import LanguageModelComponent
@@ -7,7 +9,6 @@ from langflow.components.openai.openai import OpenAIEmbeddingsComponent
 from langflow.components.processing import ParserComponent, PromptComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.graph import Graph
 
 
 def ingestion_graph():

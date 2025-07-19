@@ -9,8 +9,9 @@ from langflow.components.input_output.chat_output import ChatOutput
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
-from langflow.graph.graph.base import Graph
 from pydantic import BaseModel
+
+from lfx.graph.graph.base import Graph
 
 
 @pytest.fixture

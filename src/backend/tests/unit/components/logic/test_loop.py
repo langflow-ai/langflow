@@ -15,11 +15,11 @@ from langflow.components.processing import (
     SplitTextComponent,
     StructuredOutputComponent,
 )
-from langflow.graph import Graph
 from langflow.memory import aget_messages
 from langflow.schema.data import Data
 from langflow.services.database.models.flow import FlowCreate
 
+from lfx.graph import Graph
 from tests.base import ComponentTestBaseWithClient
 from tests.unit.build_utils import build_flow, get_build_events
 

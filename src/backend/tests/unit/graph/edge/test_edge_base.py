@@ -4,7 +4,8 @@ import pytest
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.processing import PromptComponent
-from langflow.graph.graph.base import Graph
+
+from lfx.graph.graph.base import Graph
 
 
 def test_edge_raises_error_on_invalid_target_handle():

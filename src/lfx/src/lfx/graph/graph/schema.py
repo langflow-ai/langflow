@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple, Protocol
+from typing import TYPE_CHECKING, NamedTuple, NotRequired, Protocol
 
-from typing_extensions import NotRequired, TypedDict
-
-from langflow.graph.edge.schema import EdgeData
-from langflow.graph.vertex.schema import NodeData
+from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
-    from langflow.graph.schema import ResultData
-    from langflow.graph.vertex.base import Vertex
-    from langflow.schema.log import LoggableType
+    from lfx.graph.edge.schema import EdgeData
+    from lfx.graph.schema import ResultData
+    from lfx.graph.vertex.base import Vertex
+    from lfx.graph.vertex.schema import NodeData
+    from lfx.schema.log import LoggableType
 
 
 class ViewPort(TypedDict):

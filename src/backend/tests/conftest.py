@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from langflow.components.input_output import ChatInput
-from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
@@ -38,6 +37,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+from lfx.graph import Graph
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()

@@ -15,10 +15,11 @@ from langflow.schema.data import Data
 from langflow.services.deps import get_tracing_service, session_scope
 
 if TYPE_CHECKING:
+    from lfx.graph.vertex.base import Vertex
+
     from langflow.custom.custom_component.component import Component
     from langflow.custom.custom_component.custom_component import CustomComponent
     from langflow.events.event_manager import EventManager
-    from langflow.graph.vertex.base import Vertex
 
 
 def instantiate_class(

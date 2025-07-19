@@ -9,23 +9,23 @@ import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
-from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
-from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.exceptions import NoComponentInstanceError
-from langflow.schema.artifact import ArtifactType
-from langflow.schema.data import Data
-from langflow.schema.message import Message
-from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.serialization.serialization import serialize
-from langflow.template.field.base import UNDEFINED, Output
-from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
-from langflow.utils.util import unescape_string
+from lfx.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
+from lfx.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
+from lfx.graph.vertex.base import Vertex
+from lfx.graph.vertex.exceptions import NoComponentInstanceError
+from lfx.schema.artifact import ArtifactType
+from lfx.schema.data import Data
+from lfx.schema.message import Message
+from lfx.schema.schema import INPUT_FIELD_NAME
+from lfx.serialization.serialization import serialize
+from lfx.template.field.base import UNDEFINED, Output
+from lfx.utils.schemas import ChatOutputResponse, DataOutputResponse
+from lfx.utils.util import unescape_string
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import CycleEdge
-    from langflow.graph.vertex.schema import NodeData
-    from langflow.inputs.inputs import InputTypes
+    from lfx.graph.edge.base import CycleEdge
+    from lfx.graph.vertex.schema import NodeData
+    from lfx.inputs.inputs import InputTypes
 
 
 class CustomComponentVertex(Vertex):
@@ -77,7 +77,7 @@ class ComponentVertex(Vertex):
         for key, value in self.built_object.items():
             self.add_result(key, value)
 
-    def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge, None, None]:
+    def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge]:
         """Get the edge with the target id.
 
         Args:

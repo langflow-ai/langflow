@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
+    from lfx.graph.vertex.base import Vertex
 
 
 def build_clean_params(target: Vertex) -> dict:

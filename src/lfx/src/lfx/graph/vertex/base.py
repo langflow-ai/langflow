@@ -10,29 +10,29 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.exceptions.component import ComponentBuildError
-from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
-from langflow.graph.vertex.param_handler import ParameterHandler
-from langflow.interface import initialize
-from langflow.interface.listing import lazy_load_dict
-from langflow.schema.artifact import ArtifactType
-from langflow.schema.data import Data
-from langflow.schema.message import Message
-from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
-from langflow.services.deps import get_storage_service
-from langflow.utils.schemas import ChatOutputResponse
-from langflow.utils.util import sync_to_async
+from lfx.exceptions.component import ComponentBuildError
+from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
+from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from lfx.graph.vertex.param_handler import ParameterHandler
+from lfx.interface import initialize
+from lfx.interface.listing import lazy_load_dict
+from lfx.schema.artifact import ArtifactType
+from lfx.schema.data import Data
+from lfx.schema.message import Message
+from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
+from lfx.services.deps import get_storage_service
+from lfx.utils.schemas import ChatOutputResponse
+from lfx.utils.util import sync_to_async
 
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.custom.custom_component.component import Component
-    from langflow.events.event_manager import EventManager
-    from langflow.graph.edge.base import CycleEdge, Edge
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.vertex.schema import NodeData
-    from langflow.services.tracing.schema import Log
+    from lfx.custom.custom_component.component import Component
+    from lfx.events.event_manager import EventManager
+    from lfx.graph.edge.base import CycleEdge, Edge
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.vertex.schema import NodeData
+    from lfx.services.tracing.schema import Log
 
 
 class VertexStates(str, Enum):
@@ -710,8 +710,8 @@ class Vertex:
     ) -> Any:
         # Add lazy loading check at the beginning
         # Check if we need to fully load this component first
-        from langflow.interface.components import ensure_component_loaded
-        from langflow.services.deps import get_settings_service
+        from lfx.interface.components import ensure_component_loaded
+        from lfx.services.deps import get_settings_service
 
         if get_settings_service().settings.lazy_load_components:
             component_name = self.id.split("-")[0]

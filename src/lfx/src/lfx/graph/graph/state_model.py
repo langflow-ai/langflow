@@ -1,7 +1,7 @@
 import re
 
-from langflow.graph.state.model import create_state_model
-from langflow.helpers.base_model import BaseModel
+from lfx.graph.state.model import create_state_model
+from lfx.helpers.base_model import BaseModel
 
 
 def camel_to_snake(camel_str: str) -> str:

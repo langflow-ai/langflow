@@ -2,7 +2,8 @@ import pickle
 from typing import TYPE_CHECKING
 
 import pytest
-from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
+
+from lfx.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 
 if TYPE_CHECKING:
     from collections import defaultdict

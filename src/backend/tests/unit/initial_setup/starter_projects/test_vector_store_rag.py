@@ -10,11 +10,12 @@ from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.processing import ParseDataComponent, PromptComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.graph.graph.base import Graph
-from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+
+from lfx.graph.graph.base import Graph
+from lfx.graph.graph.constants import Finish
 
 
 @pytest.fixture

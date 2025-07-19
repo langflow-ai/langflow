@@ -1,11 +1,11 @@
 from typing import Any
 
+from lfx.graph.graph.base import Graph
+from lfx.graph.vertex.base import Vertex
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom.custom_component.component import Component
-from langflow.graph.graph.base import Graph
-from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.io import DropdownInput, Output
 from langflow.schema.data import Data

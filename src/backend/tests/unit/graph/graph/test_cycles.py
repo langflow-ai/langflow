@@ -7,10 +7,11 @@ from langflow.components.logic.conditional_router import ConditionalRouterCompon
 from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.processing import PromptComponent
 from langflow.custom.custom_component.component import Component
-from langflow.graph.graph.base import Graph
-from langflow.graph.graph.utils import find_cycle_vertices
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
+
+from lfx.graph.graph.base import Graph
+from lfx.graph.graph.utils import find_cycle_vertices
 
 
 class Concatenate(Component):

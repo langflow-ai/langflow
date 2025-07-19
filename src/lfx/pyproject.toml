@@ -1,0 +1,62 @@
+[project]
+name = "lfx"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Gabriel Luiz Freitas Almeida", email = "gabriel@langflow.org" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+pydocstyle.convention = "google"
+select = ["ALL"]
+ignore = [
+    "C90", # McCabe complexity
+    "CPY", # Missing copyright
+    "COM812", # Messes with the formatter
+    "ERA", # Eradicate commented-out code
+    "FIX002", # Line contains TODO
+    "ISC001", # Messes with the formatter
+    "PERF203", # Rarely useful
+    "PLR09", # Too many something (arg, statements, etc)
+    "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
+    "TD002", # Missing author in TODO
+    "TD003", # Missing issue link in TODO
+    "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
+
+    # Rules that are TODOs
+    "ANN",
+]
+
+# Preview rules that are not yet activated
+external = ["RUF027"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = [
+    "D1",
+    "INP",
+    "T201",
+]
+"src/backend/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = [ "io", "logging", "socket"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.10",
+]

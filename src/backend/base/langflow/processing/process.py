@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from lfx.graph.vertex.base import Vertex
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.graph.vertex.base import Vertex
 from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.schema import RunOutputs
+
     from langflow.api.v1.schemas import InputValueRequest
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.schema import RunOutputs
     from langflow.services.event_manager import EventManager
 
 

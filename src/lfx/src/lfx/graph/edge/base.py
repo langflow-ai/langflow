@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
-from langflow.graph.edge.schema import EdgeData, LoopTargetHandleDict, SourceHandle, TargetHandle, TargetHandleDict
-from langflow.schema.schema import INPUT_FIELD_NAME
+from lfx.graph.edge.schema import EdgeData, LoopTargetHandleDict, SourceHandle, TargetHandle, TargetHandleDict
+from lfx.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
+    from lfx.graph.vertex.base import Vertex
 
 
 class Edge:

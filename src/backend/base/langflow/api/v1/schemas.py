@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+from lfx.graph.schema import RunOutputs
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -13,7 +14,6 @@ from pydantic import (
     model_serializer,
 )
 
-from langflow.graph.schema import RunOutputs
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue

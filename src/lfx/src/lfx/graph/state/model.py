@@ -158,8 +158,8 @@ def create_state_model(model_name: str = "State", *, validate: bool = True, **kw
         ValueError: If the provided field value is invalid or cannot be processed.
 
     Examples:
-        >>> from langflow.components.io import ChatInput
-        >>> from langflow.components.io.ChatOutput import ChatOutput
+        >>> from lfx.components.io import ChatInput
+        >>> from lfx.components.io.ChatOutput import ChatOutput
         >>> from pydantic import Field
         >>>
         >>> chat_input = ChatInput()

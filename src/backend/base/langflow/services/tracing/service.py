@@ -15,9 +15,9 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.vertex.base import Vertex
 
     from langflow.custom.custom_component.component import Component
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.settings.service import SettingsService
     from langflow.services.tracing.base import BaseTracer
     from langflow.services.tracing.schema import Log

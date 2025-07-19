@@ -1,10 +1,11 @@
 from textwrap import dedent
 
+from lfx.graph import Graph
+
 from langflow.components.data import URLComponent
 from langflow.components.input_output import ChatOutput, TextInputComponent
 from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.processing import ParserComponent, PromptComponent
-from langflow.graph import Graph
 
 
 def blog_writer_graph(template: str | None = None):

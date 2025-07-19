@@ -30,7 +30,7 @@ class SessionService(Service):
         if data_graph is None:
             return None, None
         # If not cached, build the graph and cache it
-        from langflow.graph.graph.base import Graph
+        from lfx.graph.graph.base import Graph
 
         graph = Graph.from_payload(data_graph, flow_id=flow_id)
         artifacts: dict = {}

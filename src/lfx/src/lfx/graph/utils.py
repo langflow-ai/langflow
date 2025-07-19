@@ -8,20 +8,20 @@ from uuid import UUID
 import pandas as pd
 from loguru import logger
 
-from langflow.interface.utils import extract_input_variables_from_prompt
-from langflow.schema.data import Data
-from langflow.schema.message import Message
-from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
-from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
-from langflow.services.database.models.transactions.model import TransactionBase
-from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
-from langflow.services.database.models.vertex_builds.model import VertexBuildBase
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
+from lfx.interface.utils import extract_input_variables_from_prompt
+from lfx.schema.data import Data
+from lfx.schema.message import Message
+from lfx.serialization.serialization import get_max_items_length, get_max_text_length, serialize
+from lfx.services.database.models.transactions.crud import log_transaction as crud_log_transaction
+from lfx.services.database.models.transactions.model import TransactionBase
+from lfx.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
+from lfx.services.database.models.vertex_builds.model import VertexBuildBase
+from lfx.services.database.utils import session_getter
+from lfx.services.deps import get_db_service, get_settings_service
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultDataResponse
-    from langflow.graph.vertex.base import Vertex
+    from lfx.api.v1.schemas import ResultDataResponse
+    from lfx.graph.vertex.base import Vertex
 
 
 class UnbuiltObject:
@@ -224,6 +224,6 @@ def has_output_vertex(vertices: dict[Vertex, int]):
 
 
 def has_chat_output(vertices: dict[Vertex, int]):
-    from langflow.graph.schema import InterfaceComponentTypes
+    from lfx.graph.schema import InterfaceComponentTypes
 
     return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)
