@@ -1,5 +1,5 @@
-import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect } from "react";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { Textarea } from "../../../../../../components/ui/textarea";
 import { classNames } from "../../../../../../utils/utils";
 
@@ -46,6 +46,7 @@ const TextAreaWrapper = ({
       data-testid="input-chat-playground"
       onKeyDown={(event) => {
         if (checkSendingOk(event)) {
+          event.preventDefault();
           send();
         }
       }}

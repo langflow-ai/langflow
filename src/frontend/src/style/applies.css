@@ -145,12 +145,7 @@
     bottom: -10px;
     left: -10px;
     right: -10px;
-    background: rgba(
-      255,
-      255,
-      255,
-      0.5
-    ); /* Reduced opacity for better readability */
+    background: rgba(255, 255, 255, 0.5); /* Reduced opacity for better readability */
     border-radius: 10px;
     pointer-events: none;
   }
@@ -905,7 +900,7 @@
     @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
-    @apply -mt-1 h-full w-full pb-4;
+    @apply h-full w-full;
   }
   .api-modal-accordion-display {
     @apply mt-2 flex h-full w-full;
@@ -1247,6 +1242,14 @@
     @apply absolute right-3 w-14 -translate-y-3.5 cursor-text rounded-sm px-2 py-[1px] text-center hover:ring-[1px] hover:ring-slider-input-border;
   }
 
+  .cursor-pointer,
+  .cursor-default,
+  .cursor-not-allowed,
+  label,
+  button {
+    @apply select-none;
+  }
+
   .btn-add-input-list {
     @apply flex h-6 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
   }
@@ -1261,6 +1264,26 @@
     --tw-ring-shadow: none !important;
     --tw-ring-offset-shadow: none !important;
     --tw-ring-color: none !important;
+  }
+
+  .helper-lines {
+    @apply pointer-events-none absolute left-0 top-0 z-10 h-full w-full;
+  }
+
+  .helper-line {
+    stroke: hsl(var(--primary));
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.3));
+  }
+
+  .helper-line.horizontal {
+    stroke: hsl(var(--primary));
+  }
+
+  .helper-line.vertical {
+    stroke: hsl(var(--primary));
   }
 }
 

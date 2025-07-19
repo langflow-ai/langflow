@@ -179,6 +179,10 @@ export const lazyIconsMapping = {
     import("@/icons/IFixIt").then((mod) => ({ default: mod.IFixIcon })),
   javascript: () =>
     import("@/icons/JSicon").then((mod) => ({ default: mod.JSIcon })),
+  JigsawStack: () =>
+    import("@/icons/JigsawStack").then((mod) => ({
+      default: mod.JigsawStackIcon,
+    })),
   Linear: () =>
     import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>
@@ -324,6 +328,8 @@ export const lazyIconsMapping = {
     import("@/icons/Wikipedia/Wikipedia").then((mod) => ({
       default: mod.default,
     })),
+  Windsurf: () =>
+    import("@/icons/Windsurf").then((mod) => ({ default: mod.WindsurfIcon })),
   Wolfram: () =>
     import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
   xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),

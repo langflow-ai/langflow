@@ -79,7 +79,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
   // Wait for the target element to be available before evaluation
 
-  await page.waitForSelector('[data-testid="sidebar-nav-My Projects"]', {
+  await page.waitForSelector('[data-testid="sidebar-nav-Starter Project"]', {
     timeout: 100000,
   });
   // Create the DataTransfer and File
@@ -94,7 +94,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   }, jsonContent);
 
   // Now dispatch
-  await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
+  await page.getByTestId("sidebar-nav-Starter Project").dispatchEvent("drop", {
     dataTransfer,
   });
   // wait for the file to be uploaded failed with waitforselector
@@ -107,7 +107,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
     expect(true).toBeTruthy();
   }
 
-  await page.getByTestId("sidebar-nav-My Projects").click();
+  await page.getByTestId("sidebar-nav-Starter Project").click();
 
   await page.waitForSelector("text=Getting Started:", {
     timeout: 100000,

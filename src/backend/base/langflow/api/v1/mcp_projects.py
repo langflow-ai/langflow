@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import json
 import logging
 import os
@@ -9,8 +8,8 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
-from urllib.parse import quote, unquote, urlparse
-from uuid import UUID, uuid4
+from subprocess import CalledProcessError
+from uuid import UUID
 
 from anyio import BrokenResourceError
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -22,28 +21,25 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveMCPUser
-from langflow.api.v1.endpoints import simple_run_flow
-from langflow.api.v1.mcp import (
+from langflow.api.v1.mcp_utils import (
     current_user_ctx,
-    get_mcp_config,
+    handle_call_tool,
+    handle_list_resources,
+    handle_list_tools,
     handle_mcp_errors,
-    with_db_session,
+    handle_read_resource,
 )
-from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings, SimplifiedAPIRequest
-from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH, MAX_MCP_TOOL_NAME_LENGTH
-from langflow.base.mcp.util import get_flow_snake_case, get_unique_name
-from langflow.helpers.flow import json_schema_from_flow
-from langflow.schema.message import Message
+from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings
+from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME, NEW_FOLDER_NAME
-from langflow.services.deps import get_settings_service, get_storage_service, session_scope
-from langflow.services.storage.utils import build_content_type_from_extension
+from langflow.services.deps import get_settings_service, session_scope
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
-# Create a context variable to store the current project
+# Create project-specific context variable
 current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx", default=None)
 
 # Create a mapping of project-specific SSE transports
@@ -95,10 +91,10 @@ async def list_project_tools(
                     continue
 
                 # Format the flow name according to MCP conventions (snake_case)
-                flow_name = "_".join(flow.name.lower().split())
+                flow_name = sanitize_mcp_name(flow.name)
 
                 # Use action_name and action_description if available, otherwise use defaults
-                name = flow.action_name or flow_name
+                name = sanitize_mcp_name(flow.action_name) if flow.action_name else flow_name
                 description = flow.action_description or (
                     flow.description if flow.description else f"Tool generated from flow: {flow_name}"
                 )
@@ -326,7 +322,7 @@ async def install_mcp_config(
     request: Request,
     current_user: CurrentActiveMCPUser,
 ):
-    """Install MCP server configuration for Cursor or Claude."""
+    """Install MCP server configuration for Cursor, Windsurf, or Claude."""
     # Check if the request is coming from a local IP address
     client_ip = get_client_ip(request)
     if not is_local_ip(client_ip):
@@ -355,7 +351,9 @@ async def install_mcp_config(
         args = ["mcp-proxy", sse_url]
 
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
-        if os_type == "Linux" and "microsoft" in platform.uname().release.lower():
+        is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+        if is_wsl:
             logger.debug("WSL detected, using Windows-specific configuration")
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
@@ -387,26 +385,77 @@ async def install_mcp_config(
             logger.debug("Windows detected, using cmd command")
 
         name = project.name
-        name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
 
         # Create the MCP configuration
         mcp_config = {
             "mcpServers": {
-                f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": {
+                f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": {
                     "command": command,
                     "args": args,
                 }
             }
         }
 
+        server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        logger.debug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
+
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
             config_path = Path.home() / ".cursor" / "mcp.json"
+        elif body.client.lower() == "windsurf":
+            config_path = Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
         elif body.client.lower() == "claude":
             if os_type == "Darwin":  # macOS
                 config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-            elif os_type == "Windows":
-                config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+            elif os_type == "Windows" or is_wsl:  # Windows or WSL (Claude runs on Windows host)
+                if is_wsl:
+                    # In WSL, we need to access the Windows APPDATA directory
+                    try:
+                        # First try to get the Windows username
+                        proc = await create_subprocess_exec(
+                            "/mnt/c/Windows/System32/cmd.exe",
+                            "/c",
+                            "echo %USERNAME%",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                        stdout, stderr = await proc.communicate()
+
+                        if proc.returncode == 0 and stdout.strip():
+                            windows_username = stdout.decode().strip()
+                            config_path = Path(
+                                f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"
+                            )
+                        else:
+                            # Fallback: try to find the Windows user directory
+                            users_dir = Path("/mnt/c/Users")
+                            if users_dir.exists():
+                                # Get the first non-system user directory
+                                user_dirs = [
+                                    d
+                                    for d in users_dir.iterdir()
+                                    if d.is_dir() and not d.name.startswith(("Default", "Public", "All Users"))
+                                ]
+                                if user_dirs:
+                                    config_path = (
+                                        user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+                                    )
+                                else:
+                                    raise HTTPException(
+                                        status_code=400, detail="Could not find Windows user directory in WSL"
+                                    )
+                            else:
+                                raise HTTPException(
+                                    status_code=400, detail="Windows C: drive not mounted at /mnt/c in WSL"
+                                )
+                    except (OSError, CalledProcessError) as e:
+                        logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
+                        raise HTTPException(
+                            status_code=400, detail=f"Could not determine Windows Claude config path in WSL: {e!s}"
+                        ) from e
+                else:
+                    # Regular Windows
+                    config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
             else:
                 raise HTTPException(status_code=400, detail="Unsupported operating system for Claude configuration")
         else:
@@ -449,7 +498,7 @@ async def check_installed_mcp_servers(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
 ):
-    """Check if MCP server configuration is installed for this project in Cursor or Claude."""
+    """Check if MCP server configuration is installed for this project in Cursor, Windsurf, or Claude."""
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
@@ -460,40 +509,126 @@ async def check_installed_mcp_servers(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-        # Project server name pattern
-        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        # Project server name pattern (must match the logic in install function)
+        name = project.name
+        project_server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+        logger.debug(
+            "Checking for installed MCP servers for project: %s (server name: %s)", project.name, project_server_name
+        )
 
         # Check configurations for different clients
         results = []
 
         # Check Cursor configuration
         cursor_config_path = Path.home() / ".cursor" / "mcp.json"
+        logger.debug("Checking Cursor config at: %s (exists: %s)", cursor_config_path, cursor_config_path.exists())
         if cursor_config_path.exists():
             try:
                 with cursor_config_path.open("r") as f:
                     cursor_config = json.load(f)
                     if "mcpServers" in cursor_config and project_server_name in cursor_config["mcpServers"]:
+                        logger.debug("Found Cursor config for project server: %s", project_server_name)
                         results.append("cursor")
+                    else:
+                        logger.debug(
+                            "Cursor config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(cursor_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
-                pass
+                logger.warning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
+
+        # Check Windsurf configuration
+        windsurf_config_path = Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
+        logger.debug(
+            "Checking Windsurf config at: %s (exists: %s)", windsurf_config_path, windsurf_config_path.exists()
+        )
+        if windsurf_config_path.exists():
+            try:
+                with windsurf_config_path.open("r") as f:
+                    windsurf_config = json.load(f)
+                    if "mcpServers" in windsurf_config and project_server_name in windsurf_config["mcpServers"]:
+                        logger.debug("Found Windsurf config for project server: %s", project_server_name)
+                        results.append("windsurf")
+                    else:
+                        logger.debug(
+                            "Windsurf config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(windsurf_config.get("mcpServers", {}).keys()),
+                        )
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse Windsurf config JSON at: %s", windsurf_config_path)
 
         # Check Claude configuration
         claude_config_path = None
-        if platform.system() == "Darwin":  # macOS
+        os_type = platform.system()
+        is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+        if os_type == "Darwin":  # macOS
             claude_config_path = (
                 Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
             )
-        elif platform.system() == "Windows":
-            claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+        elif os_type == "Windows" or is_wsl:  # Windows or WSL (Claude runs on Windows host)
+            if is_wsl:
+                # In WSL, we need to access the Windows APPDATA directory
+                try:
+                    # First try to get the Windows username
+                    proc = await create_subprocess_exec(
+                        "/mnt/c/Windows/System32/cmd.exe",
+                        "/c",
+                        "echo %USERNAME%",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await proc.communicate()
+
+                    if proc.returncode == 0 and stdout.strip():
+                        windows_username = stdout.decode().strip()
+                        claude_config_path = Path(
+                            f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"
+                        )
+                    else:
+                        # Fallback: try to find the Windows user directory
+                        users_dir = Path("/mnt/c/Users")
+                        if users_dir.exists():
+                            # Get the first non-system user directory
+                            user_dirs = [
+                                d
+                                for d in users_dir.iterdir()
+                                if d.is_dir() and not d.name.startswith(("Default", "Public", "All Users"))
+                            ]
+                            if user_dirs:
+                                claude_config_path = (
+                                    user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+                                )
+                except (OSError, CalledProcessError) as e:
+                    logger.warning(
+                        "Failed to determine Windows user path in WSL for checking Claude config: %s", str(e)
+                    )
+                    # Don't set claude_config_path, so it will be skipped
+            else:
+                # Regular Windows
+                claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
 
         if claude_config_path and claude_config_path.exists():
+            logger.debug("Checking Claude config at: %s", claude_config_path)
             try:
                 with claude_config_path.open("r") as f:
                     claude_config = json.load(f)
                     if "mcpServers" in claude_config and project_server_name in claude_config["mcpServers"]:
+                        logger.debug("Found Claude config for project server: %s", project_server_name)
                         results.append("claude")
+                    else:
+                        logger.debug(
+                            "Claude config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(claude_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
-                pass
+                logger.warning("Failed to parse Claude config JSON at: %s", claude_config_path)
+        else:
+            logger.debug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
     except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
@@ -513,229 +648,33 @@ class ProjectMCPServer:
         @handle_mcp_errors
         async def handle_list_project_tools():
             """Handle listing tools for this specific project."""
-            tools = []
-            try:
-                async with session_scope() as session:
-                    # Get flows with mcp_enabled flag set to True and in this project
-                    flows = (
-                        await session.exec(
-                            select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
-                        )
-                    ).all()
-                    existing_names = set()
-                    for flow in flows:
-                        if flow.user_id is None:
-                            continue
-
-                        # Use action_name if available, otherwise construct from flow name
-                        base_name = flow.action_name or "_".join(flow.name.lower().split())
-                        name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
-
-                        # Use action_description if available, otherwise use defaults
-                        description = flow.action_description or (
-                            flow.description if flow.description else f"Tool generated from flow: {name}"
-                        )
-
-                        tool = types.Tool(
-                            name=name,
-                            description=description,
-                            inputSchema=json_schema_from_flow(flow),
-                        )
-                        tools.append(tool)
-                        existing_names.add(name)
-            except Exception as e:  # noqa: BLE001
-                msg = f"Error in listing project tools: {e!s} from flow: {name}"
-                logger.warning(msg)
-            return tools
+            return await handle_list_tools(project_id=self.project_id, mcp_enabled_only=True)
 
         @self.server.list_prompts()
         async def handle_list_prompts():
             return []
 
         @self.server.list_resources()
-        async def handle_list_resources():
-            resources = []
-            try:
-                storage_service = get_storage_service()
-                settings_service = get_settings_service()
-
-                # Build full URL from settings
-                host = getattr(settings_service.settings, "host", "localhost")
-                port = getattr(settings_service.settings, "port", 3000)
-
-                base_url = f"http://{host}:{port}".rstrip("/")
-
-                async with session_scope() as session:
-                    flows = (await session.exec(select(Flow))).all()
-
-                    for flow in flows:
-                        if flow.id:
-                            try:
-                                files = await storage_service.list_files(flow_id=str(flow.id))
-                                for file_name in files:
-                                    # URL encode the filename
-                                    safe_filename = quote(file_name)
-                                    resource = types.Resource(
-                                        uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
-                                        name=file_name,
-                                        description=f"File in flow: {flow.name}",
-                                        mimeType=build_content_type_from_extension(file_name),
-                                    )
-                                    resources.append(resource)
-                            except FileNotFoundError as e:
-                                msg = f"Error listing files for flow {flow.id}: {e}"
-                                logger.debug(msg)
-                                continue
-            except Exception as e:
-                msg = f"Error in listing resources: {e!s}"
-                logger.exception(msg)
-                raise
-            return resources
+        async def handle_list_project_resources():
+            """Handle listing resources for this specific project."""
+            return await handle_list_resources(project_id=self.project_id)
 
         @self.server.read_resource()
-        async def handle_read_resource(uri: str) -> bytes:
-            """Handle resource read requests."""
-            try:
-                # Parse the URI properly
-                parsed_uri = urlparse(str(uri))
-                # Path will be like /api/v1/files/{flow_id}/{filename}
-                path_parts = parsed_uri.path.split("/")
-                # Remove empty strings from split
-                path_parts = [p for p in path_parts if p]
-
-                # The flow_id and filename should be the last two parts
-                two = 2
-                if len(path_parts) < two:
-                    msg = f"Invalid URI format: {uri}"
-                    raise ValueError(msg)
-
-                flow_id = path_parts[-2]
-                filename = unquote(path_parts[-1])  # URL decode the filename
-
-                storage_service = get_storage_service()
-
-                # Read the file content
-                content = await storage_service.get_file(flow_id=flow_id, file_name=filename)
-                if not content:
-                    msg = f"File {filename} not found in flow {flow_id}"
-                    raise ValueError(msg)
-
-                # Ensure content is base64 encoded
-                if isinstance(content, str):
-                    content = content.encode()
-                return base64.b64encode(content)
-            except Exception as e:
-                msg = f"Error reading resource {uri}: {e!s}"
-                logger.exception(msg)
-                raise
+        async def handle_read_project_resource(uri: str) -> bytes:
+            """Handle resource read requests for this specific project."""
+            return await handle_read_resource(uri=uri)
 
         @self.server.call_tool()
         @handle_mcp_errors
-        async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-            """Handle tool execution requests."""
-            mcp_config = get_mcp_config()
-            if mcp_config.enable_progress_notifications is None:
-                settings_service = get_settings_service()
-                mcp_config.enable_progress_notifications = (
-                    settings_service.settings.mcp_server_enable_progress_notifications
-                )
-
-            current_user = current_user_ctx.get()
-
-            async def execute_tool(session):
-                # get flow id from name
-                flow = await get_flow_snake_case(name, current_user.id, session, is_action=True)
-                if not flow:
-                    msg = f"Flow with name '{name}' not found"
-                    raise ValueError(msg)
-
-                # Process inputs
-                processed_inputs = dict(arguments)
-
-                # Initial progress notification
-                if mcp_config.enable_progress_notifications and (
-                    progress_token := self.server.request_context.meta.progressToken
-                ):
-                    await self.server.request_context.session.send_progress_notification(
-                        progress_token=progress_token, progress=0.0, total=1.0
-                    )
-
-                conversation_id = str(uuid4())
-                input_request = SimplifiedAPIRequest(
-                    input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
-                )
-
-                async def send_progress_updates(progress_token):
-                    try:
-                        progress = 0.0
-                        while True:
-                            await self.server.request_context.session.send_progress_notification(
-                                progress_token=progress_token, progress=min(0.9, progress), total=1.0
-                            )
-                            progress += 0.1
-                            await asyncio.sleep(1.0)
-                    except asyncio.CancelledError:
-                        if mcp_config.enable_progress_notifications:
-                            await self.server.request_context.session.send_progress_notification(
-                                progress_token=progress_token, progress=1.0, total=1.0
-                            )
-                        raise
-
-                collected_results = []
-                try:
-                    progress_task = None
-                    if mcp_config.enable_progress_notifications and self.server.request_context.meta.progressToken:
-                        progress_task = asyncio.create_task(
-                            send_progress_updates(self.server.request_context.meta.progressToken)
-                        )
-
-                    try:
-                        try:
-                            result = await simple_run_flow(
-                                flow=flow,
-                                input_request=input_request,
-                                stream=False,
-                                api_key_user=current_user,
-                            )
-                            # Process all outputs and messages
-                            for run_output in result.outputs:
-                                for component_output in run_output.outputs:
-                                    # Handle messages
-                                    for msg in component_output.messages or []:
-                                        text_content = types.TextContent(type="text", text=msg.message)
-                                        collected_results.append(text_content)
-                                    # Handle results
-                                    for value in (component_output.results or {}).values():
-                                        if isinstance(value, Message):
-                                            text_content = types.TextContent(type="text", text=value.get_text())
-                                            collected_results.append(text_content)
-                                        else:
-                                            collected_results.append(types.TextContent(type="text", text=str(value)))
-                        except Exception as e:  # noqa: BLE001
-                            error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
-                            collected_results.append(types.TextContent(type="text", text=error_msg))
-
-                        return collected_results
-                    finally:
-                        if progress_task:
-                            progress_task.cancel()
-                            await asyncio.gather(progress_task, return_exceptions=True)
-
-                except Exception:
-                    if mcp_config.enable_progress_notifications and (
-                        progress_token := self.server.request_context.meta.progressToken
-                    ):
-                        await self.server.request_context.session.send_progress_notification(
-                            progress_token=progress_token, progress=1.0, total=1.0
-                        )
-                    raise
-
-            try:
-                return await with_db_session(execute_tool)
-            except Exception as e:
-                msg = f"Error executing tool {name}: {e!s}"
-                logger.exception(msg)
-                raise
+        async def handle_call_project_tool(name: str, arguments: dict) -> list[types.TextContent]:
+            """Handle tool execution requests for this specific project."""
+            return await handle_call_tool(
+                name=name,
+                arguments=arguments,
+                server=self.server,
+                project_id=self.project_id,
+                is_action=True,
+            )
 
 
 # Cache of project MCP servers
