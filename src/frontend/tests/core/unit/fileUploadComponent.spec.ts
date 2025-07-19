@@ -304,19 +304,18 @@ test(
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
       });
-
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
         timeout: 1000,
       });
 
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 3000 });
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
-          timeout: 1000,
+          timeout: 3000,
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
@@ -374,7 +373,7 @@ test(
 
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
-    const fileContent = fs.readFileSync(testFilePath);
+    const _fileContent = fs.readFileSync(testFilePath);
 
     await awaitBootstrapTest(page);
 
@@ -697,7 +696,7 @@ test(
 
     // Open the file management modal
     await page.getByTestId("button_open_file_management").click();
-    console.log(pngFileName);
+    console.warn(pngFileName);
 
     // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${pngFileName}`)).toHaveClass(

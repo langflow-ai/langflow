@@ -1,3 +1,8 @@
+import type { ColDef } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { cloneDeep } from "lodash";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
@@ -12,12 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function ToolsTable({
   rows,
@@ -162,7 +162,7 @@ export default function ToolsTable({
     },
     {
       field: "name",
-      headerName: isAction ? "Action" : "Slug",
+      headerName: isAction ? "Tool" : "Slug",
       flex: 1,
       resizable: false,
       valueGetter: (params) =>
@@ -263,7 +263,7 @@ export default function ToolsTable({
         <div className="flex-none px-4">
           <Input
             icon="Search"
-            placeholder="Search actions..."
+            placeholder="Search tools..."
             inputClassName="h-8"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -300,7 +300,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    Name
+                    {isAction ? "Tool name" : "Name"}
                   </label>
 
                   <Input
@@ -322,7 +322,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-desc-input"
                   >
-                    Description
+                    {isAction ? "Tool description" : "Description"}
                   </label>
 
                   <Textarea
@@ -335,7 +335,7 @@ export default function ToolsTable({
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "This is the description for the action exposed to the clients."
+                      ? "This is the description for the tool exposed to a client."
                       : "This is the description for the tool exposed to the agents."}
                   </div>
                 </div>
@@ -370,7 +370,7 @@ export default function ToolsTable({
                           Parameters
                         </h3>
                         <p className="text-mmd text-muted-foreground">
-                          Manage inputs for this action
+                          Manage inputs for this tool
                         </p>
                       </div>
                     )}

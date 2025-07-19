@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import asyncio
-import re
 import uuid
 from typing import Any
 
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import StructuredTool  # noqa: TC002
 
 from langflow.api.v2.mcp import get_server
+from langflow.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
 from langflow.base.mcp.util import (
     MCPSseClient,
     MCPStdioClient,
@@ -13,7 +15,7 @@ from langflow.base.mcp.util import (
     update_tools,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs.inputs import InputTypes
+from langflow.inputs.inputs import InputTypes  # noqa: TC001
 from langflow.io import DropdownInput, McpInput, MessageTextInput, Output
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
@@ -26,44 +28,6 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
 
 
-def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
-    """If any key looks nested (contains a dot or "[index]"), rebuild the.
-
-    full nested structure; otherwise return flat as is.
-    """
-    # Quick check: do we have any nested keys?
-    if not any(re.search(r"\.|\[\d+\]", key) for key in flat):
-        return flat
-
-    # Otherwise, unflatten into dicts/lists
-    nested: dict[str, Any] = {}
-    array_re = re.compile(r"^(.+)\[(\d+)\]$")
-
-    for key, val in flat.items():
-        parts = key.split(".")
-        cur = nested
-        for i, part in enumerate(parts):
-            m = array_re.match(part)
-            # Array segment?
-            if m:
-                name, idx = m.group(1), int(m.group(2))
-                lst = cur.setdefault(name, [])
-                # Ensure list is big enough
-                while len(lst) <= idx:
-                    lst.append({})
-                if i == len(parts) - 1:
-                    lst[idx] = val
-                else:
-                    cur = lst[idx]
-            # Normal object key
-            elif i == len(parts) - 1:
-                cur[part] = val
-            else:
-                cur = cur.setdefault(part, {})
-
-    return nested
-
-
 class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
     tools: list[StructuredTool] = []
@@ -74,14 +38,23 @@ class MCPToolsComponent(ComponentWithCache):
     def __init__(self, **data) -> None:
         super().__init__(**data)
         # Initialize cache keys to avoid CacheMiss when accessing them
-        if "servers" not in self._shared_component_cache:
-            self._shared_component_cache["servers"] = {}
-        if "last_selected_server" not in self._shared_component_cache:
-            self._shared_component_cache["last_selected_server"] = ""
+        self._ensure_cache_structure()
 
         # Initialize clients with access to the component cache
         self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
         self.sse_client: MCPSseClient = MCPSseClient(component_cache=self._shared_component_cache)
+
+    def _ensure_cache_structure(self):
+        """Ensure the cache has the required structure."""
+        # Check if servers key exists and is not CacheMiss
+        servers_value = safe_cache_get(self._shared_component_cache, "servers")
+        if servers_value is None:
+            safe_cache_set(self._shared_component_cache, "servers", {})
+
+        # Check if last_selected_server key exists and is not CacheMiss
+        last_server_value = safe_cache_get(self._shared_component_cache, "last_selected_server")
+        if last_server_value is None:
+            safe_cache_set(self._shared_component_cache, "last_selected_server", "")
 
     default_keys: list[str] = [
         "code",
@@ -94,6 +67,7 @@ class MCPToolsComponent(ComponentWithCache):
 
     display_name = "MCP Tools"
     description = "Connect to an MCP server to use its tools."
+    documentation: str = "https://docs.langflow.org/mcp-client"
     icon = "Mcp"
     name = "MCPTools"
 
@@ -120,7 +94,7 @@ class MCPToolsComponent(ComponentWithCache):
             info="Placeholder for the tool",
             value="",
             show=False,
-            tool_mode=True,
+            tool_mode=False,
         ),
     ]
 
@@ -169,7 +143,9 @@ class MCPToolsComponent(ComponentWithCache):
             return [], {"name": server_name, "config": server_config_from_value}
 
         # Use shared cache if available
-        cached = self._shared_component_cache["servers"].get(server_name)
+        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+        cached = servers_cache.get(server_name) if isinstance(servers_cache, dict) else None
+
         if cached is not None:
             self.tools = cached["tools"]
             self.tool_names = cached["tool_names"]
@@ -210,13 +186,19 @@ class MCPToolsComponent(ComponentWithCache):
                 self._tool_cache = tool_cache
                 self.tools = tool_list
                 # Cache the result using shared cache
-
-                self._shared_component_cache["servers"][server_name] = {
+                cache_data = {
                     "tools": tool_list,
                     "tool_names": self.tool_names,
                     "tool_cache": tool_cache,
                     "config": server_config,
                 }
+
+                # Safely update the servers cache
+                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                if isinstance(current_servers_cache, dict):
+                    current_servers_cache[server_name] = cache_data
+                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+
                 return tool_list, {"name": server_name, "config": server_config}
         except (TimeoutError, asyncio.TimeoutError) as e:
             msg = f"Timeout updating tool list: {e!s}"
@@ -280,11 +262,14 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
                     build_config["tool"]["placeholder"] = ""
+                    build_config["tool_placeholder"]["tool_mode"] = False
                     self.remove_non_default_keys(build_config)
                     return build_config
 
+                build_config["tool_placeholder"]["tool_mode"] = True
+
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
-                _last_selected_server = self._shared_component_cache.get("last_selected_server") or ""
+                _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
                 if (_last_selected_server in (current_server_name, "")) and build_config["tool"]["show"]:
@@ -292,17 +277,19 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 is_in_tool_mode = build_config["tools_metadata"]["show"]
-                self._shared_component_cache.set("last_selected_server", current_server_name)
+                safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
 
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
                 if current_server_name:
-                    cached = self._shared_component_cache["servers"].get(current_server_name)
-                    if cached is not None:
-                        cached_tools = cached["tools"]
-                        self.tools = cached_tools
-                        self.tool_names = cached["tool_names"]
-                        self._tool_cache = cached["tool_cache"]
+                    servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                    if isinstance(servers_cache, dict):
+                        cached = servers_cache.get(current_server_name)
+                        if cached is not None:
+                            cached_tools = cached["tools"]
+                            self.tools = cached_tools
+                            self.tool_names = cached["tool_names"]
+                            self._tool_cache = cached["tool_cache"]
 
                 # Only clear tools if we don't have cached tools for the current server
                 if not cached_tools:
@@ -329,7 +316,7 @@ class MCPToolsComponent(ComponentWithCache):
 
             elif field_name == "tool_mode":
                 build_config["tool"]["placeholder"] = ""
-                build_config["tool"]["show"] = not field_value
+                build_config["tool"]["show"] = not bool(field_value) and bool(build_config["mcp_server"])
                 self.remove_non_default_keys(build_config)
                 self.tool = build_config["tool"]["value"]
                 if field_value:

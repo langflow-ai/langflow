@@ -1,13 +1,13 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import useAlertStore from "@/stores/alertStore";
-import { useEffect, useMemo, useRef, useState } from "react";
 import ListSelectionComponent from "../../../../../CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "../../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 export default function McpComponent({
   value,
@@ -31,8 +31,8 @@ export default function McpComponent({
                 : "Error"
               : "Loading..."
             : !server.toolsCount
-              ? "No actions found"
-              : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
+              ? "No tools found"
+              : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`,
       })),
     [mcpServers],
   );

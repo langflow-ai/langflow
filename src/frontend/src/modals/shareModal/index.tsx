@@ -1,7 +1,7 @@
+import { cloneDeep } from "lodash";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { cloneDeep } from "lodash";
-import { ReactNode, useEffect, useMemo, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import { TagsSelector } from "../../components/common/tagsSelectorComponent";
 import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
@@ -15,7 +15,7 @@ import {
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { useStoreStore } from "../../stores/storeStore";
-import { FlowType } from "../../types/flow";
+import type { FlowType } from "../../types/flow";
 import {
   downloadNode,
   removeApiKeys,
@@ -146,7 +146,7 @@ export default function ShareModal({
     downloadNode(component);
   };
 
-  let modalConfirmation = useMemo(() => {
+  const modalConfirmation = useMemo(() => {
     return (
       <>
         <ConfirmationModal
