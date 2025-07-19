@@ -25,6 +25,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.cli.execute import execute
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
@@ -298,12 +299,12 @@ def run(
                 settings_service.auth_settings.set(arg, values[arg])
             logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
-        # Get final values from settings
-        host = settings_service.settings.host
-        port = settings_service.settings.port
+        # Get final values from settings and ensure proper types
+        host = settings_service.settings.host or "127.0.0.1"
+        port = int(settings_service.settings.port or 7860)
         workers = settings_service.settings.workers
         worker_timeout = settings_service.settings.worker_timeout
-        log_level = settings_service.settings.log_level
+        log_level = settings_service.settings.log_level or "info"
         frontend_path = settings_service.settings.frontend_path
         backend_only = settings_service.settings.backend_only
         ssl_cert_file_path = (
@@ -344,7 +345,7 @@ def run(
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
             # non-picklable code to the subprocess.
             progress.print_summary()
-            print_banner(host, port, protocol)
+            print_banner(host, port or 7860, protocol)
 
         # Blocking call, so must be outside of the progress step
         uvicorn.run(
@@ -379,7 +380,7 @@ def run(
 
         # Print summary and banner after server is ready
         progress.print_summary()
-        print_banner(host, port, protocol)
+        print_banner(host, port or 7860, protocol)
 
         # Handle browser opening
         if open_browser and not backend_only:
@@ -778,6 +779,9 @@ def api_key(
     # Create a banner to display the API key and tell the user it won't be shown again
     if unmasked_api_key:
         api_key_banner(unmasked_api_key)
+
+
+app.command()(execute)
 
 
 def show_version(*, value: bool):
