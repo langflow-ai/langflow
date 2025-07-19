@@ -761,6 +761,38 @@ Ozone Pollution and Global Warming: A recent study highlights that ozone polluti
 
 </details>
 
+## JQ
+
+This Component allows you to transform an input JSON Data Object.
+This is useful if you don't want to send the full payload from an integration to an LLM.
+
+For detailed information on how to use JQ see https://jqlang.org/manual/.
+
+By using the array output you are able to convert a single object into an array/DataFrame to be processed individually.
+This can be chained together with the loop component to further process each item in an array again with JQ.
+
+JQ supports [Object Construction](https://jqlang.org/manual/#object-construction) which allows you to return multiple attributes from an object in one go.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| jq | JQ Input | This is the JQ query to be run against the input JSON |
+| input_json | Input JSON | The JSON data to be transformed with JQ |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_object | Output Data Object | Return a single Data Object from the input JSON |
+| output_array | Output DataFrame Array | Return a DataFrame array from the input JSON |
+| output_string | Output String | Return a single string from the input JSON |
+
+</details>
+
 ## Legacy components
 
 **Legacy** components are available for use but are no longer supported.
