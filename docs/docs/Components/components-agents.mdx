@@ -10,7 +10,7 @@ These components define the behavior and capabilities of AI agents in your flows
 <summary>How agents work</summary>
 
 Agents extend Large Language Models (LLMs) by integrating _tools_, which are functions that provide additional context and enable autonomous task execution.
-These integrations make agents more specialized and powerful than standalone Large Language Models (LLMs).
+These integrations make agents more specialized and powerful than standalone LLMs.
 
 Whereas an LLM might generate acceptable, inert responses to general queries and tasks, an agent can leverage the integrated context and tools to provide more relevant responses and even take action.
 For example, you might create an agent that can access your company's knowledge base, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.
@@ -46,22 +46,7 @@ This component uses an LLM integration to respond to input, such as a chat messa
 The agent can use the tools already available in the base LLM model as well as additional tools that you connect to the **Agent** component's **Tools** port.
 You can connect any Langflow component as a tool, including other **Agent** components and MCP servers through the [**MCP Tools** component](#mcp-connection).
 
-### Agent parameters
-
-For more information about these settings, see [Use Langflow agents](/agents).
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent_llm | Dropdown | Input parameter. The provider of the language model that the agent uses to generate responses. Options include OpenAI and other providers or Custom. |
-| system_prompt | String | Input parameter. The system prompt provides initial instructions and context to guide the agent's behavior. |
-| tools | List | Input parameter. The list of tools available for the agent to use. This field is optional and can be empty. For more information, see [Configure tools for agents](/agents-tools). |
-| input_value | String | Input parameter. The input task or question for the agent to process. |
-| add_current_date_tool | Boolean | Input parameter. When true this adds a tool to the agent that returns the current date. |
-| memory | Memory | Input parameter. An optional memory configuration for maintaining conversation history. |
-| max_iterations | Integer | Input parameter. The maximum number of iterations the agent can perform. |
-| handle_parsing_errors | Boolean | Input parameter. This determines whether to handle parsing errors during agent execution. |
-| verbose | Boolean | Input parameter. This enables verbose output for detailed logging. |
-| response | Message | Output parameter. The agent's response to the given input task. |
+For more information about using this component, see [Use Langflow agents](/agents).
 
 ## MCP Tools component {#mcp-connection}
 
@@ -115,7 +100,7 @@ This component accepts the following parameters:
 </details>
 
 <details>
-<summary>Hierarchical Crew</summary>
+<summary>CrewAI Hierarchical Crew</summary>
 
 This component represents a group of agents managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
 For more information, see the [CrewAI hierarchical crew documentation](https://docs.crewai.com/how-to/Hierarchical/).
@@ -139,7 +124,7 @@ It accepts the following parameters:
 </details>
 
 <details>
-<summary>Sequential Crew</summary>
+<summary>CrewAI Sequential Crew</summary>
 
 This component represents a group of agents with tasks that are executed sequentially. This component allows for the creation of a crew that performs tasks in a specific order.
 For more information, see the [CrewAI sequential crew documentation](https://docs.crewai.com/how-to/Sequential/).
@@ -160,7 +145,7 @@ It accepts the following parameters:
 </details>
 
 <details>
-<summary>Sequential Task Agent</summary>
+<summary>CrewAI Sequential Task Agent</summary>
 
 This component creates a CrewAI Task and its associated Agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
 For more information, see the [CrewAI sequential agents documentation](https://docs.crewai.com/how-to/Sequential/).

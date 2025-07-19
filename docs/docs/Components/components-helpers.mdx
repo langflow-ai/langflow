@@ -116,7 +116,7 @@ The following steps explain how to create a flow that stores and retrieves chat 
 
    1. Configure the **Redis Chat Memory** component to connect to your Redis database. For more information, see the [Redis documentation](https://redis.io/docs/latest/).
    2. Set the **Message History** component to **Retrieve** mode.
-   3. In the **Message History** component's header menu, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
+   3. In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
    4. Connect the **Redis Chat Memory** component's output to the **Message History** component's **External Memory** input.
 
 3. Add a [**Prompt Template** component](/components-prompts), add a `{memory}` variable to the template, and then connect the **Message History** component's output to the **Prompt Template** component's **memory** input.
@@ -137,7 +137,7 @@ The following steps explain how to create a flow that stores and retrieves chat 
 
    1. Configure the **Redis Chat Memory** component to connect to your Redis database.
    2. Set the **Message History** component to **Store** mode.
-   3. In the **Message History** component's header menu, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
+   3. In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
    4. Connect the **Redis Chat Memory** component's output to the **Message History** component's **External Memory** input.
 
 9. Connect the **Chat Output** component's output to the **Message History** component's **Message** input.

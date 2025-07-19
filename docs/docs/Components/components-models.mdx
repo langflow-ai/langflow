@@ -20,44 +20,63 @@ The component accepts inputs and prompts, including chat messages, files, format
 The flow must include [**Chat Input/Output** component](/components-io#chat-io) to allow chat-based interactions with the LLM.
 However, you can also use the **Language Model** component for actions requiring an LLM without chat, such as generating text that is processed by another component or triggers another flow before a final response is returned to the user.
 
-This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/basic-prompting).
+The following example uses an OpenAI model to create a chatbot flow similar to the [**Basic Prompting** template](/basic-prompting):
 
 1. Add the **Language Model** component to your flow.
-The default model is OpenAI's GPT-4.1 mini model. Based on [OpenAI's recommendations](https://platform.openai.com/docs/models/gpt-4.1-mini), this model is a good, balanced starter model.
-2. In the **OpenAI API Key** field, enter your OpenAI API key.
-3. Add a [Prompt](/components-prompts) component to your flow.
-4. To connect the [Prompt](/components-prompts) component to the **Language Model** component, on the **Language Model** component, click **Controls**.
-5. Enable the **System Message** setting.
-On the **Language Model** component, a new **System Message** port opens.
-6. Connect the **Prompt** port to the **System Message** port.
-7. Add [Chat input](/components-io#chat-input) and [Chat output](/components-io#chat-output) components to your flow.
-Your flow looks like this:
-![A Language Model component for basic prompting](/img/component-language-model.png)
 
-8. Open the **Playground**, and ask a question.
-The bot responds to your question with sources.
+2. In the **OpenAI API Key** field, enter your OpenAI API key.
+
+    If you want to use a different provider, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+    However, these steps use the default OpenAI model specifically as an example to compare response from different providers.
+
+3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, and then click **Close**.
+
+4. Add a [**Prompt Template** component](/components-prompts) to your flow.
+
+5. In the **Template** field, enter some instructions for the LLM, such as `You are an expert in geography who is tutoring high school students`.
+
+6. Connect the **Prompt Template** component's output to the **Language Model** component's **System Message** input.
+
+7. Add [**Chat Input** and **Chat Output** components](/components-io#chat-io) to your flow.
+
+8. Connect the **Chat Input** component to the **Language Model** component's **Input**, and then connect the **Language Model** component's **Message** output to the **Chat Output** component.
+
+    ![A basic prompting flow with Language Model, Prompt Template, Chat Input, and Chat Output components](/img/component-language-model.png)
+
+8. Open the **Playground**, and ask a question to chat with the LLM and test the flow, such as `What is the capital of Utah?`.
+
+    <details>
+    <summary>Result</summary>
+
+    The following response is an example of an OpenAI model's response.
+    Your actual response may vary based on the model version at the time of your request, your template, and input.
 
     ```
-    What is the capital of Utah?
-
-    AI
-    gpt-4o-mini
     The capital of Utah is Salt Lake City. It is not only the largest city in the state but also serves as the cultural and economic center of Utah. Salt Lake City was founded in 1847 by Mormon pioneers and is known for its proximity to the Great Salt Lake and its role in the history of the Church of Jesus Christ of Latter-day Saints. For more information, you can refer to sources such as the U.S. Geological Survey or the official state website of Utah.
     ```
 
-9. Try an alternate model provider, and test how the response differs.
-In the **Language Model** component, in the **Model Provider** field, select **Anthropic**.
-10. In the **Model Name** field, select your Anthropic model.
-This model uses Claude 3.5 Haiku, based on [Anthropic's recommendation](https://docs.anthropic.com/en/docs/about-claude/models/choosing-a-model) for a fast and cost-effective model.
-11. In the **Anthropic API Key** field, enter your Anthropic API key.
-12. Open the **Playground**, and ask the same question as you did before.
+    </details>
+
+9. Try a different model or provider to see how the response changes. For example:
+
+    1. In the **Language Model** component, change the model provider to **Anthropic**.
+    2. Select an Anthropic model, such as Claude 3.5 Haiku.
+    3. Enter an Anthropic API key.
+
+10. Open the **Playground**, ask the same question as you did before, and then compare the content and format of the responses.
+
+    This helps you understand how different models handle the same request so you can choose the best model for your use case.
+    You can also learn more about different models in each model provider's documentation.
+
+    <details>
+    <summary>Result</summary>
+
+    The following response is an example of an Anthropic model's response.
+    Your actual response may vary based on the model version at the time of your request, your template, and input.
+
+    Note that this response is shorter and includes sources, whereas the OpenAI response was more encyclopedic and didn't cite sources.
 
     ```
-    User
-    What is the capital of Utah?
-
-    AI
-    claude-3-5-haiku-latest
     The capital of Utah is Salt Lake City. It is also the most populous city in the state. Salt Lake City has been the capital of Utah since 1896, when Utah became a state.
     Sources:
     Utah State Government Official Website (utah.gov)
@@ -65,8 +84,7 @@ This model uses Claude 3.5 Haiku, based on [Anthropic's recommendation](https://
     Encyclopedia Britannica
     ```
 
-The response from the Anthropic model is less verbose, and lists its sources outside of the informative paragraph.
-For more information, see your LLM provider's documentation.
+    </details>
 
 ## Language Model parameters
 
