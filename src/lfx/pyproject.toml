@@ -7,7 +7,10 @@ authors = [
     { name = "Gabriel Luiz Freitas Almeida", email = "gabriel@langflow.org" }
 ]
 requires-python = ">=3.10,<3.14"
-dependencies = []
+dependencies = [
+    "langchain-core>=0.3.66",
+    "loguru>=0.7.3",
+]
 
 [build-system]
 requires = ["hatchling"]
