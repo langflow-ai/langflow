@@ -7,8 +7,8 @@ from composio.client.exceptions import NoItemsFound
 from composio.exceptions import ApiKeyError
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import (
     AuthInput,
     MessageTextInput,

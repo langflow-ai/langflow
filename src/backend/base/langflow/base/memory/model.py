@@ -1,8 +1,8 @@
 from abc import abstractmethod
 
 from langchain.memory import ConversationBufferMemory
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.field_typing import BaseChatMemory
 from langflow.field_typing.constants import Memory
 from langflow.template.field.base import Output

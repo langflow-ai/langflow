@@ -2,8 +2,8 @@ import pandas as pd
 import youtube_transcript_api
 from langchain_community.document_loaders import YoutubeLoader
 from langchain_community.document_loaders.youtube import TranscriptFormat
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DropdownInput, IntInput, MultilineInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame

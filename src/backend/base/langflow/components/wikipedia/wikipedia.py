@@ -1,6 +1,6 @@
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.io import Output
 from langflow.schema.data import Data

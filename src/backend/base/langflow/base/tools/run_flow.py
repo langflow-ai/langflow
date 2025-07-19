@@ -1,12 +1,12 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
+from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from loguru import logger
 from typing_extensions import override
 
-from langflow.custom.custom_component.component import Component, _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.helpers.flow import get_flow_inputs
 from langflow.inputs.inputs import (

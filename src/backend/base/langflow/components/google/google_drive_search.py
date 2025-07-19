@@ -2,8 +2,8 @@ import json
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DropdownInput, MessageTextInput
 from langflow.io import SecretStrInput
 from langflow.schema.data import Data

@@ -1,6 +1,7 @@
 import asyncio
 
-from langflow.custom.custom_component.component_with_cache import ComponentWithCache
+from lfx.custom.custom_component.component_with_cache import ComponentWithCache
+
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Message
 from langflow.services.cache.utils import CacheMiss

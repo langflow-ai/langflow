@@ -13,17 +13,14 @@ import nanoid
 import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, ValidationError
-
 from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
-from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
+from langflow.field_typing import Tool
 
 # Lazy import to avoid circular dependency
 # from lfx.graph.state.model import create_state_model
@@ -40,20 +37,23 @@ from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import find_closest_match
+from pydantic import BaseModel, ValidationError
+
+from lfx.custom.tree_visitor import RequiredInputsVisitor
 
 from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from lfx.graph.edge.schema import EdgeData
-    from lfx.graph.vertex.base import Vertex
-
     from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
     from langflow.inputs.inputs import InputTypes
     from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType
+
+    from lfx.graph.edge.schema import EdgeData
+    from lfx.graph.vertex.base import Vertex
 
 
 _ComponentToolkit = None

@@ -7,9 +7,9 @@ import pkgutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from lfx.custom.utils import abuild_custom_components, create_component_template, get_all_types_dict
 from loguru import logger
 
-from langflow.custom.utils import abuild_custom_components, create_component_template, get_all_types_dict
 from langflow.services.settings.base import BASE_COMPONENTS_PATH
 
 if TYPE_CHECKING:
@@ -387,7 +387,7 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
 
 async def load_single_component(component_type: str, component_name: str, components_paths: list[str]):
     """Load a single component fully."""
-    from langflow.custom.utils import get_single_component_dict
+    from lfx.custom.utils import get_single_component_dict
 
     try:
         # Delegate to a more specific function that knows how to load
@@ -476,7 +476,7 @@ async def aget_all_components(components_paths, *, as_dict=False):
 def get_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
     # Import here to avoid circular imports
-    from langflow.custom.utils import build_custom_components
+    from lfx.custom.utils import build_custom_components
 
     all_types_dict = build_custom_components(components_paths=components_paths)
     components = [] if not as_dict else {}

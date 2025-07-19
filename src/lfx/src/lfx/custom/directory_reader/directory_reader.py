@@ -7,7 +7,7 @@ import anyio
 from aiofile import async_open
 from loguru import logger
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
 
 MAX_DEPTH = 2
 
@@ -62,7 +62,7 @@ class DirectoryReader:
         return len(file_content.strip()) == 0
 
     def filter_loaded_components(self, data: dict, *, with_errors: bool) -> dict:
-        from langflow.custom.utils import build_component
+        from lfx.custom.utils import build_component
 
         items = []
         for menu in data["menu"]:

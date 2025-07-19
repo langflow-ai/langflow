@@ -1,4 +1,5 @@
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.io import DataFrameInput, MultilineInput, Output, StrInput
 from langflow.schema.message import Message
 

@@ -1,6 +1,7 @@
 from typing import Any, cast
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.helpers.data import data_to_text
 from langflow.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput
 from langflow.memory import aget_messages, astore_message

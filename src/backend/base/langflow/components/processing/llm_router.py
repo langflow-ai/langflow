@@ -4,10 +4,10 @@ import json
 from typing import Any
 
 import aiohttp
+from lfx.custom.custom_component.component import Component
 
 from langflow.base.models.chat_result import get_chat_result
 from langflow.base.models.model_utils import get_model_name
-from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput
 from langflow.schema.data import Data
 from langflow.schema.message import Message

@@ -2,7 +2,8 @@ import ast
 import operator
 from collections.abc import Callable
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.inputs.inputs import MessageTextInput
 from langflow.io import Output
 from langflow.schema.data import Data

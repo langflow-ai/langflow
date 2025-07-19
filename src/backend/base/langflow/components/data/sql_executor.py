@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Any
 
 from langchain_community.utilities import SQLDatabase
+from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from sqlalchemy.exc import SQLAlchemyError
 
-from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.io import BoolInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message

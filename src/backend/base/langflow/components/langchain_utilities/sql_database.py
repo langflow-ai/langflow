@@ -1,8 +1,8 @@
 from langchain_community.utilities.sql_database import SQLDatabase
+from lfx.custom.custom_component.component import Component
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import (
     Output,
     StrInput,

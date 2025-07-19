@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
+from lfx.custom.custom_component.component import Component
 from metaphor_python import Metaphor
 
-from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Tool
 from langflow.io import BoolInput, IntInput, Output, SecretStrInput
 

@@ -1,8 +1,8 @@
 import importlib
 
 from langchain_experimental.utilities import PythonREPL
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import CodeInput, Output, StrInput
 from langflow.schema.data import Data
 

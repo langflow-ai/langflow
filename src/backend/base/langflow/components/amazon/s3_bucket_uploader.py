@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Any
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.io import (
     BoolInput,
     DropdownInput,

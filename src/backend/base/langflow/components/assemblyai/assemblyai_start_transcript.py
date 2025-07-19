@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import assemblyai as aai
+from lfx.custom.custom_component.component import Component
 from loguru import logger
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.data import Data
 

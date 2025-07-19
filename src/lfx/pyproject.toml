@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Gabriel Luiz Freitas Almeida", email = "gabriel@langflow.org" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10,<3.14"
 dependencies = []
 
 [build-system]

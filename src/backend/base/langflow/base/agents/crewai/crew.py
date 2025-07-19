@@ -2,9 +2,9 @@ from collections.abc import Callable
 from typing import Any, cast
 
 import litellm
+from lfx.custom.custom_component.component import Component
 from pydantic import SecretStr
 
-from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data

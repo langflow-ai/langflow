@@ -1,4 +1,5 @@
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.inputs.inputs import MessageTextInput
 from langflow.io import HandleInput, NestedDictInput, Output, StrInput
 from langflow.schema.data import Data

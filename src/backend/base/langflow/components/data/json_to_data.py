@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 
 from json_repair import repair_json
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.data import Data
 

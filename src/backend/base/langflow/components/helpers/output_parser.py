@@ -1,6 +1,6 @@
 from langchain_core.output_parsers import CommaSeparatedListOutputParser
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.field_typing.constants import OutputParser
 from langflow.io import DropdownInput, Output
 from langflow.schema.message import Message

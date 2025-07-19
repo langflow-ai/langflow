@@ -1,6 +1,7 @@
 from typing import Any
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.inputs.inputs import DictInput, DropdownInput, MessageTextInput, SecretStrInput
 from langflow.template.field.base import Output
 

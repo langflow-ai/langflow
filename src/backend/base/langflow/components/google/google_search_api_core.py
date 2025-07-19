@@ -1,6 +1,6 @@
 from langchain_google_community import GoogleSearchAPIWrapper
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import IntInput, MultilineInput, Output, SecretStrInput
 from langflow.schema.dataframe import DataFrame
 

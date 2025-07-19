@@ -3,8 +3,8 @@ from urllib.parse import urlparse
 from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import fromstring
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame

@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.io import BoolInput, FileInput, Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
 

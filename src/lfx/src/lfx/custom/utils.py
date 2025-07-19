@@ -11,18 +11,6 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
-from pydantic import BaseModel
-
-from langflow.custom.custom_component.component import Component
-from langflow.custom.custom_component.custom_component import CustomComponent
-from langflow.custom.directory_reader.utils import (
-    abuild_custom_component_list_from_path,
-    build_custom_component_list_from_path,
-    merge_nested_dicts_with_renaming,
-)
-from langflow.custom.eval import eval_custom_component_code
-from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
 from langflow.schema.dotdict import dotdict
@@ -31,6 +19,18 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 from langflow.type_extraction.type_extraction import extract_inner_type
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+from loguru import logger
+from pydantic import BaseModel
+
+from lfx.custom.custom_component.component import Component
+from lfx.custom.custom_component.custom_component import CustomComponent
+from lfx.custom.directory_reader.utils import (
+    abuild_custom_component_list_from_path,
+    build_custom_component_list_from_path,
+    merge_nested_dicts_with_renaming,
+)
+from lfx.custom.eval import eval_custom_component_code
+from lfx.custom.schema import MissingDefault
 
 
 def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:

@@ -11,9 +11,9 @@ from googleapiclient.discovery import build
 from langchain_core.chat_sessions import ChatSession
 from langchain_core.messages import HumanMessage
 from langchain_google_community.gmail.loader import GMailLoader
+from lfx.custom.custom_component.component import Component
 from loguru import logger
 
-from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import MessageTextInput
 from langflow.io import SecretStrInput
 from langflow.schema.data import Data

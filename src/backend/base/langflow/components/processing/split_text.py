@@ -1,6 +1,6 @@
 from langchain_text_splitters import CharacterTextSplitter
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame

@@ -1,6 +1,6 @@
 import pandas as pd
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.inputs import SortableListInput
 from langflow.io import (
     BoolInput,

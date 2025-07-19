@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, Any
 
+from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
-from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.helpers.flow import get_flow_inputs
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict

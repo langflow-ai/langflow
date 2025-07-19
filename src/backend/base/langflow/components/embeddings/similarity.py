@@ -1,8 +1,8 @@
 from typing import Any
 
 import numpy as np
+from lfx.custom.custom_component.component import Component
 
-from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema.data import Data
 

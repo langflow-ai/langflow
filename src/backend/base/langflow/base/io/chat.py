@@ -1,4 +1,4 @@
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
 
 
 class ChatComponent(Component):

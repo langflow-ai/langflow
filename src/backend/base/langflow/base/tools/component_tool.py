@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from langchain_core.callbacks import Callbacks
+    from lfx.custom.custom_component.component import Component
 
-    from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output

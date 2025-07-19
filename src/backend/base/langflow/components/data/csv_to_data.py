@@ -2,7 +2,8 @@ import csv
 import io
 from pathlib import Path
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.data import Data
 

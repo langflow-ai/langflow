@@ -2,7 +2,8 @@ from abc import abstractmethod
 from functools import wraps
 from typing import TYPE_CHECKING, Any
 
-from langflow.custom.custom_component.component import Component
+from lfx.custom.custom_component.component import Component
+
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import BoolInput
