@@ -88,6 +88,14 @@ For example, the **System Message** field accepts [message data](/data-types#mes
 When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.
 For information about the programmatic representation of each data type, see [Langflow data types](/data-types).
 
+:::tip
+* Hover over a port to see connection details for that port.
+
+* Click a port to filter the **Components** menu by compatible components.
+
+* If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/components-processing#type-convert) to convert the data between components.
+:::
+
 ### Dynamic ports
 
 Some components have ports that are dynamically added or removed.
@@ -111,11 +119,7 @@ When `group_outputs=True`, outputs are displayed individually.
 ### Port colors
 
 Component port colors indicate the data type ingested or emitted by the port.
-For example, a **Message** port either accepts or emits `message` data.
-
-:::tip
-Hover over a port to see connection details for that port.
-:::
+For example, a **Message** port either accepts or emits `Message` data.
 
 The following table lists the component data types and their corresponding port colors:
 

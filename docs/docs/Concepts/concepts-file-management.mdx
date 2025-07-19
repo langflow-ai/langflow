@@ -46,8 +46,6 @@ For example, add a **File** component to your flow, click **Select files**, and 
 This list includes all files in your server's file management system, but you can only select [file types that are supported by the **File** component](/components-data#file).
 If you need another file type, you must use a different component that supports that file type, or you need to convert it to a supported type before uploading it.
 
-If you upload new files to the **File** component, either through **My Files** or at runtime, those files are stored in Langflow file management.
-
 For more information about the **File** component and other data loading components, see [Data components](/components-data).
 
 ### Load files at runtime
@@ -85,6 +83,11 @@ You can upload images to the **Playground** chat interface and as runtime input 
    ```
 
 For more specialized image processing, browse third-party [bundles](/components-bundle-components) or [create your own components](/components-custom-components).
+
+## Set the maximum file size
+
+By default, the maximum file size is 100 MB.
+To modify this value, change the [`--max-file-size-upload` environment variable](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
 
 ## See also
 
