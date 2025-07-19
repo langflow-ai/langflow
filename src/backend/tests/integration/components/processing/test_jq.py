@@ -40,4 +40,4 @@ class TestJQComponent(ComponentTestBaseWithoutClient):
         component.input_json = Data(data={"array": [{"val": 1}, {"val": 2}, {"val": 3}], "number": 32})
 
         result = component.build_output_array()
-        assert result == DataFrame(data=[{"val": 1}, {"val": 2}, {"val": 3}])
+        assert result == DataFrame(data=[Data(data={"val": 1}), Data(data={"val": 2}), Data(data={"val": 3})])
