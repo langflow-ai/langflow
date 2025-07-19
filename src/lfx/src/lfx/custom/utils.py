@@ -15,7 +15,7 @@ from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
-from langflow.type_extraction.type_extraction import extract_inner_type
+from lfx.type_extraction import extract_inner_type
 from loguru import logger
 from pydantic import BaseModel
 

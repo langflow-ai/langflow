@@ -12,7 +12,7 @@ from langflow.schema.data import Data
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
-from langflow.type_extraction.type_extraction import post_process_type
+from lfx.type_extraction import post_process_type
 from pydantic import BaseModel
 
 from lfx.custom.custom_component.base_component import BaseComponent
