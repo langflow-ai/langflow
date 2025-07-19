@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from lfx.custom.custom_component.base_component import BaseComponent
 from lfx.type_extraction import post_process_type
-from lfx.utils import list_flows, load_flow, run_flow, run_until_complete, validate
+from lfx.utils.util import list_flows, load_flow, run_flow, run_until_complete, validate
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler

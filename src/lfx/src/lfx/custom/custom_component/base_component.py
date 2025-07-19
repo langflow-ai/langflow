@@ -10,7 +10,7 @@ from loguru import logger
 from lfx.custom.attributes import ATTR_FUNC_MAPPING
 from lfx.custom.code_parser.code_parser import CodeParser
 from lfx.custom.eval import eval_custom_component_code
-from lfx.utils import validate
+from lfx.utils.util import validate
 
 if TYPE_CHECKING:
     from uuid import UUID

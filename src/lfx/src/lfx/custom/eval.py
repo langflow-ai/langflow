@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from lfx.utils import validate
+from lfx.utils.util import validate
 
 if TYPE_CHECKING:
     from lfx.custom.custom_component.custom_component import CustomComponent

@@ -28,7 +28,7 @@ from lfx.custom.schema import MissingDefault
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.schema.dotdict import dotdict
 from lfx.type_extraction import extract_inner_type
-from lfx.utils import format_type, get_base_classes, validate
+from lfx.utils.util import format_type, get_base_classes, validate
 
 
 def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:

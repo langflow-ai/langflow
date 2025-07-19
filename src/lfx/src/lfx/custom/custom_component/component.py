@@ -36,7 +36,7 @@ from lfx.schema.properties import Source
 # from lfx.graph.state.model import create_state_model
 # Lazy import to avoid circular dependency
 # from lfx.graph.utils import has_chat_output
-from lfx.utils import find_closest_match, format_type, run_until_complete
+from lfx.utils.util import find_closest_match, format_type, run_until_complete
 
 from .custom_component import CustomComponent
 

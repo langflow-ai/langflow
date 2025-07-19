@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.graph.schema import CHAT_COMPONENTS
-from lfx.utils.lazy_load import LazyLoadDictBase
 
 if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
@@ -24,10 +23,16 @@ def _import_vertex_types():
     return vertex_types
 
 
-class VertexTypesDict(LazyLoadDictBase):
+class VertexTypesDict:
     def __init__(self) -> None:
         self._all_types_dict = None
         self._types = _import_vertex_types
+
+    @property
+    def all_types_dict(self):
+        if self._all_types_dict is None:
+            self._all_types_dict = self._build_dict()
+        return self._all_types_dict
 
     @property
     def vertex_type_map(self) -> dict[str, type[Vertex]]:
