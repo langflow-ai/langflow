@@ -125,8 +125,6 @@ class ComposioBaseComponent(Component):
             return set()
         return set(self._actions_data[action_key]["action_fields"]) if action_key in self._actions_data else set()
 
-
-
     def _build_wrapper(self) -> Composio:
         """Build the Composio wrapper."""
         try:
@@ -374,7 +372,6 @@ class ComposioBaseComponent(Component):
         except ValueError as e:
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
 
-
     def _validate_schema_inputs(self, action_key: str) -> list[InputTypes]:
         """Convert the JSON schema for *action_key* into Langflow input objects."""
         schema_dict = self._action_schemas.get(action_key)
@@ -470,7 +467,9 @@ class ComposioBaseComponent(Component):
                     clean_field_name = f"{self.app_name}_user_id"
                     # Update the field schema description to reflect the name change
                     field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = f"User ID for {self.app_name.title()}: " + field_schema["description"] #noqa: E501
+                    field_schema_copy["description"] = (
+                        f"User ID for {self.app_name.title()}: " + field_schema["description"]
+                    )  # noqa: E501
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -484,7 +483,7 @@ class ComposioBaseComponent(Component):
                 attachment_schema = {
                     "type": "string",
                     "description": "File attachment for the email",
-                    "title": "Attachment"
+                    "title": "Attachment",
                 }
                 cleaned_properties["attachment"] = attachment_schema
 
@@ -535,8 +534,21 @@ class ComposioBaseComponent(Component):
                                 info=getattr(inp, "info", "Upload file for this field"),
                                 show=True,
                                 file_types=[
-                                    "csv", "txt", "doc", "docx", "xls", "xlsx", "pdf",
-                                    "png", "jpg", "jpeg", "gif", "zip", "rar", "ppt", "pptx"
+                                    "csv",
+                                    "txt",
+                                    "doc",
+                                    "docx",
+                                    "xls",
+                                    "xlsx",
+                                    "pdf",
+                                    "png",
+                                    "jpg",
+                                    "jpeg",
+                                    "gif",
+                                    "zip",
+                                    "rar",
+                                    "ppt",
+                                    "pptx",
                                 ],
                             )
                             processed_inputs.append(file_input)
@@ -562,7 +574,9 @@ class ComposioBaseComponent(Component):
                                 inp.advanced = True
 
                             # Skip entity_id being mapped to user_id parameter
-                            if inp.name == "user_id" and getattr(self, "entity_id", None) == getattr(inp, "value", None): #noqa: E501
+                            if inp.name == "user_id" and getattr(self, "entity_id", None) == getattr(
+                                inp, "value", None
+                            ):  # noqa: E501
                                 continue
 
                             processed_inputs.append(inp)
@@ -680,9 +694,13 @@ class ComposioBaseComponent(Component):
 
             # Also hide any other action-related fields that might be in build_config
             action_related_fields = []
-            for field_name_in_config in build_config: #noqa: PLC0206
+            for field_name_in_config in build_config:  # noqa: PLC0206
                 # Skip base fields like api_key, tool_mode, action, etc.
-                if field_name_in_config not in ["api_key", "tool_mode", "action", "auth_link", "entity_id"] and isinstance(build_config[field_name_in_config], dict) and "show" in build_config[field_name_in_config]:  # noqa: E501
+                if (
+                    field_name_in_config not in ["api_key", "tool_mode", "action", "auth_link", "entity_id"]
+                    and isinstance(build_config[field_name_in_config], dict)
+                    and "show" in build_config[field_name_in_config]
+                ):  # noqa: E501
                     build_config[field_name_in_config]["show"] = False
                     action_related_fields.append(field_name_in_config)
 
@@ -740,8 +758,7 @@ class ComposioBaseComponent(Component):
         # Update action options only if tool_mode is disabled
         self._build_action_maps()
         build_config["action"]["options"] = [
-            {"name": self.sanitize_action_name(action), "metadata": action}
-            for action in self._actions_data
+            {"name": self.sanitize_action_name(action), "metadata": action} for action in self._actions_data
         ]
         # Only set show=True if tool_mode is not enabled
         if not current_tool_mode:
@@ -754,7 +771,9 @@ class ComposioBaseComponent(Component):
             # Handle disconnection first (if user clicked disconnect)
             if field_name == "auth_link" and field_value == "disconnect":
                 try:
-                    connections = toolset.connected_accounts.list(user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]) #noqa: E501
+                    connections = toolset.connected_accounts.list(
+                        user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]
+                    )  # noqa: E501
                     # Validate response structure before accessing items
                     if connections and hasattr(connections, "items") and connections.items:
                         if isinstance(connections.items, list) and len(connections.items) > 0:
@@ -773,7 +792,9 @@ class ComposioBaseComponent(Component):
                                 else:
                                     logger.warning(f"ACTIVE connection found but no ID available for {toolkit_slug}")
                             else:
-                                logger.warning(f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect") #noqa: E501
+                                logger.warning(
+                                    f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect"
+                                )  # noqa: E501
                         else:
                             logger.warning(f"No connections to disconnect for {toolkit_slug}")
                     else:
@@ -789,8 +810,7 @@ class ComposioBaseComponent(Component):
             # Check current connection status and set appropriate auth_link value
             try:
                 connection_list = toolset.connected_accounts.list(
-                    user_ids=[self.entity_id],
-                    toolkit_slugs=[toolkit_slug]
+                    user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]
                 )
 
                 # Validate response structure and check for valid connections
@@ -808,11 +828,11 @@ class ComposioBaseComponent(Component):
                         if active_connections:
                             has_active_connections = True
                             logger.debug(
-                                f"Found {len(active_connections)} ACTIVE connection(s) out of {len(connection_list.items)} total for {toolkit_slug}" #noqa: E501
+                                f"Found {len(active_connections)} ACTIVE connection(s) out of {len(connection_list.items)} total for {toolkit_slug}"  # noqa: E501
                             )
                         else:
                             logger.debug(
-                                f"Found {len(connection_list.items)} connection(s) for {toolkit_slug}, but none are ACTIVE" #noqa: E501
+                                f"Found {len(connection_list.items)} connection(s) for {toolkit_slug}, but none are ACTIVE"  # noqa: E501
                             )
                     else:
                         logger.debug(f"No valid connections found for {toolkit_slug}: items is not a valid list")

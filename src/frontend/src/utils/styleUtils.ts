@@ -6,7 +6,6 @@ import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { GradientSave } from "@/icons/GradientSparkles";
 
-
 const iconCache = new Map<string, any>();
 
 export const BG_NOISE =

@@ -88,7 +88,6 @@ class ComposioAPIComponent(LCToolComponent):
         build_config["actions"]["helper_text"] = ""
         build_config["actions"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
 
-
         try:
             composio = self._build_wrapper()
             current_tool = tool_name or getattr(self, "tool_name", None)
@@ -105,10 +104,7 @@ class ComposioAPIComponent(LCToolComponent):
                 if hasattr(tool, "name"):
                     action_name = tool.name
                     display_name = action_name.replace("_", " ").title()
-                    authenticated_actions.append({
-                        "name": action_name,
-                        "display_name": display_name
-                    })
+                    authenticated_actions.append({"name": action_name, "display_name": display_name})
         except (ValueError, ConnectionError, AttributeError) as e:
             self.log(f"Error getting actions for {current_tool or 'unknown tool'}: {e}")
             authenticated_actions = []
@@ -156,8 +152,10 @@ class ComposioAPIComponent(LCToolComponent):
             composio = self._build_wrapper()
 
             current_tool_name = (
-                field_value if isinstance(field_value, str)
-                else field_value.get("validate") if isinstance(field_value, dict) and "validate" in field_value
+                field_value
+                if isinstance(field_value, str)
+                else field_value.get("validate")
+                if isinstance(field_value, dict) and "validate" in field_value
                 else getattr(self, "tool_name", None)
             )
 
@@ -169,23 +167,30 @@ class ComposioAPIComponent(LCToolComponent):
                 toolkit_slug = current_tool_name.lower()
 
                 connection_list = composio.connected_accounts.list(
-                    user_ids=[self.entity_id],
-                    toolkit_slugs=[toolkit_slug]
+                    user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]
                 )
 
                 # Check for active connections
                 has_active_connections = False
-                if (connection_list and hasattr(connection_list, "items") and connection_list.items and
-                    isinstance(connection_list.items, list) and len(connection_list.items) > 0):
-                        for connection in connection_list.items:
-                            if getattr(connection, "status", None) == "ACTIVE":
-                                has_active_connections = True
-                                break
+                if (
+                    connection_list
+                    and hasattr(connection_list, "items")
+                    and connection_list.items
+                    and isinstance(connection_list.items, list)
+                    and len(connection_list.items) > 0
+                ):
+                    for connection in connection_list.items:
+                        if getattr(connection, "status", None) == "ACTIVE":
+                            has_active_connections = True
+                            break
 
                 # Get the index of the selected tool in the list of options
                 selected_tool_index = next(
-                    (ind for ind, tool in enumerate(build_config["tool_name"]["options"])
-                     if tool["name"] == current_tool_name.title()),
+                    (
+                        ind
+                        for ind, tool in enumerate(build_config["tool_name"]["options"])
+                        if tool["name"] == current_tool_name.title()
+                    ),
                     None,
                 )
 
@@ -238,10 +243,7 @@ class ComposioAPIComponent(LCToolComponent):
             return []
 
         # Get all tools for the relevant toolkits
-        all_tools = composio.tools.get(
-            user_id=self.entity_id,
-            toolkits=list(toolkits)
-        )
+        all_tools = composio.tools.get(user_id=self.entity_id, toolkits=list(toolkits))
 
         # Filter to only the specific actions we want using list comprehension
         return [tool for tool in all_tools if hasattr(tool, "name") and tool.name in action_names]

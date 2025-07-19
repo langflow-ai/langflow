@@ -7,6 +7,3 @@ class ComposioGoogleTasksAPIComponent(ComposioBaseComponent):
     icon = "GoogleTasks"
     documentation: str = "https://docs.composio.dev"
     app_name = "googletasks"
-
-
-
