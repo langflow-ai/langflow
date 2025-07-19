@@ -76,9 +76,17 @@ To freeze a component, click the component in the **Workspace** to expose the co
 
 ## Component ports
 
-Circular port icons (<Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) on the border of a component indicate the types of inputs and outputs that can be connected to the component at that port.
+Around the border of each component, there are circular port icons like <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>.
+These indicate a component _connection point_ or _port_.
+
+Ports either accept input or produce output of a specific data type.
+You can infer the data type from the field the port is attached to or from the [port's color](#port-colors).
+For example, the **System Message** field accepts [message data](#message), as illustrated by the blue port icon: <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} />.
 
 ![Prompt component with multiple inputs](/img/prompt-component.png)
+
+When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.
+For information about the programmatic representation of each data type, see [Langflow data types](/data-types).
 
 ### Dynamic ports
 
@@ -92,33 +100,35 @@ For example, the **Prompt** component accepts inputs within curly braces, and ne
 Some components include dropdown menus to select the type of output sent to the next component.
 
 For example, the **Language Model** component includes **Model Response** or **Language Model** outputs.
-The **Model Response** output sends a [Message](/concepts-objects#message-object) output on to another Message port.
+The **Model Response** output sends a [Message](/data-types#message) output on to another Message port.
 The **Language Model** output can be connected to components like [Structured output](/components-processing#structured-output) to use the LLM to power the component's reasoning.
+
+In the component code, `group_outputs` is set to `False` by default, which forces the outputs into the same dropdown menu, and only allows one output to be selected.
+When `group_outputs=True`, outputs are displayed individually.
 
 ![Output type selection in the Language Model component](/img/select-output.png)
 
 ### Port colors
 
 Component port colors indicate the data type ingested or emitted by the port.
-For example, a text port either accepts or emits text data.
+For example, a **Message** port either accepts or emits `message` data.
 
 :::tip
 Hover over a port to see connection details for that port.
 :::
 
-The following table lists the component port colors and their corresponding input types:
+The following table lists the component data types and their corresponding port colors:
 
 | Data type | Port color | Port icon example |
 |-----------|--------------|----------|
-| Data | Red | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#dc2626', fill: '#dc2626' }} /> |
-| DataFrame | Pink | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#ec4899', fill:'#ec4899' }} /> |
-| Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#10b981', fill: '#10b981' }} /> |
-| LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#c026d3', fill: '#c026d3' }} /> |
-| Memory | Orange | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#f97316', fill: '#f97316' }} /> |
-| Message | Indigo | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> |
-| Text | Indigo | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> |
-| Tool | Cyan | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#06b6d4', fill: '#06b6d4' }} /> |
-| Unknown | Gray | <Icon name="Circle" size="16" aria-label="Circular component port icon" style={{ color: '#9CA3AF', fill: '#9CA3AF' }} /> |
+| Data | Red | <Icon name="Circle" size="16" aria-label="Red data port" style={{ color: '#dc2626', fill: '#dc2626' }} /> |
+| DataFrame | Pink | <Icon name="Circle" size="16" aria-label="Pink dataframe port" style={{ color: '#ec4899', fill:'#ec4899' }} /> |
+| Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="Emerald embeddings port" style={{ color: '#10b981', fill: '#10b981' }} /> |
+| LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="Fuchsia language model port" style={{ color: '#c026d3', fill: '#c026d3' }} /> |
+| Memory | Orange | <Icon name="Circle" size="16" aria-label="Orange memory port" style={{ color: '#f97316', fill: '#f97316' }} /> |
+| Message | Indigo | <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> |
+| Tool | Cyan | <Icon name="Circle" size="16" aria-label="Cyan tool port" style={{ color: '#06b6d4', fill: '#06b6d4' }} /> |
+| Unknown or multiple types | Gray | <Icon name="Circle" size="16" aria-label="Gray unknown port" style={{ color: '#9CA3AF', fill: '#9CA3AF' }} /> |
 
 ## Component code
 
@@ -190,7 +200,7 @@ For example, the `RecursiveCharacterTextSplitter` has two methods:
         )
 ```
 
-The `get_data_input` method retrieves the text data to be split from the component's input, which makes the data available to the class.
+The `get_data_input` method retrieves the text to be split from the component's input, which makes the data available to the class.
 The `build_text_splitter` method creates a `RecursiveCharacterTextSplitter` object by calling its parent class's `build` method. Then, the text is split with the created splitter and passed to the next component.
 
 ## Component versions

@@ -146,7 +146,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -438,7 +441,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -778,7 +784,10 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "name": "",
             "output_types": [],
             "outputs": [
@@ -1226,7 +1235,10 @@
             "icon": "file-text",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "0c57c835f136",
+              "module": "langflow.components.data.file.FileComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
