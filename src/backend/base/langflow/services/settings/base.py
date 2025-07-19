@@ -92,6 +92,10 @@ class Settings(BaseSettings):
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
 
+    mcp_server_timeout: int = 20
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
+
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
@@ -121,6 +125,10 @@ class Settings(BaseSettings):
     - pool_recycle: Seconds before connections are recycled (prevents timeouts)
     - echo: Enable SQL query logging (development only)
     """
+
+    use_noop_database: bool = False
+    """If True, disables all database operations and uses a no-op session.
+    Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
 
     # cache configuration
     cache_type: Literal["async", "redis", "memory", "disk"] = "async"
@@ -255,6 +263,21 @@ class Settings(BaseSettings):
     lazy_load_components: bool = False
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
+
+    # Starter Projects
+    create_starter_projects: bool = True
+    """If set to True, Langflow will create starter projects. If False, skips all starter project setup.
+    Note that this doesn't check if the starter projects are already loaded in the db;
+    this is intended to be used to skip all startup project logic."""
+    update_starter_projects: bool = True
+    """If set to True, Langflow will update starter projects."""
+
+    @field_validator("use_noop_database", mode="before")
+    @classmethod
+    def set_use_noop_database(cls, value):
+        if value:
+            logger.info("Running with NOOP database session. All DB operations are disabled.")
+        return value
 
     @field_validator("event_delivery", mode="before")
     @classmethod
@@ -421,8 +444,14 @@ class Settings(BaseSettings):
                     logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
-            value = []
-            logger.debug("Setting empty components path")
+            value = [BASE_COMPONENTS_PATH]
+            logger.debug("Setting default components path to components_path")
+        else:
+            if isinstance(value, Path):
+                value = [str(value)]
+            elif isinstance(value, list):
+                value = [str(p) if isinstance(p, Path) else p for p in value]
+            logger.debug("Adding default components path to components_path")
 
         logger.debug(f"Components path: {value}")
         return value

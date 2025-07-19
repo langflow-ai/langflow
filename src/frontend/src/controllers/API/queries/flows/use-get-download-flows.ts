@@ -1,6 +1,6 @@
-import { FlowType } from "@/types/flow";
+import type { FlowType } from "@/types/flow";
 import { downloadFlow, processFlows } from "@/utils/reactflowUtils";
-import { useMutationFunctionType } from "../../../../types/api";
+import type { useMutationFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

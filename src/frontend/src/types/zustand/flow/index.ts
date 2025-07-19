@@ -1,5 +1,4 @@
-import { AllNodeType, EdgeType, FlowType } from "@/types/flow";
-import {
+import type {
   Connection,
   Node,
   OnEdgesChange,
@@ -7,10 +6,11 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import { BuildStatus, EventDeliveryType } from "../../../constants/enums";
-import { VertexBuildTypeAPI } from "../../api";
-import { ChatInputType, ChatOutputType } from "../../chat";
-import { FlowState } from "../../tabs";
+import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
+import type { VertexBuildTypeAPI } from "../../api";
+import type { ChatInputType, ChatOutputType } from "../../chat";
+import type { FlowState } from "../../tabs";
 
 export type FlowPoolObjectType = {
   timestamp: string;
@@ -285,4 +285,8 @@ export type FlowStoreType = {
   setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
   clearEdgesRunningByNodes: () => Promise<void>;
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
+  helperLineEnabled: boolean;
+  setHelperLineEnabled: (helperLineEnabled: boolean) => void;
+  newChatOnPlayground: boolean;
+  setNewChatOnPlayground: (newChat: boolean) => void;
 };

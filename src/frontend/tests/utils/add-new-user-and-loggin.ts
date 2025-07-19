@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 export const addNewUserAndLogin = async (page: Page) => {
   await page.route("**/api/v1/auto_login", (route) => {

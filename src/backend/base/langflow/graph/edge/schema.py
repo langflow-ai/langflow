@@ -21,9 +21,16 @@ class TargetHandleDict(TypedDict):
     type: str
 
 
+class LoopTargetHandleDict(TypedDict):
+    dataType: str
+    id: str
+    name: str
+    output_types: list[str]
+
+
 class EdgeDataDetails(TypedDict):
     sourceHandle: SourceHandleDict
-    targetHandle: TargetHandleDict
+    targetHandle: TargetHandleDict | LoopTargetHandleDict
 
 
 class EdgeData(TypedDict, total=False):
@@ -74,7 +81,7 @@ class TargetHandle(BaseModel):
     type: str = Field(None, description="Type of the target handle.")
 
     @classmethod
-    def from_loop_target_handle(cls, target_handle: TargetHandleDict) -> "TargetHandle":
+    def from_loop_target_handle(cls, target_handle: LoopTargetHandleDict) -> "TargetHandle":
         # The target handle is a loop edge
         # The target handle is a dict with the following keys:
         # - name: str

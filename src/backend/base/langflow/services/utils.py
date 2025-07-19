@@ -29,7 +29,8 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     from langflow.services.database.models.user.model import User
 
     stmt = select(User).where(User.username == username)
-    user = (await session.exec(stmt)).first()
+    result = await session.exec(stmt)
+    user = result.first()
 
     if user and user.is_superuser:
         return None  # Superuser already exists
@@ -114,7 +115,8 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
             from langflow.services.database.models.user.model import User
 
             stmt = select(User).where(User.username == username)
-            user = (await session.exec(stmt)).first()
+            result = await session.exec(stmt)
+            user = result.first()
             # Check if super was ever logged in, if not delete it
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
@@ -131,17 +133,12 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
 
 async def teardown_services() -> None:
     """Teardown all the services."""
-    try:
-        async with get_db_service().with_session() as session:
-            await teardown_superuser(get_settings_service(), session)
-    except Exception as exc:  # noqa: BLE001
-        logger.exception(exc)
-    try:
-        from langflow.services.manager import service_manager
+    async with get_db_service().with_session() as session:
+        await teardown_superuser(get_settings_service(), session)
 
-        await service_manager.teardown()
-    except Exception as exc:  # noqa: BLE001
-        logger.exception(exc)
+    from langflow.services.manager import service_manager
+
+    await service_manager.teardown()
 
 
 def initialize_settings_service() -> None:

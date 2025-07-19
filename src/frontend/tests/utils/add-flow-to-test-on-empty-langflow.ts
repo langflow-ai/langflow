@@ -1,4 +1,4 @@
-import { Page } from "playwright/test";
+import type { Page } from "playwright/test";
 
 export const addFlowToTestOnEmptyLangflow = async (page: Page) => {
   await page.getByTestId("new_project_btn_empty_page").click();

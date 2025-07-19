@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v5.0.0
     hooks:
       - id: check-case-conflict
       - id: end-of-file-fixer
@@ -11,19 +11,30 @@ repos:
         args:
           - --fix=lf
       - id: trailing-whitespace
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.3
+  - repo: local
     hooks:
       - id: ruff
         name: ruff check
+        entry: uv run ruff check
+        language: system
         types_or: [python, pyi]
         args: [--fix]
       - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
         types_or: [python, pyi]
         args: [--config, pyproject.toml]
-  # --- Secrets / API-key scanning -------------------
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
+  - repo: local
+    hooks:
+      - id: local-biome-check
+        name: biome check
+        entry: bash -c 'cd src/frontend && npx @biomejs/biome check --write --files-ignore-unknown=true --no-errors-on-unmatched --diagnostic-level=error'
+        language: system
+        types: [text]
+        files: "\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"

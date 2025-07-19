@@ -1,5 +1,5 @@
+import type { MutableRefObject } from "react";
 import { useStartRecording } from "@/modals/IOModal/components/chatView/chatInput/components/voice-assistant/hooks/use-start-recording";
-import { MutableRefObject } from "react";
 
 export const customUseStartRecording = (
   audioContextRef: React.MutableRefObject<AudioContext | null>,
