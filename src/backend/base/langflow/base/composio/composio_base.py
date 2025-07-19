@@ -469,7 +469,7 @@ class ComposioBaseComponent(Component):
                     field_schema_copy = field_schema.copy()
                     field_schema_copy["description"] = (
                         f"User ID for {self.app_name.title()}: " + field_schema["description"]
-                    )  # noqa: E501
+                    )
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -576,7 +576,7 @@ class ComposioBaseComponent(Component):
                             # Skip entity_id being mapped to user_id parameter
                             if inp.name == "user_id" and getattr(self, "entity_id", None) == getattr(
                                 inp, "value", None
-                            ):  # noqa: E501
+                            ):
                                 continue
 
                             processed_inputs.append(inp)
@@ -700,7 +700,7 @@ class ComposioBaseComponent(Component):
                     field_name_in_config not in ["api_key", "tool_mode", "action", "auth_link", "entity_id"]
                     and isinstance(build_config[field_name_in_config], dict)
                     and "show" in build_config[field_name_in_config]
-                ):  # noqa: E501
+                ):
                     build_config[field_name_in_config]["show"] = False
                     action_related_fields.append(field_name_in_config)
 
@@ -773,7 +773,7 @@ class ComposioBaseComponent(Component):
                 try:
                     connections = toolset.connected_accounts.list(
                         user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]
-                    )  # noqa: E501
+                    )
                     # Validate response structure before accessing items
                     if connections and hasattr(connections, "items") and connections.items:
                         if isinstance(connections.items, list) and len(connections.items) > 0:
@@ -793,8 +793,8 @@ class ComposioBaseComponent(Component):
                                     logger.warning(f"ACTIVE connection found but no ID available for {toolkit_slug}")
                             else:
                                 logger.warning(
-                                    f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect"
-                                )  # noqa: E501
+                                    f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect"  # noqa: E501
+                                )
                         else:
                             logger.warning(f"No connections to disconnect for {toolkit_slug}")
                     else:
