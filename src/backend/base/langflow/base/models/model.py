@@ -252,7 +252,7 @@ class LCModelComponent(Component):
             if stream:
                 lf_message, result = await self._handle_stream(runnable, inputs)
             else:
-                message = runnable.invoke(inputs)
+                message = await runnable.ainvoke(inputs)
                 result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
@@ -298,7 +298,7 @@ class LCModelComponent(Component):
             lf_message = await self.send_message(model_message)
             result = lf_message.text
         else:
-            message = runnable.invoke(inputs)
+            message = await runnable.ainvoke(inputs)
             result = message.content if hasattr(message, "content") else message
         return lf_message, result
 
@@ -335,8 +335,6 @@ class LCModelComponent(Component):
             # Ensure component_inputs is a list of the expected types
             if not isinstance(component_inputs, list):
                 component_inputs = []
-
-            import warnings
 
             with warnings.catch_warnings():
                 warnings.filterwarnings(
