@@ -11,11 +11,8 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from langflow.field_typing.range_spec import RangeSpec
-from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
-from lfx.type_extraction import extract_inner_type
 from loguru import logger
 from pydantic import BaseModel
 
@@ -28,6 +25,9 @@ from lfx.custom.directory_reader.utils import (
 )
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import MissingDefault
+from lfx.field_typing.range_spec import RangeSpec
+from lfx.schema.dotdict import dotdict
+from lfx.type_extraction import extract_inner_type
 from lfx.utils import format_type, get_base_classes, validate
 
 
