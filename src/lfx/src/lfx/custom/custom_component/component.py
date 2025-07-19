@@ -24,13 +24,13 @@ from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
-from langflow.schema.properties import Source
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from pydantic import BaseModel, ValidationError
 
 from lfx.custom.tree_visitor import RequiredInputsVisitor
+from lfx.schema.properties import Source
 
 # Lazy import to avoid circular dependency
 # from lfx.graph.state.model import create_state_model
