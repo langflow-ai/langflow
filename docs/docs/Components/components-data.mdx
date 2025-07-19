@@ -5,35 +5,53 @@ slug: /components-data
 
 import Icon from "@site/src/components/icon";
 
-# Data components in Langflow
+You can use Langflow's data components to bring data into your flows from various sources like files, API endpoints, and URLs.
+For example:
 
-Data components load data from a source into your flow.
+* **Load files**: Import data from a file or directory with the [**File**](#file) and [**Directory**](#directory) components.
 
-They may perform some processing or type checking, like converting raw HTML data into text, or ensuring your loaded file is of an acceptable type.
+* **Search the web**: Fetch data from the web with components like the [**News Search**](#news-search), [**RSS Reader**](#rss-reader), [**Web Search**](#web-search), and [**URL**](#url) components.
+
+* **Make API calls**: Use APIs to trigger flows or perform actions with the [**API Request**](#api-request) and [**Webhook**](#webhook) components.
+
+* **Run SQL queries**: Query an SQL database with the [**SQL Database**](#sql-database) component.
+
+Each component runs different commands for retrieval, processing, and type checking.
+Some components are a minimal wrapper for a command that you provide, and others include built-in scripts to fetch and process data based on variable inputs.
+Additionally, some components return raw data, whereas others can convert, restructure, or validate the data before outputting it.
+This means that some similar components might produce different results.
+
+:::tip
+Data components pair well with [processing components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
+
+This can include basic operations, like saving a file in a specific format, or more complex tasks, like using a **Text Splitter** component to break down a large document into smaller chunks before generating embeddings for vector search.
+:::
 
 ## Use data components in a flow
 
-Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/data-types#dataframe) format, or can be connected to an **Agent** component to be used as tools.
+Data components are used often in flows because they offer a versatile way to perform common, basic functions.
 
-For example, to connect all three components to an Agent component, do the following:
+You can use data components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
 
-1. Create the [Simple Agent starter flow](/simple-agent).
-2. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
-3. Add the **News search**, **RSS reader**, and **Web Search** components to your flow.
-4. In all three components, enable **Tool Mode**.
-5. Connect the three components to the **Agent** component's **Tools** port.
-The flow looks like the following:
+![An agentic flows with three data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
 
-![Data components connected to agent](/img/connect-data-components-to-agent.png)
+For examples of **Data** components in flows, see the following:
 
-6. Open the **Playground** and enter `Use the websearch component to get me an RSS feed of the latest news.`
-The Agent uses the `perform_search` tool to return a list of RSS feeds.
-7. Enter the name of an RSS feed that interests you.
-The Agent uses the `read_rss` tool to fetch and summarize the latest RSS feed.
+* [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **File** component to load a file as context for a chatbot.
+The file and user input are both passed to the LLM so you can ask questions about the file you uploaded.
+
+* [Create a vector RAG chatbot](/chat-with-rag): Learn how to ingest files for use in Retrieval-Augmented Generation (RAG), and then set up a chatbot that can use the ingested files as context.
+The two flows in this tutorial prepare files for RAG, and then let your LLM use vector search to retrieve contextually relevant data during a chat session.
+
+* [Configure tools for agents](/agents-tools): Learn how to use any component as a tool for an agent.
+When used as tools, the agent autonomously decides when to call a component based on the user's query.
+
+* [Trigger flows with webhooks](/webhook): Learn how to use the **Webhook** component to trigger a flow run in response to an external event.
 
 ## API Request
 
 This component makes HTTP requests using URLs or cURL commands.
+as well as provider-specific API components in [bundles](/components-bundle-components).
 
 1. To use this component in a flow, connect the **Data** output to a component that accepts the input.
 For example, connect the **API Request** component to a **Chat Output** component.
@@ -125,6 +143,21 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 The **File** component’s outputs change dynamically based on the number and type of files you select.
 For more information, expand the following **Parameters** section, and then review the **Outputs** parameters.
 
+
+
+
+
+For example, add a **File** component to your flow, click **Select files**, and then select files from the **My Files** list.
+
+This list includes all files in your server's file management system, but you can only select [file types that are supported by the **File** component](/components-data#file).
+If you need another file type, you must use a different component that supports that file type, or you need to convert it to a supported type before uploading it.
+
+If you upload new files to the **File** component, either through **My Files** or at runtime, those files are stored in Langflow file management.
+
+
+
+
+
 <details>
 <summary>Parameters</summary>
 
@@ -162,7 +195,10 @@ If no files are selected:
 
 ### Supported File Types
 
-Text files:
+The maximum supported file size is 100 MB.
+
+Supported text files formats:
+
 - `.txt` - Text files
 - `.md`, `.mdx` - Markdown files
 - `.csv` - CSV files
@@ -178,12 +214,17 @@ Text files:
 - `.js` - JavaScript files
 - `.ts`, `.tsx` - TypeScript files
 
-Archive formats (for bundling multiple files):
+Supported archive formats for bundling multiple files:
+
 - `.zip` - ZIP archives
 - `.tar` - TAR archives
 - `.tgz` - Gzipped TAR archives
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
+
+Alternatively, you can use the [**Directory** component](#directory) or use multiple **File** components in the same flow.
+
+For information about working with image files, see [Upload images](/concepts-file-management#upload-images).
 
 ## News search
 
@@ -195,6 +236,8 @@ To use this component in a flow, connect the **News Search** output to a compone
 For example, connect the **News Search** component to a **Chat Output** component. Enter a search query, open the Playground, and click **Run Flow**.
 
 The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
+
+s well as provider-specific search components in [bundles](/components-bundle-components).
 
 <details>
 <summary>Parameters</summary>
@@ -217,6 +260,7 @@ The latest content is returned in a structured DataFrame, with the key columns `
 |------|--------------|------|
 | articles | News Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
 
+They can output the retrieved data in [DataFrame](/data-types#dataframe) format, or can be connected to an **Agent** component to be used as tools.
 </details>
 
 ## RSS Reader
@@ -247,9 +291,13 @@ The latest content is returned in a structured DataFrame, with the key columns `
 |------|--------------|------|
 | articles | Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
 
+They can output the retrieved data in [DataFrame](/data-types#dataframe) format, or can be connected to an **Agent** component to be used as tools.
 </details>
 
 ## SQL Database
+
+    For CQL queries, see the components in the [**DataStax** bundle](/bundles-datastax).
+    For vector search, see [**Vector Store** components](/components-vector-stores).
 
 This component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/).
 It supports any SQLAlchemy-compatible database, including PostgreSQL, MySQL, SQLite, and others.
@@ -329,6 +377,8 @@ It seems there are duplicate entries for the users.
 
 ## Web search
 
+s well as provider-specific search components in [bundles](/components-bundle-components).
+
 This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/data-types#dataframe) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
 
 To use this component in a flow, do the following:
@@ -376,6 +426,7 @@ This component uses web scraping and may be subject to rate limits. For producti
 |------|--------------|------|
 | results | Search Results | A DataFrame containing search results with titles, links, and snippets. |
 
+They can output the retrieved data in [DataFrame](/data-types#dataframe) format, or can be connected to an **Agent** component to be used as tools.
 </details>
 
 ## URL
@@ -461,6 +512,7 @@ To troubleshoot a flow with a **Webhook** component and verify that the componen
 8. Click **Playground** to verify that the **Chat Output** component printed the JSON data from your POST request.
 
 For more information, see [Trigger flows with webhooks](/webhook).
+
 <details>
 <summary>Parameters</summary>
 
@@ -479,6 +531,22 @@ For more information, see [Trigger flows with webhooks](/webhook).
 | output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/data-types#data) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
 
 </details>
+
+## Additional data components
+
+Langflow's core components are meant to be generic and support a range of use cases.
+Core components are typically not limited to a single provider.
+
+If the core data components don't meet your needs, you can find provider-specific components in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+
+For example, the [**DataStax** bundle](/bundles-datastax) includes components for CQL queries, and the [**Google** bundle](/bundles-google) includes components for Google Search APIs.
+
+## Legacy data components
+
+The **Load CSV** and **Load JSON** components are legacy components.
+You can still use them in your flows, but they are no longer maintained and can be removed in a future release.
+
+Replace these components with the **File** component, which supports loading CSV and JSON files, as well as many other file types.
 
 ## See also
 

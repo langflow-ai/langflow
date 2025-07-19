@@ -132,44 +132,6 @@ Alternatively, if you want every chat to be unique, you might want to automatica
 
 For more information, see [Use session ID to manage communication between components](/session-id).
 
-## Upload images
-
-If your flow requires image data, the **Playground** supports base64 images in the following formats:
-
-* PNG
-* JPG/JPEG
-* GIF
-* BMP
-* WebP
-
-You can provide images to the **Playground** in the visual editor or through the Langflow API.
-
-<Tabs>
-  <TabItem value="visual" label="Visual editor" default>
-
-In the **Playground**, you can drag-and-drop images into the chat input area, or you can click the **Attach image** icon to select an image to upload.
-
-  </TabItem>
-  <TabItem value="api" label="Langflow API">
-
-When you trigger a flow with the Langflow API, use the `files` parameter to attach the base64-encoded image data to the request payload:
-
-```bash
-curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
--H "Content-Type: application/json" \
--H "x-api-key: $LANGFLOW_API_KEY" \
--d '{
-    "session_id": "custom_session_123",
-    "input_value": "What is in this image?",
-    "input_type": "chat",
-    "output_type": "chat",
-    "files": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."]
-}'
-```
-
-  </TabItem>
-</Tabs>
-
 ## Share a flow's Playground
 
 :::important
@@ -194,6 +156,7 @@ This window's URL is the flow's **Shareable Playground** address, such as `https
 
 ## See also
 
+- [Upload images](/concepts-file-management#upload-images)
 - [Use voice mode](/concepts-voice-mode)
 - [Trigger flows with the Langflow API](/concepts-publish)
 - [Session ID](/session-id)

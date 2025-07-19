@@ -5,74 +5,83 @@ slug: /concepts-file-management
 
 import Icon from "@site/src/components/icon";
 
-Upload, store, and manage files in Langflow's **File management** system.
+Each Langflow server has a file management system where you can store files that you want to use in your flows.
 
-Uploading files to the **File management** system keeps your files in a central location, and allows you to re-use files across flows without repeated manual uploads.
+Files uploaded to Langflow file management are stored locally to your Langflow server, and they are available to all of your flows.
 
-## Upload a file
+Uploading files to Langflow file management keeps your files in a central location, and allows you to reuse files across flows without repeated manual uploads.
 
-The **File management** system is available at the `/files` URL. For example, if you're running Langflow at the default `http://localhost:7860` address, the **File management** system is located at `http://localhost:7860/files`.
+## Use the file management UI
 
-To upload a file from your local machine:
+You can use the file management UI to upload files from your local machine to your own Langflow server.
+You can also manage all files that have been uploaded to your Langflow server.
 
-1. From the **My Files** window at `http://localhost:7860/files`, click **Upload**.
-2. Select the file to upload.
-   The file is uploaded to Langflow.
+1. Navigate to your server's file management system at `/files`, such as `http://localhost:7860/files`.
+If you don't use the default port or local hosting, replace the base URL with your Langflow server's address or port.
 
-You can upload multiple files in a single action.
-Files are available to flows stored in different projects.
+2. On the **My Files** page, click **Upload**.
 
-Files stored in **My Files** can be renamed, downloaded, duplicated, or deleted.
+3. Select one or more files to upload.
 
-To delete a file from your project, hover over a file's icon to click and select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+After uploading files, you can rename, download, copy, or delete files within the file management UI:
+
+* To delete a file, hover over a file's icon, select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 You can delete multiple files in a single action.
 
-To download a file from your project, hover over a file's icon to click and select it, and then click <Icon name="Download" aria-hidden="true"/> **Download**.
-You can download multiple files in a single action, but they will be saved together in a .ZIP file.
+* To download a file, hover over a file's icon, select it, and then click <Icon name="Download" aria-hidden="true"/> **Download**.
+If you download multiple files in a single action, they are saved together in a zip file.
 
-## Use uploaded files in a flow
+## Use preloaded files in a flow
 
-To use your uploaded files in flows:
+To use files in your Langflow file management system in a flow, add a component that accepts file input to your flow, such as the **File** component.
 
-1. Include the [File](/components-data#file) component in a flow.
-2. To select a document to load, in the **File** component, click the **Select files** button.
-3. Select a file to upload, and then click **Select file**. The loaded file name appears in the component.
+For example, add a **File** component to your flow, click **Select files**, and then select files from the **My Files** list.
 
-For an example of using the **File** component in a flow, see the [Document QA tutorial project](/document-qa).
+This list includes all files in your server's file management system, but you can only select [file types that are supported by the **File** component](/components-data#file).
+If you need another file type, you must use a different component that supports that file type, or you need to convert it to a supported type before uploading it.
 
-:::note
-If you prefer a one-time upload, the [File](/components-data#file) component still allows one-time uploads directly from your local machine.
-:::
+If you upload new files to the **File** component, either through **My Files** or at runtime, those files are stored in Langflow file management.
+
+For more information about the **File** component and other data loading components, see [Data components](/components-data).
 
 ## Send files to a flow with the Langflow API
 
-For information on file management with the Langflow API, see [Files endpoints](/api-files).
+With the Langflow API, you can upload and manage files in Langflow file management, and you can send files to flows programmatically at runtime.
 
-## Supported file types
+For more information and examples, see [Files endpoints](/api-files) and [Create a chatbot that can ingest files](/chat-with-files).
 
-The maximum supported file size is 100 MB.
+## Upload images
 
-Text files:
+Langflow supports base64 images in the following formats:
 
-- `.txt` - Text files
-- `.md`, `.mdx` - Markdown files
-- `.csv` - CSV files
-- `.json` - JSON files
-- `.yaml`, `.yml` - YAML files
-- `.xml` - XML files
-- `.html`, `.htm` - HTML files
-- `.pdf` - PDF files
-- `.docx` - Word documents
-- `.py` - Python files
-- `.sh` - Shell scripts
-- `.sql` - SQL files
-- `.js` - JavaScript files
-- `.ts`, `.tsx` - TypeScript files
+* PNG
+* JPG/JPEG
+* GIF
+* BMP
+* WebP
 
-Archive formats (for bundling multiple files):
+You can upload images to the **Playground** chat interface and as runtime input with the Langflow API.
 
-- `.zip` - ZIP archives
-- `.tar` - TAR archives
-- `.tgz` - Gzipped TAR archives
-- `.bz2` - Bzip2 compressed files
-- `.gz` - Gzip compressed files
+* In the **Playground**, you can drag-and-drop images into the chat input area, or you can click the **Attach image** icon to select an image to upload.
+
+* When you trigger a flow with the `/api/v1/run/$FLOW_ID` endpoint, you can use the `files` parameter to attach the base64-encoded image data to the request payload:
+
+   ```bash
+   curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
+   -H "Content-Type: application/json" \
+   -H "x-api-key: $LANGFLOW_API_KEY" \
+   -d '{
+      "session_id": "custom_session_123",
+      "input_value": "What is in this image?",
+      "input_type": "chat",
+      "output_type": "chat",
+      "files": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."]
+   }'
+   ```
+
+For more specialized image processing, browse third-party [bundles](/components-bundle-components) or [create your own components](/components-custom-components).
+
+## See also
+
+* [Data components](/components-data)
+* [Processing components](/components-processing)
