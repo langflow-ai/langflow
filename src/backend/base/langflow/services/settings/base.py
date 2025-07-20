@@ -348,7 +348,7 @@ class Settings(BaseSettings):
 
             # NOTE: This change, done in v1.5.0, changes the default directory for Files,
             # secret keys, and more from the user's cache directory to the user's config directory.
-            # It maintains backward compatibility by migrating data from the cache directory 
+            # It maintains backward compatibility by migrating data from the cache directory
             # to the config directory.
             config_dir = user_config_dir(app_name, app_author)
 
@@ -370,7 +370,7 @@ class Settings(BaseSettings):
                         elif item.is_dir():
                             shutil.copytree(item, config_path / item.name, dirs_exist_ok=True)
                     logger.debug("Successfully migrated data to config directory")
-                except Exception as e: # noqa: BLE001
+                except Exception as e:  # noqa: BLE001
                     logger.error(f"Failed to migrate data from cache to config directory: {e}")
                     # Fall back to cache directory if migration fails
                     value = cache_path
