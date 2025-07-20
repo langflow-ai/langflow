@@ -80,7 +80,7 @@ class Settings(BaseSettings):
 
     This location is designed for persistent data and is typically included in system backups.
     For production use, consider setting LANGFLOW_CONFIG_DIR to a custom location.
-    
+
     Note: If an existing installation has data in the cache directory, it will be automatically
     migrated to the config directory on first run."""
     save_db_in_config_dir: bool = False
@@ -346,7 +346,10 @@ class Settings(BaseSettings):
             app_name = "langflow"
             app_author = "langflow"
 
-            # Get the config directory for the application
+            # NOTE: This change, done in v1.5.0, changes the default directory for Files,
+            # secret keys, and more from the user's cache directory to the user's config directory.
+            # It maintains backward compatibility by migrating data from the cache directory 
+            # to the config directory.
             config_dir = user_config_dir(app_name, app_author)
 
             # Check if we need to migrate from cache to config directory
@@ -356,22 +359,18 @@ class Settings(BaseSettings):
 
             # If cache directory exists but config doesn't, we need to migrate
             if cache_path.exists() and not config_path.exists():
-                logger.info(f"Migrating data from cache directory {cache_path} to config directory {config_path}")
+                logger.debug(f"Migrating data from cache directory {cache_path} to config directory {config_path}")
                 try:
-                    # Create config directory
-                    config_path.mkdir(parents=True, exist_ok=True)
-
-                    # Copy all contents from cache to config
                     import shutil
 
+                    config_path.mkdir(parents=True, exist_ok=True)
                     for item in cache_path.iterdir():
                         if item.is_file():
                             shutil.copy2(item, config_path / item.name)
                         elif item.is_dir():
                             shutil.copytree(item, config_path / item.name, dirs_exist_ok=True)
-
-                    logger.info("Successfully migrated data to config directory")
-                except Exception as e:
+                    logger.debug("Successfully migrated data to config directory")
+                except Exception as e: # noqa: BLE001
                     logger.error(f"Failed to migrate data from cache to config directory: {e}")
                     # Fall back to cache directory if migration fails
                     value = cache_path
