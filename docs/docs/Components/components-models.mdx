@@ -5,29 +5,32 @@ slug: /components-models
 
 import Icon from "@site/src/components/icon";
 
-The Langflow **Language Model** core component generates text using the selected Large Language Model (LLM).
+Language model components in Langflow generate text using a specified Large Language Model (LLM).
 
-The **Language Model** core component supports many providers and models.
-It is appropriate for most text-based language model use cases in Langflow.
+Langflow includes a core **Language Model** component that has built-in support for many LLMs, as well as an interface to connect any [additional language model component](#additional-language-model-components).
+The built-in LLMs are appropriate for most text-based language model use cases in Langflow.
 
-If your provider or model isn't supported by the core **Language Model** component, additional single-provider language model components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+## Use language model components in a flow
 
-## Use the Language Model component in a flow
+Use language model components anywhere you would use an LLM in a flow.
 
-Use a **Language Model** component anywhere you would use an LLM in a flow.
-
-The component accepts inputs and prompts, including chat messages, files, formatting instructions, and rules, and then generates a text response.
+These components accept inputs like chat messages, files, and instructions in order to generate a text response.
 The flow must include [**Chat Input/Output** component](/components-io#chat-io) to allow chat-based interactions with the LLM.
-However, you can also use the **Language Model** component for actions requiring an LLM without chat, such as generating text that is processed by another component or triggers another flow before a final response is returned to the user.
+However, you can also use the **Language Model** component for actions that don't emit chat output directly, such as the **Smart Function** component.
 
-The following example uses an OpenAI model to create a chatbot flow similar to the [**Basic Prompting** template](/basic-prompting):
+The following example uses the core **Language Model** component and a built-in LLM to create a chatbot flow similar to the [**Basic Prompting** template](/basic-prompting).
+The example focuses on using the built-in models, but it also indicates where you can integrate another model.
 
 1. Add the **Language Model** component to your flow.
 
 2. In the **OpenAI API Key** field, enter your OpenAI API key.
 
+    This example uses the default OpenAI model and a built-in Anthropic model to compare responses from different providers.
+
     If you want to use a different provider, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
-    However, these steps use the default OpenAI model specifically as an example to compare response from different providers.
+
+    If you want to use provider or model that isn't built-in to the **Language Model** component, see [Additional language model components](#additional-language-model-components) to learn how to connect a **Custom** model provider to the **Language Model** component.
+    Then, you can continue following these steps to build your flow.
 
 3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, and then click **Close**.
 
@@ -115,3 +118,21 @@ This is a specific data type that is only required by certain components, such a
 ## Additional language model components
 
 If your provider or model isn't supported by the core **Language Model** component, additional single-provider language model components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+
+You can use bundled components directly in your flows or you can connect them to other components that accept a [`LanguageModel`](/data-types#languagemodel) input, such as the **Language Model** and **Agent** components.
+
+For example, to connect bundled components to the core **Language Model** component, do the following:
+
+1. In the **Language Model** component, set **Model Provider** to **Custom**.
+
+    The field name changes to **Language Model** and the input port changes to a `LanguageModel` port.
+
+2. Add a compatible bundled component to your flow, such as the [**Vertex AI** component for text generation](/bundles-vertexai).
+
+3. Change the bundled component's output type to `LanguageModel`.
+To do this, click **Model Response** near the component's output port, and then select **Language Model**.
+For more information, see [Language Model output types](#language-model-output-types).
+
+4. Connect the bundled component's output to the **Language Model** component's `LanguageModel` input port.
+
+    The bundled component now provides the LLM configuration for the component that it is connected to, and you can continue building your flow as needed.

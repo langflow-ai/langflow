@@ -15,15 +15,73 @@ Many bundled components are developed by third-party contributors to the Langflo
 Some providers contribute documentation with their bundles, whereas others document their bundles in their own documentation.
 Some bundles have no documentation.
 
+To find documentation for a specific bundled component, browse the Langflow docs and your provider's documentation.
+If available, you can also find links to relevant documentation, such as API endpoints, through the component itself:
+
+1. Click the component to expose the [component's header menu](/concepts-components#component-menus).
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**.
+3. Select **Docs**.
+
 The Langflow documentation focuses on using bundles within flows.
 For that reason, it focuses on the Langflow-specific configuration steps for bundled components.
 For information about provider-specific features or APIs, see the provider's documentation.
 
-## Use both core components and bundles
+## Component parameters
 
-Some core components don't require you to use a specific provider.
-Other core components support multiple third-party providers.
+Some component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in each [component's header menu](/concepts-components#component-menus).
+
+## Core components and bundles
+
+:::tip
+The Langflow documentation doesn't list all bundles or components in bundles.
+For the most accurate and up-to-date list of bundles and components for your version of Langflow, check the **Components** menu in Langflow.
+
+If you can't find a component that you used in an earlier version of Langflow, it may have been removed or marked as a [legacy component](#legacy-components).
+:::
+
+Langflow offers core components in addition to third-party, provider-specific bundles.
+
+Core components are meant to support a wide range of use cases and are typically not tied to a specific provider.
+Exceptions include the [**Embedding Model** core component](/components-embedding-models), [**Language Model** core component](/components-models), and most [vector store core components](/components-vector-stores), which are integrated with several providers.
 
 If you are looking for a specific service or integration, try searching the **Components** menu or browsing both the core components and bundles.
 
 If all else fails, you can always create your own [custom components](/components-custom-components).
+
+## Legacy components
+
+Legacy components are no longer maintained and can be removed in a future release.
+
+You can still use them in your flows, but you should replace them with non-legacy components as soon as possible.
+Components marked `[DEPRECATED]` should be replaced immediately.
+
+In the **Components** menu, you must enable the **Legacy components** toggle to view legacy components.
+
+## See also
+
+* [LangWatch observability and evaluation](/integrations-langwatch)
+
+
+
+<!-- Not documented but in Langflow as of 1.5.11 -->
+<!--
+* AgentQL
+* Confluence
+* Firecrawl
+* Git
+* Home Assistant
+* Jigsawstack
+* LangWatch (Mentioned on integrations-langwatch.mdx)
+* Needle
+* Not Diamond
+* Olivya
+* Scrape Graph AI
+* SerpApi (Mentioned on components-tools.mdx)
+* Tavily (Mentioned on components-tools.mdx)
+* Twelve Labs (Mentioned on concepts-file-management.mdx and components-data.mdx)
+* Unstructured
+* WolframAlpha
+* yfinance/Yahoo! Search (Mentioned on components-tools.mdx)
+* YouTube (Mentioned on concepts-file-management.mdx and components-data.mdx)
+-->

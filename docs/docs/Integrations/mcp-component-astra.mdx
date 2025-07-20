@@ -15,44 +15,54 @@ Use the [MCP Tools component](/mcp-client) to connect Langflow to a [Datastax As
 
 3. Create an [Astra DB Serverless (Vector) database](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html#create-vector-database), if you don't already have one.
 
-4. Get your database's **Astra DB API endpoint** and an **Astra DB application token** with the Database Administrator role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
+4. Get your database's Astra DB API endpoint and an Astra application token with the **Database Administrator** role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
 
-5. Create a [Simple agent starter project](/simple-agent) if you want to follow along with this guide. Otherwise, you can use an existing flow or create a new, blank flow.
+5. To follow along with this guide, create a flow based on the [**Simple Agent** template](/simple-agent).
 
-6. Remove the **URL** tool, and then replace it with an [MCP Tools component](/mcp-client).
-The flow should look like this:
+    You can also use an existing flow or create a blank flow.
 
-    ![MCP Tools component connecting to Astra](/img/component-mcp-astra-db.png)
+6. Remove the **URL** tool, and then replace it with an [**MCP Tools** component](/mcp-client).
 
-7. In the **MCP Tools** component, in the **MCP server** field, add the following code to connect to an Astra DB MCP server:
+7. Configure the **MCP Tools** component as follows:
 
-    ```bash
-    npx -y @datastax/astra-db-mcp
-    ```
+    1. Select **Stdio** mode.
+    2. In the **MCP server** field, add the following code to connect to an Astra DB MCP server:
 
-8. In the **MCP Tools** component, in the **Env** fields, add variables for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` with the values from your Astra database.
+        ```bash
+        npx -y @datastax/astra-db-mcp
+        ```
 
-    :::important
-    Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
-    To add the values for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` as global variables, add them to Langflow's `.env` file at startup.
-    For more information, see [global variables](/configuration-global-variables).
-    :::
+    3. In the **Env** fields, add variables for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` with the values from your Astra database.
 
-    ```bash
-    ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
-    ```
+        :::important
+        Environment variables declared in your Langflow `.env` file can be referenced in your MCP server commands, but you cannot reference global variables declared in Langflow.
 
-9. To add another variable, click <Icon name="Plus" aria-hidden="true"/> **Add More**.
+        If you want to use variables for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT`, add them to Langflow's `.env` file, and then restart Langflow.
+        For more information, see [global variables](/configuration-global-variables).
+        :::
 
-    ```bash
-    ASTRA_DB_API_ENDPOINT=https://...-us-east-2.apps.astra.datastax.com
-    ```
+        Add each variable separately.
+        To add another variable field click <Icon name="Plus" aria-hidden="true"/> **Add More**.
+
+        ```bash
+        ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
+        ```
+
+        ```bash
+        ASTRA_DB_API_ENDPOINT=https://...-us-east-2.apps.astra.datastax.com
+        ```
 
 10. In the **Agent** component, add your **OpenAI API key**.
 
+    The default model is an OpenAI model.
+    If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+    ![The Simple Agent flow with the URL tool replaced by an MCP Tools component, and the MCP Tools component launching an Astra DB MCP server](/img/component-mcp-astra-db.png)
+
 11. Open the **Playground**, and then ask the agent, `What collections are available?`
 
-    Since Langflow is connected to your Astra DB database through the MCP, the agent chooses the correct tool and connects to your database to retrieve the answer.
+    Since Langflow is connected to your Astra DB database through the MCP server, the agent chooses the correct tool and connects to your database to retrieve the answer.
+    For example:
 
     ```text
     The available collections in your database are:

@@ -9,50 +9,35 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **Wikipedia** bundle.
 
-## Wikidata
+:::tip
+Wikipedia components are useful [tools for agents](/agents-tools) that need reliable sources for information retrieval, such as tutoring chatbots or generic research assistants.
 
-This component performs a search using the Wikidata API.
+Rather than broad internet searches or recall from internal model data, these components provide specific data returned from Wikipedia API requests.
+:::
 
-<details>
-<summary>Parameters</summary>
+## Wikidata API
 
-**Inputs**
+This component performs a similarity search using the [Wikidata API](https://www.wikidata.org/wiki/Wikidata:REST_API).
 
-| Name | Type | Description |
-|------|------|-------------|
-| query | String | The text query for similarity search on Wikidata. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| data | List[Data] | The search results from Wikidata API as a list of Data objects. |
-| text | Message | The search results formatted as a text message. |
-
-</details>
+It accepts a string text query, and it outputs a [`DataFrame`](/data-types#dataframe) containing the search results.
 
 ## Wikipedia API
 
-This component creates a tool for searching and retrieving information from Wikipedia.
+This component searches and retrieves information from Wikipedia with the [WikiMedia API](https://www.mediawiki.org/wiki/API:Main_page) search endpoints, and then outputs the response as a [`DataFrame`](/data-types#dataframe).
 
-<details>
-<summary>Parameters</summary>
+### Wikipedia API parameters
 
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| input_value | String | The search query input. |
-| lang | String | The language code for Wikipedia. Default: `en`. |
-| k | Integer | The number of results to return. |
-| load_all_available_meta | Boolean | Whether to load all available metadata. |
-| doc_content_chars_max | Integer | The maximum number of characters for document content. |
-
-**Outputs**
+Some **Wikipedia API** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| results | List[Data] | A list of Wikipedia search results. |
-| tool | Tool | A Wikipedia search tool for use in LangChain. |
+| input_value | String | Input parameter. The search query input. |
+| lang | String | Input parameter. The language code for Wikipedia. Default: `en`. |
+| k | Integer | Input parameter. The number of results to return. |
+| load_all_available_meta | Boolean | Input parameter. Whether to load all available metadata. |
+| doc_content_chars_max | Integer | Input parameter. The maximum number of characters for document content. |
 
-</details>
+## See also
+
+* [**API Request** component](/components-data#api-request)

@@ -3,15 +3,10 @@ title: Memory management options
 slug: /memory
 ---
 
-Langflow provides flexible memory management options for storage and retrieval.
+Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
+This includes essential Langflow database tables, file management, and caching, as well as chat memory.
 
-This page details the following memory configuration options in Langflow.
-
-- [Local Langflow database tables](#local-langflow-database-tables)
-- [Store messages in local memory](#store-messages-in-local-memory)
-- [Configure external memory](#configure-external-memory)
-- [Configure the external database connection](#configure-the-external-database-connection)
-- [Configure cache memory](#configure-cache-memory)
+Langflow supports both local memory and external memory options.
 
 ## Local Langflow database tables
 
@@ -41,18 +36,16 @@ The following tables are stored in `langflow.db`:
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
-## Store messages in local memory
+## Store chat memory
 
-To store and retrieve messages in local Langflow memory, add a [Message history](/components-helpers#message-history) component to your flow.
+To store and retrieve messages in local Langflow memory, use **Message History** components in your flow.
 
-To store or retrieve chat messages from external memory, connect the **External memory** port of the **Message history** component to a **Memory** component.
-An example flow looks like this:
+To store or retrieve chat messages from external memory, use both **Message History** and third-party chat memory components in your flow.
+If external storage is connected to the **Message History** component, then no chat messages are stored in local Langflow memory.
+
+For more information and examples, see the [**Message History** component](/components-helpers#message-history) reference and [**Memory chatbot** template](/memory-chatbot).
 
 ![Sample Flow storing Chat Memory in Redit](/img/component-message-history-external-memory.png)
-
-If external storage is connected to a memory helper component, no chat messages are stored in local Langflow memory.
-
-For an example of using local chat memory, see the [Memory chatbot](/memory-chatbot) starter flow.
 
 ## Configure external memory
 
@@ -91,3 +84,7 @@ LANGFLOW_CACHE_TYPE=Async
 
 Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
 The default behavior is suitable for most use cases.
+
+## See also
+
+* [Langflow file management](/concepts-file-management)

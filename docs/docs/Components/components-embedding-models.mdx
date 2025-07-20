@@ -5,28 +5,38 @@ slug: /components-embedding-models
 
 import Icon from "@site/src/components/icon";
 
-The Langflow **Embedding Model** core component generates text embeddings using the selected Large Language Model (LLM).
+Embedding model components in Langflow generate text embeddings using a specified Large Language Model (LLM).
 
-The **Embedding Model** core component supports many providers and models.
-It is appropriate for most text-based embedding model use cases in Langflow.
+Langflow includes a core **Embedding Model** component that has built-in support for some LLMs.
+Alternatively, you can use any [additional embedding model component](#additional-embedding-model-components) in place of the core **Embedding Model** component.
 
-If your provider or model isn't supported by the core **Embedding Model** component, additional single-provider embedding model components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+The built-in LLMs are appropriate for most text-based embedding model use cases in Langflow.
 
-## Use the Embedding Model component in a flow
+## Use embedding model components in a flow
 
-This example shows how to use the **Embedding Model** component in a flow by creating a semantic search system.
+Use embedding model components anywhere you need to generate embeddings in a flow.
+
+This example shows how to use an embedding model component in a flow to create a semantic search system.
 This flow loads a text file, splits the text into chunks, generates embeddings for each chunk, and then loads the chunks and embeddings into a vector store. The input and output components allow a user to query the vector store through a chat interface.
 
 ![A semantic search flow that uses Embedding Model, File, Split Text, Chroma DB, Chat Input, and Chat Output components](/img/component-embedding-models-add-chat.png)
+
+:::tip
+This example uses the core **Embedding Model** component.
+
+To use another model, you can replace the core **Embedding Model** component with any [additional embedding model component](#additional-embedding-model-components) in these steps.
+However, your component might have slightly different parameters than the core **Embedding Model** component.
+:::
 
 1. Create a flow, add a **File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
 
 2. Add an **Embedding Model** component, and then provide a valid OpenAI API key.
 
     By default, the **Embedding Model** component uses an OpenAI model.
-    If you want to use a different provider or model, edit the **Provider**, **Model**, and **API Key** fields accordingly.
+    If you want to use a different model, edit the **Model Name**, and **API Key** fields accordingly.
+    Or, see [Additional embedding model components](#additional-embedding-model-components) for other embedding model components that you can use in place of the core **Embedding Model** component.
 
-    You can enter the API key directly or select a Langflow global variable that references your API key.
+    You can enter component API keys directly or use Langflow global variables to reference your API keys.
 
 3. Add a [**Split Text** component](/components-processing#split-text) to your flow.
 This component splits text input into smaller chunks to be processed into embeddings.
