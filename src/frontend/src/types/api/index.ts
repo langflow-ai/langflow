@@ -1,12 +1,11 @@
-import {
+import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { Edge, Node, Viewport } from "reactflow";
-import { ChatInputType, ChatOutputType } from "../chat";
-import { FlowType } from "../flow";
+import type { ChatInputType, ChatOutputType } from "../chat";
+import type { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
@@ -43,6 +42,7 @@ export type APIClassType = {
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
   beta?: boolean;
+  legacy?: boolean;
   documentation: string;
   error?: string;
   official?: boolean;
@@ -51,6 +51,9 @@ export type APIClassType = {
   lf_version?: string;
   flow?: FlowType;
   field_order?: string[];
+  tool_mode?: boolean;
+  type?: string;
+  last_updated?: string;
   [key: string]:
     | Array<string>
     | string
@@ -83,9 +86,13 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
+  options?: string[];
+  active_tab?: number;
   [key: string]: any;
   icon?: string;
   text?: string;
+  temp_file?: boolean;
+  separator?: string;
 };
 
 export type OutputFieldProxyType = {
@@ -98,19 +105,13 @@ export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
+  group_outputs?: boolean;
+  method?: string;
   display_name: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
-};
-export type sendAllProps = {
-  nodes: Node[];
-  edges: Edge[];
-  name: string;
-  description: string;
-  viewport: Viewport;
-  inputs: { text?: string };
-  chatKey: string;
-  chatHistory: { message: string | object; isSend: boolean }[];
+  allows_loop?: boolean;
+  options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {
   function: { errors: Array<string> };
@@ -159,6 +160,12 @@ export type changeUser = {
   is_superuser?: boolean;
   password?: string;
   profile_image?: string;
+  optins?: {
+    github_starred?: boolean;
+    discord_clicked?: boolean;
+    dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
+  };
 };
 
 export type resetPasswordType = {
@@ -174,6 +181,12 @@ export type Users = {
   profile_image: string;
   create_at: Date;
   updated_at: Date;
+  optins?: {
+    github_starred?: boolean;
+    discord_clicked?: boolean;
+    dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
+  };
 };
 
 export type Component = {
@@ -248,13 +261,17 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
-export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+export type useQueryFunctionType<
+  T = undefined,
+  R = any,
+  O = {},
+> = T extends undefined
   ? (
-      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey"> & O,
     ) => UseQueryResult<R>
   : (
       params: T,
-      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey"> & O,
     ) => UseQueryResult<R>;
 
 export type QueryFunctionType = (
@@ -288,3 +305,46 @@ export type useMutationFunctionType<
         "mutationFn" | "mutationKey"
       >,
     ) => UseMutationResult<Data, Error, Variables>;
+
+export type FieldValidatorType =
+  | "no_spaces"
+  | "lowercase"
+  | "uppercase"
+  | "email"
+  | "url"
+  | "alphanumeric"
+  | "numeric"
+  | "alpha"
+  | "phone"
+  | "slug"
+  | "username"
+  | "password";
+
+export type FieldParserType =
+  | "snake_case"
+  | "camel_case"
+  | "pascal_case"
+  | "kebab_case"
+  | "lowercase"
+  | "uppercase"
+  | "no_blank"
+  | "valid_csv"
+  | "space_case"
+  | "commands"
+  | "sanitize_mcp_name";
+
+export type TableOptionsTypeAPI = {
+  block_add?: boolean;
+  block_delete?: boolean;
+  block_edit?: boolean;
+  block_sort?: boolean;
+  block_filter?: boolean;
+  block_hide?: boolean | string[];
+  block_select?: boolean;
+  hide_options?: boolean;
+  field_validators?: Array<
+    FieldValidatorType | { [key: string]: FieldValidatorType }
+  >;
+  field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
+  description?: string;
+};

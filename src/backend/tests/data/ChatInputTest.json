@@ -903,7 +903,7 @@
                     "stroke": "#555"
                 },
                 "className": "stroke-foreground  stroke-connection",
-                "animated": true,
+                "animated": false,
                 "id": "reactflow__edge-LLMChain-e2dhNLLMChain|LLMChain-e2dhN|Chain|LLMChain|function|Text-ChatOutput-1jlJyText|message|ChatOutput-1jlJy"
             }
         ],

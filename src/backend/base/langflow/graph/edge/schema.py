@@ -6,6 +6,39 @@ from typing_extensions import TypedDict
 from langflow.helpers.base_model import BaseModel
 
 
+class SourceHandleDict(TypedDict, total=False):
+    baseClasses: list[str]
+    dataType: str
+    id: str
+    name: str | None
+    output_types: list[str]
+
+
+class TargetHandleDict(TypedDict):
+    fieldName: str
+    id: str
+    inputTypes: list[str] | None
+    type: str
+
+
+class LoopTargetHandleDict(TypedDict):
+    dataType: str
+    id: str
+    name: str
+    output_types: list[str]
+
+
+class EdgeDataDetails(TypedDict):
+    sourceHandle: SourceHandleDict
+    targetHandle: TargetHandleDict | LoopTargetHandleDict
+
+
+class EdgeData(TypedDict, total=False):
+    source: str
+    target: str
+    data: EdgeDataDetails
+
+
 class ResultPair(BaseModel):
     result: Any
     extra: Any
@@ -45,7 +78,22 @@ class TargetHandle(BaseModel):
     input_types: list[str] = Field(
         default_factory=list, alias="inputTypes", description="List of input types for the target handle."
     )
-    type: str = Field(..., description="Type of the target handle.")
+    type: str = Field(None, description="Type of the target handle.")
+
+    @classmethod
+    def from_loop_target_handle(cls, target_handle: LoopTargetHandleDict) -> "TargetHandle":
+        # The target handle is a loop edge
+        # The target handle is a dict with the following keys:
+        # - name: str
+        # - id: str
+        # - inputTypes: list[str]
+        # - type: str
+        # It is built from an Output, which is why it has a different structure
+        return cls(
+            field_name=target_handle.get("name"),
+            id=target_handle.get("id"),
+            input_types=target_handle.get("output_types"),
+        )
 
 
 class SourceHandle(BaseModel):
@@ -60,37 +108,12 @@ class SourceHandle(BaseModel):
 
     @field_validator("name", mode="before")
     @classmethod
-    def validate_name(cls, v, _info):
-        if _info.data["data_type"] == "GroupNode":
+    def validate_name(cls, v, info):
+        if info.data["data_type"] == "GroupNode":
             # 'OpenAIModel-u4iGV_text_output'
             splits = v.split("_", 1)
-            if len(splits) != 2:
-                raise ValueError(f"Invalid source handle name {v}")
+            if len(splits) != 2:  # noqa: PLR2004
+                msg = f"Invalid source handle name {v}"
+                raise ValueError(msg)
             v = splits[1]
         return v
-
-
-class SourceHandleDict(TypedDict, total=False):
-    baseClasses: list[str]
-    dataType: str
-    id: str
-    name: str | None
-    output_types: list[str]
-
-
-class TargetHandleDict(TypedDict):
-    fieldName: str
-    id: str
-    inputTypes: list[str] | None
-    type: str
-
-
-class EdgeDataDetails(TypedDict):
-    sourceHandle: SourceHandleDict
-    targetHandle: TargetHandleDict
-
-
-class EdgeData(TypedDict, total=False):
-    source: str
-    target: str
-    data: EdgeDataDetails

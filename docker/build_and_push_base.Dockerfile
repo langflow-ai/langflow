@@ -1,60 +1,32 @@
-
-
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
-
-# Based on https://github.com/python-poetry/poetry/discussions/1879?sort=top#discussioncomment-216865
-# but I try to keep it updated (see history)
-
-################################
-# PYTHON-BASE
-# Sets up all our shared environment variables
-################################
-
-# use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
-FROM python:3.12.3-slim as python-base
-
-# python
-ENV PYTHONUNBUFFERED=1 \
-    # prevents python creating .pyc files
-    PYTHONDONTWRITEBYTECODE=1 \
-    \
-    # pip
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100 \
-    \
-    # poetry
-    # https://python-poetry.org/docs/configuration/#using-environment-variables
-    POETRY_VERSION=1.8.2 \
-    # make poetry install to this location
-    POETRY_HOME="/opt/poetry" \
-    # make poetry create the virtual environment in the project's root
-    # it gets named `.venv`
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
-    # do not ask any interactive question
-    POETRY_NO_INTERACTION=1 \
-    \
-    # paths
-    # this is where our requirements + virtual environment will live
-    PYSETUP_PATH="/opt/pysetup" \
-    VENV_PATH="/opt/pysetup/.venv"
-
-
-# prepend poetry and venv to path
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
 
 ################################
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
 ################################
-FROM python-base as builder-base
+
+# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+# 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
+# Use a Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+
+# Install the project into `/app`
+WORKDIR /app
+
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
+
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
-    # deps for installing poetry
-    curl \
     # deps for building python deps
     build-essential \
+    git \
     # npm
     npm \
     # gcc
@@ -62,40 +34,67 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN --mount=type=cache,target=/root/.cache \
-    curl -sSL https://install.python-poetry.org | python3 -
+# Install the project's dependencies using the lockfile and settings
+# We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
+    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
+    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=README.md,target=README.md \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable --extra postgresql
 
-# Now we need to copy the entire project into the image
-COPY pyproject.toml poetry.lock ./
-COPY src/frontend/package.json /tmp/package.json
-RUN cd /tmp && npm install
-WORKDIR /app
-COPY src/frontend ./src/frontend
-RUN rm -rf src/frontend/node_modules
-RUN cp -a /tmp/node_modules /app/src/frontend
-COPY scripts ./scripts
-COPY Makefile ./
-COPY README.md ./
-RUN cd src/frontend && npm run build
-COPY src/backend ./src/backend
-RUN cp -r src/frontend/build src/backend/base/langflow/frontend
-RUN rm -rf src/backend/base/dist
-RUN useradd -m -u 1000 user && \
-    mkdir -p /app/langflow && \
-    chown -R user:user /app && \
-    chmod -R u+w /app/langflow
+COPY ./src /app/src
 
-# Update PATH with home/user/.local/bin
-ENV PATH="/home/user/.local/bin:${PATH}"
-RUN cd src/backend/base && $POETRY_HOME/bin/poetry build
+COPY src/frontend /tmp/src/frontend
+WORKDIR /tmp/src/frontend
+RUN npm install \
+    && npm run build \
+    && cp -r build /app/src/backend/base/langflow/frontend \
+    && rm -rf /tmp/src/frontend
 
-# Copy virtual environment and built .tar.gz from builder base
+COPY ./src/backend/base /app/src/backend/base
+WORKDIR /app/src/backend/base
+# again we need these because of workspaces
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./uv.lock /app/uv.lock
+COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
+COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
+COPY ./src/backend/base/README.md /app/src/backend/base/README.md
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable --extra postgresql
+
+################################
+# RUNTIME
+# Setup user, utilities and copy the virtual environment only
+################################
+FROM python:3.12.3-slim AS runtime
+
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y git libpq5 curl gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+# and we use the venv at the root because workspaces
+COPY --from=builder --chown=1000 /app/.venv /app/.venv
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+
+LABEL org.opencontainers.image.title=langflow
+LABEL org.opencontainers.image.authors=['Langflow']
+LABEL org.opencontainers.image.licenses=MIT
+LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
+LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
 USER user
-# Install the package from the .tar.gz
-RUN python -m pip install /app/src/backend/base/dist/*.tar.gz --user
+WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 
-CMD ["python", "-m", "langflow", "run"]
+CMD ["langflow-base", "run"]

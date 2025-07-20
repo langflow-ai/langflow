@@ -1,126 +1,137 @@
-[tool.poetry]
+[project]
 name = "langflow-base"
-version = "0.0.96"
+version = "0.5.0.post1"
 description = "A Python package with a built-in web application"
-authors = ["Langflow <contact@langflow.org>"]
-maintainers = [
-    "Carlos Coelho <carlos@langflow.org>",
-    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
-    "Gabriel Almeida <gabriel@langflow.org>",
-    "Igor Carvalho <igorr.ackerman@gmail.com>",
-    "Lucas Eduoli <lucaseduoli@gmail.com>",
-    "Otávio Anovazzi <otavio2204@gmail.com>",
-    "Rodrigo Nader <rodrigo@langflow.org>",
-    "Italo dos Anjos <italojohnnydosanjos@gmail.com>",
-]
-repository = "https://github.com/langflow-ai/langflow"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
-readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
-packages = [{ include = "langflow" }, { include = "langflow/py.typed" }]
-include = ["pyproject.toml", "README.md", "langflow/**/*"]
-documentation = "https://docs.langflow.org"
+readme = "README.md"
+maintainers = [
+    { name = "Carlos Coelho", email = "carlos@langflow.org" },
+    { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
+    { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
+    { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
+    { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
+    { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
+    { name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com" },
+]
+
+dependencies = [
+    "fastapi>=0.115.2,<1.0.0",
+    "httpx[http2]>=0.27,<1.0.0",
+    "aiofile>=3.9.0,<4.0.0",
+    "uvicorn>=0.30.0,<1.0.0",
+    "gunicorn>=22.0.0,<24.0.0",
+    "langchain~=0.3.21",
+    "langchain-community~=0.3.20",
+    "langchain-core~=0.3.45",
+    "langchainhub~=0.1.15",
+    "loguru>=0.7.1,<1.0.0",
+    "rich>=13.7.0,<14.0.0",
+    "langchain-experimental>=0.3.4,<1.0.0",
+    "sqlmodel==0.0.22",
+    "pydantic~=2.10.1",
+    "pydantic-settings>=2.2.0,<3.0.0",
+    "typer>=0.13.0,<1.0.0",
+    "cachetools>=5.5.0,<6.0.0",
+    "platformdirs>=4.2.0,<5.0.0",
+    "python-multipart>=0.0.12,<1.0.0",
+    "orjson==3.10.15",
+    "alembic>=1.13.0,<2.0.0",
+    "passlib>=1.7.4,<2.0.0",
+    "bcrypt==4.0.1",
+    "pillow>=11.1.0,<12.0.0",
+    "docstring-parser>=0.16,<1.0.0",
+    "python-jose>=3.3.0,<4.0.0",
+    "pandas==2.2.3",
+    "multiprocess>=0.70.14,<1.0.0",
+    "duckdb>=1.0.0,<2.0.0",
+    "python-docx>=1.1.0,<2.0.0",
+    "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
+    "nest-asyncio>=1.6.0,<2.0.0",
+    "emoji>=2.12.0,<3.0.0",
+    "cryptography>=42.0.5,<44.0.0",
+    "asyncer>=0.0.5,<1.0.0",
+    "pyperclip>=1.8.2,<2.0.0",
+    "uncurl>=0.0.11,<1.0.0",
+    "sentry-sdk[fastapi,loguru]>=2.5.1,<3.0.0",
+    "chardet>=5.2.0,<6.0.0",
+    "firecrawl-py>=1.0.16,<2.0.0",
+    "opentelemetry-api>=1.25.0,<2.0.0",
+    "opentelemetry-sdk>=1.25.0,<2.0.0",
+    "opentelemetry-exporter-prometheus>=0.46b0,<1.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
+    "prometheus-client>=0.20.0,<1.0.0",
+    "aiofiles>=24.1.0,<25.0.0",
+    "setuptools>=78.1.0,<79.0.0",
+    "nanoid>=2.0.0,<3.0.0",
+    "filelock>=3.15.4,<4.0.0",
+    "grandalf>=0.8.0,<1.0.0",
+    "spider-client>=0.0.27,<1.0.0",
+    "diskcache>=5.6.3,<6.0.0",
+    "clickhouse-connect==0.7.19",
+    "assemblyai>=0.33.0,<1.0.0",
+    "fastapi-pagination>=0.13.1,<1.0.0",
+    "defusedxml>=0.7.1,<1.0.0",
+    "pypdf~=5.1.0",
+    "validators>=0.34.0",
+    "networkx>=3.4.2",
+    "json-repair>=0.30.3",
+    "mcp~=1.10.1",
+    "aiosqlite>=0.20.0",
+    "greenlet>=3.1.1",
+    "jsonquerylang>=1.1.1",
+    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    'elevenlabs==1.58.1; python_version == "3.12"',
+    'elevenlabs>=1.52.0; python_version != "3.12"',
+    "scipy>=1.15.2",
+    "ibm-watsonx-ai>=1.3.1",
+    "langchain-ibm>=0.3.8",
+    "trustcall>=0.0.38",
+]
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
+    "pytest-github-actions-annotate-failures>=0.2.0",
+    "types-aiofiles>=24.1.0.20240626",
+    "types-redis>=4.6.0.5",
+    "ipykernel>=6.29.0",
+    "mypy>=1.11.0",
+    "ruff>=0.6.2",
+    "httpx[http2]>=0.27",
+    "pytest>=8.2.0",
+    "types-requests>=2.32.0",
+    "requests>=2.32.0",
+    "pytest-cov>=5.0.0",
+    "pandas-stubs>=2.1.4.231227",
+    "types-pillow>=10.2.0.20240213",
+    "types-pyyaml>=6.0.12.8",
+    "types-python-jose>=3.3.4.8",
+    "types-passlib>=1.7.7.13",
+    "pytest-mock>=3.14.0",
+    "pytest-xdist>=3.6.0",
+    "types-pywin32>=306.0.0.4",
+    "types-google-cloud-ndb>=2.2.0.0",
+    "pytest-sugar>=1.0.0",
+    "respx>=0.21.1",
+    "pytest-instafail>=0.5.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-profiling>=1.7.0",
+    "pre-commit>=3.7.0",
+    "vulture>=2.11",
+    "dictdiffer>=0.9.0",
+    "pytest-split>=0.9.0",
+    "devtools>=0.12.2",
+    "pytest-flakefinder>=1.1.0",
+    "types-markdown>=3.7.0.20240822",
+    "codeflash>=0.8.4"
+
+]
 
 
-[tool.poetry.scripts]
-langflow-base = "langflow.__main__:main"
-
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-fastapi = "^0.111.0"
-httpx = "*"
-uvicorn = "^0.30.0"
-gunicorn = "^22.0.0"
-langchain = "~0.2.0"
-langchain-core = "^0.2.32"
-langchainhub = "~0.1.15"
-sqlmodel = "^0.0.18"
-loguru = "^0.7.1"
-rich = "^13.7.0"
-langchain-experimental = "^0.0.61"
-pydantic = "^2.7.0"
-pydantic-settings = "^2.2.0"
-websockets = "*"
-typer = "^0.12.0"
-cachetools = "^5.3.1"
-platformdirs = "^4.2.0"
-python-multipart = "^0.0.7"
-orjson = "3.10.0"
-alembic = "^1.13.0"
-passlib = "^1.7.4"
-bcrypt = "4.0.1"
-pillow = "^10.2.0"
-docstring-parser = "^0.16"
-python-jose = "^3.3.0"
-pandas = "2.2.2"
-multiprocess = "^0.70.14"
-duckdb = "^1.0.0"
-python-docx = "^1.1.0"
-jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
-pypdf = "^4.2.0"
-nest-asyncio = "^1.6.0"
-emoji = "^2.12.0"
-cryptography = ">=42.0.5,<44.0.0"
-asyncer = "^0.0.5"
-pyperclip = "^1.8.2"
-uncurl = "^0.0.11"
-sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
-chardet = "^5.2.0"
-firecrawl-py = "^0.0.16"
-opentelemetry-api = "^1.25.0"
-opentelemetry-sdk = "^1.25.0"
-opentelemetry-exporter-prometheus = "^0.46b0"
-opentelemetry-instrumentation-fastapi = "^0.46b0"
-prometheus-client = "^0.20.0"
-aiofiles = "^24.1.0"
-setuptools = ">=70"
-nanoid = "^2.0.0"
-filelock = "^3.15.4"
-grandalf = "^0.8.0"
-crewai = "^0.36.0"
-spider-client = "^0.0.27"
-diskcache = "^5.6.3"
-clickhouse-connect = "0.7.19"
-
-
-[tool.poetry.extras]
-deploy = ["celery", "redis", "flower"]
-local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
-all = ["deploy", "local"]
-
-
-
-[tool.poetry.group.dev.dependencies]
-types-redis = "^4.6.0.5"
-ipykernel = "^6.29.0"
-mypy = "^1.11.0"
-ruff = "^0.4.5"
-httpx = "*"
-pytest = "^8.2.0"
-types-requests = "^2.32.0"
-requests = "^2.32.0"
-pytest-cov = "^5.0.0"
-pandas-stubs = "^2.1.4.231227"
-types-pillow = "^10.2.0.20240213"
-types-pyyaml = "^6.0.12.8"
-types-python-jose = "^3.3.4.8"
-types-passlib = "^1.7.7.13"
-pytest-mock = "^3.14.0"
-pytest-xdist = "^3.6.0"
-types-pywin32 = "^306.0.0.4"
-types-google-cloud-ndb = "^2.2.0.0"
-pytest-sugar = "^1.0.0"
-respx = "^0.21.1"
-pytest-instafail = "^0.5.0"
-pytest-asyncio = "^0.23.0"
-pytest-profiling = "^1.7.0"
-pre-commit = "^3.7.0"
-vulture = "^2.11"
-dictdiffer = "^0.9.0"
-pytest-split = "^0.9.0"
-devtools = "^0.12.2"
-pytest-flakefinder = "^1.1.0"
-types-markdown = "^3.7.0.20240822"
+[tool.hatch.build.targets.wheel]
+packages = ["langflow"]
 
 
 [tool.pytest.ini_options]
@@ -131,6 +142,8 @@ console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
 markers = ["async_test"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
@@ -141,9 +154,102 @@ mypy_path = "langflow"
 ignore_missing_imports = true
 
 [tool.ruff]
-exclude = ["src/backend/langflow/alembic/*"]
+target-version = "py310"
+exclude = ["langflow/alembic/versions"]
 line-length = 120
 
+[tool.ruff.lint]
+flake8-annotations.mypy-init-return = true
+flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "typer.Option",
+]
+flake8-type-checking.runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "typing.TypedDict", # Needed by fastapi
+    "typing_extensions.TypedDict", # Needed by fastapi
+]
+pydocstyle.convention = "google"
+select = ["ALL"]
+ignore = [
+    "C90", # McCabe complexity
+    "CPY", # Missing copyright
+    "COM812", # Messes with the formatter
+    "ERA", # Eradicate commented-out code
+    "FIX002", # Line contains TODO
+    "ISC001", # Messes with the formatter
+    "PERF203", # Rarely useful
+    "PLR09", # Too many something (arg, statements, etc)
+    "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
+    "TD002", # Missing author in TODO
+    "TD003", # Missing issue link in TODO
+    "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
+
+    # Rules that are TODOs
+    "ANN", # Missing type annotations
+    "D1", # Missing docstrings
+    "SLF001", # Using private attributes outside of class
+]
+
+[tool.ruff.lint.per-file-ignores]
+"langflow/api/v1/*" = [
+    "TCH", # FastAPI needs to evaluate types at runtime
+]
+"langflow/api/v2/*" = [
+    "TCH", # FastAPI needs to evaluate types at runtime
+]
+"langflow/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [
+    "S102", # Use of exec
+]
+"langflow/services/cache/*" = [
+    "S301", # Use of pickle
+]
+
+[tool.codeflash]
+# All paths are relative to this pyproject.toml's directory.
+module-root = "langflow"
+tests-root = "../tests/unit"
+test-framework = "pytest"
+ignore-paths = ["langflow/components/"]
+formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
+#disable plugins that might interfere with runtime measurement
+pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+
+
+
+[project.urls]
+Repository = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org"
+
+# Optional dependencies for uv
+[project.optional-dependencies]
+audio = [
+    "webrtcvad>=2.0.10",
+]
+
+postgresql = [
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
+
+local = [
+    "llama-cpp-python>=0.2.0",
+    "sentence-transformers>=2.0.0",
+    "ctransformers>=0.2"
+]
+all = [
+    "llama-cpp-python>=0.2.0",
+    "sentence-transformers>=2.0.0",
+    "ctransformers>=0.2"
+]
+
+[project.scripts]
+langflow-base = "langflow.__main__:main"

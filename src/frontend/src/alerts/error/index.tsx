@@ -1,7 +1,9 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import { ErrorAlertType } from "../../types/alerts";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import IconComponent from "../../components/common/genericIconComponent";
+import type { ErrorAlertType } from "../../types/alerts";
 
 export default function ErrorAlert({
   title,
@@ -23,7 +25,6 @@ export default function ErrorAlert({
 
   return (
     <Transition
-      className="relative"
       show={show}
       appear={true}
       enter="transition-transform duration-500 ease-out"
@@ -54,11 +55,38 @@ export default function ErrorAlert({
             <h3 className="error-build-foreground line-clamp-2">{title}</h3>
             {list?.length !== 0 &&
             list?.some((item) => item !== null && item !== undefined) ? (
-              <div className="error-build-message-div">
-                <ul className="error-build-message-list">
+              <div className="mt-2 text-sm text-error-foreground">
+                <ul className="list-disc space-y-1 pl-5 align-top">
                   {list.map((item, index) => (
-                    <li key={index} className="line-clamp-5">
-                      {item}
+                    <li key={index} className="word-break-break-word">
+                      <span className="">
+                        <Markdown
+                          linkTarget="_blank"
+                          remarkPlugins={[remarkGfm]}
+                          className="align-text-top"
+                          components={{
+                            a: ({ node, ...props }) => (
+                              <a
+                                href={props.href}
+                                target="_blank"
+                                className="underline"
+                                rel="noopener noreferrer"
+                              >
+                                {props.children}
+                              </a>
+                            ),
+                            p({ node, ...props }) {
+                              return (
+                                <span className="inline-block w-fit max-w-full align-text-top truncate-multiline">
+                                  {props.children}
+                                </span>
+                              );
+                            },
+                          }}
+                        >
+                          {Array.isArray(item) ? item.join("\n") : item}
+                        </Markdown>
+                      </span>
                     </li>
                   ))}
                 </ul>

@@ -1,20 +1,29 @@
-FROM python:3.12-bookworm
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 ENV TZ=UTC
 
 WORKDIR /app
 
-RUN apt update -y
-RUN apt install \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y \
     build-essential \
     curl \
     npm \
-    -y
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . /app
 
-RUN pip install poetry
-RUN poetry config virtualenvs.create false
-RUN poetry install --no-interaction --no-ansi
+# Install dependencies using uv
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=README.md,target=README.md \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
+    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
+    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev --extra postgresql
 
 EXPOSE 7860
 EXPOSE 3000

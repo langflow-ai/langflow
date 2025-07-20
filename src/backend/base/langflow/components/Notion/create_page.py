@@ -1,12 +1,14 @@
 import json
-from typing import Dict, Any, Union
+from typing import Any
+
 import requests
-from pydantic import BaseModel, Field
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionPageCreator(LCToolComponent):
@@ -43,29 +45,29 @@ class NotionPageCreator(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the created page data
-            output = "Created page properties:\n"
-            for prop_name, prop_value in result.get("properties", {}).items():
-                output += f"{prop_name}: {prop_value}\n"
-            return Data(text=output, data=result)
+        # Success, return the created page data
+        output = "Created page properties:\n"
+        for prop_name, prop_value in result.get("properties", {}).items():
+            output += f"{prop_name}: {prop_value}\n"
+        return Data(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="create_notion_page",
-            description="Create a new page in a Notion database. IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
+            description="Create a new page in a Notion database. "
+            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
             func=self._create_notion_page,
             args_schema=self.NotionPageCreatorSchema,
         )
 
-    def _create_notion_page(self, database_id: str, properties_json: str) -> Union[Dict[str, Any], str]:
+    def _create_notion_page(self, database_id: str, properties_json: str) -> dict[str, Any] | str:
         if not database_id or not properties_json:
             return "Invalid input. Please provide 'database_id' and 'properties_json'."
 
         try:
             properties = json.loads(properties_json)
         except json.JSONDecodeError as e:
-            return f"Invalid properties format. Please provide a valid JSON string. Error: {str(e)}"
+            return f"Invalid properties format. Please provide a valid JSON string. Error: {e}"
 
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -79,12 +81,11 @@ class NotionPageCreator(LCToolComponent):
         }
 
         try:
-            response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data)
+            response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data, timeout=10)
             response.raise_for_status()
-            result = response.json()
-            return result
+            return response.json()
         except requests.exceptions.RequestException as e:
-            error_message = f"Failed to create Notion page. Error: {str(e)}"
+            error_message = f"Failed to create Notion page. Error: {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message

@@ -1,340 +1,87 @@
 import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("user must be able to freeze a component", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+test(
+  "user must be able to freeze a component",
+  { tag: ["@release", "@workspace", "@components"] },
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    const firstRunLangflow = await page
+      .getByTestId("empty-project-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await page.getByTestId("blank-flow").click();
 
-  await page.getByRole("heading", { name: "Blank Flow" }).click();
+    await addLegacyComponents(page);
 
-  //first component
-
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text input");
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("inputsText Input")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTitle("zoom out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-800, 300);
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
+      timeout: 1000,
     });
 
-  await page.mouse.up();
+    await page
+      .getByTestId("input_outputText Input")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
+      });
 
-  //second component
+    await page.getByTestId("textarea_str_input_value").fill("hello world");
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("url");
-  await page.waitForTimeout(1000);
+    await page.getByTestId("div-generic-node").getByRole("button").click();
 
-  await page
-    .getByTestId("dataURL")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTitle("zoom out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-800, 300);
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
+      timeout: 10000,
     });
 
-  await page.mouse.up();
+    await page.getByTestId("output-inspection-output text-textinput").click();
 
-  //third component
+    const firstOutputText = await page.getByPlaceholder("Empty").textContent();
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("split text");
-  await page.waitForTimeout(1000);
+    expect(firstOutputText).toBe("hello world");
 
-  await page
-    .getByTestId("helpersSplit Text")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.getByText("Close").last().click();
 
-  await page.getByTitle("zoom out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-800, 300);
+    await page.getByTestId("textarea_str_input_value").fill("goodbye world");
+
+    await page.getByTestId("div-generic-node").click();
+
+    await page.waitForSelector('[data-testid="freeze-all-button-modal"]', {
+      timeout: 1000,
     });
 
-  await page.mouse.up();
+    await page.getByTestId("freeze-all-button-modal").click();
 
-  //fourth component
-
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("parse data");
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("helpersParse Data")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTitle("zoom out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-800, 300);
+    await page.waitForSelector('[data-testid="icon-FreezeAll"]', {
+      timeout: 1000,
     });
 
-  await page.mouse.up();
+    await page.waitForTimeout(5000);
 
-  //fifth component
-
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("outputsChat Output")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTitle("zoom out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-800, 300);
+    await page.getByTestId("icon-FreezeAll").click();
+    await page.waitForSelector('[data-testid="frozen-icon"]', {
+      timeout: 20000,
     });
+    await expect(page.getByTestId("frozen-icon")).toBeVisible();
+    await page.keyboard.press("Escape");
 
-  await page.mouse.up();
+    await page.getByTestId("div-generic-node").getByRole("button").click();
 
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+    await page.waitForTimeout(5000);
 
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
+    await page.getByTestId("output-inspection-output text-textinput").click();
 
-  await page.getByTitle("fit view").click();
+    const secondOutputText = await page.getByPlaceholder("Empty").textContent();
 
-  //connection 1
-  const urlOutput = await page
-    .getByTestId("handle-url-shownode-data-right")
-    .nth(0);
-  await urlOutput.hover();
-  await page.mouse.down();
-  const splitTextInputData = await page.getByTestId(
-    "handle-splittext-shownode-data inputs-left",
-  );
-  await splitTextInputData.hover();
-  await page.mouse.up();
-
-  //connection 2
-  const textOutput = await page
-    .getByTestId("handle-textinput-shownode-text-right")
-    .nth(0);
-  await textOutput.hover();
-  await page.mouse.down();
-  const splitTextInput = await page.getByTestId(
-    "handle-splittext-shownode-separator-left",
-  );
-  await splitTextInput.hover();
-  await page.mouse.up();
-
-  await page.getByTitle("fit view").click();
-
-  //connection 3
-  const splitTextOutput = await page
-    .getByTestId("handle-splittext-shownode-chunks-right")
-    .nth(0);
-  await splitTextOutput.hover();
-  await page.mouse.down();
-  const parseDataInput = await page.getByTestId(
-    "handle-parsedata-shownode-data-left",
-  );
-  await parseDataInput.hover();
-  await page.mouse.up();
-
-  //connection 4
-  const parseDataOutput = await page
-    .getByTestId("handle-parsedata-shownode-text-right")
-    .nth(0);
-  await parseDataOutput.hover();
-  await page.mouse.down();
-  const chatOutputInput = await page.getByTestId(
-    "handle-chatoutput-shownode-text-left",
-  );
-  await chatOutputInput.hover();
-  await page.mouse.up();
-
-  await page.getByTitle("fit view").click();
-
-  await page
-    .getByTestId("textarea_str_input_value")
-    .first()
-    .fill("lorem ipsum");
-
-  await page
-    .getByTestId("inputlist_str_urls_0")
-    .fill("https://www.lipsum.com/");
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("output-inspection-message").first().click();
-
-  await page.getByRole("gridcell").first().click();
-
-  const firstRunWithoutFreezing = await page
-    .getByPlaceholder("Empty")
-    .textContent();
-
-  await page.getByText("Close").last().click();
-  await page.getByText("Close").last().click();
-
-  await page.getByTestId("textarea_str_input_value").first().fill(",");
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("output-inspection-message").first().click();
-
-  await page.getByRole("gridcell").first().click();
-
-  const secondRunWithoutFreezing = await page
-    .getByPlaceholder("Empty")
-    .textContent();
-
-  await page.getByText("Close").last().click();
-  await page.getByText("Close").last().click();
-
-  await page.getByText("Split Text", { exact: true }).click();
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("more-options-modal").click();
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("icon-Snowflake").click();
-
-  await page.waitForTimeout(1000);
-
-  await page.keyboard.press("Escape");
-
-  await page.locator('//*[@id="react-flow-id"]').click();
-
-  await page
-    .getByTestId("textarea_str_input_value")
-    .first()
-    .fill("lorem ipsum");
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("output-inspection-message").first().click();
-
-  await page.getByRole("gridcell").first().click();
-
-  const firstTextFreezed = await page.getByPlaceholder("Empty").textContent();
-
-  await page.getByText("Close").last().click();
-  await page.getByText("Close").last().click();
-
-  await page.getByText("Split Text", { exact: true }).click();
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("more-options-modal").click();
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("icon-Snowflake").last().click();
-
-  await page.waitForTimeout(1000);
-
-  await page.keyboard.press("Escape");
-
-  await page.locator('//*[@id="react-flow-id"]').click();
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("output-inspection-message").first().click();
-
-  await page.getByRole("gridcell").first().click();
-
-  const thirdTextWithoutFreezing = await page
-    .getByPlaceholder("Empty")
-    .textContent();
-
-  expect(secondRunWithoutFreezing).toBe(firstTextFreezed);
-
-  expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
-  expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
-  expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
-  expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
-});
+    expect(secondOutputText).toBe(firstOutputText);
+    expect(secondOutputText).toBe("hello world");
+  },
+);

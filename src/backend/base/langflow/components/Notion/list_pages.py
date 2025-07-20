@@ -1,13 +1,15 @@
-import requests
 import json
-from typing import Dict, Any, List, Optional
+from typing import Any
+
+import requests
+from langchain.tools import StructuredTool
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
+from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionListPages(LCToolComponent):
@@ -16,7 +18,8 @@ class NotionListPages(LCToolComponent):
         "Query a Notion database with filtering and sorting. "
         "The input should be a JSON string containing the 'filter' and 'sorts' objects. "
         "Example input:\n"
-        '{"filter": {"property": "Status", "select": {"equals": "Done"}}, "sorts": [{"timestamp": "created_time", "direction": "descending"}]}'
+        '{"filter": {"property": "Status", "select": {"equals": "Done"}}, '
+        '"sorts": [{"timestamp": "created_time", "direction": "descending"}]}'
     )
     documentation: str = "https://docs.langflow.org/integrations/notion/list-pages"
     icon = "NotionDirectoryLoader"
@@ -36,18 +39,20 @@ class NotionListPages(LCToolComponent):
         MultilineInput(
             name="query_json",
             display_name="Database query (JSON)",
-            info="A JSON string containing the filters and sorts that will be used for querying the database. Leave empty for no filters or sorts.",
+            info="A JSON string containing the filters and sorts that will be used for querying the database. "
+            "Leave empty for no filters or sorts.",
         ),
     ]
 
     class NotionListPagesSchema(BaseModel):
         database_id: str = Field(..., description="The ID of the Notion database to query.")
-        query_json: Optional[str] = Field(
+        query_json: str | None = Field(
             default="",
-            description="A JSON string containing the filters and sorts for querying the database. Leave empty for no filters or sorts.",
+            description="A JSON string containing the filters and sorts for querying the database. "
+            "Leave empty for no filters or sorts.",
         )
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         result = self._query_notion_database(self.database_id, self.query_json)
 
         if isinstance(result, str):
@@ -88,7 +93,7 @@ class NotionListPages(LCToolComponent):
             args_schema=self.NotionListPagesSchema,
         )
 
-    def _query_notion_database(self, database_id: str, query_json: Optional[str] = None) -> List[Dict[str, Any]] | str:
+    def _query_notion_database(self, database_id: str, query_json: str | None = None) -> list[dict[str, Any]] | str:
         url = f"https://api.notion.com/v1/databases/{database_id}/query"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -101,16 +106,17 @@ class NotionListPages(LCToolComponent):
             try:
                 query_payload = json.loads(query_json)
             except json.JSONDecodeError as e:
-                return f"Invalid JSON format for query: {str(e)}"
+                return f"Invalid JSON format for query: {e}"
 
         try:
-            response = requests.post(url, headers=headers, json=query_payload)
+            response = requests.post(url, headers=headers, json=query_payload, timeout=10)
             response.raise_for_status()
             results = response.json()
             return results["results"]
         except requests.exceptions.RequestException as e:
-            return f"Error querying Notion database: {str(e)}"
+            return f"Error querying Notion database: {e}"
         except KeyError:
             return "Unexpected response format from Notion API"
-        except Exception as e:
-            return f"An unexpected error occurred: {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error querying Notion database")
+            return f"An unexpected error occurred: {e}"

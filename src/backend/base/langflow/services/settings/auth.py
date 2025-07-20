@@ -2,12 +2,13 @@ import secrets
 from pathlib import Path
 from typing import Literal
 
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 from loguru import logger
 from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
 
 class AuthSettings(BaseSettings):
@@ -26,9 +27,12 @@ class AuthSettings(BaseSettings):
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 
-    # If AUTO_LOGIN = True
-    # > The application does not request login and logs in automatically as a super user.
     AUTO_LOGIN: bool = True
+    """If True, the application will attempt to log in automatically as a super user."""
+    skip_auth_auto_login: bool = True
+    """If True, the application will skip authentication when AUTO_LOGIN is enabled.
+    This will be removed in v1.6"""
+
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
@@ -51,12 +55,9 @@ class AuthSettings(BaseSettings):
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    class Config:
-        validate_assignment = True
-        extra = "ignore"
-        env_prefix = "LANGFLOW_"
+    model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    def reset_credentials(self):
+    def reset_credentials(self) -> None:
         self.SUPERUSER = DEFAULT_SUPERUSER
         self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
 
@@ -109,4 +110,4 @@ class AuthSettings(BaseSettings):
                 write_secret_to_file(secret_key_path, value)
                 logger.debug("Saved secret key")
 
-        return value if isinstance(value, SecretStr) else SecretStr(value)
+        return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()

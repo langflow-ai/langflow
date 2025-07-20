@@ -1,15 +1,15 @@
+import { cloneDeep } from "lodash";
+import { useContext, useEffect, useRef, useState } from "react";
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   useAddUser,
   useDeleteUsers,
   useGetUsers,
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
-import { cloneDeep } from "lodash";
-import { useContext, useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import LoadingComponent from "../../components/loadingComponent";
-import PaginatorComponent from "../../components/paginatorComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import CustomLoader from "@/customization/components/custom-loader";
+import IconComponent from "../../components/common/genericIconComponent";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
@@ -32,19 +32,22 @@ import {
 import {
   ADMIN_HEADER_DESCRIPTION,
   ADMIN_HEADER_TITLE,
+  PAGINATION_PAGE,
+  PAGINATION_ROWS_COUNT,
+  PAGINATION_SIZE,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import ConfirmationModal from "../../modals/confirmationModal";
 import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
-import { Users } from "../../types/api";
-import { UserInputType } from "../../types/components";
+import type { Users } from "../../types/api";
+import type { UserInputType } from "../../types/components";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
 
-  const [size, setPageSize] = useState(12);
-  const [index, setPageIndex] = useState(1);
+  const [size, setPageSize] = useState(PAGINATION_SIZE);
+  const [index, setPageIndex] = useState(PAGINATION_PAGE);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
@@ -64,7 +67,7 @@ export default function AdminPage() {
 
   const [filterUserList, setFilterUserList] = useState(userList.current);
 
-  const { mutate: mutateGetUsers, isPending } = useGetUsers({});
+  const { mutate: mutateGetUsers, isPending, isIdle } = useGetUsers({});
 
   function getUsers() {
     mutateGetUsers(
@@ -103,8 +106,8 @@ export default function AdminPage() {
   }
 
   function resetFilter() {
-    setPageIndex(1);
-    setPageSize(12);
+    setPageIndex(PAGINATION_PAGE);
+    setPageSize(PAGINATION_SIZE);
     getUsers();
   }
 
@@ -298,11 +301,11 @@ export default function AdminPage() {
               </UserManagementModal>
             </div>
           </div>
-          {isPending ? (
+          {isPending || isIdle ? (
             <div className="flex h-full w-full items-center justify-center">
-              <LoadingComponent remSize={12} />
+              <CustomLoader remSize={12} />
             </div>
-          ) : userList.current.length === 0 ? (
+          ) : userList.current.length === 0 && !isIdle ? (
             <>
               <div className="m-4 flex items-center justify-between text-sm">
                 No users registered.
@@ -312,7 +315,7 @@ export default function AdminPage() {
             <>
               <div
                 className={
-                  "m-4 h-full overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background custom-scroll" +
+                  "m-4 h-fit overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background custom-scroll" +
                   (isPending ? " border-0" : "")
                 }
               >
@@ -488,9 +491,8 @@ export default function AdminPage() {
                 pageIndex={index}
                 pageSize={size}
                 totalRowsCount={totalRowsCount}
-                paginate={(pageSize, pageIndex) => {
-                  handleChangePagination(pageIndex, pageSize);
-                }}
+                paginate={handleChangePagination}
+                rowsCount={PAGINATION_ROWS_COUNT}
               ></PaginatorComponent>
             </>
           )}

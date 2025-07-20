@@ -32,8 +32,8 @@ def upgrade() -> None:
             sa.Column("sender_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("text", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-            sa.Column("flow_id", sqlmodel.sql.sqltypes.GUID(), nullable=True),
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=True),
             sa.Column("files", sa.JSON(), nullable=True),
             sa.ForeignKeyConstraint(
                 ["flow_id"],

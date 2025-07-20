@@ -1,13 +1,15 @@
 import json
+from typing import Any
+
 import requests
-from typing import Dict, Any, Union
-from pydantic import BaseModel, Field
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
 from loguru import logger
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionPageUpdate(LCToolComponent):
@@ -37,7 +39,7 @@ class NotionPageUpdate(LCToolComponent):
 
     class NotionPageUpdateSchema(BaseModel):
         page_id: str = Field(..., description="The ID of the Notion page to update.")
-        properties: Union[str, Dict[str, Any]] = Field(
+        properties: str | dict[str, Any] = Field(
             ..., description="The properties to update on the page (as a JSON string or a dictionary)."
         )
 
@@ -46,22 +48,22 @@ class NotionPageUpdate(LCToolComponent):
         if isinstance(result, str):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the updated page data
-            output = "Updated page properties:\n"
-            for prop_name, prop_value in result.get("properties", {}).items():
-                output += f"{prop_name}: {prop_value}\n"
-            return Data(text=output, data=result)
+        # Success, return the updated page data
+        output = "Updated page properties:\n"
+        for prop_name, prop_value in result.get("properties", {}).items():
+            output += f"{prop_name}: {prop_value}\n"
+        return Data(text=output, data=result)
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="update_notion_page",
-            description="Update the properties of a Notion page. IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
+            description="Update the properties of a Notion page. "
+            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
             func=self._update_notion_page,
             args_schema=self.NotionPageUpdateSchema,
         )
 
-    def _update_notion_page(self, page_id: str, properties: Union[str, Dict[str, Any]]) -> Union[Dict[str, Any], str]:
+    def _update_notion_page(self, page_id: str, properties: str | dict[str, Any]) -> dict[str, Any] | str:
         url = f"https://api.notion.com/v1/pages/{page_id}"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -74,8 +76,8 @@ class NotionPageUpdate(LCToolComponent):
             try:
                 parsed_properties = json.loads(properties)
             except json.JSONDecodeError as e:
-                error_message = f"Invalid JSON format for properties: {str(e)}"
-                logger.error(error_message)
+                error_message = f"Invalid JSON format for properties: {e}"
+                logger.exception(error_message)
                 return error_message
 
         else:
@@ -85,27 +87,28 @@ class NotionPageUpdate(LCToolComponent):
 
         try:
             logger.info(f"Sending request to Notion API: URL: {url}, Data: {json.dumps(data)}")
-            response = requests.patch(url, headers=headers, json=data)
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
             updated_page = response.json()
 
             logger.info(f"Successfully updated Notion page. Response: {json.dumps(updated_page)}")
-            return updated_page
         except requests.exceptions.HTTPError as e:
-            error_message = f"HTTP Error occurred: {str(e)}"
+            error_message = f"HTTP Error occurred: {e}"
             if e.response is not None:
                 error_message += f"\nStatus code: {e.response.status_code}"
                 error_message += f"\nResponse body: {e.response.text}"
-            logger.error(error_message)
+            logger.exception(error_message)
             return error_message
         except requests.exceptions.RequestException as e:
-            error_message = f"An error occurred while making the request: {str(e)}"
-            logger.error(error_message)
+            error_message = f"An error occurred while making the request: {e}"
+            logger.exception(error_message)
             return error_message
-        except Exception as e:
-            error_message = f"An unexpected error occurred: {str(e)}"
-            logger.error(error_message)
+        except Exception as e:  # noqa: BLE001
+            error_message = f"An unexpected error occurred: {e}"
+            logger.exception(error_message)
             return error_message
+
+        return updated_page
 
     def __call__(self, *args, **kwargs):
         return self._update_notion_page(*args, **kwargs)

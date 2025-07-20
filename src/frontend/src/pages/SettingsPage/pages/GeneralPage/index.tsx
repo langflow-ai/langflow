@@ -1,3 +1,6 @@
+import { cloneDeep } from "lodash";
+import { useContext, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   EDIT_PASSWORD_ALERT_LIST,
   EDIT_PASSWORD_ERROR_ALERT,
@@ -10,16 +13,14 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
-import { cloneDeep } from "lodash";
-import { useContext, useState } from "react";
-import { useParams } from "react-router-dom";
 import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
 import { useStoreStore } from "../../../../stores/storeStore";
-import {
+import type {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../../../types/components";
@@ -27,7 +28,6 @@ import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
-import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export const GeneralPage = () => {
   const { scrollId } = useParams();
@@ -39,11 +39,7 @@ export const GeneralPage = () => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
-  const { password, cnfPassword, profilePicture, apikey } = inputState;
+  const { password, cnfPassword, profilePicture } = inputState;
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { storeApiKey } = useContext(AuthContext);
@@ -91,7 +87,7 @@ export const GeneralPage = () => {
         { user_id: userData!.id, user: { profile_image: profile_picture } },
         {
           onSuccess: () => {
-            let newUserData = cloneDeep(userData);
+            const newUserData = cloneDeep(userData);
             newUserData!.profile_image = profile_picture;
             setUserData(newUserData);
             setSuccessData({ title: SAVE_SUCCESS_ALERT });
@@ -128,7 +124,7 @@ export const GeneralPage = () => {
     },
   });
 
-  const handleSaveKey = (apikey: string) => {
+  const _handleSaveKey = (apikey: string) => {
     if (apikey) {
       mutate({ key: apikey });
       storeApiKey(apikey);
@@ -142,10 +138,10 @@ export const GeneralPage = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex h-full w-full flex-col gap-6 overflow-x-hidden">
       <GeneralPageHeaderComponent />
 
-      <div className="grid gap-6">
+      <div className="flex w-full flex-col gap-6">
         {ENABLE_PROFILE_ICONS && (
           <ProfilePictureFormComponent
             profilePicture={profilePicture}
@@ -164,17 +160,9 @@ export const GeneralPage = () => {
             handlePatchPassword={handlePatchPassword}
           />
         )}
-        {hasStore && (
-          <StoreApiKeyFormComponent
-            apikey={apikey}
-            handleInput={handleInput}
-            handleSaveKey={handleSaveKey}
-            loadingApiKey={loadingApiKey}
-            validApiKey={validApiKey}
-            hasApiKey={hasApiKey}
-          />
-        )}
       </div>
+
+      <CustomTermsLinks />
     </div>
   );
 };

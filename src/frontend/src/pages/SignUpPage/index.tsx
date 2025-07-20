@@ -1,10 +1,11 @@
+import * as Form from "@radix-ui/react-form";
+import { type FormEvent, useEffect, useState } from "react";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
-import * as Form from "@radix-ui/react-form";
-import { FormEvent, useEffect, useState } from "react";
-import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
@@ -13,10 +14,10 @@ import {
   SIGN_UP_SUCCESS,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
-import {
-  UserInputType,
+import type {
   inputHandlerEventType,
   signUpInputStateType,
+  UserInputType,
 } from "../../types/components";
 
 export default function SignUp(): JSX.Element {
@@ -82,16 +83,19 @@ export default function SignUp(): JSX.Element {
           return;
         }
 
-        const data = Object.fromEntries(new FormData(event.currentTarget));
+        const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
-      className="h-full w-full"
+      className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
-          <span className="mb-4 text-5xl">⛓️</span>
+          <LangflowLogo
+            title="Langflow logo"
+            className="mb-4 h-10 w-10 scale-[1.5]"
+          />
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up to Langflow
+            Sign up for Langflow
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">

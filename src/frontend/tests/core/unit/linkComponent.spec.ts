@@ -1,103 +1,83 @@
-import { expect, Page, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { expect, type Page, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("user should interact with link component", async ({ context, page }) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+// TODO: This test might not be needed anymore
+test(
+  "user should interact with link component",
+  { tag: ["@release", "@workspace"] },
+  async ({ context, page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await page.getByTestId("sidebar-custom-component-button").click();
+    await page.getByTitle("fit view").click();
+    await page.getByTitle("zoom out").click();
 
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-  let control = "Control";
+    await page.getByTestId("title-Custom Component").first().click();
 
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
+    await page.waitForSelector('[data-testid="code-button-modal"]', {
+      timeout: 3000,
+    });
 
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("blank-flow").click();
+    await page.getByTestId("code-button-modal").click();
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await page.getByTestId("extended-disclosure");
-    focusElements.click();
-  };
+    let cleanCode = await extractAndCleanCode(page);
 
-  await focusElementsOnBoard({ page });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom component");
+    // Use regex pattern to match the imports section more flexibly
+    cleanCode = updateComponentCode(cleanCode, {
+      imports: ["MessageTextInput", "Output", "LinkInput"],
+      inputs: [
+        {
+          name: "MessageTextInput",
+          config: {
+            name: "input_value",
+            display_name: "Input Value",
+            info: "This is a custom component Input",
+            value: "Hello, World!",
+            tool_mode: true,
+          },
+        },
+        {
+          name: "LinkInput",
+          config: {
+            name: "link",
+            display_name: "BUTTON",
+            value: "https://www.datastax.com",
+            text: "Click me",
+          },
+        },
+      ],
+    });
 
-  await page.waitForTimeout(1000);
+    await page.locator("textarea").last().press(`ControlOrMeta+a`);
+    await page.keyboard.press("Backspace");
+    await page.locator("textarea").last().fill(cleanCode);
+    await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
-  await page
-    .locator('//*[@id="helpersCustom Component"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 3000,
+    });
 
-  await page.getByTestId("title-Custom Component").first().click();
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
 
-  await page.waitForTimeout(500);
-  await page.getByTestId("code-button-modal").click();
-  await page.waitForTimeout(500);
-
-  let cleanCode = await extractAndCleanCode(page);
-
-  // Replace the import statement
-  cleanCode = cleanCode.replace(
-    "from langflow.io import MessageTextInput, Output",
-    "from langflow.io import MessageTextInput, Output, LinkInput",
-  );
-
-  // Replace the MessageTextInput line and add LinkInput
-  cleanCode = cleanCode.replace(
-    'MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),',
-    `MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
-    LinkInput(name="link", display_name="BUTTON", value="https://www.datastax.com", text="Click me"),`,
-  );
-
-  await page.locator("textarea").last().press(`${control}+a`);
-  await page.keyboard.press("Backspace");
-  await page.locator("textarea").last().fill(cleanCode);
-  await page.locator('//*[@id="checkAndSaveBtn"]').click();
-  await page.waitForTimeout(500);
-
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-
-  expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
-  expect(await page.getByText("Click me").isVisible()).toBeTruthy();
-  expect(await page.getByTestId("link_link_link")).toBeEnabled();
-  await page.getByTestId("link_link_link").click();
-});
+    expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
+    expect(await page.getByText("Click me").isVisible()).toBeTruthy();
+    expect(await page.getByTestId("link_link_link")).toBeEnabled();
+    await page.getByTestId("link_link_link").click();
+  },
+);
 
 async function extractAndCleanCode(page: Page): Promise<string> {
   const outerHTML = await page
@@ -109,7 +89,7 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     throw new Error("Could not find value attribute in the HTML");
   }
 
-  let codeContent = valueMatch[1]
+  const codeContent = valueMatch[1]
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -118,4 +98,45 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     .replace(/&#x2F;/g, "/");
 
   return codeContent;
+}
+
+function updateComponentCode(
+  code: string,
+  updates: {
+    imports?: string[];
+    inputs?: Array<{ name: string; config: Record<string, any> }>;
+  },
+): string {
+  let updatedCode = code;
+
+  // Update imports
+  if (updates.imports) {
+    const importPattern = /from\s+langflow\.io\s+import\s+([^;\n]+)/;
+    const newImports = updates.imports.join(", ");
+    updatedCode = updatedCode.replace(
+      importPattern,
+      `from langflow.io import ${newImports}`,
+    );
+  }
+
+  // Update inputs
+  if (updates.inputs) {
+    const inputsPattern = /inputs\s*=\s*\[([\s\S]*?)\]/;
+    const newInputs = updates.inputs
+      .map(({ name, config }) => {
+        const params = Object.entries(config)
+          .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+          .join(",\n            ");
+        return `        ${name}(\n            ${params}\n        )`;
+      })
+      .join(",\n");
+    updatedCode = updatedCode.replace(
+      inputsPattern,
+      `inputs = [\n${newInputs}\n    ]`,
+    );
+    updatedCode = updatedCode.replace("true", "True");
+    updatedCode = updatedCode.replace("false", "False");
+  }
+
+  return updatedCode;
 }

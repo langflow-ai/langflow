@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { PORT } from "./src/customization/config-constants";
+
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -24,7 +25,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  timeout: 3 * 60 * 1000,
+  timeout: 3 * 60 * 750,
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
@@ -55,7 +56,37 @@ export default defineConfig({
         },
       },
     },
-
+    // {
+    //   name: "firefox",
+    //   use: {
+    //     ...devices["Desktop Firefox"],
+    //     launchOptions: {
+    //       // headless: false,
+    //       firefoxUserPrefs: {
+    //         "dom.events.asyncClipboard.readText": true,
+    //         "dom.events.testing.asyncClipboard": true,
+    //       },
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "safari",
+    //   use: {
+    //     ...devices["Desktop Safari"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
+    // {
+    //   name: "arc",
+    //   use: {
+    //     ...devices["Desktop Arc"],
+    //     launchOptions: {
+    //       // headless: false,
+    //     },
+    //   },
+    // },
     // {
     //   name: "firefox",
     //   use: {
@@ -73,7 +104,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "poetry run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860 --loop asyncio",
+        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
@@ -82,13 +113,13 @@ export default defineConfig({
       stdout: "ignore",
 
       reuseExistingServer: true,
-      timeout: 120 * 1000,
+      timeout: 120 * 750,
     },
     {
       command: "npm start",
       port: PORT || 3000,
       env: {
-        VITE_PROXY_TARGET: "http://127.0.0.1:7860",
+        VITE_PROXY_TARGET: "http://localhost:7860",
       },
     },
   ],

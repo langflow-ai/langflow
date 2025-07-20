@@ -13,7 +13,7 @@ on:
         description: "(Optional) Python versions to test"
         required: true
         type: string
-        default: "['3.10', '3.11', '3.12']"
+        default: "['3.10', '3.11', '3.12', '3.13']"
       ref:
         description: "(Optional) ref to checkout"
         required: false
@@ -30,6 +30,7 @@ jobs:
       max-parallel: 1 # Currently, we can only run at a time for collection-per-db-constraints
       matrix:
         python-version:
+          - "3.13"
           - "3.12"
           - "3.11"
           - "3.10"
@@ -42,16 +43,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
-      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Install Python dependencies
-        run: |
-          poetry env use ${{ matrix.python-version }}
-          poetry install
+          prune-cache: false
       - name: Run integration tests with api keys
         timeout-minutes: 20
         run: |

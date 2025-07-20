@@ -1,10 +1,12 @@
 import requests
-from pydantic import BaseModel, Field
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput
-from langflow.schema import Data
-from langflow.field_typing import Tool
 from langchain.tools import StructuredTool
+from loguru import logger
+from pydantic import BaseModel, Field
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
+from langflow.inputs.inputs import SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionPageContent(LCToolComponent):
@@ -35,9 +37,8 @@ class NotionPageContent(LCToolComponent):
         if isinstance(result, str) and result.startswith("Error:"):
             # An error occurred, return it as text
             return Data(text=result)
-        else:
-            # Success, return the content
-            return Data(text=result, data={"content": result})
+        # Success, return the content
+        return Data(text=result, data={"content": result})
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
@@ -54,25 +55,26 @@ class NotionPageContent(LCToolComponent):
             "Notion-Version": "2022-06-28",
         }
         try:
-            blocks_response = requests.get(blocks_url, headers=headers)
+            blocks_response = requests.get(blocks_url, headers=headers, timeout=10)
             blocks_response.raise_for_status()
             blocks_data = blocks_response.json()
             return self.parse_blocks(blocks_data.get("results", []))
         except requests.exceptions.RequestException as e:
-            error_message = f"Error: Failed to retrieve Notion page content. {str(e)}"
+            error_message = f"Error: Failed to retrieve Notion page content. {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
-        except Exception as e:
-            return f"Error: An unexpected error occurred while retrieving Notion page content. {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error retrieving Notion page content")
+            return f"Error: An unexpected error occurred while retrieving Notion page content. {e}"
 
     def parse_blocks(self, blocks: list) -> str:
         content = ""
         for block in blocks:
             block_type = block.get("type")
-            if block_type in ["paragraph", "heading_1", "heading_2", "heading_3", "quote"]:
+            if block_type in {"paragraph", "heading_1", "heading_2", "heading_3", "quote"}:
                 content += self.parse_rich_text(block[block_type].get("rich_text", [])) + "\n\n"
-            elif block_type in ["bulleted_list_item", "numbered_list_item"]:
+            elif block_type in {"bulleted_list_item", "numbered_list_item"}:
                 content += self.parse_rich_text(block[block_type].get("rich_text", [])) + "\n"
             elif block_type == "to_do":
                 content += self.parse_rich_text(block["to_do"].get("rich_text", [])) + "\n"

@@ -1,13 +1,12 @@
-const SvgGroqLogo = ({ color, ...props }) => (
+const SvgGroqLogo = ({ ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     aria-label="groq logo"
     role="img"
-    width="48"
-    height="48"
     viewBox="0 0 24 24"
     fill="none"
-    class="fill-foreground"
+    className="fill-foreground"
+    {...props}
   >
     <path
       fill="#F55036"

@@ -15,31 +15,31 @@ def test_user():
     )
 
 
-def test_login_successful(client, test_user):
+async def test_login_successful(client, test_user):
     # Adding the test user to the database
     try:
-        with session_scope() as session:
+        async with session_scope() as session:
             session.add(test_user)
-            session.commit()
+            await session.commit()
     except IntegrityError:
         pass
 
-    response = client.post("api/v1/login", data={"username": "testuser", "password": "testpassword"})
+    response = await client.post("api/v1/login", data={"username": "testuser", "password": "testpassword"})
     assert response.status_code == 200
     assert "access_token" in response.json()
 
 
-def test_login_unsuccessful_wrong_username(client):
-    response = client.post("api/v1/login", data={"username": "wrongusername", "password": "testpassword"})
+async def test_login_unsuccessful_wrong_username(client):
+    response = await client.post("api/v1/login", data={"username": "wrongusername", "password": "testpassword"})
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect username or password"
 
 
-def test_login_unsuccessful_wrong_password(client, test_user, session):
+async def test_login_unsuccessful_wrong_password(client, test_user, async_session):
     # Adding the test user to the database
-    session.add(test_user)
-    session.commit()
+    async_session.add(test_user)
+    await async_session.commit()
 
-    response = client.post("api/v1/login", data={"username": "testuser", "password": "wrongpassword"})
+    response = await client.post("api/v1/login", data={"username": "testuser", "password": "wrongpassword"})
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect username or password"

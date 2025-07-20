@@ -1,8 +1,8 @@
-import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import { cloneDeep } from "lodash";
 import { create } from "zustand";
-import { FlowType } from "../types/flow";
-import {
+import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
+import type { FlowType } from "../types/flow";
+import type {
   FlowsManagerStoreType,
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";
@@ -17,6 +17,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  IOModalOpen: false,
+  setIOModalOpen: (IOModalOpen: boolean) => {
+    set({ IOModalOpen });
+  },
   healthCheckMaxRetries: 5,
   setHealthCheckMaxRetries: (healthCheckMaxRetries: number) =>
     set({ healthCheckMaxRetries }),
@@ -125,6 +129,15 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   selectedFlowsComponentsCards: [],
   setSelectedFlowsComponentsCards: (selectedFlowsComponentsCards: string[]) => {
     set({ selectedFlowsComponentsCards });
+  },
+  resetStore: () => {
+    set({
+      flows: [],
+      currentFlow: undefined,
+      currentFlowId: "",
+      searchFlowsComponents: "",
+      selectedFlowsComponentsCards: [],
+    });
   },
 }));
 

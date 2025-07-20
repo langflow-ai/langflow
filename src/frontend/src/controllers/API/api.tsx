@@ -1,12 +1,18 @@
-import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
-import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
-import useAuthStore from "@/stores/authStore";
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+} from "axios";
 import * as fetchIntercept from "fetch-intercept";
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { BuildStatus } from "../../constants/enums";
-import { AuthContext } from "../../contexts/authContext";
+import { IS_AUTO_LOGIN } from "@/constants/constants";
+import { baseURL } from "@/customization/constants";
+import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
+import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
+import useAuthStore from "@/stores/authStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { BuildStatus, type EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
@@ -14,56 +20,80 @@ import { useLogout, useRefreshAccessToken } from "./queries/auth";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: "",
+  baseURL: baseURL,
 });
 
-const cookies = new Cookies();
+const _cookies = new Cookies();
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, authenticationErrorCount } = useContext(AuthContext);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const authenticationErrorCount = useAuthStore(
+    (state) => state.authenticationErrorCount,
+  );
+  const setAuthenticationErrorCount = useAuthStore(
+    (state) => state.setAuthenticationErrorCount,
+  );
+
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const isLoginPage = location.pathname.includes("login");
   const customHeaders = useCustomApiHeaders();
 
+  const setHealthCheckTimeout = useUtilityStore(
+    (state) => state.setHealthCheckTimeout,
+  );
+
   useEffect(() => {
     const unregister = fetchIntercept.register({
-      request: function (url, config) {
-        const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
-        if (accessToken && !isAuthorizedURL(config?.url)) {
-          config.headers["Authorization"] = `Bearer ${accessToken}`;
+      request: (url, config) => {
+        const accessToken = customGetAccessToken();
+
+        if (!isExternalURL(url)) {
+          if (accessToken && !isAuthorizedURL(config?.url)) {
+            config.headers["Authorization"] = `Bearer ${accessToken}`;
+          }
+
+          for (const [key, value] of Object.entries(customHeaders)) {
+            config.headers[key] = value;
+          }
         }
 
-        for (const [key, value] of Object.entries(customHeaders)) {
-          config.headers[key] = value;
-        }
         return [url, config];
       },
     });
 
     const interceptor = api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        setHealthCheckTimeout(null);
+        return response;
+      },
       async (error: AxiosError) => {
         const isAuthenticationError =
           error?.response?.status === 403 || error?.response?.status === 401;
 
-        if (isAuthenticationError) {
-          if (autoLogin !== undefined && !autoLogin) {
-            if (error?.config?.url?.includes("github")) {
-              return Promise.reject(error);
-            }
-            const stillRefresh = checkErrorCount();
-            if (!stillRefresh) {
-              return Promise.reject(error);
-            }
+        const shouldRetryRefresh =
+          (isAuthenticationError && !IS_AUTO_LOGIN) ||
+          (isAuthenticationError && !autoLogin && autoLogin !== undefined);
 
-            await tryToRenewAccessToken(error);
+        if (shouldRetryRefresh) {
+          if (
+            error?.config?.url?.includes("github") ||
+            error?.config?.url?.includes("public")
+          ) {
+            return Promise.reject(error);
+          }
+          const stillRefresh = checkErrorCount();
+          if (!stillRefresh) {
+            return Promise.reject(error);
+          }
 
-            const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
-            if (!accessToken && error?.config?.url?.includes("login")) {
-              return Promise.reject(error);
-            }
+          await tryToRenewAccessToken(error);
+
+          const accessToken = customGetAccessToken();
+
+          if (!accessToken && error?.config?.url?.includes("login")) {
+            return Promise.reject(error);
           }
         }
 
@@ -95,15 +125,32 @@ function ApiInterceptor() {
         );
 
         return isDomainAllowed || isEndpointAllowed;
-      } catch (e) {
+      } catch (_e) {
         // Invalid URL
+        return false;
+      }
+    };
+
+    // Check for external url which we don't want to add custom headers to
+    const isExternalURL = (url: string): boolean => {
+      const EXTERNAL_DOMAINS = [
+        "https://raw.githubusercontent.com",
+        "https://api.github.com",
+        "https://api.segment.io",
+        "https://cdn.sprig.com",
+      ];
+
+      try {
+        const parsedURL = new URL(url);
+        return EXTERNAL_DOMAINS.some((domain) => parsedURL.origin === domain);
+      } catch (_e) {
         return false;
       }
     };
 
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
-      (config) => {
+      async (config) => {
         const controller = new AbortController();
         try {
           checkDuplicateRequestAndStoreRequest(config);
@@ -113,7 +160,8 @@ function ApiInterceptor() {
           console.error(error.message);
         }
 
-        const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+        const accessToken = customGetAccessToken();
+
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
@@ -149,10 +197,10 @@ function ApiInterceptor() {
   function checkErrorCount() {
     if (isLoginPage) return;
 
-    authenticationErrorCount = authenticationErrorCount + 1;
+    setAuthenticationErrorCount(authenticationErrorCount + 1);
 
     if (authenticationErrorCount > 3) {
-      authenticationErrorCount = 0;
+      setAuthenticationErrorCount(0);
       mutationLogout();
       return false;
     }
@@ -169,9 +217,9 @@ function ApiInterceptor() {
     }
     mutationRenewAccessToken(undefined, {
       onSuccess: async () => {
-        authenticationErrorCount = 0;
+        setAuthenticationErrorCount(0);
         await remakeRequest(error);
-        authenticationErrorCount = 0;
+        setAuthenticationErrorCount(0);
       },
       onError: (error) => {
         console.error(error);
@@ -195,7 +243,8 @@ function ApiInterceptor() {
     const originalRequest = error.config as AxiosRequestConfig;
 
     try {
-      const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+      const accessToken = customGetAccessToken();
+
       if (!accessToken) {
         throw new Error("Access token not found in cookies");
       }
@@ -223,7 +272,19 @@ export type StreamingRequestParams = {
   body?: object;
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
+  buildController: AbortController;
+  eventDeliveryConfig?: EventDeliveryType;
 };
+
+// Helper function to sanitize JSON strings
+function sanitizeJsonString(jsonStr: string): string {
+  // Replace NaN with null (valid JSON)
+  return jsonStr
+    .replace(/:\s*NaN\b/g, ": null")
+    .replace(/\[\s*NaN\s*\]/g, "[null]")
+    .replace(/,\s*NaN\s*,/g, ", null,")
+    .replace(/,\s*NaN\s*\]/g, ", null]");
+}
 
 async function performStreamingRequest({
   method,
@@ -232,36 +293,37 @@ async function performStreamingRequest({
   body,
   onError,
   onNetworkError,
+  buildController,
 }: StreamingRequestParams) {
-  let headers = {
+  const headers = {
     "Content-Type": "application/json",
     // this flag is fundamental to ensure server stops tasks when client disconnects
     Connection: "close",
   };
-  const controller = new AbortController();
-  useFlowStore.getState().setBuildController(controller);
+
   const params = {
     method: method,
     headers: headers,
-    signal: controller.signal,
+    signal: buildController.signal,
   };
   if (body) {
     params["body"] = JSON.stringify(body);
   }
   let current: string[] = [];
-  let textDecoder = new TextDecoder();
-  const response = await fetch(url, params);
-  if (!response.ok) {
-    if (onError) {
-      onError(response.status);
-    } else {
-      throw new Error("error in streaming request");
-    }
-  }
-  if (response.body === null) {
-    return;
-  }
+  const textDecoder = new TextDecoder();
+
   try {
+    const response = await fetch(url, params);
+    if (!response.ok) {
+      if (onError) {
+        onError(response.status);
+      } else {
+        throw new Error("Error in streaming request.");
+      }
+    }
+    if (response.body === null) {
+      return;
+    }
     const reader = response.body.getReader();
     while (true) {
       const { done, value } = await reader.read();
@@ -269,21 +331,22 @@ async function performStreamingRequest({
         break;
       }
       const decodedChunk = textDecoder.decode(value);
-      let all = decodedChunk.split("\n\n");
+      const all = decodedChunk.split("\n\n");
       for (const string of all) {
         if (string.endsWith("}")) {
           const allString = current.join("") + string;
           let data: object;
           try {
-            data = JSON.parse(allString);
+            const sanitizedJson = sanitizeJsonString(allString);
+            data = JSON.parse(sanitizedJson);
             current = [];
-          } catch (e) {
+          } catch (_e) {
             current.push(string);
             continue;
           }
           const shouldContinue = await onData(data);
           if (!shouldContinue) {
-            controller.abort();
+            buildController.abort();
             return;
           }
         } else {
@@ -294,7 +357,8 @@ async function performStreamingRequest({
     if (current.length > 0) {
       const allString = current.join("");
       if (allString) {
-        const data = JSON.parse(current.join(""));
+        const sanitizedJson = sanitizeJsonString(allString);
+        const data = JSON.parse(sanitizedJson);
         await onData(data);
       }
     }

@@ -1,13 +1,12 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
 from loguru import logger
 
-from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.inputs.inputs import DefaultPromptField
-
+from langflow.interface.utils import extract_input_variables_from_prompt
 
 _INVALID_CHARACTERS = {
     " ",
@@ -26,6 +25,7 @@ _INVALID_CHARACTERS = {
 }
 
 _INVALID_NAMES = {
+    "code",
     "input_variables",
     "output_parser",
     "partial_variables",
@@ -63,7 +63,7 @@ def _fix_variable(var, invalid_chars, wrong_variables):
         new_var, invalid_chars, wrong_variables = _fix_variable(var[1:], invalid_chars, wrong_variables)
 
     # Temporarily replace {{ and }} to avoid treating them as invalid
-    new_var = new_var.replace("{{", "ᴛᴇᴍᴘᴏᴘᴇɴ").replace("}}", "ᴛᴇᴍᴘᴄʟᴏsᴇ")
+    new_var = new_var.replace("{{", "ᴛᴇᴍᴘᴏᴘᴇɴ").replace("}}", "ᴛᴇᴍᴘᴄʟᴏsᴇ")  # noqa: RUF001
 
     # Remove invalid characters
     for char in new_var:
@@ -74,7 +74,7 @@ def _fix_variable(var, invalid_chars, wrong_variables):
                 wrong_variables.append(var)
 
     # Restore {{ and }}
-    new_var = new_var.replace("ᴛᴇᴍᴘᴏᴘᴇɴ", "{{").replace("ᴛᴇᴍᴘᴄʟᴏsᴇ", "}}")
+    new_var = new_var.replace("ᴛᴇᴍᴘᴏᴘᴇɴ", "{{").replace("ᴛᴇᴍᴘᴄʟᴏsᴇ", "}}")  # noqa: RUF001
 
     return new_var, invalid_chars, wrong_variables
 
@@ -87,7 +87,7 @@ def _check_variable(var, invalid_chars, wrong_variables, empty_variables):
     return wrong_variables, empty_variables
 
 
-def _check_for_errors(input_variables, fixed_variables, wrong_variables, empty_variables):
+def _check_for_errors(input_variables, fixed_variables, wrong_variables, empty_variables) -> None:
     if any(var for var in input_variables if var not in fixed_variables):
         error_message = (
             f"Error: Input variables contain invalid characters or formats. \n"
@@ -122,20 +122,22 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
-def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[str]:
+def validate_prompt(prompt_template: str, *, silent_errors: bool = False) -> list[str]:
     input_variables = extract_input_variables_from_prompt(prompt_template)
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
     if any(var in _INVALID_NAMES for var in input_variables):
-        raise ValueError(f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. ")
+        msg = f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
+        raise ValueError(msg)
 
     try:
         PromptTemplate(template=prompt_template, input_variables=input_variables)
     except Exception as exc:
-        logger.error(f"Invalid prompt: {exc}")
+        msg = f"Invalid prompt: {exc}"
+        logger.exception(msg)
         if not silent_errors:
-            raise ValueError(f"Invalid prompt: {exc}") from exc
+            raise ValueError(msg) from exc
 
     return input_variables
 
@@ -145,7 +147,7 @@ def get_old_custom_fields(custom_fields, name):
         if len(custom_fields) == 1 and name == "":
             # If there is only one custom field and the name is empty string
             # then we are dealing with the first prompt request after the node was created
-            name = list(custom_fields.keys())[0]
+            name = next(iter(custom_fields.keys()))
 
         old_custom_fields = custom_fields[name]
         if not old_custom_fields:
@@ -158,7 +160,7 @@ def get_old_custom_fields(custom_fields, name):
     return old_custom_fields
 
 
-def add_new_variables_to_template(input_variables, custom_fields, template, name):
+def add_new_variables_to_template(input_variables, custom_fields, template, name) -> None:
     for variable in input_variables:
         try:
             template_field = DefaultPromptField(name=variable, display_name=variable)
@@ -173,11 +175,10 @@ def add_new_variables_to_template(input_variables, custom_fields, template, name
                 custom_fields[name].append(variable)
 
         except Exception as exc:
-            logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def remove_old_variables_from_template(old_custom_fields, input_variables, custom_fields, template, name):
+def remove_old_variables_from_template(old_custom_fields, input_variables, custom_fields, template, name) -> None:
     for variable in old_custom_fields:
         if variable not in input_variables:
             try:
@@ -189,17 +190,16 @@ def remove_old_variables_from_template(old_custom_fields, input_variables, custo
                 template.pop(variable, None)
 
             except Exception as exc:
-                logger.exception(exc)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def update_input_variables_field(input_variables, template):
+def update_input_variables_field(input_variables, template) -> None:
     if "input_variables" in template:
         template["input_variables"]["value"] = input_variables
 
 
 def process_prompt_template(
-    template: str, name: str, custom_fields: Optional[Dict[str, List[str]]], frontend_node_template: Dict[str, Any]
+    template: str, name: str, custom_fields: dict[str, list[str]] | None, frontend_node_template: dict[str, Any]
 ):
     """Process and validate prompt template, update template and custom fields."""
     # Validate the prompt template and extract input variables
@@ -221,20 +221,4 @@ def process_prompt_template(
     # Update the input variables field in the template
     update_input_variables_field(input_variables, frontend_node_template)
 
-    # Optional: cleanup fields based on specific conditions
-    cleanup_prompt_template_fields(input_variables, frontend_node_template)
-
     return input_variables
-
-
-def cleanup_prompt_template_fields(input_variables, template):
-    """Removes unused fields if the conditions are met in the template."""
-    prompt_fields = [
-        key for key, field in template.items() if isinstance(field, dict) and field.get("type") == "prompt"
-    ]
-
-    if len(prompt_fields) == 1:
-        for key in list(template.keys()):  # Use list to copy keys
-            field = template.get(key, {})
-            if isinstance(field, dict) and field.get("type") != "code" and key not in input_variables + prompt_fields:
-                del template[key]

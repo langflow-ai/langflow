@@ -1,0 +1,76 @@
+name: Install Playwright
+description: Install Playwright and dependencies with cache
+
+# https://github.com/microsoft/playwright/issues/7249
+
+inputs:
+  working-directory:
+    description: Where to install Playwright
+    default: ./
+  browsers:
+    description: Browsers to install
+    default: chromium webkit firefox
+
+outputs:
+  version:
+    description: Installed version of Playwright
+    value: ${{ steps.version.outputs.version }}
+  cache-hit:
+    description: Whether cache for Playwright was found
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get Playwright version
+      uses: actions/github-script@v7
+      id: version
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          // Get working directory
+          const workingDirectory = "${{ inputs.working-directory }}";
+          console.debug("Specified working directory:", workingDirectory);
+          if (workingDirectory) process.chdir(workingDirectory);
+          console.debug("Actual working directory:", process.cwd());
+
+          // Read package.json
+          let version = "";
+          try {
+            const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            version = (
+              packageJson.devDependencies?.['@playwright/test'] ||
+              packageJson.dependencies?.['@playwright/test'] ||
+              packageJson.dependencies?.['playwright'] ||
+              packageJson.devDependencies?.['playwright']
+            )?.replace(/[\^~]/g, '');
+          } catch (error) {
+            console.log(error.message);
+          }
+
+          console.debug("Version:", version);
+          if (version) {
+            core.exportVariable("PLAYWRIGHT_VERSION", version);
+            core.setOutput("version", version);
+          } else core.setFailed("Couldn't get Playwright version");
+
+    - name: Cache Playwright
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ env.PLAYWRIGHT_VERSION }}
+
+    - name: Install Playwright and its dependencies
+      shell: bash
+      if: steps.cache.outputs.cache-hit != 'true'
+      working-directory: ${{ inputs.working-directory }}
+      run: npx playwright install ${{ inputs.browsers }} --with-deps
+
+    - name: Install just Playwright's dependencies
+      shell: bash
+      if: steps.cache.outputs.cache-hit == 'true'
+      working-directory: ${{ inputs.working-directory }}
+      run: npx playwright install-deps

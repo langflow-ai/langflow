@@ -1,10 +1,9 @@
 import base64
 import contextlib
 import hashlib
-import os
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 from fastapi import UploadFile
 from platformdirs import user_cache_dir
@@ -12,7 +11,7 @@ from platformdirs import user_cache_dir
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import BuildStatus
 
-CACHE: Dict[str, Any] = {}
+CACHE: dict[str, Any] = {}
 
 CACHE_DIR = user_cache_dir("langflow", "langflow")
 
@@ -20,10 +19,10 @@ PREFIX = "langflow_cache"
 
 
 class CacheMiss:
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<CACHE_MISS>"
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
 
@@ -33,7 +32,7 @@ def create_cache_folder(func):
         cache_path = Path(CACHE_DIR) / PREFIX
 
         # Create the destination folder if it doesn't exist
-        os.makedirs(cache_path, exist_ok=True)
+        cache_path.mkdir(parents=True, exist_ok=True)
 
         return func(*args, **kwargs)
 
@@ -41,7 +40,7 @@ def create_cache_folder(func):
 
 
 @create_cache_folder
-def clear_old_cache_files(max_cache_size: int = 3):
+def clear_old_cache_files(max_cache_size: int = 3) -> None:
     cache_dir = Path(tempfile.gettempdir()) / PREFIX
     cache_files = list(cache_dir.glob("*.dill"))
 
@@ -50,7 +49,7 @@ def clear_old_cache_files(max_cache_size: int = 3):
 
         for cache_file in cache_files_sorted_by_mtime[max_cache_size:]:
             with contextlib.suppress(OSError):
-                os.remove(cache_file)
+                cache_file.unlink()
 
 
 def filter_json(json_data):
@@ -79,40 +78,40 @@ def filter_json(json_data):
 
 @create_cache_folder
 def save_binary_file(content: str, file_name: str, accepted_types: list[str]) -> str:
-    """
-    Save a binary file to the specified folder.
+    """Save a binary file to the specified folder.
 
     Args:
         content: The content of the file as a bytes object.
         file_name: The name of the file, including its extension.
+        accepted_types: A list of accepted file types.
 
     Returns:
         The path to the saved file.
     """
     if not any(file_name.endswith(suffix) for suffix in accepted_types):
-        raise ValueError(f"File {file_name} is not accepted")
+        msg = f"File {file_name} is not accepted"
+        raise ValueError(msg)
 
     # Get the destination folder
     cache_path = Path(CACHE_DIR) / PREFIX
     if not content:
-        raise ValueError("Please, reload the file in the loader.")
+        msg = "Please, reload the file in the loader."
+        raise ValueError(msg)
     data = content.split(",")[1]
     decoded_bytes = base64.b64decode(data)
 
     # Create the full file path
-    file_path = os.path.join(cache_path, file_name)
+    file_path = cache_path / file_name
 
     # Save the binary content to the file
-    with open(file_path, "wb") as file:
-        file.write(decoded_bytes)
+    file_path.write_bytes(decoded_bytes)
 
-    return file_path
+    return str(file_path)
 
 
 @create_cache_folder
 def save_uploaded_file(file: UploadFile, folder_name):
-    """
-    Save an uploaded file to the specified folder with a hash of its content as the file name.
+    """Save an uploaded file to the specified folder with a hash of its content as the file name.
 
     Args:
         file: The uploaded file object.
@@ -124,10 +123,7 @@ def save_uploaded_file(file: UploadFile, folder_name):
     cache_path = Path(CACHE_DIR)
     folder_path = cache_path / folder_name
     filename = file.filename
-    if isinstance(filename, str) or isinstance(filename, Path):
-        file_extension = Path(filename).suffix
-    else:
-        file_extension = ""
+    file_extension = Path(filename).suffix if isinstance(filename, str | Path) else ""
     file_object = file.file
 
     # Create the folder if it doesn't exist
@@ -151,17 +147,19 @@ def save_uploaded_file(file: UploadFile, folder_name):
 
     # Save the file with the hash as its name
     file_path = folder_path / file_name
-    with open(file_path, "wb") as new_file:
+
+    with file_path.open("wb") as new_file:
         while chunk := file_object.read(8192):
             new_file.write(chunk)
 
     return file_path
 
 
-def update_build_status(cache_service, flow_id: str, status: "BuildStatus"):
+def update_build_status(cache_service, flow_id: str, status: "BuildStatus") -> None:
     cached_flow = cache_service[flow_id]
     if cached_flow is None:
-        raise ValueError(f"Flow {flow_id} not found in cache")
+        msg = f"Flow {flow_id} not found in cache"
+        raise ValueError(msg)
     cached_flow["status"] = status
     cache_service[flow_id] = cached_flow
     cached_flow["status"] = status

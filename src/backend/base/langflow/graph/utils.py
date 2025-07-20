@@ -1,17 +1,17 @@
-import json
-from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from __future__ import annotations
+
 from collections.abc import Generator
+from enum import Enum
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from langchain_core.documents import Document
+import pandas as pd
 from loguru import logger
-from pydantic import BaseModel
-from pydantic.v1 import BaseModel as V1BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
 from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
@@ -66,26 +66,6 @@ def flatten_list(list_of_lists: list[list | Any]) -> list:
     return new_list
 
 
-def serialize_field(value):
-    """Unified serialization function for handling both BaseModel and Document types,
-    including handling lists of these types."""
-
-    if isinstance(value, (list, tuple)):
-        return [serialize_field(v) for v in value]
-    elif isinstance(value, Document):
-        return value.to_json()
-    elif isinstance(value, BaseModel):
-        return value.model_dump()
-    elif isinstance(value, V1BaseModel):
-        if hasattr(value, "to_json"):
-            return value.to_json()
-        else:
-            return value.dict()
-    elif isinstance(value, str):
-        return {"result": value}
-    return value
-
-
 def get_artifact_type(value, build_result) -> str:
     result = ArtifactType.UNKNOWN
     match value:
@@ -104,11 +84,10 @@ def get_artifact_type(value, build_result) -> str:
         case Message():
             result = ArtifactType.MESSAGE
 
-    if result == ArtifactType.UNKNOWN:
-        if isinstance(build_result, Generator):
-            result = ArtifactType.STREAM
-        elif isinstance(value, Message) and isinstance(value.text, Generator):
-            result = ArtifactType.STREAM
+    if result == ArtifactType.UNKNOWN and (
+        isinstance(build_result, Generator) or (isinstance(value, Message) and isinstance(value.text, Generator))
+    ):
+        result = ArtifactType.STREAM
 
     return result.value
 
@@ -120,71 +99,108 @@ def post_process_raw(raw, artifact_type: str):
     return raw
 
 
-def _vertex_to_primitive_dict(target: "Vertex") -> dict:
-    """
-    Cleans the parameters of the target vertex.
-    """
+def _vertex_to_primitive_dict(target: Vertex) -> dict:
+    """Cleans the parameters of the target vertex."""
     # Removes all keys that the values aren't python types like str, int, bool, etc.
     params = {
-        key: value for key, value in target.params.items() if isinstance(value, (str, int, bool, float, list, dict))
+        key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)
     }
     # if it is a list we need to check if the contents are python types
     for key, value in params.items():
         if isinstance(value, list):
-            params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
+            params[key] = [item for item in value if isinstance(item, str | int | bool | float | list | dict)]
     return params
 
 
 async def log_transaction(
-    flow_id: str | UUID, source: "Vertex", status, target: Optional["Vertex"] = None, error=None
+    flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
 ) -> None:
+    """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
+
+    Serializes the source vertex's primitive parameters and result, handling pandas DataFrames as needed,
+    and records transaction details including inputs, outputs, status, error, and flow ID in the database.
+    If the flow ID is not provided, attempts to retrieve it from the source vertex's graph.
+    Logs warnings and errors on serialization or database failures.
+    """
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
             return
+        if not flow_id:
+            if source.graph.flow_id:
+                flow_id = source.graph.flow_id
+            else:
+                return
         inputs = _vertex_to_primitive_dict(source)
+
+        # Convert the result to a serializable format
+        if source.result:
+            try:
+                result_dict = source.result.model_dump()
+                for key, value in result_dict.items():
+                    if isinstance(value, pd.DataFrame):
+                        result_dict[key] = value.to_dict()
+                outputs = result_dict
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Error serializing result: {e!s}")
+                outputs = None
+        else:
+            outputs = None
+
         transaction = TransactionBase(
             vertex_id=source.id,
             target_id=target.id if target else None,
-            inputs=inputs,
-            # ugly hack to get the model dump with weird datatypes
-            outputs=json.loads(source.result.model_dump_json()) if source.result else None,
+            inputs=serialize(inputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            outputs=serialize(outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
             status=status,
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_transaction(session, transaction)
-            logger.debug(f"Logged transaction: {inserted.id}")
-    except Exception as e:
-        logger.error(f"Error logging transaction: {e}")
+        async with session_getter(get_db_service()) as session:
+            with session.no_autoflush:
+                inserted = await crud_log_transaction(session, transaction)
+                if inserted:
+                    logger.debug(f"Logged transaction: {inserted.id}")
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"Error logging transaction: {exc!s}")
 
 
-def log_vertex_build(
-    flow_id: str,
+async def log_vertex_build(
+    *,
+    flow_id: str | UUID,
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: "ResultDataResponse",
+    data: ResultDataResponse | dict,
     artifacts: dict | None = None,
-):
+) -> None:
+    """Asynchronously logs a vertex build record to the database if vertex build storage is enabled.
+
+    Serializes the provided data and artifacts with configurable length and item limits before storing.
+    Converts parameters to string if present. Handles exceptions by logging errors.
+    """
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+        try:
+            if isinstance(flow_id, str):
+                flow_id = UUID(flow_id)
+        except ValueError:
+            msg = f"Invalid flow_id passed to log_vertex_build: {flow_id!r}(type: {type(flow_id)})"
+            raise ValueError(msg) from None
+
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
             valid=valid,
             params=str(params) if params else None,
-            # ugly hack to get the model dump with weird datatypes
-            data=json.loads(data.model_dump_json()),
-            # ugly hack to get the model dump with weird datatypes
-            artifacts=json.loads(json.dumps(artifacts, default=str)),
+            data=serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            artifacts=serialize(artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_vertex_build(session, vertex_build)
+        async with session_getter(get_db_service()) as session:
+            inserted = await crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
-    except Exception as e:
-        logger.exception(f"Error logging vertex build: {e}")
+    except Exception:  # noqa: BLE001
+        logger.exception("Error logging vertex build")
 
 
 def rewrite_file_path(file_path: str):
@@ -195,9 +211,19 @@ def rewrite_file_path(file_path: str):
 
     file_path_split = [part for part in file_path.split("/") if part]
 
-    if len(file_path_split) >= 2:
+    if len(file_path_split) > 1:
         consistent_file_path = f"{file_path_split[-2]}/{file_path_split[-1]}"
     else:
         consistent_file_path = "/".join(file_path_split)
 
     return [consistent_file_path]
+
+
+def has_output_vertex(vertices: dict[Vertex, int]):
+    return any(vertex.is_output for vertex in vertices)
+
+
+def has_chat_output(vertices: dict[Vertex, int]):
+    from langflow.graph.schema import InterfaceComponentTypes
+
+    return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)

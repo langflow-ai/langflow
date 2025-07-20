@@ -1,13 +1,12 @@
-from typing import Any, get_type_hints
 from collections.abc import Callable
+from typing import Any, get_type_hints
 
 from pydantic import ConfigDict, computed_field, create_model
 from pydantic.fields import FieldInfo
 
 
 def __validate_method(method: Callable) -> None:
-    """
-    Validates a method by checking if it has the required attributes.
+    """Validates a method by checking if it has the required attributes.
 
     This function ensures that the given method belongs to a class with the necessary
     structure for output handling. It checks for the presence of a __self__ attribute
@@ -30,14 +29,15 @@ def __validate_method(method: Callable) -> None:
         >>> __validate_method(lambda x: x)  # This will raise a ValueError
     """
     if not hasattr(method, "__self__"):
-        raise ValueError(f"Method {method} does not have a __self__ attribute.")
+        msg = f"Method {method} does not have a __self__ attribute."
+        raise ValueError(msg)
     if not hasattr(method.__self__, "get_output_by_method"):
-        raise ValueError(f"Method's class {method.__self__} must have a get_output_by_method attribute.")
+        msg = f"Method's class {method.__self__} must have a get_output_by_method attribute."
+        raise ValueError(msg)
 
 
-def build_output_getter(method: Callable, validate: bool = True) -> Callable:
-    """
-    Builds an output getter function for a given method in a graph component.
+def build_output_getter(method: Callable, *, validate: bool = True) -> Callable:
+    """Builds an output getter function for a given method in a graph component.
 
     This function creates a new callable that, when invoked, retrieves the output
     of the specified method using the get_output_by_method of the method's class.
@@ -82,14 +82,14 @@ def build_output_getter(method: Callable, validate: bool = True) -> Callable:
     return_type = get_type_hints(method).get("return", None)
 
     if return_type is None:
-        raise ValueError(f"Method {method.__name__} has no return type annotation.")
+        msg = f"Method {method.__name__} has no return type annotation."
+        raise ValueError(msg)
     output_getter.__annotations__["return"] = return_type
     return output_getter
 
 
-def build_output_setter(method: Callable, validate: bool = True) -> Callable:
-    """
-    Build an output setter function for a given method in a graph component.
+def build_output_setter(method: Callable, *, validate: bool = True) -> Callable:
+    """Build an output setter function for a given method in a graph component.
 
     This function creates a new callable that, when invoked, sets the output
     of the specified method using the get_output_by_method of the method's class.
@@ -126,19 +126,18 @@ def build_output_setter(method: Callable, validate: bool = True) -> Callable:
         >>> print(component.get_output_by_method(component.set_message).value)  # Prints "New message"
     """
 
-    def output_setter(self, value):
+    def output_setter(self, value) -> None:  # noqa: ARG001
         if validate:
             __validate_method(method)
-        methods_class = method.__self__
+        methods_class = method.__self__  # type: ignore[attr-defined]
         output = methods_class.get_output_by_method(method)
         output.value = value
 
     return output_setter
 
 
-def create_state_model(model_name: str = "State", validate: bool = True, **kwargs) -> type:
-    """
-    Create a dynamic Pydantic state model based on the provided keyword arguments.
+def create_state_model(model_name: str = "State", *, validate: bool = True, **kwargs) -> type:
+    """Create a dynamic Pydantic state model based on the provided keyword arguments.
 
     This function generates a Pydantic model class with fields corresponding to the
     provided keyword arguments. It can handle various types of field definitions,
@@ -159,8 +158,8 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
         ValueError: If the provided field value is invalid or cannot be processed.
 
     Examples:
-        >>> from langflow.components.inputs import ChatInput
-        >>> from langflow.components.outputs.ChatOutput import ChatOutput
+        >>> from langflow.components.io import ChatInput
+        >>> from langflow.components.io.ChatOutput import ChatOutput
         >>> from pydantic import Field
         >>>
         >>> chat_input = ChatInput()
@@ -207,32 +206,32 @@ def create_state_model(model_name: str = "State", validate: bool = True, **kwarg
             # Define the field with the return type
             try:
                 __validate_method(value)
-                getter = build_output_getter(value, validate)
-                setter = build_output_setter(value, validate)
+                getter = build_output_getter(value, validate=validate)
+                setter = build_output_setter(value, validate=validate)
                 property_method = property(getter, setter)
             except ValueError as e:
                 # If the method is not valid,assume it is already a getter
-                if "get_output_by_method" not in str(e) and "__self__" not in str(e) or validate:
-                    raise e
+                if ("get_output_by_method" not in str(e) and "__self__" not in str(e)) or validate:
+                    raise
                 property_method = value
             fields[name] = computed_field(property_method)
         elif isinstance(value, FieldInfo):
             field_tuple = (value.annotation or Any, value)
             fields[name] = field_tuple
-        elif isinstance(value, tuple) and len(value) == 2:
+        elif isinstance(value, tuple) and len(value) == 2:  # noqa: PLR2004
             # Fields are defined by one of the following tuple forms:
 
             # (<type>, <default value>)
             # (<type>, Field(...))
             # typing.Annotated[<type>, Field(...)]
             if not isinstance(value[0], type):
-                raise ValueError(f"Invalid type for field {name}: {type(value[0])}")
+                msg = f"Invalid type for field {name}: {type(value[0])}"
+                raise TypeError(msg)
             fields[name] = (value[0], value[1])
         else:
-            raise ValueError(f"Invalid value type {type(value)} for field {name}")
+            msg = f"Invalid value type {type(value)} for field {name}"
+            raise ValueError(msg)
 
     # Create the model dynamically
     config_dict = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True)
-    model = create_model(model_name, __config__=config_dict, **fields)
-
-    return model
+    return create_model(model_name, __config__=config_dict, **fields)

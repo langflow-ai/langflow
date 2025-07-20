@@ -1,38 +1,76 @@
 # Path: src/backend/langflow/services/database/models/flow/model.py
 
 import re
-import warnings
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, List, Optional
+from enum import Enum
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 import emoji
-from emoji import purely_emoji  # type: ignore
+from emoji import purely_emoji
 from fastapi import HTTPException, status
-from pydantic import field_serializer, field_validator
-from sqlalchemy import UniqueConstraint, Text
+from loguru import logger
+from pydantic import (
+    BaseModel,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+)
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema import Data
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.schema.data import Data
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.folder import Folder
-    from langflow.services.database.models.message import MessageTable
-    from langflow.services.database.models.user import User
-    from langflow.services.database.models import TransactionTable
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
+
+HEX_COLOR_LENGTH = 7
+
+
+class AccessTypeEnum(str, Enum):
+    PRIVATE = "PRIVATE"
+    PUBLIC = "PUBLIC"
 
 
 class FlowBase(SQLModel):
+    # Supresses warnings during migrations
+    __mapper_args__ = {"confirm_deleted_rows": False}
+
     name: str = Field(index=True)
-    description: Optional[str] = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
-    icon: Optional[str] = Field(default=None, nullable=True)
-    icon_bg_color: Optional[str] = Field(default=None, nullable=True)
-    data: Optional[Dict] = Field(default=None, nullable=True)
-    is_component: Optional[bool] = Field(default=False, nullable=True)
-    updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
-    webhook: Optional[bool] = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
-    endpoint_name: Optional[str] = Field(default=None, nullable=True, index=True)
+    description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
+    icon: str | None = Field(default=None, nullable=True)
+    icon_bg_color: str | None = Field(default=None, nullable=True)
+    gradient: str | None = Field(default=None, nullable=True)
+    data: dict | None = Field(default=None, nullable=True)
+    is_component: bool | None = Field(default=False, nullable=True)
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
+    webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
+    endpoint_name: str | None = Field(default=None, nullable=True, index=True)
+    tags: list[str] | None = None
+    locked: bool | None = Field(default=False, nullable=True)
+    mcp_enabled: bool | None = Field(default=False, nullable=True, description="Can be exposed in the MCP server")
+    action_name: str | None = Field(
+        default=None, nullable=True, description="The name of the action associated with the flow"
+    )
+    action_description: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+        description="The description of the action associated with the flow",
+    )
+    access_type: AccessTypeEnum = Field(
+        default=AccessTypeEnum.PRIVATE,
+        sa_column=Column(
+            SQLEnum(
+                AccessTypeEnum,
+                name="access_type_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=False,
+            server_default=text("'PRIVATE'"),
+        ),
+    )
 
     @field_validator("endpoint_name")
     @classmethod
@@ -52,19 +90,24 @@ class FlowBase(SQLModel):
         return v
 
     @field_validator("icon_bg_color")
+    @classmethod
     def validate_icon_bg_color(cls, v):
         if v is not None and not isinstance(v, str):
-            raise ValueError("Icon background color must be a string")
+            msg = "Icon background color must be a string"
+            raise ValueError(msg)
         # validate that is is a hex color
         if v and not v.startswith("#"):
-            raise ValueError("Icon background color must start with #")
+            msg = "Icon background color must start with #"
+            raise ValueError(msg)
 
         # validate that it is a valid hex color
-        if v and len(v) != 7:
-            raise ValueError("Icon background color must be 7 characters long")
+        if v and len(v) != HEX_COLOR_LENGTH:
+            msg = "Icon background color must be 7 characters long"
+            raise ValueError(msg)
         return v
 
     @field_validator("icon")
+    @classmethod
     def validate_icon_atr(cls, v):
         #   const emojiRegex = /\p{Emoji}/u;
         # const isEmoji = emojiRegex.test(data?.node?.icon!);
@@ -76,15 +119,15 @@ class FlowBase(SQLModel):
 
         if not v.startswith(":") and not v.endswith(":"):
             return v
-        elif not v.startswith(":") or not v.endswith(":"):
+        if not v.startswith(":") or not v.endswith(":"):
             # emoji should have both starting and ending colons
             # so if one of them is missing, we will raise
-            raise ValueError(f"Invalid emoji. {v} is not a valid emoji.")
+            msg = f"Invalid emoji. {v} is not a valid emoji."
+            raise ValueError(msg)
 
         emoji_value = emoji.emojize(v, variant="emoji_type")
         if v == emoji_value:
-            warnings.warn(f"Invalid emoji. {v} is not a valid emoji.")
-            icon = v
+            logger.warning(f"Invalid emoji. {v} is not a valid emoji.")
         icon = emoji_value
 
         if purely_emoji(icon):
@@ -92,32 +135,39 @@ class FlowBase(SQLModel):
             return icon
         # otherwise it should be a valid lucide icon
         if v is not None and not isinstance(v, str):
-            raise ValueError("Icon must be a string")
+            msg = "Icon must be a string"
+            raise ValueError(msg)
         # is should be lowercase and contain only letters and hyphens
         if v and not v.islower():
-            raise ValueError("Icon must be lowercase")
+            msg = "Icon must be lowercase"
+            raise ValueError(msg)
         if v and not v.replace("-", "").isalpha():
-            raise ValueError("Icon must contain only letters and hyphens")
+            msg = "Icon must contain only letters and hyphens"
+            raise ValueError(msg)
         return v
 
     @field_validator("data")
-    def validate_json(v):
+    @classmethod
+    def validate_json(cls, v):
         if not v:
             return v
         if not isinstance(v, dict):
-            raise ValueError("Flow must be a valid JSON")
+            msg = "Flow must be a valid JSON"
+            raise ValueError(msg)  # noqa: TRY004
 
         # data must contain nodes and edges
-        if "nodes" not in v.keys():
-            raise ValueError("Flow must have nodes")
-        if "edges" not in v.keys():
-            raise ValueError("Flow must have edges")
+        if "nodes" not in v:
+            msg = "Flow must have nodes"
+            raise ValueError(msg)
+        if "edges" not in v:
+            msg = "Flow must have edges"
+            raise ValueError(msg)
 
         return v
 
     # updated_at can be serialized to JSON
     @field_serializer("updated_at")
-    def serialize_datetime(value):
+    def serialize_datetime(self, value):
         if isinstance(value, datetime):
             # I'm getting 2024-05-29T17:57:17.631346
             # and I want 2024-05-29T17:57:17-05:00
@@ -128,25 +178,27 @@ class FlowBase(SQLModel):
         return value
 
     @field_validator("updated_at", mode="before")
+    @classmethod
     def validate_dt(cls, v):
         if v is None:
             return v
-        elif isinstance(v, datetime):
+        if isinstance(v, datetime):
             return v
 
         return datetime.fromisoformat(v)
 
 
-class Flow(FlowBase, table=True):  # type: ignore
+class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
-    data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
-    user_id: Optional[UUID] = Field(index=True, foreign_key="user.id", nullable=True)
+    data: dict | None = Field(default=None, sa_column=Column(JSON))
+    user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
-    folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    icon: str | None = Field(default=None, nullable=True)
+    tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
+    locked: bool | None = Field(default=False, nullable=True)
+    folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
-    messages: List["MessageTable"] = Relationship(back_populates="flow")
-    transactions: List["TransactionTable"] = Relationship(back_populates="flow")
-    vertex_builds: List["VertexBuildTable"] = Relationship(back_populates="flow")
 
     def to_data(self):
         serialized = self.model_dump()
@@ -157,8 +209,7 @@ class Flow(FlowBase, table=True):  # type: ignore
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        record = Data(data=data)
-        return record
+        return Data(data=data)
 
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="unique_flow_name"),
@@ -167,22 +218,57 @@ class Flow(FlowBase, table=True):  # type: ignore
 
 
 class FlowCreate(FlowBase):
-    user_id: Optional[UUID] = None
-    folder_id: Optional[UUID] = None
+    user_id: UUID | None = None
+    folder_id: UUID | None = None
+    fs_path: str | None = None
 
 
 class FlowRead(FlowBase):
     id: UUID
-    user_id: Optional[UUID] = Field()
-    folder_id: Optional[UUID] = Field()
+    user_id: UUID | None = Field()
+    folder_id: UUID | None = Field()
+    tags: list[str] | None = Field(None, description="The tags of the flow")
+
+
+class FlowHeader(BaseModel):
+    """Model representing a header for a flow - Without the data."""
+
+    id: UUID = Field(description="Unique identifier for the flow")
+    name: str = Field(description="The name of the flow")
+    folder_id: UUID | None = Field(
+        None,
+        description="The ID of the folder containing the flow. None if not associated with a folder",
+    )
+    is_component: bool | None = Field(None, description="Flag indicating whether the flow is a component")
+    endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
+    description: str | None = Field(None, description="A description of the flow")
+    data: dict | None = Field(None, description="The data of the component, if is_component is True")
+    access_type: AccessTypeEnum | None = Field(None, description="The access type of the flow")
+    tags: list[str] | None = Field(None, description="The tags of the flow")
+    mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
+    action_name: str | None = Field(None, description="The name of the action associated with the flow")
+    action_description: str | None = Field(None, description="The description of the action associated with the flow")
+
+    @field_validator("data", mode="before")
+    @classmethod
+    def validate_flow_header(cls, value: dict, info: ValidationInfo):
+        if not info.data["is_component"]:
+            return None
+        return value
 
 
 class FlowUpdate(SQLModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    data: Optional[Dict] = None
-    folder_id: Optional[UUID] = None
-    endpoint_name: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
+    data: dict | None = None
+    folder_id: UUID | None = None
+    endpoint_name: str | None = None
+    mcp_enabled: bool | None = None
+    locked: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+    access_type: AccessTypeEnum | None = None
+    fs_path: str | None = None
 
     @field_validator("endpoint_name")
     @classmethod

@@ -1,8 +1,6 @@
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "../FlowPage/components/PageComponent";
 
@@ -14,10 +12,6 @@ export default function ViewPage() {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const getTypes = useTypesStore((state) => state.getTypes);
-  const types = useTypesStore((state) => state.types);
 
   // Set flow tab id
   useEffect(() => {
@@ -31,11 +25,6 @@ export default function ViewPage() {
         }
 
         setCurrentFlow(isAnExistingFlow);
-      } else if (!flows) {
-        setIsLoading(true);
-        await refreshFlows(undefined);
-        if (!types || Object.keys(types).length === 0) await getTypes();
-        setIsLoading(false);
       }
     };
     awaitgetTypes();

@@ -1,19 +1,36 @@
+from __future__ import annotations
+
+import asyncio
+from typing import TYPE_CHECKING
+
 from loguru import logger
-from sqlmodel import Session, select
+from sqlalchemy import delete
+from sqlalchemy import exc as sqlalchemy_exc
+from sqlmodel import col, select
 
 from langflow.services.auth.utils import create_super_user, verify_password
+from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
+from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
-from .deps import get_db_service, get_service, get_session, get_settings_service
+from .deps import get_db_service, get_service, get_settings_service
+
+if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.settings.manager import SettingsService
 
 
-def get_or_create_super_user(session: Session, username, password, is_default):
+async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
     from langflow.services.database.models.user.model import User
 
-    user = session.exec(select(User).where(User.username == username)).first()
+    stmt = select(User).where(User.username == username)
+    result = await session.exec(stmt)
+    user = result.first()
 
     if user and user.is_superuser:
         return None  # Superuser already exists
@@ -22,50 +39,50 @@ def get_or_create_super_user(session: Session, username, password, is_default):
         if user.is_superuser:
             if verify_password(password, user.password):
                 return None
-            else:
-                # Superuser exists but password is incorrect
-                # which means that the user has changed the
-                # base superuser credentials.
-                # This means that the user has already created
-                # a superuser and changed the password in the UI
-                # so we don't need to do anything.
-                logger.debug(
-                    "Superuser exists but password is incorrect. "
-                    "This means that the user has changed the "
-                    "base superuser credentials."
-                )
-                return None
-        else:
-            logger.debug("User with superuser credentials exists but is not a superuser.")
+            # Superuser exists but password is incorrect
+            # which means that the user has changed the
+            # base superuser credentials.
+            # This means that the user has already created
+            # a superuser and changed the password in the UI
+            # so we don't need to do anything.
+            logger.debug(
+                "Superuser exists but password is incorrect. "
+                "This means that the user has changed the "
+                "base superuser credentials."
+            )
             return None
+        logger.debug("User with superuser credentials exists but is not a superuser.")
+        return None
 
     if user:
         if verify_password(password, user.password):
-            raise ValueError("User with superuser credentials exists but is not a superuser.")
-        else:
-            raise ValueError("Incorrect superuser credentials")
+            msg = "User with superuser credentials exists but is not a superuser."
+            raise ValueError(msg)
+        msg = "Incorrect superuser credentials"
+        raise ValueError(msg)
 
     if is_default:
         logger.debug("Creating default superuser.")
     else:
         logger.debug("Creating superuser.")
     try:
-        return create_super_user(username, password, db=session)
-    except Exception as exc:
+        return await create_super_user(username, password, db=session)
+    except Exception as exc:  # noqa: BLE001
         if "UNIQUE constraint failed: user.username" in str(exc):
             # This is to deal with workers running this
             # at startup and trying to create the superuser
             # at the same time.
-            logger.debug("Superuser already exists.")
+            logger.opt(exception=True).debug("Superuser already exists.")
             return None
+        logger.opt(exception=True).debug("Error creating superuser.")
 
 
-def setup_superuser(settings_service, session: Session):
+async def setup_superuser(settings_service, session: AsyncSession) -> None:
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
     else:
         # Remove the default superuser if it exists
-        teardown_superuser(settings_service, session)
+        await teardown_superuser(settings_service, session)
 
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
@@ -73,20 +90,21 @@ def setup_superuser(settings_service, session: Session):
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
 
     try:
-        user = get_or_create_super_user(session=session, username=username, password=password, is_default=is_default)
+        user = await get_or_create_super_user(
+            session=session, username=username, password=password, is_default=is_default
+        )
         if user is not None:
             logger.debug("Superuser created successfully.")
     except Exception as exc:
         logger.exception(exc)
-        raise RuntimeError("Could not create superuser. Please create a superuser manually.") from exc
+        msg = "Could not create superuser. Please create a superuser manually."
+        raise RuntimeError(msg) from exc
     finally:
         settings_service.auth_settings.reset_credentials()
 
 
-def teardown_superuser(settings_service, session):
-    """
-    Teardown the superuser.
-    """
+async def teardown_superuser(settings_service, session: AsyncSession) -> None:
+    """Teardown the superuser."""
     # If AUTO_LOGIN is True, we will remove the default superuser
     # from the database.
 
@@ -96,51 +114,44 @@ def teardown_superuser(settings_service, session):
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.model import User
 
-            user = session.exec(select(User).where(User.username == username)).first()
+            stmt = select(User).where(User.username == username)
+            result = await session.exec(stmt)
+            user = result.first()
             # Check if super was ever logged in, if not delete it
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
-                session.delete(user)
-                session.commit()
+                await session.delete(user)
+                await session.commit()
                 logger.debug("Default superuser removed successfully.")
 
         except Exception as exc:
             logger.exception(exc)
-            session.rollback()
-            raise RuntimeError("Could not remove default superuser.") from exc
+            await session.rollback()
+            msg = "Could not remove default superuser."
+            raise RuntimeError(msg) from exc
 
 
-async def teardown_services():
-    """
-    Teardown all the services.
-    """
-    try:
-        teardown_superuser(get_settings_service(), next(get_session()))
-    except Exception as exc:
-        logger.exception(exc)
-    try:
-        from langflow.services.manager import service_manager
+async def teardown_services() -> None:
+    """Teardown all the services."""
+    async with get_db_service().with_session() as session:
+        await teardown_superuser(get_settings_service(), session)
 
-        await service_manager.teardown()
-    except Exception as exc:
-        logger.exception(exc)
+    from langflow.services.manager import service_manager
+
+    await service_manager.teardown()
 
 
-def initialize_settings_service():
-    """
-    Initialize the settings manager.
-    """
+def initialize_settings_service() -> None:
+    """Initialize the settings manager."""
     from langflow.services.settings import factory as settings_factory
 
     get_service(ServiceType.SETTINGS_SERVICE, settings_factory.SettingsServiceFactory())
 
 
-def initialize_session_service():
-    """
-    Initialize the session manager.
-    """
+def initialize_session_service() -> None:
+    """Initialize the session manager."""
     from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.session import factory as session_service_factory
 
     initialize_settings_service()
 
@@ -155,20 +166,82 @@ def initialize_session_service():
     )
 
 
-def initialize_services(fix_migration: bool = False, socketio_server=None):
+async def clean_transactions(settings_service: SettingsService, session: AsyncSession) -> None:
+    """Clean up old transactions from the database.
+
+    This function deletes transactions that exceed the maximum number to keep (configured in settings).
+    It orders transactions by timestamp descending and removes the oldest ones beyond the limit.
+
+    Args:
+        settings_service: The settings service containing configuration like max_transactions_to_keep
+        session: The database session to use for the deletion
     """
-    Initialize all the services needed.
+    try:
+        # Delete transactions using bulk delete
+        delete_stmt = delete(TransactionTable).where(
+            col(TransactionTable.id).in_(
+                select(TransactionTable.id)
+                .order_by(col(TransactionTable.timestamp).desc())
+                .offset(settings_service.settings.max_transactions_to_keep)
+            )
+        )
+
+        await session.exec(delete_stmt)
+        await session.commit()
+        logger.debug("Successfully cleaned up old transactions")
+    except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
+        logger.error(f"Error cleaning up transactions: {exc!s}")
+        await session.rollback()
+        # Don't re-raise since this is a cleanup task
+
+
+async def clean_vertex_builds(settings_service: SettingsService, session: AsyncSession) -> None:
+    """Clean up old vertex builds from the database.
+
+    This function deletes vertex builds that exceed the maximum number to keep (configured in settings).
+    It orders vertex builds by timestamp descending and removes the oldest ones beyond the limit.
+
+    Args:
+        settings_service: The settings service containing configuration like max_vertex_builds_to_keep
+        session: The database session to use for the deletion
     """
-    # Test cache connection
-    get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
+    try:
+        # Delete vertex builds using bulk delete
+        delete_stmt = delete(VertexBuildTable).where(
+            col(VertexBuildTable.id).in_(
+                select(VertexBuildTable.id)
+                .order_by(col(VertexBuildTable.timestamp).desc())
+                .offset(settings_service.settings.max_vertex_builds_to_keep)
+            )
+        )
+
+        await session.exec(delete_stmt)
+        await session.commit()
+        logger.debug("Successfully cleaned up old vertex builds")
+    except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
+        logger.error(f"Error cleaning up vertex builds: {exc!s}")
+        await session.rollback()
+        # Don't re-raise since this is a cleanup task
+
+
+async def initialize_services(*, fix_migration: bool = False) -> None:
+    """Initialize all the services needed."""
+    cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
+    # Test external cache connection
+    if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
+        msg = "Cache service failed to connect to external database"
+        raise ConnectionError(msg)
+
     # Setup the superuser
+    await initialize_database(fix_migration=fix_migration)
+    db_service = get_db_service()
+    await db_service.initialize_alembic_log_file()
+    async with db_service.with_session() as session:
+        settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+        await setup_superuser(settings_service, session)
     try:
-        initialize_database(fix_migration=fix_migration)
-    except Exception as exc:
-        raise exc
-    setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), next(get_session()))
-    try:
-        get_db_service().migrate_flows_if_auto_login()
-    except Exception as exc:
-        logger.error(f"Error migrating flows: {exc}")
-        raise RuntimeError("Error migrating flows") from exc
+        await get_db_service().assign_orphaned_flows_to_superuser()
+    except sqlalchemy_exc.IntegrityError as exc:
+        logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
+    await clean_transactions(settings_service, session)
+    await clean_vertex_builds(settings_service, session)

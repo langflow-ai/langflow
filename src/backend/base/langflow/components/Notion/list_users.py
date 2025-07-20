@@ -1,12 +1,11 @@
 import requests
-from typing import List, Dict
+from langchain.tools import StructuredTool
 from pydantic import BaseModel
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
+from langflow.inputs.inputs import SecretStrInput
+from langflow.schema.data import Data
 
 
 class NotionUserList(LCToolComponent):
@@ -27,7 +26,7 @@ class NotionUserList(LCToolComponent):
     class NotionUserListSchema(BaseModel):
         pass
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         users = self._list_users()
         records = []
         combined_text = ""
@@ -52,14 +51,14 @@ class NotionUserList(LCToolComponent):
             args_schema=self.NotionUserListSchema,
         )
 
-    def _list_users(self) -> List[Dict]:
+    def _list_users(self) -> list[dict]:
         url = "https://api.notion.com/v1/users"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Notion-Version": "2022-06-28",
         }
 
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
 
         data = response.json()

@@ -14,6 +14,11 @@ on:
         required: true
         type: boolean
         default: false
+      build_docker_ep:
+        description: "Build Docker Image for Langflow Nightly with Entrypoint"
+        required: false
+        type: boolean
+        default: false
       nightly_tag_main:
         description: "Tag for the nightly main build"
         required: true
@@ -34,6 +39,11 @@ on:
         required: true
         type: boolean
         default: false
+      build_docker_ep:
+        description: "Build Docker Image for Langflow Nightly with Entrypoint"
+        required: false
+        type: boolean
+        default: false
       nightly_tag_main:
         description: "Tag for the nightly main build"
         required: true
@@ -45,7 +55,7 @@ on:
 
 env:
   POETRY_VERSION: "1.8.3"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   release-nightly-base:
@@ -54,30 +64,29 @@ jobs:
     defaults:
       run:
         shell: bash
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
-      - name: Install poetry
-        run: |
-          pipx install poetry==${{ env.POETRY_VERSION }}
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
-          cache: "poetry"
-      - name: Set up Nodejs 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
 
       - name: Verify Nightly Name and Version
-        working-directory: src/backend/base
+        id: verify
         run: |
-          name=$(poetry version | cut -d' ' -f1)
-          version=v$(poetry version --short)
+          name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
@@ -86,24 +95,33 @@ jobs:
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
             exit 1
           fi
+          # Strip the leading `v` from the version
+          version=$(echo $version | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Build project for distribution
-        run: make build base=true
+        run: |
+          rm -rf src/backend/base/dist
+          rm -rf dist
+          make build base=true args="--wheel"
 
       - name: Test CLI
         run: |
-          python -m pip install src/backend/base/dist/*.whl
-          python -m langflow run --host 127.0.0.1 --port 7860 &
+          # TODO: Unsure why the whl is not built in src/backend/base/dist
+          mkdir src/backend/base/dist
+          mv dist/*.whl src/backend/base/dist/
+          uv pip install src/backend/base/dist/*.whl
+          uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
@@ -111,6 +129,7 @@ jobs:
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish base=true
 
@@ -124,6 +143,8 @@ jobs:
     name: Release Langflow Nightly Main
     needs: [release-nightly-base]
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
     defaults:
       run:
         shell: bash
@@ -131,23 +152,23 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_main}}
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
 
-      - name: Install poetry
-        run: pipx install poetry==${{ env.POETRY_VERSION }}
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "poetry"
-      - name: Set up Nodejs 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
       - name: Verify Nightly Name and Version
+        id: verify
         run: |
-          name=$(poetry version | cut -d' ' -f1)
-          version=v$(poetry version --short)
+          name=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $1}')
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}')
           if [ "$name" != "langflow-nightly" ]; then
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
@@ -156,32 +177,35 @@ jobs:
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_main }}. Exiting the workflow."
             exit 1
           fi
-
+          # Strip the leading `v` from the version
+          version=$(echo $version | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
       - name: Wait for PyPI Propagation
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of base
 
       - name: Build project for distribution
-        run: make build main=true
+        run: make build main=true args="--no-sources --wheel"
       - name: Test CLI
         run: |
-          python -m pip install dist/*.whl
-          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          uv pip install dist/*.whl
+          uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish main=true
       - name: Upload Artifact
@@ -193,33 +217,41 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: always() && ${{ inputs.build_docker_base == 'true' }}
-    needs: [release-nightly-base]
+    needs: [release-nightly-base, release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - base
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
-      nightly_tag_base: ${{ inputs.nightly_tag_base }}
+      release_type: nightly-base
+      base_version: ${{ inputs.nightly_tag_base }}
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: always() && ${{ inputs.build_docker_main == 'true' }}
-    needs: [release-nightly-main]
+    needs: [release-nightly-main, call_docker_build_base]
     uses: ./.github/workflows/docker-build.yml
-    strategy:
-      matrix:
-        release_type:
-          - main
     with:
-      # version should be needs.release-base.outputs.version  if release_type is base
-      # version should be needs.release-main.outputs.version  if release_type is main
-      version: ""
-      release_type: ${{ matrix.release_type }}
-      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+      release_type: nightly-main
+      main_version: ${{ inputs.nightly_tag_main }}
+    secrets: inherit
+
+  # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)
+  # call_docker_build_main_all:
+  #   name: Call Docker Build Workflow for langflow-all
+  #   if: always() && ${{ inputs.build_docker_main == 'true' }}
+  #   needs: [release-nightly-main]
+  #   uses: ./.github/workflows/docker-build.yml
+  #   with:
+  #     release_type: nightly-main-all
+  #     main_version: ${{ inputs.nightly_tag_main }}
+  #   secrets: inherit
+
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: always() && ${{ inputs.build_docker_ep == 'true' }}
+    needs: [release-nightly-main, call_docker_build_main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: main-ep
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit

@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import threading
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from langflow.services.base import Service
 
@@ -10,63 +10,69 @@ AsyncLockType = TypeVar("AsyncLockType", bound=asyncio.Lock)
 
 
 class CacheService(Service, Generic[LockType]):
-    """
-    Abstract base class for a cache.
-    """
+    """Abstract base class for a cache."""
 
     name = "cache_service"
 
     @abc.abstractmethod
-    def get(self, key, lock: Optional[LockType] = None):
-        """
-        Retrieve an item from the cache.
+    def get(self, key, lock: LockType | None = None):
+        """Retrieve an item from the cache.
 
         Args:
             key: The key of the item to retrieve.
+            lock: A lock to use for the operation.
 
         Returns:
-            The value associated with the key, or None if the key is not found.
+            The value associated with the key, or CACHE_MISS if the key is not found.
         """
 
     @abc.abstractmethod
-    def set(self, key, value, lock: Optional[LockType] = None):
-        """
-        Add an item to the cache.
+    def set(self, key, value, lock: LockType | None = None):
+        """Add an item to the cache.
 
         Args:
             key: The key of the item.
             value: The value to cache.
+            lock: A lock to use for the operation.
         """
 
     @abc.abstractmethod
-    def upsert(self, key, value, lock: Optional[LockType] = None):
-        """
-        Add an item to the cache if it doesn't exist, or update it if it does.
+    def upsert(self, key, value, lock: LockType | None = None):
+        """Add an item to the cache if it doesn't exist, or update it if it does.
 
         Args:
             key: The key of the item.
             value: The value to cache.
+            lock: A lock to use for the operation.
         """
 
     @abc.abstractmethod
-    def delete(self, key, lock: Optional[LockType] = None):
-        """
-        Remove an item from the cache.
+    def delete(self, key, lock: LockType | None = None):
+        """Remove an item from the cache.
 
         Args:
             key: The key of the item to remove.
+            lock: A lock to use for the operation.
         """
 
     @abc.abstractmethod
-    def clear(self, lock: Optional[LockType] = None):
-        """
-        Clear all items from the cache.
+    def clear(self, lock: LockType | None = None):
+        """Clear all items from the cache."""
+
+    @abc.abstractmethod
+    def contains(self, key) -> bool:
+        """Check if the key is in the cache.
+
+        Args:
+            key: The key of the item to check.
+
+        Returns:
+            True if the key is in the cache, False otherwise.
         """
 
     @abc.abstractmethod
-    def __contains__(self, key):
-        """
-        Check if the key is in the cache.
+    def __contains__(self, key) -> bool:
+        """Check if the key is in the cache.
 
         Args:
             key: The key of the item to check.
@@ -77,17 +83,15 @@ class CacheService(Service, Generic[LockType]):
 
     @abc.abstractmethod
     def __getitem__(self, key):
-        """
-        Retrieve an item from the cache using the square bracket notation.
+        """Retrieve an item from the cache using the square bracket notation.
 
         Args:
             key: The key of the item to retrieve.
         """
 
     @abc.abstractmethod
-    def __setitem__(self, key, value):
-        """
-        Add an item to the cache using the square bracket notation.
+    def __setitem__(self, key, value) -> None:
+        """Add an item to the cache using the square bracket notation.
 
         Args:
             key: The key of the item.
@@ -95,9 +99,8 @@ class CacheService(Service, Generic[LockType]):
         """
 
     @abc.abstractmethod
-    def __delitem__(self, key):
-        """
-        Remove an item from the cache using the square bracket notation.
+    def __delitem__(self, key) -> None:
+        """Remove an item from the cache using the square bracket notation.
 
         Args:
             key: The key of the item to remove.
@@ -105,67 +108,76 @@ class CacheService(Service, Generic[LockType]):
 
 
 class AsyncBaseCacheService(Service, Generic[AsyncLockType]):
-    """
-    Abstract base class for a async cache.
-    """
+    """Abstract base class for a async cache."""
 
     name = "cache_service"
 
     @abc.abstractmethod
-    async def get(self, key, lock: Optional[AsyncLockType] = None):
-        """
-        Retrieve an item from the cache.
+    async def get(self, key, lock: AsyncLockType | None = None):
+        """Retrieve an item from the cache.
 
         Args:
             key: The key of the item to retrieve.
+            lock: A lock to use for the operation.
 
         Returns:
-            The value associated with the key, or None if the key is not found.
+            The value associated with the key, or CACHE_MISS if the key is not found.
         """
 
     @abc.abstractmethod
-    async def set(self, key, value, lock: Optional[AsyncLockType] = None):
-        """
-        Add an item to the cache.
+    async def set(self, key, value, lock: AsyncLockType | None = None):
+        """Add an item to the cache.
 
         Args:
             key: The key of the item.
             value: The value to cache.
+            lock: A lock to use for the operation.
         """
 
     @abc.abstractmethod
-    async def upsert(self, key, value, lock: Optional[AsyncLockType] = None):
-        """
-        Add an item to the cache if it doesn't exist, or update it if it does.
+    async def upsert(self, key, value, lock: AsyncLockType | None = None):
+        """Add an item to the cache if it doesn't exist, or update it if it does.
 
         Args:
             key: The key of the item.
             value: The value to cache.
+            lock: A lock to use for the operation.
         """
 
     @abc.abstractmethod
-    async def delete(self, key, lock: Optional[AsyncLockType] = None):
-        """
-        Remove an item from the cache.
+    async def delete(self, key, lock: AsyncLockType | None = None):
+        """Remove an item from the cache.
 
         Args:
             key: The key of the item to remove.
+            lock: A lock to use for the operation.
         """
 
     @abc.abstractmethod
-    async def clear(self, lock: Optional[AsyncLockType] = None):
-        """
-        Clear all items from the cache.
-        """
+    async def clear(self, lock: AsyncLockType | None = None):
+        """Clear all items from the cache."""
 
     @abc.abstractmethod
-    def __contains__(self, key):
-        """
-        Check if the key is in the cache.
+    async def contains(self, key) -> bool:
+        """Check if the key is in the cache.
 
         Args:
             key: The key of the item to check.
 
         Returns:
             True if the key is in the cache, False otherwise.
+        """
+
+
+class ExternalAsyncBaseCacheService(AsyncBaseCacheService):
+    """Abstract base class for an external async cache."""
+
+    name = "cache_service"
+
+    @abc.abstractmethod
+    async def is_connected(self) -> bool:
+        """Check if the cache is connected.
+
+        Returns:
+            True if the cache is connected, False otherwise.
         """

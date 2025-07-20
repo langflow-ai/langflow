@@ -1,11 +1,12 @@
 from fastapi import HTTPException
+from pydantic import BaseModel
+
 from langflow.api.utils import get_suggestion_message
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow.utils import get_outdated_components
-from pydantic import BaseModel
 
 
-class InvalidChatInputException(Exception):
+class InvalidChatInputError(Exception):
     pass
 
 
@@ -30,5 +31,4 @@ class APIException(HTTPException):
             outdated_components = get_outdated_components(flow)
             if outdated_components:
                 body["suggestion"] = get_suggestion_message(outdated_components)
-        excep = ExceptionBody(**body)
-        return excep
+        return ExceptionBody(**body)

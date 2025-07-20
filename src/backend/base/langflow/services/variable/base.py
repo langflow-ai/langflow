@@ -1,24 +1,20 @@
 import abc
-from typing import Optional, Union
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable
+from langflow.services.database.models.variable.model import Variable, VariableRead
 
 
 class VariableService(Service):
-    """
-    Abstract base class for a variable service.
-    """
+    """Abstract base class for a variable service."""
 
     name = "variable_service"
 
     @abc.abstractmethod
-    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session) -> None:
-        """
-        Initialize user variables.
+    async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
+        """Initialize user variables.
 
         Args:
             user_id: The user ID.
@@ -26,9 +22,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def get_variable(self, user_id: Union[UUID, str], name: str, field: str, session: Session) -> str:
-        """
-        Get a variable value.
+    async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str:
+        """Async get a variable value.
 
         Args:
             user_id: The user ID.
@@ -41,9 +36,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def list_variables(self, user_id: Union[UUID, str], session: Session) -> list[Optional[str]]:
-        """
-        List all variables.
+    async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
+        """List all variables.
 
         Args:
             user_id: The user ID.
@@ -54,9 +48,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def update_variable(self, user_id: Union[UUID, str], name: str, value: str, session: Session) -> Variable:
-        """
-        Update a variable.
+    async def update_variable(self, user_id: UUID | str, name: str, value: str, session: AsyncSession) -> Variable:
+        """Update a variable.
 
         Args:
             user_id: The user ID.
@@ -69,9 +62,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable(self, user_id: Union[UUID, str], name: str, session: Session) -> None:
-        """
-        Delete a variable.
+    async def delete_variable(self, user_id: UUID | str, name: str, session: AsyncSession) -> None:
+        """Delete a variable.
 
         Args:
             user_id: The user ID.
@@ -83,9 +75,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID, session: Session) -> None:
-        """
-        Delete a variable by ID.
+    async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
+        """Delete a variable by ID.
 
         Args:
             user_id: The user ID.
@@ -94,26 +85,35 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def create_variable(
+    async def create_variable(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID | str,
         name: str,
         value: str,
+        *,
         default_fields: list[str],
-        _type: str,
-        session: Session,
+        type_: str,
+        session: AsyncSession,
     ) -> Variable:
-        """
-        Create a variable.
+        """Create a variable.
 
         Args:
             user_id: The user ID.
             name: The name of the variable.
             value: The value of the variable.
             default_fields: The default fields of the variable.
-            _type: The type of the variable.
+            type_: The type of the variable.
             session: The database session.
 
         Returns:
             The created variable.
+        """
+
+    @abc.abstractmethod
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
+        """Get all variables.
+
+        Args:
+            user_id: The user ID.
+            session: The database session.
         """

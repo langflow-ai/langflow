@@ -3,12 +3,12 @@ name: Nightly Build
 on:
   workflow_dispatch:
   schedule:
-    # Run job at 6:30 UTC, 10.30pm PST, or 11.30pm PDT
-    - cron: "30 6 * * *"
+    # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
+    - cron: "0 0 * * *"
 
 env:
   POETRY_VERSION: "1.8.3"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   create-nightly-tag:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash
+        shell: bash -ex -o pipefail {0}
     permissions:
       # Required to create tag
       contents: write
@@ -28,73 +28,57 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: true
-
-      - name: Set up Python ${{ env.PYTHON_VERSION }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies
-        run: |
-          poetry env use ${{ env.PYTHON_VERSION }}
-          poetry install
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
 
       - name: Generate main nightly tag
         id: generate_main_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          MAIN_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py main)"
+          MAIN_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
           echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           echo "main_tag=$MAIN_TAG"
 
-      - name: Check if main tag already exists
+      - name: Delete existing tag if it exists
         id: check_main_tag
         run: |
           git fetch --tags
-          if git rev-parse -q --verify "refs/tags/${{ steps.generate_main_tag.outputs.main_tag }}" >/dev/null; then
-            echo "main_tag_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "main_tag_exists=false" >> $GITHUB_OUTPUT
-          fi
+          git tag -d ${{ steps.generate_main_tag.outputs.main_tag }} || true
+          git push --delete origin ${{ steps.generate_main_tag.outputs.main_tag }} || true
+          echo "main_tag_exists=false" >> $GITHUB_OUTPUT
 
       - name: Generate base nightly tag
         id: generate_base_tag
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          BASE_TAG="$(poetry run python ./scripts/ci/pypi_nightly_tag.py base)"
+          BASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py base)"
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           echo "base_tag=$BASE_TAG"
 
       - name: Commit tag
         id: commit_tag
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
           # If the main tag does not exist in GH, we create the base tag from the existing codebase.
 
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          # WARNING: These scripts must be run in this order.
-          # Poetry will use a different cached virtual environment once the main pyproject.toml
-          # project-name is updated, which does not have dependencies installed.
-          BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
-          echo "Updating base project version to $BASE_TAG"
-          poetry run python ./scripts/ci/update_pyproject_name.py langflow-base-nightly base
-          poetry run python ./scripts/ci/update_pyproject_version.py $BASE_TAG base
-
-          # This updates the dependency of langflow-base to langflow-base-nightly in {project_root}/pyproject.toml
-          poetry run python ./scripts/ci/update_lf_base_dependency.py $BASE_TAG
-
-          # Use the main tag created earlier
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
-          echo "Updating main project version to $MAIN_TAG"
-          poetry run python ./scripts/ci/update_pyproject_version.py $MAIN_TAG main
-          poetry run python ./scripts/ci/update_pyproject_name.py langflow-nightly main
+          BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
+          echo "Updating base project version to $BASE_TAG and updating main project version to $MAIN_TAG"
+          uv run ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG
 
-          git add pyproject.toml src/backend/base/pyproject.toml
+          uv lock
+          cd src/backend/base && uv lock && cd ../../..
+
+          git add pyproject.toml src/backend/base/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
 
           echo "Tagging main with $MAIN_TAG"
@@ -112,20 +96,18 @@ jobs:
 
       - name: Checkout main nightly tag
         uses: actions/checkout@v4
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'true' }}
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
       - name: Retrieve Base Tag
         id: retrieve_base_tag
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'true' }}
         working-directory: src/backend/base
         run: |
           # If the main tag already exists, we need to retrieve the base version from the main tag codebase.
-          version=$(poetry version --short)
-          echo "base_tag=v$version" >> $GITHUB_OUTPUT
-          echo "base_tag=v$version"
-      
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
+          echo "base_tag=$version" >> $GITHUB_OUTPUT
+          echo "base_tag=$version"
+
       - name: Set Base Tag
         id: set_base_tag
         run: |
@@ -149,7 +131,12 @@ jobs:
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
-    secrets: inherit
+      release: true
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   backend-unit-tests:
     if: github.repository == 'langflow-ai/langflow'
@@ -157,7 +144,10 @@ jobs:
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: '["3.10", "3.11", "3.12"]'
+      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
   # Not making nightly builds dependent on integration test success
   # due to inherent flakiness of 3rd party integrations
@@ -167,7 +157,7 @@ jobs:
   #   needs: create-nightly-tag
   #   uses: ./.github/workflows/integration_tests.yml
   #   with:
-  #     python-versions: '["3.10", "3.11", "3.12"]'
+  #     python-versions: '["3.10", "3.11", "3.12", "3.13"]'
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:

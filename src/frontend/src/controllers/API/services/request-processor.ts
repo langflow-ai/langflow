@@ -1,12 +1,15 @@
 import {
-  QueryClient,
+  type QueryClient,
+  type UseMutationOptions,
+  type UseQueryOptions,
   useMutation,
-  UseMutationOptions,
   useQuery,
   useQueryClient,
-  UseQueryOptions,
 } from "@tanstack/react-query";
-import { MutationFunctionType, QueryFunctionType } from "../../../types/api";
+import type {
+  MutationFunctionType,
+  QueryFunctionType,
+} from "../../../types/api";
 
 export function UseRequestProcessor(): {
   query: QueryFunctionType;
@@ -23,6 +26,8 @@ export function UseRequestProcessor(): {
     return useQuery({
       queryKey,
       queryFn,
+      retry: 5,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       ...options,
     });
   }
@@ -40,6 +45,8 @@ export function UseRequestProcessor(): {
         options.onSettled && options.onSettled(data, error, variables, context);
       },
       ...options,
+      retry: options.retry ?? 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
   }
 

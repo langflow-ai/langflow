@@ -1,33 +1,29 @@
-import IconComponent from "../../../../components/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
+import type {
+  ColDef,
+  RowClickedEvent,
+  SelectionChangedEvent,
+} from "ag-grid-community";
+import { useRef, useState } from "react";
 
-import TableAutoCellRender from "@/components/tableComponent/components/tableAutoCellRender";
+import Dropdown from "@/components/core/dropdownComponent";
+import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useTypesStore } from "@/stores/typesStore";
-import { GlobalVariable } from "@/types/global_variables";
-import {
-  ColDef,
-  ColGroupDef,
-  RowClickedEvent,
-  RowDoubleClickedEvent,
-  SelectionChangedEvent,
-} from "ag-grid-community";
-import { useEffect, useRef, useState } from "react";
-import GlobalVariableModal from "../../../../components/GlobalVariableModal/GlobalVariableModal";
-import Dropdown from "../../../../components/dropdownComponent";
-import ForwardedIconComponent from "../../../../components/genericIconComponent";
-import TableComponent from "../../../../components/tableComponent";
+import type { GlobalVariable } from "@/types/global_variables";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/common/genericIconComponent";
 import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
 
 export default function GlobalVariablesPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openModal, setOpenModal] = useState(false);
   const initialData = useRef<GlobalVariable | undefined>(undefined);
-  const getTypes = useTypesStore((state) => state.getTypes);
   const BadgeRenderer = (props) => {
     return props.value !== "" ? (
       <div>
@@ -39,11 +35,6 @@ export default function GlobalVariablesPage() {
       <div></div>
     );
   };
-
-  useEffect(() => {
-    //get the components to build the Aplly To Fields dropdown
-    getTypes(true);
-  }, []);
 
   const DropdownEditor = ({ options, value, onValueChange }) => {
     return (

@@ -1,9 +1,4 @@
-import { keepPreviousData } from "@tanstack/react-query";
-import {
-  useMutationFunctionType,
-  useQueryFunctionType,
-} from "../../../../types/api";
-import { api } from "../../api";
+import type { useMutationFunctionType } from "../../../../types/api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
@@ -20,7 +15,11 @@ export const useGetDownloadFileMutation: useMutationFunctionType<
   const getDownloadImagesFn = async () => {
     if (!params) return;
     // need to use fetch because axios convert blob data to string, and this convertion can corrupt the file
-    const response = await fetch(`${getURL("FILES")}/download/${params.path}`);
+    const response = await fetch(`${getURL("FILES")}/download/${params.path}`, {
+      headers: {
+        Accept: "*/*",
+      },
+    });
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
 

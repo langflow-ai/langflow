@@ -1,9 +1,10 @@
-import contextlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import contextlib
+
     with contextlib.suppress(ImportError):
-        from celery import Celery  # type: ignore
+        from celery import Celery
 
 
 def get_celery_worker_status(app: "Celery"):

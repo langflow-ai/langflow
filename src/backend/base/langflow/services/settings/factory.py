@@ -1,3 +1,5 @@
+from typing_extensions import override
+
 from langflow.services.factory import ServiceFactory
 from langflow.services.settings.service import SettingsService
 
@@ -10,9 +12,10 @@ class SettingsServiceFactory(ServiceFactory):
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(SettingsService)
 
+    @override
     def create(self):
         # Here you would have logic to create and configure a SettingsService
 

@@ -3,7 +3,8 @@
 name: Label PRs with Conventional Commits
 on:
   pull_request_target:
-    types: [opened, edited]
+    types: [opened, edited, synchronize]
+  merge_group:
 
 jobs:
   validate-pr:
@@ -12,7 +13,7 @@ jobs:
     steps:
       - name: Validate the pull request
         id: validate
-        uses: Namchee/conventional-pr@v0.15.4
+        uses: Namchee/conventional-pr@v0.15.6
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
           issue: false

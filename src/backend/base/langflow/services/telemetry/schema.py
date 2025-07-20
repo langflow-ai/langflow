@@ -1,15 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RunPayload(BaseModel):
-    runIsWebhook: bool = False
-    runSeconds: int
-    runSuccess: bool
-    runErrorMessage: str = ""
+    run_is_webhook: bool = Field(default=False, serialization_alias="runIsWebhook")
+    run_seconds: int = Field(serialization_alias="runSeconds")
+    run_success: bool = Field(serialization_alias="runSuccess")
+    run_error_message: str = Field("", serialization_alias="runErrorMessage")
 
 
 class ShutdownPayload(BaseModel):
-    timeRunning: int
+    time_running: int = Field(serialization_alias="timeRunning")
 
 
 class VersionPayload(BaseModel):
@@ -18,20 +18,21 @@ class VersionPayload(BaseModel):
     platform: str
     python: str
     arch: str
-    autoLogin: bool
-    cacheType: str
-    backendOnly: bool
+    auto_login: bool = Field(serialization_alias="autoLogin")
+    cache_type: str = Field(serialization_alias="cacheType")
+    backend_only: bool = Field(serialization_alias="backendOnly")
+    desktop: bool = False
 
 
 class PlaygroundPayload(BaseModel):
-    playgroundSeconds: int
-    playgroundComponentCount: int | None = None
-    playgroundSuccess: bool
-    playgroundErrorMessage: str = ""
+    playground_seconds: int = Field(serialization_alias="playgroundSeconds")
+    playground_component_count: int | None = Field(None, serialization_alias="playgroundComponentCount")
+    playground_success: bool = Field(serialization_alias="playgroundSuccess")
+    playground_error_message: str = Field("", serialization_alias="playgroundErrorMessage")
 
 
 class ComponentPayload(BaseModel):
-    componentName: str
-    componentSeconds: int
-    componentSuccess: bool
-    componentErrorMessage: str | None = None
+    component_name: str = Field(serialization_alias="componentName")
+    component_seconds: int = Field(serialization_alias="componentSeconds")
+    component_success: bool = Field(serialization_alias="componentSuccess")
+    component_error_message: str | None = Field(serialization_alias="componentErrorMessage")

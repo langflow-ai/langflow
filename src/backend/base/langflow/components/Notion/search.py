@@ -1,12 +1,13 @@
+from typing import Any
+
 import requests
-from typing import Dict, Any, List
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, DropdownInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
+from langflow.inputs.inputs import DropdownInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class NotionSearch(LCToolComponent):
@@ -48,7 +49,7 @@ class NotionSearch(LCToolComponent):
         filter_value: str = Field(default="page", description="Filter type: 'page' or 'database'.")
         sort_direction: str = Field(default="descending", description="Sort direction: 'ascending' or 'descending'.")
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         results = self._search_notion(self.query, self.filter_value, self.sort_direction)
         records = []
         combined_text = f"Results found: {len(results)}\n\n"
@@ -81,14 +82,15 @@ class NotionSearch(LCToolComponent):
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="notion_search",
-            description="Search Notion pages and databases. Input should include the search query and optionally filter type and sort direction.",
+            description="Search Notion pages and databases. "
+            "Input should include the search query and optionally filter type and sort direction.",
             func=self._search_notion,
             args_schema=self.NotionSearchSchema,
         )
 
     def _search_notion(
         self, query: str, filter_value: str = "page", sort_direction: str = "descending"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         url = "https://api.notion.com/v1/search"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -102,7 +104,7 @@ class NotionSearch(LCToolComponent):
             "sort": {"direction": sort_direction, "timestamp": "last_edited_time"},
         }
 
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
         response.raise_for_status()
 
         results = response.json()

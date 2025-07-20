@@ -1,4 +1,4 @@
-import { FlowType } from "../../../types/flow";
+import type { FlowType } from "../../../types/flow";
 
 export type FolderType = {
   name: string;
@@ -7,6 +7,23 @@ export type FolderType = {
   parent_id: string;
   flows: FlowType[];
   components: string[];
+};
+
+export type PaginatedFolderType = {
+  folder: {
+    name: string;
+    description: string;
+    id?: string | null;
+    parent_id: string;
+    components: string[];
+  };
+  flows: {
+    items: FlowType[];
+    total: number;
+    page: number;
+    size: number;
+    pages: number;
+  };
 };
 
 export type AddFolderType = {

@@ -1,19 +1,17 @@
 import { BuildStatus } from "../../constants/enums";
-import { VertexBuildTypeAPI } from "../../types/api";
+import type { VertexBuildTypeAPI } from "../../types/api";
 
 export const getSpecificClassFromBuildStatus = (
   buildStatus: BuildStatus | undefined,
   validationStatus: VertexBuildTypeAPI | null,
-  isDark: boolean,
-) => {
-  let isInvalid = validationStatus && !validationStatus.valid;
-  if (
-    (buildStatus === BuildStatus.BUILT && isInvalid) ||
-    buildStatus === BuildStatus.ERROR
-  ) {
-    return isDark ? "built-invalid-status-dark" : "built-invalid-status";
-  } else if (buildStatus === BuildStatus.BUILDING) {
-    return "building-status";
+  isBuilding: boolean,
+): string => {
+  const isInvalid = validationStatus && !validationStatus.valid;
+
+  if (BuildStatus.BUILDING === buildStatus) {
+    return "border-foreground border-[1px] ring-[0.75px] ring-foreground";
+  } else if ((isInvalid || buildStatus === BuildStatus.ERROR) && !isBuilding) {
+    return "border-destructive border-[1px] ring-[0.75px] ring-destructive";
   } else {
     return "";
   }

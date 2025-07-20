@@ -1,7 +1,7 @@
-import httpx
+from importlib import metadata
 
-from typing import Optional
-from langflow.logging.logger import logger
+import httpx
+from packaging import version as pkg_version
 
 
 def _compute_non_prerelease_version(prerelease_version: str) -> str:
@@ -13,8 +13,8 @@ def _compute_non_prerelease_version(prerelease_version: str) -> str:
 
 
 def _get_version_info():
-    """
-    Retrieves the version of the package from a possible list of package names.
+    """Retrieves the version of the package from a possible list of package names.
+
     This accounts for after package names are updated for -nightly builds.
 
     Returns:
@@ -23,8 +23,6 @@ def _get_version_info():
     Raises:
         ValueError: If the package is not found from the list of package names.
     """
-    from importlib import metadata
-
     package_options = [
         ("langflow", "Langflow"),
         ("langflow-base", "Langflow Base"),
@@ -37,55 +35,56 @@ def _get_version_info():
             __version__ = metadata.version(pkg_name)
             prerelease_version = __version__
             version = _compute_non_prerelease_version(prerelease_version)
-
+        except (ImportError, metadata.PackageNotFoundError):
+            pass
+        else:
             return {
                 "version": prerelease_version,
                 "main_version": version,
                 "package": display_name,
             }
-        except (ImportError, metadata.PackageNotFoundError):
-            pass
 
     if __version__ is None:
-        raise ValueError(f"Package not found from options {package_options}")
+        msg = f"Package not found from options {package_options}"
+        raise ValueError(msg)
+    return None
 
 
 VERSION_INFO = _get_version_info()
 
 
 def is_pre_release(v: str) -> bool:
-    """
-    Returns a boolean indicating whether the version is a pre-release version,
-    as per the definition of a pre-release segment from PEP 440.
+    """Whether the version is a pre-release version.
+
+    Returns:
+        Whether the version is a pre-release version,
+        as per the definition of a pre-release segment from PEP 440.
     """
     return any(label in v for label in ["a", "b", "rc"])
 
 
 def is_nightly(v: str) -> bool:
-    """
-    Returns a boolean indicating whether the version is a dev (nightly) version,
-    as per the definition of a dev segment from PEP 440.
+    """Whether the version is a dev (nightly) version.
+
+    Returns:
+         Whether the version is a dev (nightly) version,
+         as per the definition of a dev segment from PEP 440.
     """
     return "dev" in v
 
 
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
-    from packaging import version as pkg_version
-
+def fetch_latest_version(package_name: str, *, include_prerelease: bool) -> str | None:
     package_name = package_name.replace(" ", "-").lower()
-    valid_versions = []
     try:
         response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
         versions = response.json()["releases"].keys()
         valid_versions = [v for v in versions if include_prerelease or not is_pre_release(v)]
-
-    except Exception as e:
-        logger.exception(e)
-
-    finally:
         if not valid_versions:
             return None  # Handle case where no valid versions are found
-        return max(valid_versions, key=lambda v: pkg_version.parse(v))
+        return max(valid_versions, key=pkg_version.parse)
+
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def get_version_info():

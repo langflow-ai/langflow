@@ -7,6 +7,7 @@ Create Date: 2024-01-26 13:34:14.496769
 """
 
 from typing import Sequence, Union
+import warnings
 
 import sqlalchemy as sa
 import sqlmodel
@@ -22,10 +23,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)  # type: ignore
+    inspector = sa.inspect(conn)  # type: ignore
     flow_columns = {column["name"] for column in inspector.get_columns("flow")}
     flow_indexes = {index["name"] for index in inspector.get_indexes("flow")}
-    flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
+
+    # Suppress the SQLite foreign key warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*SQL-parsed foreign key constraint.*")
+        flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
 
     with op.batch_alter_table("flow", schema=None) as batch_op:
         if "is_component" not in flow_columns:
@@ -35,7 +40,7 @@ def upgrade() -> None:
         if "folder" not in flow_columns:
             batch_op.add_column(sa.Column("folder", sqlmodel.sql.sqltypes.AutoString(), nullable=True))
         if "user_id" not in flow_columns:
-            batch_op.add_column(sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=True))
+            batch_op.add_column(sa.Column("user_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=True))
         if "ix_flow_user_id" not in flow_indexes:
             batch_op.create_index(batch_op.f("ix_flow_user_id"), ["user_id"], unique=False)
         if "flow_user_id_fkey" not in flow_fks:
@@ -44,10 +49,14 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)  # type: ignore
+    inspector = sa.inspect(conn)  # type: ignore
     flow_columns = {column["name"] for column in inspector.get_columns("flow")}
     flow_indexes = {index["name"] for index in inspector.get_indexes("flow")}
-    flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
+
+    # Suppress the SQLite foreign key warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*SQL-parsed foreign key constraint.*")
+        flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
 
     with op.batch_alter_table("flow", schema=None) as batch_op:
         if "flow_user_id_fkey" in flow_fks:

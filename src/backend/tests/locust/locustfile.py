@@ -1,125 +1,125 @@
-import random
+import os
 import time
-from pathlib import Path
+from http import HTTPStatus
 
-import httpx
-import orjson
-from locust import FastHttpUser, between, task
-from rich import print
+from locust import FastHttpUser, between, events, task
 
 
-class NameTest(FastHttpUser):
-    wait_time = between(1, 5)
+@events.quitting.add_listener
+def _(environment, **_kwargs):
+    """Print stats at test end for analysis."""
+    if environment.stats.total.fail_ratio > 0.01:
+        environment.process_exit_code = 1
+    environment.runner.quit()
 
-    with open("names.txt", "r") as file:
-        names = [line.strip() for line in file.readlines()]
 
-    headers: dict = {}
+class FlowRunUser(FastHttpUser):
+    """FlowRunUser simulates users sending requests to the Langflow run endpoint.
 
-    def poll_task(self, task_id, sleep_time=1):
-        while True:
-            with self.rest(
-                "GET",
-                f"/task/{task_id}",
-                name="task_status",
-                headers=self.headers,
-            ) as response:
-                status = response.js.get("status")
-                print(f"Poll Response: {response.js}")
-                if status == "SUCCESS":
-                    return response.js.get("result")
-                elif status in ["FAILURE", "REVOKED"]:
-                    raise ValueError(f"Task failed with status: {status}")
-            time.sleep(sleep_time)
+    Designed for high-load testing with proper wait times and connection handling.
+    Uses FastHttpUser for better performance with keep-alive connections and connection pooling.
 
-    def process(self, name, flow_id, payload):
-        task_id = None
-        print(f"Processing {payload}")
-        with self.rest(
-            "POST",
-            f"/process/{flow_id}",
-            json=payload,
-            name="process",
-            headers=self.headers,
-        ) as response:
-            print(response.js)
-            if response.status_code != 200:
-                response.failure("Process call failed")
-                raise ValueError("Process call failed")
-            task_id = response.js.get("id")
-            session_id = response.js.get("session_id")
-            assert task_id, "Inner Task ID not found"
+    Environment Variables:
+      - LANGFLOW_HOST: Base URL for the Langflow server (default: http://localhost:7860)
+      - FLOW_ID: UUID or endpoint name of the flow to test (default: 62c21279-f7ca-43e2-b5e3-326ac573db04)
+      - API_KEY: API key for authentication, sent as header 'x-api-key' (Required)
+      - MIN_WAIT: Minimum wait time between requests in ms (default: 2000)
+      - MAX_WAIT: Maximum wait time between requests in ms (default: 5000)
+      - REQUEST_TIMEOUT: Timeout for each request in seconds (default: 30.0)
+    """
 
-        assert task_id, "Task ID not found"
-        result = self.poll_task(task_id)
-        print(f"Result for {name}: {result}")
+    abstract = False  # This user class can be instantiated
+    connection_timeout = float(os.getenv("REQUEST_TIMEOUT", "30.0"))  # Configurable timeout
+    network_timeout = float(os.getenv("REQUEST_TIMEOUT", "30.0"))
 
-        return result, session_id
+    # Dynamic wait time based on environment variables or defaults
+    # Increased default minimum wait to reduce database pressure
+    wait_time = between(
+        float(os.getenv("MIN_WAIT", "2000")) / 1000,
+        float(os.getenv("MAX_WAIT", "5000")) / 1000,
+    )
 
-    @task
-    def send_name_and_check(self):
-        name = random.choice(self.names)
+    # Use the host provided by environment variable or default
+    host = os.getenv("LANGFLOW_HOST", "http://localhost:7860")
 
-        payload1 = {
-            "inputs": {"text": f"Hello, My name is {name}"},
-            "sync": False,
-        }
-        result1, session_id = self.process(name, self.flow_id, payload1)
+    # Flow ID from environment variable or default example UUID
+    flow_id = os.getenv("FLOW_ID")
 
-        payload2 = {
-            "inputs": {"text": "What is my name? Please, answer like this: Your name is <name>"},
-            "session_id": session_id,
-            "sync": False,
-        }
-        result2, session_id = self.process(name, self.flow_id, payload2)
-
-        assert f"Your name is {name}" in str(result2), "Name not found in response"
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_response: dict | None = None
+        self._consecutive_failures = 0
 
     def on_start(self):
-        print("Starting")
-        login_data = {"username": "superuser", "password": "superuser"}
-        response = httpx.post(f"{self.host}/login", data=login_data)
-        print(response.json())
+        """Setup and validate required configurations."""
+        if not os.getenv("API_KEY"):
+            msg = "API_KEY environment variable is required for load testing"
+            raise ValueError(msg)
 
-        tokens = response.json()
-        print(tokens)
-        a_token = tokens["access_token"]
-        logged_in_headers = {"Authorization": f"Bearer {a_token}"}
-        print("Logged in")
-        with open(
-            Path(__file__).parent.parent / "data" / "BasicChatwithPromptandHistory.json",
-            "r",
-        ) as f:
-            json_flow = f.read()
-        flow = orjson.loads(json_flow)
-        data = flow["data"]
-        # Create test data
-        flow = {"name": "Flow 1", "description": "description", "data": data}
-        print("Creating flow")
-        # Make request to endpoint
-        response = httpx.post(
-            f"{self.host}/flows/",
-            json=flow,
-            headers=logged_in_headers,
-        )
-        self.flow_id = response.json()["id"]
-        print(f"Flow ID: {self.flow_id}")
+        # Test connection and auth before starting
+        with self.client.get("/health", catch_response=True) as response:
+            if response.status_code != HTTPStatus.OK:
+                msg = f"Initial health check failed: {response.status_code}"
+                raise ConnectionError(msg)
 
-        # read all users
-        response = httpx.get(
-            f"{self.host}/users/",
-            headers=logged_in_headers,
-        )
-        print(response.json())
-        user_id = next(
-            (user["id"] for user in response.json()["users"] if user["username"] == "superuser"),
-            None,
-        )
-        # Create api key
-        response = httpx.post(
-            f"{self.host}/api_key/",
-            json={"user_id": user_id},
-            headers=logged_in_headers,
-        )
-        print(response.json())
-        self.headers["x-api-key"] = response.json()["api_key"]
+    def log_error(self, name: str, exc: Exception, response_time: float):
+        """Helper method to log errors in a format Locust expects.
+
+        Args:
+            name: The name/endpoint of the request
+            exc: The exception that occurred
+            response_time: The response time in milliseconds
+        """
+        # Log error in stats
+        self.environment.stats.log_error("ERROR", name, str(exc))
+        # Log request with error
+        self.environment.stats.log_request("ERROR", name, response_time, 0)
+
+    @task(1)
+    def run_flow_endpoint(self):
+        """Sends a POST request to the run endpoint using a realistic payload.
+
+        Includes basic error handling.
+        """
+        if not self.flow_id:
+            msg = "FLOW_ID environment variable is required for load testing"
+            raise ValueError(msg)
+        endpoint = f"/api/v1/run/{self.flow_id}?stream=false"
+
+        # Realistic payload that exercises the system
+        payload = {
+            "input_value": (
+                "Hey, Could you check https://docs.langflow.org for me? Later, could you calculate 1390 / 192 ?"
+            ),
+            "output_type": "chat",
+            "input_type": "chat",
+            "tweaks": {},
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": os.getenv("API_KEY"),
+            "Accept": "application/json",
+        }
+
+        start_time = time.time()
+        try:
+            with self.client.post(
+                endpoint, json=payload, headers=headers, catch_response=True, timeout=self.connection_timeout
+            ) as response:
+                response_time = (time.time() - start_time) * 1000
+                if response.status_code == HTTPStatus.OK:
+                    try:
+                        self._last_response = response.json()
+                    except ValueError as e:
+                        response.failure("Invalid JSON response")
+                        self.log_error(endpoint, e, response_time)
+                else:
+                    error_text = response.text or "No response text"
+                    error_msg = f"Unexpected status code: {response.status_code}, Response: {error_text[:200]}"
+                    response.failure(error_msg)
+                    self.log_error(endpoint, Exception(error_msg), response_time)
+        except Exception as e:  # noqa: BLE001
+            response_time = (time.time() - start_time) * 1000
+            self.log_error(endpoint, e, response_time)
+            response.failure(f"Error: {e}")

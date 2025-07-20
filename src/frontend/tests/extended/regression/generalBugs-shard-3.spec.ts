@@ -1,265 +1,157 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
-test("should copy code from playground modal", async ({ page }) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
+test(
+  "should copy code from playground modal",
+  {
+    tag: ["@release"],
+  },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
-
-  await page.goto("/");
-  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-  } catch (error) {
-    modalCount = 0;
-  }
+    await awaitBootstrapTest(page);
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
 
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
+    await page.getByTestId("blank-flow").click();
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("chat output");
 
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
-  await page.waitForTimeout(1000);
+    await page
+      .getByTestId("input_outputChat Output")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
+      });
 
-  await page
-    .getByTestId("outputsChat Output")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+    await page
+      .getByTestId("input_outputChat Output")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("chat input");
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat input");
-  await page.waitForTimeout(1000);
+    await page
+      .getByTestId("input_outputChat Input")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
+      });
 
-  await page
-    .getByTestId("inputsChat Input")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("openai");
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
-  await page.waitForTimeout(1000);
+    await page
+      .getByTestId("openaiOpenAI")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 200 },
+      });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+    await initialGPTsetup(page);
 
-  await page
-    .getByTestId("modelsOpenAI")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+      state: "visible",
+    });
 
-  await page.waitForSelector('[title="fit view"]', {
-    timeout: 100000,
-  });
+    await page.getByTestId("fit_view").click();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+    await page
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
+      .click();
+    await page.getByTestId("handle-openaimodel-shownode-input-left").click();
 
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+    await page
+      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .last()
+      .click();
 
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
+    await page.getByTestId("fit_view").click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.waitForSelector('[data-testid="input-chat-playground"]', {
+      timeout: 100000,
+    });
+    await page.getByTestId("input-chat-playground").click();
+    await page
+      .getByTestId("input-chat-playground")
+      .fill(
+        "Could you provide a Python example for a 'Hello, World!' program?",
+      );
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+    await page.waitForSelector('[data-testid="button-send"]', {
+      timeout: 100000,
+    });
 
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
+    await page.getByTestId("button-send").click();
 
-  const elementsChatInput = await page
-    .locator('[data-testid="handle-chatinput-shownode-message-right"]')
-    .all();
+    await page.getByTestId("api_tab_python").isVisible({
+      timeout: 100000,
+    });
 
-  let visibleElementHandle;
+    await page.waitForSelector('[data-testid="copy-code-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
 
-  for (const element of elementsChatInput) {
-    if (await element.isVisible()) {
-      visibleElementHandle = element;
-      break;
-    }
-  }
+    await page.getByTestId("copy-code-button").last().click();
 
-  // Click and hold on the first element
-  await visibleElementHandle.hover();
-  await page.mouse.down();
+    const handle = await page.evaluateHandle(() =>
+      navigator.clipboard.readText(),
+    );
+    const clipboardContent = await handle.jsonValue();
+    expect(clipboardContent.length).toBeGreaterThan(0);
+    expect(clipboardContent).toContain("Hello");
+  },
+);
 
-  const elementsOpenAiInput = await page
-    .locator('[data-testid="handle-openaimodel-shownode-input-left"]')
-    .all();
+test(
+  "playground button should be enabled or disabled",
+  { tag: ["@release", "@api", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  for (const element of elementsOpenAiInput) {
-    if (await element.isVisible()) {
-      visibleElementHandle = element;
-      break;
-    }
-  }
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
 
-  await visibleElementHandle.hover();
-  await page.mouse.up();
+    await page.getByTestId("blank-flow").click();
 
-  const elementsOpenAiOutput = await page
-    .locator('[data-testid="handle-openaimodel-shownode-text-right"]')
-    .all();
+    expect(await page.getByTestId("playground-btn-flow").isDisabled());
 
-  for (const element of elementsOpenAiOutput) {
-    if (await element.isVisible()) {
-      visibleElementHandle = element;
-      break;
-    }
-  }
+    expect(await page.getByText("Langflow Chat").isHidden());
 
-  // Click and hold on the first element
-  await visibleElementHandle.hover();
-  await page.mouse.down();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("chat output");
 
-  // Move to the second element
-  const elementsChatOutput = await page
-    .getByTestId("handle-chatoutput-shownode-text-left")
-    .all();
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
+      timeout: 30000,
+    });
+    await page
+      .locator('//*[@id="input_outputChat Output"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
 
-  for (const element of elementsChatOutput) {
-    if (await element.isVisible()) {
-      visibleElementHandle = element;
-      break;
-    }
-  }
+    await page.getByTestId("playground-btn-flow-io").click({ force: true });
 
-  await visibleElementHandle.hover();
-  await page.mouse.up();
-
-  await page.getByLabel("fit view").click();
-  await page.getByText("Playground", { exact: true }).click();
-  await page.waitForSelector('[data-testid="input-chat-playground"]', {
-    timeout: 100000,
-  });
-  await page.getByTestId("input-chat-playground").click();
-  await page
-    .getByTestId("input-chat-playground")
-    .fill("Could you provide a Python example for a 'Hello, World!' program?");
-
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("icon-LucideSend").click();
-
-  await page.getByRole("tab", { name: "python" }).isVisible({
-    timeout: 100000,
-  });
-
-  await page.getByTestId("icon-Copy").first().click();
-
-  const handle = await page.evaluateHandle(() =>
-    navigator.clipboard.readText(),
-  );
-  const clipboardContent = await handle.jsonValue();
-  expect(clipboardContent.length).toBeGreaterThan(0);
-  expect(clipboardContent).toContain("Hello");
-});
-
-test("playground button should be enabled or disabled", async ({ page }) => {
-  await page.goto("/");
-  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-
-  expect(await page.getByTestId("playground-btn-flow").isDisabled());
-
-  expect(await page.getByText("Langflow Chat").isHidden());
-
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
-
-  await page.waitForTimeout(1000);
-
-  await page
-    .locator('//*[@id="outputsChat Output"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.waitForSelector('[title="fit view"]', {
-    timeout: 100000,
-  });
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("playground-btn-flow-io").click({ force: true });
-
-  expect(await page.getByText("Langflow Chat").isVisible());
-});
+    expect(await page.getByText("Langflow Chat").isVisible());
+  },
+);

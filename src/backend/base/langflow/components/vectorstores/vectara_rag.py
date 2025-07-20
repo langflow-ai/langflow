@@ -1,6 +1,6 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, StrInput, SecretStrInput, Output
+from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.message import Message
 
 
@@ -58,14 +58,20 @@ class VectaraRagComponent(Component):
         StrInput(name="vectara_customer_id", display_name="Vectara Customer ID", required=True),
         StrInput(name="vectara_corpus_id", display_name="Vectara Corpus ID", required=True),
         SecretStrInput(name="vectara_api_key", display_name="Vectara API Key", required=True),
-        MessageTextInput(name="search_query", display_name="Search Query", info="The query to receive an answer on."),
+        MessageTextInput(
+            name="search_query",
+            display_name="Search Query",
+            info="The query to receive an answer on.",
+            tool_mode=True,
+        ),
         FloatInput(
             name="lexical_interpolation",
             display_name="Hybrid Search Factor",
             range_spec=RangeSpec(min=0.005, max=0.1, step=0.005),
             value=0.005,
             advanced=True,
-            info="How much to weigh lexical scores compared to the embedding score. 0 means lexical search is not used at all, and 1 means only lexical search is used.",
+            info="How much to weigh lexical scores compared to the embedding score. "
+            "0 means lexical search is not used at all, and 1 means only lexical search is used.",
         ),
         MessageTextInput(
             name="filter",
@@ -118,7 +124,8 @@ class VectaraRagComponent(Component):
             options=SUMMARIZER_PROMPTS,
             value=SUMMARIZER_PROMPTS[0],
             advanced=True,
-            info="Only vectara-summary-ext-24-05-sml is for Growth customers; all other prompts are for Scale customers only.",
+            info="Only vectara-summary-ext-24-05-sml is for Growth customers; "
+            "all other prompts are for Scale customers only.",
         ),
     ]
 
@@ -134,8 +141,9 @@ class VectaraRagComponent(Component):
         try:
             from langchain_community.vectorstores import Vectara
             from langchain_community.vectorstores.vectara import RerankConfig, SummaryConfig, VectaraQueryConfig
-        except ImportError:
-            raise ImportError("Could not import Vectara. Please install it with `pip install langchain-community`.")
+        except ImportError as e:
+            msg = "Could not import Vectara. Please install it with `pip install langchain-community`."
+            raise ImportError(msg) from e
 
         vectara = Vectara(self.vectara_customer_id, self.vectara_corpus_id, self.vectara_api_key)
         rerank_config = RerankConfig(self.reranker, self.reranker_k, self.diversity_bias)

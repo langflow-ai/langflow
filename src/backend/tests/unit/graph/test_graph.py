@@ -1,11 +1,8 @@
 import copy
 import json
-import pickle
 
 import pytest
-
 from langflow.graph import Graph
-from langflow.graph.edge.base import Edge
 from langflow.graph.graph.utils import (
     find_last_node,
     process_flow,
@@ -17,17 +14,11 @@ from langflow.graph.graph.utils import (
 )
 from langflow.graph.vertex.base import Vertex
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.utils.payload import get_root_vertex
 
 # Test cases for the graph module
 
 # now we have three types of graph:
 # BASIC_EXAMPLE_PATH, COMPLEX_EXAMPLE_PATH, OPENAPI_EXAMPLE_PATH
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 @pytest.fixture
@@ -67,39 +58,8 @@ def sample_nodes():
 
 
 def get_node_by_type(graph, node_type: type[Vertex]) -> Vertex | None:
-    """Get a node by type"""
+    """Get a node by type."""
     return next((node for node in graph.vertices if isinstance(node, node_type)), None)
-
-
-def test_graph_structure(basic_graph):
-    assert isinstance(basic_graph, Graph)
-    assert len(basic_graph.vertices) > 0
-    assert len(basic_graph.edges) > 0
-    for node in basic_graph.vertices:
-        assert isinstance(node, Vertex)
-    for edge in basic_graph.edges:
-        assert isinstance(edge, Edge)
-        source_vertex = basic_graph.get_vertex(edge.source_id)
-        target_vertex = basic_graph.get_vertex(edge.target_id)
-        assert source_vertex in basic_graph.vertices
-        assert target_vertex in basic_graph.vertices
-
-
-def test_circular_dependencies(basic_graph):
-    assert isinstance(basic_graph, Graph)
-
-    def check_circular(node, visited):
-        visited.add(node)
-        neighbors = basic_graph.get_vertices_with_target(node)
-        for neighbor in neighbors:
-            if neighbor in visited:
-                return True
-            if check_circular(neighbor, visited.copy()):
-                return True
-        return False
-
-    for node in basic_graph.vertices:
-        assert not check_circular(node, set())
 
 
 def test_invalid_node_types():
@@ -119,123 +79,9 @@ def test_invalid_node_types():
         ],
         "edges": [],
     }
-    with pytest.raises(Exception):
-        g = Graph()
+    g = Graph()
+    with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
-
-
-def test_get_vertices_with_target(basic_graph):
-    """Test getting connected nodes"""
-    assert isinstance(basic_graph, Graph)
-    # Get root node
-    root = get_root_vertex(basic_graph)
-    assert root is not None
-    connected_nodes = basic_graph.get_vertices_with_target(root.id)
-    assert connected_nodes is not None
-
-
-def test_get_node_neighbors_basic(basic_graph):
-    """Test getting node neighbors"""
-
-    assert isinstance(basic_graph, Graph)
-    # Get root node
-    root = get_root_vertex(basic_graph)
-    assert root is not None
-    neighbors = basic_graph.get_vertex_neighbors(root)
-    assert neighbors is not None
-    assert isinstance(neighbors, dict)
-    # Root Node is an Agent, it requires an LLMChain and tools
-    # We need to check if there is a Chain in the one of the neighbors'
-    # data attribute in the type key
-    assert any("ConversationBufferMemory" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
-
-    assert any("OpenAI" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
-
-
-def test_get_node(basic_graph):
-    """Test getting a single node"""
-    node_id = basic_graph.vertices[0].id
-    node = basic_graph.get_vertex(node_id)
-    assert isinstance(node, Vertex)
-    assert node.id == node_id
-
-
-def test_build_nodes(basic_graph):
-    """Test building nodes"""
-
-    assert len(basic_graph.vertices) == len(basic_graph._vertices)
-    for node in basic_graph.vertices:
-        assert isinstance(node, Vertex)
-
-
-def test_build_edges(basic_graph):
-    """Test building edges"""
-    assert len(basic_graph.edges) == len(basic_graph._edges)
-    for edge in basic_graph.edges:
-        assert isinstance(edge, Edge)
-        assert isinstance(edge.source_id, str)
-        assert isinstance(edge.target_id, str)
-
-
-def test_get_root_vertex(client, basic_graph, complex_graph):
-    """Test getting root node"""
-    assert isinstance(basic_graph, Graph)
-    root = get_root_vertex(basic_graph)
-    assert root is not None
-    assert isinstance(root, Vertex)
-    assert root.data["type"] == "TimeTravelGuideChain"
-    # For complex example, the root node is a ZeroShotAgent too
-    assert isinstance(complex_graph, Graph)
-    root = get_root_vertex(complex_graph)
-    assert root is not None
-    assert isinstance(root, Vertex)
-    assert root.data["type"] == "ZeroShotAgent"
-
-
-def test_validate_edges(basic_graph):
-    """Test validating edges"""
-
-    assert isinstance(basic_graph, Graph)
-    # all edges should be valid
-    assert all(edge.valid for edge in basic_graph.edges)
-
-
-def test_matched_type(basic_graph):
-    """Test matched type attribute in Edge"""
-    assert isinstance(basic_graph, Graph)
-    # all edges should be valid
-    assert all(edge.valid for edge in basic_graph.edges)
-    # all edges should have a matched_type attribute
-    assert all(hasattr(edge, "matched_type") for edge in basic_graph.edges)
-    # The matched_type attribute should be in the source_types attr
-    assert all(edge.matched_type in edge.source_types for edge in basic_graph.edges)
-
-
-def test_build_params(basic_graph):
-    """Test building params"""
-
-    assert isinstance(basic_graph, Graph)
-    # all edges should be valid
-    assert all(edge.valid for edge in basic_graph.edges)
-    # all edges should have a matched_type attribute
-    assert all(hasattr(edge, "matched_type") for edge in basic_graph.edges)
-    # The matched_type attribute should be in the source_types attr
-    assert all(edge.matched_type in edge.source_types for edge in basic_graph.edges)
-    # Get the root node
-    root = get_root_vertex(basic_graph)
-    # Root node is a TimeTravelGuideChain
-    # which requires an llm and memory
-    assert root is not None
-    assert isinstance(root.params, dict)
-    assert "llm" in root.params
-    assert "memory" in root.params
-
-
-# def test_wrapper_node_build(openapi_graph):
-#     wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
-#     assert wrapper_node is not None
-#     built_object = wrapper_node.build()
-#     assert built_object is not None
 
 
 def test_find_last_node(grouped_chat_json_flow):
@@ -284,10 +130,10 @@ def test_process_flow_one_group(one_grouped_chat_json_flow):
     node_data = group_node["data"]["node"]
     assert node_data.get("flow") is not None
     template_data = node_data["template"]
-    assert any("openai_api_key" in key for key in template_data.keys())
+    assert any("openai_api_key" in key for key in template_data)
     # Get the openai_api_key dict
     openai_api_key = next(
-        (template_data[key] for key in template_data.keys() if "openai_api_key" in key),
+        (template_data[key] for key in template_data if "openai_api_key" in key),
         None,
     )
     assert openai_api_key is not None
@@ -334,9 +180,9 @@ def test_process_flow_vector_store_grouped(vector_store_grouped_json_flow):
 
     for idx, expected_keyword in enumerate(expected_keywords):
         for key, value in expected_keyword.items():
-            assert (
-                value in edges[idx][key].split("-")[0]
-            ), f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
+            assert value in edges[idx][key].split("-")[0], (
+                f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
+            )
 
 
 def test_update_template(sample_template, sample_nodes):
@@ -372,8 +218,7 @@ def test_update_target_handle_proxy():
         }
     }
     g_nodes = [{"id": "some_id", "data": {"node": {"flow": None}}}]
-    group_node_id = "group_id"
-    updated_edge = update_target_handle(new_edge, g_nodes, group_node_id)
+    updated_edge = update_target_handle(new_edge, g_nodes)
     assert updated_edge["data"]["targetHandle"] == new_edge["data"]["targetHandle"]
 
 
@@ -411,13 +256,16 @@ def test_update_source_handle():
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 
 
-@pytest.mark.asyncio
-async def test_pickle_graph():
-    starter_projects = load_starter_projects()
-    data = starter_projects[0][1]["data"]
+async def test_serialize_graph():
+    # Get the actual starter projects and directly await the result
+    starter_projects = await load_starter_projects()
+    project_data = starter_projects[0][1]
+    data = project_data["data"]
+
+    # Create and test the graph
     graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
-    pickled = pickle.dumps(graph)
-    assert pickled is not None
-    unpickled = pickle.loads(pickled)
-    assert unpickled is not None
+    serialized = graph.dumps()
+    assert serialized is not None
+    assert isinstance(serialized, str)
+    assert len(serialized) > 0

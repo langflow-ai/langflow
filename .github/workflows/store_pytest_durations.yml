@@ -1,0 +1,76 @@
+name: Store pytest durations
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run job at 6:30 UTC every Monday (10.30pm PST/11.30pm PDT Sunday night)
+    - cron: "30 6 * * 1"
+
+env:
+  PYTEST_RUN_PATH: "src/backend/tests"
+
+jobs:
+  build:
+    name: Run pytest and store durations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ASTRA_DB_API_ENDPOINT: ${{ secrets.ASTRA_DB_API_ENDPOINT }}
+      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
+      - name: Run unit tests
+        id: run_tests
+        continue-on-error: true
+        run: uv run pytest src/backend/tests/unit --timeout=120 --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
+
+
+      - name: Close existing PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+
+            for (const pull of pulls) {
+              if (pull.title === "chore: update test durations") {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pull.number,
+                  state: 'closed'
+                });
+              }
+            }
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch-token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update test durations"
+          title: "chore: update test durations"
+          body: |
+            Automated PR to update test durations file.
+
+            This PR was automatically created by the store_pytest_durations workflow.
+          branch: update-test-durations
+          branch-suffix: timestamp
+          delete-branch: true
+          maintainer-can-modify: true

@@ -1,10 +1,10 @@
-import {
+import type { UseMutationResult } from "@tanstack/react-query";
+import type {
   APIClassType,
   CustomComponentRequest,
   ResponseErrorTypeAPI,
   useMutationFunctionType,
 } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -40,11 +40,11 @@ export const usePostValidateComponentCode: useMutationFunctionType<
     CustomComponentRequest,
     ResponseErrorTypeAPI,
     IPostValidateComponentCode
-  > = mutate(
-    ["usePostValidateComponentCode"],
-    postValidateComponentCodeFn,
-    options,
-  );
+  > = mutate(["usePostValidateComponentCode"], postValidateComponentCodeFn, {
+    ...options,
+    retry: 0,
+    retryDelay: 0,
+  });
 
   return mutation;
 };

@@ -18,9 +18,9 @@ const SvgGoogleGenerativeAI = (props) => (
         gradientUnits="userSpaceOnUse"
         gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"
       >
-        <stop offset=".067" stop-color="#9168C0" />
-        <stop offset=".343" stop-color="#5684D1" />
-        <stop offset=".672" stop-color="#1BA1E3" />
+        <stop offset=".067" stopColor="#9168C0" />
+        <stop offset=".343" stopColor="#5684D1" />
+        <stop offset=".672" stopColor="#1BA1E3" />
       </radialGradient>
     </defs>
   </svg>

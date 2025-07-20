@@ -1,15 +1,19 @@
 import json
-from typing import Dict, Any, Union
-from markdown import markdown
-from bs4 import BeautifulSoup
+from typing import Any
+
 import requests
+from bs4 import BeautifulSoup
+from langchain.tools import StructuredTool
+from loguru import logger
+from markdown import markdown
+from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, StrInput, MultilineInput
-from langflow.schema import Data
 from langflow.field_typing import Tool
-from langchain.tools import StructuredTool
-from pydantic import BaseModel, Field
+from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
+
+MIN_ROWS_IN_TABLE = 3
 
 
 class AddContentToPage(LCToolComponent):
@@ -53,7 +57,7 @@ class AddContentToPage(LCToolComponent):
             args_schema=self.AddContentToPageSchema,
         )
 
-    def _add_content_to_page(self, markdown_text: str, block_id: str) -> Union[Dict[str, Any], str]:
+    def _add_content_to_page(self, markdown_text: str, block_id: str) -> dict[str, Any] | str:
         try:
             html_text = markdown(markdown_text)
             soup = BeautifulSoup(html_text, "html.parser")
@@ -70,17 +74,18 @@ class AddContentToPage(LCToolComponent):
                 "children": blocks,
             }
 
-            response = requests.patch(url, headers=headers, json=data)
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
 
             return response.json()
         except requests.exceptions.RequestException as e:
-            error_message = f"Error: Failed to add content to Notion page. {str(e)}"
+            error_message = f"Error: Failed to add content to Notion page. {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
-        except Exception as e:
-            return f"Error: An unexpected error occurred while adding content to Notion page. {str(e)}"
+        except Exception as e:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error adding content to Notion page")
+            return f"Error: An unexpected error occurred while adding content to Notion page. {e}"
 
     def process_node(self, node):
         blocks = []
@@ -90,12 +95,8 @@ class AddContentToPage(LCToolComponent):
                 if text.startswith("#"):
                     heading_level = text.count("#", 0, 6)
                     heading_text = text[heading_level:].strip()
-                    if heading_level == 1:
-                        blocks.append(self.create_block("heading_1", heading_text))
-                    elif heading_level == 2:
-                        blocks.append(self.create_block("heading_2", heading_text))
-                    elif heading_level == 3:
-                        blocks.append(self.create_block("heading_3", heading_text))
+                    if heading_level in range(3):
+                        blocks.append(self.create_block(f"heading_{heading_level + 1}", heading_text))
                 else:
                     blocks.append(self.create_block("paragraph", text))
         elif node.name == "h1":
@@ -153,7 +154,7 @@ class AddContentToPage(LCToolComponent):
 
     def is_table(self, text):
         rows = text.split("\n")
-        if len(rows) < 2:
+        if len(rows) < MIN_ROWS_IN_TABLE:
             return False
 
         has_separator = False
@@ -166,7 +167,7 @@ class AddContentToPage(LCToolComponent):
                 elif not cells:
                     return False
 
-        return has_separator and len(rows) >= 3
+        return has_separator
 
     def process_list(self, node, list_type):
         blocks = []
@@ -190,7 +191,7 @@ class AddContentToPage(LCToolComponent):
         if header_row or body_rows:
             table_width = max(
                 len(header_row.find_all(["th", "td"])) if header_row else 0,
-                max(len(row.find_all(["th", "td"])) for row in body_rows),
+                *(len(row.find_all(["th", "td"])) for row in body_rows),
             )
 
             table_block = self.create_block("table", "", table_width=table_width, has_column_header=bool(header_row))
@@ -208,14 +209,14 @@ class AddContentToPage(LCToolComponent):
 
         return blocks
 
-    def create_block(self, block_type: str, content: str, **kwargs) -> Dict[str, Any]:
+    def create_block(self, block_type: str, content: str, **kwargs) -> dict[str, Any]:
         block: dict[str, Any] = {
             "object": "block",
             "type": block_type,
             block_type: {},
         }
 
-        if block_type in [
+        if block_type in {
             "paragraph",
             "heading_1",
             "heading_2",
@@ -223,7 +224,7 @@ class AddContentToPage(LCToolComponent):
             "bulleted_list_item",
             "numbered_list_item",
             "quote",
-        ]:
+        }:
             block[block_type]["rich_text"] = [
                 {
                     "type": "text",

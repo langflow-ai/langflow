@@ -1,34 +1,58 @@
-import { useTypesStore } from "@/stores/typesStore";
-import { nodeColors, nodeIconsLucide } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
-import IconComponent from "../../../../components/genericIconComponent";
+import { useEffect, useState } from "react";
+import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useTypesStore } from "@/stores/typesStore";
+import { iconExists, nodeColors } from "@/utils/styleUtils";
+import IconComponent from "../../../../components/common/genericIconComponent";
 
 export function NodeIcon({
   icon,
   dataType,
-  showNode,
   isGroup,
 }: {
   icon?: string;
   dataType: string;
-  showNode: boolean;
   isGroup?: boolean;
 }) {
   const types = useTypesStore((state) => state.types);
-  const name = nodeIconsLucide[dataType] ? dataType : types[dataType];
+  const [name, setName] = useState(types[dataType]);
+
+  useEffect(() => {
+    iconExists(dataType).then((exists) => {
+      setName(exists ? dataType : types[dataType]);
+    });
+  }, [dataType, types]);
+
   const isEmoji = emojiRegex().test(icon ?? "");
   const iconColor = nodeColors[types[dataType]];
   const iconName = icon || (isGroup ? "group_components" : name);
-  const iconClassName = `generic-node-icon ${
-    !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
-  }`;
-  return icon && isEmoji ? (
-    <span className="text-lg">{icon}</span>
-  ) : (
-    <IconComponent
-      name={iconName}
-      className={iconClassName}
-      iconColor={iconColor}
-    />
-  );
+
+  const isLucideIcon = checkLucideIcons(iconName);
+
+  const renderIcon = () => {
+    if (icon && isEmoji) {
+      return <span className="text-lg">{icon}</span>;
+    }
+
+    return (
+      <div className="flex h-4 w-4 items-center justify-center">
+        {isLucideIcon ? (
+          <IconComponent
+            strokeWidth={ICON_STROKE_WIDTH}
+            name={iconName}
+            className="h-4 w-4"
+          />
+        ) : (
+          <IconComponent
+            name={iconName}
+            iconColor={iconColor}
+            className="h-4 w-4"
+          />
+        )}
+      </div>
+    );
+  };
+
+  return <>{renderIcon()}</>;
 }

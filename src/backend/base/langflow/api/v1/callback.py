@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from loguru import logger
+from typing_extensions import override
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
 from langflow.services.deps import get_chat_service, get_socket_service
 from langflow.utils.util import remove_ansi_escape_codes
-from langchain_core.agents import AgentAction, AgentFinish
 
 if TYPE_CHECKING:
     from langflow.services.socket.service import SocketIOService
@@ -24,15 +28,17 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     def __init__(self, session_id: str):
         self.chat_service = get_chat_service()
         self.client_id = session_id
-        self.socketio_service: "SocketIOService" = get_socket_service()
+        self.socketio_service: SocketIOService = get_socket_service()
         self.sid = session_id
         # self.socketio_service = self.chat_service.active_connections[self.client_id]
 
-    async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
+    @override
+    async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:  # type: ignore[misc]
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
 
-    async def on_tool_start(self, serialized: dict[str, Any], input_str: str, **kwargs: Any) -> Any:
+    @override
+    async def on_tool_start(self, serialized: dict[str, Any], input_str: str, **kwargs: Any) -> Any:  # type: ignore[misc]
         """Run when tool starts running."""
         resp = ChatResponse(
             message="",
@@ -64,15 +70,15 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             )
             for word in rest_of_output
         ]
-        resps = [resp] + rest_of_resps
+        resps = [resp, *rest_of_resps]
         # Try to send the response, handle potential errors.
 
         try:
             # This is to emulate the stream of tokens
             for resp in resps:
                 await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
-        except Exception as exc:
-            logger.error(f"Error sending response: {exc}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Error sending response")
 
     async def on_tool_error(
         self,
@@ -85,7 +91,10 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     ) -> None:
         """Run when tool errors."""
 
-    async def on_text(self, text: str, **kwargs: Any) -> Any:
+    @override
+    async def on_text(  # type: ignore[misc]
+        self, text: str, **kwargs: Any
+    ) -> Any:
         """Run on arbitrary text."""
         # This runs when first sending the prompt
         # to the LLM, adding it will send the final prompt
@@ -98,7 +107,10 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             )
             await self.socketio_service.emit_message(to=self.sid, data=resp.model_dump())
 
-    async def on_agent_action(self, action: AgentAction, **kwargs: Any):
+    @override
+    async def on_agent_action(  # type: ignore[misc]
+        self, action: AgentAction, **kwargs: Any
+    ) -> None:
         log = f"Thought: {action.log}"
         # if there are line breaks, split them and send them
         # as separate messages
@@ -111,7 +123,10 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             resp = ChatResponse(message="", type="stream", intermediate_steps=log)
             await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
 
-    async def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
+    @override
+    async def on_agent_finish(  # type: ignore[misc]
+        self, finish: AgentFinish, **kwargs: Any
+    ) -> Any:
         """Run on agent end."""
         resp = ChatResponse(
             message="",

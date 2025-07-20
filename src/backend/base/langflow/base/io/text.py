@@ -1,4 +1,4 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 
 
 class TextComponent(Component):
@@ -9,13 +9,14 @@ class TextComponent(Component):
         return {
             "input_value": {
                 "display_name": "Value",
-                "input_types": ["Text", "Data"],
+                "input_types": ["Message", "Data"],
                 "info": "Text or Data to be passed.",
             },
             "data_template": {
                 "display_name": "Data Template",
                 "multiline": True,
-                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "info": "Template to convert Data to Text. "
+                "If left empty, it will be dynamically set to the Data's text key.",
                 "advanced": True,
             },
         }

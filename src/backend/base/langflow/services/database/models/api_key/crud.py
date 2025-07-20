@@ -1,22 +1,27 @@
 import datetime
 import secrets
-import threading
-from typing import List, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session, select
-from sqlmodel.sql.expression import SelectOfScalar
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_settings_service, session_scope
+
+if TYPE_CHECKING:
+    from sqlmodel.sql.expression import SelectOfScalar
 
 
-def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
+async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
-    api_keys = session.exec(query).all()
+    api_keys = (await session.exec(query)).all()
     return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
 
 
-def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
+async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
@@ -28,47 +33,42 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
     )
 
     session.add(api_key)
-    session.commit()
-    session.refresh(api_key)
+    await session.commit()
+    await session.refresh(api_key)
     unmasked = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
     unmasked.api_key = generated_api_key
     return unmasked
 
 
-def delete_api_key(session: Session, api_key_id: UUID) -> None:
-    api_key = session.get(ApiKey, api_key_id)
+async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
+    api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
-        raise ValueError("API Key not found")
-    session.delete(api_key)
-    session.commit()
+        msg = "API Key not found"
+        raise ValueError(msg)
+    await session.delete(api_key)
+    await session.commit()
 
 
-def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
+async def check_key(session: AsyncSession, api_key: str) -> User | None:
     """Check if the API key is valid."""
-    query: SelectOfScalar = select(ApiKey).where(ApiKey.api_key == api_key)
-    api_key_object: Optional[ApiKey] = session.exec(query).first()
+    query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
+    api_key_object: ApiKey | None = (await session.exec(query)).first()
     if api_key_object is not None:
-        threading.Thread(
-            target=update_total_uses,
-            args=(
-                session,
-                api_key_object,
-            ),
-        ).start()
-    return api_key_object
+        settings_service = get_settings_service()
+        if settings_service.settings.disable_track_apikey_usage is not True:
+            await update_total_uses(api_key_object.id)
+        return api_key_object.user
+    return None
 
 
-def update_total_uses(session, api_key: ApiKey):
+async def update_total_uses(api_key_id: UUID):
     """Update the total uses and last used at."""
-    # This is running in a separate thread to avoid slowing down the request
-    # but session is not thread safe so we need to create a new session
-
-    with Session(session.get_bind()) as new_session:
-        new_api_key = new_session.get(ApiKey, api_key.id)
+    async with session_scope() as session:
+        new_api_key = await session.get(ApiKey, api_key_id)
         if new_api_key is None:
-            raise ValueError("API Key not found")
+            msg = "API Key not found"
+            raise ValueError(msg)
         new_api_key.total_uses += 1
         new_api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-        new_session.add(new_api_key)
-        new_session.commit()
-    return new_api_key
+        session.add(new_api_key)
+        await session.commit()

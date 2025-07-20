@@ -2,12 +2,11 @@ from copy import deepcopy
 
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 def data_to_string(record: Data) -> str:
-    """
-    Convert a record to a string.
+    """Convert a record to a string.
 
     Args:
         record (Data): The record to convert.
@@ -19,8 +18,7 @@ def data_to_string(record: Data) -> str:
 
 
 def dict_values_to_string(d: dict) -> dict:
-    """
-    Converts the values of a dictionary to strings.
+    """Converts the values of a dictionary to strings.
 
     Args:
         d (dict): The dictionary whose values need to be converted.
@@ -52,8 +50,7 @@ def dict_values_to_string(d: dict) -> dict:
 
 
 def document_to_string(document: Document) -> str:
-    """
-    Convert a document to a string.
+    """Convert a document to a string.
 
     Args:
         document (Document): The document to convert.

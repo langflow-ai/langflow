@@ -1,13 +1,9 @@
-import pytest
-import os
 import json
+import os
 from unittest.mock import patch
+
+import pytest
 from langflow.logging.logger import SizedLogBuffer
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 @pytest.fixture
@@ -32,8 +28,8 @@ def test_write(sized_log_buffer):
     sized_log_buffer.max = 1  # Set max size to 1 for testing
     sized_log_buffer.write(message)
     assert len(sized_log_buffer.buffer) == 1
-    assert 1625097600124 == sized_log_buffer.buffer[0][0]
-    assert "Test log" == sized_log_buffer.buffer[0][1]
+    assert sized_log_buffer.buffer[0][0] == 1625097600124
+    assert sized_log_buffer.buffer[0][1] == "Test log"
 
 
 def test_write_overflow(sized_log_buffer):
@@ -43,8 +39,8 @@ def test_write_overflow(sized_log_buffer):
         sized_log_buffer.write(message)
 
     assert len(sized_log_buffer.buffer) == 2
-    assert 1625097601000 == sized_log_buffer.buffer[0][0]
-    assert 1625097602000 == sized_log_buffer.buffer[1][0]
+    assert sized_log_buffer.buffer[0][0] == 1625097601000
+    assert sized_log_buffer.buffer[1][0] == 1625097602000
 
 
 def test_len(sized_log_buffer):

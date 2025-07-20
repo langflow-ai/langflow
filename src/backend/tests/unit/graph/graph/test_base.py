@@ -1,44 +1,36 @@
+import logging
 from collections import deque
 
 import pytest
-
-from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.outputs.TextOutput import TextOutputComponent
-from langflow.components.tools.YfinanceTool import YfinanceToolComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.input_output import ChatInput, ChatOutput, TextOutputComponent
+from langflow.components.langchain_utilities import ToolCallingAgentComponent
+from langflow.components.tools import YfinanceToolComponent
+from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 
 
-@pytest.fixture
-def client():
-    pass
-
-
-@pytest.mark.asyncio
 async def test_graph_not_prepared():
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Graph not prepared"):
         await graph.astep()
 
 
-@pytest.mark.asyncio
-async def test_graph():
+def test_graph(caplog: pytest.LogCaptureFixture):
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
-    with pytest.warns(UserWarning, match="Graph has vertices but no edges"):
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
         graph.prepare()
+        assert "Graph has vertices but no edges" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_graph_with_edge():
     chat_input = ChatInput()
     chat_output = ChatOutput()
@@ -59,9 +51,9 @@ async def test_graph_with_edge():
     assert graph.edges[0].target_id == output_id
 
 
-@pytest.mark.asyncio
 async def test_graph_functional():
     chat_input = ChatInput(_id="chat_input")
+    chat_input.set(should_store_message=False)
     chat_output = ChatOutput(input_value="test", _id="chat_output")
     chat_output.set(sender_name=chat_input.message_response)
     graph = Graph(chat_input, chat_output)
@@ -75,7 +67,6 @@ async def test_graph_functional():
     assert graph.edges[0].target_id == "chat_output"
 
 
-@pytest.mark.asyncio
 async def test_graph_functional_async_start():
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(input_value="test", _id="chat_output")
@@ -85,9 +76,7 @@ async def test_graph_functional_async_start():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "chat_output"]
-    results = []
-    async for result in graph.async_start():
-        results.append(result)
+    results = [result async for result in graph.async_start()]
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -104,9 +93,7 @@ def test_graph_functional_start():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "chat_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -125,9 +112,7 @@ def test_graph_functional_start_end():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "text_output"]
-    results = []
-    for result in graph.start():
-        results.append(result)
+    results = list(graph.start())
 
     assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
@@ -143,13 +128,6 @@ def test_graph_functional_start_end():
     assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
-
-
-def test_graph_set_with_invalid_component():
-    chat_input = ChatInput(_id="chat_input")
-    chat_output = ChatOutput(input_value="test", _id="chat_output")
-    with pytest.raises(ValueError, match="There are multiple outputs"):
-        chat_output.set(sender_name=chat_input)
 
 
 @pytest.mark.skip(reason="Temporarily disabled")

@@ -1,11 +1,16 @@
-import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
+import { Outlet, type To } from "react-router-dom";
+import SideBarButtonsComponent from "@/components/core/sidebarComponent";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_LANGFLOW_STORE,
+  ENABLE_PROFILE_ICONS,
+} from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
-import { Outlet } from "react-router-dom";
-import ForwardedIconComponent from "../../components/genericIconComponent";
-import PageLayout from "../../components/pageLayout";
-import SidebarNav from "../../components/sidebarComponent";
-
+import ForwardedIconComponent from "../../components/common/genericIconComponent";
+import PageLayout from "../../components/common/pageLayout";
 export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -34,6 +39,16 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
+      title: "MCP Servers",
+      href: "/settings/mcp-servers",
+      icon: (
+        <ForwardedIconComponent
+          name="Mcp"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
       title: "Global Variables",
       href: "/settings/global-variables",
       icon: (
@@ -43,16 +58,7 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-    {
-      title: "Langflow API",
-      href: "/settings/api-keys",
-      icon: (
-        <ForwardedIconComponent
-          name="Key"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-        />
-      ),
-    },
+
     {
       title: "Shortcuts",
       href: "/settings/shortcuts",
@@ -74,21 +80,27 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
   );
+
+  // TODO: Remove this on cleanup
+  if (!ENABLE_DATASTAX_LANGFLOW) {
+    const langflowItems = CustomStoreSidebar(true, ENABLE_LANGFLOW_STORE);
+    sidebarNavItems.splice(2, 0, ...langflowItems);
+  }
+
   return (
     <PageLayout
+      backTo={-1 as To}
       title="Settings"
       description="Manage the general settings for Langflow."
     >
-      <div className="flex h-full w-full space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
-        <aside className="flex h-full shrink-0 flex-col space-y-6 lg:w-[20vw]">
-          <SidebarNav items={sidebarNavItems} />
-        </aside>
-        <div className="flex h-full w-full flex-1 flex-col">
-          <div className="flex-1 pb-8">
+      <SidebarProvider width="15rem" defaultOpen={false}>
+        <SideBarButtonsComponent items={sidebarNavItems} />
+        <main className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-x-hidden pt-1">
             <Outlet />
           </div>
-        </div>
-      </div>
+        </main>
+      </SidebarProvider>
     </PageLayout>
   );
 }

@@ -1,5 +1,5 @@
-import { AddFolderType } from "@/pages/MainPage/entities";
-import { useMutationFunctionType } from "@/types/api";
+import type { AddFolderType } from "@/pages/MainPage/entities";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -26,7 +26,7 @@ export const usePatchFolders: useMutationFunctionType<
     };
 
     const res = await api.patch(
-      `${getURL("FOLDERS")}/${newFolder.folderId}`,
+      `${getURL("PROJECTS")}/${newFolder.folderId}`,
       payload,
     );
     return res.data;

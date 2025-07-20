@@ -1,8 +1,9 @@
 import base64
 import json
 import os
-import re
 from io import BytesIO
+from pathlib import Path
+from string import Formatter
 
 import yaml
 from langchain_core.language_models import BaseLanguageModel
@@ -14,18 +15,21 @@ from langflow.services.deps import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
+    file_path_ = Path(file_path)
+    if not file_path_.exists():
+        msg = f"File not found: {file_path}"
+        raise FileNotFoundError(msg)
 
     # Files names are UUID, so we can't find the extension
-    with open(file_path, "r") as file:
+    with file_path_.open(encoding="utf-8") as file:
         try:
             data = json.load(file)
         except json.JSONDecodeError:
             file.seek(0)
             data = yaml.safe_load(file)
         except ValueError as exc:
-            raise ValueError("Invalid file type. Expected .json or .yaml.") from exc
+            msg = "Invalid file type. Expected .json or .yaml."
+            raise ValueError(msg) from exc
     return data
 
 
@@ -56,49 +60,41 @@ def try_setting_streaming_options(langchain_object):
 
 
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
-    variables = []
-    remaining_text = prompt
+    """Extract variable names from a prompt string using Python's built-in string formatter.
 
-    # Pattern to match single {var} and double {{var}} braces.
-    pattern = r"\{\{(.*?)\}\}|\{([^{}]+)\}"
+    Uses the same convention as Python's .format() method:
+    - Single braces {name} are variable placeholders
+    - Double braces {{name}} are escape sequences that render as literal {name}
+    """
+    formatter = Formatter()
+    variables: list[str] = []
+    seen: set[str] = set()
 
-    while True:
-        match = re.search(pattern, remaining_text)
-        if not match:
-            break
+    # Use local bindings for micro-optimization
+    variables_append = variables.append
+    seen_add = seen.add
+    seen_contains = seen.__contains__
 
-        # Extract the variable name from either the single or double brace match
-        if match.group(1):  # Match found in double braces
-            variable_name = "{{" + match.group(1) + "}}"  # Re-add single braces for JSON strings
-        else:  # Match found in single braces
-            variable_name = match.group(2)
-        if variable_name is not None:
-            # This means there is a match
-            # but there is nothing inside the braces
-            variables.append(variable_name)
-
-        # Remove the matched text from the remaining_text
-        start, end = match.span()
-        remaining_text = remaining_text[:start] + remaining_text[end:]
-
-        # Proceed to the next match until no more matches are found
-        # No need to compare remaining "{}" instances because we are re-adding braces for JSON compatibility
+    for _, field_name, _, _ in formatter.parse(prompt):
+        if field_name and not seen_contains(field_name):
+            variables_append(field_name)
+            seen_add(field_name)
 
     return variables
 
 
-def setup_llm_caching():
+def setup_llm_caching() -> None:
     """Setup LLM caching."""
     settings_service = get_settings_service()
     try:
         set_langchain_cache(settings_service.settings)
     except ImportError:
         logger.warning(f"Could not import {settings_service.settings.cache_type}. ")
-    except Exception as exc:
-        logger.warning(f"Could not setup LLM caching. Error: {exc}")
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not setup LLM caching.")
 
 
-def set_langchain_cache(settings):
+def set_langchain_cache(settings) -> None:
     from langchain.globals import set_llm_cache
 
     from langflow.interface.importing.utils import import_class
@@ -113,4 +109,4 @@ def set_langchain_cache(settings):
         except ImportError:
             logger.warning(f"Could not import {cache_type}. ")
     else:
-        logger.info("No LLM cache set.")
+        logger.debug("No LLM cache set.")

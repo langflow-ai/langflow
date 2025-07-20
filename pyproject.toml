@@ -1,165 +1,239 @@
-[tool.poetry]
+[project]
 name = "langflow"
-version = "1.0.18"
+version = "1.5.0.post1"
 description = "A Python package with a built-in web application"
-authors = ["Langflow <contact@langflow.org>"]
-maintainers = [
-    "Carlos Coelho <carlos@langflow.org>",
-    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
-    "Gabriel Almeida <gabriel@langflow.org>",
-    "Igor Carvalho <igorr.ackerman@gmail.com>",
-    "Lucas Eduoli <lucaseduoli@gmail.com>",
-    "Otávio Anovazzi <otavio2204@gmail.com>",
-    "Rodrigo Nader <rodrigo@langflow.org>",
-    "Italo dos Anjos <italojohnnydosanjos@gmail.com>",
-]
-repository = "https://github.com/langflow-ai/langflow"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
-readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
-packages = [{ include = "langflow", from = "src/backend" }]
-include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
-documentation = "https://docs.langflow.org"
+readme = "README.md"
+maintainers = [
+    { name = "Carlos Coelho", email = "carlos@langflow.org" },
+    { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
+    { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
+    { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
+    { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
+    { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
+    { name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com" },
+]
+# Define your main dependencies here
+dependencies = [
+    "langflow-base~=0.5.0",
+    "beautifulsoup4==4.12.3",
+    "google-search-results>=2.4.1,<3.0.0",
+    "google-api-python-client==2.154.0",
+    "huggingface-hub[inference]>=0.23.2,<1.0.0",
+    "networkx==3.4.2",
+    "fake-useragent==1.5.1",
+    "pyarrow==19.0.0",
+    "wikipedia==1.4.0",
+    "qdrant-client==1.9.2",
+    "weaviate-client==4.10.2",
+    "faiss-cpu==1.9.0.post1",
+    "types-cachetools==5.5.0.20240820",
+    "pymongo==4.10.1",
+    "supabase==2.6.0",
+    "certifi>=2023.11.17,<2025.0.0",
+    "certifi==2024.8.30",
+    'fastavro==1.9.7; python_version < "3.13"',
+    'fastavro>=1.9.8; python_version >= "3.13"',
+    "redis==5.2.1",
+    "metaphor-python==0.1.23",
+    'pywin32==307; sys_platform == "win32"',
+    "langfuse==2.53.9",
+    "metal_sdk==2.5.1",
+    "MarkupSafe==3.0.2",
+    "boto3==1.34.162",
+    "numexpr==2.10.2",
+    "qianfan==0.3.5",
+    "pgvector==0.3.6",
+    "langchain==0.3.21",
+    "elasticsearch==8.16.0",
+    "pytube==15.0.0",
+    "dspy-ai==2.5.41",
+    "datasets>2.14.7",
+    "assemblyai==0.35.1",
+    "litellm==1.60.2",
+    "chromadb==0.5.23",
+    "zep-python==2.0.2",
+    "youtube-transcript-api==0.6.3",
+    "Markdown==3.7",
+    "upstash-vector==0.6.0",
+    "GitPython==3.1.43",
+    "kubernetes==31.0.0",
+    "json_repair==0.30.3",
+    "langwatch==0.1.16",
+    "langsmith>=0.3.42,<1.0.0",
+    "yfinance==0.2.50",
+    "wolframalpha==5.1.3",
+    "astra-assistants[tools]~=2.2.12",
+    "composio-langchain==0.7.15",
+    "composio-core==0.7.15",
+    "spider-client==0.1.24",
+    "nltk==3.9.1",
+    "lark==1.2.2",
+    "jq==1.8.0",
+    "pydantic-settings>=2.2.0,<3.0.0",
+    "duckduckgo_search==7.2.1",
+    "opensearch-py==2.8.0",
+    "langchain-google-genai==2.0.6",
+    "langchain-cohere==0.3.3",
+    "langchain-anthropic==0.3.14",
+    "langchain-astradb~=0.6.0",
+    "langchain-openai>=0.2.12",
+    "langchain-google-vertexai==2.0.7",
+    "langchain-groq==0.2.1",
+    "langchain-pinecone>=0.2.8",
+    "langchain-mistralai==0.2.3",
+    "langchain-chroma==0.1.4",
+    "langchain-aws==0.2.7",
+    "langchain-unstructured==0.1.5",
+    "langchain-milvus==0.1.7",
+    "langchain-mongodb==0.2.0",
+    "langchain-nvidia-ai-endpoints==0.3.8",
+    "langchain-google-calendar-tools==0.0.1",
+    "langchain-google-community==2.0.3",
+    "langchain-elasticsearch==0.3.0",
+    "langchain-ollama==0.2.1",
+    "langchain-sambanova==0.1.0",
+    "langchain-community~=0.3.20",
+    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    "atlassian-python-api==3.41.16",
+    "mem0ai==0.1.34",
+    "needle-python>=0.4.0",
+    "aiofile>=3.9.0,<4.0.0",
+    "sseclient-py==1.8.0",
+    "arize-phoenix-otel>=0.6.1",
+    "openinference-instrumentation-langchain>=0.1.29",
+    # "crewai>=0.126.0",
+    "mcp>=1.10.1",
+    "uv>=0.5.7",
+    "scipy>=1.14.1",
+    "scrapegraph-py>=1.12.0",
+    "pydantic-ai>=0.0.19",
+    "smolagents>=1.8.0",
+    "apify-client>=1.8.1",
+    "pylint>=3.3.4",
+    "ruff>=0.9.7",
+    "langchain-graph-retriever==0.6.1",
+    "graph-retriever==0.6.1",
+    "ibm-watsonx-ai>=1.3.1",
+    "langchain-ibm>=0.3.8",
+    "opik>=1.6.3",
+    "openai>=1.68.2",
+    "cleanlab-tlm>=1.1.2",
+    'gassist>=0.0.1; sys_platform == "win32"',
+    "twelvelabs>=0.4.7",
+    "docling_core>=2.36.1",
+    "filelock>=3.18.0",
+    "jigsawstack==0.2.7",
+]
 
-[tool.poetry.scripts]
-langflow = "langflow.__main__:main"
+[dependency-groups]
+dev = [
+    "pytest-instafail>=0.5.0",
+    "types-redis>=4.6.0.5",
+    "ipykernel>=6.29.0",
+    "mypy>=1.11.0",
+    "ruff>=0.9.7,<0.10",
+    "httpx>=0.27.0",
+    "pytest>=8.2.0",
+    "types-requests>=2.32.0",
+    "requests>=2.32.0",
+    "pytest-cov>=5.0.0",
+    "pandas-stubs>=2.1.4.231227",
+    "types-pillow>=10.2.0.20240213",
+    "types-pyyaml>=6.0.12.8",
+    "types-python-jose>=3.3.4.8",
+    "types-passlib>=1.7.7.13",
+    "pytest-mock>=3.14.0",
+    "pytest-xdist>=3.6.0",
+    "types-pywin32>=306.0.0.4",
+    "types-google-cloud-ndb>=2.2.0.0",
+    "pytest-sugar>=1.0.0",
+    "respx>=0.21.1",
+    "pytest-asyncio>=0.23.0",
+    "pytest-profiling>=1.7.0",
+    "pre-commit>=3.7.0",
+    "vulture>=2.11",
+    "dictdiffer>=0.9.0",
+    "pytest-split>=0.9.0",
+    "pytest-flakefinder>=1.1.0",
+    "types-markdown>=3.7.0.20240822",
+    "packaging>=24.1,<25.0",
+    "asgi-lifespan>=2.1.0",
+    "pytest-github-actions-annotate-failures>=0.2.0",
+    "blockbuster>=1.5.20,<1.6",
+    "types-aiofiles>=24.1.0.20240626",
+    "codeflash>=0.8.4",
+    "hypothesis>=6.123.17",
+    "locust>=2.32.9",
+    "pytest-rerunfailures>=15.0",
+    "scrapegraph-py>=1.10.2",
+    "pydantic-ai>=0.0.19",
+    'elevenlabs==1.58.1; python_version == "3.12"',
+    'elevenlabs>=1.52.0; python_version != "3.12"',
+    "faker>=37.0.0",
+    "pytest-timeout>=2.3.1",
+    "pyyaml>=6.0.2",
+    "pyleak>=0.1.14",
+]
 
+[tool.uv.sources]
+langflow-base = { workspace = true }
+langflow = { workspace = true }
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-langflow-base = { path = "./src/backend/base", develop = true }
-beautifulsoup4 = "^4.12.2"
-google-search-results = "^2.4.1"
-google-api-python-client = "^2.130.0"
-huggingface-hub = { version = "^0.23.2", extras = ["inference"] }
-llama-cpp-python = { version = "~0.2.0", optional = true }
-networkx = "^3.1"
-fake-useragent = "^1.5.0"
-psycopg2-binary = "^2.9.6"
-pyarrow = "^14.0.0"
-wikipedia = "^1.4.0"
-qdrant-client = "^1.9.0"
-weaviate-client = "*"
-sentence-transformers = { version = "^2.3.1", optional = true }
-ctransformers = { version = "^0.2.10", optional = true }
-cohere = "^5.5.3"
-faiss-cpu = "^1.8.0"
-types-cachetools = "^5.3.0.5"
-pymongo = "^4.6.0"
-supabase = "^2.3.0"
-certifi = ">=2023.11.17,<2025.0.0"
-psycopg = "3.1.9" # https://github.com/psycopg/psycopg/issues/858
-fastavro = "^1.8.0"
-celery = { extras = ["redis"], version = "^5.3.6", optional = true }
-redis = "^5.0.1"
-flower = { version = "^2.0.0", optional = true }
-metaphor-python = "^0.1.11"
-pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
-langfuse = "^2.33.0"
-metal-sdk = "^2.5.0"
-markupsafe = "^2.1.3"
-boto3 = "~1.34.162"
-numexpr = "^2.8.6"
-qianfan = "0.3.5"
-pgvector = "^0.2.3"
-pyautogen = "^0.2.0"
-langchain-google-genai = "1.0.8"
-langchain-cohere = "^0.1.5"
-elasticsearch = "^8.12.0"
-pytube = "^15.0.0"
-dspy-ai = "^2.4.0"
-assemblyai = "^0.26.0"
-litellm = "^1.44.0"
-chromadb = "^0.4"
-langchain-anthropic = "^0.1.23"
-langchain-astradb = "^0.3.5"
-langchain-openai = "0.1.22"
-zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
-langchain-google-vertexai = "1.0.10"
-langchain-groq = "0.1.9"
-langchain-pinecone = "^0.1.3"
-langchain-mistralai = "0.1.12"
-couchbase = { extras = ["couchbase"], version = "^4.2.1", optional = true }
-youtube-transcript-api = "^0.6.2"
-markdown = "^3.7"
-langchain-chroma = "^0.1.1"
-upstash-vector = "^0.5.0"
-gitpython = "^3.1.43"
-cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
-unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
-langchain-aws = "^0.1.16"
-langchain-mongodb = "^0.1.6"
-kubernetes = "^30.1.0"
-firecrawl-py = "^0.0.16"
-json-repair = "^0.25.2"
-langchain-nvidia-ai-endpoints = "0.1.6"
-langchain-google-calendar-tools = "^0.0.1"
-langchain-milvus = "^0.1.1"
-crewai = {extras = ["tools"], version = "^0.36.0"}
-langwatch = "^0.1.16"
-langsmith = "^0.1.86"
-yfinance = "^0.2.40"
-langchain-google-community = "1.0.7"
-wolframalpha = "^5.1.3"
-astra-assistants = "^2.1.2"
-composio-langchain = "0.5.9"
-spider-client = "^0.0.27"
-nltk = "^3.9.1"
-bson = "^0.5.10"
-lark = "^1.2.2"
-jq = "^1.8.0"
-clickhouse-connect = {version = "0.7.19", optional = true, extras = ["clickhouse-connect"]}
-langchain-unstructured = "^0.1.2"
-pydantic-settings = "2.4.0"
-ragstack-ai-knowledge-store = "^0.2.1"
-duckduckgo-search = "^6.2.12"
+[tool.uv.workspace]
+members = ["src/backend/base", "."]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend/langflow"]
 
-[tool.poetry.group.dev.dependencies]
-types-redis = "^4.6.0.5"
-ipykernel = "^6.29.0"
-mypy = "^1.11.0"
-ruff = ">=0.6.2,<0.7.0"
-httpx = "*"
-pytest = "^8.2.0"
-types-requests = "^2.32.0"
-requests = "^2.32.0"
-pytest-cov = "^5.0.0"
-pandas-stubs = "^2.1.4.231227"
-types-pillow = "^10.2.0.20240213"
-types-pyyaml = "^6.0.12.8"
-types-python-jose = "^3.3.4.8"
-types-passlib = "^1.7.7.13"
-pytest-mock = "^3.14.0"
-pytest-xdist = "^3.6.0"
-types-pywin32 = "^306.0.0.4"
-types-google-cloud-ndb = "^2.2.0.0"
-pytest-sugar = "^1.0.0"
-respx = "^0.21.1"
-pytest-instafail = "^0.5.0"
-pytest-asyncio = "^0.23.0"
-pytest-profiling = "^1.7.0"
-pre-commit = "^3.7.0"
-vulture = "^2.11"
-dictdiffer = "^0.9.0"
-pytest-split = "^0.9.0"
-pytest-flakefinder = "^1.1.0"
-types-markdown = "^3.7.0.20240822"
-packaging = ">=23.2,<24.0"
+[project.urls]
+Repository = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org"
 
-[tool.poetry.extras]
-deploy = ["celery", "redis", "flower"]
-couchbase = ["couchbase"]
-cassio = ["cassio"]
-local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
+[project.optional-dependencies]
+docling = [
+    "docling>=2.36.1",
+]
 
+audio = [
+    "webrtcvad>=2.0.10",
+]
 
-[tool.poetry.group.spelling]
-optional = true
+couchbase = [
+    "couchbase>=4.2.1"
+]
+cassio = [
+    "cassio>=0.1.7"
+]
+local = [
+    "llama-cpp-python~=0.2.0",
+    "sentence-transformers>=2.3.1",
+    "ctransformers>=0.2.10"
+]
+clickhouse-connect = [
+    "clickhouse-connect==0.7.19"
+]
 
-[tool.poetry.group.spelling.dependencies]
-codespell = "^2.3.0"
+nv-ingest = [
+    "nv-ingest-api==2025.4.22.dev20250422",
+    "nv-ingest-client==2025.4.22.dev20250422",
+]
 
+postgresql = [
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
+
+[tool.uv]
+override-dependencies = [
+    # temporary force a newer python-pptx
+    "python-pptx>=1.0.2"
+]
+
+[project.scripts]
+langflow = "langflow.langflow_launcher:main"
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
@@ -168,15 +242,18 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
+timeout = 120
+timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["tests", "integration"]
+testpaths = ["src/backend/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required"]
-
+markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 command_line = """
@@ -200,8 +277,48 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/langflow/alembic/*"]
+exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*"]
 line-length = 120
+
+[tool.ruff.lint]
+pydocstyle.convention = "google"
+select = ["ALL"]
+ignore = [
+    "C90", # McCabe complexity
+    "CPY", # Missing copyright
+    "COM812", # Messes with the formatter
+    "ERA", # Eradicate commented-out code
+    "FIX002", # Line contains TODO
+    "ISC001", # Messes with the formatter
+    "PERF203", # Rarely useful
+    "PLR09", # Too many something (arg, statements, etc)
+    "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
+    "TD002", # Missing author in TODO
+    "TD003", # Missing issue link in TODO
+    "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
+
+    # Rules that are TODOs
+    "ANN",
+]
+
+# Preview rules that are not yet activated
+external = ["RUF027"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = [
+    "D1",
+    "INP",
+    "T201",
+]
+"src/backend/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = [ "io", "logging", "socket"]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
@@ -212,5 +329,5 @@ mypy_path = "langflow"
 ignore_missing_imports = true
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

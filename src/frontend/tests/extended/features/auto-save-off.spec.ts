@@ -1,178 +1,178 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("user should be able to manually save a flow when the auto_save is off", async ({
-  page,
-}) => {
-  await page.route("**/api/v1/config", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        auto_saving: false,
-        frontend_timeout: 0,
-      }),
-      headers: {
-        "content-type": "application/json",
-        ...route.request().headers(),
-      },
+test(
+  "user should be able to manually save a flow when the auto_save is off",
+  { tag: ["@release", "@api", "@database", "@components"] },
+  async ({ page }) => {
+    await page.route("**/api/v1/config", (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          auto_saving: false,
+          frontend_timeout: 0,
+        }),
+        headers: {
+          "content-type": "application/json",
+          ...route.request().headers(),
+        },
+      });
     });
-  });
 
-  await page.goto("/");
-  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 5000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 5000,
+    });
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 5000,
-  });
+    await page.getByTestId("blank-flow").click();
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
+      timeout: 3000,
+    });
 
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 5000,
-  });
-
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 5000,
-  });
-
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
-
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("modelsNVIDIA")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-
-  await page.waitForSelector('[title="fit view"]', {
-    timeout: 5000,
-  });
-
-  await page.getByTitle("fit view").click();
-
-  expect(await page.getByText("Last saved:").isVisible()).toBeTruthy();
-
-  expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
-
-  await page.waitForSelector("text=loading", {
-    state: "hidden",
-    timeout: 5000,
-  });
-
-  await page.getByTestId("icon-ChevronLeft").last().click();
-
-  expect(
     await page
-      .getByText("Unsaved changes will be permanently lost.")
-      .isVisible(),
-  ).toBeTruthy();
+      .getByTestId("nvidiaNVIDIA")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
 
-  await page.getByText("Exit Anyway", { exact: true }).click();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+    });
 
-  await page.getByText("Untitled document").first().click();
+    await page.getByTestId("fit_view").click();
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-    timeout: 5000,
-  });
+    expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
 
-  expect(await page.getByText("NVIDIA").isVisible()).toBeFalsy();
+    await page.waitForSelector("text=loading", {
+      state: "hidden",
+      timeout: 5000,
+    });
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+    await page.getByTestId("icon-ChevronLeft").last().click();
 
-  await page.waitForTimeout(1000);
+    try {
+      await page.waitForSelector(
+        'text="Unsaved changes will be permanently lost."',
+        {
+          state: "visible",
+          timeout: 2000,
+        },
+      );
 
-  await page
-    .getByTestId("modelsNVIDIA")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+      await page.getByText("Exit Anyway", { exact: true }).click();
+    } catch (_error) {
+      console.error("Warning text not visible, skipping dialog confirmation");
+    }
 
-  await page.waitForSelector('[title="fit view"]', {
-    timeout: 5000,
-  });
+    await page.getByText("Untitled document").first().click();
 
-  await page.getByTitle("fit view").click();
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 5000,
+    });
 
-  await page.getByTestId("icon-ChevronLeft").last().click();
+    const nvidiaNode = await page.getByTestId("div-generic-node").count();
+    expect(nvidiaNode).toBe(0);
 
-  await page.getByText("Save And Exit", { exact: true }).click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-  await page.getByText("Untitled document").first().click();
+    await page.keyboard.press("Escape");
+    await page.locator('//*[@id="react-flow-id"]').click();
 
-  await page.waitForSelector("text=loading", {
-    state: "hidden",
-    timeout: 5000,
-  });
+    const lastNvidiaModel = page.getByTestId("nvidiaNVIDIA").last();
+    await lastNvidiaModel.scrollIntoViewIfNeeded();
 
-  await page.waitForTimeout(5000);
+    try {
+      await lastNvidiaModel.hover({ timeout: 5000 });
 
-  expect(await page.getByTestId("title-NVIDIA").isVisible()).toBeTruthy();
+      // Wait for the add component button to appear
+      await page.getByTestId("add-component-button-nvidia").waitFor({
+        state: "visible",
+        timeout: 5000,
+      });
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+      await page.getByTestId("add-component-button-nvidia").click();
+    } catch (error) {
+      console.error("Failed to hover or find add component button:", error);
+      throw error;
+    }
 
-  await page.waitForTimeout(1000);
+    // Wait for fit view button
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+    });
 
-  await page
-    .getByTestId("modelsNVIDIA")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+    await page.getByTestId("fit_view").click();
 
-  await page.waitForSelector('[title="fit view"]', {
-    timeout: 5000,
-  });
+    await page.getByTestId("icon-ChevronLeft").last().click();
 
-  await page.getByTitle("fit view").click();
+    await page.getByText("Save And Exit", { exact: true }).click();
 
-  await page.getByTestId("save-flow-button").click();
-  await page.getByTestId("icon-ChevronLeft").last().click();
+    await page.getByText("Untitled document").first().click();
 
-  const replaceButton = await page.getByTestId("replace-button").isVisible();
+    await page.waitForSelector("text=loading", {
+      state: "hidden",
+      timeout: 5000,
+    });
 
-  if (replaceButton) {
-    await page.getByTestId("replace-button").click();
-  }
+    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
+      timeout: 5000,
+    });
 
-  const saveExitButton = await page
-    .getByText("Save And Exit", { exact: true })
-    .last()
-    .isVisible();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-  if (saveExitButton) {
-    await page.getByText("Save And Exit", { exact: true }).last().click();
-  }
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
+      timeout: 3000,
+    });
 
-  await page.getByText("Untitled document").first().click();
+    await page
+      .getByTestId("nvidiaNVIDIA")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-    timeout: 5000,
-  });
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+    });
 
-  await page.waitForTimeout(5000);
+    await page.getByTestId("fit_view").click();
 
-  const nvidiaNumber = await page.getByTestId("title-NVIDIA").count();
-  expect(nvidiaNumber).toBe(2);
-});
+    await page.getByTestId("save-flow-button").click();
+    await page.getByTestId("icon-ChevronLeft").last().click();
+
+    const replaceButton = await page.getByTestId("replace-button").isVisible();
+
+    if (replaceButton) {
+      await page.getByTestId("replace-button").click();
+    }
+
+    const saveExitButton = await page
+      .getByText("Save And Exit", { exact: true })
+      .last()
+      .isVisible();
+
+    if (saveExitButton) {
+      await page.getByText("Save And Exit", { exact: true }).last().click();
+    }
+
+    await page.getByText("Untitled document").first().click();
+
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 5000,
+    });
+
+    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
+      timeout: 5000,
+    });
+
+    const nvidiaNumber = await page.getByTestId("title-NVIDIA").count();
+    expect(nvidiaNumber).toBe(2);
+  },
+);

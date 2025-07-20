@@ -1,21 +1,24 @@
 import ast
 import contextlib
 import importlib
+import warnings
 from types import FunctionType
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
+from langchain_core._api.deprecation import LangChainDeprecationWarning
+from loguru import logger
 from pydantic import ValidationError
 
-from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 
 
-def add_type_ignores():
+def add_type_ignores() -> None:
     if not hasattr(ast, "TypeIgnore"):
 
         class TypeIgnore(ast.AST):
             _fields = ()
 
-        ast.TypeIgnore = TypeIgnore
+        ast.TypeIgnore = TypeIgnore  # type: ignore[assignment, misc]
 
 
 def validate_code(code):
@@ -25,7 +28,11 @@ def validate_code(code):
     # Parse the code string into an abstract syntax tree (AST)
     try:
         tree = ast.parse(code)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        if hasattr(logger, "opt"):
+            logger.opt(exception=True).debug("Error parsing code")
+        else:
+            logger.debug("Error parsing code")
         errors["function"]["errors"].append(str(e))
         return errors
 
@@ -48,7 +55,8 @@ def validate_code(code):
             code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
                 exec(code_obj)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
+                logger.opt(exception=True).debug("Error executing function code")
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
@@ -57,7 +65,7 @@ def validate_code(code):
 
 def eval_function(function_string: str):
     # Create an empty dictionary to serve as a separate namespace
-    namespace: Dict = {}
+    namespace: dict = {}
 
     # Execute the code string in the new namespace
     exec(function_string, namespace)
@@ -70,7 +78,8 @@ def eval_function(function_string: str):
         None,
     )
     if function_object is None:
-        raise ValueError("Function string does not contain a function")
+        msg = "Function string does not contain a function"
+        raise ValueError(msg)
     return function_object
 
 
@@ -91,20 +100,23 @@ def execute_function(code, function_name, *args, **kwargs):
                     )
                     exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
+                    msg = f"Module {alias.name} not found. Please install it and try again."
+                    raise ModuleNotFoundError(msg) from e
 
     function_code = next(
         node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
     )
     function_code.parent = None
     code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
+    exec_locals = dict(locals())
     try:
-        exec(code_obj, exec_globals, locals())
+        exec(code_obj, exec_globals, exec_locals)
     except Exception as exc:
-        raise ValueError("Function string does not contain a function") from exc
+        msg = "Function string does not contain a function"
+        raise ValueError(msg) from exc
 
     # Add the function to the exec_globals dictionary
-    exec_globals[function_name] = locals()[function_name]
+    exec_globals[function_name] = exec_locals[function_name]
 
     return exec_globals[function_name](*args, **kwargs)
 
@@ -121,21 +133,30 @@ def create_function(code, function_name):
     exec_globals = globals().copy()
 
     for node in module.body:
-        if isinstance(node, ast.Import):
+        if isinstance(node, ast.Import | ast.ImportFrom):
             for alias in node.names:
                 try:
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
+                    if isinstance(node, ast.ImportFrom):
+                        module_name = node.module
+                        exec_globals[alias.asname or alias.name] = getattr(
+                            importlib.import_module(module_name), alias.name
+                        )
+                    else:
+                        module_name = alias.name
+                        exec_globals[alias.asname or alias.name] = importlib.import_module(module_name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
+                    msg = f"Module {alias.name} not found. Please install it and try again."
+                    raise ModuleNotFoundError(msg) from e
 
     function_code = next(
         node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
     )
     function_code.parent = None
     code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
+    exec_locals = dict(locals())
     with contextlib.suppress(Exception):
-        exec(code_obj, exec_globals, locals())
-    exec_globals[function_name] = locals()[function_name]
+        exec(code_obj, exec_globals, exec_locals)
+    exec_globals[function_name] = exec_locals[function_name]
 
     # Return a function that imports necessary modules and calls the target function
     def wrapped_function(*args, **kwargs):
@@ -149,40 +170,57 @@ def create_function(code, function_name):
 
 
 def create_class(code, class_name):
-    """
-    Dynamically create a class from a string of code and a specified class name.
+    """Dynamically create a class from a string of code and a specified class name.
 
-    :param code: String containing the Python code defining the class
-    :param class_name: Name of the class to be created
-    :return: A function that, when called, returns an instance of the created class
+    Args:
+        code: String containing the Python code defining the class
+        class_name: Name of the class to be created
+
+    Returns:
+         A function that, when called, returns an instance of the created class
+
+    Raises:
+        ValueError: If the code contains syntax errors or the class definition is invalid
     """
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
 
-    # Replace from langflow import CustomComponent with from langflow.custom import CustomComponent
     code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
     code = code.replace(
         "from langflow.interface.custom.custom_component import CustomComponent",
         "from langflow.custom import CustomComponent",
     )
-    module = ast.parse(code)
-    exec_globals = prepare_global_scope(code, module)
 
-    class_code = extract_class_code(module, class_name)
-    compiled_class = compile_class_code(class_code)
+    code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
+        module = ast.parse(code)
+        exec_globals = prepare_global_scope(module)
+
+        class_code = extract_class_code(module, class_name)
+        compiled_class = compile_class_code(class_code)
+
         return build_class_constructor(compiled_class, exec_globals, class_name)
+
+    except SyntaxError as e:
+        msg = f"Syntax error in code: {e!s}"
+        raise ValueError(msg) from e
+    except NameError as e:
+        msg = f"Name error (possibly undefined variable): {e!s}"
+        raise ValueError(msg) from e
     except ValidationError as e:
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
+    except Exception as e:
+        msg = f"Error creating class: {e!s}"
+        raise ValueError(msg) from e
 
 
 def create_type_ignore_class():
-    """
-    Create a TypeIgnore class for AST module if it doesn't exist.
+    """Create a TypeIgnore class for AST module if it doesn't exist.
 
-    :return: TypeIgnore class
+    Returns:
+        TypeIgnore class
     """
 
     class TypeIgnore(ast.AST):
@@ -191,39 +229,81 @@ def create_type_ignore_class():
     return TypeIgnore
 
 
-def prepare_global_scope(code, module):
-    """
-    Prepares the global scope with necessary imports from the provided code module.
+def prepare_global_scope(module):
+    """Prepares the global scope with necessary imports from the provided code module.
 
-    :param module: AST parsed module
-    :return: Dictionary representing the global scope with imported modules
+    Args:
+        module: AST parsed module
+
+    Returns:
+        Dictionary representing the global scope with imported modules
+
+    Raises:
+        ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
-    exec_globals.update(get_default_imports(code))
+    imports = []
+    import_froms = []
+    definitions = []
+
     for node in module.body:
         if isinstance(node, ast.Import):
+            imports.append(node)
+        elif isinstance(node, ast.ImportFrom) and node.module is not None:
+            import_froms.append(node)
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
+            definitions.append(node)
+
+    for node in imports:
+        for alias in node.names:
+            try:
+                module_name = alias.name
+                variable_name = alias.asname or alias.name
+                exec_globals[variable_name] = importlib.import_module(module_name)
+            except ModuleNotFoundError as e:
+                msg = f"Module {alias.name} not found. Please install it and try again."
+                raise ModuleNotFoundError(msg) from e
+
+    for node in import_froms:
+        try:
+            module_name = node.module
+            # Apply warning suppression only when needed
+            if "langchain" in module_name:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", LangChainDeprecationWarning)
+                    imported_module = importlib.import_module(module_name)
+            else:
+                imported_module = importlib.import_module(module_name)
+
             for alias in node.names:
                 try:
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
-                except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
-        elif isinstance(node, ast.ImportFrom) and node.module is not None:
-            try:
-                imported_module = importlib.import_module(node.module)
-                for alias in node.names:
+                    # First try getting it as an attribute
                     exec_globals[alias.name] = getattr(imported_module, alias.name)
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError(f"Module {node.module} not found. Please install it and try again")
+                except AttributeError:
+                    # If that fails, try importing the full module path
+                    full_module_path = f"{module_name}.{alias.name}"
+                    exec_globals[alias.name] = importlib.import_module(full_module_path)
+        except ModuleNotFoundError as e:
+            msg = f"Module {node.module} not found. Please install it and try again"
+            raise ModuleNotFoundError(msg) from e
+
+    if definitions:
+        combined_module = ast.Module(body=definitions, type_ignores=[])
+        compiled_code = compile(combined_module, "<string>", "exec")
+        exec(compiled_code, exec_globals)
+
     return exec_globals
 
 
 def extract_class_code(module, class_name):
-    """
-    Extracts the AST node for the specified class from the module.
+    """Extracts the AST node for the specified class from the module.
 
-    :param module: AST parsed module
-    :param class_name: Name of the class to extract
-    :return: AST node of the specified class
+    Args:
+        module: AST parsed module
+        class_name: Name of the class to extract
+
+    Returns:
+        AST node of the specified class
     """
     class_code = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
 
@@ -232,28 +312,31 @@ def extract_class_code(module, class_name):
 
 
 def compile_class_code(class_code):
-    """
-    Compiles the AST node of a class into a code object.
+    """Compiles the AST node of a class into a code object.
 
-    :param class_code: AST node of the class
-    :return: Compiled code object of the class
+    Args:
+        class_code: AST node of the class
+
+    Returns:
+        Compiled code object of the class
     """
-    code_obj = compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
-    return code_obj
+    return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):
-    """
-    Builds a constructor function for the dynamically created class.
+    """Builds a constructor function for the dynamically created class.
 
-    :param compiled_class: Compiled code object of the class
-    :param exec_globals: Global scope with necessary imports
-    :param class_name: Name of the class
-    :return: Constructor function for the class
-    """
+    Args:
+        compiled_class: Compiled code object of the class
+        exec_globals: Global scope with necessary imports
+        class_name: Name of the class
 
-    exec(compiled_class, exec_globals, locals())
-    exec_globals[class_name] = locals()[class_name]
+    Returns:
+         Constructor function for the class
+    """
+    exec_locals = dict(locals())
+    exec(compiled_class, exec_globals, exec_locals)
+    exec_globals[class_name] = exec_locals[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
     def build_custom_class():
@@ -261,23 +344,18 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
 
-        exec_globals[class_name]
-
         return exec_globals[class_name]
 
-    build_custom_class.__globals__.update(exec_globals)
     return build_custom_class()
 
 
+# TODO: Remove this function
 def get_default_imports(code_string):
-    """
-    Returns a dictionary of default imports for the dynamic class constructor.
-    """
-
+    """Returns a dictionary of default imports for the dynamic class constructor."""
     default_imports = {
         "Optional": Optional,
-        "List": List,
-        "Dict": Dict,
+        "List": list,
+        "Dict": dict,
         "Union": Union,
     }
     langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
@@ -289,15 +367,16 @@ def get_default_imports(code_string):
 
 
 def find_names_in_code(code, names):
-    """
-    Finds if any of the specified names are present in the given code string.
+    """Finds if any of the specified names are present in the given code string.
 
-    :param code: The source code as a string.
-    :param names: A list of names to check for in the code.
-    :return: A set of names that are found in the code.
+    Args:
+        code: The source code as a string.
+        names: A list of names to check for in the code.
+
+    Returns:
+        A set of names that are found in the code.
     """
-    found_names = {name for name in names if name in code}
-    return found_names
+    return {name for name in names if name in code}
 
 
 def extract_function_name(code):
@@ -305,12 +384,36 @@ def extract_function_name(code):
     for node in module.body:
         if isinstance(node, ast.FunctionDef):
             return node.name
-    raise ValueError("No function definition found in the code string")
+    msg = "No function definition found in the code string"
+    raise ValueError(msg)
 
 
-def extract_class_name(code):
-    module = ast.parse(code)
-    for node in module.body:
-        if isinstance(node, ast.ClassDef):
-            return node.name
-    raise ValueError("No class definition found in the code string")
+def extract_class_name(code: str) -> str:
+    """Extract the name of the first Component subclass found in the code.
+
+    Args:
+        code (str): The source code to parse
+
+    Returns:
+        str: Name of the first Component subclass found
+
+    Raises:
+        TypeError: If no Component subclass is found in the code
+    """
+    try:
+        module = ast.parse(code)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+
+            # Check bases for Component inheritance
+            # TODO: Build a more robust check for Component inheritance
+            for base in node.bases:
+                if isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"]):
+                    return node.name
+
+        msg = f"No Component subclass found in the code string. Code snippet: {code[:100]}"
+        raise TypeError(msg)
+    except SyntaxError as e:
+        msg = f"Invalid Python code: {e!s}"
+        raise ValueError(msg) from e

@@ -1,15 +1,12 @@
-from typing import List
-
 from loguru import logger
 
 from langflow.graph.schema import ResultData, RunOutputs
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 
-def build_data_from_run_outputs(run_outputs: RunOutputs) -> List[Data]:
-    """
-    Build a list of data from the given RunOutputs.
+def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:
+    """Build a list of data from the given RunOutputs.
 
     Args:
         run_outputs (RunOutputs): The RunOutputs object containing the output data.
@@ -27,13 +24,11 @@ def build_data_from_run_outputs(run_outputs: RunOutputs) -> List[Data]:
     return data
 
 
-def build_data_from_result_data(result_data: ResultData, get_final_results_only: bool = True) -> List[Data]:
-    """
-    Build a list of data from the given ResultData.
+def build_data_from_result_data(result_data: ResultData) -> list[Data]:
+    """Build a list of data from the given ResultData.
 
     Args:
         result_data (ResultData): The ResultData object containing the result data.
-        get_final_results_only (bool, optional): Whether to include only final results. Defaults to True.
 
     Returns:
         List[Data]: A list of data built from the ResultData.
@@ -58,7 +53,7 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
                     data.append(artifact)
                 else:
                     # Warn about unknown output type
-                    logger.warning(f"Unable to build record output from unknown ResultData.artifact: {str(artifact)}")
+                    logger.warning(f"Unable to build record output from unknown ResultData.artifact: {artifact}")
         # Chat or text output
         elif result_data.results:
             data.append(Data(data={"result": result_data.results}, text_key="result"))
@@ -68,11 +63,8 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
 
     if isinstance(result_data.results, dict):
         for name, result in result_data.results.items():
-            dataobj: Data | Message | None = None
-            if isinstance(result, Message):
-                dataobj = result
-            else:
-                dataobj = Data(data=result, text_key=name)
+            dataobj: Data | Message | None
+            dataobj = result if isinstance(result, Message) else Data(data=result, text_key=name)
 
             data.append(dataobj)
     else:
@@ -80,9 +72,8 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
     return data
 
 
-def format_flow_output_data(data: List[Data]) -> str:
-    """
-    Format the flow output data into a string.
+def format_flow_output_data(data: list[Data]) -> str:
+    """Format the flow output data into a string.
 
     Args:
         data (List[Data]): The list of data to format.

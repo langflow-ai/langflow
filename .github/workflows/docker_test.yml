@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "docker/**"
-      - "poetry.lock"
+      - "uv.lock"
       - "pyproject.toml"
       - "src/backend/**"
       - ".github/workflows/docker_test.yml"
@@ -13,10 +13,11 @@ on:
     branches: [dev]
     paths:
       - "docker/**"
-      - "poetry.lock"
+      - "uv.lock"
       - "pyproject.toml"
       - "src/**"
       - ".github/workflows/docker_test.yml"
+  workflow_dispatch:
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -35,7 +36,7 @@ jobs:
       - name: Test image
         run: |
           expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --entrypoint bash langflowai/langflow:latest-dev -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
+          version=$(docker run --rm --entrypoint bash langflowai/langflow:latest-dev -c "python -c 'from langflow.utils.version import get_version_info; print(get_version_info()[\"version\"])'")
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"
@@ -51,7 +52,7 @@ jobs:
       - name: Test backend image
         run: |
           expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --entrypoint bash langflowai/langflow-backend:latest-dev -c 'python -c "from langflow.version import __version__ as langflow_version; print(langflow_version)"')
+          version=$(docker run --rm --entrypoint bash langflowai/langflow-backend:latest-dev -c "python -c 'from langflow.utils.version import get_version_info; print(get_version_info()[\"version\"])'")
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"

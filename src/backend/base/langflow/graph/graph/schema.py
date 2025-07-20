@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from typing_extensions import NotRequired, TypedDict
 
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.vertex.schema import NodeData
-from langflow.schema.log import LoggableType
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
     from langflow.graph.vertex.base import Vertex
+    from langflow.schema.log import LoggableType
 
 
 class ViewPort(TypedDict):
@@ -32,11 +34,11 @@ class GraphDump(TypedDict, total=False):
 
 
 class VertexBuildResult(NamedTuple):
-    result_dict: "ResultData"
+    result_dict: ResultData
     params: str
     valid: bool
     artifacts: dict
-    vertex: "Vertex"
+    vertex: Vertex
 
 
 class OutputConfigDict(TypedDict):

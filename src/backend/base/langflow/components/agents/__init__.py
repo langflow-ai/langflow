@@ -1,15 +1,4 @@
-from .CSVAgent import CSVAgentComponent
-from .JsonAgent import JsonAgentComponent
-from .SQLAgent import SQLAgentComponent
-from .VectorStoreAgent import VectorStoreAgentComponent
-from .VectorStoreRouterAgent import VectorStoreRouterAgentComponent
-from .XMLAgent import XMLAgentComponent
+from .agent import AgentComponent
+from .mcp_component import MCPToolsComponent
 
-__all__ = [
-    "CSVAgentComponent",
-    "JsonAgentComponent",
-    "SQLAgentComponent",
-    "VectorStoreAgentComponent",
-    "VectorStoreRouterAgentComponent",
-    "XMLAgentComponent",
-]
+__all__ = ["AgentComponent", "MCPToolsComponent"]

@@ -1,13 +1,14 @@
-import { useLoginUser } from "@/controllers/API/queries/auth";
 import { useContext, useState } from "react";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import { useLoginUser } from "@/controllers/API/queries/auth";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
 import useAlertStore from "../../../stores/alertStore";
-import { LoginType } from "../../../types/api";
-import {
+import type { LoginType } from "../../../types/api";
+import type {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../../types/components";
@@ -49,7 +50,7 @@ export default function LoginAdminPage() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
-        <span className="mb-4 text-5xl">⛓️</span>
+        <LangflowLogo title="Langflow logo" className="h-10 w-10 scale-[1.5]" />
         <span className="mb-6 text-2xl font-semibold text-primary">Admin</span>
         <Input
           onChange={({ target: { value } }) => {

@@ -1,31 +1,23 @@
-from typing import List
-
 from langchain_community.vectorstores import PGVector
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
-from langflow.schema import Data
+from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
+from langflow.schema.data import Data
 from langflow.utils.connection_string_parser import transform_connection_string
 
 
 class PGVectorStoreComponent(LCVectorStoreComponent):
     display_name = "PGVector"
     description = "PGVector Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pgvector/"
     name = "pgvector"
-    icon = "PGVector"
+    icon = "cpu"
 
     inputs = [
         SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
         StrInput(name="collection_name", display_name="Table", required=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingestion Data",
-            is_list=True,
-        ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        *LCVectorStoreComponent.inputs,
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -33,11 +25,13 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
     ]
 
     @check_cached_vector_store
     def build_vector_store(self) -> PGVector:
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
@@ -63,7 +57,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
 
         return pgvector
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
@@ -75,5 +69,4 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
-        else:
-            return []
+        return []

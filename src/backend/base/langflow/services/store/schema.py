@@ -1,4 +1,3 @@
-from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, field_validator
@@ -6,12 +5,12 @@ from pydantic import BaseModel, field_validator
 
 class TagResponse(BaseModel):
     id: UUID
-    name: Optional[str]
+    name: str | None
 
 
 class UsersLikesResponse(BaseModel):
-    likes_count: Optional[int]
-    liked_by_user: Optional[bool]
+    likes_count: int | None
+    liked_by_user: bool | None
 
 
 class CreateComponentResponse(BaseModel):
@@ -19,22 +18,22 @@ class CreateComponentResponse(BaseModel):
 
 
 class TagsIdResponse(BaseModel):
-    tags_id: Optional[TagResponse]
+    tags_id: TagResponse | None
 
 
 class ListComponentResponse(BaseModel):
-    id: Optional[UUID] = None
-    name: Optional[str] = None
-    description: Optional[str] = None
-    liked_by_count: Optional[int] = None
-    liked_by_user: Optional[bool] = None
-    is_component: Optional[bool] = None
-    metadata: Optional[dict] = {}
-    user_created: Optional[dict] = {}
-    tags: Optional[List[TagResponse]] = None
-    downloads_count: Optional[int] = None
-    last_tested_version: Optional[str] = None
-    private: Optional[bool] = None
+    id: UUID | None = None
+    name: str | None = None
+    description: str | None = None
+    liked_by_count: int | None = None
+    liked_by_user: bool | None = None
+    is_component: bool | None = None
+    metadata: dict | None = {}
+    user_created: dict | None = {}
+    tags: list[TagResponse] | None = None
+    downloads_count: int | None = None
+    last_tested_version: str | None = None
+    private: bool | None = None
 
     # tags comes as a TagsIdResponse but we want to return a list of TagResponse
     @field_validator("tags", mode="before")
@@ -44,33 +43,32 @@ class ListComponentResponse(BaseModel):
         # if so, return v else transform to TagResponse
         if not v:
             return v
-        if all(["id" in tag and "name" in tag for tag in v]):
+        if all("id" in tag and "name" in tag for tag in v):
             return v
-        else:
-            return [TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")]
+        return [TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")]
 
 
 class ListComponentResponseModel(BaseModel):
-    count: Optional[int] = 0
+    count: int | None = 0
     authorized: bool
-    results: Optional[List[ListComponentResponse]]
+    results: list[ListComponentResponse] | None
 
 
 class DownloadComponentResponse(BaseModel):
     id: UUID
-    name: Optional[str]
-    description: Optional[str]
-    data: Optional[dict]
-    is_component: Optional[bool]
-    metadata: Optional[dict] = {}
+    name: str | None
+    description: str | None
+    data: dict | None
+    is_component: bool | None
+    metadata: dict | None = {}
 
 
 class StoreComponentCreate(BaseModel):
     name: str
-    description: Optional[str]
+    description: str | None
     data: dict
-    tags: Optional[List[str]]
-    parent: Optional[UUID] = None
-    is_component: Optional[bool]
-    last_tested_version: Optional[str] = None
-    private: Optional[bool] = True
+    tags: list[str] | None
+    parent: UUID | None = None
+    is_component: bool | None
+    last_tested_version: str | None = None
+    private: bool | None = True

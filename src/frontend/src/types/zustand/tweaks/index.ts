@@ -1,28 +1,22 @@
-import { FlowType, NodeType } from "@/types/flow";
-import { GetCodesType } from "@/types/tweaks";
-import { tabsArrayType } from "../../components";
+import type { AllNodeType } from "@/types/flow";
 
 export type TweaksStoreType = {
-  activeTweaks: boolean;
-  setActiveTweaks: (activeTweaks: boolean) => void;
-  nodes: NodeType[];
+  nodes: AllNodeType[];
+  currentFlowId: string;
   setNodes: (
-    update: NodeType[] | ((oldState: NodeType[]) => NodeType[]),
+    update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
     skipSave?: boolean,
   ) => void;
   setNode: (
     id: string,
-    update: NodeType | ((oldState: NodeType) => NodeType),
+    update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
   ) => void;
-  getCodes: GetCodesType;
-  getNode: (id: string) => NodeType | undefined;
-  tabs: tabsArrayType[];
-  initialSetup: (
-    autoLogin: boolean,
-    flow: FlowType,
-    getCodes: GetCodesType,
-  ) => void;
-  refreshTabs: () => void;
-  autoLogin: boolean;
-  flow: FlowType | null;
+  getNode: (id: string) => AllNodeType | undefined;
+  initialSetup: (nodes: AllNodeType[], flowId: string) => void;
+  updateTweaks: () => void;
+  tweaks: {
+    [key: string]: {
+      [key: string]: any;
+    };
+  };
 };

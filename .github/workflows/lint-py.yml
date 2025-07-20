@@ -19,25 +19,28 @@ jobs:
     strategy:
       matrix:
         python-version:
+          - "3.13"
           - "3.12"
           - "3.11"
           - "3.10"
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
-      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Install Python dependencies
-        run: |
-          poetry env use ${{ matrix.python-version }}
-          poetry install
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
       - name: Run Mypy
         run: |
-          poetry run mypy --namespace-packages -p "langflow"
+          uv run mypy --namespace-packages -p "langflow"
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
+

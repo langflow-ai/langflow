@@ -19,7 +19,6 @@ body {
 }
 
 .react-flow__node {
-  width: auto;
   height: auto;
   border-radius: auto;
   min-width: inherit;
@@ -66,8 +65,6 @@ body {
 }
 
 .jv-indent {
-  overflow-y: auto !important;
-  max-height: 310px !important;
   border-radius: 10px;
 }
 
@@ -93,7 +90,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .jv-indent::-webkit-scrollbar-track {
@@ -107,7 +104,7 @@ body {
 }
 
 .jv-indent::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .custom-hover {
@@ -115,49 +112,108 @@ body {
 }
 
 .custom-hover:hover {
-  background-color: rgba(
-    99,
-    102,
-    241,
-    0.1
-  ); /* Medium indigo color with 20% opacity */
+  background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
 }
 
 /* This CSS is to not apply the border for the column having 'no-border' class */
 .no-border.ag-cell:focus {
   border: none !important;
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
 }
 .no-border.ag-cell {
   border: none !important;
-  outline: none;
+  outline: none !important;
 }
 
-/* selected */
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: var(--selected) !important;
-  stroke-width: 1.5px !important;
+  stroke-width: 2px !important;
+}
+.react-flow__controls-button svg {
+  fill: none !important;
 }
 
 .react-flow__edge .react-flow__edge-path {
-  stroke: var(--connection) !important;
   transition: color;
+  stroke: var(--connection) !important;
   transition-duration: 150ms;
+  stroke-width: 2px !important;
+}
+.react-flow__connection path {
+  transition: color;
+  stroke: var(--connection) !important;
+  transition-duration: 150ms;
+  stroke-width: 2px !important;
 }
 
 .react-flow__edge.running .react-flow__edge-path {
-  stroke: var(--status-blue) !important;
+  stroke: hsl(var(--foreground)) !important;
+  stroke-width: 2px !important;
+}
+
+.react-flow__edge.not-running .react-flow__edge-path {
+  stroke: hsl(var(--foreground)) !important;
+  stroke-width: 1px !important;
+}
+
+.react-flow__edge.ran .react-flow__edge-path {
+  stroke: hsl(var(--foreground)) !important;
+  stroke-width: 2px !important;
 }
 
 .ag-react-container {
   width: 100%;
   height: 100%;
 }
+
 .react-flow__resize-control.handle {
   width: 0.75rem !important;
   height: 0.75rem !important;
   background-color: white !important;
   border-color: var(--border) !important;
-  z-index: 1000 !important;
+  z-index: 50 !important;
   border-radius: 20% !important;
+}
+
+code {
+  font-family: var(--font-mono) s !important;
+}
+
+.ag-cell {
+  --ag-internal-calculated-line-height: none !important;
+}
+
+.ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
+  --ag-internal-calculated-line-height: none !important;
+}
+
+.arrow-hide::-webkit-inner-spin-button,
+.arrow-hide::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field {
+  background-color: hsl(var(--background)) !important;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field textarea {
+  resize: none !important;
+  height: 100% !important;
+}
+
+.cell-disable-edit {
+  cursor: not-allowed;
+}
+
+.cell-disable-edit.ag-cell-focus {
+  outline: none !important;
+  border: 0px !important;
+  box-shadow: none !important;
+  border-radius: 0px !important;
+}
+
+.cm-gutters {
+  display: none !important;
 }

@@ -1,8 +1,7 @@
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.input_output import ChatInput, ChatOutput
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from langflow.components.processing import PromptComponent
+from langflow.graph import Graph
 
 
 def basic_prompting_graph(template: str | None = None):
@@ -26,5 +25,4 @@ Answer:
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=chat_input, end=chat_output)
-    return graph
+    return Graph(start=chat_input, end=chat_output)

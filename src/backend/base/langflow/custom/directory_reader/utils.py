@@ -1,6 +1,8 @@
+import asyncio
+
 from loguru import logger
 
-from langflow.custom.directory_reader import DirectoryReader
+from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 
 
@@ -42,7 +44,7 @@ def build_valid_menu(valid_components):
 
 
 def build_and_validate_all_files(reader: DirectoryReader, file_list):
-    """Build and validate all files"""
+    """Build and validate all files."""
     data = reader.build_component_menu_list(file_list)
 
     valid_components = reader.filter_loaded_components(data=data, with_errors=False)
@@ -52,7 +54,7 @@ def build_and_validate_all_files(reader: DirectoryReader, file_list):
 
 
 async def abuild_and_validate_all_files(reader: DirectoryReader, file_list):
-    """Build and validate all files"""
+    """Build and validate all files."""
     data = await reader.abuild_component_menu_list(file_list)
 
     valid_components = reader.filter_loaded_components(data=data, with_errors=False)
@@ -62,16 +64,16 @@ async def abuild_and_validate_all_files(reader: DirectoryReader, file_list):
 
 
 def load_files_from_path(path: str):
-    """Load all files from a given path"""
-    reader = DirectoryReader(path, False)
+    """Load all files from a given path."""
+    reader = DirectoryReader(path, compress_code_field=False)
 
     return reader.get_files()
 
 
 def build_custom_component_list_from_path(path: str):
-    """Build a list of custom components for the langchain from a given path"""
+    """Build a list of custom components for the langchain from a given path."""
     file_list = load_files_from_path(path)
-    reader = DirectoryReader(path, False)
+    reader = DirectoryReader(path, compress_code_field=False)
 
     valid_components, invalid_components = build_and_validate_all_files(reader, file_list)
 
@@ -82,9 +84,9 @@ def build_custom_component_list_from_path(path: str):
 
 
 async def abuild_custom_component_list_from_path(path: str):
-    """Build a list of custom components for the langchain from a given path"""
-    file_list = load_files_from_path(path)
-    reader = DirectoryReader(path, False)
+    """Build a list of custom components for the langchain from a given path."""
+    file_list = await asyncio.to_thread(load_files_from_path, path)
+    reader = DirectoryReader(path, compress_code_field=False)
 
     valid_components, invalid_components = await abuild_and_validate_all_files(reader, file_list)
 
@@ -109,7 +111,7 @@ def create_invalid_component_template(component, component_name):
     return component_frontend_node.model_dump(by_alias=True, exclude_none=True)
 
 
-def log_invalid_component_details(component):
+def log_invalid_component_details(component) -> None:
     """Log details of an invalid component."""
     logger.debug(component)
     logger.debug(f"Component Path: {component.get('path', None)}")
@@ -132,8 +134,8 @@ def build_invalid_menu_items(menu_item):
             component_name, component_template = build_invalid_component(component)
             menu_items[component_name] = component_template
             logger.debug(f"Added {component_name} to invalid menu.")
-        except Exception as exc:
-            logger.exception(f"Error while creating custom component [{component_name}]: {str(exc)}")
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Error while creating custom component [{component_name}]")
     return menu_items
 
 
@@ -165,7 +167,6 @@ def build_menu_items(menu_item):
     for component_name, component_template, component in menu_item["components"]:
         try:
             menu_items[component_name] = component_template
-        except Exception as exc:
-            logger.error(f"Error loading Component: {component['output_types']}")
-            logger.exception(f"Error while building custom component {component['output_types']}: {exc}")
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Error while building custom component {component['output_types']}")
     return menu_items

@@ -1,1 +1,1431 @@
-{"icon_bg_color":null,"updated_at":"2024-09-23T13:23:49+00:00","webhook":false,"id":"bb28b0b4-f5b7-4bf2-8661-fead4a32ed86","name":"AssemblyAI Transcription and Speech AI Flow","description":"Transcribe and analyze audio with AssemblyAI","icon":null,"is_component":false,"endpoint_name":null,"data":{"nodes":[{"id":"Prompt-GI1uB","type":"genericNode","position":{"x":-1437.0332295387766,"y":1086.3264409390222},"data":{"type":"Prompt","node":{"template":{"_type":"Component","code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"template":{"trace_as_input":true,"list":false,"required":false,"placeholder":"","show":true,"name":"template","value":"Provide a brief summary of the transcript.","display_name":"Template","advanced":false,"dynamic":false,"info":"","title_case":false,"type":"prompt","_input_type":"PromptInput"}},"description":"Create a prompt template with dynamic variables.","icon":"prompts","is_input":null,"is_output":null,"is_composition":null,"base_classes":["Message"],"name":"","display_name":"Prompt","documentation":"","custom_fields":{"template":[]},"output_types":[],"full_path":null,"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Message"],"selected":"Message","name":"prompt","hidden":null,"display_name":"Prompt Message","method":"build_prompt","value":"__UNDEFINED__","cache":true}],"field_order":["template"],"beta":false,"error":null,"edited":false},"id":"Prompt-GI1uB"},"selected":false,"width":384,"height":325,"positionAbsolute":{"x":-1437.0332295387766,"y":1086.3264409390222},"dragging":false},{"id":"AssemblyAITranscriptionJobCreator-os7m9","type":"genericNode","position":{"x":-1957.7132501771657,"y":470.79685053457587},"data":{"type":"AssemblyAITranscriptionJobCreator","node":{"template":{"_type":"Component","audio_file":{"trace_as_metadata":true,"file_path":"bb28b0b4-f5b7-4bf2-8661-fead4a32ed86/2024-09-23_12-10-03_5_common_sports_injuries.mp3","fileTypes":["3ga","8svx","aac","ac3","aif","aiff","alac","amr","ape","au","dss","flac","flv","m4a","m4b","m4p","m4r","mp3","mpga","ogg","oga","mogg","opus","qcp","tta","voc","wav","wma","wv","webm","mts","m2ts","ts","mov","mp2","mp4","m4p","m4v","mxf"],"list":false,"required":false,"placeholder":"","show":true,"name":"audio_file","value":"5_common_sports_injuries.mp3","display_name":"Audio File","advanced":false,"dynamic":false,"info":"The audio file to transcribe","title_case":false,"type":"file","_input_type":"FileInput"},"api_key":{"load_from_db":false,"required":false,"placeholder":"","show":true,"name":"api_key","value":null,"display_name":"Assembly API Key","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/","title_case":false,"password":true,"type":"str","_input_type":"SecretStrInput"},"audio_file_url":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"audio_file_url","value":"","display_name":"Audio File URL","advanced":true,"input_types":["Message"],"dynamic":false,"info":"The URL of the audio file to transcribe (Can be used instead of a File)","title_case":false,"type":"str","_input_type":"MessageTextInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import os\nimport assemblyai as aai\nfrom langflow.custom import Component\nfrom langflow.io import FileInput, SecretStrInput, DropdownInput, Output, BoolInput, MessageTextInput\nfrom langflow.schema import Data\nfrom loguru import logger\n\n\nclass AssemblyAITranscriptionJobCreator(Component):\n    display_name = \"AssemblyAI Start Transcript\"\n    description = \"Create a transcription job for an audio file using AssemblyAI with advanced options\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        FileInput(\n            name=\"audio_file\",\n            display_name=\"Audio File\",\n            file_types=[\n                \"3ga\",\n                \"8svx\",\n                \"aac\",\n                \"ac3\",\n                \"aif\",\n                \"aiff\",\n                \"alac\",\n                \"amr\",\n                \"ape\",\n                \"au\",\n                \"dss\",\n                \"flac\",\n                \"flv\",\n                \"m4a\",\n                \"m4b\",\n                \"m4p\",\n                \"m4r\",\n                \"mp3\",\n                \"mpga\",\n                \"ogg\",\n                \"oga\",\n                \"mogg\",\n                \"opus\",\n                \"qcp\",\n                \"tta\",\n                \"voc\",\n                \"wav\",\n                \"wma\",\n                \"wv\",\n                \"webm\",\n                \"mts\",\n                \"m2ts\",\n                \"ts\",\n                \"mov\",\n                \"mp2\",\n                \"mp4\",\n                \"m4p\",\n                \"m4v\",\n                \"mxf\",\n            ],\n            info=\"The audio file to transcribe\",\n        ),\n        MessageTextInput(\n            name=\"audio_file_url\",\n            display_name=\"Audio File URL\",\n            info=\"The URL of the audio file to transcribe (Can be used instead of a File)\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"speech_model\",\n            display_name=\"Speech Model\",\n            options=[\n                \"best\",\n                \"nano\",\n            ],\n            value=\"best\",\n            info=\"The speech model to use for the transcription\",\n        ),\n        BoolInput(\n            name=\"language_detection\",\n            display_name=\"Automatic Language Detection\",\n            info=\"Enable automatic language detection\",\n        ),\n        MessageTextInput(\n            name=\"language_code\",\n            display_name=\"Language\",\n            info=\"\"\"\n            The language of the audio file. Can be set manually if automatic language detection is disabled. \n            See https://www.assemblyai.com/docs/getting-started/supported-languages for a list of supported language codes.\n            \"\"\",\n        ),\n        BoolInput(\n            name=\"speaker_labels\",\n            display_name=\"Enable Speaker Labels\",\n            info=\"Enable speaker diarization\",\n        ),\n        MessageTextInput(\n            name=\"speakers_expected\",\n            display_name=\"Expected Number of Speakers\",\n            info=\"Set the expected number of speakers (optional, enter a number)\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"punctuate\",\n            display_name=\"Punctuate\",\n            info=\"Enable automatic punctuation\",\n            advanced=True,\n            value=True,\n        ),\n        BoolInput(\n            name=\"format_text\",\n            display_name=\"Format Text\",\n            info=\"Enable text formatting\",\n            advanced=True,\n            value=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Transcript ID\", name=\"transcript_id\", method=\"create_transcription_job\"),\n    ]\n\n    def create_transcription_job(self) -> Data:\n        aai.settings.api_key = self.api_key\n\n        # Convert speakers_expected to int if it's not empty\n        speakers_expected = None\n        if self.speakers_expected and self.speakers_expected.strip():\n            try:\n                speakers_expected = int(self.speakers_expected)\n            except ValueError:\n                self.status = \"Error: Expected Number of Speakers must be a valid integer\"\n                return Data(data={\"error\": \"Error: Expected Number of Speakers must be a valid integer\"})\n\n        language_code = self.language_code if self.language_code else None\n\n        config = aai.TranscriptionConfig(\n            speech_model=self.speech_model,\n            language_detection=self.language_detection,\n            language_code=language_code,\n            speaker_labels=self.speaker_labels,\n            speakers_expected=speakers_expected,\n            punctuate=self.punctuate,\n            format_text=self.format_text,\n        )\n\n        audio = None\n        if self.audio_file:\n            if self.audio_file_url:\n                logger.warning(\"Both an audio file an audio URL were specified. The audio URL was ignored.\")\n\n            # Check if the file exists\n            if not os.path.exists(self.audio_file):\n                self.status = \"Error: Audio file not found\"\n                return Data(data={\"error\": \"Error: Audio file not found\"})\n            audio = self.audio_file\n        elif self.audio_file_url:\n            audio = self.audio_file_url\n        else:\n            self.status = \"Error: Either an audio file or an audio URL must be specified\"\n            return Data(data={\"error\": \"Error: Either an audio file or an audio URL must be specified\"})\n\n        try:\n            transcript = aai.Transcriber().submit(audio, config=config)\n\n            if transcript.error:\n                self.status = transcript.error\n                return Data(data={\"error\": transcript.error})\n            else:\n                result = Data(data={\"transcript_id\": transcript.id})\n                self.status = result\n                return result\n        except Exception as e:\n            self.status = f\"An error occurred: {str(e)}\"\n            return Data(data={\"error\": f\"An error occurred: {str(e)}\"})\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"format_text":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"format_text","value":true,"display_name":"Format Text","advanced":true,"dynamic":false,"info":"Enable text formatting","title_case":false,"type":"bool","_input_type":"BoolInput"},"language_code":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"language_code","value":"","display_name":"Language","advanced":false,"input_types":["Message"],"dynamic":false,"info":"\n            The language of the audio file. Can be set manually if automatic language detection is disabled. \n            See https://www.assemblyai.com/docs/getting-started/supported-languages for a list of supported language codes.\n            ","title_case":false,"type":"str","_input_type":"MessageTextInput"},"language_detection":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"language_detection","value":false,"display_name":"Automatic Language Detection","advanced":false,"dynamic":false,"info":"Enable automatic language detection","title_case":false,"type":"bool","_input_type":"BoolInput"},"punctuate":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"punctuate","value":true,"display_name":"Punctuate","advanced":true,"dynamic":false,"info":"Enable automatic punctuation","title_case":false,"type":"bool","_input_type":"BoolInput"},"speaker_labels":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"speaker_labels","value":true,"display_name":"Enable Speaker Labels","advanced":false,"dynamic":false,"info":"Enable speaker diarization","title_case":false,"type":"bool","_input_type":"BoolInput","load_from_db":false},"speakers_expected":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"speakers_expected","value":"","display_name":"Expected Number of Speakers","advanced":true,"input_types":["Message"],"dynamic":false,"info":"Set the expected number of speakers (optional, enter a number)","title_case":false,"type":"str","_input_type":"MessageTextInput"},"speech_model":{"trace_as_metadata":true,"options":["best","nano"],"combobox":false,"required":false,"placeholder":"","show":true,"name":"speech_model","value":"best","display_name":"Speech Model","advanced":false,"dynamic":false,"info":"The speech model to use for the transcription","title_case":false,"type":"str","_input_type":"DropdownInput"}},"description":"Create a transcription job for an audio file using AssemblyAI with advanced options","icon":"AssemblyAI","base_classes":["Data"],"display_name":"AssemblyAI Start Transcript","documentation":"https://www.assemblyai.com/docs","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"transcript_id","display_name":"Transcript ID","method":"create_transcription_job","value":"__UNDEFINED__","cache":true}],"field_order":["api_key","audio_file","audio_file_url","speech_model","language_detection","language_code","speaker_labels","speakers_expected","punctuate","format_text"],"beta":false,"edited":false,"lf_version":"1.0.18"},"id":"AssemblyAITranscriptionJobCreator-os7m9","description":"Create a transcription job for an audio file using AssemblyAI with advanced options","display_name":"AssemblyAI Start Transcript"},"selected":true,"width":384,"height":727,"positionAbsolute":{"x":-1957.7132501771657,"y":470.79685053457587},"dragging":false},{"id":"AssemblyAITranscriptionJobPoller-h1oNr","type":"genericNode","position":{"x":-1418.1773423834097,"y":468.77643572273803},"data":{"type":"AssemblyAITranscriptionJobPoller","node":{"template":{"_type":"Component","transcript_id":{"trace_as_metadata":true,"list":false,"trace_as_input":true,"required":false,"placeholder":"","show":true,"name":"transcript_id","value":"","display_name":"Transcript ID","advanced":false,"input_types":["Data"],"dynamic":false,"info":"The ID of the transcription job to poll","title_case":false,"type":"other","_input_type":"DataInput"},"api_key":{"load_from_db":false,"required":false,"placeholder":"","show":true,"name":"api_key","value":null,"display_name":"Assembly API Key","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/","title_case":false,"password":true,"type":"str","_input_type":"SecretStrInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import assemblyai as aai\nfrom langflow.custom import Component\nfrom langflow.io import FloatInput, SecretStrInput, DataInput, Output\nfrom langflow.schema import Data\n\n\nclass AssemblyAITranscriptionJobPoller(Component):\n    display_name = \"AssemblyAI Poll Transcript\"\n    description = \"Poll for the status of a transcription job using AssemblyAI\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        DataInput(\n            name=\"transcript_id\",\n            display_name=\"Transcript ID\",\n            info=\"The ID of the transcription job to poll\",\n        ),\n        FloatInput(\n            name=\"polling_interval\",\n            display_name=\"Polling Interval\",\n            value=3.0,\n            info=\"The polling interval in seconds\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Transcription Result\", name=\"transcription_result\", method=\"poll_transcription_job\"),\n    ]\n\n    def poll_transcription_job(self) -> Data:\n        \"\"\"Polls the transcription status until completion and returns the Data.\"\"\"\n        aai.settings.api_key = self.api_key\n        aai.settings.polling_interval = self.polling_interval\n\n        # check if it's an error message from the previous step\n        if self.transcript_id.data.get(\"error\"):\n            self.status = self.transcript_id.data[\"error\"]\n            return self.transcript_id\n\n        try:\n            transcript = aai.Transcript.get_by_id(self.transcript_id.data[\"transcript_id\"])\n        except Exception as e:\n            error = f\"Getting transcription failed: {str(e)}\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n        if transcript.status == aai.TranscriptStatus.completed:\n            data = Data(data=transcript.json_response)\n            self.status = data\n            return data\n        else:\n            self.status = transcript.error\n            return Data(data={\"error\": transcript.error})\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"polling_interval":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"polling_interval","value":3,"display_name":"Polling Interval","advanced":false,"dynamic":false,"info":"The polling interval in seconds","title_case":false,"type":"float","_input_type":"FloatInput"}},"description":"Poll for the status of a transcription job using AssemblyAI","icon":"AssemblyAI","base_classes":["Data"],"display_name":"AssemblyAI Poll Transcript","documentation":"https://www.assemblyai.com/docs","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"transcription_result","display_name":"Transcription Result","method":"poll_transcription_job","value":"__UNDEFINED__","cache":true}],"field_order":["api_key","transcript_id","polling_interval"],"beta":false,"edited":false,"lf_version":"1.0.18"},"id":"AssemblyAITranscriptionJobPoller-h1oNr","description":"Poll for the status of a transcription job using AssemblyAI","display_name":"AssemblyAI Poll Transcript"},"selected":false,"width":384,"height":455,"positionAbsolute":{"x":-1418.1773423834097,"y":468.77643572273803},"dragging":false},{"id":"AssemblyAITranscriptionParser-fObVy","type":"genericNode","position":{"x":-828.5466542294,"y":80.36599595290471},"data":{"type":"AssemblyAITranscriptionParser","node":{"template":{"_type":"Component","transcription_result":{"trace_as_metadata":true,"list":false,"trace_as_input":true,"required":false,"placeholder":"","show":true,"name":"transcription_result","value":"","display_name":"Transcription Result","advanced":false,"input_types":["Data"],"dynamic":false,"info":"The transcription result from AssemblyAI","title_case":false,"type":"other","_input_type":"DataInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow.custom import Component\nfrom langflow.io import DataInput, Output\nfrom langflow.schema import Data\nfrom typing import Dict, List\nimport datetime\n\n\nclass AssemblyAITranscriptionParser(Component):\n    display_name = \"AssemblyAI Parse Transcript\"\n    description = \"Parse AssemblyAI transcription result. If Speaker Labels was enabled, format utterances with speakers and timestamps\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        DataInput(\n            name=\"transcription_result\",\n            display_name=\"Transcription Result\",\n            info=\"The transcription result from AssemblyAI\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Parsed Transcription\", name=\"parsed_transcription\", method=\"parse_transcription\"),\n    ]\n\n    def parse_transcription(self) -> Data:\n        # check if it's an error message from the previous step\n        if self.transcription_result.data.get(\"error\"):\n            self.status = self.transcription_result.data[\"error\"]\n            return self.transcription_result\n\n        try:\n            transcription_data = self.transcription_result.data\n\n            if transcription_data.get(\"utterances\"):\n                # If speaker diarization was enabled\n                parsed_result = self.parse_with_speakers(transcription_data[\"utterances\"])\n            elif transcription_data.get(\"text\"):\n                # If speaker diarization was not enabled\n                parsed_result = transcription_data[\"text\"]\n            else:\n                raise ValueError(\"Unexpected transcription format\")\n\n            self.status = parsed_result\n            return Data(data={\"text\": parsed_result})\n        except Exception as e:\n            error_message = f\"Error parsing transcription: {str(e)}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message})\n\n    def parse_with_speakers(self, utterances: List[Dict]) -> str:\n        parsed_result = []\n        for utterance in utterances:\n            speaker = utterance[\"speaker\"]\n            start_time = self.format_timestamp(utterance[\"start\"])\n            text = utterance[\"text\"]\n            parsed_result.append(f'Speaker {speaker} {start_time}\\n\"{text}\"\\n')\n\n        return \"\\n\".join(parsed_result)\n\n    def format_timestamp(self, milliseconds: int) -> str:\n        return str(datetime.timedelta(milliseconds=milliseconds)).split(\".\")[0]\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false}},"description":"Parse AssemblyAI transcription result. If Speaker Labels was enabled, format utterances with speakers and timestamps","icon":"AssemblyAI","base_classes":["Data"],"display_name":"AssemblyAI Parse Transcript","documentation":"https://www.assemblyai.com/docs","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"parsed_transcription","display_name":"Parsed Transcription","method":"parse_transcription","value":"__UNDEFINED__","cache":true}],"field_order":["transcription_result"],"beta":false,"edited":false,"lf_version":"1.0.18"},"id":"AssemblyAITranscriptionParser-fObVy","description":"Parse AssemblyAI transcription result. If Speaker Labels was enabled, format utterances with speakers and timestamps","display_name":"AssemblyAI Parse Transcript"},"selected":false,"width":384,"height":311,"positionAbsolute":{"x":-828.5466542294,"y":80.36599595290471},"dragging":false},{"id":"AssemblyAIGetSubtitles-jdwaz","type":"genericNode","position":{"x":-829.718388034151,"y":455.059121470362},"data":{"type":"AssemblyAIGetSubtitles","node":{"template":{"_type":"Component","transcription_result":{"trace_as_metadata":true,"list":false,"trace_as_input":true,"required":false,"placeholder":"","show":true,"name":"transcription_result","value":"","display_name":"Transcription Result","advanced":false,"input_types":["Data"],"dynamic":false,"info":"The transcription result from AssemblyAI","title_case":false,"type":"other","_input_type":"DataInput"},"api_key":{"load_from_db":false,"required":false,"placeholder":"","show":true,"name":"api_key","value":null,"display_name":"Assembly API Key","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/","title_case":false,"password":true,"type":"str","_input_type":"SecretStrInput"},"chars_per_caption":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"chars_per_caption","value":0,"display_name":"Characters per Caption","advanced":true,"dynamic":false,"info":"The maximum number of characters per caption (0 for no limit)","title_case":false,"type":"int","_input_type":"IntInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import assemblyai as aai\nfrom langflow.custom import Component\nfrom langflow.io import SecretStrInput, DataInput, DropdownInput, IntInput, Output\nfrom langflow.schema import Data\n\n\nclass AssemblyAIGetSubtitles(Component):\n    display_name = \"AssemblyAI Get Subtitles\"\n    description = \"Export your transcript in SRT or VTT format for subtitles and closed captions\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        DataInput(\n            name=\"transcription_result\",\n            display_name=\"Transcription Result\",\n            info=\"The transcription result from AssemblyAI\",\n        ),\n        DropdownInput(\n            name=\"subtitle_format\",\n            display_name=\"Subtitle Format\",\n            options=[\"srt\", \"vtt\"],\n            value=\"srt\",\n            info=\"The format of the captions (SRT or VTT)\",\n        ),\n        IntInput(\n            name=\"chars_per_caption\",\n            display_name=\"Characters per Caption\",\n            info=\"The maximum number of characters per caption (0 for no limit)\",\n            value=0,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Subtitles\", name=\"subtitles\", method=\"get_subtitles\"),\n    ]\n\n    def get_subtitles(self) -> Data:\n        aai.settings.api_key = self.api_key\n\n        # check if it's an error message from the previous step\n        if self.transcription_result.data.get(\"error\"):\n            self.status = self.transcription_result.data[\"error\"]\n            return self.transcription_result\n\n        try:\n            transcript_id = self.transcription_result.data[\"id\"]\n            transcript = aai.Transcript.get_by_id(transcript_id)\n        except Exception as e:\n            error = f\"Getting transcription failed: {str(e)}\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n        if transcript.status == aai.TranscriptStatus.completed:\n            subtitles = None\n            chars_per_caption = self.chars_per_caption if self.chars_per_caption > 0 else None\n            if self.subtitle_format == \"srt\":\n                subtitles = transcript.export_subtitles_srt(chars_per_caption)\n            else:\n                subtitles = transcript.export_subtitles_vtt(chars_per_caption)\n\n            result = Data(\n                subtitles=subtitles,\n                format=self.subtitle_format,\n                transcript_id=transcript_id,\n                chars_per_caption=chars_per_caption,\n            )\n\n            self.status = result\n            return result\n        else:\n            self.status = transcript.error\n            return Data(data={\"error\": transcript.error})\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"subtitle_format":{"trace_as_metadata":true,"options":["srt","vtt"],"combobox":false,"required":false,"placeholder":"","show":true,"name":"subtitle_format","value":"srt","display_name":"Subtitle Format","advanced":false,"dynamic":false,"info":"The format of the captions (SRT or VTT)","title_case":false,"type":"str","_input_type":"DropdownInput"}},"description":"Export your transcript in SRT or VTT format for subtitles and closed captions","icon":"AssemblyAI","base_classes":["Data"],"display_name":"AssemblyAI Get Subtitles","documentation":"https://www.assemblyai.com/docs","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"subtitles","display_name":"Subtitles","method":"get_subtitles","value":"__UNDEFINED__","cache":true}],"field_order":["api_key","transcription_result","subtitle_format","chars_per_caption"],"beta":false,"edited":false,"lf_version":"1.0.18"},"id":"AssemblyAIGetSubtitles-jdwaz","description":"Export your transcript in SRT or VTT format for subtitles and closed captions","display_name":"AssemblyAI Get Subtitles"},"selected":false,"width":384,"height":455,"positionAbsolute":{"x":-829.718388034151,"y":455.059121470362},"dragging":false},{"id":"AssemblyAIListTranscripts-2atfG","type":"genericNode","position":{"x":-310.6154563333001,"y":441.8728251081342},"data":{"type":"AssemblyAIListTranscripts","node":{"template":{"_type":"Component","api_key":{"load_from_db":false,"required":false,"placeholder":"","show":true,"name":"api_key","value":null,"display_name":"Assembly API Key","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/","title_case":false,"password":true,"type":"str","_input_type":"SecretStrInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import assemblyai as aai\nfrom typing import List\nfrom langflow.custom import Component\nfrom langflow.io import SecretStrInput, IntInput, DropdownInput, Output, BoolInput, MessageTextInput\nfrom langflow.schema import Data\n\n\nclass AssemblyAIListTranscripts(Component):\n    display_name = \"AssemblyAI List Transcripts\"\n    description = \"Retrieve a list of transcripts from AssemblyAI with filtering options\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            info=\"Maximum number of transcripts to retrieve (default: 20, use 0 for all)\",\n            value=20,\n        ),\n        DropdownInput(\n            name=\"status_filter\",\n            display_name=\"Status Filter\",\n            options=[\"all\", \"queued\", \"processing\", \"completed\", \"error\"],\n            value=\"all\",\n            info=\"Filter by transcript status\",\n        ),\n        MessageTextInput(\n            name=\"created_on\",\n            display_name=\"Created On\",\n            info=\"Only get transcripts created on this date (YYYY-MM-DD)\",\n        ),\n        BoolInput(\n            name=\"throttled_only\",\n            display_name=\"Throttled Only\",\n            info=\"Only get throttled transcripts, overrides the status filter\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Transcript List\", name=\"transcript_list\", method=\"list_transcripts\"),\n    ]\n\n    def list_transcripts(self) -> List[Data]:\n        aai.settings.api_key = self.api_key\n\n        params = aai.ListTranscriptParameters()\n        if self.limit:\n            params.limit = self.limit\n        if self.status_filter != \"all\":\n            params.status = self.status_filter\n        if self.created_on and self.created_on.text:\n            params.created_on = self.created_on.text\n        if self.throttled_only:\n            params.throttled_only = True\n\n        try:\n            transcriber = aai.Transcriber()\n\n            def convert_page_to_data_list(page):\n                return [Data(**t.dict()) for t in page.transcripts]\n\n            if self.limit == 0:\n                # paginate over all pages\n                params.limit = 100\n                page = transcriber.list_transcripts(params)\n                transcripts = convert_page_to_data_list(page)\n\n                while page.page_details.before_id_of_prev_url is not None:\n                    params.before_id = page.page_details.before_id_of_prev_url\n                    page = transcriber.list_transcripts(params)\n                    transcripts.extend(convert_page_to_data_list(page))\n            else:\n                # just one page\n                page = transcriber.list_transcripts(params)\n                transcripts = convert_page_to_data_list(page)\n\n            self.status = transcripts\n            return transcripts\n        except Exception as e:\n            error_data = Data(data={\"error\": f\"An error occurred: {str(e)}\"})\n            self.status = [error_data]\n            return [error_data]\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"created_on":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"created_on","value":"","display_name":"Created On","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Only get transcripts created on this date (YYYY-MM-DD)","title_case":false,"type":"str","_input_type":"MessageTextInput"},"limit":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"limit","value":10,"display_name":"Limit","advanced":false,"dynamic":false,"info":"Maximum number of transcripts to retrieve (default: 20, use 0 for all)","title_case":false,"type":"int","_input_type":"IntInput","load_from_db":false},"status_filter":{"trace_as_metadata":true,"options":["all","queued","processing","completed","error"],"combobox":false,"required":false,"placeholder":"","show":true,"name":"status_filter","value":"all","display_name":"Status Filter","advanced":false,"dynamic":false,"info":"Filter by transcript status","title_case":false,"type":"str","_input_type":"DropdownInput"},"throttled_only":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"throttled_only","value":false,"display_name":"Throttled Only","advanced":false,"dynamic":false,"info":"Only get throttled transcripts, overrides the status filter","title_case":false,"type":"bool","_input_type":"BoolInput"}},"description":"Retrieve a list of transcripts from AssemblyAI with filtering options","icon":"AssemblyAI","base_classes":["Data"],"display_name":"AssemblyAI List Transcripts","documentation":"https://www.assemblyai.com/docs","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"transcript_list","display_name":"Transcript List","method":"list_transcripts","value":"__UNDEFINED__","cache":true}],"field_order":["api_key","limit","status_filter","created_on","throttled_only"],"beta":false,"edited":false,"lf_version":"1.0.18"},"id":"AssemblyAIListTranscripts-2atfG","description":"Retrieve a list of transcripts from AssemblyAI with filtering options","display_name":"AssemblyAI List Transcripts"},"selected":false,"width":384,"height":655,"positionAbsolute":{"x":-310.6154563333001,"y":441.8728251081342},"dragging":false},{"id":"AssemblyAILeMUR-cZbQ8","type":"genericNode","position":{"x":-829.7615964557997,"y":997.4743969634249},"data":{"type":"AssemblyAILeMUR","node":{"template":{"_type":"Component","transcription_result":{"trace_as_metadata":true,"list":false,"trace_as_input":true,"required":false,"placeholder":"","show":true,"name":"transcription_result","value":"","display_name":"Transcription Result","advanced":false,"input_types":["Data"],"dynamic":false,"info":"The transcription result from AssemblyAI","title_case":false,"type":"other","_input_type":"DataInput"},"api_key":{"load_from_db":false,"required":false,"placeholder":"","show":true,"name":"api_key","value":null,"display_name":"Assembly API Key","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/","title_case":false,"password":true,"type":"str","_input_type":"SecretStrInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import assemblyai as aai\nfrom langflow.custom import Component\nfrom langflow.io import DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, DataInput, Output\nfrom langflow.schema import Data\n\n\nclass AssemblyAILeMUR(Component):\n    display_name = \"AssemblyAI LeMUR\"\n    description = \"Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework\"\n    documentation = \"https://www.assemblyai.com/docs/lemur\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n            advanced=False,\n        ),\n        DataInput(\n            name=\"transcription_result\",\n            display_name=\"Transcription Result\",\n            info=\"The transcription result from AssemblyAI\",\n        ),\n        MessageInput(\n            name=\"prompt\",\n            display_name=\"Input Prompt\",\n            info=\"The text to prompt the model\",\n        ),\n        DropdownInput(\n            name=\"final_model\",\n            display_name=\"Final Model\",\n            options=[\"claude3_5_sonnet\", \"claude3_opus\", \"claude3_haiku\", \"claude3_sonnet\"],\n            value=\"claude3_5_sonnet\",\n            info=\"The model that is used for the final prompt after compression is performed\",\n        ),\n        FloatInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            advanced=True,\n            value=0.0,\n            info=\"The temperature to use for the model\",\n        ),\n        IntInput(\n            name=\"max_output_size\",\n            display_name=\" Max Output Size\",\n            advanced=True,\n            value=2000,\n            info=\"Max output size in tokens, up to 4000\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"LeMUR Response\", name=\"lemur_response\", method=\"run_lemur\"),\n    ]\n\n    def run_lemur(self) -> Data:\n        \"\"\"Use the LeMUR task endpoint to input the LLM prompt.\"\"\"\n        aai.settings.api_key = self.api_key\n\n        # check if it's an error message from the previous step\n        if self.transcription_result.data.get(\"error\"):\n            self.status = self.transcription_result.data[\"error\"]\n            return self.transcription_result\n\n        if not self.prompt or not self.prompt.text:\n            self.status = \"No prompt specified\"\n            return Data(data={\"error\": \"No prompt specified\"})\n\n        try:\n            transcript = aai.Transcript.get_by_id(self.transcription_result.data[\"id\"])\n        except Exception as e:\n            error = f\"Getting transcription failed: {str(e)}\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n        if transcript.status == aai.TranscriptStatus.completed:\n            try:\n                result = transcript.lemur.task(\n                    prompt=self.prompt.text,\n                    final_model=self.get_final_model(self.final_model),\n                    temperature=self.temperature,\n                    max_output_size=self.max_output_size,\n                )\n\n                result = Data(data=result.dict())\n                self.status = result\n                return result\n            except Exception as e:\n                error = f\"An Exception happened while calling LeMUR: {str(e)}\"\n                self.status = error\n                return Data(data={\"error\": error})\n        else:\n            self.status = transcript.error\n            return Data(data={\"error\": transcript.error})\n\n    def get_final_model(self, model_name: str) -> aai.LemurModel:\n        if model_name == \"claude3_5_sonnet\":\n            return aai.LemurModel.claude3_5_sonnet\n        elif model_name == \"claude3_opus\":\n            return aai.LemurModel.claude3_opus\n        elif model_name == \"claude3_haiku\":\n            return aai.LemurModel.claude3_haiku\n        elif model_name == \"claude3_sonnet\":\n            return aai.LemurModel.claude3_sonnet\n        else:\n            raise ValueError(f\"Model name not supported: {model_name}\")\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"final_model":{"trace_as_metadata":true,"options":["claude3_5_sonnet","claude3_opus","claude3_haiku","claude3_sonnet"],"combobox":false,"required":false,"placeholder":"","show":true,"name":"final_model","value":"claude3_5_sonnet","display_name":"Final Model","advanced":false,"dynamic":false,"info":"The model that is used for the final prompt after compression is performed","title_case":false,"type":"str","_input_type":"DropdownInput"},"max_output_size":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"max_output_size","value":2000,"display_name":" Max Output Size","advanced":true,"dynamic":false,"info":"Max output size in tokens, up to 4000","title_case":false,"type":"int","_input_type":"IntInput"},"prompt":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"prompt","value":"","display_name":"Input Prompt","advanced":false,"input_types":["Message"],"dynamic":false,"info":"The text to prompt the model","title_case":false,"type":"str","_input_type":"MessageInput"},"temperature":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"temperature","value":0,"display_name":"Temperature","advanced":true,"dynamic":false,"info":"The temperature to use for the model","title_case":false,"type":"float","_input_type":"FloatInput"}},"description":"Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework","icon":"AssemblyAI","base_classes":["Data"],"display_name":"AssemblyAI LeMUR","documentation":"https://www.assemblyai.com/docs/lemur","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"lemur_response","display_name":"LeMUR Response","method":"run_lemur","value":"__UNDEFINED__","cache":true}],"field_order":["api_key","transcription_result","prompt","final_model","temperature","max_output_size"],"beta":false,"edited":false,"lf_version":"1.0.18"},"id":"AssemblyAILeMUR-cZbQ8","description":"Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework","display_name":"AssemblyAI LeMUR"},"selected":false,"width":384,"height":541,"positionAbsolute":{"x":-829.7615964557997,"y":997.4743969634249},"dragging":false}],"edges":[{"source":"AssemblyAITranscriptionJobPoller-h1oNr","sourceHandle":"{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}","target":"AssemblyAITranscriptionParser-fObVy","targetHandle":"{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAITranscriptionParser-fObVyœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","data":{"targetHandle":{"fieldName":"transcription_result","id":"AssemblyAITranscriptionParser-fObVy","inputTypes":["Data"],"type":"other"},"sourceHandle":{"dataType":"AssemblyAITranscriptionJobPoller","id":"AssemblyAITranscriptionJobPoller-h1oNr","name":"transcription_result","output_types":["Data"]}},"id":"reactflow__edge-AssemblyAITranscriptionJobPoller-h1oNr{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionParser-fObVy{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAITranscriptionParser-fObVyœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","className":"","animated":false},{"source":"AssemblyAITranscriptionJobCreator-os7m9","sourceHandle":"{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-os7m9œ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}","target":"AssemblyAITranscriptionJobPoller-h1oNr","targetHandle":"{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","data":{"targetHandle":{"fieldName":"transcript_id","id":"AssemblyAITranscriptionJobPoller-h1oNr","inputTypes":["Data"],"type":"other"},"sourceHandle":{"dataType":"AssemblyAITranscriptionJobCreator","id":"AssemblyAITranscriptionJobCreator-os7m9","name":"transcript_id","output_types":["Data"]}},"id":"reactflow__edge-AssemblyAITranscriptionJobCreator-os7m9{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-os7m9œ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-h1oNr{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","animated":false,"className":"","selected":false},{"source":"AssemblyAITranscriptionJobPoller-h1oNr","sourceHandle":"{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}","target":"AssemblyAIGetSubtitles-jdwaz","targetHandle":"{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAIGetSubtitles-jdwazœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","data":{"targetHandle":{"fieldName":"transcription_result","id":"AssemblyAIGetSubtitles-jdwaz","inputTypes":["Data"],"type":"other"},"sourceHandle":{"dataType":"AssemblyAITranscriptionJobPoller","id":"AssemblyAITranscriptionJobPoller-h1oNr","name":"transcription_result","output_types":["Data"]}},"id":"reactflow__edge-AssemblyAITranscriptionJobPoller-h1oNr{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-AssemblyAIGetSubtitles-jdwaz{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAIGetSubtitles-jdwazœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","animated":false,"className":""},{"source":"AssemblyAITranscriptionJobPoller-h1oNr","sourceHandle":"{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}","target":"AssemblyAILeMUR-cZbQ8","targetHandle":"{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAILeMUR-cZbQ8œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","data":{"targetHandle":{"fieldName":"transcription_result","id":"AssemblyAILeMUR-cZbQ8","inputTypes":["Data"],"type":"other"},"sourceHandle":{"dataType":"AssemblyAITranscriptionJobPoller","id":"AssemblyAITranscriptionJobPoller-h1oNr","name":"transcription_result","output_types":["Data"]}},"id":"reactflow__edge-AssemblyAITranscriptionJobPoller-h1oNr{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-h1oNrœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-AssemblyAILeMUR-cZbQ8{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAILeMUR-cZbQ8œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","animated":false,"className":""}],"viewport":{"x":1172.3247309163394,"y":-181.74886289119002,"zoom":0.5421018517476199}},"user_id":"8ebaea62-2f56-446a-b161-2615346778d9","folder_id":"f490dd2a-f092-47bd-8762-4b09a289ff80"}
+{
+    "name": "AssemblyAI Transcription and Speech AI Flow",
+    "icon": null,
+    "is_component": false,
+    "endpoint_name": null,
+    "data": {
+        "nodes": [
+            {
+                "id": "Prompt-IO8Cq",
+                "type": "genericNode",
+                "position": {
+                    "x": -1376.3296370680628,
+                    "y": 928.8860970980681
+                },
+                "data": {
+                    "type": "Prompt",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "template": {
+                                "trace_as_input": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "template",
+                                "value": "Provide a brief summary of the transcript.",
+                                "display_name": "Template",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "prompt",
+                                "_input_type": "PromptInput"
+                            }
+                        },
+                        "description": "Create a prompt template with dynamic variables.",
+                        "icon": "prompts",
+                        "is_input": null,
+                        "is_output": null,
+                        "is_composition": null,
+                        "base_classes": [
+                            "Message"
+                        ],
+                        "name": "",
+                        "display_name": "Prompt",
+                        "documentation": "",
+                        "custom_fields": {
+                            "template": []
+                        },
+                        "output_types": [],
+                        "full_path": null,
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "prompt",
+                                "hidden": null,
+                                "display_name": "Prompt Message",
+                                "method": "build_prompt",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "template"
+                        ],
+                        "beta": false,
+                        "error": null,
+                        "edited": false,
+                        "lf_version": "1.0.18"
+                    },
+                    "id": "Prompt-IO8Cq"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 324,
+                "positionAbsolute": {
+                    "x": -1376.3296370680628,
+                    "y": 928.8860970980681
+                },
+                "dragging": false
+            },
+            {
+                "id": "AssemblyAITranscriptionJobCreator-Idt7P",
+                "type": "genericNode",
+                "position": {
+                    "x": -1957.7132501771657,
+                    "y": 470.79685053457587
+                },
+                "data": {
+                    "type": "AssemblyAITranscriptionJobCreator",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "audio_file": {
+                                "trace_as_metadata": true,
+                                "file_path": "fa69381c-d1c4-4535-bc23-bc2fb4956e1e/2024-09-26_16-47-01_sports_injuries.mp3",
+                                "fileTypes": [
+                                    "3ga",
+                                    "8svx",
+                                    "aac",
+                                    "ac3",
+                                    "aif",
+                                    "aiff",
+                                    "alac",
+                                    "amr",
+                                    "ape",
+                                    "au",
+                                    "dss",
+                                    "flac",
+                                    "flv",
+                                    "m4a",
+                                    "m4b",
+                                    "m4p",
+                                    "m4r",
+                                    "mp3",
+                                    "mpga",
+                                    "ogg",
+                                    "oga",
+                                    "mogg",
+                                    "opus",
+                                    "qcp",
+                                    "tta",
+                                    "voc",
+                                    "wav",
+                                    "wma",
+                                    "wv",
+                                    "webm",
+                                    "mts",
+                                    "m2ts",
+                                    "ts",
+                                    "mov",
+                                    "mp2",
+                                    "mp4",
+                                    "m4p",
+                                    "m4v",
+                                    "mxf"
+                                ],
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "audio_file",
+                                "value": "sports_injuries.mp3",
+                                "display_name": "Audio File",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "The audio file to transcribe",
+                                "title_case": false,
+                                "type": "file",
+                                "_input_type": "FileInput",
+                                "load_from_db": false
+                            },
+                            "api_key": {
+                                "load_from_db": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "api_key",
+                                "value": null,
+                                "display_name": "Assembly API Key",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str",
+                                "_input_type": "SecretStrInput"
+                            },
+                            "audio_file_url": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "audio_file_url",
+                                "value": "",
+                                "display_name": "Audio File URL",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The URL of the audio file to transcribe (Can be used instead of a File)",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import os\n\nimport assemblyai as aai\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, FileInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass AssemblyAITranscriptionJobCreator(Component):\n    display_name = \"AssemblyAI Start Transcript\"\n    description = \"Create a transcription job for an audio file using AssemblyAI with advanced options\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        FileInput(\n            name=\"audio_file\",\n            display_name=\"Audio File\",\n            file_types=[\n                \"3ga\",\n                \"8svx\",\n                \"aac\",\n                \"ac3\",\n                \"aif\",\n                \"aiff\",\n                \"alac\",\n                \"amr\",\n                \"ape\",\n                \"au\",\n                \"dss\",\n                \"flac\",\n                \"flv\",\n                \"m4a\",\n                \"m4b\",\n                \"m4p\",\n                \"m4r\",\n                \"mp3\",\n                \"mpga\",\n                \"ogg\",\n                \"oga\",\n                \"mogg\",\n                \"opus\",\n                \"qcp\",\n                \"tta\",\n                \"voc\",\n                \"wav\",\n                \"wma\",\n                \"wv\",\n                \"webm\",\n                \"mts\",\n                \"m2ts\",\n                \"ts\",\n                \"mov\",\n                \"mp2\",\n                \"mp4\",\n                \"m4p\",\n                \"m4v\",\n                \"mxf\",\n            ],\n            info=\"The audio file to transcribe\",\n        ),\n        MessageTextInput(\n            name=\"audio_file_url\",\n            display_name=\"Audio File URL\",\n            info=\"The URL of the audio file to transcribe (Can be used instead of a File)\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"speech_model\",\n            display_name=\"Speech Model\",\n            options=[\n                \"best\",\n                \"nano\",\n            ],\n            value=\"best\",\n            info=\"The speech model to use for the transcription\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"language_detection\",\n            display_name=\"Automatic Language Detection\",\n            info=\"Enable automatic language detection\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"language_code\",\n            display_name=\"Language\",\n            info=\"\"\"\n            The language of the audio file. Can be set manually if automatic language detection is disabled. \n            See https://www.assemblyai.com/docs/getting-started/supported-languages for a list of supported language codes.\n            \"\"\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"speaker_labels\",\n            display_name=\"Enable Speaker Labels\",\n            info=\"Enable speaker diarization\",\n        ),\n        MessageTextInput(\n            name=\"speakers_expected\",\n            display_name=\"Expected Number of Speakers\",\n            info=\"Set the expected number of speakers (optional, enter a number)\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"punctuate\",\n            display_name=\"Punctuate\",\n            info=\"Enable automatic punctuation\",\n            advanced=True,\n            value=True,\n        ),\n        BoolInput(\n            name=\"format_text\",\n            display_name=\"Format Text\",\n            info=\"Enable text formatting\",\n            advanced=True,\n            value=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Transcript ID\", name=\"transcript_id\", method=\"create_transcription_job\"),\n    ]\n\n    def create_transcription_job(self) -> Data:\n        aai.settings.api_key = self.api_key\n\n        # Convert speakers_expected to int if it's not empty\n        speakers_expected = None\n        if self.speakers_expected and self.speakers_expected.strip():\n            try:\n                speakers_expected = int(self.speakers_expected)\n            except ValueError:\n                self.status = \"Error: Expected Number of Speakers must be a valid integer\"\n                return Data(data={\"error\": \"Error: Expected Number of Speakers must be a valid integer\"})\n\n        language_code = self.language_code if self.language_code else None\n\n        config = aai.TranscriptionConfig(\n            speech_model=self.speech_model,\n            language_detection=self.language_detection,\n            language_code=language_code,\n            speaker_labels=self.speaker_labels,\n            speakers_expected=speakers_expected,\n            punctuate=self.punctuate,\n            format_text=self.format_text,\n        )\n\n        audio = None\n        if self.audio_file:\n            if self.audio_file_url:\n                logger.warning(\"Both an audio file an audio URL were specified. The audio URL was ignored.\")\n\n            # Check if the file exists\n            if not os.path.exists(self.audio_file):\n                self.status = \"Error: Audio file not found\"\n                return Data(data={\"error\": \"Error: Audio file not found\"})\n            audio = self.audio_file\n        elif self.audio_file_url:\n            audio = self.audio_file_url\n        else:\n            self.status = \"Error: Either an audio file or an audio URL must be specified\"\n            return Data(data={\"error\": \"Error: Either an audio file or an audio URL must be specified\"})\n\n        try:\n            transcript = aai.Transcriber().submit(audio, config=config)\n\n            if transcript.error:\n                self.status = transcript.error\n                return Data(data={\"error\": transcript.error})\n            else:\n                result = Data(data={\"transcript_id\": transcript.id})\n                self.status = result\n                return result\n        except Exception as e:\n            self.status = f\"An error occurred: {str(e)}\"\n            return Data(data={\"error\": f\"An error occurred: {str(e)}\"})\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "format_text": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "format_text",
+                                "value": true,
+                                "display_name": "Format Text",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Enable text formatting",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            },
+                            "language_code": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "language_code",
+                                "value": "",
+                                "display_name": "Language",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "\n            The language of the audio file. Can be set manually if automatic language detection is disabled. \n            See https://www.assemblyai.com/docs/getting-started/supported-languages for a list of supported language codes.\n            ",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "language_detection": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "language_detection",
+                                "value": false,
+                                "display_name": "Automatic Language Detection",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Enable automatic language detection",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            },
+                            "punctuate": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "punctuate",
+                                "value": true,
+                                "display_name": "Punctuate",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Enable automatic punctuation",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            },
+                            "speaker_labels": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "speaker_labels",
+                                "value": true,
+                                "display_name": "Enable Speaker Labels",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "Enable speaker diarization",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput",
+                                "load_from_db": false
+                            },
+                            "speakers_expected": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "speakers_expected",
+                                "value": "",
+                                "display_name": "Expected Number of Speakers",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Set the expected number of speakers (optional, enter a number)",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "speech_model": {
+                                "trace_as_metadata": true,
+                                "options": [
+                                    "best",
+                                    "nano"
+                                ],
+                                "combobox": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "speech_model",
+                                "value": "best",
+                                "display_name": "Speech Model",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The speech model to use for the transcription",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "DropdownInput"
+                            }
+                        },
+                        "description": "Create a transcription job for an audio file using AssemblyAI with advanced options",
+                        "icon": "AssemblyAI",
+                        "base_classes": [
+                            "Data"
+                        ],
+                        "display_name": "AssemblyAI Start Transcript",
+                        "documentation": "https://www.assemblyai.com/docs",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": true,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "transcript_id",
+                                "display_name": "Transcript ID",
+                                "method": "create_transcription_job",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "api_key",
+                            "audio_file",
+                            "audio_file_url",
+                            "speech_model",
+                            "language_detection",
+                            "language_code",
+                            "speaker_labels",
+                            "speakers_expected",
+                            "punctuate",
+                            "format_text"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "lf_version": "1.0.18"
+                    },
+                    "id": "AssemblyAITranscriptionJobCreator-Idt7P",
+                    "description": "Create a transcription job for an audio file using AssemblyAI with advanced options",
+                    "display_name": "AssemblyAI Start Transcript"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 482,
+                "positionAbsolute": {
+                    "x": -1957.7132501771657,
+                    "y": 470.79685053457587
+                },
+                "dragging": false
+            },
+            {
+                "id": "AssemblyAITranscriptionJobPoller-F46nf",
+                "type": "genericNode",
+                "position": {
+                    "x": -1408.0967182254753,
+                    "y": 461.5039554434261
+                },
+                "data": {
+                    "type": "AssemblyAITranscriptionJobPoller",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "transcript_id": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "trace_as_input": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "transcript_id",
+                                "value": "",
+                                "display_name": "Transcript ID",
+                                "advanced": false,
+                                "input_types": [
+                                    "Data"
+                                ],
+                                "dynamic": false,
+                                "info": "The ID of the transcription job to poll",
+                                "title_case": false,
+                                "type": "other",
+                                "_input_type": "DataInput"
+                            },
+                            "api_key": {
+                                "load_from_db": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "api_key",
+                                "value": null,
+                                "display_name": "Assembly API Key",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str",
+                                "_input_type": "SecretStrInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import assemblyai as aai\n\nfrom langflow.custom import Component\nfrom langflow.io import DataInput, FloatInput, Output, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass AssemblyAITranscriptionJobPoller(Component):\n    display_name = \"AssemblyAI Poll Transcript\"\n    description = \"Poll for the status of a transcription job using AssemblyAI\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        DataInput(\n            name=\"transcript_id\",\n            display_name=\"Transcript ID\",\n            info=\"The ID of the transcription job to poll\",\n        ),\n        FloatInput(\n            name=\"polling_interval\",\n            display_name=\"Polling Interval\",\n            value=3.0,\n            info=\"The polling interval in seconds\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Transcription Result\", name=\"transcription_result\", method=\"poll_transcription_job\"),\n    ]\n\n    def poll_transcription_job(self) -> Data:\n        \"\"\"Polls the transcription status until completion and returns the Data.\"\"\"\n        aai.settings.api_key = self.api_key\n        aai.settings.polling_interval = self.polling_interval\n\n        # check if it's an error message from the previous step\n        if self.transcript_id.data.get(\"error\"):\n            self.status = self.transcript_id.data[\"error\"]\n            return self.transcript_id\n\n        try:\n            transcript = aai.Transcript.get_by_id(self.transcript_id.data[\"transcript_id\"])\n        except Exception as e:\n            error = f\"Getting transcription failed: {str(e)}\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n        if transcript.status == aai.TranscriptStatus.completed:\n            json_response = transcript.json_response\n            text = json_response.pop(\"text\", None)\n            utterances = json_response.pop(\"utterances\", None)\n            transcript_id = json_response.pop(\"id\", None)\n            sorted_data = { \"text\": text, \"utterances\": utterances, \"id\": transcript_id}\n            sorted_data.update(json_response)\n            data = Data(data=sorted_data)\n            self.status = data\n            return data\n        else:\n            self.status = transcript.error\n            return Data(data={\"error\": transcript.error})\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "polling_interval": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "polling_interval",
+                                "value": 3,
+                                "display_name": "Polling Interval",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The polling interval in seconds",
+                                "title_case": false,
+                                "type": "float",
+                                "_input_type": "FloatInput"
+                            }
+                        },
+                        "description": "Poll for the status of a transcription job using AssemblyAI",
+                        "icon": "AssemblyAI",
+                        "base_classes": [
+                            "Data"
+                        ],
+                        "display_name": "AssemblyAI Poll Transcript",
+                        "documentation": "https://www.assemblyai.com/docs",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "transcription_result",
+                                "display_name": "Transcription Result",
+                                "method": "poll_transcription_job",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "api_key",
+                            "transcript_id",
+                            "polling_interval"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "lf_version": "1.0.18"
+                    },
+                    "id": "AssemblyAITranscriptionJobPoller-F46nf",
+                    "description": "Poll for the status of a transcription job using AssemblyAI",
+                    "display_name": "AssemblyAI Poll Transcript"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 368,
+                "positionAbsolute": {
+                    "x": -1408.0967182254753,
+                    "y": 461.5039554434261
+                },
+                "dragging": false
+            },
+            {
+                "id": "AssemblyAIGetSubtitles-3sjU6",
+                "type": "genericNode",
+                "position": {
+                    "x": -867.5862690424032,
+                    "y": 368.91683022842676
+                },
+                "data": {
+                    "type": "AssemblyAIGetSubtitles",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "transcription_result": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "trace_as_input": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "transcription_result",
+                                "value": "",
+                                "display_name": "Transcription Result",
+                                "advanced": false,
+                                "input_types": [
+                                    "Data"
+                                ],
+                                "dynamic": false,
+                                "info": "The transcription result from AssemblyAI",
+                                "title_case": false,
+                                "type": "other",
+                                "_input_type": "DataInput"
+                            },
+                            "api_key": {
+                                "load_from_db": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "api_key",
+                                "value": null,
+                                "display_name": "Assembly API Key",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str",
+                                "_input_type": "SecretStrInput"
+                            },
+                            "chars_per_caption": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "chars_per_caption",
+                                "value": 0,
+                                "display_name": "Characters per Caption",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The maximum number of characters per caption (0 for no limit)",
+                                "title_case": false,
+                                "type": "int",
+                                "_input_type": "IntInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import assemblyai as aai\n\nfrom langflow.custom import Component\nfrom langflow.io import DataInput, DropdownInput, IntInput, Output, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass AssemblyAIGetSubtitles(Component):\n    display_name = \"AssemblyAI Get Subtitles\"\n    description = \"Export your transcript in SRT or VTT format for subtitles and closed captions\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        DataInput(\n            name=\"transcription_result\",\n            display_name=\"Transcription Result\",\n            info=\"The transcription result from AssemblyAI\",\n        ),\n        DropdownInput(\n            name=\"subtitle_format\",\n            display_name=\"Subtitle Format\",\n            options=[\"srt\", \"vtt\"],\n            value=\"srt\",\n            info=\"The format of the captions (SRT or VTT)\",\n        ),\n        IntInput(\n            name=\"chars_per_caption\",\n            display_name=\"Characters per Caption\",\n            info=\"The maximum number of characters per caption (0 for no limit)\",\n            value=0,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Subtitles\", name=\"subtitles\", method=\"get_subtitles\"),\n    ]\n\n    def get_subtitles(self) -> Data:\n        aai.settings.api_key = self.api_key\n\n        # check if it's an error message from the previous step\n        if self.transcription_result.data.get(\"error\"):\n            self.status = self.transcription_result.data[\"error\"]\n            return self.transcription_result\n\n        try:\n            transcript_id = self.transcription_result.data[\"id\"]\n            transcript = aai.Transcript.get_by_id(transcript_id)\n        except Exception as e:\n            error = f\"Getting transcription failed: {str(e)}\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n        if transcript.status == aai.TranscriptStatus.completed:\n            subtitles = None\n            chars_per_caption = self.chars_per_caption if self.chars_per_caption > 0 else None\n            if self.subtitle_format == \"srt\":\n                subtitles = transcript.export_subtitles_srt(chars_per_caption)\n            else:\n                subtitles = transcript.export_subtitles_vtt(chars_per_caption)\n\n            result = Data(\n                subtitles=subtitles,\n                format=self.subtitle_format,\n                transcript_id=transcript_id,\n                chars_per_caption=chars_per_caption,\n            )\n\n            self.status = result\n            return result\n        else:\n            self.status = transcript.error\n            return Data(data={\"error\": transcript.error})\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "subtitle_format": {
+                                "trace_as_metadata": true,
+                                "options": [
+                                    "srt",
+                                    "vtt"
+                                ],
+                                "combobox": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "subtitle_format",
+                                "value": "srt",
+                                "display_name": "Subtitle Format",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "The format of the captions (SRT or VTT)",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "DropdownInput"
+                            }
+                        },
+                        "description": "Export your transcript in SRT or VTT format for subtitles and closed captions",
+                        "icon": "AssemblyAI",
+                        "base_classes": [
+                            "Data"
+                        ],
+                        "display_name": "AssemblyAI Get Subtitles",
+                        "documentation": "https://www.assemblyai.com/docs",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "subtitles",
+                                "display_name": "Subtitles",
+                                "method": "get_subtitles",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "api_key",
+                            "transcription_result",
+                            "subtitle_format",
+                            "chars_per_caption"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "lf_version": "1.0.18"
+                    },
+                    "id": "AssemblyAIGetSubtitles-3sjU6",
+                    "description": "Export your transcript in SRT or VTT format for subtitles and closed captions",
+                    "display_name": "AssemblyAI Get Subtitles"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 454,
+                "positionAbsolute": {
+                    "x": -867.5862690424032,
+                    "y": 368.91683022842676
+                },
+                "dragging": false
+            },
+            {
+                "id": "AssemblyAIListTranscripts-3prc4",
+                "type": "genericNode",
+                "position": {
+                    "x": -380.99808133361984,
+                    "y": 401.2674645310267
+                },
+                "data": {
+                    "type": "AssemblyAIListTranscripts",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "api_key": {
+                                "load_from_db": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "api_key",
+                                "value": null,
+                                "display_name": "Assembly API Key",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str",
+                                "_input_type": "SecretStrInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import assemblyai as aai\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass AssemblyAIListTranscripts(Component):\n    display_name = \"AssemblyAI List Transcripts\"\n    description = \"Retrieve a list of transcripts from AssemblyAI with filtering options\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            info=\"Maximum number of transcripts to retrieve (default: 20, use 0 for all)\",\n            value=20,\n        ),\n        DropdownInput(\n            name=\"status_filter\",\n            display_name=\"Status Filter\",\n            options=[\"all\", \"queued\", \"processing\", \"completed\", \"error\"],\n            value=\"all\",\n            info=\"Filter by transcript status\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"created_on\",\n            display_name=\"Created On\",\n            info=\"Only get transcripts created on this date (YYYY-MM-DD)\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"throttled_only\",\n            display_name=\"Throttled Only\",\n            info=\"Only get throttled transcripts, overrides the status filter\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Transcript List\", name=\"transcript_list\", method=\"list_transcripts\"),\n    ]\n\n    def list_transcripts(self) -> list[Data]:\n        aai.settings.api_key = self.api_key\n\n        params = aai.ListTranscriptParameters()\n        if self.limit:\n            params.limit = self.limit\n        if self.status_filter != \"all\":\n            params.status = self.status_filter\n        if self.created_on and self.created_on.text:\n            params.created_on = self.created_on.text\n        if self.throttled_only:\n            params.throttled_only = True\n\n        try:\n            transcriber = aai.Transcriber()\n\n            def convert_page_to_data_list(page):\n                return [Data(**t.dict()) for t in page.transcripts]\n\n            if self.limit == 0:\n                # paginate over all pages\n                params.limit = 100\n                page = transcriber.list_transcripts(params)\n                transcripts = convert_page_to_data_list(page)\n\n                while page.page_details.before_id_of_prev_url is not None:\n                    params.before_id = page.page_details.before_id_of_prev_url\n                    page = transcriber.list_transcripts(params)\n                    transcripts.extend(convert_page_to_data_list(page))\n            else:\n                # just one page\n                page = transcriber.list_transcripts(params)\n                transcripts = convert_page_to_data_list(page)\n\n            self.status = transcripts\n            return transcripts\n        except Exception as e:\n            error_data = Data(data={\"error\": f\"An error occurred: {str(e)}\"})\n            self.status = [error_data]\n            return [error_data]\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "created_on": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "created_on",
+                                "value": "",
+                                "display_name": "Created On",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Only get transcripts created on this date (YYYY-MM-DD)",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "limit": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "limit",
+                                "value": 20,
+                                "display_name": "Limit",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "Maximum number of transcripts to retrieve (default: 20, use 0 for all)",
+                                "title_case": false,
+                                "type": "int",
+                                "_input_type": "IntInput"
+                            },
+                            "status_filter": {
+                                "trace_as_metadata": true,
+                                "options": [
+                                    "all",
+                                    "queued",
+                                    "processing",
+                                    "completed",
+                                    "error"
+                                ],
+                                "combobox": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "status_filter",
+                                "value": "all",
+                                "display_name": "Status Filter",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Filter by transcript status",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "DropdownInput"
+                            },
+                            "throttled_only": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "throttled_only",
+                                "value": false,
+                                "display_name": "Throttled Only",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Only get throttled transcripts, overrides the status filter",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            }
+                        },
+                        "description": "Retrieve a list of transcripts from AssemblyAI with filtering options",
+                        "icon": "AssemblyAI",
+                        "base_classes": [
+                            "Data"
+                        ],
+                        "display_name": "AssemblyAI List Transcripts",
+                        "documentation": "https://www.assemblyai.com/docs",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "transcript_list",
+                                "display_name": "Transcript List",
+                                "method": "list_transcripts",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "api_key",
+                            "limit",
+                            "status_filter",
+                            "created_on",
+                            "throttled_only"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "lf_version": "1.0.18"
+                    },
+                    "id": "AssemblyAIListTranscripts-3prc4",
+                    "description": "Retrieve a list of transcripts from AssemblyAI with filtering options",
+                    "display_name": "AssemblyAI List Transcripts"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 410,
+                "positionAbsolute": {
+                    "x": -380.99808133361984,
+                    "y": 401.2674645310267
+                },
+                "dragging": false
+            },
+            {
+                "id": "AssemblyAILeMUR-jzwHZ",
+                "type": "genericNode",
+                "position": {
+                    "x": -875.6482330011189,
+                    "y": 887.1705799007382
+                },
+                "data": {
+                    "type": "AssemblyAILeMUR",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "transcription_result": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "trace_as_input": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "transcription_result",
+                                "value": "",
+                                "display_name": "Transcription Result",
+                                "advanced": false,
+                                "input_types": [
+                                    "Data"
+                                ],
+                                "dynamic": false,
+                                "info": "The transcription result from AssemblyAI",
+                                "title_case": false,
+                                "type": "other",
+                                "_input_type": "DataInput"
+                            },
+                            "api_key": {
+                                "load_from_db": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "api_key",
+                                "value": null,
+                                "display_name": "Assembly API Key",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str",
+                                "_input_type": "SecretStrInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import assemblyai as aai\n\nfrom langflow.custom import Component\nfrom langflow.io import DataInput, DropdownInput, FloatInput, IntInput, MultilineInput, Output, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass AssemblyAILeMUR(Component):\n    display_name = \"AssemblyAI LeMUR\"\n    description = \"Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework\"\n    documentation = \"https://www.assemblyai.com/docs/lemur\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n            advanced=False,\n        ),\n        DataInput(\n            name=\"transcription_result\",\n            display_name=\"Transcription Result\",\n            info=\"The transcription result from AssemblyAI\",\n        ),\n        MultilineInput(\n            name=\"prompt\",\n            display_name=\"Input Prompt\",\n            info=\"The text to prompt the model\",\n        ),\n        DropdownInput(\n            name=\"final_model\",\n            display_name=\"Final Model\",\n            options=[\"claude3_5_sonnet\", \"claude3_opus\", \"claude3_haiku\", \"claude3_sonnet\"],\n            value=\"claude3_5_sonnet\",\n            info=\"The model that is used for the final prompt after compression is performed\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            advanced=True,\n            value=0.0,\n            info=\"The temperature to use for the model\",\n        ),\n        IntInput(\n            name=\"max_output_size\",\n            display_name=\" Max Output Size\",\n            advanced=True,\n            value=2000,\n            info=\"Max output size in tokens, up to 4000\",\n        ),\n        DropdownInput(\n            name=\"endpoint\",\n            display_name=\"Endpoint\",\n            options=[\"task\", \"summary\", \"question-answer\"],\n            value=\"task\",\n            info=\"The LeMUR endpoint to use. For 'summary' and 'question-answer', no prompt input is needed. See https://www.assemblyai.com/docs/api-reference/lemur/ for more info.\",\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"questions\",\n            display_name=\"Questions\",\n            info=\"Comma-separated list of your questions. Only used if Endpoint is 'question-answer'\",\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"transcript_ids\",\n            display_name=\"Transcript IDs\",\n            info=\"Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts. If provided, the Transcription Result is ignored.\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"LeMUR Response\", name=\"lemur_response\", method=\"run_lemur\"),\n    ]\n\n    def run_lemur(self) -> Data:\n        \"\"\"Use the LeMUR task endpoint to input the LLM prompt.\"\"\"\n        aai.settings.api_key = self.api_key\n\n        if not self.transcription_result and not self.transcript_ids:\n            error = \"Either a Transcription Result or Transcript IDs must be provided\"\n            self.status = error\n            return Data(data={\"error\": error})\n        elif self.transcription_result and self.transcription_result.data.get(\"error\"):\n            # error message from the previous step\n            self.status = self.transcription_result.data[\"error\"]\n            return self.transcription_result\n        elif self.endpoint == \"task\" and not self.prompt:\n            self.status = \"No prompt specified for the task endpoint\"\n            return Data(data={\"error\": \"No prompt specified\"})\n        elif self.endpoint == \"question-answer\" and not self.questions:\n            error = \"No Questions were provided for the question-answer endpoint\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n        # Check for valid transcripts\n        transcript_ids = None\n        if self.transcription_result and \"id\" in self.transcription_result.data:\n            transcript_ids = [self.transcription_result.data[\"id\"]]\n        elif self.transcript_ids:\n            transcript_ids = self.transcript_ids.split(\",\")\n            transcript_ids = [t.strip() for t in transcript_ids]\n        \n        if not transcript_ids:\n            error = \"Either a valid Transcription Result or valid Transcript IDs must be provided\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n        # Get TranscriptGroup and check if there is any error\n        transcript_group = aai.TranscriptGroup(transcript_ids=transcript_ids)\n        transcript_group, failures = transcript_group.wait_for_completion(return_failures=True)\n        if failures:\n            error = f\"Getting transcriptions failed: {failures[0]}\"\n            self.status = error\n            return Data(data={\"error\": error})\n        \n        for t in transcript_group.transcripts:\n            if t.status == aai.TranscriptStatus.error:\n                self.status = t.error\n                return Data(data={\"error\": t.error})\n\n        # Perform LeMUR action\n        try:\n            response = self.perform_lemur_action(transcript_group, self.endpoint)\n            result = Data(data=response)\n            self.status = result\n            return result\n        except Exception as e:\n            error = f\"An Error happened: {str(e)}\"\n            self.status = error\n            return Data(data={\"error\": error})\n\n    def perform_lemur_action(self, transcript_group: aai.TranscriptGroup, endpoint: str) -> dict:\n        print(\"Endpoint:\", endpoint, type(endpoint))\n        if endpoint == \"task\":\n            result = transcript_group.lemur.task(\n                prompt=self.prompt,\n                final_model=self.get_final_model(self.final_model),\n                temperature=self.temperature,\n                max_output_size=self.max_output_size,\n            )\n        elif endpoint == \"summary\":\n            result = transcript_group.lemur.summarize(\n                final_model=self.get_final_model(self.final_model),\n                temperature=self.temperature,\n                max_output_size=self.max_output_size,\n            )\n        elif endpoint == \"question-answer\":\n            questions = self.questions.split(\",\")\n            questions = [aai.LemurQuestion(question=q) for q in questions]\n            result = transcript_group.lemur.question(\n                questions=questions,\n                final_model=self.get_final_model(self.final_model),\n                temperature=self.temperature,\n                max_output_size=self.max_output_size,\n            )\n        else:\n            raise ValueError(f\"Endpoint not supported: {endpoint}\")\n\n        return result.dict()\n        \n    def get_final_model(self, model_name: str) -> aai.LemurModel:\n        if model_name == \"claude3_5_sonnet\":\n            return aai.LemurModel.claude3_5_sonnet\n        elif model_name == \"claude3_opus\":\n            return aai.LemurModel.claude3_opus\n        elif model_name == \"claude3_haiku\":\n            return aai.LemurModel.claude3_haiku\n        elif model_name == \"claude3_sonnet\":\n            return aai.LemurModel.claude3_sonnet\n        else:\n            raise ValueError(f\"Model name not supported: {model_name}\")\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "endpoint": {
+                                "trace_as_metadata": true,
+                                "options": [
+                                    "task",
+                                    "summary",
+                                    "question-answer"
+                                ],
+                                "combobox": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "endpoint",
+                                "value": "task",
+                                "display_name": "Endpoint",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The LeMUR endpoint to use. For 'summary' and 'question-answer', no prompt input is needed. See https://www.assemblyai.com/docs/api-reference/lemur/ for more info.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "DropdownInput"
+                            },
+                            "final_model": {
+                                "trace_as_metadata": true,
+                                "options": [
+                                    "claude3_5_sonnet",
+                                    "claude3_opus",
+                                    "claude3_haiku",
+                                    "claude3_sonnet"
+                                ],
+                                "combobox": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "final_model",
+                                "value": "claude3_5_sonnet",
+                                "display_name": "Final Model",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The model that is used for the final prompt after compression is performed",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "DropdownInput"
+                            },
+                            "max_output_size": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "max_output_size",
+                                "value": 2000,
+                                "display_name": " Max Output Size",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Max output size in tokens, up to 4000",
+                                "title_case": false,
+                                "type": "int",
+                                "_input_type": "IntInput"
+                            },
+                            "prompt": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "prompt",
+                                "value": "",
+                                "display_name": "Input Prompt",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The text to prompt the model",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MultilineInput"
+                            },
+                            "questions": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "questions",
+                                "value": "",
+                                "display_name": "Questions",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Comma-separated list of your questions. Only used if Endpoint is 'question-answer'",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MultilineInput"
+                            },
+                            "temperature": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "temperature",
+                                "value": 0,
+                                "display_name": "Temperature",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The temperature to use for the model",
+                                "title_case": false,
+                                "type": "float",
+                                "_input_type": "FloatInput"
+                            },
+                            "transcript_ids": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "transcript_ids",
+                                "value": "",
+                                "display_name": "Transcript IDs",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts. If provided, the Transcription Result is ignored.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MultilineInput"
+                            }
+                        },
+                        "description": "Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework",
+                        "icon": "AssemblyAI",
+                        "base_classes": [
+                            "Data"
+                        ],
+                        "display_name": "AssemblyAI LeMUR",
+                        "documentation": "https://www.assemblyai.com/docs/lemur",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "lemur_response",
+                                "display_name": "LeMUR Response",
+                                "method": "run_lemur",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "api_key",
+                            "transcription_result",
+                            "prompt",
+                            "final_model",
+                            "temperature",
+                            "max_output_size",
+                            "endpoint",
+                            "questions",
+                            "transcript_ids"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "lf_version": "1.0.18"
+                    },
+                    "id": "AssemblyAILeMUR-jzwHZ",
+                    "description": "Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework",
+                    "display_name": "AssemblyAI LeMUR"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 454,
+                "positionAbsolute": {
+                    "x": -875.6482330011189,
+                    "y": 887.1705799007382
+                },
+                "dragging": false
+            },
+            {
+                "id": "ParseData-th7JM",
+                "type": "genericNode",
+                "position": {
+                    "x": -862.5843195492909,
+                    "y": -56.71774780191424
+                },
+                "data": {
+                    "type": "ParseData",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "data": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "trace_as_input": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "data",
+                                "value": "",
+                                "display_name": "Data",
+                                "advanced": false,
+                                "input_types": [
+                                    "Data"
+                                ],
+                                "dynamic": false,
+                                "info": "The data to convert to text.",
+                                "title_case": false,
+                                "type": "other",
+                                "_input_type": "DataInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "sep": {
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "sep",
+                                "value": "\n",
+                                "display_name": "Separator",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "StrInput"
+                            },
+                            "template": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "template",
+                                "value": "{text}",
+                                "display_name": "Template",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MultilineInput"
+                            }
+                        },
+                        "description": "Convert Data into plain text following a specified template.",
+                        "icon": "braces",
+                        "base_classes": [
+                            "Message"
+                        ],
+                        "display_name": "Parse Data",
+                        "documentation": "",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "text",
+                                "display_name": "Text",
+                                "method": "parse_data",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "data",
+                            "template",
+                            "sep"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "lf_version": "1.0.18"
+                    },
+                    "id": "ParseData-th7JM"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 368,
+                "positionAbsolute": {
+                    "x": -862.5843195492909,
+                    "y": -56.71774780191424
+                },
+                "dragging": false
+            }
+        ],
+        "edges": [
+            {
+                "source": "AssemblyAITranscriptionJobCreator-Idt7P",
+                "sourceHandle": "{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-Idt7Pœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}",
+                "target": "AssemblyAITranscriptionJobPoller-F46nf",
+                "targetHandle": "{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "transcript_id",
+                        "id": "AssemblyAITranscriptionJobPoller-F46nf",
+                        "inputTypes": [
+                            "Data"
+                        ],
+                        "type": "other"
+                    },
+                    "sourceHandle": {
+                        "dataType": "AssemblyAITranscriptionJobCreator",
+                        "id": "AssemblyAITranscriptionJobCreator-Idt7P",
+                        "name": "transcript_id",
+                        "output_types": [
+                            "Data"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-Idt7P{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-Idt7Pœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-F46nf{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "animated": false,
+                "className": "",
+                "selected": false
+            },
+            {
+                "source": "AssemblyAITranscriptionJobPoller-F46nf",
+                "sourceHandle": "{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}",
+                "target": "AssemblyAIGetSubtitles-3sjU6",
+                "targetHandle": "{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAIGetSubtitles-3sjU6œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "transcription_result",
+                        "id": "AssemblyAIGetSubtitles-3sjU6",
+                        "inputTypes": [
+                            "Data"
+                        ],
+                        "type": "other"
+                    },
+                    "sourceHandle": {
+                        "dataType": "AssemblyAITranscriptionJobPoller",
+                        "id": "AssemblyAITranscriptionJobPoller-F46nf",
+                        "name": "transcription_result",
+                        "output_types": [
+                            "Data"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-F46nf{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-AssemblyAIGetSubtitles-3sjU6{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAIGetSubtitles-3sjU6œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "AssemblyAITranscriptionJobPoller-F46nf",
+                "sourceHandle": "{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}",
+                "target": "ParseData-th7JM",
+                "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-th7JMœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "data",
+                        "id": "ParseData-th7JM",
+                        "inputTypes": [
+                            "Data"
+                        ],
+                        "type": "other"
+                    },
+                    "sourceHandle": {
+                        "dataType": "AssemblyAITranscriptionJobPoller",
+                        "id": "AssemblyAITranscriptionJobPoller-F46nf",
+                        "name": "transcription_result",
+                        "output_types": [
+                            "Data"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-F46nf{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-ParseData-th7JM{œfieldNameœ:œdataœ,œidœ:œParseData-th7JMœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "Prompt-IO8Cq",
+                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-IO8Cqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "AssemblyAILeMUR-jzwHZ",
+                "targetHandle": "{œfieldNameœ:œpromptœ,œidœ:œAssemblyAILeMUR-jzwHZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "prompt",
+                        "id": "AssemblyAILeMUR-jzwHZ",
+                        "inputTypes": [
+                            "Message"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "dataType": "Prompt",
+                        "id": "Prompt-IO8Cq",
+                        "name": "prompt",
+                        "output_types": [
+                            "Message"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-Prompt-IO8Cq{œdataTypeœ:œPromptœ,œidœ:œPrompt-IO8Cqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AssemblyAILeMUR-jzwHZ{œfieldNameœ:œpromptœ,œidœ:œAssemblyAILeMUR-jzwHZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "AssemblyAITranscriptionJobPoller-F46nf",
+                "sourceHandle": "{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}",
+                "target": "AssemblyAILeMUR-jzwHZ",
+                "targetHandle": "{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAILeMUR-jzwHZœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "transcription_result",
+                        "id": "AssemblyAILeMUR-jzwHZ",
+                        "inputTypes": [
+                            "Data"
+                        ],
+                        "type": "other"
+                    },
+                    "sourceHandle": {
+                        "dataType": "AssemblyAITranscriptionJobPoller",
+                        "id": "AssemblyAITranscriptionJobPoller-F46nf",
+                        "name": "transcription_result",
+                        "output_types": [
+                            "Data"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-F46nf{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-F46nfœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-AssemblyAILeMUR-jzwHZ{œfieldNameœ:œtranscription_resultœ,œidœ:œAssemblyAILeMUR-jzwHZœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "animated": false,
+                "className": ""
+            }
+        ],
+        "viewport": {
+            "x": 733.3920447354355,
+            "y": -42.8262727047815,
+            "zoom": 0.2612816498236053
+        }
+    },
+    "user_id": "9c01eee4-17dd-460e-8c52-bba36d635a9d",
+    "folder_id": "54fc9211-d42d-4c3f-a932-ee4987f61988",
+    "description": "Transcribe and analyze audio with AssemblyAI",
+    "icon_bg_color": null,
+    "updated_at": "2024-09-26T14:55:47+00:00",
+    "webhook": false,
+    "id": "fa69381c-d1c4-4535-bc23-bc2fb4956e1e"
+}

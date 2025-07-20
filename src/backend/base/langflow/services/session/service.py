@@ -1,28 +1,34 @@
-from typing import Coroutine, Optional
+import asyncio
+from typing import TYPE_CHECKING
 
 from langflow.services.base import Service
-from langflow.services.cache.base import CacheService
+from langflow.services.cache.base import AsyncBaseCacheService
+from langflow.services.cache.utils import CacheMiss
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
+
+if TYPE_CHECKING:
+    from langflow.services.cache.base import CacheService
 
 
 class SessionService(Service):
     name = "session_service"
 
-    def __init__(self, cache_service):
-        self.cache_service: "CacheService" = cache_service
+    def __init__(self, cache_service) -> None:
+        self.cache_service: CacheService | AsyncBaseCacheService = cache_service
 
-    async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
+    async def load_session(self, key, flow_id: str, data_graph: dict | None = None):
         # Check if the data is cached
-        if key in self.cache_service:
-            result = self.cache_service.get(key)
-            if isinstance(result, Coroutine):
-                result = await result
-            return result
+        if isinstance(self.cache_service, AsyncBaseCacheService):
+            value = await self.cache_service.get(key)
+        else:
+            value = await asyncio.to_thread(self.cache_service.get, key)
+        if not isinstance(value, CacheMiss):
+            return value
 
         if key is None:
             key = self.generate_key(session_id=None, data_graph=data_graph)
         if data_graph is None:
-            return (None, None)
+            return None, None
         # If not cached, build the graph and cache it
         from langflow.graph.graph.base import Graph
 
@@ -32,7 +38,8 @@ class SessionService(Service):
 
         return graph, artifacts
 
-    def build_key(self, session_id, data_graph):
+    @staticmethod
+    def build_key(session_id, data_graph) -> str:
         json_hash = compute_dict_hash(data_graph)
         return f"{session_id}{':' if session_id else ''}{json_hash}"
 
@@ -43,14 +50,14 @@ class SessionService(Service):
             session_id = session_id_generator()
         return self.build_key(session_id, data_graph=data_graph)
 
-    async def update_session(self, session_id, value):
-        result = self.cache_service.set(session_id, value)
-        # if it is a coroutine, await it
-        if isinstance(result, Coroutine):
-            await result
+    async def update_session(self, session_id, value) -> None:
+        if isinstance(self.cache_service, AsyncBaseCacheService):
+            await self.cache_service.set(session_id, value)
+        else:
+            await asyncio.to_thread(self.cache_service.set, session_id, value)
 
-    async def clear_session(self, session_id):
-        result = self.cache_service.delete(session_id)
-        # if it is a coroutine, await it
-        if isinstance(result, Coroutine):
-            await result
+    async def clear_session(self, session_id) -> None:
+        if isinstance(self.cache_service, AsyncBaseCacheService):
+            await self.cache_service.delete(session_id)
+        else:
+            await asyncio.to_thread(self.cache_service.delete, session_id)
