@@ -3,178 +3,182 @@ title: Logic
 slug: /components-logic
 ---
 
+import Icon from "@site/src/components/icon";
+
 Langflow's logic components provide functionalities for routing, conditional processing, and flow management.
 
 ## If-Else (conditional router) {#if-else}
 
-The **If-Else** component is a conditional router.
+The **If-Else** component is a conditional router that routes messages by comparing two strings.
+It evaluates a condition by comparing two text inputs using the specified operator, and then routes the message to `true_result` or `false_result` depending on the evaluation.
 
-This component routes messages by comparing two strings.
-It evaluates a condition by comparing two text inputs using the specified operator and routes the message to `true_result` or `false_result`.
+The operator looks for single strings in the input (`input_text`) based on an operator and match text (`match_text`), but it can also search for multiple words by matching a regex.
+Available operators include:
 
-The operator looks for single strings based on your defined [operator behavior](#operator-behavior), but it can also search for multiple words by regex matching.
+- **equals**: Exact match comparison
+- **not equals**: Inverse of exact match
+- **contains**: Checks if the `match_text` is found within `input_text`
+- **starts with**: Checks if `input_text` begins with `match_text`
+- **ends with**: Checks if `input_text` ends with `match_text`
+- **regex**: Matches on a case sensitive regular expression
 
-To use the **Conditional router** component to check incoming messages with regex matching, do the following:
+By default, all operators are case insensitive except **regex**.
+**regex** is always case sensitive, and you can enable case sensitivity for all other operators in the [If-Else parameters](#if-else-parameters).
 
-1. Connect the **If-Else** component's **Text Input** port to a **Chat Input** component.
-2. In the If-Else component, enter the following values.
-* In the **Match Text** field, enter `.*(urgent|warning|caution).*`. The component looks for these values. The regex match is case sensitive, so to look for all permutations of `warning`, enter `warning|Warning|WARNING`.
-* In the **Operator** field, enter `regex`. The component looks for the strings `urgent`, `warning`, and `caution`. For more operators, see [Operator behavior](#operator-behavior).
-* In the **Message** field, enter `New Message Detected`. This field is optional. The message is sent to both the **True** and **False** ports.
-The component is now set up to send a `New Message Detected` message out of its **True** port if it matches any of the strings.
-If no strings are detected, it sends a message out of the **False** port.
-3. Create two identical flows to process the messages. Connect an **Open AI** component, a **Prompt**, and a **Chat Output** component together.
-4. Connect one chain to the **If-Else** component's **True** port, and one chain to the **False** port.
+### Use the If-Else component in a flow
 
-The flow looks like this:
+The following example uses the **If-Else** component to check incoming chat messages with regex matching, and then output a different response depending on whether the match evaluated to true or false.
 
 ![A conditional router connected to two OpenAI components](/img/component-conditional-router.png)
 
-5. Add your **OpenAI API key** to both **OpenAI** components.
-6. In both **Prompt** components, enter the behavior you want each route to take.
-When a match is found:
-```text
-Send a message that a new message has been received and added to the Urgent queue.
-```
-When a match is not found:
-```text
-Send a message that a new message has been received and added to the backlog.
-```
-7. Open the **Playground**.
-8. Send the flow some messages. Your messages route differently based on the if-else component's evaluation.
-```
-User
-A new user was created.
+1. Add an **If-Else** component to your flow, and then configure it as follows:
 
-AI
-A new message has been received and added to the backlog.
+    * **Text Input**: Connect the **Text Input** port to a **Chat Input** component.
 
-User
-Sign-in warning: new user locked out.
+    * **Match Text**: Enter `.*(urgent|warning|caution).*` so the component looks for these values in incoming input. The regex match is case sensitive, so if you need to look for all permutations of `warning`, enter `warning|Warning|WARNING`.
 
-AI
-A new message has been received and added to the Urgent queue. Please review it at your earliest convenience.
-```
+    * **Operator**: Select **regex**. For more operators, see [Operator behavior](#operator-behavior).
 
-<details>
-<summary>Parameters</summary>
+    * **Case True**: In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **Case True** parameter, click **Close**, and then enter `New Message Detected` in the field.
 
-**Inputs**
+        The **Case True** message is sent from the **True** output port when the match condition evaluates to true.
+
+        No message is set for **Case False** so the component doesn't emit a message when the condition evaluates to false.
+
+3. Depending on what you want to happen when the outcome is **True**, add components to your flow to execute that logic:
+
+    1. Add a **Language Model**, **Prompt Template**, and **Chat Output** component to your flow.
+
+    2. In the **Language Model** component, enter your OpenAI API key or select a different provider and model.
+
+    3. Connect the **If-Else** component's **True** output port to the **Language Model** component's **Input** port.
+
+    4. In the **Prompt Template** component, enter a prompt to instruct the model in the event of the `true` condition, such as `Send a message that a new warning, caution, or urgent message was received`.
+
+    5. Connect the **Prompt Template** component to the **Language Model** component's **System Message** port.
+
+    6. Connect the **Language Model** component's output to the **Chat Output** component.
+
+4. Repeat the same process with another set of **Language Model**, **Prompt Template**, and **Chat Output** components for the **False** outcome.
+
+    Connect the **If-Else** component's **False** output port to the second **Language Model** component's **Input** port.
+
+    Be sure to configure the second **Prompt Template** component to instruct the model in the event of the `false` condition, such as `Send a message that a new low-priority message was received`.
+
+5. To test the flow, open the **Playground**, and then send the flow some messages with and without your regex strings.
+The chat output should reflect the instructions in your prompts based on the regex evaluation.
+
+    ```text
+    User: A new user was created.
+
+    AI: A new low-priority message was received.
+
+    User: Sign-in warning: new user locked out.
+
+    AI: A new warning, caution, or urgent message was received. Please review it at your earliest convenience.
+    ```
+
+### If-Else parameters
+
+Some **If-Else** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in each [component's header menu](/concepts-components#component-menus).
 
 | Name           | Type     | Description                                                       |
 |----------------|----------|-------------------------------------------------------------------|
-| input_text     | String   | The primary text input for the operation. |
-| match_text     | String   | The text to compare against. |
-| operator       | Dropdown | The operator used to compare texts. Options include equals, not equals, contains, starts with, ends with, and regex. The default is equals. |
-| case_sensitive | Boolean  | When set to true, the comparison is case sensitive. This setting does not apply to regex comparison. The default is false. |
-| message        | Message  | The message to pass through either route. |
-| max_iterations | Integer  | The maximum number of iterations allowed for the conditional router. The default is 10. |
-| default_route  | Dropdown | The route to take when max iterations are reached. Options include true_result or false_result. The default is false_result. |
-
-**Outputs**
-
-| Name         | Type    | Description                                |
-|--------------|---------|--------------------------------------------|
-| true_result  | Message | The output produced when the condition is true. |
-| false_result | Message | The output produced when the condition is false. |
-
-</details>
-
-### Operator Behavior
-
-The **If-else** component includes a comparison operator to compare the values in `input_text` and `match_text`.
-
-All options respect the `case_sensitive` setting except **regex**.
-
-- **equals**: Exact match comparison.
-- **not equals**: Inverse of exact match.
-- **contains**: Checks if match_text is found within input_text.
-- **starts with**: Checks if input_text begins with match_text.
-- **ends with**: Checks if input_text ends with match_text.
-- **regex**: Performs regular expression matching. It is always case sensitive and ignores the case_sensitive setting.
-
-## Listen
+| input_text     | String   | Input parameter. The primary text input for the operation. |
+| match_text     | String   | Input parameter. The text to compare against. |
+| operator       | Dropdown | Input parameter. The operator used to compare texts. Options include `equals`, `not equals`, `contains`, `starts with`, `ends with`, and `regex`. The default is `equals`. |
+| case_sensitive | Boolean  | Input parameter. When set to true, the comparison is case sensitive. The default is false. This setting doesn't apply to regex comparisons. |
+| message        | Message  | Input parameter. The message to pass through either route. |
+| max_iterations | Integer  | Input parameter. The maximum number of iterations allowed for the conditional router. The default is 10. |
+| default_route  | Dropdown | Input parameter. The route to take when max iterations are reached. Options include `true_result` or `false_result`. The default is `false_result`. |
+| true_result  | Message | Output parameter. The output produced when the condition is true. |
+| false_result | Message | Output parameter. The output produced when the condition is false. |
 
 ## Loop
 
-:::tip
-For another **Loop** component example, see the **Research Translation Loop** template.
-:::
+The **Loop** component iterates over a list of input by passing individual items to other components attached at the **Item** output port until there are no items left to process. Then, the **Loop** component passes the aggregated result of all looping to the component connected to the **Done** port.
 
-This component iterates over a list of [Data](/data-types#data) objects, outputting one item at a time and aggregating results from loop inputs.
+The **Loop** component is like a miniature flow within your flow.
+Here's a breakdown of the looping process:
 
-In this example, the **Loop** component iterates over a CSV file through the **Item** port until there are no rows left to process. Then, the **Loop** component performs the actions connected to the **Done** port, which in this case is loading the structured data into **Chroma DB**.
+1. Accepts a list of [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe) objects, such as a CSV file, through the **Loop** component's **Inputs** port.
 
-Think of it this way: the **Item** port forms the "main" loop that repeats until a "complete" condition is reached.
+2. Splits the input into individual items. For example, a CSV file is broken down by rows.
 
-1. The **Loop** component accepts **Data** from the **Load CSV** component, and outputs the data from the **Item** port.
-2. Each CSV row is converted to a **Message** and processed into structured data with the **Structured Output** component.
-The dotted line connected from the **Structured Output** component's **Looping** port tells you where the loop begins again.
-3. The **Loop** component repeatedly extracts rows by **Text Key** until there are no more rows to extract.
+    Specifically, the **Loop** component repeatedly extracts items by `text` key in the `Data` or `DataFrame` objects until there are no more items to extract.
+    Each `item` output is a `Data` objects.
 
-Once all items are processed, the action connected to the **Done** port is performed.
-In this example, the data is loaded into **Chroma DB**.
+3. Iterates over each `item` by passing them to the **Item** output port.
+
+    This port connects to one or more components that perform actions on each item.
+    The final component in the **Item** loop connects back to the **Loop** component's **Looping** port to process the next item.
+
+    Only one component connects to the **Item** port, but you can pass the data through as many components as you need, as long as the last component in the chain connects back to the **Looping** port.
+
+4. After processing all items, the results are aggregated into a single `Data` object that is passed from the **Loop** component's **Done** port to the next component in the flow.
+
+In terms of simplified code, the **Loop** component works like this:
+
+```python
+for i in input:             # Receive input data as a list
+    process_item(i)         # Process each item through components connected at the Item port
+    if has_more_items():
+        continue            # Loop back to Looping port to process the next item
+    else:
+        break               # Exit the loop when no more items are left
+
+done = aggregate_results()  # Compile all returned items
+
+print(done)                 # Send the aggregated results from the Done port to another component
+```
+
+<details>
+<summary>Loop example</summary>
+
+In the follow example, the **Loop** component iterates over a CSV file until there are no rows left to process.
+In this case, the **Item** port passes each row to a **Type Convert** component to convert the row into a `Message` object, passes the `Message` to a **Structured Output** component to be processed into structured data that is then passed back to the **Loop** component's **Looping** port.
+After processing all rows, the **Loop** component loads the aggregated list of structured data into a Chroma DB database through the **Chroma DB** component connected to the **Done** port.
 
 ![Loop CSV parser](/img/component-loop-csv.png)
 
-Follow along with this step-by-step video guide for creating this flow and adding agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type      | Description                                          |
-|------|-----------|------------------------------------------------------|
-| data | Data/List | The initial list of Data objects to process. |
-
-**Outputs**
-
-| Name | Type    | Description                                           |
-|------|---------|-------------------------------------------------------|
-| item | Data    | The current item being processed from the data list. |
-| done | Data    | The aggregated results after all items are processed. |
+:::tip
+For more examples of the **Loop** component, try the **Research Translation Loop** template in Langflow, or follow this video tutorial for creating a flow with a loop and agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
+:::
 
 </details>
 
-## Notify
+## Notify and Listen
+
+The **Notify** and **Listen** components are used together.
+
+The **Notify** component builds a notification from the current flow's context, including specific data content and a status identifier.
+
+The resulting notification is sent to the **Listen** component.
+The notification data can then be passed to other components in the flow, such as the **If-Else** component.
 
 ## Run flow
 
-This component allows you to run any flow stored in your Langflow database without opening the flow editor.
+The **Run Flow** component runs another Langflow flow as a subprocess of the current flow.
 
-The Run Flow component can also be used as a tool when connected to an [Agent](/components-agents). The `name` and `description` metadata that the Agent uses to register the tool are created automatically.
+You can use this component to chain flows together, run flows conditionally, and attach flows to [**Agent** component](/components-agents) as [tools for the agent](/agents-tools) to run as needed.
 
-When you select a flow, the component fetches the flow's graph structure and uses it to generate the inputs and outputs for the Run Flow component.
+When used with an agent, the `name` and `description` metadata that the agent uses to register the tool are created automatically.
 
-To use the Run Flow component as a tool, do the following:
-1. Add the **Run Flow** component to the [Simple Agent](/simple-agent) flow.
-2. In the **Flow Name** menu, select the sub-flow you want to run.
-The appearance of the **Run Flow** component changes to reflect the inputs and outputs of the selected flow.
-3. On the **Run Flow** component, enable **Tool Mode**.
-4. Connect the **Run Flow** component to the **Toolset** input of the Agent.
-Your flow should now look like this:
-![Run Flow component](/img/component-run-flow.png)
-5. Run the flow. The Agent uses the Run Flow component as a tool to run the selected sub-flow.
+When you select a flow for the **Run Flow** component, it uses the target flow's graph structure to dynamically generate input and output fields on the **Run Flow** component.
 
-<details>
-<summary>Parameters</summary>
+### Run Flow parameters
 
-**Inputs**
+Some **Run Flow** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in each [component's header menu](/concepts-components#component-menus).
 
 | Name              | Type     | Description                                                    |
 |-------------------|----------|----------------------------------------------------------------|
-| flow_name_selected| Dropdown | The name of the flow to run.                                    |
-| flow_tweak_data   | Dict     | Dictionary of tweaks to customize the flow's behavior.         |
-| dynamic inputs  | Various  | Additional inputs that are generated based on the selected flow.     |
-
-**Outputs**
-
-| Name         | Type        | Description                                                   |
-|--------------|-------------|---------------------------------------------------------------|
-| run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs are generated from running the flow.                   |
-
-</details>
+| flow_name_selected| Dropdown | Input parameter. The name of the flow to run.                  |
+| session_id        | String   | Input parameter. The session ID for the flow run, if you want to pass a custom session ID for the subflow. |
+| flow_tweak_data   | Dict     | Input parameter. Dictionary of tweaks to customize the flow's behavior. Available tweaks depend on the selected flow. |
+| dynamic inputs    | Various  | Input parameters. Additional inputs are generated based on the selected flow. |
+| run_outputs  | A `List` of types (`Data`, `Message`, or `DataFrame`)  | Output parameter. All outputs are generated from running the flow.  |
 
 ## Legacy logic components
 
