@@ -20,115 +20,138 @@ See [Prompt Template](/components-prompts).
 
 ## Batch Run
 
-The **Batch Run** component runs a language model over **each row** of a [DataFrame](/data-types#dataframe) text column and returns a new DataFrame with the original text and an LLM response.
+The **Batch Run** component runs a language model over _each row of one text column_ in a [`DataFrame`](/data-types#dataframe), and then returns a new `DataFrame` with the original text and an LLM response.
 
 The response contains the following columns:
 
-* `text_input`: The original text from the input DataFrame.
-* `model_response`: The model's response for each input.
-* `batch_index`: The processing order, with a `0`-based index.
-* `metadata` (optional): Additional information about the processing.
+* `text_input`: The original text from the input `DataFrame`
+* `model_response`: The model's response for each input
+* `batch_index`: The 0-indexed processing order for all rows in the `DataFrame`
+* `metadata` (optional): Additional information about the processing
 
-These columns, when connected to a **Parser** component, can be used as variables within curly braces.
+### Use the Batch Run component in a flow
 
-To use the Batch Run component with a **Parser** component, do the following:
-
-1. Connect a **Model** component to the **Batch Run** component's **Language model** port.
-2. Connect a component that outputs DataFrame, like **File** component, to the **Batch Run** component's **DataFrame** input.
-3. Connect the **Batch Run** component's **Batch Results** output to a **Parser** component's **DataFrame** input.
-The flow looks like this:
+If you pass this output to a [**Parser** component](/components-processing#parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
+This is demonstrated in the following example.
 
 ![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
 
-4. In the **Column Name** field of the **Batch Run** component, enter a column name based on the data you're loading from the **File** loader. For example, to process a column of `name`, enter `name`.
-5. Optionally, in the **System Message** field of the **Batch Run** component, enter a **System Message** to instruct the connected LLM on how to process your file. For example, `Create a business card for each name.`
-6. In the **Template** field of the **Parser** component, enter a template for using the **Batch Run** component's new DataFrame columns.
-To use all three columns from the **Batch Run** component, include them like this:
-```text
-record_number: {batch_index}, name: {text_input}, summary: {model_response}
-```
-7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-hidden="True" /> **Run component**.
-8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output**.
-9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
+1. Connect a **Language Model** component to a **Batch Run** component's **Language model** port.
 
-<details>
-<summary>Parameters</summary>
+2. Connect `DataFrame` output from another component to the **Batch Run** component's **DataFrame** input.
+For example, you could connect a **File** component with a CSV file.
 
-**Inputs**
+3. In the **Batch Run** component's **Column Name** field, enter the name of the column in the incoming `DataFrame` that contains the text to process.
+For example, if you want to extract text from a `name` column in a CSV file, enter `name` in the **Column Name** field.
 
-| Name | Type | Description |
-|------|------|-------------|
-| model | HandleInput | Connect the 'Language Model' output from your LLM component here. Required. |
-| system_message | MultilineInput | A multi-line system instruction for all rows in the DataFrame. |
-| df | DataFrameInput | The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
-| column_name | MessageTextInput | The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
-| output_column_name | MessageTextInput | Name of the column where the model's response is stored. Default=`model_response`. |
-| enable_metadata | BoolInput | If True, add metadata to the output DataFrame. |
+4. Connect the **Batch Run** component's **Batch Results** output to a **Parser** component's **DataFrame** input.
 
-**Outputs**
+5. Optional: In the **Batch Run** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, click **Close**, and then enter an instruction for how you want the LLM to process each cell extracted from the file.
+For example, `Create a business card for each name.`
 
-| Name | Type | Description |
-|------|------|-------------|
-| batch_results | DataFrame | A DataFrame with all original columns plus the model's response column. |
+6. In the **Parser** component's **Template** field, enter a template for processing the **Batch Run** component's new `DataFrame` columns (`text_input`, `model_response`, and `batch_index`):
 
-</details>
+    For example, this template uses three columns from the resulting, post-batch `DataFrame`:
 
-## Data operations
-
-This component performs operations on [Data](/data-types#data) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
-
-1. To use this component in a flow, connect a component that outputs [Data](/data-types#data) to the **Data Operations** component's input.
-All operations in the component require at least one [Data](/data-types#data) input.
-2. In the **Operations** field, select the operation you want to perform.
-For example, send this request to the **Webhook** component.
-Replace `FLOW_ID` and `LANGFLOW_API_KEY` with the values from your deployment.
-```bash
-curl -X POST "http://localhost:7860/api/v1/webhook/FLOW_ID" \
--H 'Content-Type: application/json' \
--H 'x-api-key: LANGFLOW_API_KEY' \
--d '{
-  "id": 1,
-  "name": "Leanne Graham",
-  "username": "Bret",
-  "email": "Sincere@april.biz",
-  "address": {
-    "street": "Kulas Light",
-    "suite": "Apt. 556",
-    "city": "Gwenborough",
-    "zipcode": "92998-3874",
-    "geo": {
-      "lat": "-37.3159",
-      "lng": "81.1496"
-    }
-  },
-  "phone": "1-770-736-8031 x56442",
-  "website": "hildegard.org",
-  "company": {
-    "name": "Romaguera-Crona",
-    "catchPhrase": "Multi-layered client-server neural-net",
-    "bs": "harness real-time e-markets"
-  }
-}'
-```
-
-3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
-To add additional keys, click <Icon name="Plus" aria-hidden="True" /> **Add more**.
-![A webhook and data operations component](/img/component-data-operations-select-key.png)
-4. Filter by `name`, `username`, and `email` to select the values from the request.
-    ```json
-    {
-      "name": "Leanne Graham",
-      "username": "Bret",
-      "email": "Sincere@april.biz"
-    }
+    ```text
+    record_number: {batch_index}, name: {text_input}, summary: {model_response}
     ```
 
-### Operations
+7. To test the processing, click the **Parser** component, and then click <Icon name="Play" aria-hidden="True" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the final `DataFrame`.
 
-The component supports the following operations.
-All operations in the **Data operations** component require at least one [Data](/data-types#data) input.
+    You can also connect a **Chat Output** component to the **Parser** component if you want to see the output in the **Playground**.
 
-| Operation | Required Inputs | Info |
+### Batch Run parameters
+
+Some **Batch Run** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in each [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | HandleInput | Input parameter. Connect the 'Language Model' output from your LLM component here. Required. |
+| system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
+| df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
+| column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
+| output_column_name | MessageTextInput | Input parameter. Name of the column where the model's response is stored. Default=`model_response`. |
+| enable_metadata | BoolInput | Input parameter. If True, add metadata to the output DataFrame. |
+| batch_results | DataFrame | Output parameter. A DataFrame with all original columns plus the model's response column. |
+
+## Data Operations
+
+The **Data Operations** component performs operations on [`Data`](/data-types#data) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
+
+1. To use the **Data Operations** component in a flow, you must connect its **Data** input port to the output port of a component that outputs `Data`.
+All operations in the **Data Operations** component require at least one `Data` input.
+
+    For this example, add a **Webhook** component to the flow, and then connect it to a **Data Operations** component. Assume you'll send requests to the webhook with a consistent payload that has `name`, `username`, and `email` keys.
+
+2. In the **Operations** field, select the operation you want to perform on the incoming `Data`.
+For this example, select the **Select Keys** operation to extract specific user information.
+
+3. Add keys for `name`, `username`, and `email` to select those values from the incoming request payload.
+
+    To add additional keys, click <Icon name="Plus" aria-hidden="True" /> **Add more**.
+
+4. Connect a **Chat Output** component.
+
+
+    ![A flow with Webhook, Data Operations, and Chat Output components](/img/component-data-operations-select-key.png)
+
+5. To test the flow, send the following request to your flow's webhook endpoint, and then open the **Playground** to see the resulting output from processing the payload.
+
+    ```bash
+    curl -X POST "http://$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: $LANGFLOW_API_KEY" \
+    -d '{
+      "id": 1,
+      "name": "Leanne Graham",
+      "username": "Bret",
+      "email": "Sincere@april.biz",
+      "address": {
+        "street": "Main Street",
+        "suite": "Apt. 556",
+        "city": "Springfield",
+        "zipcode": "92998-3874",
+        "geo": {
+          "lat": "-37.3159",
+          "lng": "81.1496"
+        }
+      },
+      "phone": "1-770-736-8031 x56442",
+      "website": "hildegard.org",
+      "company": {
+        "name": "Acme-Corp",
+        "catchPhrase": "Multi-layered client-server neural-net",
+        "bs": "harness real-time e-markets"
+      }
+    }'
+    ```
+
+### Data Operations parameters
+
+Some **Data Operations** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in each [component's header menu](/concepts-components#component-menus).
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Input parameter. The `Data` object to operate on. |
+| operations | Operations | Input parameter. The operation to perform on the data. See [Data Operations operations](#data-operations-operations) |
+| select_keys_input | Select Keys | Input parameter. A list of keys to select from the data. |
+| filter_key | Filter Key | Input parameter. The key to filter by. |
+| operator | Comparison Operator | Input parameter. The operator to apply for comparing values. |
+| filter_values | Filter Values | Input parameter. A list of values to filter by. |
+| append_update_data | Append or Update | Input parameter. The data to append or update the existing data with. |
+| remove_keys_input | Remove Keys | Input parameter. A list of keys to remove from the data. |
+| rename_keys_input | Rename Keys | Input parameter. A list of keys to rename in the data. |
+| data_output | Data | Output parameter. The resulting Data object after the operation. |
+
+### Data Operations operations
+
+Options for the `operations` input parameter are as follows.
+All operations act on an incoming `Data` object.
+
+| Name | Required Inputs | Process |
 |-----------|----------------|-------------|
 | Select Keys | `select_keys_input` | Selects specific keys from the data. |
 | Literal Eval | None | Evaluates string values as Python literals. |
@@ -138,40 +161,16 @@ All operations in the **Data operations** component require at least one [Data](
 | Remove Keys | `remove_keys_input` | Removes specified keys from the data. |
 | Rename Keys | `rename_keys_input` | Renames keys in the data. |
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The [Data](/data-types#data) object to operate on. |
-| operations | Operations | The operation to perform on the data. |
-| select_keys_input | Select Keys | A list of keys to select from the data. |
-| filter_key | Filter Key | The key to filter by. |
-| operator | Comparison Operator | The operator to apply for comparing values. |
-| filter_values | Filter Values | A list of values to filter by. |
-| append_update_data | Append or Update | The data to append or update the existing data with. |
-| remove_keys_input | Remove Keys | A list of keys to remove from the data. |
-| rename_keys_input | Rename Keys | A list of keys to rename in the data. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data_output | Data | The resulting Data object after the operation. |
-
-</details>
-
 ## DataFrame operations
 
-This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
+The **DataFrame** component performs operations on [`DataFrame`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
 
-To use this component in a flow, connect a component that outputs [DataFrame](/data-types#dataframe) to the **DataFrame Operations** component.
+To use the **DataFrame Operations** component in a flow, you must connect its **DataFrame** input port to the output port of a component that outputs `DataFrame`.
+All operations in the **DataFrame Operations** component require at least one `DataFrame` input.
 
-This example fetches JSON data from an API. The **Smart Filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
+The following example fetches JSON data from an API. The **Smart Filter** component extracts and flattens the results into a tabular `DataFrame` that is then processed through the **DataFrame Operations** component.
 
-![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
+![A flow that ingests an API response, extracts it to a `DataFrame` with a Smart Filter component, and the processes it through a DataFrame Operations component](/img/component-dataframe-operations.png)
 
 1. The **API Request** component retrieves data with only `source` and `result` fields.
 For this example, the desired data is nested within the `result` field.
@@ -447,48 +446,6 @@ If you don't include the package imports in the chat, the Agent can still create
 | global_imports | String | Input parameter. A comma-separated list of modules to import globally, such as `math,pandas,numpy`. |
 | python_code | Code | Input parameter. The Python code to execute. Only modules specified in Global Imports can be used. |
 | results | Data | Output parameter. The output of the executed Python code, including any printed results or errors. |
-
-### Legacy Python components
-
-As of Langflow version 1.5, the **Python Interpreter** component replaces the following legacy Python components.
-You can still use these components in your flows, but they are no longer supported and can be removed in a future release.
-
-<details>
-<summary>Python REPL</summary>
-
-This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| name | String | Input parameter. The name of the tool. Default: `python_repl`. |
-| description | String | Input parameter. A description of the tool's functionality. |
-| global_imports | List[String] | Input parameter. A list of modules to import globally. Default: `math`. |
-| tool | Tool | Output parameter. A Python REPL tool for use in LangChain. |
-
-</details>
-
-<details>
-<summary>Python Code Structured</summary>
-
-This component creates a structured tool from Python code using a dataclass.
-
-The component dynamically updates its configuration based on the provided Python code, allowing for custom function arguments and descriptions.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| tool_code | String | Input parameter. The Python code for the tool's dataclass. |
-| tool_name | String | Input parameter. The name of the tool. |
-| tool_description | String | Input parameter. The description of the tool. |
-| return_direct | Boolean | Input parameter. Whether to return the function output directly. |
-| tool_function | String | Input parameter. The selected function for the tool. |
-| global_variables | Dict | Input parameter. Global variables or data for the tool. |
-| result_tool | Tool | Output parameter. A structured tool created from the Python code. |
-
-</details>
 
 ## Save file
 
@@ -978,6 +935,47 @@ It accepts the following parameters:
 Replace this legacy component with the [**Parser** component](#parser).
 
 This component converts and extracts JSON fields in `Message` and `Data` objects using JQ queries, then returns `filtered_data`, which is a list of `Data` objects.
+
+</details>
+
+<details>
+<summary>Python REPL</summary>
+
+Replace this legacy component with the [**Python Interpreter** component](#python-interpreter) or another processing or logic component.
+
+This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
+
+It accepts the following parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| name | String | Input parameter. The name of the tool. Default: `python_repl`. |
+| description | String | Input parameter. A description of the tool's functionality. |
+| global_imports | List[String] | Input parameter. A list of modules to import globally. Default: `math`. |
+| tool | Tool | Output parameter. A Python REPL tool for use in LangChain. |
+
+</details>
+
+<details>
+<summary>Python Code Structured</summary>
+
+Replace this legacy component with the [**Python Interpreter** component](#python-interpreter) or another processing or logic component.
+
+This component creates a structured tool from Python code using a dataclass.
+
+The component dynamically updates its configuration based on the provided Python code, allowing for custom function arguments and descriptions.
+
+It accepts the following parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| tool_code | String | Input parameter. The Python code for the tool's dataclass. |
+| tool_name | String | Input parameter. The name of the tool. |
+| tool_description | String | Input parameter. The description of the tool. |
+| return_direct | Boolean | Input parameter. Whether to return the function output directly. |
+| tool_function | String | Input parameter. The selected function for the tool. |
+| global_variables | Dict | Input parameter. Global variables or data for the tool. |
+| result_tool | Tool | Output parameter. A structured tool created from the Python code. |
 
 </details>
 

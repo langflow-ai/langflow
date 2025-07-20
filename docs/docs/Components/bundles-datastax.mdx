@@ -149,10 +149,10 @@ The **Data** output is used when directly querying Astra DB, while the **Tool** 
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
-Instead, use the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store).
+Instead, use the [Astra DB vector store component](/components-vector-stores#astra-db).
 :::
 
-Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings through Astra DB's vectorize feature.
+Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db) to generate embeddings through Astra DB's vectorize feature.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
 For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
