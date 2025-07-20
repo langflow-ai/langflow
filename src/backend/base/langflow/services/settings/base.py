@@ -348,27 +348,28 @@ class Settings(BaseSettings):
 
             # Get the config directory for the application
             config_dir = user_config_dir(app_name, app_author)
-            
+
             # Check if we need to migrate from cache to config directory
             cache_dir = user_cache_dir(app_name, app_author)
             cache_path = Path(cache_dir)
             config_path = Path(config_dir)
-            
+
             # If cache directory exists but config doesn't, we need to migrate
             if cache_path.exists() and not config_path.exists():
                 logger.info(f"Migrating data from cache directory {cache_path} to config directory {config_path}")
                 try:
                     # Create config directory
                     config_path.mkdir(parents=True, exist_ok=True)
-                    
+
                     # Copy all contents from cache to config
                     import shutil
+
                     for item in cache_path.iterdir():
                         if item.is_file():
                             shutil.copy2(item, config_path / item.name)
                         elif item.is_dir():
                             shutil.copytree(item, config_path / item.name, dirs_exist_ok=True)
-                    
+
                     logger.info("Successfully migrated data to config directory")
                 except Exception as e:
                     logger.error(f"Failed to migrate data from cache to config directory: {e}")
