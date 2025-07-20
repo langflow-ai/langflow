@@ -1,11 +1,23 @@
 ---
-title: Processing components
+title: Processing
 slug: /components-processing
 ---
 
 import Icon from "@site/src/components/icon";
 
-Processing components process and transform data within a flow, like converting `Data` to text with a [Parser](#parser) component, filtering data with natural language with the [Smart function](#smart-function), or saving data to your local machine with [Save File](#save-file).
+Langflow's processing components process and transform data within a flow.
+
+They have many uses, including:
+
+* Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
+* Extract content from larger chunks of data with a [**Parser** component](#parser).
+* Filter data with natural language with the [**Smart Function** component](#smart-function).
+* Save data to your local machine with the [**Save File** component](#save-file).
+* Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
+
+## Prompt Template
+
+See [Prompt Template](/components-prompts).
 
 ## Batch Run
 
@@ -799,447 +811,218 @@ Ozone Pollution and Global Warming: A recent study highlights that ozone polluti
 
 </details>
 
-## Legacy components
+## Legacy processing components
 
-**Legacy** components are available for use but are no longer supported.
+The following processing components are legacy components.
+You can still use them in your flows, but they are no longer supported and can be removed in a future release.
 
-### Alter metadata
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-Instead, use the [Data operations](#data-operations) component.
-:::
-
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/data-types#message) and [Data](/data-types#data) objects, and can also create a new Data object from user-provided text.
+Replace these components with suggested alternatives as soon as possible.
 
 <details>
-<summary>Parameters</summary>
+<summary>Alter Metadata</summary>
 
-**Inputs**
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_value | Input | Objects to which Metadata should be added. |
-| text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/data-types#data) object. Empty text entries are ignored. |
-| metadata | Metadata | Metadata to add to each object. |
-| remove_fields | Fields to Remove | Metadata fields to remove. |
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both `Message` and `Data` objects, and can also create a new `Data` object from user-provided text.
 
-**Outputs**
+It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of Input objects, each with added metadata. |
+| input_value | Input | Input parameter. Objects to which Metadata should be added. |
+| text_in | User Text | Input parameter. Text input; the value is contained in the 'text' attribute of the `Data` object. Empty text entries are ignored. |
+| metadata | Metadata | Input parameter. Metadata to add to each object. |
+| remove_fields | Fields to Remove | Input parameter. Metadata fields to remove. |
+| data | Data | Output parameter. List of Input objects, each with added metadata. |
 
 </details>
 
-### Combine data
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-Prior to Langflow version 1.1.3, this component was named **Merge Data**.
-:::
-
-This component combines multiple data sources into a single unified [Data](/data-types#data) object.
-
-The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
-
 <details>
-<summary>Parameters</summary>
+<summary>Combine Data/Merge Data</summary>
 
-**Inputs**
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A list of data objects to be merged. |
+This component combines multiple data sources into a single unified `Data` object.
 
-**Outputs**
+The component iterates through a list of `Data` objects, merging them into a single `Data` object (`merged_data`).
+If the input list is empty, it returns an empty data object.
+If there's only one input data object, it returns that object unchanged.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| merged_data | Merged Data | A single [Data](/data-types#data) object containing the combined information from all input data objects. |
+The merging process uses the addition operator to combine data objects.
 
 </details>
 
-
-### Combine text
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
-This component concatenates two text sources into a single text chunk using a specified delimiter.
-
-1. To use this component in a flow, connect two components that output [Messages](/data-types#message) to the **Combine Text** component's **First Text** and **Second Text** inputs.
-This example uses two **Text Input** components.
-
-![Combine text component](/img/component-combine-text.png)
-
-2. In the **Combine Text** component, in the **Text** fields of both **Text Input** components, enter some text to combine.
-3. In the **Combine Text** component, enter an optional **Delimiter** value.
-The delimiter character separates the combined texts.
-This example uses `\n\n **end first text** \n\n **start second text** \n\n` to label the texts and create newlines between them.
-4. Connect a **Chat Output** component to view the text combination.
-5. Click **Playground**, and then click **Run Flow**.
-The combined text appears in the **Playground**.
-```text
-This is the first text. Let's combine text!
-end first text
-start second text
-Here's the second part. We'll see how combining text works.
-```
-
 <details>
-<summary>Parameters</summary>
+<summary>Combine Text</summary>
 
-**Inputs**
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| first_text | First Text | The first text input to concatenate. |
-| second_text | Second Text | The second text input to concatenate. |
-| delimiter | Delimiter | A string used to separate the two text inputs. The default is a space. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| message | Message | A Message object containing the combined text. |
+This component concatenates two text inputs into a single text chunk using a specified delimiter, outputting a `Message` object with the combined text.
 
 </details>
 
-### Create data
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
-This component dynamically creates a [Data](/data-types#data) object with a specified number of fields.
-
 <details>
-<summary>Parameters</summary>
+<summary>Create Data</summary>
 
-**Inputs**
-| Name | Display Name | Info |
-|------|--------------|------|
-| number_of_fields | Number of Fields | The number of fields to be added to the record. |
-| text_key | Text Key | Key that identifies the field to be used as the text content. |
-| text_key_validator | Text Key Validator | If enabled, checks if the given `Text Key` is present in the given `Data`. |
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
-**Outputs**
+This component dynamically creates a `Data` object with a specified number of fields and a text key.
+
+It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A [Data](/data-types#data) object created with the specified fields and text key. |
+| number_of_fields | Number of Fields | Input parameter. The number of fields to be added to the record. |
+| text_key | Text Key | Input parameter. Key that identifies the field to be used as the text content. |
+| text_key_validator | Text Key Validator | Input parameter. If enabled, checks if the given `Text Key` is present in the given `Data`. |
 
 </details>
 
-### Data to DataFrame
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-This component converts one or multiple [Data](/data-types#data) objects into a [DataFrame](/data-types#dataframe). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
-
-1. To use this component in a flow, connect a component that outputs [Data](/data-types#data) to the **Data to Dataframe** component's input.
-This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
-2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
-
-![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
-
-3. Send a POST request to the **Webhook** containing your JSON data.
-Replace `YOUR_FLOW_ID` with your flow ID.
-This example uses the default Langflow server address.
-```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "text": "Alex Cruz - Employee Profile",
-    "data": {
-        "Name": "Alex Cruz",
-        "Role": "Developer",
-        "Department": "Engineering"
-    }
-}'
-```
-
-4. In the **Playground**, view the output of your flow.
-The **Data to DataFrame** component converts the webhook request into a `DataFrame`, with `text` and `data` fields as columns.
-```text
-| text                         | data                                                                    |
-|:-----------------------------|:------------------------------------------------------------------------|
-| Alex Cruz - Employee Profile | {'Name': 'Alex Cruz', 'Role': 'Developer', 'Department': 'Engineering'} |
-```
-
-5. Send another employee data object.
-```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "text": "Kalani Smith - Employee Profile",
-    "data": {
-        "Name": "Kalani Smith",
-        "Role": "Designer",
-        "Department": "Design"
-    }
-}'
-```
-
-6. In the **Playground**, this request is also converted to `DataFrame`.
-```text
-| text                            | data                                                                 |
-|:--------------------------------|:---------------------------------------------------------------------|
-| Kalani Smith - Employee Profile | {'Name': 'Kalani Smith', 'Role': 'Designer', 'Department': 'Design'} |
-```
-
 <details>
-<summary>Parameters</summary>
+<summary>Extract Key</summary>
 
-**Inputs**
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| data_list | Data or Data List | One or multiple Data objects to transform into a DataFrame. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| dataframe | DataFrame | A DataFrame built from each Data object's fields plus a text column. |
+This component extracts a specific key from a `Data` object and returns the value associated with that key.
 
 </details>
 
-### Filter data
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-Instead, use the [Data operations](#data-operations) component.
-:::
-
-This component filters a [Data](/data-types#data) object based on a list of keys.
-
 <details>
-<summary>Parameters</summary>
+<summary>Data to DataFrame/Data to Message</summary>
 
-**Inputs**
+Replace these legacy components with newer processing components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The Data object to filter. |
-| filter_criteria | Filter Criteria | A list of keys to filter by. |
+These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
 
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | A new Data object containing only the key-value pairs that match the filter criteria. |
+For the **Data to DataFrame** component, each `Data` object corresponds to one row in the resulting `DataFrame`.
+Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a `text` column.
 
 </details>
 
-### Filter values
+<details>
+<summary>Filter Data</summary>
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-Instead, use the [Data operations](#data-operations) component.
-:::
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component filters a `Data` object based on a list of keys (`filter_criteria`), returning a new `Data` object (`filtered_data`) that contains only the key-value pairs that match the filter criteria.
+
+</details>
+
+<details>
+<summary>Filter Values</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
 The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_data | Input data | The list of data items to filter. |
-| filter_key | Filter Key | The key to filter on. |
-| filter_value | Filter Value | The value to filter by. |
-| operator | Comparison Operator | The operator to apply for comparing the values. |
-
-**Outputs**
+It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered data | The resulting list of filtered data items. |
+| input_data | Input data | Input parameter. The list of data items to filter. |
+| filter_key | Filter Key | Input parameter. The key to filter on. |
+| filter_value | Filter Value | Input parameter. The value to filter by. |
+| operator | Comparison Operator | Input parameter. The operator to apply for comparing the values. |
+| filtered_data | Filtered data | Output parameter. The resulting list of filtered data items. |
 
 </details>
 
-### JSON cleaner
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
-The JSON cleaner component cleans JSON strings to ensure they are fully compliant with the JSON specification.
-
 <details>
-<summary>Parameters</summary>
+<summary>JSON Cleaner</summary>
 
-**Inputs**
+Replace this legacy component with the [**Parser** component](#parser).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| json_str | JSON String | The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
-| remove_control_chars | Remove Control Characters | If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
-| normalize_unicode | Normalize Unicode | When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
-| validate_json | Validate JSON | If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+This component cleans JSON strings to ensure they are fully compliant with the JSON specification.
 
-**Outputs**
+It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| output | Cleaned JSON String | The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
+| json_str | JSON String | Input parameter. The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
+| remove_control_chars | Remove Control Characters | Input parameter. If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
+| normalize_unicode | Normalize Unicode | Input parameter. When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
+| validate_json | Validate JSON | Input parameter. If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+| output | Cleaned JSON String | Output parameter. The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
 
 </details>
 
-### Message to data
-
-This component converts [Message](/data-types#message) objects to [Data](/data-types#data) objects.
-
 <details>
-<summary>Parameters</summary>
+<summary>Message to Data</summary>
 
-**Inputs**
+Replace this legacy component with the [**Type Convert** component](#type-convert).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| message | Message | The Message object to convert to a Data object. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The converted Data object. |
+This component converts `Message` objects to `Data` objects.
 
 </details>
 
-### Parse DataFrame
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-Instead, use the [Parser](#parser) component.
-:::
-
-This component converts DataFrames into plain text using templates.
-
 <details>
-<summary>Parameters</summary>
+<summary>Parse DataFrame</summary>
 
-**Inputs**
+Replace this legacy component with the [**DataFrame Operations** component](#dataframe-operations) or [**Parser** component](#parser).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| df | DataFrame | The DataFrame to convert to text rows. |
-| template | Template | Template for formatting (use `{column_name}` placeholders). |
-| sep | Separator | String to join rows in output. |
+This component converts `DataFrame` objects into plain text using templates.
 
-**Outputs**
+It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| text | Text | All rows combined into single text. |
+| df | DataFrame | Input parameter. The DataFrame to convert to text rows. |
+| template | Template | Input parameter. Template for formatting (use `{column_name}` placeholders). |
+| sep | Separator | Input parameter. String to join rows in output. |
+| text | Text | Output parameter. All rows combined into single text. |
 
 </details>
 
-### Parse JSON
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
-This component converts and extracts JSON fields using JQ queries.
-
 <details>
-<summary>Parameters</summary>
+<summary>Parse JSON</summary>
 
-**Inputs**
+Replace this legacy component with the [**Parser** component](#parser).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_value | Input | Data object to filter ([Message](/data-types#message) or [Data](/data-types#data)). |
-| query | JQ Query | JQ Query to filter the data |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | Filtered data as list of [Data](/data-types#data) objects. |
+This component converts and extracts JSON fields in `Message` and `Data` objects using JQ queries, then returns `filtered_data`, which is a list of `Data` objects.
 
 </details>
 
-### Regex extractor
+<details>
+<summary>Regex Extractor</summary>
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
+Replace this legacy component with the [**Parser** component](#parser).
 
 This component extracts patterns in text using regular expressions. It can be used to find and extract specific patterns or information in text.
 
-To use this component in a flow:
-
-1. Connect the **Regex Extractor** to a **URL** component and a **Chat Output** component.
-
-2. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
-This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`:
-```
-In the news\s*\n(.*?)(?=\n\n)
-```
-
-Result:
-```
-Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
-```
-
-### Select data
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
-This component selects a single [Data](/data-types#data) item from a list.
+</details>
 
 <details>
-<summary>Parameters</summary>
+<summary>Select Data</summary>
 
-**Inputs**
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| data_list | Data List | List of data to select from |
-| data_index | Data Index | Index of the data to select |
+This component selects a single `Data` object from a list.
 
-**Outputs**
+It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| selected_data | Selected Data | The selected [Data](/data-types#data) object. |
+| data_list | Data List | Input parameter. List of data to select from |
+| data_index | Data Index | Input parameter. Index of the data to select |
+| selected_data | Selected Data | Output parameter. The selected `Data` object. |
 
 </details>
 
-### Update data
+<details>
+<summary>Update Data</summary>
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
+Replace this legacy component with the [**Data Operations** component](#data-operations).
 
 This component dynamically updates or appends data with specified fields.
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
+It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| old_data | Data | The records to update. |
-| number_of_fields | Number of Fields | The number of fields to add. The maximum is 15. |
-| text_key | Text Key | The key for text content. |
-| text_key_validator | Text Key Validator | Validates the text key presence. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The updated Data objects. |
+| old_data | Data | Input parameter. The records to update. |
+| number_of_fields | Number of Fields | Input parameter. The number of fields to add. The maximum is 15. |
+| text_key | Text Key | Input parameter. The key for text content. |
+| text_key_validator | Text Key Validator | Input parameter. Validates the text key presence. |
+| data | Data | Output parameter. The updated Data objects. |
 
 </details>
-

@@ -3,11 +3,11 @@ title: Logic
 slug: /components-logic
 ---
 
-# Logic components in Langflow
+Langflow's logic components provide functionalities for routing, conditional processing, and flow management.
 
-Logic components provide functionalities for routing, conditional processing, and flow management.
+## If-Else (conditional router) {#if-else}
 
-## Conditional router (If-Else component)
+The **If-Else** component is a conditional router.
 
 This component routes messages by comparing two strings.
 It evaluates a condition by comparing two text inputs using the specified operator and routes the message to `true_result` or `false_result`.
@@ -93,6 +93,8 @@ All options respect the `case_sensitive` setting except **regex**.
 - **ends with**: Checks if input_text ends with match_text.
 - **regex**: Performs regular expression matching. It is always case sensitive and ignores the case_sensitive setting.
 
+## Listen
+
 ## Loop
 
 :::tip
@@ -135,6 +137,8 @@ Follow along with this step-by-step video guide for creating this flow and addin
 
 </details>
 
+## Notify
+
 ## Run flow
 
 This component allows you to run any flow stored in your Langflow database without opening the flow editor.
@@ -172,129 +176,87 @@ Your flow should now look like this:
 
 </details>
 
-## Legacy components
+## Legacy logic components
 
-**Legacy** components are available for use but are no longer supported.
+The following logic components are legacy components.
+You can still use them in your flows, but they are no longer supported and can be removed in a future release.
 
-### Data Conditional Router
-
-:::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
-:::
-
-This component routes `Data` objects based on a condition applied to a specified key, including boolean validation. It can process either a single Data object or a list of Data objects.
-
-This component is particularly useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
-
-#### Inputs
-
-| Name          | Type     | Description                                                                       |
-|---------------|----------|-----------------------------------------------------------------------------------|
-| data_input    | Data     | The Data object or list of Data objects to process. This input can handle both single items and lists. |
-| key_name      | String   | The name of the key in the Data object to check.                                  |
-| operator      | Dropdown | The operator to apply. Options: "equals", "not equals", "contains", "starts with", "ends with", "boolean validator". Default: "equals". |
-| compare_value | String   | The value to compare against. Not shown/used when operator is "boolean validator". |
-
-#### Outputs
-
-| Name         | Type        | Description                                          |
-|--------------|-------------|------------------------------------------------------|
-| true_output  | Data/List   | Output when the condition is met.                    |
-| false_output | Data/List   | Output when the condition is not met.                |
-
-#### Operator behavior
-
-- **equals**: Exact match comparison between the key's value and compare_value.
-- **not equals**: Inverse of exact match.
-- **contains**: Checks if compare_value is found within the key's value.
-- **starts with**: Checks if the key's value begins with compare_value.
-- **ends with**: Checks if the key's value ends with compare_value.
-- **boolean validator**: Treats the key's value as a boolean. The following values are considered true:
-  - Boolean `true`.
-  - Strings: "true", "1", "yes", "y", "on" (case-insensitive).
-  - Any other value is converted using Python's `bool()` function.
-
-#### List processing
-
-The following actions occur when processing a list of Data objects:
-- Each object in the list is evaluated individually
-- Objects meeting the condition go to true_output
-- Objects not meeting the condition go to false_output
-- If all objects go to one output, the other output is empty
-
-### Pass
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
-This component forwards the input message, unchanged.
+Replace these components with suggested alternatives as soon as possible.
+Components marked deprecated in addition to legacy should be replaced immediately.
 
 <details>
-<summary>Parameters</summary>
+<summary>Condition/Data Conditional Router</summary>
 
-**Inputs**
+As an alternative to this legacy component, see the [**If-Else** component](#if-else).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_message | Input Message | The message to forward. |
-| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
+The **Condition** component routes `Data` objects based on a condition applied to a specified key, including Boolean validation.
+It supports `true_output` and `false_output` for routing the results based on the condition evaluation.
 
-**Outputs**
+This component is useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| output_message | Output Message | The forwarded message from the input. |
+It can process either a single `Data` object or a list of `Data` objects.
+The following actions occur when processing a list of `Data` objects:
+
+- Each object in the list is evaluated individually.
+- Objects meeting the condition go to `true_output`.
+- Objects not meeting the condition go to `false_output`.
+- If all objects go to one output, the other output is empty.
+
+The **Condition** component accepts the following parameters:
+
+| Name          | Type     | Description                                 |
+|---------------|----------|---------------------------------------------|
+| data_input    | Data     | Input parameter. The Data object or list of Data objects to process. This input can handle both single items and lists. |
+| key_name      | String   | Input parameter. The name of the key in the Data object to check.     |
+| operator      | Dropdown | Input parameter. The operator to apply. Options: `equals`, `not equals`, `contains`, `starts with`, `ends with`, `boolean validator`. Default: `equals`. |
+| compare_value | String   | Input parameter. The value to compare against. Not shown/used when operator is `boolean validator`. |
+
+The `operator` options have the following behaviors:
+
+- `equals`: Exact match comparison between the key's value and compare_value.
+- `not equals`: Inverse of exact match.
+- `contains`: Checks if compare_value is found within the key's value.
+- `starts with`: Checks if the key's value begins with compare_value.
+- `ends with`: Checks if the key's value ends with compare_value.
+- `boolean validator`: Treats the key's value as a Boolean. The following values are considered true:
+  - Boolean `true`.
+  - Strings: `true`, `1`, `yes`, `y`, `on` (case-insensitive)
+  - Any other value is converted using Python's `bool()` function
 
 </details>
 
-## Deprecated components
+<details>
+<summary>Pass</summary>
 
-Deprecated components have been replaced by newer alternatives and should not be used in new projects.
+As an alternative to this legacy component, use the [**If-Else** component](#if-else) to pass a message without modification.
 
-### Flow as tool {#flow-as-tool}
+The **Pass** component forwards the input message without modification.
 
-:::important
-This component is deprecated as of Langflow version 1.1.2.
-Instead, use the [Run flow component](/components-logic#run-flow)
-:::
+It accepts the following parameters:
 
-This component constructs a tool from a function that runs a loaded flow.
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | Input parameter. The message to forward. |
+| ignored_message | Ignored Message | Input parameter. A second message that is ignored. Used as a workaround for continuity. |
+| output_message | Output Message | Output parameter. The forwarded message from the input. |
 
-#### Inputs
+</details>
 
-| Name             | Type     | Description                                                |
-|------------------|----------|------------------------------------------------------------|
-| flow_name        | Dropdown | The name of the flow to run.                               |
-| tool_name        | String   | The name of the tool.                                      |
-| tool_description | String   | The description of the tool.                               |
-| return_direct    | Boolean  | If true, returns the result directly from the tool.        |
+<details>
+<summary>Flow As Tool (deprecated)</summary>
 
-#### Outputs
+This component constructed a tool from a function that ran a loaded flow.
 
-| Name           | Type | Description                            |
-|----------------|------|----------------------------------------|
-| api_build_tool | Tool | The constructed tool from the flow.    |
+It was deprecated in Langflow version 1.1.2 and replaced by the [**Run Flow** component](#run-flow).
 
-### Sub flow
+</details>
 
-:::important
-This component is deprecated as of Langflow version 1.1.2.
-Instead, use the [Run flow component](/components-logic#run-flow)
-:::
+<details>
+<summary>Sub Flow (deprecated)</summary>
 
-This `SubFlowComponent` generates a component from a flow with all of its inputs and outputs.
+This component integrated entire flows as components within a larger workflow.
+It dynamically generated inputs based on the selected flow and executed the flow with provided parameters.
 
-This component can integrate entire flows as components within a larger workflow. It dynamically generates inputs based on the selected flow and executes the flow with provided parameters.
+It was deprecated in Langflow version 1.1.2 and replaced by the [**Run Flow** component](#run-flow).
 
-#### Inputs
-
-| Name      | Type     | Description                        |
-|-----------|----------|------------------------------------|
-| flow_name | Dropdown | The name of the flow to run.       |
-
-#### Outputs
-
-| Name         | Type        | Description                           |
-|--------------|-------------|---------------------------------------|
-| flow_outputs | List[Data]  | The outputs generated from the flow.  |
+</details>
