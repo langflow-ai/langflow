@@ -9,29 +9,27 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **MariTalk** bundle.
 
-### MariTalk
+For more information, see the [MariTalk documentation](https://www.maritalk.com/).
 
-This component generates text using MariTalk LLMs.
+## MariTalk text generation
 
-For more information, see [MariTalk documentation](https://www.maritalk.com/).
+The **MariTalk** component generates text using MariTalk LLMs.
 
-<details>
-<summary>Parameters</summary>
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-**Inputs**
+Use the **Language Model** output when you want to use a MariTalk model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
 
-| Name | Type | Description |
-|------|------|-------------|
-| max_tokens | Integer | The maximum number of tokens to generate. Set to `0` for unlimited tokens. Default: `512`. |
-| model_name | String | The name of the MariTalk model to use. Options: `sabia-2-small`, `sabia-2-medium`. Default: `sabia-2-small`. |
-| api_key | SecretString | The MariTalk API Key to use for authentication. |
-| temperature | Float | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.5`. |
-| endpoint_url | String | The MariTalk API endpoint. Default: `https://api.maritalk.com`. |
+For more information, see [**Language Model** components](/components-models).
 
-**Outputs**
+### MariTalk text generation parameters
+
+Many **MariTalk** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | LanguageModel | An instance of ChatMariTalk configured with the specified parameters. |
-
-</details>
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to `0` for unlimited tokens. Default: `512`. |
+| model_name | String | Input parameter. The name of the MariTalk model to use. Options: `sabia-2-small`, `sabia-2-medium`. Default: `sabia-2-small`. |
+| api_key | SecretString | Input parameter. The MariTalk API Key to use for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.5`. |
+| endpoint_url | String | Input parameter. The MariTalk API endpoint. Default: `https://api.maritalk.com`. |

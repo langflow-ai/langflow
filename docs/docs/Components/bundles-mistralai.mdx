@@ -1,60 +1,61 @@
-### MistralAI
+---
+title: MistralAI
+slug: /bundles-mistralai
+---
 
-This component generates text using MistralAI LLMs.
+import Icon from "@site/src/components/icon";
 
-For more information, see [Mistral AI documentation](https://docs.mistral.ai/).
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-<details>
-<summary>Parameters</summary>
+This page describes the components that are available in the **MistralAI** bundle.
 
-**Inputs**
+For more information about MistralAI features and functionality used by MistralAI components, see the [MistralAI documentation](https://docs.mistral.ai).
+
+## MistralAI text generation
+
+The **MistralAI** component generates text using MistralAI LLMs.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Vertex AI model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### MistralAI text generation parameters
+
+Many **MistralAI** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens (advanced). |
-| model_name | String | The name of the Mistral AI model to use. Options include `open-mixtral-8x7b`, `open-mixtral-8x22b`, `mistral-small-latest`, `mistral-medium-latest`, `mistral-large-latest`, and `codestral-latest`. Default: `codestral-latest`. |
-| mistral_api_base | String | The base URL of the Mistral API. Defaults to `https://api.mistral.ai/v1` (advanced). |
-| api_key | SecretString | The Mistral API Key to use for authentication. |
-| temperature | Float | Controls randomness in the output. Default: 0.5. |
-| max_retries | Integer | Maximum number of retries for API calls. Default: 5 (advanced). |
-| timeout | Integer | Timeout for API calls in seconds. Default: 60 (advanced). |
-| max_concurrent_requests | Integer | Maximum number of concurrent API requests. Default: 3 (advanced). |
-| top_p | Float | Nucleus sampling parameter. Default: 1 (advanced). |
-| random_seed | Integer | Seed for random number generation. Default: 1 (advanced). |
-| safe_mode | Boolean | Enables safe mode for content generation (advanced). |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens (advanced). |
+| model_name | String | Input parameter. The name of the Mistral AI model to use. Options include `open-mixtral-8x7b`, `open-mixtral-8x22b`, `mistral-small-latest`, `mistral-medium-latest`, `mistral-large-latest`, and `codestral-latest`. Default: `codestral-latest`. |
+| mistral_api_base | String | Input parameter. The base URL of the Mistral API. Defaults to `https://api.mistral.ai/v1` (advanced). |
+| api_key | SecretString | Input parameter. The Mistral API Key to use for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: 0.5. |
+| max_retries | Integer | Input parameter. Maximum number of retries for API calls. Default: 5 (advanced). |
+| timeout | Integer | Input parameter. Timeout for API calls in seconds. Default: 60 (advanced). |
+| max_concurrent_requests | Integer | Input parameter. Maximum number of concurrent API requests. Default: 3 (advanced). |
+| top_p | Float | Input parameter. Nucleus sampling parameter. Default: 1 (advanced). |
+| random_seed | Integer | Input parameter. Seed for random number generation. Default: 1 (advanced). |
+| safe_mode | Boolean | Input parameter. Enables safe mode for content generation (advanced). |
 
-**Outputs**
+## MistralAI Embeddings
 
-| Name | Type | Description |
-|------|------|-------------|
-| model | LanguageModel | An instance of ChatMistralAI configured with the specified parameters. |
-
-</details>
-
-### Mistral AI Embeddings
-
-The **MistralAI Embeddings** component generates embeddings using [MistralAI](https://docs.mistral.ai/) models.
+The **MistralAI Embeddings** component generates embeddings using MistralAI models.
 
 For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
 
-<details>
-<summary>Parameters</summary>
+### MistralAI Embeddings parameters
 
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| model | String | The MistralAI model to use. Default: "mistral-embed". |
-| mistral_api_key | SecretString | The API key for authenticating with MistralAI. |
-| max_concurrent_requests | Integer | The maximum number of concurrent API requests. Default: 64. |
-| max_retries | Integer | The maximum number of retry attempts for failed requests. Default: 5. |
-| timeout | Integer | The request timeout in seconds. Default: 120. |
-| endpoint | String | The custom API endpoint URL. Default: `https://api.mistral.ai/v1/`). |
-
-**Outputs**
+Many **MistralAI Embeddings** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| embeddings | Embeddings | A MistralAIEmbeddings instance for generating embeddings. |
-
-</details>
+| model | String | Input parameter. The MistralAI model to use. Default: "mistral-embed". |
+| mistral_api_key | SecretString | Input parameter. The API key for authenticating with MistralAI. |
+| max_concurrent_requests | Integer | Input parameter. The maximum number of concurrent API requests. Default: 64. |
+| max_retries | Integer | Input parameter. The maximum number of retry attempts for failed requests. Default: 5. |
+| timeout | Integer | Input parameter. The request timeout in seconds. Default: 120. |
+| endpoint | String | Input parameter. The custom API endpoint URL. Default: `https://api.mistral.ai/v1/`. |

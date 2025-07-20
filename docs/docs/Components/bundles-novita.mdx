@@ -1,28 +1,35 @@
-### Novita AI
+---
+title: Novita
+slug: /bundles-novita
+---
 
-This component generates text using Novita AI's language models.
+import Icon from "@site/src/components/icon";
 
-For more information, see [Novita AI documentation](https://novita.ai/docs/model-api/reference/llm/llm.html?utm_source=github_langflow&utm_medium=github_readme&utm_campaign=link).
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-<details>
-<summary>Parameters</summary>
+This page describes the components that are available in the **Novita** bundle.
 
-**Inputs**
+## Novita AI
+
+This component generates text using [Novita's language models](https://novita.ai/docs/guides/llm-api).
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Novita model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### Novita AI parameters
+
+Many **Novita AI** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| api_key | SecretString | Your Novita AI API Key. |
-| model | String | The id of the Novita AI model to use. |
-| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
-| temperature | Float | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
-| top_p | Float | Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
-| frequency_penalty | Float | Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
-| presence_penalty | Float | Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| model | LanguageModel | An instance of Novita AI model configured with the specified parameters. |
-
-</details>
+| api_key | SecretString | Input parameter. Your Novita AI API Key. |
+| model | String | Input parameter. The id of the Novita AI model to use. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| top_p | Float | Input parameter. Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
+| frequency_penalty | Float | Input parameter. Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
+| presence_penalty | Float | Input parameter. Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |

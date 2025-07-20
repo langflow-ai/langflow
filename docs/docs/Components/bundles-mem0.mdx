@@ -9,31 +9,31 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **Mem0** bundle.
 
-### Mem0 Chat Memory
+## Mem0 Chat Memory
 
-The Mem0 Chat Memory component retrieves and stores chat messages using Mem0 memory storage.
+The **Mem0 Chat Memory** component retrieves and stores chat messages using Mem0 memory storage.
 
-<details>
-<summary>Parameters</summary>
+### Mem0 Chat Memory parameters
 
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| mem0_config | Mem0 Configuration | The configuration dictionary for initializing the Mem0 memory instance. |
-| ingest_message | Message to Ingest | The message content to be ingested into Mem0 memory. |
-| existing_memory | Existing Memory Instance | An optional existing Mem0 memory instance. |
-| user_id | User ID | The identifier for the user associated with the messages. |
-| search_query | Search Query | The input text for searching related memories in Mem0. |
-| mem0_api_key | Mem0 API Key | The API key for the Mem0 platform. Leave empty to use the local version. |
-| metadata | Metadata | The additional metadata to associate with the ingested message. |
-| openai_api_key | OpenAI API Key | The API key for OpenAI. Required when using OpenAI embeddings without a provided configuration. |
-
-**Outputs**
+Many **Mem0 Chat Memory** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| memory | Mem0 Memory | The resulting Mem0 Memory object after ingesting data. |
-| search_results | Search Results | The search results from querying Mem0 memory. |
+| mem0_config | Mem0 Configuration | Input parameter. The configuration dictionary for initializing the Mem0 memory instance. |
+| ingest_message | Message to Ingest | Input parameter. The message content to be ingested into Mem0 memory. |
+| existing_memory | Existing Memory Instance | Input parameter. An optional existing Mem0 memory instance. |
+| user_id | User ID | Input parameter. The identifier for the user associated with the messages. |
+| search_query | Search Query | Input parameter. The input text for searching related memories in Mem0. |
+| mem0_api_key | Mem0 API Key | Input parameter. The API key for the Mem0 platform. Leave empty to use the local version. |
+| metadata | Metadata | Input parameter. The additional metadata to associate with the ingested message. |
+| openai_api_key | OpenAI API Key | Input parameter. The API key for OpenAI. Required when using OpenAI embeddings without a provided configuration. |
 
-</details>
+### Mem0 Chat Memory output
+
+The **Mem0 Chat Memory** component can output either **Mem0 Memory** ([`Memory`](/data-types#memory)) or **Search Results** ([`Data`](/data-types#data)).
+You can select the output type near the component's output port.
+
+Use **Mem0 Chat Memory** for memory storage and retrieval operations with the [**Message History** component](/components-helpers#message-history).
+
+Use the **Search Results** output to retrieve specific memories based on a search query.
