@@ -6,6 +6,6 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
 
 
-def generate_script_from_graph(graph: "Graph"):
-    script = generate_script(entry=graph.entry, exit=graph.exit, instances=graph.sort_components())
+def generate_script_from_graph(graph: Graph):
+    script = generate_script(start=graph._start, end=graph._end, instances=graph.sort_components())
     return script

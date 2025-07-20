@@ -16,5 +16,4 @@ def generate_import_statement(instance):
     if len(parts) > 2:
         module_path = ".".join(parts)
         return f"from {module_path} import {class_name}"
-    else:
-        return f"from {module_path} import {class_name}"
+    return f"from {module_path} import {class_name}"

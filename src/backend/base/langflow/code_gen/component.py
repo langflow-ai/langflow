@@ -5,7 +5,7 @@ def generate_call_string(instance):
     variable_name = get_variable_name(instance)
     if hasattr(instance, "_call_inputs"):
         args = ", ".join(
-            f"{key}={get_variable_name(value.__self__)}.{value.__name__}" if callable(value) else f"{key}={repr(value)}"
+            f"{key}={get_variable_name(value.__self__)}.{value.__name__}" if callable(value) else f"{key}={value!r}"
             for key, value in instance._call_inputs.items()
         )
         if args:
@@ -23,11 +23,11 @@ def generate_instantiation_string(instance):
     return f"{variable_name} = {class_name}(_id='{instance_id}')"
 
 
-def generate_graph_instantiation_string(entry, _exit):
-    return f"graph = Graph(entry={get_variable_name(entry)}, exit={get_variable_name(_exit)})"
+def generate_graph_instantiation_string(start, end):
+    return f"graph = Graph(start={get_variable_name(start)}, end={get_variable_name(end)})"
 
 
-def generate_script(*, instances, entry=None, exit=None):
+def generate_script(*, instances, start=None, end=None):
     import_statements = set()
     instantiation_strings = []
     call_strings = []
@@ -40,10 +40,10 @@ def generate_script(*, instances, entry=None, exit=None):
         if call_string:
             call_strings.append(call_string)
 
-    if entry is None or exit is None:
+    if start is None or end is None:
         graph_instantiation_code = ""
     else:
-        graph_instantiation_code = generate_graph_instantiation_string(entry, exit)
+        graph_instantiation_code = generate_graph_instantiation_string(start, end)
         # Add Graph import statement to the beginning of the script
         import_statements.add("from langflow.graph.graph.base import Graph")
     import_code = "\n".join(sorted(import_statements))

@@ -785,7 +785,7 @@ class Vertex:
             # Run steps
             for step in self.steps:
                 if step not in self.steps_ran:
-                        await step(user_id=user_id, event_manager=event_manager, **kwargs)
+                    await step(user_id=user_id, event_manager=event_manager, **kwargs)
                     self.steps_ran.append(step)
 
             self.finalize_build()

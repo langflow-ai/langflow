@@ -490,7 +490,7 @@ class Component(CustomComponent):
                 msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
             try:
-            self._inputs[input_.name] = deepcopy(input_)
+                self._inputs[input_.name] = deepcopy(input_)
             except TypeError:
                 self._inputs[input_.name] = input_
 
@@ -559,8 +559,8 @@ class Component(CustomComponent):
         if output.method is None:
             msg = f"Output {output.name} does not have a method"
             raise ValueError(msg)
-            return_types = self._get_method_return_type(output.method)
-            output.add_types(return_types)
+        return_types = self._get_method_return_type(output.method)
+        output.add_types(return_types)
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
@@ -687,7 +687,6 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, input_)
         else:
             self._set_parameter_or_attribute(key, value)
-        self._set_call_inputs(key, value)
 
     def _is_loop_connection(self, key: str, value) -> bool:
         """Check if this is a loop feedback connection.
@@ -866,7 +865,7 @@ class Component(CustomComponent):
                 )
                 raise ValueError(msg)
             try:
-            self._inputs[name].value = value
+                self._inputs[name].value = value
             except Exception as e:
                 msg = f"Error setting input value for {name}: {e}"
                 raise ValueError(msg) from e
@@ -911,9 +910,9 @@ class Component(CustomComponent):
         return frontend_node
 
     def to_frontend_node(self):
-        #! This part here is clunky but we need it like this for
-        #! backwards compatibility. We can change how prompt component
-        #! works and then update this later
+        # ! This part here is clunky but we need it like this for
+        # ! backwards compatibility. We can change how prompt component
+        # ! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
         for key in self._inputs:
@@ -1047,9 +1046,9 @@ class Component(CustomComponent):
         else:
             session_id = None
         try:
-        if self._tracing_service:
-            return await self._build_with_tracing()
-        return await self._build_without_tracing()
+            if self._tracing_service:
+                return await self._build_with_tracing()
+            return await self._build_without_tracing()
         except StreamingError as e:
             await self.send_error(
                 exception=e.cause,
@@ -1074,7 +1073,7 @@ class Component(CustomComponent):
         self._handle_tool_mode()
 
         for output in self._get_outputs_to_process():
-                    self._current_output = output.name
+            self._current_output = output.name
             result = await self._get_output_result(output)
             results[output.name] = result
             artifacts[output.name] = self._build_artifact(result)
@@ -1141,7 +1140,7 @@ class Component(CustomComponent):
         and returns the result. Raises a ValueError if the output method is not defined, or a TypeError
         if the method invocation fails.
         """
-                    if output.cache and output.value != UNDEFINED:
+        if output.cache and output.value != UNDEFINED:
             return output.value
 
         if output.method is None:
@@ -1155,15 +1154,15 @@ class Component(CustomComponent):
             msg = f'Error running method "{output.method}": {e}'
             raise TypeError(msg) from e
 
-                        if (
-                            self._vertex is not None
-                            and isinstance(result, Message)
-                            and result.flow_id is None
-                            and self._vertex.graph.flow_id is not None
-                        ):
-                            result.set_flow_id(self._vertex.graph.flow_id)
+        if (
+            self._vertex is not None
+            and isinstance(result, Message)
+            and result.flow_id is None
+            and self._vertex.graph.flow_id is not None
+        ):
+            result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-                        output.value = result
+        output.value = result
 
         return result
 
@@ -1190,15 +1189,15 @@ class Component(CustomComponent):
 
         The artifact includes a human-readable representation, the processed raw result, and its determined type.
         """
-                    custom_repr = self.custom_repr()
+        custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
-                        custom_repr = result
-                    if not isinstance(custom_repr, str):
-                        custom_repr = str(custom_repr)
+            custom_repr = result
+        if not isinstance(custom_repr, str):
+            custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
         artifact_type = get_artifact_type(self.status or raw, result)
-                    raw, artifact_type = post_process_raw(raw, artifact_type)
+        raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
@@ -1223,9 +1222,9 @@ class Component(CustomComponent):
         return result
 
     def _log_output(self, output):
-                    self._output_logs[output.name] = self._logs
-                    self._logs = []
-                    self._current_output = ""
+        self._output_logs[output.name] = self._logs
+        self._logs = []
+        self._current_output = ""
 
     def _finalize_results(self, results, artifacts):
         self._artifacts = artifacts

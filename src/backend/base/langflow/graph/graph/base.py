@@ -119,8 +119,6 @@ class Graph:
         self._first_layer: list[str] = []
         self._lock = asyncio.Lock()
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
-        self._entry = None
-        self._exit = None
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
         self._cycle_vertices: set[str] | None = None
@@ -272,61 +270,6 @@ class Graph:
 
         return component_id
 
-    def _find_entry(self):
-        # Find a vertex with a "ChatInput" component, overriding a "TextInput" component
-        found_entry = None
-        for vertex_id in self._is_input_vertices:
-            if "ChatInput" in vertex_id:
-                found_entry = vertex_id
-                break
-            elif found_entry is None and "TextInput" in vertex_id:
-                found_entry = vertex_id
-        vertex = self.get_vertex(found_entry) if found_entry else None
-        return vertex.get_component_instance() if vertex else None
-
-    @property
-    def entry(self):
-        if self._entry is None:
-            if entry := self._find_entry():
-                self._entry = entry
-            else:
-                raise ValueError(
-                    "Graph has no entry component or couldn't find a suitable entry component (e.g. ChatInput)"
-                )
-        return self._entry
-
-    def _find_exit(self):
-        # Find a vertex with a "ChatOutput" component, overriding a "TextOutput" component
-        found_exit = None
-        for vertex_id in self._is_output_vertices:
-            if "ChatOutput" in vertex_id:
-                found_exit = vertex_id
-                break
-            elif found_exit is None and "TextOutput" in vertex_id:
-                found_exit = vertex_id
-        vertex = self.get_vertex(found_exit) if found_exit else None
-
-        return vertex.get_component_instance() if vertex else None
-
-    @property
-    def exit(self):
-        if self._exit is None:
-            if _exit := self._find_exit():
-                self._exit = _exit
-            else:
-                raise ValueError("Graph has no exit component")
-        return self._exit
-
-    def _set_entry_and_exit(self, entry: "Component", exit: "Component"):
-        if not hasattr(entry, "to_frontend_node"):
-            raise TypeError(f"start must be a Component. Got {type(entry)}")
-        if not hasattr(exit, "to_frontend_node"):
-            raise TypeError(f"end must be a Component. Got {type(exit)}")
-        self._entry = entry
-        self._exit = exit
-        self.add_component(entry._id, entry)
-        self.add_component(exit._id, exit)
-
     def _set_start_and_end(self, start: Component, end: Component) -> None:
         if not hasattr(start, "to_frontend_node"):
             msg = f"start must be a Component. Got {type(start)}"
@@ -473,16 +416,16 @@ class Graph:
 
             try:
                 # Run the async generator
-        async_gen = self.async_start(inputs, max_iterations, event_manager)
+                async_gen = self.async_start(inputs, max_iterations, event_manager)
 
-        while True:
-            try:
+                while True:
+                    try:
                         # Get next result from async generator
                         result = loop.run_until_complete(anext(async_gen))
                         result_queue.put(result)
 
-                if isinstance(result, Finish):
-                break
+                        if isinstance(result, Finish):
+                            break
 
                     except StopAsyncIteration:
                         break
@@ -674,7 +617,7 @@ class Graph:
 
     async def initialize_run(self) -> None:
         if not self._run_id:
-        self.set_run_id()
+            self.set_run_id()
         if self.tracing_service:
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
@@ -1536,18 +1479,18 @@ class Graph:
                 logger.exception("Error building Component")
             raise
 
-            if vertex.result is not None:
+        if vertex.result is not None:
             params = f"{vertex.built_object_repr()}{params}"
-                valid = True
-                result_dict = vertex.result
-                artifacts = vertex.artifacts
-            else:
+            valid = True
+            result_dict = vertex.result
+            artifacts = vertex.artifacts
+        else:
             msg = f"Error building Component: no result found for vertex {vertex_id}"
             raise ValueError(msg)
 
         return VertexBuildResult(
-                result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
-            )
+            result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
+        )
 
     def get_vertex_edges(
         self,
@@ -2073,12 +2016,26 @@ class Graph:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
 
-    def _sort_vertices(
+    def sort_components(
+        self, stop_component_id: str | None = None, start_component_id: str | None = None
+    ) -> list[str]:
+        """Sorts the vertices in the graph."""
+        vertices_layers = self.sort_vertices(
+            stop_component_id=stop_component_id, start_component_id=start_component_id
+        )
+        # Now get all the vertices instances
+        vertices = [self.get_vertex(vertex_id) for vertex_id in vertices_layers]
+        # Now we need to get the components
+        components = [vertex.get_component_instance() for vertex in vertices if hasattr(vertex, "_custom_component")]
+        return components
+
+
+    def sort_vertices(
         self,
         stop_component_id: str | None = None,
         start_component_id: str | None = None,
-        flatten: bool = False,
-    ):
+    ) -> list[str]:
+        """Sorts the vertices in the graph."""
         self.mark_all_vertices("ACTIVE")
 
         first_layer, remaining_layers = get_sorted_vertices(
@@ -2095,6 +2052,7 @@ class Graph:
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
         )
+
         self.increment_run_count()
         self._sorted_vertices_layers = [first_layer, *remaining_layers]
         self.vertices_layers = remaining_layers
