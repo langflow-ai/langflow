@@ -134,19 +134,27 @@ When represented as tabular data, the preceding DataFrame object is structured a
 
 ## Embeddings
 
-**Embeddings** ports <Icon name="Circle" size="16" aria-label="Emerald embeddings port" style={{ color: '#10b981', fill: '#10b981' }} /> handle vector embeddings to support functions like similarity search.
+**Embeddings** ports <Icon name="Circle" size="16" aria-label="Emerald embeddings port" style={{ color: '#10b981', fill: '#10b981' }} /> emit or ingest vector embeddings to support functions like similarity search.
 
-For example, the **Embedding Model** component outputs `embeddings` data that you can connect to an **Embedding** input port on a vector store component.
+The `Embeddings` data type is used specifically by components that either produce or consume vector embeddings, such as the [embedding model components](/components-embedding-models) and [vector store components](/components-vector-stores).
+
+For example, the **Embedding Model** component outputs `Embeddings` data that you can connect to an **Embedding** input port on a vector store component.
 
 ## LanguageModel
 
-`LanguageModel` output is a specific type of output that can be produced by **Language Model** components.
-When enabled, the component's output port changes from a **Message** port to a **Language Model** port <Icon name="Circle" size="16" aria-label="Fuchsia language model port" style={{ color: '#c026d3', fill: '#c026d3' }} />.
+The `LanguageModel` type is a specific data type can be produced by language model components and accepted by components that use an LLM.
+
+When you change a language model component's output type from **Model Response** to **Language Model**, the component's output port changes from a **Message** port to a **Language Model** port <Icon name="Circle" size="16" aria-label="Fuchsia language model port" style={{ color: '#c026d3', fill: '#c026d3' }} />.
+
+Then, you connect the outgoing **Language Model** port to a **Language Model** input port on a compatible component, such as a **Smart Function** component.
+
 For more information, see [Language Model output types](/components-models#language-model-output-types).
 
 ## Memory
 
-**Memory** ports <Icon name="Circle" size="16" aria-label="Orange memory port" style={{ color: '#f97316', fill: '#f97316' }} /> are available for components that store or retrieve chat memory.
+**Memory** ports <Icon name="Circle" size="16" aria-label="Orange memory port" style={{ color: '#f97316', fill: '#f97316' }} /> are used to integrate a **Message History** component with external chat memory storage.
+
+For more information, see the [**Message History** component](/components-helpers#message-history).
 
 ## Message
 

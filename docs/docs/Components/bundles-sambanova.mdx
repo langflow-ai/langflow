@@ -1,29 +1,35 @@
+---
+title: SambaNova
+slug: /bundles-sambanova
+---
 
+import Icon from "@site/src/components/icon";
 
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-### SambaNova
+This page describes the components that are available in the **SambaNova** bundle.
+
+For more information about SambaNova features and functionality used by SambaNova components, see the [SambaNova Cloud documentation](https://cloud.sambanova.ai/).
+
+## SambaNova text generation
 
 This component generates text using SambaNova LLMs.
 
-For more information, see [Sambanova Cloud documentation](https://cloud.sambanova.ai/).
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-<details>
-<summary>Parameters</summary>
+Use the **Language Model** output when you want to use a SambaNova model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
 
-**Inputs**
+For more information, see [**Language Model** components](/components-models).
 
-| Name | Type | Description |
-|------|------|-------------|
-| sambanova_url | String | Base URL path for API requests. Default: `https://api.sambanova.ai/v1/chat/completions`. |
-| sambanova_api_key | SecretString | Your SambaNova API Key. |
-| model_name | String | The name of the Sambanova model to use. Options include various Llama models. |
-| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
-| temperature | Float | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.07. |
+### SambaNova text generation parameters
 
-**Outputs**
+Many **SambaNova** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | LanguageModel | An instance of SambaNova model configured with the specified parameters. |
-
-</details>
+| sambanova_url | String | Input parameter. Base URL path for API requests. Default: `https://api.sambanova.ai/v1/chat/completions`. |
+| sambanova_api_key | SecretString | Input parameter. Your SambaNova API Key. |
+| model_name | String | Input parameter. The name of the SambaNova model to use. Options include various Llama models. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.07. |

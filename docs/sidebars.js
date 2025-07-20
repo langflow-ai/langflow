@@ -303,7 +303,6 @@ module.exports = {
               label: 'Google',
               items: [
                 "Components/bundles-google",
-                "Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow",
                 "Integrations/Google/integrations-google-big-query",
               ],
             },

@@ -1,28 +1,37 @@
-### OpenRouter
+---
+title: OpenRouter
+slug: /bundles-openrouter
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **OpenRouter** bundle.
+
+For more information about OpenRouter features and functionality used by OpenRouter components, see the [OpenRouter documentation](https://openrouter.ai/docs).
+
+## OpenRouter text generation
 
 This component generates text using OpenRouter's unified API for multiple AI models from different providers.
 
-For more information, see [OpenRouter documentation](https://openrouter.ai/docs).
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-<details>
-<summary>Parameters</summary>
+Use the **Language Model** output when you want to use an xAI model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
 
-**Inputs**
+For more information, see [**Language Model** components](/components-models).
 
-| Name | Type | Description |
-|------|------|-------------|
-| api_key | SecretString | Your OpenRouter API key for authentication. |
-| site_url | String | Your site URL for OpenRouter rankings (advanced). |
-| app_name | String | Your app name for OpenRouter rankings (advanced). |
-| provider | String | The AI model provider to use. |
-| model_name | String | The specific model to use for chat completion. |
-| temperature | Float | Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
-| max_tokens | Integer | The maximum number of tokens to generate (advanced). |
+### OpenRouter text generation parameters
 
-**Outputs**
+Many **OpenRouter** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
-
-</details>
+| api_key | SecretString | Input parameters. Your OpenRouter API key for authentication. |
+| site_url | String | Input parameters. Your site URL for OpenRouter rankings (advanced). |
+| app_name | String | Input parameters. Your app name for OpenRouter rankings (advanced). |
+| provider | String | Input parameters. The AI model provider to use. |
+| model_name | String | Input parameters. The specific model to use for chat completion. |
+| temperature | Float | Input parameters. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameters. The maximum number of tokens to generate (advanced). |

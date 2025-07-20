@@ -9,29 +9,31 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **SearchApi** bundle.
 
-## Search API
-
-This component calls the `searchapi.io` API. It can be used to search the web for information.
-
 For more information, see the [SearchApi documentation](https://www.searchapi.io/docs/google).
 
-<details>
-<summary>Parameters</summary>
+## Search API
 
-**Inputs**
+This component calls the `searchapi.io` API to run Google, Bing, and DuckDuckGo web searches.
 
-| Name | Type | Description |
-|------|------|-------------|
-| engine | String | The search engine to use. Default: `google`. |
-| api_key | SecretString | The API key for authenticating with SearchApi. |
-| input_value | String | The search query or input for the API call. |
-| search_params | Dict | Additional parameters for customizing the search. |
+It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
 
-**Outputs**
+### Search API parameters
+
+Some **Search API** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| data | List[Data] | A list of Data objects containing search results. |
-| tool | Tool | A Tool object for use in LangChain workflows. |
+| engine | String | Input parameter. The search engine to use. Default: `google`. |
+| api_key | SecretString | Input parameter. The API key for authenticating with SearchApi. |
+| input_value | String | Input parameter. The search query or input for the API call. |
+| max_results | Integer | Input parameter. The maximum number of search results to return. Default: `5`. |
+| max_snippet_length | Integer | Input parameter. The maximum length of the snippet to return. Default: `100`. |
+| search_params | Dict | Input parameter. Additional key-value pairs to customize the request. |
 
-</details>
+## See also
+
+* [**Web Search** component](/components-data#web-search)
+* [**Google** bundle](/bundles-google)
+* [**Bing** bundle](/bundles-bing)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)

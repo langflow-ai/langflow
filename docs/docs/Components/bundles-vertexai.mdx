@@ -9,70 +9,98 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **Vertex AI** bundle.
 
+For more information about Vertex AI features and functionality used by Vertex AI components, see the [Vertex AI documentation](https://cloud.google.com/vertex-ai).
 
-### Vertex AI
+For other Google components, see the [**Google** bundle](/bundles-google).
 
-This component generates text using Vertex AI LLMs.
+## Vertex AI text generation
 
-For more information, see [Google Vertex AI documentation](https://cloud.google.com/vertex-ai).
+The **Vertex AI** component generates text using Google Vertex AI models.
 
-<details>
-<summary>Parameters</summary>
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-**Inputs**
+Use the **Language Model** output when you want to use a Vertex AI model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
 
-| Name | Type | Description |
-|------|------|-------------|
-| credentials | File | JSON credentials file. Leave empty to fall back to environment variables. File type: JSON. |
-| model_name | String | The name of the Vertex AI model to use. Default: "gemini-1.5-pro". |
-| project | String | The project ID (advanced). |
-| location | String | The location for the Vertex AI API. Default: "us-central1" (advanced). |
-| max_output_tokens | Integer | The maximum number of tokens to generate (advanced). |
-| max_retries | Integer | Maximum number of retries for API calls. Default: 1 (advanced). |
-| temperature | Float | Controls randomness in the output. Default: 0.0. |
-| top_k | Integer | The number of highest probability vocabulary tokens to keep for top-k-filtering (advanced). |
-| top_p | Float | The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling. Default: 0.95 (advanced). |
-| verbose | Boolean | Whether to print verbose output. Default: False (advanced). |
+For more information, see [**Language Model** components](/components-models).
 
-**Outputs**
+### Vertex AI text generation parameters
+
+Many **Vertex AI** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | LanguageModel | An instance of ChatVertexAI configured with the specified parameters. |
+| credentials | File | Input parameter. JSON credentials file. Leave empty to fall back to environment variables. File type: JSON. For more information, see [Create a service account for Vertex AI authentication](#vertexai-credentials). |
+| model_name | String | Input parameter. The name of the Vertex AI model to use. Default: "gemini-1.5-pro". |
+| project | String | Input parameter. The project ID (advanced). |
+| location | String | Input parameter. The location for the Vertex AI API. Default: "us-central1" (advanced). |
+| max_output_tokens | Integer | Input parameter. The maximum number of tokens to generate (advanced). |
+| max_retries | Integer | Input parameter. Maximum number of retries for API calls. Default: 1 (advanced). |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: 0.0. |
+| top_k | Integer | Input parameter. The number of highest probability vocabulary tokens to keep for top-k-filtering (advanced). |
+| top_p | Float | Input parameter. The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling. Default: 0.95 (advanced). |
+| verbose | Boolean | Input parameter. Whether to print verbose output. Default: False (advanced). |
 
-</details>
+## Vertex AI Embeddings
 
-### Vertex AI Embeddings
+The **Vertex AI Embeddings** component is a wrapper around the [Google Vertex AI Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings) for embedding generation.
 
-Langflow's [**Embedding Model** core component](/components-embedding-models) generates text embeddings using the selected LLM.
-The **Embedding Model** core component supports many LLMs, and it is sufficient for most use cases.
-You can use the following bundled component if the **Embedding Model** core component doesn't support the model you need.
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
 
-The **Vertex AI Embeddings** component is a wrapper around the [Google Vertex AI Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| credentials | Credentials | The default custom credentials to use. |
-| location | String | The default location to use when making API calls. Default: `us-central1`. |
-| max_output_tokens | Integer | The token limit determines the maximum amount of text output from one prompt. Default: `128`. |
-| model_name | String | The name of the Vertex AI large language model. Default: `text-bison`. |
-| project | String | The default GCP project to use when making Vertex API calls. |
-| request_parallelism | Integer | The amount of parallelism allowed for requests issued to VertexAI models. Default: `5`. |
-| temperature | Float | Tunes the degree of randomness in text generations. Should be a non-negative value. Default: `0`. |
-| top_k | Integer | How the model selects tokens for output. The next token is selected from the top `k` tokens. Default: `40`. |
-| top_p | Float | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value. Default: `0.95`. |
-| tuned_model_name | String | The name of a tuned model. If provided, `model_name` is ignored. |
-| verbose | Boolean | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug. Default: `False`. |
-
-**Outputs**
+### Vertex AI Embeddings parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| embeddings | Embeddings | An instance for generating embeddings using VertexAI. |
+| credentials | Credentials | Input parameter. JSON credentials file. Leave empty to fall back to environment variables. File type: JSON. For more information, see [Create a service account for Vertex AI authentication](#vertexai-credentials). |
+| location | String | Input parameter. The default location to use when making API calls. Default: `us-central1`. |
+| max_output_tokens | Integer | Input parameter. The token limit determines the maximum amount of text output from one prompt. Default: `128`. |
+| model_name | String | Input parameter. The name of the Vertex AI large language model. Default: `text-bison`. |
+| project | String | Input parameter. The default GCP project to use when making Vertex API calls. |
+| request_parallelism | Integer | Input parameter. The amount of parallelism allowed for requests issued to VertexAI models. Default: `5`. |
+| temperature | Float | Input parameter. Tunes the degree of randomness in text generations. Should be a non-negative value. Default: `0`. |
+| top_k | Integer | Input parameter. How the model selects tokens for output. The next token is selected from the top `k` tokens. Default: `40`. |
+| top_p | Float | Input parameter. Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value. Default: `0.95`. |
+| tuned_model_name | String | Input parameter. The name of a tuned model. If provided, `model_name` is ignored. |
+| verbose | Boolean | Input parameter. This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug. Default: `False`. |
+| embeddings | Embeddings | Output parameter. An instance for generating embeddings using VertexAI. |
 
-</details>
+## Create a service account for Vertex AI authentication {#vertexai-credentials}
+
+The **Vertex AI Embeddings** and **Vertex AI** components authenticate with the [Google Vertex AI API](https://console.cloud.google.com/marketplace/product/google/aiplatform.googleapis.com) using a service account JSON file.
+
+These components require that you provide a service account JSON file in the **Credentials** parameter (`credentials`).
+You can either provide the file directly in your component's settings or you can use a [`GOOGLE_APPLICATION_CREDENTIALS` environment variable](https://cloud.google.com/docs/authentication/application-default-credentials) to reference the path to your JSON file.
+
+The following steps explain how to create a service account for Langflow, create a service account JSON key file, and then use the JSON key file in Langflow:
+
+1. If you haven't done so already, [enable the Vertex AI APIs in your Google Cloud project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment).
+
+2. Create a [service account](https://cloud.google.com/iam/docs/service-account-overview) in your Google Cloud project.
+
+    It is recommended that you [create a custom service account for Vertex AI](https://cloud.google.com/vertex-ai/docs/general/custom-service-account) because Langflow uses this account to access the Vertex AI APIs.
+
+3. Assign the **Vertex AI Service Agent** role to the service account.
+
+    This role allows Langflow to access Vertex AI resources.
+    For more information, see [Vertex AI access control with IAM](https://cloud.google.com/vertex-ai/docs/general/access-control).
+
+4. [Create a service account key](https://cloud.google.com/iam/docs/keys-create-delete#console) in JSON format for your Langflow Vertex AI service account.
+
+    When you click **Create**, the JSON key file is downloaded.
+
+5. In Langflow, create or open a flow with the **Vertex AI** or **Vertex AI Embeddings** component.
+
+6. In the component's **Credentials** field, do one of the following:
+
+    * Select your service account JSON file directly.
+
+    * Leave the **Credentials** field empty if you want to pull the key file from an environment variable.
+    Then, you must provide the path to your JSON file in a `GOOGLE_APPLICATION_CREDENTIALS` environment variable that is set somewhere relative to your Langflow instance.
+    For example, you can set the environment variable in your terminal, your Langflow `.env` file, or otherwise in the environment where your Langflow server or application runs.
+
+    ![Select a local JSON key file for the Vertex AI component](/img/google/configure-vertex-ai-credentials-in-langflow.gif)
+
+7. Run your flow to verify that Langflow can use the service account credentials successfully.
+
+    For example, in a flow with **Chat Input**, **Chat Output**, and **Vertex AI** components, you can open the **Playground** and try chatting with the LLM.
+    If the LLM responds, then the credentials are configured correctly.

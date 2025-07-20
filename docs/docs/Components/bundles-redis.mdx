@@ -9,29 +9,29 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **Redis** bundle.
 
-### Redis Chat Memory
+## Redis Chat Memory
 
-This component retrieves and stores chat messages from Redis.
+This component lets you use Redis for chat memory storage and retrieval.
 
-<details>
-<summary>Parameters</summary>
+Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
 
-**Inputs**
+For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| host | hostname | The IP address or hostname. |
-| port | port | The Redis Port Number. |
-| database | database | The Redis database. |
-| username | Username | The Redis username. |
-| password | Password | The password for the username. |
-| key_prefix | Key prefix | The key prefix. |
-| session_id | Session ID | The unique session identifier for the message. |
+### Redis Chat Memory parameters
 
-**Outputs**
+Many **Redis Chat Memory** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| memory | Memory | The Redis chat message history object. |
+| host | hostname | Input parameter. The IP address or hostname. |
+| port | port | Input parameter. The Redis Port Number. |
+| database | database | Input parameter. The Redis database. |
+| username | Username | Input parameter. The Redis username. |
+| password | Password | Input parameter. The password for the username. |
+| key_prefix | Key prefix | Input parameter. The key prefix. |
+| session_id | Session ID | Input parameter. The unique session identifier for the message. |
 
-</details>
+## Redis vector store
+
+See [**Redis** vector store component](/components-vector-stores#redis).
