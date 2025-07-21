@@ -328,6 +328,18 @@ class KBIngestionComponent(Component):
             cfg_path = kb_path / "schema.json"
             cfg_path.write_text(json.dumps(config_list, indent=2))
 
+            # Save embedding model metadata
+            embedding_metadata = {
+                "embedding_provider": self.embedding_provider,
+                "embedding_model": self.embedding_model,
+                "api_key_used": bool(self.api_key),  # Don't save the actual key
+                "dimensions": self.dimensions,
+                "chunk_size": self.chunk_size,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            metadata_path = kb_path / "embedding_metadata.json"
+            metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+
             # Save embeddings and IDs if available
             if embeddings.size > 0:
                 np.save(kb_path / "vectors.npy", embeddings)

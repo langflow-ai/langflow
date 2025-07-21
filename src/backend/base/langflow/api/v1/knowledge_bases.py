@@ -15,6 +15,7 @@ class KnowledgeBaseInfo(BaseModel):
     id: str
     name: str
     embedding_provider: str | None = "Unknown"
+    embedding_model: str | None = "Unknown"
     size: int = 0
     words: int = 0
     characters: int = 0
@@ -89,6 +90,69 @@ def detect_embedding_provider(kb_path: Path) -> str:
     return "Unknown"
 
 
+def detect_embedding_model(kb_path: Path) -> str:
+    """Detect the embedding model from config files."""
+    # First check the embedding metadata file (most accurate)
+    metadata_file = kb_path / "embedding_metadata.json"
+    if metadata_file.exists():
+        try:
+            with metadata_file.open("r", encoding="utf-8") as f:
+                metadata = json.load(f)
+                if isinstance(metadata, dict):
+                    # Check for embedding model field
+                    if "embedding_model" in metadata:
+                        model_value = str(metadata["embedding_model"])
+                        if model_value and model_value.lower() != "unknown":
+                            return model_value
+        except (OSError, json.JSONDecodeError) as _:
+            import logging
+            logging.exception("Error reading embedding metadata file '%s'", metadata_file)
+
+    # Check other JSON config files for model information
+    for config_file in kb_path.glob("*.json"):
+        # Skip the embedding metadata file since we already checked it
+        if config_file.name == "embedding_metadata.json":
+            continue
+            
+        try:
+            with config_file.open("r", encoding="utf-8") as f:
+                config_data = json.load(f)
+                if not isinstance(config_data, dict):
+                    continue
+
+                # Check for explicit model fields first and return the actual model name
+                model_fields = ["embedding_model", "model", "embedding_model_name", "model_name"]
+                for field in model_fields:
+                    if field in config_data:
+                        model_value = str(config_data[field])
+                        if model_value and model_value.lower() != "unknown":
+                            return model_value
+
+                # Check for OpenAI specific model names
+                if "openai" in json.dumps(config_data).lower():
+                    openai_models = ["text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large"]
+                    config_str = json.dumps(config_data).lower()
+                    for model in openai_models:
+                        if model in config_str:
+                            return model
+
+                # Check for HuggingFace model names (usually in model field)
+                if "model" in config_data:
+                    model_name = str(config_data["model"])
+                    # Common HuggingFace embedding models
+                    hf_patterns = ["sentence-transformers", "all-MiniLM", "all-mpnet", "multi-qa"]
+                    if any(pattern in model_name for pattern in hf_patterns):
+                        return model_name
+
+        except (OSError, json.JSONDecodeError) as _:
+            import logging
+
+            logging.exception("Error reading config file '%s'", config_file)
+            continue
+
+    return "Unknown"
+
+
 def get_text_columns(df: pd.DataFrame, schema_data: list | None = None) -> list[str]:
     """Get the text columns to analyze for word/character counts."""
     # First try schema-defined text columns
@@ -135,11 +199,30 @@ def get_kb_metadata(kb_path: Path) -> dict:
         "characters": 0,
         "avg_chunk_size": 0.0,
         "embedding_provider": "Unknown",
+        "embedding_model": "Unknown",
     }
 
     try:
-        # Detect embedding provider
-        metadata["embedding_provider"] = detect_embedding_provider(kb_path)
+        # First check embedding metadata file for accurate provider and model info
+        metadata_file = kb_path / "embedding_metadata.json"
+        if metadata_file.exists():
+            try:
+                with metadata_file.open("r", encoding="utf-8") as f:
+                    embedding_metadata = json.load(f)
+                    if isinstance(embedding_metadata, dict):
+                        if "embedding_provider" in embedding_metadata:
+                            metadata["embedding_provider"] = embedding_metadata["embedding_provider"]
+                        if "embedding_model" in embedding_metadata:
+                            metadata["embedding_model"] = embedding_metadata["embedding_model"]
+            except (OSError, json.JSONDecodeError) as _:
+                import logging
+                logging.exception("Error reading embedding metadata file '%s'", metadata_file)
+
+        # Fallback to detection if not found in metadata file
+        if metadata["embedding_provider"] == "Unknown":
+            metadata["embedding_provider"] = detect_embedding_provider(kb_path)
+        if metadata["embedding_model"] == "Unknown":
+            metadata["embedding_model"] = detect_embedding_model(kb_path)
 
         # Read schema for text column information
         schema_data = None
@@ -181,7 +264,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
     except Exception as _:
         import logging
 
-        logging.exception("Exception occurred while extracting metadata from '%s'", kb_path)
+        logging.exception("Error processing knowledge base directory '%s'", kb_path)
 
     return metadata
 
@@ -213,6 +296,7 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
                     id=kb_dir.name,
                     name=kb_dir.name.replace("_", " ").replace("-", " ").title(),
                     embedding_provider=metadata["embedding_provider"],
+                    embedding_model=metadata["embedding_model"],
                     size=size,
                     words=metadata["words"],
                     characters=metadata["characters"],
@@ -258,6 +342,7 @@ async def get_knowledge_base(kb_name: str) -> KnowledgeBaseInfo:
             id=kb_name,
             name=kb_name.replace("_", " ").replace("-", " ").title(),
             embedding_provider=metadata["embedding_provider"],
+            embedding_model=metadata["embedding_model"],
             size=size,
             words=metadata["words"],
             characters=metadata["characters"],

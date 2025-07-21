@@ -35,18 +35,21 @@ export const createKnowledgeBaseColumns = (
       },
     },
     {
-      headerName: 'Embedding Provider',
+      headerName: 'Embedding Model',
       field: 'embedding_provider',
       flex: 1.2,
       filter: 'agTextColumnFilter',
       editable: false,
       cellClass: cellClassStyles,
-      cellRenderer: params => {
-        return (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{params.value || 'Unknown'}</span>
-          </div>
-        );
+      tooltipValueGetter: params => {
+        // Show full model name in tooltip
+        const embeddingModel = params.data.embedding_model || 'Unknown';
+        return embeddingModel;
+      },
+      valueGetter: params => {
+        // Get the embedding model value for display
+        const embeddingModel = params.data.embedding_model || 'Unknown';
+        return embeddingModel;
       },
     },
     {
