@@ -149,7 +149,10 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -461,7 +464,10 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1286,7 +1292,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ad2a6f4552c0",
+              "module": "langflow.components.processing.structured_output.StructuredOutputComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
