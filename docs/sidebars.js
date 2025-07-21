@@ -322,7 +322,6 @@ module.exports = {
                 "Integrations/Notion/integrations-notion",
                 "Integrations/Notion/notion-agent-conversational",
                 "Integrations/Notion/notion-agent-meeting-notes",
-                "Components/bundles-notion",
               ],
             },
             "Components/bundles-novita",
