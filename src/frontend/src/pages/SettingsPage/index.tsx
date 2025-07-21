@@ -79,6 +79,16 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
+    {
+      title: "Package Manager",
+      href: "/settings/package-manager",
+      icon: (
+        <ForwardedIconComponent
+          name="Package"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
   );
 
   // TODO: Remove this on cleanup
