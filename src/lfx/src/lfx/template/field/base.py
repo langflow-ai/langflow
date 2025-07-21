@@ -21,7 +21,7 @@ from lfx.field_typing import Text
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.custom import format_type
 from lfx.schema.data import Data
-from lfx.type_extraction.type_extraction import post_process_type
+from lfx.type_extraction import post_process_type
 
 
 class UndefinedType(Enum):

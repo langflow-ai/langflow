@@ -1,32 +1,14 @@
-from langflow.template.field.base import Input
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from lfx.template.field.base import Input
+from lfx.template.frontend_node.base import FrontendNode
+from lfx.template.template.base import Template
 
-DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow.custom import CustomComponent
+DEFAULT_CUSTOM_COMPONENT_CODE = """from lfx.custom import CustomComponent
 
 from typing import Optional, List, Dict, Union
-from langflow.field_typing import (
-    AgentExecutor,
-    BaseChatMemory,
-    BaseLanguageModel,
-    BaseLLM,
-    BaseLoader,
-    BaseMemory,
-    BasePromptTemplate,
-    BaseRetriever,
-    Callable,
-    Chain,
-    ChatPromptTemplate,
-    Data,
-    Document,
-    Embeddings,
-    NestedDict,
-    Object,
-    PromptTemplate,
-    TextSplitter,
+from lfx.field_typing import (
     Tool,
-    VectorStore,
 )
+from lfx.schema.data import Data
 
 
 class Component(CustomComponent):

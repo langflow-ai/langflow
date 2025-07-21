@@ -4,7 +4,7 @@ from pathlib import Path
 
 from platformdirs import user_cache_dir
 
-from langflow.schema.data import Data
+from lfx.schema.data import Data
 
 
 def raw_frontend_data_is_valid(raw_frontend_data):

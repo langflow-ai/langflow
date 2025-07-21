@@ -2,8 +2,8 @@ from collections import defaultdict
 
 from pydantic import BaseModel, field_serializer, model_serializer
 
-from langflow.template.field.base import Output
-from langflow.template.template.base import Template
+from lfx.template.field.base import Output
+from lfx.template.template.base import Template
 
 
 class FrontendNode(BaseModel):
