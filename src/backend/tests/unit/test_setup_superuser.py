@@ -157,7 +157,7 @@ async def test_create_super_user_race_condition():
     mock_get_user_by_username = AsyncMock()
     mock_get_user_by_username.side_effect = [None, mock_user]  # None first, then existing user
 
-    mock_session.commit.side_effect = IntegrityError("statement", "params", "orig")
+    mock_session.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))
     with (
         patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username),
         patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
@@ -191,16 +191,16 @@ async def test_create_super_user_race_condition_no_user_found():
     mock_user = MagicMock(spec=User)
 
     # Set up scenario where IntegrityError occurs but no user is found afterward
-    integrity_error = IntegrityError("statement", "params", "orig")
+    integrity_error = IntegrityError("statement", "params", Exception("orig"))
     mock_session.commit.side_effect = integrity_error
 
     with (
         patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username),
         patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
         patch("langflow.services.database.models.user.model.User", return_value=mock_user),
+        pytest.raises(IntegrityError),
     ):
-        with pytest.raises(IntegrityError):
-            await create_super_user("testuser", "password", mock_session)
+        await create_super_user("testuser", "password", mock_session)
 
     # Verify rollback was called but exception was re-raised
     assert mock_session.rollback.call_count == 1
@@ -225,15 +225,17 @@ async def test_create_super_user_concurrent_workers():
 
     # Worker 1 succeeds, Worker 2 gets IntegrityError then finds existing user
     mock_session1.commit.return_value = None  # Success
-    mock_session2.commit.side_effect = IntegrityError("statement", "params", "orig")  # Race condition
+    mock_session2.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))  # Race condition
 
     # get_user_by_username returns None initially, then the created user for worker 2
     mock_get_user_by_username.side_effect = [None, None, mock_user]
 
     with patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username):
-        # Simulate concurrent execution
-        result1 = await create_super_user("admin", "password", mock_session1)
-        result2 = await create_super_user("admin", "password", mock_session2)
+        # Simulate concurrent execution using asyncio.gather
+        result1, result2 = await asyncio.gather(
+            create_super_user("admin", "password", mock_session1),
+            create_super_user("admin", "password", mock_session2),
+        )
 
     # Both workers should end up with a user (worker 1 creates, worker 2 finds existing)
     assert result1 is not None
