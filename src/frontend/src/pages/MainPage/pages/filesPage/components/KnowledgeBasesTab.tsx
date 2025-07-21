@@ -1,16 +1,16 @@
-import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
-import type { AgGridReact } from "ag-grid-react";
-import { useRef } from "react";
-import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { Input } from "@/components/ui/input";
-import Loading from "@/components/ui/loading";
-import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
-import useAlertStore from "@/stores/alertStore";
-import { cn } from "@/utils/utils";
-import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
-import CreateKnowledgeBaseButton from "./CreateKnowledgeBaseButton";
-import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
-import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
+import type { NewValueParams, SelectionChangedEvent } from 'ag-grid-community';
+import type { AgGridReact } from 'ag-grid-react';
+import { useRef, useState } from 'react';
+import TableComponent from '@/components/core/parameterRenderComponent/components/tableComponent';
+import { Input } from '@/components/ui/input';
+import Loading from '@/components/ui/loading';
+import { useGetKnowledgeBases } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
+import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
+import useAlertStore from '@/stores/alertStore';
+import { cn } from '@/utils/utils';
+import { createKnowledgeBaseColumns } from '../config/knowledgeBaseColumns';
+import KnowledgeBaseEmptyState from './KnowledgeBaseEmptyState';
+import KnowledgeBaseSelectionOverlay from './KnowledgeBaseSelectionOverlay';
 
 interface KnowledgeBasesTabProps {
   quickFilterText: string;
@@ -32,8 +32,12 @@ const KnowledgeBasesTab = ({
   isShiftPressed,
 }: KnowledgeBasesTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore(state => state.setErrorData);
+  const setSuccessData = useAlertStore(state => state.setSuccessData);
+
+  // State for deletion confirmation dialog
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [knowledgeBaseToDelete, setKnowledgeBaseToDelete] = useState<any>(null);
 
   // Fetch knowledge bases from API
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
@@ -41,16 +45,36 @@ const KnowledgeBasesTab = ({
   // Handle errors
   if (error) {
     setErrorData({
-      title: "Failed to load knowledge bases",
-      list: [error?.message || "An unknown error occurred"],
+      title: 'Failed to load knowledge bases',
+      list: [error?.message || 'An unknown error occurred'],
     });
   }
 
   const handleRename = (params: NewValueParams<any, any>) => {
     // TODO: Implement knowledge base rename functionality
     setSuccessData({
-      title: "Knowledge Base renamed successfully!",
+      title: 'Knowledge Base renamed successfully!',
     });
+  };
+
+  const handleDelete = (knowledgeBase: any) => {
+    // Open confirmation dialog instead of immediate deletion
+    setKnowledgeBaseToDelete(knowledgeBase);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (knowledgeBaseToDelete) {
+      // TODO: Implement actual knowledge base deletion API call
+      setSuccessData({
+        title: `Knowledge Base "${knowledgeBaseToDelete.name}" deleted successfully!`,
+      });
+      console.log('Deleting knowledge base:', knowledgeBaseToDelete);
+
+      // Reset state
+      setKnowledgeBaseToDelete(null);
+      setDeleteModalOpen(false);
+    }
   };
 
   const handleSelectionChanged = (event: SelectionChangedEvent) => {
@@ -71,7 +95,7 @@ const KnowledgeBasesTab = ({
   };
 
   // Get column definitions
-  const columnDefs = createKnowledgeBaseColumns(handleRename);
+  const columnDefs = createKnowledgeBaseColumns(handleRename, handleDelete);
 
   // Show loading state
   if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
@@ -99,14 +123,11 @@ const KnowledgeBasesTab = ({
             type="text"
             placeholder="Search knowledge bases..."
             className="mr-2 w-full"
-            value={quickFilterText || ""}
-            onChange={(event) => {
+            value={quickFilterText || ''}
+            onChange={event => {
               setQuickFilterText(event.target.value);
             }}
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <CreateKnowledgeBaseButton />
         </div>
       </div>
 
@@ -123,7 +144,7 @@ const KnowledgeBasesTab = ({
             suppressRowClickSelection={!isShiftPressed}
             editable={[
               {
-                field: "name",
+                field: 'name',
                 onUpdate: handleRename,
                 editableCell: true,
               },
@@ -133,8 +154,8 @@ const KnowledgeBasesTab = ({
             columnDefs={columnDefs}
             rowData={knowledgeBases}
             className={cn(
-              "ag-no-border group w-full",
-              isShiftPressed && quantitySelected > 0 && "no-select-cells",
+              'ag-no-border ag-knowledge-table group w-full',
+              isShiftPressed && quantitySelected > 0 && 'no-select-cells'
             )}
             pagination
             ref={tableRef}
@@ -142,7 +163,7 @@ const KnowledgeBasesTab = ({
             gridOptions={{
               stopEditingWhenCellsLoseFocus: true,
               ensureDomOrder: true,
-              colResizeDefault: "shift",
+              colResizeDefault: 'shift',
             }}
           />
 
@@ -154,6 +175,17 @@ const KnowledgeBasesTab = ({
           />
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={deleteModalOpen}
+        setOpen={setDeleteModalOpen}
+        onConfirm={confirmDelete}
+        description={`knowledge base "${knowledgeBaseToDelete?.name || ''}"`}
+        note="This action cannot be undone"
+      >
+        <></>
+      </DeleteConfirmationModal>
     </div>
   );
 };
