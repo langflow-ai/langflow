@@ -122,9 +122,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             try:
                 self.advance_search_filter = raw_filter
             except json.JSONDecodeError as err:
-                raise ValueError(
-                    "The 'advance_search_filter' must be a valid JSON dictionary."
-                ) from err
+                raise ValueError("The 'advance_search_filter' must be a valid JSON dictionary.") from err
         else:
             self.advance_search_filter = None
 
@@ -136,10 +134,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             from chromadb import Client
             from langchain_chroma import Chroma
         except ImportError as e:
-            msg = (
-                "Could not import Chroma integration package. "
-                "Please install it with `pip install langchain-chroma`."
-            )
+            msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
             raise ImportError(msg) from e
 
         chroma_settings = None
@@ -154,11 +149,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             )
             client = Client(settings=chroma_settings)
 
-        persist_directory = (
-            self.resolve_path(self.persist_directory)
-            if self.persist_directory is not None
-            else None
-        )
+        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
 
         chroma = Chroma(
             persist_directory=persist_directory,
