@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text, data_to_text_list
 from langflow.io import DataInput, MultilineInput, Output, StrInput
 from langflow.schema.data import Data

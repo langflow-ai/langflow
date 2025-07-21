@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.custom_component import CustomComponent
-
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 

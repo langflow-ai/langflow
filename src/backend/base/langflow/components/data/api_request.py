@@ -10,9 +10,9 @@ import aiofiles
 import aiofiles.os as aiofiles_os
 import httpx
 import validators
-from lfx.custom.custom_component.component import Component
 
 from langflow.base.curl.parse import parse_context
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import TabInput
 from langflow.io import (
     BoolInput,

@@ -1,8 +1,8 @@
 import requests
-from lfx.custom.custom_component.component import Component
 from requests.auth import HTTPBasicAuth
 
 from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DropdownInput, SecretStrInput, StrInput
 from langflow.io import MessageTextInput, Output
 from langflow.schema.data import Data

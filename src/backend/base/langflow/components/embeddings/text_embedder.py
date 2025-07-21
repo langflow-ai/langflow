@@ -1,8 +1,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.io import HandleInput, MessageInput, Output
 from langflow.schema.data import Data
 

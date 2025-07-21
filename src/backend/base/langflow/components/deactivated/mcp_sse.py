@@ -1,7 +1,6 @@
 # from langflow.field_typing import Data
 
 from langchain_core.tools import StructuredTool
-from lfx.custom.custom_component.component import Component
 from mcp import types
 
 from langflow.base.mcp.util import (
@@ -10,6 +9,7 @@ from langflow.base.mcp.util import (
     create_tool_coroutine,
     create_tool_func,
 )
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
 

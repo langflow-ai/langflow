@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import cast
 
-from lfx.custom.custom_component.component import Component
 from loguru import logger
 
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema.dataframe import DataFrame
 

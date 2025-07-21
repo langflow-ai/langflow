@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.io import MessageInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output

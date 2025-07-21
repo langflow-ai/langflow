@@ -1,8 +1,7 @@
 import json
 import unicodedata
 
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import BoolInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output

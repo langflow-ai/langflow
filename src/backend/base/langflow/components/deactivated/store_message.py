@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.custom_component import CustomComponent
-
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.memory import aget_messages, astore_message
 from langflow.schema.message import Message
 

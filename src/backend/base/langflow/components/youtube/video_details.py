@@ -4,8 +4,8 @@ import googleapiclient
 import pandas as pd
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from lfx.custom.custom_component.component import Component
 
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import BoolInput, MessageTextInput, SecretStrInput
 from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output

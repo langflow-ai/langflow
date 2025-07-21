@@ -1,7 +1,6 @@
 import json
 
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.io import MultilineInput, Output
 from langflow.schema.data import Data
 

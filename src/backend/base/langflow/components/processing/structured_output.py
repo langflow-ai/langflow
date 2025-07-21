@@ -1,8 +1,8 @@
-from lfx.custom.custom_component.component import Component
 from pydantic import BaseModel, Field, create_model
 from trustcall import create_extractor
 
 from langflow.base.models.chat_result import get_chat_result
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.io import (
     HandleInput,

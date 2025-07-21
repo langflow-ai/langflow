@@ -3,9 +3,9 @@ import json
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
-from lfx.custom.custom_component.custom_component import CustomComponent
 
 from langflow.base.vectorstores.model import check_cached_vector_store
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.io import HandleInput, StrInput
 
 

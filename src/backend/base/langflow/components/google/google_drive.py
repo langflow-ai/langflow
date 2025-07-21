@@ -4,8 +4,8 @@ from json.decoder import JSONDecodeError
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from langchain_google_community import GoogleDriveLoader
-from lfx.custom.custom_component.component import Component
 
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import MessageTextInput
 from langflow.io import SecretStrInput

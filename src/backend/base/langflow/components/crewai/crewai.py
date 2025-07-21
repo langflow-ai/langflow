@@ -1,6 +1,5 @@
-from lfx.custom.custom_component.component import Component
-
 from langflow.base.agents.crewai.crew import convert_llm, convert_tools
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
 
 

@@ -1,7 +1,7 @@
 import assemblyai as aai
-from lfx.custom.custom_component.component import Component
 from loguru import logger
 
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import DataInput, FloatInput, Output, SecretStrInput
 from langflow.schema.data import Data

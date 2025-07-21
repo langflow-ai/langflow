@@ -1,6 +1,6 @@
 from langchain_core.vectorstores import VectorStoreRetriever
-from lfx.custom.custom_component.custom_component import CustomComponent
 
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import VectorStore
 from langflow.inputs.inputs import HandleInput
 

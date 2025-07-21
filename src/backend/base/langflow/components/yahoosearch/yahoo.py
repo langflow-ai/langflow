@@ -4,10 +4,10 @@ from enum import Enum
 
 import yfinance as yf
 from langchain_core.tools import ToolException
-from lfx.custom.custom_component.component import Component
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema.data import Data

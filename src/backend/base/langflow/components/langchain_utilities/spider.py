@@ -1,7 +1,7 @@
-from lfx.custom.custom_component.component import Component
 from spider.spider import Spider
 
 from langflow.base.langchain_utilities.spider_constants import MODES
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     BoolInput,
     DictInput,

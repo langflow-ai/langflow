@@ -1,7 +1,7 @@
 from langchain.prompts import PromptTemplate
 from langchain.retrievers import MultiQueryRetriever
-from lfx.custom.custom_component.custom_component import CustomComponent
 
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import BaseRetriever, LanguageModel, Text
 from langflow.inputs.inputs import HandleInput, StrInput
 

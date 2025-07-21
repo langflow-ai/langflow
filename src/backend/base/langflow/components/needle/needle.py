@@ -1,6 +1,6 @@
 from langchain_community.retrievers.needle import NeedleRetriever
-from lfx.custom.custom_component.component import Component
 
+from langflow.custom.custom_component.component import Component
 from langflow.io import IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI

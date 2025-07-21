@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Text
 from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output
 

@@ -13,8 +13,8 @@
 
 
 from langchain_core.documents import Document
-from lfx.custom.custom_component.custom_component import CustomComponent
 
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.io import HandleInput, StrInput
 from langflow.services.database.models.base import orjson_dumps
 

@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
-from lfx.custom.custom_component.component import Component
 from loguru import logger
 
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.dataframe import DataFrame
 

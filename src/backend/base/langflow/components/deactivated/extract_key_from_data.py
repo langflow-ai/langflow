@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.custom_component import CustomComponent
-
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.schema.data import Data
 
 

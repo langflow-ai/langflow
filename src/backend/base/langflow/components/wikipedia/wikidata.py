@@ -1,8 +1,8 @@
 import httpx
 from httpx import HTTPError
 from langchain_core.tools import ToolException
-from lfx.custom.custom_component.component import Component
 
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import MultilineInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame

@@ -3,10 +3,10 @@ import os
 from typing import Any
 
 import httpx
-from lfx.custom.custom_component.component import Component
 from loguru import logger
 
 from langflow.base.langwatch.utils import get_cached_evaluators
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import (
     BoolInput,

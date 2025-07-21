@@ -1,5 +1,4 @@
 from langchain_core.tools import StructuredTool
-from lfx.custom.custom_component.component import _get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 
 from langflow.base.agents.agent import LCToolsAgentComponent
@@ -15,6 +14,7 @@ from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
 from langflow.logging import logger

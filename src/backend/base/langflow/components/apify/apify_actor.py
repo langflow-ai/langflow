@@ -5,9 +5,9 @@ from typing import Any, cast
 from apify_client import ApifyClient
 from langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader
 from langchain_core.tools import BaseTool
-from lfx.custom.custom_component.component import Component
 from pydantic import BaseModel, Field, field_serializer
 
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import BoolInput
 from langflow.io import MultilineInput, Output, SecretStrInput, StrInput

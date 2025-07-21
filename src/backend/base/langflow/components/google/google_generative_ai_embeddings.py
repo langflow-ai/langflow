@@ -5,8 +5,8 @@ from google.ai.generativelanguage_v1beta.types import BatchEmbedContentsRequest
 from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_google_genai._common import GoogleGenerativeAIError
-from lfx.custom.custom_component.component import Component
 
+from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput
 
 MIN_DIMENSION_ERROR = "Output dimensionality must be at least 1"

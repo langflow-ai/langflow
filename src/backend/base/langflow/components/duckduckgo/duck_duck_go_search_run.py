@@ -1,6 +1,6 @@
 from langchain_community.tools import DuckDuckGoSearchRun
-from lfx.custom.custom_component.component import Component
 
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import IntInput, MessageTextInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame

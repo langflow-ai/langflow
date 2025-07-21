@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import safe_convert
 from langflow.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput
 from langflow.schema.data import Data

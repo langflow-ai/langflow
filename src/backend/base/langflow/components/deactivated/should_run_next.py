@@ -1,7 +1,7 @@
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import PromptTemplate
-from lfx.custom.custom_component.custom_component import CustomComponent
 
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import LanguageModel, Text
 
 

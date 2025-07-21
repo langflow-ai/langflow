@@ -5,8 +5,8 @@ from pathlib import Path
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from lfx.custom.custom_component.component import Component
 
+from langflow.custom.custom_component.component import Component
 from langflow.io import FileInput, MultilineInput, Output
 from langflow.schema.data import Data
 

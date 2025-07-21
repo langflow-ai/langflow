@@ -1,5 +1,4 @@
-from lfx.custom.custom_component.component import Component
-
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import DataInput, IntInput
 from langflow.io import Output

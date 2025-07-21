@@ -1,6 +1,5 @@
-from lfx.custom.custom_component.component import Component
-
 from langflow.base.agents.crewai.tasks import SequentialTask
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, HandleInput, MultilineInput, Output
 
 

@@ -1,9 +1,9 @@
 import uuid
 from typing import Any
 
-from lfx.custom.custom_component.component import Component
 from typing_extensions import override
 
+from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message

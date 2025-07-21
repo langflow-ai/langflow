@@ -1,9 +1,9 @@
 from collections.abc import Callable
 
-from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import get_function
 from loguru import logger
 
+from langflow.custom.custom_component.component import Component
 from langflow.io import CodeInput, Output
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
