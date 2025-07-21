@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 
 class Source(BaseModel):
@@ -30,4 +30,12 @@ class Properties(BaseModel):
     def validate_source(cls, v):
         if isinstance(v, str):
             return Source(id=v, display_name=v, source=v)
+        if v is None:
+            return Source()
         return v
+
+    @field_serializer("source")
+    def serialize_source(self, value):
+        if isinstance(value, Source):
+            return value.model_dump()
+        return value

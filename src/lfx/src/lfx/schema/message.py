@@ -76,6 +76,8 @@ class Message(Data):
             value = Properties.model_validate_json(value)
         elif isinstance(value, dict):
             value = Properties.model_validate(value)
+        elif isinstance(value, Properties):
+            return value
         return value
 
     @field_validator("timestamp", mode="before")
@@ -178,6 +180,11 @@ class Message(Data):
             formatted_text = template
 
         return cls(text=formatted_text)
+
+    @classmethod
+    async def from_template_and_variables(cls, template: str, **variables) -> Message:
+        """Backwards compatibility method for versions >1.0.15, <1.1."""
+        return cls.from_template(template, **variables)
 
     @classmethod
     async def create(cls, **kwargs):
