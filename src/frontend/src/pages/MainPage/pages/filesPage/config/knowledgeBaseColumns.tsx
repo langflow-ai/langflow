@@ -42,12 +42,10 @@ export const createKnowledgeBaseColumns = (
       editable: false,
       cellClass: cellClassStyles,
       tooltipValueGetter: params => {
-        // Show full model name in tooltip
         const embeddingModel = params.data.embedding_model || 'Unknown';
         return embeddingModel;
       },
       valueGetter: params => {
-        // Get the embedding model value for display
         const embeddingModel = params.data.embedding_model || 'Unknown';
         return embeddingModel;
       },
