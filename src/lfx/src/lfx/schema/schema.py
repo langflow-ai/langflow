@@ -32,3 +32,8 @@ class ErrorLog(TypedDict):
 class OutputValue(BaseModel):
     message: ErrorLog | StreamURL | dict | list | str
     type: str
+
+
+def build_output_logs(*args, **kwargs):  # noqa: ARG001
+    """Stub function for building output logs."""
+    return []
