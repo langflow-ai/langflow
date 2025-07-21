@@ -115,7 +115,7 @@ def _build_component_inputs(
             input_dict[key] = f'env_values.get("{env_key}", "")' if env_key else '""'
         else:
             val = value.get("value") if "value" in value else value
-            if val is not None and val != "":  # noqa: PLC1901
+            if val is not None and val != "":
                 input_dict[key] = repr(val)
 
     # remove all None or empty string values
