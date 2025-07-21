@@ -97,7 +97,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         FloatInput(
             name="sim_threshold",
             display_name="Similarity Threshold",
-            info="Minimum similarity score (0 to 1) to include a document. Only applies to 'Similarity with Score' search.",
+            info=(
+                "Minimum similarity score (0 to 1) to include a document. Only applies to "
+                "'Similarity with Score' search."
+            ),
             value=0.0,
             range_spec={"min": 0.0, "max": 1.0},
             advanced=True,
@@ -105,6 +108,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         NestedDictInput(
             name="search_filter",
             display_name="Metadata Filter",
+            input_types=["Data"],
             info="Dictionary of metadata filter to refine search results.",
             tool_mode=True,
         ),
@@ -117,8 +121,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         if raw_filter:
             try:
                 self.advance_search_filter = raw_filter
-            except json.JSONDecodeError:
-                raise ValueError("The 'advance_search_filter' must be a valid JSON dictionary.")
+            except json.JSONDecodeError as err:
+                raise ValueError(
+                    "The 'advance_search_filter' must be a valid JSON dictionary."
+                ) from err
         else:
             self.advance_search_filter = None
 
@@ -130,9 +136,12 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             from chromadb import Client
             from langchain_chroma import Chroma
         except ImportError as e:
-            msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
+            msg = (
+                "Could not import Chroma integration package. "
+                "Please install it with `pip install langchain-chroma`."
+            )
             raise ImportError(msg) from e
-        # Chroma settings
+
         chroma_settings = None
         client = None
         if self.chroma_server_host:
@@ -145,8 +154,11 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             )
             client = Client(settings=chroma_settings)
 
-        # Check persist_directory and expand it if it is a relative path
-        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
+        persist_directory = (
+            self.resolve_path(self.persist_directory)
+            if self.persist_directory is not None
+            else None
+        )
 
         chroma = Chroma(
             persist_directory=persist_directory,
@@ -166,7 +178,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             self.status = ""
             return
 
-        # Convert DataFrame to Data if needed using parent's method
         ingest_data = self._prepare_ingest_data()
 
         stored_documents_without_id = []
@@ -212,7 +223,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         threshold = float(self.sim_threshold or 0.0)
 
         if mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_relevance_scores"):
-            docs_and_scores = vs.similarity_search_with_relevance_scores(query, k=k, filter=filt if filt else None)
+            docs_and_scores = vs.similarity_search_with_relevance_scores(query, k=k, filter=filt or None)
             results: list[Data] = []
             for doc, score in docs_and_scores:
                 if score >= threshold:
@@ -224,16 +235,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                     results.append(data)
             self.status = results
             return results
-
-        query = self.search_query
-        if not query:
-            self.status = ""
-            return []
-
-        mode = self.search_type
-        k = self.number_of_results
-        filt = self.advance_search_filter
-        threshold = float(self.sim_threshold or 0.0)
 
         if filt:
             self.log(f"Filter: {filt}")
