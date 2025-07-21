@@ -1334,13 +1334,26 @@ class Graph:
             return Finish()
         vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()
+
+        # Provide fallback cache functions if chat service is unavailable
+        if chat_service is not None:
+            get_cache_func = chat_service.get_cache
+            set_cache_func = chat_service.set_cache
+        else:
+            # Fallback no-op cache functions for tests or when service unavailable
+            async def get_cache_func(*args, **kwargs):  # noqa: ARG001
+                return None
+
+            async def set_cache_func(*args, **kwargs):
+                pass
+
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
             inputs_dict=inputs.model_dump() if inputs else {},
             files=files,
-            get_cache=chat_service.get_cache,
-            set_cache=chat_service.set_cache,
+            get_cache=get_cache_func,
+            set_cache=set_cache_func,
             event_manager=event_manager,
         )
 
@@ -1353,7 +1366,8 @@ class Graph:
         self.reset_inactivated_vertices()
         self.reset_activated_vertices()
 
-        await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+        if chat_service is not None:
+            await chat_service.set_cache(str(self.flow_id or self._run_id), self)
         self._record_snapshot(vertex_id)
         return vertex_build_result
 

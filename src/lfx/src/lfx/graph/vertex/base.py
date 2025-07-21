@@ -715,9 +715,10 @@ class Vertex:
         from lfx.interface.components import ensure_component_loaded
         from lfx.services.deps import get_settings_service
 
-        if get_settings_service().settings.lazy_load_components:
+        settings_service = get_settings_service()
+        if settings_service and settings_service.settings.lazy_load_components:
             component_name = self.id.split("-")[0]
-            await ensure_component_loaded(self.vertex_type, component_name, get_settings_service())
+            await ensure_component_loaded(self.vertex_type, component_name, settings_service)
 
         # Continue with the original implementation
         async with self._lock:

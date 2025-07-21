@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
@@ -76,13 +77,8 @@ class Message(Data):
             # Try parsing with timezone
             return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
         except ValueError:
-            try:
-                # Try parsing without timezone
-                dt = datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-                return dt.replace(tzinfo=timezone.utc)
-            except ValueError:
-                # If parsing fails, return current timestamp
-                return datetime.now(timezone.utc)
+            # Try parsing without timezone
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
     def set_flow_id(self, flow_id: str) -> None:
         """Set the flow ID for this message."""
@@ -129,6 +125,13 @@ class Message(Data):
             formatted_text = template
 
         return cls(text=formatted_text)
+
+    @classmethod
+    async def create(cls, **kwargs):
+        """If files are present, create the message in a separate thread as is_image_file is blocking."""
+        if "files" in kwargs:
+            return await asyncio.to_thread(cls, **kwargs)
+        return cls(**kwargs)
 
     def format_text(self) -> str:
         """Format the message text.
