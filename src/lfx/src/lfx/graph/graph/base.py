@@ -39,18 +39,24 @@ from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, Stat
 from lfx.logging.logger import LogConfig, configure
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
-from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.util import run_until_complete
 
+
+# Define CacheMiss locally since cache utils were removed from lfx
+class CacheMiss:
+    """Sentinel object for cache misses."""
+
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
+    from typing import Any
 
-    from lfx.api.v1.schemas import InputValueRequest
     from lfx.custom.custom_component.component import Component
     from lfx.events.event_manager import EventManager
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
+    from lfx.schema.schema import InputValueRequest
     from lfx.services.chat.schema import GetCache, SetCache
     from lfx.services.tracing.service import TracingService
 
@@ -137,7 +143,7 @@ class Graph:
             self.tracing_service = None
         if start is not None and end is not None:
             self._set_start_and_end(start, end)
-            self.prepare(start_component_id=start._id)
+            self.prepare(start_component_id=start.get_id())
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
@@ -248,10 +254,10 @@ class Graph:
         self.initialize()
 
     def add_component(self, component: Component, component_id: str | None = None) -> str:
-        component_id = component_id or component._id
+        component_id = component_id or component.get_id()
         if component_id in self.vertex_map:
             return component_id
-        component._id = component_id
+        component.set_id(component_id)
         if component_id in self.vertex_map:
             msg = f"Component ID {component_id} already exists"
             raise ValueError(msg)
@@ -260,12 +266,12 @@ class Graph:
         vertex = self._create_vertex(frontend_node)
         vertex.add_component_instance(component)
         self._add_vertex(vertex)
-        if component._edges:
-            for edge in component._edges:
+        if component.get_edges():
+            for edge in component.get_edges():
                 self._add_edge(edge)
 
-        if component._components:
-            for _component in component._components:
+        if component.get_components():
+            for _component in component.get_components():
                 self.add_component(_component)
 
         return component_id
@@ -277,8 +283,8 @@ class Graph:
         if not hasattr(end, "to_frontend_node"):
             msg = f"end must be a Component. Got {type(end)}"
             raise TypeError(msg)
-        self.add_component(start, start._id)
-        self.add_component(end, end._id)
+        self.add_component(start, start.get_id())
+        self.add_component(end, end.get_id())
 
     def add_component_edge(self, source_id: str, output_input_tuple: tuple[str, str], target_id: str) -> None:
         source_vertex = self.get_vertex(source_id)
@@ -376,7 +382,7 @@ class Graph:
         for vertex in self.vertices:
             if vertex.custom_component is None:
                 continue
-            for output in vertex.custom_component._outputs_map.values():
+            for output in vertex.custom_component.get_outputs_map().values():
                 for key, value in config["output"].items():
                     setattr(output, key, value)
 
@@ -1631,7 +1637,7 @@ class Graph:
             params = result.message
             tb = result.formatted_traceback
         else:
-            from lfx.api.utils import format_exception_message
+            from lfx.utils.util import format_exception_message
 
             tb = traceback.format_exc()
             logger.exception("Error building Component")
@@ -1860,7 +1866,7 @@ class Graph:
             if self._start is None:
                 self._cycles = []
             else:
-                entry_vertex = self._start._id
+                entry_vertex = self._start.get_id()
                 edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
                 self._cycles = find_all_cycle_edges(entry_vertex, edges)
         return self._cycles
