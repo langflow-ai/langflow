@@ -10,12 +10,11 @@ import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 
+# Import schema functions from lfx
+from lfx.io.schema import create_input_schema, create_input_schema_from_dict
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
-
-# Import schema functions from lfx
-from lfx.template.schema import create_input_schema, create_input_schema_from_dict
 
 if TYPE_CHECKING:
     from collections.abc import Callable
