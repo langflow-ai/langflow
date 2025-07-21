@@ -105,6 +105,21 @@ class CustomComponent(BaseComponent):
         self._parameters = parameters
         self.set_attributes(self._parameters)
 
+    def get_vertex(self):
+        return self._vertex
+
+    def get_results(self):
+        return self._results
+
+    def get_artifacts(self):
+        return self._artifacts
+
+    def set_results(self, results: dict):
+        self._results = results
+
+    def set_artifacts(self, artifacts: dict):
+        self._artifacts = artifacts
+
     @property
     def trace_name(self) -> str:
         if hasattr(self, "_id") and self._id is None:
