@@ -7,10 +7,10 @@ import { ArizeIcon } from "@/icons/Arize";
 import { ArXivIcon } from "@/icons/ArXiv";
 import { AssemblyAIIcon } from "@/icons/AssemblyAI";
 import { AstraDBIcon } from "@/icons/AstraDB";
-import { AthenaIcon } from "@/icons/athena/index";
 import { AWSIcon } from "@/icons/AWS";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { AzureIcon } from "@/icons/Azure";
+import { AthenaIcon } from "@/icons/athena/index";
 import { BingIcon } from "@/icons/Bing";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { BWPythonIcon } from "@/icons/BW python";
@@ -36,8 +36,6 @@ import { freezeAllIcon } from "@/icons/freezeAll";
 import { GitBookIcon } from "@/icons/GitBook";
 import { GitLoaderIcon } from "@/icons/GitLoader";
 import { GleanIcon } from "@/icons/Glean";
-import { GlobeOkIcon } from "@/icons/globe-ok";
-import { GmailIcon } from "@/icons/gmail";
 import { GoogleIcon } from "@/icons/Google";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
@@ -48,10 +46,12 @@ import {
 } from "@/icons/GradientSparkles";
 import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { GroqIcon } from "@/icons/Groq";
-import { HackerNewsIcon } from "@/icons/hackerNews";
+import { GlobeOkIcon } from "@/icons/globe-ok";
+import { GmailIcon } from "@/icons/gmail";
 import { HCDIcon } from "@/icons/HCD";
 import { HomeAssistantIcon } from "@/icons/HomeAssistant";
 import { HuggingFaceIcon } from "@/icons/HuggingFace";
+import { HackerNewsIcon } from "@/icons/hackerNews";
 import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
@@ -64,8 +64,8 @@ import { Mem0 } from "@/icons/Mem0";
 import { MetaIcon } from "@/icons/Meta";
 import { MidjourneyIcon } from "@/icons/Midjorney";
 import { MilvusIcon } from "@/icons/Milvus";
-import { MistralIcon } from "@/icons/mistral";
 import { MongoDBIcon } from "@/icons/MongoDB";
+import { MistralIcon } from "@/icons/mistral";
 import { NeedleIcon } from "@/icons/Needle";
 import { NotDiamondIcon } from "@/icons/NotDiamond";
 import { NotionIcon } from "@/icons/Notion";
@@ -100,8 +100,8 @@ import { SpiderIcon } from "@/icons/Spider";
 import { Streamlit } from "@/icons/Streamlit";
 import { SupabaseIcon } from "@/icons/supabase";
 import { TavilyIcon } from "@/icons/Tavily";
-import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwelveLabsIcon } from "@/icons/TwelveLabs";
+import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { UpstashSvgIcon } from "@/icons/Upstash";
 import { VectaraIcon } from "@/icons/VectaraIcon";
@@ -112,6 +112,7 @@ import { WolframIcon } from "@/icons/Wolfram";
 import { XAIIcon } from "@/icons/xAI";
 import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
+import { JigsawStackIcon } from "./JigsawStack";
 import { WindsurfIcon } from "./Windsurf";
 
 // Export the eagerly loaded icons map
@@ -172,6 +173,7 @@ export const eagerIconsMapping = {
   Icosa: IcosaIcon,
   IFixIt: IFixIcon,
   javascript: JSIcon,
+  JigsawStack: JigsawStackIcon,
   LangChain: LangChainIcon,
   Langwatch: LangwatchIcon,
   LMStudio: LMStudioIcon,
