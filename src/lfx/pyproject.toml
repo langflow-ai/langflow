@@ -36,6 +36,7 @@ ignore = [
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
     "D1", # Missing docstring in public package
+    "S1",
     # Rules that are TODOs
     "ANN",
 ]
