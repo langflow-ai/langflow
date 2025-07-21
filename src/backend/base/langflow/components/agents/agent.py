@@ -132,7 +132,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Store result for potential JSON output
             self._agent_result = result
-            return result
+            # return result
 
         except (ValueError, TypeError, KeyError) as e:
             logger.error(f"{type(e).__name__}: {e!s}")
@@ -143,6 +143,8 @@ class AgentComponent(ToolCallingAgentComponent):
         except Exception as e:
             logger.error(f"Unexpected error: {e!s}")
             raise
+        else:
+            return result
 
     async def json_response(self) -> Data:
         """Convert agent response to structured JSON Data output."""

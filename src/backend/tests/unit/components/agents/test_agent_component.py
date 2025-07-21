@@ -8,7 +8,7 @@ from langflow.base.models.model_input_constants import (
     MODEL_PROVIDERS,
 )
 from langflow.base.models.openai_constants import (
-    OPENAI_MODEL_NAMES,
+    OPENAI_CHAT_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
 )
 from langflow.components.agents.agent import AgentComponent
@@ -100,7 +100,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "model_name" not in updated_config
 
     async def test_agent_has_dual_outputs(self, component_class, default_kwargs):
-        """Test that Agent component has both Response and Structured Response outputs"""
+        """Test that Agent component has both Response and Structured Response outputs."""
         component = await self.component_setup(component_class, default_kwargs)
 
         assert len(component.outputs) == 2
@@ -114,7 +114,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert component.outputs[1].tool_mode is False
 
     async def test_json_mode_filtered_from_openai_inputs(self, component_class, default_kwargs):
-        """Test that json_mode is filtered out from OpenAI inputs"""
+        """Test that json_mode is filtered out from OpenAI inputs."""
         component = await self.component_setup(component_class, default_kwargs)
 
         # Check that json_mode is not in the agent's inputs
@@ -127,7 +127,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "temperature" in input_names
 
     async def test_json_response_parsing_valid_json(self, component_class, default_kwargs):
-        """Test that json_response correctly parses JSON from agent response"""
+        """Test that json_response correctly parses JSON from agent response."""
         component = await self.component_setup(component_class, default_kwargs)
 
         # Mock a response with valid JSON
@@ -142,7 +142,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"name": "test", "value": 123}
 
     async def test_json_response_parsing_embedded_json(self, component_class, default_kwargs):
-        """Test that json_response handles text containing JSON"""
+        """Test that json_response handles text containing JSON."""
         component = await self.component_setup(component_class, default_kwargs)
 
         # Mock a response with text containing JSON
@@ -157,7 +157,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"status": "success"}
 
     async def test_json_response_error_handling(self, component_class, default_kwargs):
-        """Test that json_response handles completely non-JSON responses"""
+        """Test that json_response handles completely non-JSON responses."""
         component = await self.component_setup(component_class, default_kwargs)
 
         # Mock a response with no JSON
@@ -173,7 +173,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert result.data["content"] == "This is just plain text with no JSON"
 
     async def test_model_building_without_json_mode(self, component_class, default_kwargs):
-        """Test that model building works without json_mode attribute"""
+        """Test that model building works without json_mode attribute."""
         component = await self.component_setup(component_class, default_kwargs)
         component.agent_llm = "OpenAI"
 
@@ -191,7 +191,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         mock_component.set.assert_called_once()
 
     async def test_shared_execution_between_outputs(self, component_class, default_kwargs):
-        """Test that both outputs use the same agent execution"""
+        """Test that both outputs use the same agent execution."""
         component = await self.component_setup(component_class, default_kwargs)
 
         # Mock the message_response method
@@ -199,7 +199,11 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         mock_result = type("MockResult", (), {"content": '{"shared": "result"}'})()
 
-        component.message_response = AsyncMock(return_value=mock_result)
+        async def mock_message_response_side_effect():
+            component._agent_result = mock_result
+            return mock_result
+
+        component.message_response = AsyncMock(side_effect=mock_message_response_side_effect)
 
         # Call json_response first
         json_result = await component.json_response()
@@ -212,7 +216,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert json_result.data == {"shared": "result"}
 
     async def test_agent_component_initialization(self, component_class, default_kwargs):
-        """Test that Agent component initializes correctly with filtered inputs"""
+        """Test that Agent component initializes correctly with filtered inputs."""
         component = await self.component_setup(component_class, default_kwargs)
 
         # Should not raise any errors during initialization
@@ -222,7 +226,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert len(component.outputs) == 2
 
     async def test_frontend_node_structure(self, component_class, default_kwargs):
-        """Test that frontend node has correct structure with filtered inputs"""
+        """Test that frontend node has correct structure with filtered inputs."""
         component = await self.component_setup(component_class, default_kwargs)
 
         frontend_node = component.to_frontend_node()
@@ -279,7 +283,7 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
 
         # Iterate over all OpenAI models
         failed_models = []
-        for model_name in OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
+        for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
             # Initialize the AgentComponent with mocked inputs
             tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
             agent = AgentComponent(
