@@ -1,4 +1,7 @@
+import argparse
+import json
 import os
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -7,38 +10,24 @@ from typing import Any
 IGNORE_LINT = "# ruff: noqa"
 FILE_COMMENT = "# This file is auto-generated from a flow JSON file by generate_flow_vc."
 FILE_PREFIX = f"{FILE_COMMENT}\n{IGNORE_LINT}\n"
-
-HELPERS_CODE = """\
-async def set_component_inputs_and_run(component: Component, inputs: dict | None = None):
-    if inputs:
-        component.build(**inputs)
-    await component.run()
-"""
-
-# Constants for node classification
-CHAT_INPUT_TYPES = {"chatinput", "textinput", "message"}
 MERMAID_FILENAME = "mermaid_graph.txt"
 COMPONENTS_DIR = "components"
 FLOW_FILENAME = "flow.py"
 
 
-def _escape_mermaid_display_name(display_name: str) -> str:
-    """Escape special characters in display names for Mermaid syntax."""
-    return display_name.replace('"', '\\"').replace("\n", " ").replace("\r", "").strip()
-
-
 def _generate_mermaid_diagram(
-    flow_name: str,
-    nodes: list[dict[str, Any]],
-    edges: list[dict[str, Any]],
+    flow_dict: dict[str, Any],
     dest_folder: str,
 ) -> str:
+    nodes = flow_dict["data"]["nodes"]
+    edges = flow_dict["data"]["edges"]
+    flow_name = flow_dict["name"]
     mermaid_lines = ["graph TD", f"    subgraph {flow_name}"]
 
     for node in nodes:
         node_id = _fix_node_id(node["data"]["id"])
         display_name = node["data"].get("display_name", node_id)
-        safe_display_name = _escape_mermaid_display_name(display_name)
+        safe_display_name = display_name.replace('"', '\\"').replace("\n", " ").replace("\r", "").strip()
         mermaid_lines.append(f'        {node_id}["{safe_display_name}"]')
 
     for edge in edges:
@@ -51,26 +40,6 @@ def _generate_mermaid_diagram(
     mermaid_file_path = Path(dest_folder) / MERMAID_FILENAME
     _write_file(mermaid_file_path, mermaid_text)
     return mermaid_file_path
-
-
-def _build_node_dependency_map(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Build a mapping of node dependencies and targets from edges."""
-    node_map = {}
-    for node in nodes:
-        node_id = node["data"]["id"]
-        node_map[node_id] = {
-            "id": node_id,
-            "dependencies": [],
-            "targets": [],
-        }
-
-    for edge in edges:
-        src = edge["source"]
-        tgt = edge["target"]
-        node_map[tgt]["dependencies"].append(src)
-        node_map[src]["targets"].append(tgt)
-
-    return node_map
 
 
 def _find_available_nodes(node_map: dict[str, dict[str, Any]], processed_ids: set[str]) -> list[tuple[str, int]]:
@@ -87,10 +56,31 @@ def _find_available_nodes(node_map: dict[str, dict[str, Any]], processed_ids: se
     return available_nodes
 
 
-def _topological_sort_nodes(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _topological_sort_nodes(flow_dict: dict):
     """Return nodes sorted in topological order based on edges."""
+    nodes = flow_dict["data"]["nodes"]
+    edges = flow_dict["data"]["edges"]
+    node_map = {}
+    input_map: dict[str, dict[str, tuple[str, str]]] = defaultdict(dict)
+
+    for node in nodes:
+        node_id = node["data"]["id"]
+        node_map[node_id] = {
+            "id": node_id,
+            "dependencies": [],
+            "targets": [],
+        }
+
+    for edge in edges:
+        src = edge["source"]
+        tgt = edge["target"]
+        node_map[tgt]["dependencies"].append(src)
+        node_map[src]["targets"].append(tgt)
+        src_handle = edge["data"].get("sourceHandle", {}).get("name", "output")
+        tgt_handle = edge["data"].get("targetHandle", {}).get("fieldName", "input")
+        input_map[_fix_node_id(edge["target"])][tgt_handle] = (_fix_node_id(src), src_handle)
+
     node_id_map = {node["data"]["id"]: node for node in nodes}
-    node_map = _build_node_dependency_map(nodes, edges)
     sorted_nodes = []
     processed_ids = set()
 
@@ -105,215 +95,36 @@ def _topological_sort_nodes(nodes: list[dict[str, Any]], edges: list[dict[str, A
             sorted_nodes.append(node_id_map[node_id])
             processed_ids.add(node_id)
 
-    return sorted_nodes
-
-
-def _extract_edge_handles(edge: dict[str, Any]) -> tuple[str, str]:
-    """Extract source and target handles from an edge."""
-    src_handle = edge["data"].get("sourceHandle", {}).get("name", "output")
-    tgt_handle = edge["data"].get("targetHandle", {}).get("fieldName", "input")
-    return src_handle, tgt_handle
-
-
-def _build_input_and_output_maps(
-    edges: list[dict[str, Any]],
-    node_id_to_class_name: dict[str, str],
-) -> tuple[dict[str, dict[str, tuple[str, str]]], list[str]]:
-    input_map: dict[str, dict[str, tuple[str, str]]] = defaultdict(dict)
-    reverse_dependency_graph: dict[str, set[str]] = defaultdict(set)
-
-    for edge in edges:
-        src = _fix_node_id(edge["source"])
-        tgt = _fix_node_id(edge["target"])
-        src_handle, tgt_handle = _extract_edge_handles(edge)
-        reverse_dependency_graph[src].add(tgt)
-        input_map[tgt][tgt_handle] = (src, src_handle)
-
-    all_node_ids = set(node_id_to_class_name.keys())
-    output_nodes = [nid for nid in all_node_ids if not reverse_dependency_graph[nid]]
-    return input_map, output_nodes
+    flow_dict["data"]["nodes"] = sorted_nodes
+    return flow_dict, input_map
 
 
 def _build_component_inputs(
     node_id: str,
     input_map: dict[str, dict[str, tuple[str, str]]],
     node: dict[str, Any],
-    chat_input_nodes: list[str],
 ) -> dict[str, str]:
     """Build input dictionary for a component."""
+    template = node["data"]["node"].get("template", {})
     input_dict = {}
-    has_input_value = False
-
-    for input_name, (src_node_id, src_output) in input_map.get(node_id, {}).items():
-        input_dict[input_name] = f"components['{src_node_id}'].{src_output}.value"
-        has_input_value = True
-
-    input_dict = _process_template_inputs(node, input_dict)
-
-    if node_id in chat_input_nodes and not has_input_value:
-        default_value = input_dict.get("input_value", '""')
-        input_dict["input_value"] = f"flow_input or {default_value}"
-
-    return input_dict
-
-
-def _generate_component_call_lines(node_id: str, input_dict: dict[str, str]) -> list[str]:
-    """Generate lines for calling a component with inputs."""
-    if not input_dict:
-        return []
-
-    input_items = [f"'{key}': {value}" for key, value in input_dict.items()]
-    lines = [
-        "    await set_component_inputs_and_run(",
-        f"        components['{node_id}'],",
-        "        {",
-    ]
-    lines.extend(f"            {input_item}," for input_item in input_items)
-    lines.extend(["        }", "    )"])
-    return lines
-
-
-def _generate_function_signature_and_setup(flow_dict: dict[str, Any]) -> list[str]:
-    """Generate the function signature and initial setup code."""
-    return [
-        f"""async def run(
-    flow_input: str | None = None,
-    session_id: str | None = None,
-    user_id: str | None = None, flow_name: str | None = None,
-    flow_id: str | None = None,
-    env_values: dict | None = None
-):
-    env_values = env_values or os.environ.copy()
-    global_state = {{
-        "_session_id": session_id or str(uuid4()),
-        "_user_id": user_id,
-        "_flow_name": flow_name or "{flow_dict["name"]}",
-        "_flow_id": flow_id or "{flow_dict["id"]}",
-    }}
-    components: dict[str, Component] = {{}}
-    results = {{
-        "outputs": {{}},
-        "components": {{}},
-        "global_state": global_state,
-    }}
-    """,
-    ]
-
-
-def _generate_component_initialization_lines(nodes: list[dict[str, Any]]) -> list[str]:
-    """Generate lines for initializing all components."""
-    lines = ["    # Initialize all components"]
-    lines.extend(
-        f"    components['{_fix_node_id(node['data']['id'])}'] = _{_fix_node_id(node['data']['id'])}(**global_state)"
-        for node in nodes
-        if node["data"]["node"]["template"].get("code", {}).get("value")
-    )
-    return lines
-
-
-def _generate_execution_lines(
-    flow_dict: dict[str, Any],
-    nodes: list[dict[str, Any]],
-    input_map: dict[str, dict[str, tuple[str, str]]],
-    chat_input_nodes: list[str],
-) -> list[str]:
-    execution_lines = []
-    execution_lines.extend(_generate_function_signature_and_setup(flow_dict))
-    execution_lines.extend(_generate_component_initialization_lines(nodes))
-    execution_lines.append("\n\n    # Set inputs and run components in topological order")
-
-    for node in nodes:
-        node_id = _fix_node_id(node["data"]["id"])
-        input_dict = _build_component_inputs(node_id, input_map, node, chat_input_nodes)
-        execution_lines.extend(_generate_component_call_lines(node_id, input_dict))
-
-    return execution_lines
-
-
-def _generate_imports(node_id_to_class_name: dict[str, str]) -> list[str]:
-    imports = []
-    for node_id, class_name in node_id_to_class_name.items():
-        if not class_name:
+    for key, value in template.items():
+        if key in input_dict or not isinstance(value, dict):
             continue
-        imports.append(f"from components.{node_id} import {class_name} as _{node_id}")
-    return imports
-
-
-def _generate_result_lines(output_nodes: list[str], node_id_to_outputs: dict[str, list[str]]) -> list[str]:
-    result_lines = ["\n\n    # Collect results from output nodes"]
-    output_nodes.sort()
-
-    result_lines.extend(
-        f"    results['outputs']['{node_id}.{output_name}'] = components['{node_id}'].{output_name}"
-        for node_id in output_nodes
-        for output_name in node_id_to_outputs.get(node_id, [])
-    )
-
-    result_lines.append("""    results["components"] = {
-        node_id: {
-            "id": component._id,
-            "description": component.description,
-            "display_name": component.display_name,
-            "name": component.name,
-            "trace_name": component.trace_name,
-            "trace_type": component.trace_type,
-            "outputs": component.outputs,
-            "inputs": component.inputs,
-        }
-        for node_id, component in components.items()
-    }""")
-    result_lines.append("    return results")
-    return result_lines
-
-
-def _compose_main_code(
-    flow_dict: dict[str, Any],
-    components_imports: list[str],
-    execution_lines: list[str],
-    result_lines: list[str],
-) -> str:
-    return f"""{FILE_PREFIX}
-import asyncio
-import os
-import sys
-from uuid import uuid4
-import json
-from langflow.custom.custom_component.component import Component
-import argparse
-{chr(10).join(components_imports)}
-
-{HELPERS_CODE}
-
-{chr(10).join(execution_lines)}
-{chr(10).join(result_lines)}
-
-def print_results_as_json(results):
-    def convert_data_to_dict(data):
-        if isinstance(data, dict):
-            return {{k: convert_data_to_dict(v) for k, v in data.items()}}
-        elif isinstance(data, list):
-            return [convert_data_to_dict(item) for item in data]
-        elif hasattr(data, 'dict'):
-            return data.dict()
-        elif hasattr(data, 'to_dict'):
-            return data.to_dict()
-        elif hasattr(data, 'to_json'):
-            return json.loads(data.to_json())
+        if value.get("load_from_db"):
+            env_key = value.get("value", "")
+            input_dict[key] = f'env_values.get("{env_key}", "")' if env_key else '""'
         else:
-            return data
-    results = convert_data_to_dict(results)
-    print(json.dumps(results, default=str, indent=2))
+            val = value.get("value") if "value" in value else value
+            if val is not None and val != "":  # noqa: PLC1901
+                input_dict[key] = repr(val)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run the {flow_dict["name"]} flow')
-    parser.add_argument('--flow-input', type=str, default='', help='Input for the flow')
-    parser.add_argument('--session-id', type=str, default=str(uuid4()), help='Session ID for the flow')
-    parser.add_argument('--user-id', type=str, default=None, help='User ID for the flow')
-    parser.add_argument('--flow-name', type=str, default=None, help='Flow name')
-    parser.add_argument('--flow-id', type=str, default=None, help='Flow ID')
-    args = parser.parse_args()
-    result = asyncio.run(run(**vars(args)))
-"""
+    # remove all None or empty string values
+    input_dict = {k: v for k, v in input_dict.items() if v not in {None, "", "None", '""'}}
+    for input_name, (_src_node_id, _src_output) in input_map.get(node_id, {}).items():
+        if input_name in input_dict:
+            input_dict.pop(input_name)
+    input_dict.pop("code")
+    return input_dict
 
 
 def _write_file(path: str | Path, content: str) -> None:
@@ -372,100 +183,10 @@ def _write_component_files(nodes: list[dict[str, Any]], dest_folder: str) -> dic
     return node_id_to_class_name
 
 
-def _extract_node_outputs(nodes: list[dict[str, Any]]) -> dict[str, list[str]]:
-    """Extract output names for each node by node_id."""
-    node_id_to_outputs: dict[str, list[str]] = {}
-    for node in nodes:
-        node_id: str = _fix_node_id(node["data"]["id"])
-        outputs: list[dict[str, Any]] = node["data"]["node"].get("outputs", [])
-        node_id_to_outputs[node_id] = [output.get("name") for output in outputs if output.get("name")]
-    return node_id_to_outputs
-
-
-def _is_chat_input_node(base_classes: list[str]) -> bool:
-    """Check if a node is a chat input type based on its base classes."""
-    return any(cls.lower() in CHAT_INPUT_TYPES for cls in base_classes)
-
-
-def _identify_chat_input_nodes(nodes: list[dict[str, Any]]) -> list[str]:
-    """Identify nodes that are chat input, text input, or message types."""
-    chat_input_nodes = []
-    for node in nodes:
-        node_id = _fix_node_id(node["data"]["id"])
-        base_classes = node["data"]["node"].get("base_classes", [])
-        if _is_chat_input_node(base_classes):
-            chat_input_nodes.append(node_id)
-    return chat_input_nodes
-
-
-def _should_process_template_value(key: str, value: Any, input_dict: dict[str, str]) -> bool:
-    """Check if a template value should be processed."""
-    if key in input_dict:
-        return False
-    return isinstance(value, dict) and "_input_type" in value
-
-
-def _process_environment_value(value: dict[str, Any]) -> str:
-    """Process environment variable values."""
-    env_key = value.get("value", "")
-    return f'env_values.get("{env_key}", "")' if env_key else '""'
-
-
-def _process_template_inputs(
-    node: dict[str, Any],
-    input_dict: dict[str, str],
-) -> dict[str, str]:
-    """Process template inputs for a node, handling environment variables and default values.
-
-    Args:
-        node: The node data containing template information
-        input_dict: Existing input dictionary from edge connections
-
-    Returns:
-        Updated input dictionary with template inputs processed
-    """
-    template = node["data"]["node"].get("template", {})
-
-    for key, value in template.items():
-        if not _should_process_template_value(key, value, input_dict):
-            continue
-
-        if value.get("load_from_db"):
-            input_dict[key] = _process_environment_value(value)
-        else:
-            input_dict[key] = repr(value.get("value") if "value" in value else value)
-
-    return input_dict
-
-
-def _write_main_file(
-    flow_dict: dict[str, Any],
-    node_id_to_class_name: dict[str, str],
-    dest_folder: str,
-    nodes: list[dict[str, Any]],
-) -> None:
-    """Generate the main flow execution file.
-
-    Args:
-        flow_dict: The complete flow dictionary
-        node_id_to_class_name: Mapping of node IDs to their class names
-        dest_folder: Destination folder for the generated file
-        nodes: List of node data for processing
-    """
-    edges = flow_dict["data"]["edges"]
-    imports = _generate_imports(node_id_to_class_name)
-    input_map, output_nodes = _build_input_and_output_maps(edges, node_id_to_class_name)
-    node_id_to_outputs = _extract_node_outputs(nodes)
-    chat_input_nodes = _identify_chat_input_nodes(nodes)
-    execution_lines = _generate_execution_lines(flow_dict, nodes, input_map, chat_input_nodes)
-    result_lines = _generate_result_lines(output_nodes, node_id_to_outputs)
-    main_code = _compose_main_code(flow_dict, imports, execution_lines, result_lines)
-    _write_file(Path(dest_folder) / FLOW_FILENAME, main_code)
-
-
 def _clean_destination_folder(dest_folder: str) -> None:
     """Remove all files and folders from the destination folder."""
     dest_path = Path(dest_folder)
+    _ensure_dir(dest_folder)
     if not dest_path.exists():
         return
 
@@ -474,6 +195,7 @@ def _clean_destination_folder(dest_folder: str) -> None:
             (Path(root) / name).unlink()
         for name in dirs:
             (Path(root) / name).rmdir()
+    _ensure_dir(dest_folder)
 
 
 def export_flow_as_code(flow_dict: dict[str, Any], dest_folder: str) -> None:
@@ -489,15 +211,220 @@ def export_flow_as_code(flow_dict: dict[str, Any], dest_folder: str) -> None:
         - mermaid_graph.txt: Mermaid diagram source text
     """
     _clean_destination_folder(dest_folder)
-    _ensure_dir(dest_folder)
-
-    flow_name = flow_dict["name"]
+    flow_dict, input_map = _topological_sort_nodes(flow_dict)
     nodes = flow_dict["data"]["nodes"]
     edges = flow_dict["data"]["edges"]
-
-    nodes = _topological_sort_nodes(nodes, edges)
-    flow_dict["data"]["nodes"] = nodes
-
     node_id_to_class_name = _write_component_files(nodes, dest_folder)
-    _write_main_file(flow_dict, node_id_to_class_name, dest_folder, nodes)
-    _generate_mermaid_diagram(flow_name, nodes, edges, dest_folder)
+    components_imports = [
+        f"from components.{node_id} import {class_name} as _{node_id}"
+        for node_id, class_name in node_id_to_class_name.items()
+        if class_name
+    ]
+    components_instances = []
+    for node in nodes:
+        if not node["data"]["node"]["template"].get("code", {}).get("value"):
+            continue
+        node_id = _fix_node_id(node["data"]["id"])
+        class_name = "_" + _fix_node_id(node["data"]["id"])
+        inputs = _build_component_inputs(
+            node_id,
+            input_map,
+            node,
+        )
+        input_items = [f"'{key}': {value}," for key, value in inputs.items()]
+        inputs_str = "\n        ".join(input_items)
+        components_instances.append(
+            f"""\n    components['{node_id}'] = {class_name}(**{{**global_state, **{{"_id": '{node["data"]["id"]}'}}}})""",
+        )
+        components_instances.append(
+            f"""\n    components['{node_id}'].set(**{{
+        {inputs_str}
+    }})""",
+        )
+        edges_values = [
+            json.dumps({"source": edge["source"], "target": edge["target"], "data": edge["data"]}, indent=4)
+            for edge in edges
+        ]
+        edges_setups = []
+        for edge in edges_values:
+            edges_setups.append(
+                f"""    graph.add_edge({edge.replace("\n", "\n    ")})""",
+            )
+
+    main_code = f"""{FILE_PREFIX}
+import anyio
+import os
+import sys
+from uuid import uuid4
+import json
+from langflow.custom.custom_component.component import Component
+from langflow.graph.graph.base import Graph
+import argparse
+{chr(10).join(components_imports)}
+
+def get_graph(
+    session_id: str | None = None,
+    user_id: str | None = None, flow_name: str | None = None,
+    flow_id: str | None = None,
+    env_values: dict | None = None
+):
+    env_values = env_values or os.environ.copy()
+    global_state = {{
+        "_session_id": session_id or str(uuid4()),
+        "_user_id": user_id,
+        "_flow_name": flow_name or "{flow_dict["name"]}",
+        "_flow_id": flow_id or "{flow_dict["id"]}",
+    }}
+    components: dict[str, Component] = {{}}
+
+    # Initialize all components
+{"".join(components_instances)}
+    graph = Graph()
+    for component in components.values():
+        graph.add_component(component)
+{"\n".join(edges_setups)}
+    graph.flow_id = global_state["_flow_id"]
+    graph.flow_name = global_state["_flow_name"]
+    graph.session_id = global_state["_session_id"]
+    graph.user_id = global_state["_user_id"]
+    graph.set_run_id(global_state["_session_id"])
+    graph.initialize()
+    return graph
+
+
+def print_results_as_json(results):
+    def convert_data_to_dict(data):
+        if isinstance(data, dict):
+            return {{k: convert_data_to_dict(v) for k, v in data.items()}}
+        elif isinstance(data, list):
+            return [convert_data_to_dict(item) for item in data]
+        elif hasattr(data, 'model_dump'):
+            return data.model_dump()
+        elif hasattr(data, 'dict'):
+            return data.dict()
+        elif hasattr(data, 'to_dict'):
+            return data.to_dict()
+        elif hasattr(data, 'to_json'):
+            return json.loads(data.to_json())
+        else:
+            return data
+    results = convert_data_to_dict(results)
+    print(json.dumps(results, default=str, indent=2))
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run the language_test flow')
+    parser.add_argument('--flow-input', type=str, default='', help='Input for the flow')
+    parser.add_argument('--session-id', type=str, default=str(uuid4()), help='Session ID for the flow')
+    parser.add_argument('--user-id', type=str, default=None, help='User ID for the flow')
+    parser.add_argument('--flow-name', type=str, default=None, help='Flow name')
+    parser.add_argument('--flow-id', type=str, default=None, help='Flow ID')
+    args = parser.parse_args()
+    graph = get_graph(
+        session_id=args.session_id,
+        user_id=args.user_id,
+        flow_name=args.flow_name,
+        flow_id=args.flow_id
+    )
+    inputs = {{ "input_value": args.flow_input }} if args.flow_input else {{}}
+    result = anyio.run(graph.arun, inputs)
+    print_results_as_json(result)
+"""
+    _write_file(Path(dest_folder) / FLOW_FILENAME, main_code)
+    _generate_mermaid_diagram(flow_dict, dest_folder)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Export a Langflow JSON file as executable Python code",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python flow_export.py --input flow.json --output ./exported_flow
+  python flow_export.py -i my_flow.json -o ./output --verbose
+        """,
+    )
+
+    parser.add_argument(
+        "--input",
+        "-i",
+        type=str,
+        required=True,
+        help="Path to the input Langflow JSON file",
+    )
+
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=str,
+        required=True,
+        help="Output directory for generated Python code",
+    )
+
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
+    )
+
+    args = parser.parse_args()
+
+    # Validate input file exists
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: Input file '{args.input}' does not exist")
+        sys.exit(1)
+
+    if not input_path.suffix.lower() == ".json":
+        print(f"Warning: Input file '{args.input}' does not have a .json extension")
+
+    # Load the flow JSON
+    try:
+        with open(input_path, encoding="utf-8") as f:
+            flow_dict = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Failed to parse JSON file '{args.input}': {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: Failed to read file '{args.input}': {e}")
+        sys.exit(1)
+
+    # Validate flow structure
+    if not isinstance(flow_dict, dict):
+        print("Error: Flow JSON must be a dictionary")
+        sys.exit(1)
+
+    if "name" not in flow_dict:
+        print("Error: Flow JSON must contain a 'name' field")
+        sys.exit(1)
+
+    if "data" not in flow_dict or "nodes" not in flow_dict["data"] or "edges" not in flow_dict["data"]:
+        print("Error: Flow JSON must contain 'data.nodes' and 'data.edges' fields")
+        sys.exit(1)
+
+    # Create output directory
+    output_path = Path(args.output)
+
+    if args.verbose:
+        print(f"Input file: {input_path.absolute()}")
+        print(f"Output directory: {output_path.absolute()}")
+        print(f"Flow name: {flow_dict['name']}")
+        print(f"Number of nodes: {len(flow_dict['data']['nodes'])}")
+        print(f"Number of edges: {len(flow_dict['data']['edges'])}")
+
+    try:
+        # Export the flow as code
+        export_flow_as_code(flow_dict, str(output_path))
+
+        if args.verbose:
+            print(f"\nSuccessfully exported flow to: {output_path.absolute()}")
+            print("Generated files:")
+            for file_path in output_path.rglob("*"):
+                if file_path.is_file():
+                    print(f"  - {file_path.relative_to(output_path)}")
+        else:
+            print(f"Successfully exported flow to: {output_path.absolute()}")
+
+    except Exception as e:
+        print(f"Error: Failed to export flow: {e}")
+        sys.exit(1)
