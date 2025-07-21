@@ -27,6 +27,9 @@ if TYPE_CHECKING:
 
 # Constants
 TOOL_OUTPUT_NAME = "component_as_tool"
+TOOL_OUTPUT_DISPLAY_NAME = "Toolset"
+TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."
+TOOLS_METADATA_INPUT_NAME = "tools_metadata"
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
 
 
