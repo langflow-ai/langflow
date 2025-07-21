@@ -8,27 +8,27 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import yaml
 from cachetools import TTLCache
 from langchain_core.documents import Document
-from langflow.schema.data import Data
-from langflow.services.deps import get_storage_service, get_variable_service, session_scope
-from langflow.services.storage.service import StorageService
-from langflow.template.utils import update_frontend_node_with_template_values
 from pydantic import BaseModel
 
 from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
+from lfx.schema.data import Data
+from lfx.services.deps import get_storage_service, get_variable_service, session_scope
+from lfx.services.storage.service import StorageService
+from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.util import list_flows, load_flow, run_flow, run_until_complete
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
-    from langflow.schema.schema import OutputValue
-    from langflow.services.storage.service import StorageService
-    from langflow.services.tracing.schema import Log
-    from langflow.services.tracing.service import TracingService
 
     from lfx.graph.graph.base import Graph
     from lfx.graph.vertex.base import Vertex
     from lfx.schema.dotdict import dotdict
+    from lfx.schema.log import Log
+    from lfx.schema.schema import OutputValue
+    from lfx.services.storage.service import StorageService
+    from lfx.services.tracing.service import TracingService
 
 
 class CustomComponent(BaseComponent):

@@ -13,25 +13,25 @@ import nanoid
 import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
-from langflow.base.tools.constants import (
+from pydantic import BaseModel, ValidationError
+
+from lfx.custom.tools import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
-from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool  # noqa: TC002
-from langflow.memory import astore_message, aupdate_messages, delete_message
-from langflow.schema.artifact import get_artifact_type, post_process_raw
-from langflow.schema.data import Data
-from langflow.schema.message import ErrorMessage, Message
-from langflow.services.tracing.schema import Log
-from langflow.template.field.base import UNDEFINED, Input, Output
-from langflow.template.frontend_node.custom_components import ComponentFrontendNode
-from pydantic import BaseModel, ValidationError
-
 from lfx.custom.tree_visitor import RequiredInputsVisitor
+from lfx.exceptions.component import StreamingError
+from lfx.field_typing import Tool  # noqa: TC001
+from lfx.memory import astore_message, aupdate_messages, delete_message
+from lfx.schema.artifact import get_artifact_type, post_process_raw
+from lfx.schema.data import Data
+from lfx.schema.log import Log
+from lfx.schema.message import ErrorMessage, Message
 from lfx.schema.properties import Source
+from lfx.template.field.base import UNDEFINED, Input, Output
+from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 
 # Lazy import to avoid circular dependency
 # from lfx.graph.state.model import create_state_model
@@ -44,14 +44,13 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from langflow.base.tools.component_tool import ComponentToolkit
-    from langflow.events.event_manager import EventManager
-    from langflow.inputs.inputs import InputTypes
-    from langflow.schema.dataframe import DataFrame
-    from langflow.schema.log import LoggableType
-
+    from lfx.custom.tools import ComponentToolkit
+    from lfx.events.event_manager import EventManager
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.vertex.base import Vertex
+    from lfx.inputs.inputs import InputTypes
+    from lfx.schema.dataframe import DataFrame
+    from lfx.schema.log import LoggableType
 
 
 _ComponentToolkit = None
@@ -1391,9 +1390,9 @@ class Component(CustomComponent):
 
     async def _build_tools_metadata_input(self):
         try:
-            from langflow.io import ToolsInput
+            from lfx.inputs.inputs import ToolsInput
         except ImportError as e:
-            msg = "Failed to import ToolsInput from langflow.io"
+            msg = "Failed to import ToolsInput from lfx.inputs.inputs"
             raise ImportError(msg) from e
         placeholder = None
         tools = []
