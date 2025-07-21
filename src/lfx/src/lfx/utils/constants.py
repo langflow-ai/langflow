@@ -11,4 +11,12 @@ DIRECT_TYPES = [
     "code",
     "NestedDict",
     "table",
+    "slider",
+    "tab",
+    "sortableList",
+    "auth",
+    "connect",
+    "query",
+    "tools",
+    "mcp",
 ]

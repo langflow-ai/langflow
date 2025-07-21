@@ -16,12 +16,13 @@ from lfx.utils.util import unescape_string
 
 if TYPE_CHECKING:
     from lfx.graph.edge.base import CycleEdge
+    from lfx.graph.vertex.base import Vertex
 
 
 class ParameterHandler:
     """Handles parameter processing for vertices."""
 
-    def __init__(self, vertex, storage_service=None) -> None:
+    def __init__(self, vertex: Vertex, storage_service) -> None:
         """Initialize the parameter handler.
 
         Args:
