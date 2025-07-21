@@ -103,6 +103,9 @@ class Data(BaseData):
     def __deepcopy__(self, memo):
         """Custom deepcopy implementation to handle copying of the Data object."""
         import copy
+
         # Create a new Data object with a deep copy of the data dictionary
         # Use the same class (could be subclassed)
-        return self.__class__(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
+        return self.__class__(
+            data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value
+        )
