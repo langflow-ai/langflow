@@ -67,24 +67,18 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
-            });
-
             const conclusion = '${{ job.status }}';
             const emoji = conclusion === 'success' ? '✅' : '❌';
             const status = conclusion === 'success' ? 'passed' : 'failed';
 
             const comment = `${emoji} **Smoke tests ${status}**
 
-Tests ran without API keys - covers ~90% of functionality.
+            Tests ran without API keys - covers ~90% of functionality.
 
-- Backend tests: Skipped API-dependent tests
-- Frontend tests: Full test suite with mocked APIs
+            - Backend tests: Skipped API-dependent tests
+            - Frontend tests: Full test suite with mocked APIs
 
-View details in the [Actions tab](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`;
+            View details in the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
 
             await github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
