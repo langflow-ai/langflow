@@ -6,10 +6,10 @@ from langflow.components.input_output.text import TextInputComponent
 from langflow.components.logic.conditional_router import ConditionalRouterComponent
 from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.processing import PromptComponent
-from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
 
+from lfx.custom.custom_component.component import Component
 from lfx.graph.graph.base import Graph
 from lfx.graph.graph.utils import find_cycle_vertices
 

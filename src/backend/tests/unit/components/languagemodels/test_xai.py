@@ -2,8 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.components.xai.xai import XAIModelComponent
-from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template
 from langflow.inputs.inputs import (
     BoolInput,
     DictInput,
@@ -14,6 +12,8 @@ from langflow.inputs.inputs import (
     SliderInput,
 )
 
+from lfx.custom.custom_component.component import Component
+from lfx.custom.utils import build_custom_component_template
 from tests.base import ComponentTestBaseWithoutClient
 
 

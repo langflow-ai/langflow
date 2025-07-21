@@ -3,14 +3,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
-from langflow.components.custom_component import CustomComponent
 from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import update_component_build_config
 from langflow.schema import dotdict
 from langflow.schema.message import Message
 from langflow.services.database.session import NoopSession
 from langflow.template import Output
+
+from lfx.custom.custom_component.component import Component
+from lfx.custom.custom_component.custom_component import CustomComponent
+from lfx.custom.utils import update_component_build_config
 
 crewai_available = False
 try:

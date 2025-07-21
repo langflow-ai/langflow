@@ -1,6 +1,7 @@
 import pytest
 from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
-from langflow.custom.custom_component.component import Component
+
+from lfx.custom.custom_component.component import Component
 
 
 class TestComponentOutputs:

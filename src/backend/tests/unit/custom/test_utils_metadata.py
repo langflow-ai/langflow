@@ -3,7 +3,8 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from langflow.custom.utils import _generate_code_hash
+
+from lfx.custom.utils import _generate_code_hash
 
 
 class TestCodeHashGeneration:
@@ -48,11 +49,11 @@ class TestCodeHashGeneration:
 class TestMetadataInTemplateBuilders:
     """Test metadata addition in template building functions."""
 
-    @patch("langflow.custom.utils.ComponentFrontendNode")
+    @patch("lfx.custom.utils.ComponentFrontendNode")
     def test_build_from_inputs_adds_metadata_with_module(self, mock_frontend_class):
         """Test that build_custom_component_template_from_inputs adds metadata when module_name is provided."""
-        from langflow.custom.custom_component.component import Component
-        from langflow.custom.utils import build_custom_component_template_from_inputs
+        from lfx.custom.custom_component.component import Component
+        from lfx.custom.utils import build_custom_component_template_from_inputs
 
         # Setup mock frontend node
         mock_frontend = Mock()
@@ -70,7 +71,7 @@ class TestMetadataInTemplateBuilders:
         test_component.template_config = {"inputs": []}
 
         # Mock get_component_instance to return a mock instance
-        with patch("langflow.custom.utils.get_component_instance") as mock_get_instance:
+        with patch("lfx.custom.utils.get_component_instance") as mock_get_instance:
             mock_instance = Mock()
             mock_instance.get_template_config = Mock(return_value={})
             mock_instance._get_field_order = Mock(return_value=[])
@@ -78,8 +79,8 @@ class TestMetadataInTemplateBuilders:
 
             # Mock add_code_field to return the frontend node
             with (
-                patch("langflow.custom.utils.add_code_field", return_value=mock_frontend),
-                patch("langflow.custom.utils.reorder_fields"),
+                patch("lfx.custom.utils.add_code_field", return_value=mock_frontend),
+                patch("lfx.custom.utils.reorder_fields"),
             ):
                 # Call the function
                 template, _ = build_custom_component_template_from_inputs(test_component, module_name="test.module")
@@ -90,11 +91,11 @@ class TestMetadataInTemplateBuilders:
         assert "code_hash" in mock_frontend.metadata
         assert len(mock_frontend.metadata["code_hash"]) == 12
 
-    @patch("langflow.custom.utils.CustomComponentFrontendNode")
+    @patch("lfx.custom.utils.CustomComponentFrontendNode")
     def test_build_template_adds_metadata_with_module(self, mock_frontend_class):
         """Test that build_custom_component_template adds metadata when module_name is provided."""
-        from langflow.custom.custom_component.custom_component import CustomComponent
-        from langflow.custom.utils import build_custom_component_template
+        from lfx.custom.custom_component.custom_component import CustomComponent
+        from lfx.custom.utils import build_custom_component_template
 
         # Setup mock frontend node
         mock_frontend = Mock()
@@ -111,17 +112,17 @@ class TestMetadataInTemplateBuilders:
         test_component._get_function_entrypoint_return_type = []
 
         # Mock helper functions
-        with patch("langflow.custom.utils.run_build_config") as mock_run_build:
+        with patch("lfx.custom.utils.run_build_config") as mock_run_build:
             mock_instance = Mock()
             mock_instance._get_field_order = Mock(return_value=[])
             mock_run_build.return_value = ({}, mock_instance)
 
             with (
-                patch("langflow.custom.utils.add_extra_fields"),
-                patch("langflow.custom.utils.add_code_field", return_value=mock_frontend),
-                patch("langflow.custom.utils.add_base_classes"),
-                patch("langflow.custom.utils.add_output_types"),
-                patch("langflow.custom.utils.reorder_fields"),
+                patch("lfx.custom.utils.add_extra_fields"),
+                patch("lfx.custom.utils.add_code_field", return_value=mock_frontend),
+                patch("lfx.custom.utils.add_base_classes"),
+                patch("lfx.custom.utils.add_output_types"),
+                patch("lfx.custom.utils.reorder_fields"),
             ):
                 # Call the function
                 template, _ = build_custom_component_template(test_component, module_name="custom.test")
