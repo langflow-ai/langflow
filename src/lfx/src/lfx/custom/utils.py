@@ -52,6 +52,11 @@ def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:
         msg = f"Empty source code for {class_name} in {modname}"
         raise ValueError(msg)
 
+    # Ensure source_code is a string
+    if not isinstance(source_code, str):
+        msg = f"Source code must be a string, got {type(source_code)} for {class_name} in {modname}"
+        raise TypeError(msg)
+
     # Generate SHA256 hash of the source code
     return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]  # First 12 chars for brevity
 

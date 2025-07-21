@@ -5,10 +5,11 @@ from textwrap import dedent
 
 import pytest
 from langchain_core.documents import Document
-from langflow.custom import Component, CustomComponent
-from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
-from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
-from langflow.custom.utils import build_custom_component_template
+
+from lfx.custom import Component, CustomComponent
+from lfx.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
+from lfx.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
+from lfx.custom.utils import build_custom_component_template
 
 
 @pytest.fixture

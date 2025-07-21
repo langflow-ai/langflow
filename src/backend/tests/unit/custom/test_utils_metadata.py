@@ -68,6 +68,7 @@ class TestMetadataInTemplateBuilders:
         test_component = Mock(spec=Component)
         test_component.__class__.__name__ = "TestComponent"
         test_component._code = "class TestComponent: pass"
+        test_component.code = "class TestComponent: pass"  # Ensure code is a string, not Mock
         test_component.template_config = {"inputs": []}
 
         # Mock get_component_instance to return a mock instance
@@ -107,6 +108,7 @@ class TestMetadataInTemplateBuilders:
         test_component = Mock(spec=CustomComponent)
         test_component.__class__.__name__ = "CustomTestComponent"
         test_component._code = "class CustomTestComponent: pass"
+        test_component.code = "class CustomTestComponent: pass"  # Ensure code is a string, not Mock
         test_component.template_config = {"display_name": "Test"}
         test_component.get_function_entrypoint_args = []
         test_component._get_function_entrypoint_return_type = []
@@ -141,3 +143,16 @@ class TestMetadataInTemplateBuilders:
         assert isinstance(result, str)
         assert len(result) == 12
         assert all(c in "0123456789abcdef" for c in result)
+
+    def test_hash_non_string_source_raises(self):
+        """Test that non-string source raises TypeError."""
+        with pytest.raises(TypeError, match="Source code must be a string"):
+            _generate_code_hash(123, "mod", "cls")
+
+    def test_hash_mock_source_raises(self):
+        """Test that Mock source raises TypeError."""
+        from unittest.mock import Mock
+
+        mock_code = Mock()
+        with pytest.raises(TypeError, match="Source code must be a string"):
+            _generate_code_hash(mock_code, "mod", "cls")
