@@ -35,7 +35,7 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "D1", # Missing docstring in public package
     # Rules that are TODOs
     "ANN",
 ]
