@@ -1,27 +1,37 @@
-### Anthropic
+---
+title: Anthropic
+slug: /bundles-anthropic
+---
 
-This component allows the generation of text using Anthropic Chat and Language models.
+import Icon from "@site/src/components/icon";
 
-For more information, see the [Anthropic documentation](https://docs.anthropic.com/en/docs/welcome).
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-<details>
-<summary>Parameters</summary>
+This page describes the components that are available in the **Anthropic** bundle.
 
-**Inputs**
+For more information about Anthropic features and functionality used by Anthropic components, see the [Anthropic documentation](https://docs.anthropic.com/en/docs/intro).
+
+## Anthropic text generation
+
+The **Anthropic** component is generates text using Anthropic Chat and Language models like Claude.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+Specifically, the **Language Model** output is an instance of [`ChatAnthropic`](https://python.langchain.com/docs/integrations/chat/anthropic/) configured according to the component's parameters.
+
+Use the **Language Model** output when you want to use an Anthropic model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### Anthropic text generation parameters
+
+Many **Anthropic** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. Default: `4096`. |
-| model | String | The name of the Anthropic model to use. Options include various Claude 3 models. |
-| anthropic_api_key | SecretString | Your Anthropic API key for authentication. |
-| temperature | Float | Controls randomness in the output. Default: `0.1`. |
-| anthropic_api_url | String | Endpoint of the Anthropic API. Defaults to `https://api.anthropic.com` if not specified (advanced). |
-| prefill | String | Prefill text to guide the model's response (advanced). |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| model | LanguageModel | An instance of ChatAnthropic configured with the specified parameters. |
-
-</details>
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. Default: `4096`. |
+| model | String | Input parameter. The name of the Anthropic model to use. Options include various Claude 3 models. |
+| anthropic_api_key | SecretString | Input parameter. Your Anthropic API key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
+| anthropic_api_url | String | Input parameter. Endpoint of the Anthropic API. Defaults to `https://api.anthropic.com` if not specified (advanced). |
+| prefill | String | Input parameter. Prefill text to guide the model's response (advanced). |

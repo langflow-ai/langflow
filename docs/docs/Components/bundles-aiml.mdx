@@ -1,51 +1,50 @@
-### AIML
+---
+title: AI/ML API
+slug: /bundles-aiml
+---
 
-This component creates a ChatOpenAI model instance using the AI/ML API.
+import Icon from "@site/src/components/icon";
 
-For more information, see the [AI/ML API Langflow integration documentation](https://docs.aimlapi.com/integrations/langflow).
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-<details>
-<summary>Parameters</summary>
+This page describes the components that are available in the **AI/ML** bundle.
 
-**Inputs**
+## AI/ML text generation
+
+This component creates a `ChatOpenAI` model instance using the AI/ML API.
+The output is exclusively a **Language Model** ([`LanguageModel`](/data-types#languagemodel)) that you can connect to another LLM-driven component, such as a **Smart Function** component.
+
+For more information, see the [AI/ML API Langflow integration documentation](https://docs.aimlapi.com/integrations/langflow) and [**Language Model** components](/components-models).
+
+### AI/ML text generation parameters
+
+Many **AI/ML** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| max_tokens | Integer | The maximum number of tokens to generate. Set to 0 for unlimited tokens. Range: 0-128000. |
-| model_kwargs | Dictionary | Additional keyword arguments for the model. |
-| model_name | String | The name of the AIML model to use. Options are predefined in `AIML_CHAT_MODELS`. |
-| aiml_api_base | String | The base URL of the AIML API. Defaults to `https://api.aimlapi.com`. |
-| api_key | SecretString | The AIML API Key to use for the model. |
-| temperature | Float | Controls randomness in the output. Default: `0.1`. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. Range: 0-128000. |
+| model_kwargs | Dictionary | Input parameter. Additional keyword arguments for the model. |
+| model_name | String | Input parameter. The name of the AIML model to use. Options are predefined in `AIML_CHAT_MODELS`. |
+| aiml_api_base | String | Input parameter. The base URL of the AIML API. Defaults to `https://api.aimlapi.com`. |
+| api_key | SecretString | Input parameter. The AIML API Key to use for the model. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
 
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
-
-</details>
-
-### AI/ML API
+## AI/ML API embedding generation
 
 The **AI/ML API** component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
 
+The output is [`Embeddings`](/data-types#embeddings).
+Specifically, an instance of `AIMLEmbeddingsImpl`.
+
 For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
 
-<details>
-<summary>Parameters</summary>
+### AI/ML API embedding generation parameters
 
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| model_name | String | The name of the AI/ML embedding model to use. |
-| aiml_api_key | SecretString | The API key required for authenticating with the AI/ML service. |
-
-**Outputs**
+Some **AI/ML API** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
-| embeddings | Embeddings | An instance of `AIMLEmbeddingsImpl` for generating embeddings. |
-
-</details>
+| model_name | String | Input parameter. The name of the AI/ML embedding model to use. |
+| aiml_api_key | SecretString | Input parameter. The API key required for authenticating with the AI/ML service. |
