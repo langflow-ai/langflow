@@ -66,11 +66,6 @@ def get_component_toolkit():
     return _ComponentToolkit
 
 
-# For backwards compatibility
-def _get_component_toolkit():
-    return get_component_toolkit()
-
-
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
 
