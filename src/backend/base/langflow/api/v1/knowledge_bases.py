@@ -111,6 +111,7 @@ def detect_embedding_model(kb_path: Path) -> str:
                             return model_value
         except (OSError, json.JSONDecodeError) as _:
             import logging
+
             logging.exception("Error reading embedding metadata file '%s'", metadata_file)
 
     # Check other JSON config files for model information
@@ -118,7 +119,7 @@ def detect_embedding_model(kb_path: Path) -> str:
         # Skip the embedding metadata file since we already checked it
         if config_file.name == "embedding_metadata.json":
             continue
-            
+
         try:
             with config_file.open("r", encoding="utf-8") as f:
                 config_data = json.load(f)
@@ -221,6 +222,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
                             metadata["embedding_model"] = embedding_metadata["embedding_model"]
             except (OSError, json.JSONDecodeError) as _:
                 import logging
+
                 logging.exception("Error reading embedding metadata file '%s'", metadata_file)
 
         # Fallback to detection if not found in metadata file
