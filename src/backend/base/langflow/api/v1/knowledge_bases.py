@@ -370,7 +370,7 @@ async def delete_knowledge_base(kb_name: str) -> dict[str, str]:
 
 @router.delete("", status_code=HTTPStatus.OK)
 @router.delete("/", status_code=HTTPStatus.OK)
-async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, str | int]:
+async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
         kb_root_path = get_kb_root_path()
