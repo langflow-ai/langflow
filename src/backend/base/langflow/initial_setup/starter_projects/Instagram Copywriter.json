@@ -26,9 +26,9 @@
         "id": "reactflow__edge-TextInput-4RTs6{œdataTypeœ:œTextInputœ,œidœ:œTextInput-4RTs6œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-irBTi{œfieldNameœ:œguidelinesœ,œidœ:œPrompt-irBTiœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-4RTs6",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-4RTs6œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-4RTs6œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-irBTi",
-        "targetHandle": "{œfieldNameœ:œguidelinesœ,œidœ:œPrompt-irBTiœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œguidelinesœ, œidœ: œPrompt-irBTiœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -56,9 +56,9 @@
         "id": "reactflow__edge-Prompt-vj0Ef{œdataTypeœ:œPromptœ,œidœ:œPrompt-vj0Efœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-xm3UQ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xm3UQœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-vj0Ef",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-vj0Efœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-vj0Efœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-xm3UQ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xm3UQœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-xm3UQœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-ChatInput-jcKwH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jcKwHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-DYPjp{œfieldNameœ:œinput_valueœ,œidœ:œAgent-DYPjpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-jcKwH",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jcKwHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jcKwHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-DYPjp",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-DYPjpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-DYPjpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-TavilySearchComponent-WmiId{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-WmiIdœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-DYPjp{œfieldNameœ:œtoolsœ,œidœ:œAgent-DYPjpœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-WmiId",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-WmiIdœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-WmiIdœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-DYPjp",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-DYPjpœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-DYPjpœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -140,9 +140,9 @@
         "id": "reactflow__edge-Prompt-irBTi{œdataTypeœ:œPromptœ,œidœ:œPrompt-irBTiœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-CWWr8{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-CWWr8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-irBTi",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-irBTiœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-irBTiœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-CWWr8",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-CWWr8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-CWWr8œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -169,9 +169,9 @@
         "id": "reactflow__edge-LanguageModelComponent-CWWr8{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-CWWr8œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-vj0Ef{œfieldNameœ:œpostœ,œidœ:œPrompt-vj0Efœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-CWWr8",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-CWWr8œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-CWWr8œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-vj0Ef",
-        "targetHandle": "{œfieldNameœ:œpostœ,œidœ:œPrompt-vj0Efœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-vj0Efœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -198,9 +198,9 @@
         "id": "reactflow__edge-LanguageModelComponent-CWWr8{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-CWWr8œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-6Lx3u{œfieldNameœ:œpostœ,œidœ:œPrompt-6Lx3uœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-CWWr8",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-CWWr8œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-CWWr8œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-6Lx3u",
-        "targetHandle": "{œfieldNameœ:œpostœ,œidœ:œPrompt-6Lx3uœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-6Lx3uœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -226,9 +226,9 @@
         "id": "reactflow__edge-Prompt-6Lx3u{œdataTypeœ:œPromptœ,œidœ:œPrompt-6Lx3uœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-JhaTG{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-JhaTGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-6Lx3u",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-6Lx3uœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-6Lx3uœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-JhaTG",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-JhaTGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-JhaTGœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -255,9 +255,9 @@
         "id": "reactflow__edge-LanguageModelComponent-JhaTG{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-JhaTGœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-vj0Ef{œfieldNameœ:œimage_descriptionœ,œidœ:œPrompt-vj0Efœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-JhaTG",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-JhaTGœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-JhaTGœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-vj0Ef",
-        "targetHandle": "{œfieldNameœ:œimage_descriptionœ,œidœ:œPrompt-vj0Efœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œimage_descriptionœ, œidœ: œPrompt-vj0Efœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
@@ -281,9 +281,9 @@
         },
         "id": "xy-edge__Agent-DYPjp{œdataTypeœ:œAgentœ,œidœ:œAgent-DYPjpœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-irBTi{œfieldNameœ:œcontextœ,œidœ:œPrompt-irBTiœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "source": "Agent-DYPjp",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-DYPjpœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-DYPjpœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-irBTi",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-irBTiœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-irBTiœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -316,7 +316,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -611,7 +614,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -782,7 +788,10 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "efdcba3771af",
+              "module": "langflow.components.input_output.text.TextInputComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -894,7 +903,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1051,7 +1063,10 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1352,7 +1367,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1568,7 +1586,10 @@
             "icon": "TavilyIcon",
             "last_updated": "2025-07-18T17:42:31.004Z",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6843645056d9",
+              "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

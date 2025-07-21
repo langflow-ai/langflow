@@ -284,7 +284,10 @@
             "key": "BatchRunComponent",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "86f4b70ee039",
+              "module": "langflow.components.processing.batch_run.BatchRunComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -499,7 +502,10 @@
             "key": "YouTubeCommentsComponent",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "aeda2975f4aa",
+              "module": "langflow.components.youtube.comments.YouTubeCommentsComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1432,7 +1438,10 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1740,7 +1749,10 @@
             "last_updated": "2025-07-07T14:52:15.000Z",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "c9f0262ff0b6",
+              "module": "langflow.components.youtube.youtube_transcripts.YouTubeTranscriptsComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2487,7 +2499,10 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
