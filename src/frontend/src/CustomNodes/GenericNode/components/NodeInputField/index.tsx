@@ -119,7 +119,9 @@ export default function NodeInputField({
       colors={colors}
       setFilterEdge={setFilterEdge}
       showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+      testIdComplement={`${data?.type?.toLowerCase()}-${
+        showNode ? "shownode" : "noshownode"
+      }`}
       nodeId={data.id}
       colorName={colorName}
     />

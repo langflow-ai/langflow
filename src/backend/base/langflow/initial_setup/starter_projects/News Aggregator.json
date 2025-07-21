@@ -204,7 +204,10 @@
             "icon": "AgentQL",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ce845cc47ae8",
+              "module": "langflow.components.agentql.agentql_api.AgentQL"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -557,7 +560,10 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -896,7 +902,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1198,7 +1207,10 @@
             "icon": "save",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f244023207e",
+              "module": "langflow.components.processing.save_file.SaveToFileComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
