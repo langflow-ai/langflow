@@ -1,0 +1,94 @@
+name: Smoke Tests
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  smoke-tests:
+    if: contains(github.event.label.name, 'smoke-test')
+    name: "Smoke Tests (No API Keys)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install backend dependencies
+        run: |
+          uv sync --dev
+
+      - name: Run backend smoke tests
+        run: |
+          uv run pytest src/backend/tests/unit \
+            -m "not api_key_required" \
+            --tb=short \
+            --maxfail=10 \
+            -v \
+            --durations=10
+        env:
+          LANGFLOW_SUPERUSER: admin
+          LANGFLOW_SUPERUSER_PASSWORD: 123456
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "21"
+          cache: "npm"
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd src/frontend
+          npm ci
+
+      - name: Run frontend smoke tests
+        run: |
+          cd src/frontend
+          npm run test:ci
+        env:
+          NODE_ENV: test
+
+      - name: Comment on PR with results
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            const conclusion = '${{ job.status }}';
+            const emoji = conclusion === 'success' ? '✅' : '❌';
+            const status = conclusion === 'success' ? 'passed' : 'failed';
+
+            const comment = `${emoji} **Smoke tests ${status}**
+
+Tests ran without API keys - covers ~90% of functionality.
+
+- Backend tests: Skipped API-dependent tests
+- Frontend tests: Full test suite with mocked APIs
+
+View details in the [Actions tab](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
