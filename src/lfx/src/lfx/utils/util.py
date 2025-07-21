@@ -177,6 +177,15 @@ INPUT_TYPE_MAP = {
 
 async def list_flows(*, user_id: str | None = None):
     """List flows for a user."""
+    # TODO: We may need to build a list flows that relies on calling
+    # the API or the db like langflow's list_flows does.
+    try:
+        from langflow.helpers.flow import list_flows as langflow_list_flows
+
+        return await langflow_list_flows(user_id=user_id)
+    except ImportError:
+        logger.error("Error listing flows: langflow.helpers.flow is not available")
+        return []
 
 
 async def load_flow(user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None):
