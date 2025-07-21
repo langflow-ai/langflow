@@ -1,4 +1,4 @@
-import { FlowType } from "../../../types/flow";
+import type { FlowType } from "../../../types/flow";
 
 export type FolderType = {
   name: string;
