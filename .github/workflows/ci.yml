@@ -132,56 +132,6 @@ jobs:
       - run: echo "Nightly build status -> ${{ needs.check-nightly-status.outputs.should-proceed }}"
       - run: echo "Should run tests -> ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}"
 
-      # Detailed breakdown of should-run-ci condition
-      - name: Debug should-run-ci condition
-        run: |
-          echo "=== SHOULD-RUN-CI CONDITION BREAKDOWN ==="
-
-          # First part: nightly status OR workflow_dispatch
-          NIGHTLY_OR_DISPATCH="${{ needs.check-nightly-status.outputs.should-proceed == 'true' || github.event_name == 'workflow_dispatch' }}"
-          echo "1. Nightly status OR workflow_dispatch: $NIGHTLY_OR_DISPATCH"
-          echo "   - Nightly status: ${{ needs.check-nightly-status.outputs.should-proceed }}"
-          echo "   - Is workflow_dispatch: ${{ github.event_name == 'workflow_dispatch' }}"
-
-          # Second part: PR conditions OR event type conditions
-          HAS_LGTM="${{ contains( github.event.pull_request.labels.*.name, 'lgtm') }}"
-          IS_NOT_DRAFT="${{ github.event.pull_request.draft == false }}"
-          PR_CONDITIONS="${{ contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false }}"
-
-          IS_WORKFLOW_DISPATCH="${{ github.event_name == 'workflow_dispatch' }}"
-          IS_WORKFLOW_CALL="${{ github.event_name == 'workflow_call' }}"
-          IS_MERGE_GROUP="${{ github.event_name == 'merge_group' }}"
-          EVENT_CONDITIONS="${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group' }}"
-
-          SECOND_PART="${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}"
-
-          echo "2. PR conditions OR event type conditions: $SECOND_PART"
-          echo "   PR Conditions (LGTM AND not draft): $PR_CONDITIONS"
-          echo "     - Has LGTM label: $HAS_LGTM"
-          echo "     - Is not draft: $IS_NOT_DRAFT"
-          echo "   Event Type Conditions: $EVENT_CONDITIONS"
-          echo "     - Is workflow_dispatch: $IS_WORKFLOW_DISPATCH"
-          echo "     - Is workflow_call: $IS_WORKFLOW_CALL"
-          echo "     - Is merge_group: $IS_MERGE_GROUP"
-
-          # Final result
-          FINAL_RESULT="${{ (needs.check-nightly-status.outputs.should-proceed == 'true' || github.event_name == 'workflow_dispatch') && ((contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group')) }}"
-          echo "FINAL should-run-ci: $FINAL_RESULT"
-
-          if [ "$FINAL_RESULT" = "false" ]; then
-            echo ""
-            echo "🚫 CI WILL NOT RUN because:"
-            if [ "$NIGHTLY_OR_DISPATCH" = "false" ]; then
-              echo "   - Nightly build was not updated today AND this is not a manual workflow_dispatch"
-            fi
-            if [ "$SECOND_PART" = "false" ]; then
-              echo "   - This PR doesn't have 'lgtm' label or is still a draft AND this is not a workflow_dispatch/workflow_call/merge_group event"
-            fi
-          else
-            echo ""
-            echo "✅ CI WILL RUN"
-          fi
-
   path-filter:
     needs: set-ci-condition
     if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
@@ -221,15 +171,12 @@ jobs:
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
     if: ${{ needs.path-filter.outputs.frontend == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/jest_test.yml
-    secrets:
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   test-frontend:
     needs: [path-filter, set-ci-condition]
@@ -278,79 +225,11 @@ jobs:
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
       EXIT_CODE: ${{ ((!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true') || (needs.set-ci-condition.outputs.should-run-tests == 'false' && needs.set-ci-condition.outputs.should-run-ci == 'true')) && '0' || '1' }}
     steps:
-      - name: "Debug CI Success Conditions"
-        run: |
-          echo "=== CI SUCCESS DEBUG INFORMATION ==="
-          echo "Jobs JSON: $JOBS_JSON"
-          echo "Results JSON: $RESULTS_JSON"
-          echo "Should run tests: ${{ needs.set-ci-condition.outputs.should-run-tests }}"
-          echo "Should run CI: ${{ needs.set-ci-condition.outputs.should-run-ci }}"
-          echo ""
-
-          echo "=== EXIT CODE CONDITION BREAKDOWN ==="
-
-          # Check for failures and cancellations
-          HAS_FAILURES="${{ contains(needs.*.result, 'failure') }}"
-          HAS_CANCELLATIONS="${{ contains(needs.*.result, 'cancelled') }}"
-          SHOULD_RUN_CI="${{ needs.set-ci-condition.outputs.should-run-ci }}"
-          SHOULD_RUN_TESTS="${{ needs.set-ci-condition.outputs.should-run-tests }}"
-
-          echo "Job Results Analysis:"
-          echo "  - Has failures: $HAS_FAILURES"
-          echo "  - Has cancellations: $HAS_CANCELLATIONS"
-          echo "  - Should run CI: $SHOULD_RUN_CI"
-          echo "  - Should run tests: $SHOULD_RUN_TESTS"
-          echo ""
-
-          # First condition: no failures AND no cancellations AND should-run-ci is true
-          NO_FAILURES_OR_CANCELLATIONS="${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}"
-          CONDITION_1="${{ (!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true') }}"
-
-          echo "Condition 1 (Normal success path):"
-          echo "  - No failures or cancellations: $NO_FAILURES_OR_CANCELLATIONS"
-          echo "  - Should run CI is true: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}"
-          echo "  - Condition 1 result: $CONDITION_1"
-          echo ""
-
-          # Second condition: should-run-tests is false AND should-run-ci is true
-          CONDITION_2="${{ (needs.set-ci-condition.outputs.should-run-tests == 'false' && needs.set-ci-condition.outputs.should-run-ci == 'true') }}"
-
-          echo "Condition 2 (Fast-track path):"
-          echo "  - Should run tests is false: ${{ needs.set-ci-condition.outputs.should-run-tests == 'false' }}"
-          echo "  - Should run CI is true: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}"
-          echo "  - Condition 2 result: $CONDITION_2"
-          echo ""
-
-          # Final exit code calculation
-          FINAL_SUCCESS="${{ ((!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true') || (needs.set-ci-condition.outputs.should-run-tests == 'false' && needs.set-ci-condition.outputs.should-run-ci == 'true')) }}"
-
-          echo "Final Success Evaluation:"
-          echo "  - Condition 1 OR Condition 2: $FINAL_SUCCESS"
-          echo "  - Exit code will be: $EXIT_CODE"
-          echo ""
-
-          if [ "$EXIT_CODE" = "1" ]; then
-            echo "❌ CI WILL FAIL (EXIT CODE 1) because:"
-            if [ "$SHOULD_RUN_CI" = "false" ]; then
-              echo "   - CI was configured not to run (should-run-ci is false)"
-            elif [ "$HAS_FAILURES" = "true" ]; then
-              echo "   - One or more jobs failed"
-            elif [ "$HAS_CANCELLATIONS" = "true" ]; then
-              echo "   - One or more jobs were cancelled"
-            elif [ "$CONDITION_1" = "false" ] && [ "$CONDITION_2" = "false" ]; then
-              echo "   - Neither success condition was met"
-              echo "   - This might indicate an unexpected state"
-            fi
-          else
-            echo "✅ CI WILL SUCCEED (EXIT CODE 0)"
-            if [ "$CONDITION_1" = "true" ]; then
-              echo "   - All jobs completed successfully and CI was supposed to run"
-            elif [ "$CONDITION_2" = "true" ]; then
-              echo "   - Fast-track mode: tests were skipped but CI validation passed"
-            fi
-          fi
-
       - name: "CI Success"
         run: |
-          echo "Exiting with code $EXIT_CODE"
+          echo $JOBS_JSON
+          echo $RESULTS_JSON
+          echo "Should run tests: ${{ needs.set-ci-condition.outputs.should-run-tests }}"
+          echo "Should run CI: ${{ needs.set-ci-condition.outputs.should-run-ci }}"
+          echo "Exiting with $EXIT_CODE"
           exit $EXIT_CODE
