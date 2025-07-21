@@ -1,12 +1,11 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from loguru import logger
-from typing_extensions import override
 
+from langflow.custom.custom_component.component import Component, get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.helpers.flow import get_flow_inputs
 from langflow.inputs.inputs import (
@@ -215,9 +214,8 @@ class RunFlowBaseComponent(Component):
                 field.input_types = []
         return fields
 
-    @override
     async def _get_tools(self) -> list[Tool]:
-        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
         flow_description, tool_mode_inputs = await self.get_required_data(self.flow_name_selected)
         # # convert list of dicts to list of dotdicts
         tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]

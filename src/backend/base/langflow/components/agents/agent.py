@@ -1,5 +1,4 @@
 from langchain_core.tools import StructuredTool
-from lfx.custom.utils import update_component_build_config
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.agents.events import ExceptionWithMessageError
@@ -14,7 +13,8 @@ from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
-from langflow.custom.custom_component.component import _get_component_toolkit
+from langflow.custom.custom_component.component import get_component_toolkit
+from langflow.custom.utils import update_component_build_config
 from langflow.field_typing import Tool
 from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
 from langflow.logging import logger
@@ -289,7 +289,7 @@ class AgentComponent(ToolCallingAgentComponent):
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
+        component_toolkit = get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
         # TODO: Agent Description Depreciated Feature to be removed

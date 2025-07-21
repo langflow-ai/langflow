@@ -20,6 +20,7 @@ from langflow.base.tools.constants import (
     TOOLS_METADATA_INPUT_NAME,
 )
 from langflow.exceptions.component import StreamingError
+from langflow.field_typing import Tool  # noqa: TC002
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
@@ -45,7 +46,6 @@ if TYPE_CHECKING:
 
     from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
-    from langflow.field_typing import Tool
     from langflow.inputs.inputs import InputTypes
     from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType
@@ -57,13 +57,18 @@ if TYPE_CHECKING:
 _ComponentToolkit = None
 
 
-def _get_component_toolkit():
+def get_component_toolkit():
     global _ComponentToolkit  # noqa: PLW0603
     if _ComponentToolkit is None:
-        from langflow.base.tools.component_tool import ComponentToolkit
+        from lfx.custom.tools import ComponentToolkit
 
         _ComponentToolkit = ComponentToolkit
     return _ComponentToolkit
+
+
+# For backwards compatibility
+def _get_component_toolkit():
+    return get_component_toolkit()
 
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
@@ -161,6 +166,9 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
+
+    def get_undesrcore_inputs(self) -> dict[str, InputTypes]:
+        return self._inputs
 
     def get_id(self) -> str:
         return self._id
@@ -1318,7 +1326,7 @@ class Component(CustomComponent):
         Returns:
             list[Tool]: List of tools provided by this component
         """
-        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
         return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
 
     def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
@@ -1327,7 +1335,7 @@ class Component(CustomComponent):
 
     def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
         """Update tools with provided metadata."""
-        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
@@ -1486,16 +1494,43 @@ class Component(CustomComponent):
             and not isinstance(message, ErrorMessage)
         )
 
-    async def send_message(self, message: Message, id_: str | None = None):
-        if self._should_skip_message(message):
-            return message
-        if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
+    def _ensure_message_required_fields(self, message: Message) -> None:
+        """Ensure message has required fields for storage (session_id, sender, sender_name).
+
+        Only sets default values if the fields are not already provided.
+        """
+        from lfx.utils.schemas import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
+
+        # Set default session_id from graph if not already set
+        if (
+            not message.session_id
+            and hasattr(self, "graph")
+            and hasattr(self.graph, "session_id")
+            and self.graph.session_id
+        ):
             session_id = (
                 UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
             )
             message.session_id = session_id
+
+        # Set default sender if not set (preserves existing values)
+        if not message.sender:
+            message.sender = MESSAGE_SENDER_AI
+
+        # Set default sender_name if not set (preserves existing values)
+        if not message.sender_name:
+            message.sender_name = MESSAGE_SENDER_NAME_AI
+
+    async def send_message(self, message: Message, id_: str | None = None):
+        if self._should_skip_message(message):
+            return message
+
         if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
             message.flow_id = UUID(message.flow_id)
+
+        # Ensure required fields for message storage are set
+        self._ensure_message_required_fields(message)
+
         stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
