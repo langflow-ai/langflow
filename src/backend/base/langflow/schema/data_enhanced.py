@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class Data(BaseData):
     """Enhanced Data class with langflow-specific methods.
-    
+
     This class inherits from lfx.schema.data.Data and adds methods that require
     langflow-specific dependencies like services, templates, and other schema modules.
     """
@@ -72,7 +72,7 @@ class Data(BaseData):
 
     def to_message(self) -> Message:
         """Converts the Data to a Message.
-        
+
         Returns:
             Message: The converted Message.
         """
@@ -84,7 +84,7 @@ class Data(BaseData):
 
     def to_dataframe(self) -> DataFrame:
         """Converts the Data to a DataFrame.
-        
+
         Returns:
             DataFrame: The converted DataFrame.
         """

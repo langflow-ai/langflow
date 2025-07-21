@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import Literal
-from typing_extensions import TypedDict
 
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 INPUT_FIELD_NAME = "input_value"
 

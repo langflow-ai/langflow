@@ -5,7 +5,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     """Extract variable names from a prompt string using Python's built-in string formatter.
     Uses the same convention as Python's .format() method:
     - Single braces {name} are variable placeholders
-    - Double braces {{name}} are escape sequences that render as literal {name}
+    - Double braces {{name}} are escape sequences that render as literal {name}.
     """
     formatter = Formatter()
     variables: list[str] = []

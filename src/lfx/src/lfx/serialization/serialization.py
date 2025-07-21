@@ -7,10 +7,21 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 from langchain_core.documents import Document
+from loguru import logger
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+
+
+def get_max_text_length() -> int:
+    """Return the maximum allowed text length for serialization."""
+    return MAX_TEXT_LENGTH
+
+
+def get_max_items_length() -> int:
+    """Return the maximum allowed number of items for serialization."""
+    return MAX_ITEMS_LENGTH
 
 
 # Sentinel variable to signal a failed serialization.
@@ -270,8 +281,8 @@ def serialize(
         if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):  # Type alias or generic type check
             try:
                 return repr(obj)
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                logger.opt(exception=True).debug(f"Error serializing object: {obj}")
 
         # Fallback to common serialization patterns
         if hasattr(obj, "model_dump"):
@@ -283,7 +294,7 @@ def serialize(
         if to_str:
             return str(obj)
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         return "[Unserializable Object]"
     return obj
 
