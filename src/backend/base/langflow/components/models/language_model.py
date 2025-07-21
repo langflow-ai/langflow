@@ -1,10 +1,12 @@
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
+from langchain_cerebras import ChatCerebras
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
+from langflow.base.models.cerebras_constants import CEREBRAS_CHAT_MODEL_NAMES, CEREBRAS_REASONING_MODEL_NAMES
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
@@ -27,11 +29,16 @@ class LanguageModelComponent(LCModelComponent):
         DropdownInput(
             name="provider",
             display_name="Model Provider",
-            options=["OpenAI", "Anthropic", "Google"],
+            options=["OpenAI", "Anthropic", "Google", "🧠 Cerebras"],
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "GoogleGenerativeAI"}],
+            options_metadata=[
+                {"icon": "OpenAI"},
+                {"icon": "Anthropic"},
+                {"icon": "GoogleGenerativeAI"},
+                {"icon": "🧠"},
+            ],
         ),
         DropdownInput(
             name="model_name",
@@ -118,6 +125,18 @@ class LanguageModelComponent(LCModelComponent):
                 streaming=stream,
                 google_api_key=self.api_key,
             )
+
+        if provider == "🧠 Cerebras":
+            if not self.api_key:
+                msg = "CEREBRAS API key is required when using Cerebras provider"
+                raise ValueError(msg)
+            return ChatCerebras(
+                model=model_name,
+                temperature=temperature,
+                streaming=stream,
+                api_key=self.api_key,
+            )
+
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
 
@@ -135,6 +154,11 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = GOOGLE_GENERATIVE_AI_MODELS
                 build_config["model_name"]["value"] = GOOGLE_GENERATIVE_AI_MODELS[0]
                 build_config["api_key"]["display_name"] = "Google API Key"
+            elif field_value == "🧠 Cerebras":
+                build_config["model_name"]["options"] = CEREBRAS_CHAT_MODEL_NAMES + CEREBRAS_REASONING_MODEL_NAMES
+                build_config["model_name"]["value"] = CEREBRAS_CHAT_MODEL_NAMES[0]
+                build_config["api_key"]["display_name"] = "Cerebras API Key"
+
         elif field_name == "model_name" and field_value.startswith("o1") and self.provider == "OpenAI":
             # Hide system_message for o1 models - currently unsupported
             if "system_message" in build_config:

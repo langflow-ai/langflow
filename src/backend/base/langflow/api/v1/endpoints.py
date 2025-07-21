@@ -27,12 +27,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import (
-    add_code_field_to_build_config,
-    build_custom_component_template,
-    get_instance_name,
-    update_component_build_config,
-)
+from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
@@ -49,12 +44,13 @@ from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.events.event_manager import EventManager
+    from langflow.services.event_manager import EventManager
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
@@ -680,15 +676,22 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
 ):
-    """Update an existing custom component with new code and configuration.
+    """Update a custom component with the provided code request.
 
-    Processes the provided code and template updates, applies parameter changes (including those loaded from the
-    database), updates the component's build configuration, and validates outputs. Returns the updated component node as
-    a JSON-serializable dictionary.
+    This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
+    on the latest version of the template.
+    This ensures that every time it runs, it has the latest version of the template.
+
+    Args:
+        code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
+        user (User, optional): The user making the request. Defaults to the current active user.
+
+    Returns:
+        dict: The updated custom component node.
 
     Raises:
-        HTTPException: If an error occurs during component building or updating.
-        SerializationError: If serialization of the updated component node fails.
+        HTTPException: If there's an error building or updating the component
+        SerializationError: If there's an error serializing the component to JSON
     """
     try:
         component = Component(_code=code_request.code)
@@ -724,8 +727,6 @@ async def custom_component_update(
             field_value=code_request.field_value,
             field_name=code_request.field,
         )
-        if "code" not in updated_build_config:
-            updated_build_config = add_code_field_to_build_config(updated_build_config, code_request.code)
         component_node["template"] = updated_build_config
 
         if isinstance(cc_instance, Component):
@@ -744,19 +745,14 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
-@router.get("/config")
-async def get_config() -> ConfigResponse:
-    """Retrieve the current application configuration settings.
-
-    Returns:
-        ConfigResponse: The configuration settings of the application.
-
-    Raises:
-        HTTPException: If an error occurs while retrieving the configuration.
-    """
+@router.get("/config", response_model=ConfigResponse)
+async def get_config():
     try:
         settings_service: SettingsService = get_settings_service()
-        return ConfigResponse.from_settings(settings_service.settings)
 
+        return {
+            "feature_flags": FEATURE_FLAGS,
+            **settings_service.settings.model_dump(),
+        }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

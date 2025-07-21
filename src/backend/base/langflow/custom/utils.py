@@ -423,22 +423,6 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
     return frontend_node
 
 
-def add_code_field_to_build_config(build_config: dict, raw_code: str):
-    build_config["code"] = Input(
-        dynamic=True,
-        required=True,
-        placeholder="",
-        multiline=True,
-        value=raw_code,
-        password=False,
-        name="code",
-        advanced=True,
-        field_type="code",
-        is_list=False,
-    ).model_dump()
-    return build_config
-
-
 def build_custom_component_template_from_inputs(
     custom_component: Component | CustomComponent, user_id: str | UUID | None = None, module_name: str | None = None
 ):
