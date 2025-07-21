@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ForwardedIconComponent from '@/components/common/genericIconComponent';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { KnowledgeBaseInfo } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
@@ -15,6 +15,7 @@ export const KnowledgePage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] =
     useState<KnowledgeBaseInfo | null>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -38,9 +39,51 @@ export const KnowledgePage = () => {
     };
   }, []);
 
+  // Handle click outside drawer to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isDrawerOpen &&
+        drawerRef.current &&
+        !drawerRef.current.contains(event.target as Node)
+      ) {
+        // Only prevent closing if it's specifically a table row click
+        const clickedElement = event.target as HTMLElement;
+        const isTableRowClick = clickedElement.closest('.ag-row');
+
+        if (!isTableRowClick) {
+          // Close drawer for all clicks outside drawer that are not on table rows
+          handleCloseDrawer();
+        }
+      }
+    };
+
+    if (isDrawerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDrawerOpen]);
+
   const handleRowClick = (knowledgeBase: KnowledgeBaseInfo) => {
-    setSelectedKnowledgeBase(knowledgeBase);
-    setIsDrawerOpen(true);
+    console.log(
+      'Row clicked, drawer open:',
+      isDrawerOpen,
+      'KB:',
+      knowledgeBase.name
+    );
+    if (isDrawerOpen) {
+      // If drawer is already open, close it regardless of which row is clicked
+      console.log('Closing drawer due to row click');
+      handleCloseDrawer();
+    } else {
+      // If drawer is closed, open it with the selected knowledge base
+      console.log('Opening drawer with KB:', knowledgeBase.name);
+      setSelectedKnowledgeBase(knowledgeBase);
+      setIsDrawerOpen(true);
+    }
   };
 
   const handleCloseDrawer = () => {
@@ -97,7 +140,10 @@ export const KnowledgePage = () => {
 
       {/* Drawer - Fixed position, flush right */}
       {isDrawerOpen && (
-        <div className="fixed right-0 top-12 z-50 h-[calc(100vh-48px)]">
+        <div
+          ref={drawerRef}
+          className="fixed right-0 top-12 z-50 h-[calc(100vh-48px)]"
+        >
           <KnowledgeBaseDrawer
             isOpen={isDrawerOpen}
             onClose={handleCloseDrawer}

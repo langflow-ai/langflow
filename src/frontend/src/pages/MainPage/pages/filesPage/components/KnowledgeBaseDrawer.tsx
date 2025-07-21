@@ -15,14 +15,14 @@ interface KnowledgeBaseDrawerProps {
 
 // Mock data for source files and linked flows - can be replaced with real data later
 const mockSourceFiles = [
-  { id: '1', name: 'document1.pdf', type: 'PDF', icon: 'File' },
-  { id: '2', name: 'data.csv', type: 'CSV', icon: 'File' },
-  { id: '3', name: 'manual.docx', type: 'DOCX', icon: 'File' },
+  { id: '1', name: 'fake_document1.pdf', type: 'PDF', icon: 'File' },
+  { id: '2', name: 'fake_data.csv', type: 'CSV', icon: 'File' },
+  { id: '3', name: 'fake_manual.docx', type: 'DOCX', icon: 'File' },
 ];
 
 const mockLinkedFlows = [
-  { id: '1', name: 'Customer Support Bot', icon: 'Flow' },
-  { id: '2', name: 'Document Q&A System', icon: 'Flow' },
+  { id: '1', name: 'Fake Customer Support Bot', icon: 'Flow' },
+  { id: '2', name: 'Fake Document Q&A System', icon: 'Flow' },
 ];
 
 const KnowledgeBaseDrawer = ({
@@ -31,7 +31,7 @@ const KnowledgeBaseDrawer = ({
   knowledgeBase,
 }: KnowledgeBaseDrawerProps) => {
   const [description, setDescription] = useState(
-    'This knowledge base contains documents related to customer support and product documentation.'
+    'This is a description of the knowledge base. Need to replace with actual description.'
   );
 
   if (!isOpen || !knowledgeBase) {
