@@ -74,6 +74,28 @@ class Message(LfxMessage):
                 new_files.append(Image.model_validate(file_))
         return new_files
 
+    @field_validator("properties", mode="before")
+    @classmethod
+    def validate_properties(cls, value):
+        """Enhanced properties validator that handles both langflow and lfx Properties classes."""
+        from lfx.schema.properties import Properties as LfxProperties
+
+        from langflow.schema.properties import Properties as LangflowProperties
+
+        if isinstance(value, str):
+            return LfxProperties.model_validate_json(value)
+        if isinstance(value, dict):
+            return LfxProperties.model_validate(value)
+        if isinstance(value, LfxProperties):
+            return value
+        if isinstance(value, LangflowProperties):
+            # Convert langflow Properties to lfx Properties for compatibility
+            return LfxProperties.model_validate(value.model_dump())
+        if hasattr(value, "model_dump"):
+            # Generic case for any pydantic model with the right structure
+            return LfxProperties.model_validate(value.model_dump())
+        return value
+
     def model_post_init(self, /, _context: Any) -> None:
         if self.files:
             self.files = self.get_file_paths()
