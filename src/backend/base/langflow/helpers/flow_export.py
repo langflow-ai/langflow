@@ -3,8 +3,11 @@ import json
 import os
 import sys
 from collections import defaultdict
+from itertools import chain
 from pathlib import Path
 from typing import Any
+
+from langflow.graph.graph.base import Graph, Vertex
 
 # Constants for code generation
 IGNORE_LINT = "# ruff: noqa"
@@ -16,23 +19,21 @@ FLOW_FILENAME = "flow.py"
 
 
 def _generate_mermaid_diagram(
-    flow_dict: dict[str, Any],
+    graph: Graph,
+    comps: list[Vertex],
     dest_folder: str,
 ) -> str:
-    nodes = flow_dict["data"]["nodes"]
-    edges = flow_dict["data"]["edges"]
-    flow_name = flow_dict["name"]
-    mermaid_lines = ["graph TD", f"    subgraph {flow_name}"]
+    mermaid_lines = ["graph TD", f"    subgraph {graph.flow_name}"]
 
-    for node in nodes:
-        node_id = _fix_node_id(node["data"]["id"])
-        display_name = node["data"].get("display_name", node_id)
+    for comp in comps:
+        node_id = _fix_node_id(comp.data["id"])
+        display_name = comp.data.get("display_name", node_id)
         safe_display_name = display_name.replace('"', '\\"').replace("\n", " ").replace("\r", "").strip()
         mermaid_lines.append(f'        {node_id}["{safe_display_name}"]')
 
-    for edge in edges:
-        src = _fix_node_id(edge["source"])
-        tgt = _fix_node_id(edge["target"])
+    for edge in graph.edges:
+        src = _fix_node_id(edge.source_id)
+        tgt = _fix_node_id(edge.target_id)
         mermaid_lines.append(f"        {src} --> {tgt}")
 
     mermaid_lines.append("    end")
@@ -42,70 +43,13 @@ def _generate_mermaid_diagram(
     return mermaid_file_path
 
 
-def _find_available_nodes(node_map: dict[str, dict[str, Any]], processed_ids: set[str]) -> list[tuple[str, int]]:
-    """Find nodes without remaining dependencies, sorted by targets count (desc) then by ID (asc)."""
-    available_nodes = []
-    for node_id, node_info in node_map.items():
-        if node_id in processed_ids:
-            continue
-        remaining_deps = [dep for dep in node_info["dependencies"] if dep not in processed_ids]
-        if not remaining_deps:
-            available_nodes.append((node_id, len(node_info["targets"])))
-
-    available_nodes.sort(key=lambda x: (-x[1], x[0]))
-    return available_nodes
-
-
-def _topological_sort_nodes(flow_dict: dict):
-    """Return nodes sorted in topological order based on edges."""
-    nodes = flow_dict["data"]["nodes"]
-    edges = flow_dict["data"]["edges"]
-    node_map = {}
-    input_map: dict[str, dict[str, tuple[str, str]]] = defaultdict(dict)
-
-    for node in nodes:
-        node_id = node["data"]["id"]
-        node_map[node_id] = {
-            "id": node_id,
-            "dependencies": [],
-            "targets": [],
-        }
-
-    for edge in edges:
-        src = edge["source"]
-        tgt = edge["target"]
-        node_map[tgt]["dependencies"].append(src)
-        node_map[src]["targets"].append(tgt)
-        src_handle = edge["data"].get("sourceHandle", {}).get("name", "output")
-        tgt_handle = edge["data"].get("targetHandle", {}).get("fieldName", "input")
-        input_map[_fix_node_id(edge["target"])][tgt_handle] = (_fix_node_id(src), src_handle)
-
-    node_id_map = {node["data"]["id"]: node for node in nodes}
-    sorted_nodes = []
-    processed_ids = set()
-
-    while len(sorted_nodes) < len(nodes):
-        available_nodes = _find_available_nodes(node_map, processed_ids)
-
-        if not available_nodes:
-            error_msg = "Graph has cycles or disconnected components"
-            raise ValueError(error_msg)
-
-        for node_id, _ in available_nodes:
-            sorted_nodes.append(node_id_map[node_id])
-            processed_ids.add(node_id)
-
-    flow_dict["data"]["nodes"] = sorted_nodes
-    return flow_dict, input_map
-
-
 def _build_component_inputs(
     node_id: str,
     input_map: dict[str, dict[str, tuple[str, str]]],
-    node: dict[str, Any],
+    node: Vertex,
 ) -> dict[str, str]:
     """Build input dictionary for a component."""
-    template = node["data"]["node"].get("template", {})
+    template = node.data["node"].get("template", {})
     input_dict = {}
     for key, value in template.items():
         if key in input_dict or not isinstance(value, dict):
@@ -115,7 +59,7 @@ def _build_component_inputs(
             input_dict[key] = f'env_values.get("{env_key}", "")' if env_key else '""'
         else:
             val = value.get("value") if "value" in value else value
-            if val is not None and val != "":
+            if val is not None and val != "":  # noqa: PLC1901
                 input_dict[key] = repr(val)
 
     # remove all None or empty string values
@@ -154,7 +98,7 @@ def _extract_class_name_from_code(code: str) -> str | None:
     return None
 
 
-def _write_component_files(nodes: list[dict[str, Any]], dest_folder: str) -> dict[str, str]:
+def _write_component_files(comps: list[Vertex], dest_folder: str) -> dict[str, str]:
     """Write individual component files for each node.
 
     Args:
@@ -168,9 +112,9 @@ def _write_component_files(nodes: list[dict[str, Any]], dest_folder: str) -> dic
     _ensure_dir(components_dir)
     node_id_to_class_name = {}
 
-    for node in nodes:
-        node_id = _fix_node_id(node["data"]["id"])
-        code = node["data"]["node"]["template"].get("code", {}).get("value", "")
+    for comp in comps:
+        node_id = _fix_node_id(comp.data["id"])
+        code = comp.data["node"]["template"].get("code", {}).get("value", "")
         if not code:
             continue
 
@@ -211,30 +155,42 @@ def export_flow_as_code(flow_dict: dict[str, Any], dest_folder: str) -> None:
         - mermaid_graph.txt: Mermaid diagram source text
     """
     _clean_destination_folder(dest_folder)
-    flow_dict, input_map = _topological_sort_nodes(flow_dict)
-    nodes = flow_dict["data"]["nodes"]
-    edges = flow_dict["data"]["edges"]
-    node_id_to_class_name = _write_component_files(nodes, dest_folder)
+    graph = Graph.from_payload(flow_dict)
+    graph.sort_vertices()  # to build _sorted_vertices_layers
+    components = [graph.get_vertex(vertex_id) for vertex_id in list(chain.from_iterable(graph._sorted_vertices_layers))]
+    components.sort(key=lambda c: c.data["id"])
+    graph.edges.sort(key=lambda e: (e.source_id, e.target_id))
+    input_map = defaultdict(dict)
+    for edge in graph.edges:
+        input_map[_fix_node_id(edge.target_id)][edge.target_handle.field_name or "input"] = (
+            _fix_node_id(edge.source_id),
+            edge.source_handle.name or "output",
+        )
+    node_id_to_class_name = _write_component_files(components, dest_folder)
     components_imports = [
         f"from components.{node_id} import {class_name} as _{node_id}"
         for node_id, class_name in node_id_to_class_name.items()
         if class_name
     ]
     components_instances = []
-    for node in nodes:
-        if not node["data"]["node"]["template"].get("code", {}).get("value"):
+    edges_setups = []
+    for comp in components:
+        if not comp.data["node"]["template"].get("code", {}).get("value"):
             continue
-        node_id = _fix_node_id(node["data"]["id"])
-        class_name = "_" + _fix_node_id(node["data"]["id"])
+        node_id = _fix_node_id(comp.data["id"])
+        class_name = "_" + _fix_node_id(comp.data["id"])
         inputs = _build_component_inputs(
             node_id,
             input_map,
-            node,
+            comp,
         )
         input_items = [f"'{key}': {value}," for key, value in inputs.items()]
         inputs_str = "\n        ".join(input_items)
         components_instances.append(
-            f"""\n    components['{node_id}'] = {class_name}(**{{**global_state, **{{"_id": '{node["data"]["id"]}'}}}})""",
+            f"""\n    components['{node_id}'] = {class_name}(**{{
+        **global_state,
+        **{{"_id": '{comp.data["id"]}'}}
+    }})""",
         )
         components_instances.append(
             f"""\n    components['{node_id}'].set(**{{
@@ -242,10 +198,9 @@ def export_flow_as_code(flow_dict: dict[str, Any], dest_folder: str) -> None:
     }})""",
         )
         edges_values = [
-            json.dumps({"source": edge["source"], "target": edge["target"], "data": edge["data"]}, indent=4)
-            for edge in edges
+            json.dumps({"source": edge.source_id, "target": edge.target_id, "data": edge._data["data"]}, indent=4)
+            for edge in graph.edges
         ]
-        edges_setups = []
         for edge in edges_values:
             edges_setups.append(
                 f"""    graph.add_edge({edge.replace("\n", "\n    ")})""",
@@ -272,8 +227,8 @@ def get_graph(
     global_state = {{
         "_session_id": session_id or str(uuid4()),
         "_user_id": user_id,
-        "_flow_name": flow_name or "{flow_dict["name"]}",
-        "_flow_id": flow_id or "{flow_dict["id"]}",
+        "_flow_name": flow_name or "{graph.flow_name}",
+        "_flow_id": flow_id or "{graph.flow_id}",
     }}
     components: dict[str, Component] = {{}}
 
@@ -330,7 +285,7 @@ if __name__ == '__main__':
     print_results_as_json(result)
 """
     _write_file(Path(dest_folder) / FLOW_FILENAME, main_code)
-    _generate_mermaid_diagram(flow_dict, dest_folder)
+    _generate_mermaid_diagram(graph, components, dest_folder)
 
 
 if __name__ == "__main__":
