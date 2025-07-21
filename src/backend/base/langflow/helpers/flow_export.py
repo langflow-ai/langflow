@@ -59,7 +59,7 @@ def _build_component_inputs(
             input_dict[key] = f'env_values.get("{env_key}", "")' if env_key else '""'
         else:
             val = value.get("value") if "value" in value else value
-            if val is not None and val != "":
+            if val is not None and val != "":  # noqa: PLC1901
                 input_dict[key] = repr(val)
 
     # remove all None or empty string values
@@ -315,13 +315,6 @@ Examples:
         help="Output directory for generated Python code",
     )
 
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Enable verbose output",
-    )
-
     args = parser.parse_args()
 
     # Validate input file exists
@@ -349,23 +342,8 @@ Examples:
         print("Error: Flow JSON must be a dictionary")
         sys.exit(1)
 
-    if "name" not in flow_dict:
-        print("Error: Flow JSON must contain a 'name' field")
-        sys.exit(1)
-
-    if "data" not in flow_dict or "nodes" not in flow_dict["data"] or "edges" not in flow_dict["data"]:
-        print("Error: Flow JSON must contain 'data.nodes' and 'data.edges' fields")
-        sys.exit(1)
-
     # Create output directory
     output_path = Path(args.output)
-
-    if args.verbose:
-        print(f"Input file: {input_path.absolute()}")
-        print(f"Output directory: {output_path.absolute()}")
-        print(f"Flow name: {flow_dict['name']}")
-        print(f"Number of nodes: {len(flow_dict['data']['nodes'])}")
-        print(f"Number of edges: {len(flow_dict['data']['edges'])}")
 
     try:
         # Export the flow as code
