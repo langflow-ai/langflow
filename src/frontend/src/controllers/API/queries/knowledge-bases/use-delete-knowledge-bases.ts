@@ -1,8 +1,8 @@
-import type { UseMutationResult } from '@tanstack/react-query';
-import type { useMutationFunctionType } from '@/types/api';
-import { api } from '../../api';
-import { getURL } from '../../helpers/constants';
-import { UseRequestProcessor } from '../../services/request-processor';
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
+import { api } from "../../api";
+import { getURL } from "../../helpers/constants";
+import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IDeleteKnowledgeBases {
   kb_names: string[];
@@ -15,9 +15,9 @@ export const useDeleteKnowledgeBases: useMutationFunctionType<
   const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteKnowledgeBasesFn = async (
-    params: IDeleteKnowledgeBases
+    params: IDeleteKnowledgeBases,
   ): Promise<any> => {
-    const response = await api.delete<any>(`${getURL('KNOWLEDGE_BASES')}/`, {
+    const response = await api.delete<any>(`${getURL("KNOWLEDGE_BASES")}/`, {
       data: { kb_names: params.kb_names },
     });
 
@@ -25,17 +25,17 @@ export const useDeleteKnowledgeBases: useMutationFunctionType<
   };
 
   const mutation: UseMutationResult<any, any, IDeleteKnowledgeBases> = mutate(
-    ['useDeleteKnowledgeBases'],
+    ["useDeleteKnowledgeBases"],
     deleteKnowledgeBasesFn,
     {
       onSettled: (data, error, variables, context) => {
         queryClient.invalidateQueries({
-          queryKey: ['useGetKnowledgeBases'],
+          queryKey: ["useGetKnowledgeBases"],
         });
         options?.onSettled?.(data, error, variables, context);
       },
       ...options,
-    }
+    },
   );
 
   return mutation;

@@ -1,33 +1,33 @@
-import { useEffect, useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import FilesTab from './components/FilesTab';
+import { useEffect, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import FilesTab from "./components/FilesTab";
 
 export const FilesPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [quickFilterText, setQuickFilterText] = useState('');
+  const [quickFilterText, setQuickFilterText] = useState("");
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 

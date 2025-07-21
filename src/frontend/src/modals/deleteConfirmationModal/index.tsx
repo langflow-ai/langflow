@@ -1,6 +1,6 @@
-import { DialogClose } from '@radix-ui/react-dialog';
-import { Trash2 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { DialogClose } from "@radix-ui/react-dialog";
+import { Trash2 } from "lucide-react";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../../components/ui/dialog';
+} from "../../components/ui/dialog";
 
 export default function DeleteConfirmationModal({
   children,
@@ -17,7 +17,7 @@ export default function DeleteConfirmationModal({
   asChild,
   open,
   setOpen,
-  note = '',
+  note = "",
 }: {
   children?: JSX.Element;
   onConfirm: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
@@ -45,15 +45,15 @@ export default function DeleteConfirmationModal({
           </DialogTitle>
         </DialogHeader>
         <span className="pb-3 text-sm">
-          This will permanently delete the {description ?? 'flow'}
-          {note ? ' ' + note : ''}.<br />
+          This will permanently delete the {description ?? "flow"}
+          {note ? " " + note : ""}.<br />
           <br />
           This can't be undone.
         </span>
         <DialogFooter>
           <DialogClose asChild>
             <Button
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               className="mr-1"
               variant="outline"
               data-testid="btn_cancel_delete_confirmation_modal"
@@ -65,7 +65,7 @@ export default function DeleteConfirmationModal({
             <Button
               type="submit"
               variant="destructive"
-              onClick={e => {
+              onClick={(e) => {
                 onConfirm(e);
               }}
               data-testid="btn_delete_delete_confirmation_modal"
