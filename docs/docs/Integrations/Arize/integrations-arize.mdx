@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 
 Arize is a tool built on [OpenTelemetry](https://opentelemetry.io/) and [OpenInference](https://docs.arize.com/phoenix/reference/open-inference) for monitoring and optimizing LLM applications.
 
-To add Arize tracing to your Langflow application, add Arize environment variables to your Langflow application.
+To enable Arize tracing, set the required Arize environment variables in your Langflow deployment.
 Arize begins monitoring and collecting telemetry data from your LLM applications automatically.
 
 :::tip
@@ -87,7 +87,7 @@ This can take a few minutes.
 
     Each Langflow execution generates two traces in Arize:
 
-    * The `AgentExecutor` trace is the Arize trace of Langchain's `AgentExecutor`.
+    * The `AgentExecutor` trace is the Arize trace of LangChain's `AgentExecutor`.
     * The `UUID` trace is the trace of the Langflow components.
 
 4. To view traces, go to the **Traces** tab.

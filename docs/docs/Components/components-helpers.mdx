@@ -212,8 +212,8 @@ It accepts the following parameters:
 Replace the legacy **Output Parser** component with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
 The components you need depend on the data types and complexity of the parsing task.
 
-The **Output Parser** component transforms the output of a language model into comma-separate values (CSV) format, such as `["item1", "item2", "item3"]`, using Langchain's `CommaSeparatedListOutputParser`.
-The **Structured Output** component also formats LLM responses, but it accepts custom schemas and it can handle more complex parsing than the **Output Parser** component.
+The **Output Parser** component transforms the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
+The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
 
 Parsing components only provide formatting instructions and parsing functionality.
 _They don't include prompts._

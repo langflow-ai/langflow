@@ -20,7 +20,7 @@ Available operators include:
 - **contains**: Checks if the `match_text` is found within `input_text`
 - **starts with**: Checks if `input_text` begins with `match_text`
 - **ends with**: Checks if `input_text` ends with `match_text`
-- **regex**: Matches on a case sensitive regular expression
+- **regex**: Matches on a case-sensitive pattern
 
 By default, all operators are case insensitive except **regex**.
 **regex** is always case sensitive, and you can enable case sensitivity for all other operators in the [If-Else parameters](#if-else-parameters).
@@ -177,7 +177,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | flow_name_selected| Dropdown | Input parameter. The name of the flow to run.                  |
 | session_id        | String   | Input parameter. The session ID for the flow run, if you want to pass a custom session ID for the subflow. |
 | flow_tweak_data   | Dict     | Input parameter. Dictionary of tweaks to customize the flow's behavior. Available tweaks depend on the selected flow. |
-| dynamic inputs    | Various  | Input parameters. Additional inputs are generated based on the selected flow. |
+| dynamic inputs    | Various  | Input parameter. Additional inputs are generated based on the selected flow. |
 | run_outputs  | A `List` of types (`Data`, `Message`, or `DataFrame`)  | Output parameter. All outputs are generated from running the flow.  |
 
 ## Legacy logic components

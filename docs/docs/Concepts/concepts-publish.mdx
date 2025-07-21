@@ -66,7 +66,7 @@ For more information, see [API keys](/configuration-api-keys) and [Get started w
 
 ### Input Schema (tweaks) {#input-schema}
 
-Tweaks are one-time overrides that modify component parameters for at runtime, rather than permanently modifying the flow itself.
+Tweaks are one-time overrides that modify component parameters at runtime, rather than permanently modifying the flow itself.
 For an example of tweaks in a script, see the [Quickstart](/get-started-quickstart).
 
 :::tip
@@ -123,7 +123,7 @@ For each flow, Langflow provides a code snippet that you can insert into the `<b
 The chat widget only supports flows that have **Chat Input** and **Chat Output** components, which are required for the chat experience.
 **Text Input** and **Text Output** components can send and receive messages, but they don't include ongoing LLM chat context.
 
-Attempting to chat with a flow that doesn't have a valid input component will trigger the flow, but the response only indicates that the input was empty.
+Attempting to chat with a flow that doesn't have [**Chat Input** component](/components-io) will trigger the flow, but the response only indicates that the input was empty.
 :::
 
 ### Get a langflow-chat snippet

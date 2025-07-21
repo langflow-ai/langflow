@@ -33,7 +33,7 @@ Data components are used often in flows because they offer a versatile way to pe
 
 You can use data components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
 
-![An agentic flows with three data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
+![An agentic flow with three data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
 
 For examples of data components in flows, see the following:
 
@@ -149,7 +149,7 @@ Use archive and compressed formats to bundle multiple files together, or use the
 
 </details>
 
-If you need to load an unsupported file type, you must use a different component that supports that file type and, potentially, parses it outside of Langflow, or you must convert it to a supported type before uploading it.
+If you need to load an unsupported file type, you must use a different component that supports that file type and, potentially, parses it outside Langflow, or you must convert it to a supported type before uploading it.
 
 For images, see [Upload images](/concepts-file-management#upload-images).
 
@@ -308,7 +308,7 @@ Instead, you only need to provide enough context for the agent to understand tha
 
 4. Click the **SQL Database** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
 
-    The component is now able to be used as a tool for an agent.
+    You can now use this component as a tool for an agent.
     In **Tool Mode**, no query is set in the **SQL Database** component because the agent will generate and send one if it determines that the tool is required to complete the user's request.
     For more information, see [Configure tools for agents](/agents-tools).
 
@@ -499,7 +499,7 @@ For more information, see [Trigger flows with webhooks](/webhook).
 | data | Payload | Input parameter. Receives a payload from external systems through HTTP POST requests. |
 | curl | cURL | Input parameter. The cURL command template for making requests to this webhook. |
 | endpoint | Endpoint | Input parameter. The endpoint URL where this webhook receives requests. |
-| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [Data](/data-types#data) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. |
+| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [`Data`](/data-types#data) object if no input is provided. If the input is not valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow. |
 
 ## Additional data components
 

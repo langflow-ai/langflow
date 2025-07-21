@@ -25,13 +25,13 @@ This vector data can then be retrieved for workloads like Retrieval Augmented Ge
 
 The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search.
 The results are output from the vector database component as a [`Data`](/data-types#data) object and parsed into text.
-This text fills the `{context}` variable in the **Prompt Template** component, which informs the **Open AI model** component's responses.
+This text fills the `{context}` variable in the **Prompt Template** component, which informs the **OpenAI model** component's responses.
 
 ![Retrieval from a vector store](/img/vector-store-retrieval.png)
 
 ### Configure vector store parameters
 
-Most vector store components have same utility within a flow, but each provider can offer different parameters and functionality.
+Most vector store components have the same utility within a flow, but each provider can offer different parameters and functionality.
 Inspect a component's parameters to learn more about the inputs it accepts and how to configure it.
 
 Many input parameters for vector store components are hidden by default in the visual editor.

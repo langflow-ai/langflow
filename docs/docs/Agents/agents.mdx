@@ -22,8 +22,8 @@ Agents use LLMs as a reasoning engine to process input, determine which actions 
 The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.
 
 In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
-A function is wrapped as a `Tool` object with a common interface the agent understands.
-Agents become aware of tools through tool registration where the agent is provided a list of available tools typically at agent initialization.
+A function is wrapped as a `Tool` object with a common interface that the agent understands.
+Agents become aware of tools through tool registration, which is when the agent is provided a list of available tools typically at agent initialization.
 The `Tool` object's description tells the agent what the tool can do so that it can decide whether the tool is appropriate for a given request.
 
 </details>
@@ -47,7 +47,7 @@ For a prebuilt example, use the [**Simple Agent** template](/simple-agent) or tr
     However, this flow only chats with the LLM.
     To enhance this flow and make it truly agentic, add some tools, as explained in the next steps.
 
-    ![Chat with agent component](/img/agent-example-add-chat.png)
+    ![A basic agent chat flow with Chat Input, Agent, and Chat Output components.](/img/agent-example-add-chat.png)
 
 5. Add **News Search**, **URL**, and **Calculator** components to your flow.
 6. Enable **Tool Mode** in the **News Search**, **URL**, and **Calculator** components:
@@ -63,7 +63,7 @@ For a prebuilt example, use the [**Simple Agent** template](/simple-agent) or tr
 
     For more information, see [Configure tools for agents](/agents-tools).
 
-    ![Chat with agent component](/img/agent-example-add-tools.png)
+    ![A more complex agent chat flow where three components are connected to the Agent component as tools](/img/agent-example-add-tools.png)
 
 8. Open the <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the agent, `What tools are you using to answer my questions?`
 

@@ -8,7 +8,7 @@ import Icon from "@site/src/components/icon";
 You can use the **Webhook** component to start a flow run in response to an external event.
 
 With the **Webhook** component, a flow can receive data directly from external sources. Then, the flow can parse the data and pass it to other components in the flow to initiate other actions, such as calling APIs, writing to databases, and chatting with LLMs.
-If the input is not valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be processed and trigger the flow.
+If the input is not valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow.
 
 The **Webhook** component provides a versatile entrypoint that can make your flows more event-driven and integrated with your entire stack of applications and services.
 For example:
@@ -90,7 +90,7 @@ To learn about triggering flows with payloads from external applications, see th
 
 ## Troubleshoot flows with Webhook components
 
-Use the following information to help address common issue that can occur with the **Webhook** component.
+Use the following information to help address common issues that can occur with the **Webhook** component.
 
 ### Validate data received by the Webhook component
 

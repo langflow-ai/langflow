@@ -54,10 +54,10 @@ The output is **Remediated Response** (`remediated_response`), which is a `Messa
 | Name                        | Type       | Description |
 |-----------------------------|------------|---------|
 | response                    | Message    | Input parameter. The response to potentially remediate.  |
-| score                       | number     | Input parameter. The trust score from `CleanlabEvaluator`. |
+| score                       | Number     | Input parameter. The trust score from `CleanlabEvaluator`. |
 | explanation                 | Message    | Input parameter. The explanation to append if a warning is shown. Optional.|
-| threshold                   | float      | Input parameter. The minimum trust score to pass a response unchanged.  |
-| show_untrustworthy_response | bool       | Input parameter. Whether to display or hide the original response with a warning if a response is deemed untrustworthy. |
+| threshold                   | Float      | Input parameter. The minimum trust score to pass a response unchanged.  |
+| show_untrustworthy_response | Boolean      | Input parameter. Whether to display or hide the original response with a warning if a response is deemed untrustworthy. |
 | untrustworthy_warning_text  | Prompt     | Input parameter. The warning text for untrustworthy responses. |
 | fallback_text              | Prompt     | Input parameter. The fallback message if the response is hidden. |
 
@@ -80,22 +80,22 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | context                    | Message    | Input parameter. The retrieved context from your RAG system.   |
 | query                      | Message    | Input parameter. The original user query.   |
 | response                   | Message    | Input parameter. The model's response based on the context and query. |
-| run_context_sufficiency    | bool       | Input parameter. Evaluate whether context supports answering the query.  |
-| run_response_groundedness  | bool       | Input parameter. Evaluate whether the response is grounded in the context. |
-| run_response_helpfulness   | bool       | Input parameter. Evaluate how helpful the response is.  |
-| run_query_ease            | bool       | Input parameter. Evaluate if the query is vague, complex, or adversarial. |
+| run_context_sufficiency    | Boolean      | Input parameter. Evaluate whether context supports answering the query.  |
+| run_response_groundedness  | Boolean      | Input parameter. Evaluate whether the response is grounded in the context. |
+| run_response_helpfulness   | Boolean      | Input parameter. Evaluate how helpful the response is.  |
+| run_query_ease            | Boolean      | Input parameter. Evaluate if the query is vague, complex, or adversarial. |
 
 ### Cleanlab RAG Evaluator outputs
 
 The **Cleanlab RAG Evaluator** component has the following output options:
 
-| Name                    | Type       | Description                 |
-|-------------------------|------------|---------------------------|
-| trust_score             | number     | The overall trust score.            |
-| trust_explanation       | Message    | The explanation for the trust score.           |
-| other_scores            | dict       | A dictionary of optional enabled RAG evaluation metrics.      |
-| evaluation_summary      | Message    | A Markdown summary of query, context, response, and evaluation results. |
-| response                | `Message`    | Returns the original response for easy chaining to the **Cleanlab Remediator** component. |
+| Name               | Type       | Description              |
+|--------------------|------------|--------------------------|
+| trust_score        | Number     | The overall trust score. |
+| trust_explanation  | Message    | The explanation for the trust score. |
+| other_scores       | Dictionary | A dictionary of optional enabled RAG evaluation metrics. |
+| evaluation_summary | Message    | A Markdown summary of query, context, response, and evaluation results. |
+| response           | Message    | Returns the original response for easy chaining to the **Cleanlab Remediator** component. |
 
 ## Example Cleanlab flows
 

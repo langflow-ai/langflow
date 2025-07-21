@@ -4,7 +4,7 @@ slug: /contributing-components
 ---
 
 
-New components are added as objects of the [Component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/custom/custom_component/component.py) class.
+New components are added as objects of the [`Component`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/custom/custom_component/component.py) class.
 
 Dependencies are added to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L148) file.
 
@@ -13,7 +13,7 @@ Dependencies are added to the [pyproject.toml](https://github.com/langflow-ai/la
 Anyone can contribute an example component. For example, to create a new data component called **DataFrame processor**, follow these steps to contribute it to Langflow.
 
 1. Create a Python file called `dataframe_processor.py`.
-2. Write your processor as an object of the [Component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/custom/custom_component/component.py) class. You'll create a new class, `DataFrameProcessor`, that will inherit from `Component` and override the base class's methods.
+2. Write your processor as an object of the [`Component`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/custom/custom_component/component.py) class. You'll create a new class, `DataFrameProcessor`, that will inherit from `Component` and override the base class's methods.
 
 ```python
 from typing import Any, Dict, Optional

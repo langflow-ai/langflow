@@ -37,9 +37,11 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | max_output_tokens | Integer | Input parameter. The maximum number of tokens to generate (advanced). |
 | max_retries | Integer | Input parameter. Maximum number of retries for API calls. Default: 1 (advanced). |
 | temperature | Float | Input parameter. Controls randomness in the output. Default: 0.0. |
-| top_k | Integer | Input parameter. The number of highest probability vocabulary tokens to keep for top-k-filtering (advanced). |
-| top_p | Float | Input parameter. The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling. Default: 0.95 (advanced). |
+| top_k | Integer | Input parameter. The number of highest-probability vocabulary tokens to keep for top-k-filtering (advanced). |
+| top_p | Float | Input parameter. The cumulative probability of all highest-probability vocabulary tokens that are kept for nucleus sampling. Default: 0.95 (advanced). |
 | verbose | Boolean | Input parameter. Whether to print verbose output. Default: False (advanced). |
+
+For more information about Vertex AI text generation parameters, see the [Vertex AI content generation parameters documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/content-generation-parameters#token-sampling-parameters).
 
 ## Vertex AI Embeddings
 

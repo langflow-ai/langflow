@@ -19,8 +19,8 @@ Agents use LLMs as a reasoning engine to process input, determine which actions 
 The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.
 
 In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
-A function is wrapped as a `Tool` object with a common interface the agent understands.
-Agents become aware of tools through tool registration where the agent is provided a list of available tools typically at agent initialization.
+A function is wrapped as a `Tool` object with a common interface that the agent understands.
+Agents become aware of tools through tool registration, which is when the agent is provided a list of available tools typically at agent initialization.
 The `Tool` object's description tells the agent what the tool can do so that it can decide whether the tool is appropriate for a given request.
 
 </details>

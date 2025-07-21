@@ -22,7 +22,7 @@ Then, if your flow has a [**Chat Input** component](/components-io), enter a pro
 :::tip
 If there is no message input field in the **Playground**, make sure your flow has a **Chat Input** component that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
 
-Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model** or **Agent**, and **Chat Output** components to be fully supported by the **Playground**'s chat interface
+Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground**'s chat interface
 
 For flows that require another type of input, such as a webhook event, file upload, or text input, you can [use the Langflow API to trigger the flow](/api-flows-run), and then open the **Playground** to review the LLM activity for the flow run, if applicable.
 :::
@@ -74,11 +74,11 @@ Chat sessions are identified by session ID (`session_id`).
 
 The default session ID is the flow ID, which means that all chat messages for a flow are stored under the same session ID as one enormous chat session.
 
-If you need to preserve chat context over multiple flow runs or differentiate chat sessions when debugging flows, you can set custom a custom `session_id`.
+If you need to preserve chat context over multiple flow runs or differentiate chat sessions when debugging flows, you can set a custom `session_id`.
 
 Custom session IDs are helpful for multiple reasons:
 
-* Separate chat sessions in situations where one flow has have multiple chat sessions, such as a chatbot that can have multiple simultaneous user interactions.
+* Separate chat sessions in situations where one flow has multiple chat sessions, such as a chatbot that can have multiple simultaneous user interactions.
 * Preserve memory when continuing a chat session across multiple flow runs or when passing context from one flow to another.
 * Differentiate activity from multiple users within the same flow.
 * Identify your own chat sessions when debugging and testing flows.
