@@ -57,7 +57,10 @@ This component stores the generated embeddings so they can be used for similarit
 
 7. Click **Playground**, and then enter a search query to retrieve text chunks that are most semantically similar to your query.
 
-## Embedding Model parameters
+## Embedding Model
+
+Some **Embedding Model** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Display Name | Type | Description |
 |------|--------------|------|-------------|
@@ -71,7 +74,7 @@ This component stores the generated embeddings so they can be used for similarit
 | max_retries | Max Retries | Integer | Input parameter. Maximum number of retry attempts. Default: `3`. |
 | show_progress_bar | Show Progress Bar | Boolean | Input parameter. Whether to display a progress bar during embedding generation. |
 | model_kwargs | Model Kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
-| embeddings | Embeddings | Output parameter. An instance for generating embeddings using the selected provider. |
+| embeddings | Embeddings | Embeddings | Output parameter. An instance for generating embeddings using the selected provider. |
 
 ## Additional embedding model components
 

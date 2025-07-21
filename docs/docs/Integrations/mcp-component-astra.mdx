@@ -52,14 +52,14 @@ Use the [MCP Tools component](/mcp-client) to connect Langflow to a [Datastax As
         ASTRA_DB_API_ENDPOINT=https://...-us-east-2.apps.astra.datastax.com
         ```
 
-10. In the **Agent** component, add your **OpenAI API key**.
+8. In the **Agent** component, add your **OpenAI API key**.
 
     The default model is an OpenAI model.
     If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 
     ![The Simple Agent flow with the URL tool replaced by an MCP Tools component, and the MCP Tools component launching an Astra DB MCP server](/img/component-mcp-astra-db.png)
 
-11. Open the **Playground**, and then ask the agent, `What collections are available?`
+9. Open the **Playground**, and then ask the agent, `What collections are available?`
 
     Since Langflow is connected to your Astra DB database through the MCP server, the agent chooses the correct tool and connects to your database to retrieve the answer.
     For example:

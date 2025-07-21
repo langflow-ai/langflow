@@ -32,7 +32,7 @@ To use the **Ollama** component in a flow, connect Langflow to your locally runn
 
 5. Connect the **Ollama** component to other components in the flow, depending on how you want to use the model.
 
-    Language model components can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). Use the **Language Model** output when you want to use a Vertex AI model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component. For more information, see [**Language Model** components](/components-models).
+    Language model components can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). Use the **Language Model** output when you want to use an Ollama model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component. For more information, see [**Language Model** components](/components-models).
 
     In the following example, the flow uses `LanguageModel` output to use an Ollama model as the LLM for an [**Agent** component](/components-agents).
 

@@ -63,7 +63,7 @@ Specialized searches require that the collection is pre-configured with the requ
 
 Outputs a list of [`Data`](/data-types#data) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter and the upper limit of the Astra DB Data API, depending on the type of search.
 
-You can use the component to execute queries directly as isolated steps in a flow, or you can connect it as a (tool for an agent)(/agents-tools) to allow the agent to query data from Astra DB collections as needed to respond to user queries.
+You can use the component to execute queries directly as isolated steps in a flow, or you can connect it as a [tool for an agent](/agents-tools) to allow the agent to query data from Astra DB collections as needed to respond to user queries.
 For more information, see [Use Langflow agents](/agents).
 
 ![Astra DB Tool component connected as a tool to an Agent component](/img/component-astra-db-json-tool.png)
@@ -73,8 +73,6 @@ For more information, see [Use Langflow agents](/agents).
 The following parameters are for the **Astra DB Tool** component overall.
 
 The values for **Collection Name**, **Astra DB Application Token**, and **Astra DB API Endpoint** are found in your Astra DB deployment. For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
-
-For searches that require a vector embedding, 
 
 | Name              | Type   | Description   |
 |-------------------|--------|--------|
@@ -87,7 +85,7 @@ For searches that require a vector embedding,
 | Projection Fields | String | Input parameter. Comma-separated list of attributes to return from matching documents. The default is the default projection, `*`, which returns all attributes except reserved fields like `$vector`.  |
 | Tool Parameters  | Dict   | Input parameter. [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters) that become tools for an agent. These Filters _may_ be used in a search, if the agent selects them. See [Define tool-specific parameters](#define-tool-specific-parameters). |
 | Static Filters    | Dict   | Input parameter. Attribute-value pairs used to filter query results. Equivalent to [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters). **Static Filters** are included with _every_ query. Use **Static Filters** without semantic search to perform a regular filter search. |
-| Number of Results             | Int | Input parameter. The maximum number of documents to return.   |
+| Number of Results  | Int | Input parameter. The maximum number of documents to return.   |
 | Semantic Search | Boolean | Input parameter. Whether to run a similarity search by generating a vector embedding from the chat input and following the **Semantic Search Instruction**. Default: `False`. If `True`, you must attach an [**Embedding Model** component](/components-embedding-models) or have vectorize pre-enabled on your collection. |
 | Use Astra DB Vectorize | Boolean | Input parameter. Whether to use the Astra DB vectorize feature for embedding generation when running a semantic search. Default: `False`. If `True`, you must have vectorize pre-enabled on your collection. |
 | Embedding Model | Embedding | Input parameter. A port to attach an **Embedding Model** component to generate a vector from input text for semantic search. This can be used when **Semantic Search** is `True` with or without vectorize. Be sure to use a model that aligns with the dimensions of the embeddings already present in the collection. |
