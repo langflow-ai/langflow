@@ -408,4 +408,5 @@ def sync_to_async(func):
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
         return func(*args, **kwargs)
+
     return async_wrapper
