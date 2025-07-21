@@ -14,12 +14,17 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
 
+# Import schema functions from lfx
+from lfx.template.schema import create_input_schema, create_input_schema_from_dict
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from langchain_core.callbacks import Callbacks
 
     from lfx.custom.custom_component.component import Component
+    from lfx.schema.dotdict import dotdict
+    from lfx.template.field.base import Output
 
 # Constants
 TOOL_OUTPUT_NAME = "component_as_tool"
@@ -141,17 +146,15 @@ def _add_commands_to_tool_description(tool_description: str, commands: str):
 
 
 class ComponentToolkit:
-    """ComponentToolkit for lfx package - breaks circular dependency with langflow."""
-
     def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
         self.component = component
         self.metadata = metadata
 
-    def _should_skip_output(self, output) -> bool:
+    def _should_skip_output(self, output: Output) -> bool:
         """Determines if an output should be skipped when creating tools.
 
         Args:
-            output: The output to check.
+            output (Output): The output to check.
 
         Returns:
             bool: True if the output should be skipped, False otherwise.
@@ -161,9 +164,8 @@ class ComponentToolkit:
         - output name matches TOOL_OUTPUT_NAME
         - output types contain any of the tool types in TOOL_TYPES_SET
         """
-        return not getattr(output, "tool_mode", True) or (
-            output.name == TOOL_OUTPUT_NAME
-            or any(tool_type in getattr(output, "types", []) for tool_type in TOOL_TYPES_SET)
+        return not output.tool_mode or (
+            output.name == TOOL_OUTPUT_NAME or any(tool_type in output.types for tool_type in TOOL_TYPES_SET)
         )
 
     def get_tools(
@@ -171,9 +173,8 @@ class ComponentToolkit:
         tool_name: str | None = None,
         tool_description: str | None = None,
         callbacks: Callbacks | None = None,
-        flow_mode_inputs: list | None = None,
+        flow_mode_inputs: list[dotdict] | None = None,
     ) -> list[BaseTool]:
-        """Get tools from component outputs."""
         tools = []
         for output in self.component.outputs:
             if self._should_skip_output(output):
@@ -186,23 +187,23 @@ class ComponentToolkit:
             output_method: Callable = getattr(self.component, output.method)
             args_schema = None
             tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
-
-            # Simplified schema creation - for full functionality, this would need
-            # to be moved from langflow to lfx or handled via dependency injection
             if flow_mode_inputs:
-                # TODO: Implement create_input_schema_from_dict in lfx
-                args_schema = None
+                args_schema = create_input_schema_from_dict(
+                    inputs=flow_mode_inputs,
+                    param_key="flow_tweak_data",
+                )
             elif tool_mode_inputs:
-                # TODO: Implement create_input_schema in lfx
-                args_schema = None
-            elif getattr(output, "required_inputs", None):
+                args_schema = create_input_schema(tool_mode_inputs)
+            elif output.required_inputs:
                 inputs = [
-                    self.component.get_undesrcore_inputs()[input_name]
+                    self.component.get_underscore_inputs()[input_name]
                     for input_name in output.required_inputs
                     if getattr(self.component, input_name) is None
                 ]
                 # If any of the required inputs are not in tool mode, this means
                 # that when the tool is called it will raise an error.
+                # so we should raise an error here.
+                # TODO: This logic might need to be improved, example if the required is an api key.
                 if not all(getattr(_input, "tool_mode", False) for _input in inputs):
                     non_tool_mode_inputs = [
                         input_.name
@@ -216,16 +217,14 @@ class ComponentToolkit:
                         "Please ensure all required inputs are set to tool mode."
                     )
                     raise ValueError(msg)
-                # TODO: Implement create_input_schema in lfx
-                args_schema = None
+                args_schema = create_input_schema(inputs)
+
             else:
-                # TODO: Implement create_input_schema in lfx
-                args_schema = None
+                args_schema = create_input_schema(self.component.inputs)
 
             name = f"{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
             event_manager = getattr(self.component, "_event_manager", None)
-
             if asyncio.iscoroutinefunction(output_method):
                 tools.append(
                     StructuredTool(
@@ -258,7 +257,6 @@ class ComponentToolkit:
                         },
                     )
                 )
-
         if len(tools) == 1 and (tool_name or tool_description):
             tool = tools[0]
             tool.name = _format_tool_name(str(tool_name)) or tool.name
@@ -280,7 +278,6 @@ class ComponentToolkit:
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:
-        """Get tools metadata dictionary."""
         if isinstance(self.metadata, pd.DataFrame):
             try:
                 return {
@@ -297,8 +294,7 @@ class ComponentToolkit:
         self,
         tools: list[BaseTool | StructuredTool],
     ) -> list[BaseTool]:
-        """Update tools metadata."""
-        # update the tool_name and description according to the name and description mentioned in the list
+        # update the tool_name and description according to the name and secriotion mentioned in the list
         if isinstance(self.metadata, pd.DataFrame):
             metadata_dict = self.get_tools_metadata_dictionary()
             filtered_tools = []
