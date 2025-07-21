@@ -496,8 +496,16 @@ define bot refuse to respond
                     else:
                         session_id = None
 
+                    # For streaming, we need to handle the response format differently
+                    stream_response = output.stream(input_dict)
+                    # Extract text from streaming response if it's a dict
+                    if isinstance(stream_response, dict) and "output" in stream_response:
+                        stream_text = stream_response["output"]
+                    else:
+                        stream_text = stream_response
+
                     model_message = Message(
-                        text=output.stream(input_dict),
+                        text=stream_text,
                         sender=MESSAGE_SENDER_AI,
                         sender_name="AI",
                         properties={"icon": self.icon, "state": "partial"},
@@ -515,13 +523,21 @@ define bot refuse to respond
                 message = output.invoke(input_dict)
                 result = message.content if hasattr(message, "content") else message
 
+            # Always extract the actual text content from RunnableRails response
+            if isinstance(result, dict) and "output" in result:
+                result = result["output"]
+            elif hasattr(message, "content"):
+                # Handle AIMessage objects
+                result = message.content
+            elif isinstance(message, str):
+                result = message
+
             # Set status
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
                 self.status = status_message
             elif isinstance(result, dict):
-                result = json.dumps(message, indent=4)
-                self.status = result
+                self.status = json.dumps(result, indent=4)
             else:
                 self.status = result
 
