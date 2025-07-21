@@ -11,24 +11,15 @@ This page describes the components that are available in the **Exa** bundle.
 
 ## Exa Search
 
-This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval.
+This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval by a [Langflow agent](/agents) or [MCP client](/mcp-client).
 
-<details>
-<summary>Parameters</summary>
+The output is exclusively [`Tools`](/data-types#tool).
 
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| metaphor_api_key | SecretString | An API key for Exa Search. |
-| use_autoprompt | Boolean | Whether to use the autoprompt feature. Default: true. |
-| search_num_results | Integer | The number of results to return for search. Default: 5. |
-| similar_num_results | Integer | The number of similar results to return. Default: 5. |
-
-**Outputs**
+### Exa Search parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| tools | List[Tool] | A list of search tools provided by the toolkit. |
-
-</details>
+| metaphor_api_key | SecretString | Input parameter. An API key for Exa Search. |
+| use_autoprompt | Boolean | Input parameter. Whether to use the autoprompt feature. Default: true. |
+| search_num_results | Integer | Input parameter. The number of results to return for search. Default: 5. |
+| similar_num_results | Integer | Input parameter. The number of similar results to return. Default: 5. |

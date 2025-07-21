@@ -9,25 +9,20 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **arXiv** bundle.
 
-## arXiv
+## arXiv search
 
 This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
 
-<details>
-<summary>Parameters</summary>
+It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
 
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| search_query | String | The search query for arXiv papers. For example, `quantum computing`. |
-| search_type | String | The field to search in. |
-| max_results | Integer | The maximum number of results to return. |
-
-**Outputs**
+### arXiv search parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| papers | List[Data] | A list of retrieved arXiv papers. |
+| search_query | String | Input parameter. The search query for arXiv papers. For example, `quantum computing`. |
+| search_type | String | Input parameter. The field to search in. |
+| max_results | Integer | Input parameter. The maximum number of results to return. |
 
-</details>
+## See also
+
+* [**Web Search** component](/components-data#web-search)

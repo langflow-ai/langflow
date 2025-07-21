@@ -245,7 +245,9 @@ In fact, some components should not receive a complete `Message` object because 
 
 **Tool** ports <Icon name="Circle" size="16" aria-label="Cyan tool port" style={{ color: '#06b6d4', fill: '#06b6d4' }} /> connect tools to an **Agent** component.
 
-Tools can be other components where you enabled **Tool Mode** or they can be the dedicated **MCP Tools** component.
+Tools can be other components where you enabled **Tool Mode**, they can be the dedicated **MCP Tools** component, or other components that only support **Tool Mode**.
+
+Functionally, `Tool` data is a LangChain `StructuredTool` object that can be used in agent workflows.
 
 For more information, see [Configure tools for agents](/agents-tools) and [Use Langflow as an MCP client](/mcp-client).
 

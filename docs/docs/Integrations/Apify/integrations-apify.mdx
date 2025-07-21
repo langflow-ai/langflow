@@ -3,63 +3,46 @@ title: Apify
 slug: /integrations-apify
 ---
 
-[Apify](https://apify.com/) is a web scraping and data extraction platform. It provides an [Actor Store](https://apify.com/store) with more than 3,000 ready-made cloud tools called **Actors**.
+import Icon from "@site/src/components/icon";
 
-Apify components in Langflow run **Actors** to accomplish tasks like data extraction, content analysis, and SQL operations.
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
-## Prerequisites
+[Apify](https://apify.com/) is a web scraping and data extraction platform with more than 3,000 ready-made cloud tools called **Actors**.
 
-* An [Apify API token](https://docs.apify.com/platform/integrations/api)
+Your flows can use the **Apify Actors** component to run **Actors** to accomplish tasks like data extraction, content analysis, and SQL operations.
 
 ## Use the Apify Actors component in a flow
 
-To use an **Apify Actor** in your flow:
+1. Add an **Apify Actors** component to your flow, and then configure it as follows:
 
-1. Click and drag the **Apify Actors** component to your **workspace**.
-2. In the **Apify Actor** component's **Apify Token** field, add your **Apify API token**.
-3. In the **Apify Actor** component's **Actor** field, add your **Actor ID**.
-You can find the Actor ID in the [Apify Actor Store](https://apify.com/store).
-For example, the [Website Content Crawler](https://apify.com/apify/website-content-crawler) has Actor ID `apify/website-content-crawler`.
-4. The component can now be used as a **Tool** to be connected to an **Agent** component, or configured to run manually.
-For more information on running the component manually, see the **JSON Example** in the [Apify documentation](https://apify.com/apify/website-content-crawler/input-schema).
+    * **Apify Token**: Enter your [Apify API token](https://docs.apify.com/platform/integrations/api).
+    * **Actor**: Enter the ID of the Actor you want to run from the [Apify Actor Store](https://apify.com/store). For example, the [Website Content Crawler](https://apify.com/apify/website-content-crawler) has the Actor ID `apify/website-content-crawler`.
+    * **Run Input**: Enter the [JSON input for configuring the Actor run](https://docs.apify.com/platform/actors/running-actors#input).
+    * Configure additional parameters and commands depending on the Actor you chose and your use case.
 
-## Example flows
+2. Connect the component to other components in your flow.
+The component can be used to perform tasks as a standalone step in a flow or as a tool for an agent.
 
-Here are some example flows that use the **Apify Actors** component.
+    To enable tool mode for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
 
-### Extract website text content in Markdown
+    **Apify Actors** components output the results of the Actor run as a JSON object in Langflow's [`Data` type](/data-types#data).
 
-Use the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to extract text content in Markdown format from a website and process it in your flow.
+## Example Apify Actors flows
 
-![Apify Flow - Website Content Crawler](./apify_flow_wcc.png)
+The following scenarios provide a few examples of how you could use the **Apify Actors** components in Langflow:
 
-### Process web content with an agent
+* **Extract website text content in Markdown**: Use the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to extract text content in Markdown format from a website, and then connect the **Output** to a **Parser** component's input for further processing.
 
-Extract website content using the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler), and then process it with an agent.
+    ![Apify Flow - Website Content Crawler](./apify_flow_wcc.png)
 
-The agent takes the extracted data and transforms it into summaries, insights, or structured responses to make the information more actionable.
+* **Process web content with an agent**: Attach a [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to an **Agent** component as a tool so the agent can decide whether to extract website content based on the chat input. The agent could take the extracted data and transform it into summaries, insights, or structured responses to make the information more actionable.
 
-![Apify Agent Flow - Simple](./apify_agent_flow_simple.png)
+    ![Apify Agent Flow - Simple](./apify_agent_flow_simple.png)
 
-### Analyze social media profiles with multiple actors
+* **Analyze social media profiles with multiple actors**: Perform comprehensive social media research with multiple Apify Actors:
 
-Perform comprehensive social media research with multiple Apify Actors.
+    * Use the [Google Search Results Scraper Actor](https://apify.com/apify/google-search-scraper) to find relevant social media profiles.
+    * Use the [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) to gather data and videos.
+    * Attach both actors as tools for an **Agent** component to collect the links from Google and content from TikTok, and then analyze the data to provide insights about a person, brand, or topic.
 
-Add the [Google Search Results Scraper Actor](https://apify.com/apify/google-search-scraper) to find relevant social media profiles, and then add the [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) to gather data and videos.
-
-The agent collects the links from Google and content from TikTok and analyzes the data to provide insights about a person, brand, or topic.
-![Apify Agent Flow](./apify_agent_flow.png)
-
-## Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| apify_token | Apify Token | Your Apify API key. |
-| actor | Actor | The Apify Actor to run, for example `apify/website-content-crawler`. |
-| run_input | Run Input | The JSON input for configuring the Actor run. For more information, see the [Apify documentation](https://apify.com/apify/website-content-crawler/input-schema). |
-
-## Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output | Actor Run Result | The JSON response containing the output of the Actor run. |
+    ![Apify Agent Flow](./apify_agent_flow.png)
