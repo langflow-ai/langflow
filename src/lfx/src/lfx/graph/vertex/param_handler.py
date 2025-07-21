@@ -11,20 +11,17 @@ from loguru import logger
 
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
-from lfx.services.storage.service import StorageService
 from lfx.utils.constants import DIRECT_TYPES
 from lfx.utils.util import unescape_string
 
 if TYPE_CHECKING:
     from lfx.graph.edge.base import CycleEdge
-    from lfx.graph.vertex.base import Vertex
-    from lfx.services.storage.service import StorageService
 
 
 class ParameterHandler:
     """Handles parameter processing for vertices."""
 
-    def __init__(self, vertex: Vertex, storage_service: StorageService) -> None:
+    def __init__(self, vertex, storage_service=None) -> None:
         """Initialize the parameter handler.
 
         Args:

@@ -177,6 +177,9 @@ class Component(CustomComponent):
     def get_outputs_map(self) -> dict[str, Output]:
         return self._outputs_map
 
+    def get_output_logs(self) -> dict[str, Any]:
+        return self._output_logs
+
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
         if id_:
@@ -818,7 +821,7 @@ class Component(CustomComponent):
             methods = ", ".join([f"'{output.method}'" for output in value.outputs])
             msg = f"You set {value.display_name} as value for `{key}`. You should pass one of the following: {methods}"
             raise TypeError(msg)
-        self._set_input_value(key, value)
+        self.set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
 
@@ -863,7 +866,7 @@ class Component(CustomComponent):
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
-    def _set_input_value(self, name: str, value: Any) -> None:
+    def set_input_value(self, name: str, value: Any) -> None:
         if name in self._inputs:
             input_value = self._inputs[name].value
             if isinstance(input_value, Component):

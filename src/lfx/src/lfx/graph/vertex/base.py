@@ -32,7 +32,9 @@ if TYPE_CHECKING:
     from lfx.graph.edge.base import CycleEdge, Edge
     from lfx.graph.graph.base import Graph
     from lfx.graph.vertex.schema import NodeData
-    from lfx.services.tracing.schema import Log
+
+    # Simple log type for tracing
+    Log = dict
 
 
 class VertexStates(str, Enum):
@@ -120,7 +122,7 @@ class Vertex:
         if self.custom_component is None:
             msg = f"Vertex {self.id} does not have a component instance."
             raise ValueError(msg)
-        self.custom_component._set_input_value(name, value)
+        self.custom_component.set_input_value(name, value)
 
     def to_data(self):
         return self.full_data
@@ -657,7 +659,7 @@ class Vertex:
                 self.built_object, self.artifacts = result
             elif len(result) == 3:  # noqa: PLR2004
                 self.custom_component, self.built_object, self.artifacts = result
-                self.logs = self.custom_component._output_logs
+                self.logs = self.custom_component.get_output_logs()
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = {
                     self.outputs[0]["name"]: self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
@@ -809,4 +811,4 @@ class Vertex:
         if not self.custom_component or not self.custom_component.outputs:
             return
         # Apply the function to each output
-        [func(output) for output in self.custom_component._outputs_map.values()]
+        [func(output) for output in self.custom_component.get_outputs_map().values()]
