@@ -37,3 +37,12 @@ class OutputValue(BaseModel):
 def build_output_logs(*args, **kwargs):  # noqa: ARG001
     """Stub function for building output logs."""
     return []
+
+
+class InputValueRequest(TypedDict, total=False):
+    """Type definition for input value requests."""
+
+    components: list[str] | None
+    input_value: str | None
+    session: str | None
+    type: InputType | None
