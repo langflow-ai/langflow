@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { KnowledgeBaseInfo } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
-import KnowledgeBasesTab from '../filesPage/components/KnowledgeBasesTab';
-import KnowledgeBaseDrawer from '../filesPage/components/KnowledgeBaseDrawer';
+import { useEffect, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
+import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
 
 export const KnowledgePage = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [quickFilterText, setQuickFilterText] = useState('');
+  const [quickFilterText, setQuickFilterText] = useState("");
 
   // State for drawer
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -18,23 +18,23 @@ export const KnowledgePage = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -64,7 +64,7 @@ export const KnowledgePage = () => {
       {/* Main Content */}
       <div
         className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
-          isDrawerOpen ? 'mr-80' : ''
+          isDrawerOpen ? "mr-80" : ""
         }`}
       >
         <div className="flex h-full w-full flex-col xl:container">
