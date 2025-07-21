@@ -1,4 +1,5 @@
 import json
+import shutil
 from http import HTTPStatus
 from pathlib import Path
 
@@ -21,6 +22,10 @@ class KnowledgeBaseInfo(BaseModel):
     characters: int = 0
     chunks: int = 0
     avg_chunk_size: float = 0.0
+
+
+class BulkDeleteRequest(BaseModel):
+    kb_names: list[str]
 
 
 def get_kb_root_path() -> Path:
@@ -354,3 +359,71 @@ async def get_knowledge_base(kb_name: str) -> KnowledgeBaseInfo:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
+
+
+@router.delete("/{kb_name}", status_code=HTTPStatus.OK)
+async def delete_knowledge_base(kb_name: str) -> dict[str, str]:
+    """Delete a specific knowledge base."""
+    try:
+        kb_root_path = get_kb_root_path()
+        kb_path = kb_root_path / kb_name
+
+        if not kb_path.exists() or not kb_path.is_dir():
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        # Delete the entire knowledge base directory
+        shutil.rmtree(kb_path)
+
+        return {"message": f"Knowledge base '{kb_name}' deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting knowledge base '{kb_name}': {e!s}") from e
+
+
+@router.delete("", status_code=HTTPStatus.OK)
+@router.delete("/", status_code=HTTPStatus.OK)
+async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, str | int]:
+    """Delete multiple knowledge bases."""
+    try:
+        kb_root_path = get_kb_root_path()
+        deleted_count = 0
+        not_found_kbs = []
+
+        for kb_name in request.kb_names:
+            kb_path = kb_root_path / kb_name
+            
+            if not kb_path.exists() or not kb_path.is_dir():
+                not_found_kbs.append(kb_name)
+                continue
+
+            try:
+                # Delete the entire knowledge base directory
+                shutil.rmtree(kb_path)
+                deleted_count += 1
+            except Exception as e:
+                import logging
+                logging.exception("Error deleting knowledge base '%s': %s", kb_name, e)
+                # Continue with other deletions even if one fails
+
+        if not_found_kbs and deleted_count == 0:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Knowledge bases not found: {', '.join(not_found_kbs)}"
+            )
+
+        result = {
+            "message": f"Successfully deleted {deleted_count} knowledge base(s)",
+            "deleted_count": deleted_count,
+        }
+
+        if not_found_kbs:
+            result["not_found"] = not_found_kbs
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting knowledge bases: {e!s}") from e

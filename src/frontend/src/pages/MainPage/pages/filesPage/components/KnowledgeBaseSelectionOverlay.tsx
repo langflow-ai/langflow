@@ -1,5 +1,6 @@
 import ForwardedIconComponent from '@/components/common/genericIconComponent';
 import { Button } from '@/components/ui/button';
+import { useDeleteKnowledgeBases } from '@/controllers/API/queries/knowledge-bases/use-delete-knowledge-bases';
 import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
 import useAlertStore from '@/stores/alertStore';
 import { cn } from '@/utils/utils';
@@ -18,17 +19,39 @@ const KnowledgeBaseSelectionOverlay = ({
   onClearSelection,
 }: KnowledgeBaseSelectionOverlayProps) => {
   const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore(state => state.setErrorData);
+
+  // Bulk delete knowledge bases mutation
+  const deleteKnowledgeBasesMutation = useDeleteKnowledgeBases({
+    onSuccess: data => {
+      setSuccessData({
+        title: `${data.deleted_count} Knowledge Base(s) deleted successfully!`,
+      });
+      onClearSelection();
+    },
+    onError: (error: any) => {
+      setErrorData({
+        title: 'Failed to delete knowledge bases',
+        list: [
+          error?.response?.data?.detail ||
+            error?.message ||
+            'An unknown error occurred',
+        ],
+      });
+      onClearSelection();
+    },
+  });
 
   const handleDelete = () => {
     if (onDelete) {
       onDelete();
     } else {
-      // TODO: Implement knowledge base delete functionality
-      setSuccessData({
-        title: 'Knowledge Base(s) deleted successfully!',
-      });
+      // Extract knowledge base IDs from selected files
+      const kbNames = selectedFiles.map(file => file.id);
+      if (kbNames.length > 0 && !deleteKnowledgeBasesMutation.isPending) {
+        deleteKnowledgeBasesMutation.mutate({ kb_names: kbNames });
+      }
     }
-    onClearSelection();
   };
 
   return (

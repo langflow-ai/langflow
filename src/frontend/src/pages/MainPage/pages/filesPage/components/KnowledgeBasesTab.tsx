@@ -5,6 +5,7 @@ import TableComponent from '@/components/core/parameterRenderComponent/component
 import { Input } from '@/components/ui/input';
 import Loading from '@/components/ui/loading';
 import { useGetKnowledgeBases } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
+import { useDeleteKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base';
 import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
 import useAlertStore from '@/stores/alertStore';
 import { cn } from '@/utils/utils';
@@ -42,6 +43,36 @@ const KnowledgeBasesTab = ({
   // Fetch knowledge bases from API
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
 
+  // Delete knowledge base mutation
+  const deleteKnowledgeBaseMutation = useDeleteKnowledgeBase(
+    {
+      kb_name: knowledgeBaseToDelete?.id || '',
+    },
+    {
+      onSuccess: () => {
+        setSuccessData({
+          title: `Knowledge Base "${knowledgeBaseToDelete?.name}" deleted successfully!`,
+        });
+        // Reset state
+        setKnowledgeBaseToDelete(null);
+        setDeleteModalOpen(false);
+      },
+      onError: (error: any) => {
+        setErrorData({
+          title: 'Failed to delete knowledge base',
+          list: [
+            error?.response?.data?.detail ||
+              error?.message ||
+              'An unknown error occurred',
+          ],
+        });
+        // Reset state
+        setKnowledgeBaseToDelete(null);
+        setDeleteModalOpen(false);
+      },
+    }
+  );
+
   // Handle errors
   if (error) {
     setErrorData({
@@ -64,16 +95,8 @@ const KnowledgeBasesTab = ({
   };
 
   const confirmDelete = () => {
-    if (knowledgeBaseToDelete) {
-      // TODO: Implement actual knowledge base deletion API call
-      setSuccessData({
-        title: `Knowledge Base "${knowledgeBaseToDelete.name}" deleted successfully!`,
-      });
-      console.log('Deleting knowledge base:', knowledgeBaseToDelete);
-
-      // Reset state
-      setKnowledgeBaseToDelete(null);
-      setDeleteModalOpen(false);
+    if (knowledgeBaseToDelete && !deleteKnowledgeBaseMutation.isPending) {
+      deleteKnowledgeBaseMutation.mutate();
     }
   };
 
