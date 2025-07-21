@@ -6,15 +6,16 @@ import KnowledgeBasesTab from '../filesPage/components/KnowledgeBasesTab';
 import KnowledgeBaseDrawer from '../filesPage/components/KnowledgeBaseDrawer';
 
 export const KnowledgePage = () => {
-  const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
-  const [quantitySelected, setQuantitySelected] = useState(0);
+  const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<any[]>(
+    []
+  );
+  const [selectionCount, setSelectionCount] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [quickFilterText, setQuickFilterText] = useState('');
-
-  // State for drawer
+  const [searchText, setSearchText] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] =
     useState<KnowledgeBaseInfo | null>(null);
+
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +40,6 @@ export const KnowledgePage = () => {
     };
   }, []);
 
-  // Handle click outside drawer to close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -47,13 +47,11 @@ export const KnowledgePage = () => {
         drawerRef.current &&
         !drawerRef.current.contains(event.target as Node)
       ) {
-        // Only prevent closing if it's specifically a table row click
         const clickedElement = event.target as HTMLElement;
         const isTableRowClick = clickedElement.closest('.ag-row');
 
         if (!isTableRowClick) {
-          // Close drawer for all clicks outside drawer that are not on table rows
-          handleCloseDrawer();
+          closeDrawer();
         }
       }
     };
@@ -67,44 +65,33 @@ export const KnowledgePage = () => {
     };
   }, [isDrawerOpen]);
 
-  const handleRowClick = (knowledgeBase: KnowledgeBaseInfo) => {
-    console.log(
-      'Row clicked, drawer open:',
-      isDrawerOpen,
-      'KB:',
-      knowledgeBase.name
-    );
+  const handleKnowledgeBaseSelect = (knowledgeBase: KnowledgeBaseInfo) => {
     if (isDrawerOpen) {
-      // If drawer is already open, close it regardless of which row is clicked
-      console.log('Closing drawer due to row click');
-      handleCloseDrawer();
+      closeDrawer();
     } else {
-      // If drawer is closed, open it with the selected knowledge base
-      console.log('Opening drawer with KB:', knowledgeBase.name);
       setSelectedKnowledgeBase(knowledgeBase);
       setIsDrawerOpen(true);
     }
   };
 
-  const handleCloseDrawer = () => {
+  const closeDrawer = () => {
     setIsDrawerOpen(false);
     setSelectedKnowledgeBase(null);
   };
 
   const tabProps = {
-    quickFilterText,
-    setQuickFilterText,
-    selectedFiles,
-    setSelectedFiles,
-    quantitySelected,
-    setQuantitySelected,
+    quickFilterText: searchText,
+    setQuickFilterText: setSearchText,
+    selectedFiles: selectedKnowledgeBases,
+    setSelectedFiles: setSelectedKnowledgeBases,
+    quantitySelected: selectionCount,
+    setQuantitySelected: setSelectionCount,
     isShiftPressed,
-    onRowClick: handleRowClick,
+    onRowClick: handleKnowledgeBaseSelect,
   };
 
   return (
     <div className="flex h-full w-full" data-testid="cards-wrapper">
-      {/* Main Content */}
       <div
         className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
           isDrawerOpen ? 'mr-80' : ''
@@ -123,7 +110,6 @@ export const KnowledgePage = () => {
                       <ForwardedIconComponent
                         name="PanelLeftOpen"
                         aria-hidden="true"
-                        className=""
                       />
                     </SidebarTrigger>
                   </div>
@@ -138,7 +124,6 @@ export const KnowledgePage = () => {
         </div>
       </div>
 
-      {/* Drawer - Fixed position, flush right */}
       {isDrawerOpen && (
         <div
           ref={drawerRef}
@@ -146,7 +131,7 @@ export const KnowledgePage = () => {
         >
           <KnowledgeBaseDrawer
             isOpen={isDrawerOpen}
-            onClose={handleCloseDrawer}
+            onClose={closeDrawer}
             knowledgeBase={selectedKnowledgeBase}
           />
         </div>

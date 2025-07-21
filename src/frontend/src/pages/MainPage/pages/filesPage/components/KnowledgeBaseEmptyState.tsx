@@ -1,5 +1,3 @@
-import CreateKnowledgeBaseButton from "./CreateKnowledgeBaseButton";
-
 interface KnowledgeBaseEmptyStateProps {
   onCreateKnowledgeBase?: () => void;
 }
@@ -14,11 +12,6 @@ const KnowledgeBaseEmptyState = ({
         <p className="text-lg text-secondary-foreground">
           Create your first knowledge base to get started.
         </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <CreateKnowledgeBaseButton
-          onCreateKnowledgeBase={onCreateKnowledgeBase}
-        />
       </div>
     </div>
   );
