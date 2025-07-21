@@ -129,16 +129,20 @@ class KBRetrievalComponent(Component):
         try:
             parquet_df = pd.read_parquet(parquet_file).to_dict(orient="records")
 
-            # Append an embeddings column to the DataFrame
+            # Append a embeddings column to the DataFrame
             for i, record in enumerate(parquet_df):
-                record["embedding"] = vectors[i]
+                record["_embedding"] = vectors[i].tolist() if i < len(vectors) else None
 
             # If a search query is provided, by using OpenAI to perform a vector search against the data
             if self.search_query:
-                top_indices = self.vector_search(df=pd.DataFrame(parquet_df), query=self.search_query, top_k=5)
+                top_indices, scores = self.vector_search(df=pd.DataFrame(parquet_df), query=self.search_query, top_k=5)
 
                 # Filter the DataFrame to only include the top results
                 parquet_df = [parquet_df[i] for i in top_indices]
+
+                # Append a scores column to the DataFrame
+                for i, record in enumerate(parquet_df):
+                    record["_score"] = scores[i]
 
             # Convert each record (dict) to a Data object, then create a DataFrame from the list of Data
             data_list = [Data(**record) for record in parquet_df]
@@ -172,10 +176,10 @@ class KBRetrievalComponent(Component):
         query_embedding = np.array(self.get_embedding(query))
 
         # Convert embeddings to matrix
-        embeddings_matrix = np.vstack(df["embedding"].values)
+        embeddings_matrix = np.vstack(df["_embedding"].values)
 
         # Calculate similarities using lightweight numpy function
         similarities = self.cosine_similarity_np(query_embedding, embeddings_matrix)
 
         # Get top k results
-        return np.argsort(similarities)[::-1][:top_k]
+        return np.argsort(similarities)[::-1][:top_k], similarities[np.argsort(similarities)[::-1][:top_k]]
