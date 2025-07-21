@@ -3,158 +3,108 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lfx.services.interfaces import (
+        CacheServiceProtocol,
+        ChatServiceProtocol,
+        DatabaseServiceProtocol,
+        SettingsServiceProtocol,
+        StorageServiceProtocol,
+        TracingServiceProtocol,
+        VariableServiceProtocol,
+    )
+    from lfx.services.schema import ServiceType
 
 
-def get_service(service_type, default=None):
+def get_service(service_type: ServiceType, default=None):
     """Retrieves the service instance for the given service type.
 
     Args:
-        service_type (ServiceType): The type of service to retrieve.
-        default (ServiceFactory, optional): The default ServiceFactory to use if the service is not found.
-            Defaults to None.
+        service_type: The type of service to retrieve.
+        default: The default ServiceFactory to use if the service is not found.
 
     Returns:
-        Any: The service instance.
+        The service instance or None if not available.
     """
     from lfx.services.manager import service_manager
 
-    return service_manager.get(service_type, default)
+    try:
+        return service_manager.get(service_type, default)
+    except Exception:  # noqa: BLE001
+        return None
 
 
-def get_db_service():
+def get_db_service() -> DatabaseServiceProtocol | None:
     """Retrieves the database service instance."""
     from lfx.services.schema import ServiceType
 
-    try:
-        return get_service(ServiceType.DATABASE_SERVICE)
-    except Exception:  # noqa: BLE001
-        # Return a stub if no real service is available
-        return _StubDatabaseService()
+    return get_service(ServiceType.DATABASE_SERVICE)
 
 
-def get_storage_service():
+def get_storage_service() -> StorageServiceProtocol | None:
     """Retrieves the storage service instance."""
     from lfx.services.schema import ServiceType
 
-    try:
-        return get_service(ServiceType.STORAGE_SERVICE)
-    except Exception:  # noqa: BLE001
-        # Return a stub if no real service is available
-        return _StubStorageService()
+    return get_service(ServiceType.STORAGE_SERVICE)
 
 
-def get_settings_service():
+def get_settings_service() -> SettingsServiceProtocol | None:
     """Retrieves the settings service instance."""
     from lfx.services.schema import ServiceType
 
-    try:
-        return get_service(ServiceType.SETTINGS_SERVICE)
-    except Exception:  # noqa: BLE001
-        # Return a stub if no real service is available
-        return _StubSettingsService()
+    return get_service(ServiceType.SETTINGS_SERVICE)
 
 
-def get_variable_service():
+def get_variable_service() -> VariableServiceProtocol | None:
     """Retrieves the variable service instance."""
     from lfx.services.schema import ServiceType
 
-    try:
-        return get_service(ServiceType.VARIABLE_SERVICE)
-    except Exception:  # noqa: BLE001
-        # Return a stub if no real service is available
-        return _StubVariableService()
+    return get_service(ServiceType.VARIABLE_SERVICE)
 
 
-def get_shared_component_cache_service():
+def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     """Retrieves the shared component cache service instance."""
     from lfx.services.schema import ServiceType
 
-    try:
-        return get_service(ServiceType.CACHE_SERVICE)
-    except Exception:  # noqa: BLE001
-        # Return a stub if no real service is available
-        return _StubCacheService()
+    return get_service(ServiceType.CACHE_SERVICE)
 
 
-def get_chat_service():
+def get_chat_service() -> ChatServiceProtocol | None:
     """Retrieves the chat service instance."""
     from lfx.services.schema import ServiceType
 
-    try:
-        return get_service(ServiceType.CHAT_SERVICE)
-    except Exception:  # noqa: BLE001
-        # Return a stub if no real service is available
-        return _StubChatService()
+    return get_service(ServiceType.CHAT_SERVICE)
 
 
-def get_tracing_service():
+def get_tracing_service() -> TracingServiceProtocol | None:
     """Retrieves the tracing service instance."""
     from lfx.services.schema import ServiceType
 
-    try:
-        return get_service(ServiceType.TRACING_SERVICE)
-    except Exception:  # noqa: BLE001
-        # Return a stub if no real service is available
-        return _StubTracingService()
+    return get_service(ServiceType.TRACING_SERVICE)
 
 
 @asynccontextmanager
 async def session_scope():
-    """Session scope context manager."""
-    # This is a stub implementation
-    yield None
+    """Session scope context manager.
 
+    Returns a real session if database service is available, otherwise a NoopSession.
+    This ensures code can always call session methods without None checking.
+    """
+    db_service = get_db_service()
+    if db_service is None:
+        from lfx.services.session import NoopSession
 
-# Stub service implementations for when real services aren't available
-class _StubDatabaseService:
-    def get_session(self):
-        return None
+        yield NoopSession()
+        return
 
+    # If we have a database service, try to get a real session
+    try:
+        session = db_service.get_session()
+        async with session:
+            yield session
+    except Exception:  # noqa: BLE001
+        from lfx.services.session import NoopSession
 
-class _StubStorageService:
-    def save(self, *args, **kwargs):  # noqa: ARG002
-        return "stub://saved"
-
-    def get_file(self, *args, **kwargs):  # noqa: ARG002
-        return None
-
-
-class _StubSettingsService:
-    def __init__(self):
-        self.settings = _StubSettings()
-
-    def get(self, key, default=None):
-        return getattr(self.settings, key, default)
-
-
-class _StubSettings:
-    def __init__(self):
-        self.vertex_builds_storage_enabled = False
-        self.lazy_load_components = False
-        self.max_text_length = 2000
-        self.max_items_length = 1000
-
-
-class _StubVariableService:
-    def get_variable(self, *args, **kwargs):  # noqa: ARG002
-        return None
-
-    def set_variable(self, *args, **kwargs):
-        pass
-
-
-class _StubCacheService:
-    def get(self, *args, **kwargs):  # noqa: ARG002
-        return None
-
-    def set(self, *args, **kwargs):
-        pass
-
-
-class _StubChatService:
-    pass
-
-
-class _StubTracingService:
-    def log(self, *args, **kwargs):
-        pass
+        yield NoopSession()
