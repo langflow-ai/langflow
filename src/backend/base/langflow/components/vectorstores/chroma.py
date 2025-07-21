@@ -242,17 +242,17 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Number of results: {k}")
         self.log(f"Similarity threshold: {threshold}")
 
-        if mode.lower() in ["similarity", "mmr"] and hasattr(vs, "search")::
-                search_args = {
-                    "query": query,
-                    "search_type": mode.lower(),
-                    "k": k,
-                }
-                if filt:
-                    search_args["filter"] = filt
-                docs = vs.search(**search_args)
-                data_list = [Data(metadata={**getattr(d, "metadata", {})}, text=d.page_content) for d in docs]
-                self.status = data_list
-                return data_list
+        if mode.lower() in ["similarity", "mmr"] and hasattr(vs, "search"):
+            search_args = {
+                "query": query,
+                "search_type": mode.lower(),
+                "k": k,
+            }
+            if filt:
+                search_args["filter"] = filt
+            docs = vs.search(**search_args)
+            data_list = [Data(metadata={**getattr(d, "metadata", {})}, text=d.page_content) for d in docs]
+            self.status = data_list
+            return data_list
 
         return super().search_documents()
