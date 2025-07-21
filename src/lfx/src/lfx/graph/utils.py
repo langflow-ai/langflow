@@ -5,22 +5,16 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-import pandas as pd
 from loguru import logger
 
 from lfx.interface.utils import extract_input_variables_from_prompt
 from lfx.schema.data import Data
 from lfx.schema.message import Message
-from lfx.serialization.serialization import get_max_items_length, get_max_text_length, serialize
-from lfx.services.database.models.transactions.crud import log_transaction as crud_log_transaction
-from lfx.services.database.models.transactions.model import TransactionBase
-from lfx.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
-from lfx.services.database.models.vertex_builds.model import VertexBuildBase
-from lfx.services.database.utils import session_getter
+
+# Database imports removed - lfx should be lightweight
 from lfx.services.deps import get_db_service, get_settings_service
 
 if TYPE_CHECKING:
-    from lfx.api.v1.schemas import ResultDataResponse
     from lfx.graph.vertex.base import Vertex
 
 
@@ -113,55 +107,36 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
 
 
 async def log_transaction(
-    flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
+    flow_id: str | UUID,
+    source: Vertex,
+    status,
+    target: Vertex | None = None,  # noqa: ARG001
+    error=None,  # noqa: ARG001
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
-    Serializes the source vertex's primitive parameters and result, handling pandas DataFrames as needed,
-    and records transaction details including inputs, outputs, status, error, and flow ID in the database.
-    If the flow ID is not provided, attempts to retrieve it from the source vertex's graph.
-    Logs warnings and errors on serialization or database failures.
+    This is a lightweight implementation that only logs if database service is available.
     """
     try:
-        if not get_settings_service().settings.transactions_storage_enabled:
+        settings_service = get_settings_service()
+        if not settings_service or not getattr(settings_service.settings, "transactions_storage_enabled", False):
             return
+
+        db_service = get_db_service()
+        if db_service is None:
+            logger.debug("Database service not available, skipping transaction logging")
+            return
+
         if not flow_id:
             if source.graph.flow_id:
                 flow_id = source.graph.flow_id
             else:
                 return
-        inputs = _vertex_to_primitive_dict(source)
 
-        # Convert the result to a serializable format
-        if source.result:
-            try:
-                result_dict = source.result.model_dump()
-                for key, value in result_dict.items():
-                    if isinstance(value, pd.DataFrame):
-                        result_dict[key] = value.to_dict()
-                outputs = result_dict
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"Error serializing result: {e!s}")
-                outputs = None
-        else:
-            outputs = None
-
-        transaction = TransactionBase(
-            vertex_id=source.id,
-            target_id=target.id if target else None,
-            inputs=serialize(inputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
-            outputs=serialize(outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
-            status=status,
-            error=error,
-            flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
-        )
-        async with session_getter(get_db_service()) as session:
-            with session.no_autoflush:
-                inserted = await crud_log_transaction(session, transaction)
-                if inserted:
-                    logger.debug(f"Logged transaction: {inserted.id}")
+        # Log basic transaction info - concrete implementation should be in langflow
+        logger.debug(f"Transaction logged: vertex={source.id}, flow={flow_id}, status={status}")
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"Error logging transaction: {exc!s}")
+        logger.debug(f"Error logging transaction: {exc!s}")
 
 
 async def log_vertex_build(
@@ -169,38 +144,35 @@ async def log_vertex_build(
     flow_id: str | UUID,
     vertex_id: str,
     valid: bool,
-    params: Any,
-    data: ResultDataResponse | dict,
-    artifacts: dict | None = None,
+    params: Any,  # noqa: ARG001
+    data: dict | Any,  # noqa: ARG001
+    artifacts: dict | None = None,  # noqa: ARG001
 ) -> None:
-    """Asynchronously logs a vertex build record to the database if vertex build storage is enabled.
+    """Asynchronously logs a vertex build record if vertex build storage is enabled.
 
-    Serializes the provided data and artifacts with configurable length and item limits before storing.
-    Converts parameters to string if present. Handles exceptions by logging errors.
+    This is a lightweight implementation that only logs if database service is available.
     """
     try:
-        if not get_settings_service().settings.vertex_builds_storage_enabled:
+        settings_service = get_settings_service()
+        if not settings_service or not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
             return
+
+        db_service = get_db_service()
+        if db_service is None:
+            logger.debug("Database service not available, skipping vertex build logging")
+            return
+
         try:
             if isinstance(flow_id, str):
                 flow_id = UUID(flow_id)
         except ValueError:
-            msg = f"Invalid flow_id passed to log_vertex_build: {flow_id!r}(type: {type(flow_id)})"
-            raise ValueError(msg) from None
+            logger.debug(f"Invalid flow_id passed to log_vertex_build: {flow_id!r}")
+            return
 
-        vertex_build = VertexBuildBase(
-            flow_id=flow_id,
-            id=vertex_id,
-            valid=valid,
-            params=str(params) if params else None,
-            data=serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length()),
-            artifacts=serialize(artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
-        )
-        async with session_getter(get_db_service()) as session:
-            inserted = await crud_log_vertex_build(session, vertex_build)
-            logger.debug(f"Logged vertex build: {inserted.build_id}")
+        # Log basic vertex build info - concrete implementation should be in langflow
+        logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
     except Exception:  # noqa: BLE001
-        logger.exception("Error logging vertex build")
+        logger.debug("Error logging vertex build")
 
 
 def rewrite_file_path(file_path: str):
