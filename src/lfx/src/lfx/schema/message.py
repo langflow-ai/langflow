@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -16,11 +16,26 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
 
-def timestamp_to_str_validator(value: Any) -> str:
-    """Simple timestamp validator for base Message class."""
+def timestamp_to_datetime_validator(value: Any) -> datetime:
+    """Convert timestamp to datetime object for base Message class."""
     if isinstance(value, datetime):
-        return value.strftime("%Y-%m-%d %H:%M:%S %Z")
-    return str(value)
+        # Ensure timezone is UTC
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+    if isinstance(value, str):
+        # Parse string timestamp
+        try:
+            if " UTC" in value or " utc" in value.upper():
+                cleaned_value = value.replace(" UTC", "").replace(" utc", "")
+                dt = datetime.strptime(cleaned_value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+                return dt.replace(tzinfo=timezone.utc)
+            dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+            return dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return datetime.now(timezone.utc)
+    # For other types, return current time
+    return datetime.now(timezone.utc)
 
 
 class Message(Data):
@@ -39,9 +54,7 @@ class Message(Data):
     sender_name: str | None = None
     files: list[str] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
-    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
-    )
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
@@ -68,10 +81,28 @@ class Message(Data):
     @field_validator("timestamp", mode="before")
     @classmethod
     def validate_timestamp(cls, value):
-        """Convert datetime objects to string format."""
+        """Convert timestamp to string format for storage."""
         if isinstance(value, datetime):
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
-        return value
+            return value.strftime("%Y-%m-%d %H:%M:%S UTC")
+        if isinstance(value, str):
+            # Validate the string format and standardize it
+            try:
+                # Handle format with timezone
+                if " UTC" in value.upper():
+                    return value
+                time_date_parts = 2
+                if " " in value and len(value.split()) == time_date_parts:
+                    # Format: "YYYY-MM-DD HH:MM:SS"
+                    return f"{value} UTC"
+                # Try to parse and reformat
+                dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+                return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+            except ValueError:
+                # If parsing fails, return current time as string
+                return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        else:
+            # For other types, return current time as string
+            return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     @field_serializer("flow_id")
     def serialize_flow_id(self, value):
@@ -81,13 +112,26 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        """Serialize timestamp to string format."""
+        """Keep timestamp as datetime object for model_dump()."""
         if isinstance(value, datetime):
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
-        if isinstance(value, str):
+            # Ensure timezone is UTC
+            if value.tzinfo is None:
+                return value.replace(tzinfo=timezone.utc)
             return value
-        # If it's neither datetime nor string, return current timestamp as string
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        if isinstance(value, str):
+            # Parse string back to datetime
+            try:
+                # Handle format with timezone
+                if " UTC" in value or " utc" in value.upper():
+                    cleaned_value = value.replace(" UTC", "").replace(" utc", "")
+                    dt = datetime.strptime(cleaned_value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+                    return dt.replace(tzinfo=timezone.utc)
+                dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+                return dt.replace(tzinfo=timezone.utc)
+            except ValueError:
+                return datetime.now(timezone.utc)
+        # For other types, return current time
+        return datetime.now(timezone.utc)
 
     def set_flow_id(self, flow_id: str) -> None:
         """Set the flow ID for this message."""
