@@ -12,7 +12,6 @@ class ServiceType(Enum):
     TELEMETRY_SERVICE = "telemetry_service"
     TRACING_SERVICE = "tracing_service"
     STATE_SERVICE = "state_service"
-    SOCKETIO_SERVICE = "socketio_service"
     SESSION_SERVICE = "session_service"
     CHAT_SERVICE = "chat_service"
     TASK_SERVICE = "task_service"
