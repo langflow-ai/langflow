@@ -395,7 +395,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, s
 
         for kb_name in request.kb_names:
             kb_path = kb_root_path / kb_name
-            
+
             if not kb_path.exists() or not kb_path.is_dir():
                 not_found_kbs.append(kb_name)
                 continue
@@ -406,14 +406,12 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, s
                 deleted_count += 1
             except Exception as e:
                 import logging
+
                 logging.exception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Knowledge bases not found: {', '.join(not_found_kbs)}"
-            )
+            raise HTTPException(status_code=404, detail=f"Knowledge bases not found: {', '.join(not_found_kbs)}")
 
         result = {
             "message": f"Successfully deleted {deleted_count} knowledge base(s)",

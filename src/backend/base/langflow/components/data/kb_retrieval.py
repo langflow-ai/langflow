@@ -48,7 +48,7 @@ class KBRetrievalComponent(Component):
             name="search_query",
             display_name="Search Query",
             info="Optional search query to filter knowledge base data.",
-        )
+        ),
     ]
 
     outputs = [
@@ -135,11 +135,7 @@ class KBRetrievalComponent(Component):
 
             # If a search query is provided, by using OpenAI to perform a vector search against the data
             if self.search_query:
-                top_indices = self.vector_search(
-                    df=pd.DataFrame(parquet_df),
-                    query=self.search_query,
-                    top_k=5
-                )
+                top_indices = self.vector_search(df=pd.DataFrame(parquet_df), query=self.search_query, top_k=5)
 
                 # Filter the DataFrame to only include the top results
                 parquet_df = [parquet_df[i] for i in top_indices]
@@ -183,4 +179,3 @@ class KBRetrievalComponent(Component):
 
         # Get top k results
         return np.argsort(similarities)[::-1][:top_k]
-
