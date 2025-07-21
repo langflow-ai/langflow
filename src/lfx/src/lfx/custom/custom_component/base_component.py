@@ -52,6 +52,16 @@ class BaseComponent:
                 pass
         super().__setattr__(key, value)
 
+    @property
+    def code(self) -> str | None:
+        """Get the component code."""
+        return self._code
+
+    @property
+    def function_entrypoint_name(self) -> str:
+        """Get the function entrypoint name."""
+        return self._function_entrypoint_name
+
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):
         parser = CodeParser(code)

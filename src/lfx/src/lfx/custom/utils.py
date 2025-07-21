@@ -16,6 +16,7 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 from loguru import logger
 from pydantic import BaseModel
 
+from lfx.custom import validate
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.directory_reader.utils import (
@@ -28,7 +29,7 @@ from lfx.custom.schema import MissingDefault
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.schema.dotdict import dotdict
 from lfx.type_extraction import extract_inner_type
-from lfx.utils.util import format_type, get_base_classes, validate
+from lfx.utils.util import format_type, get_base_classes
 
 
 def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:
@@ -294,7 +295,7 @@ def get_component_instance(custom_component: CustomComponent | Component, user_i
     """
     # Fast path: avoid repeated str comparisons
 
-    code = custom_component._code
+    code = custom_component.code
     if not isinstance(code, str):
         # Only two failure cases: None, or other non-str
         error = "Code is None" if code is None else "Invalid code type"
@@ -358,13 +359,13 @@ def run_build_config(
     if is_a_preimported_component(custom_component):
         return custom_component.build_config(), custom_component
 
-    if custom_component._code is None:
+    if custom_component.code is None:
         error = "Code is None"
-    elif not isinstance(custom_component._code, str):
+    elif not isinstance(custom_component.code, str):
         error = "Invalid code type"
     else:
         try:
-            custom_class = eval_custom_component_code(custom_component._code)
+            custom_class = eval_custom_component_code(custom_component.code)
         except Exception as exc:
             logger.exception("Error while evaluating custom component code")
             raise HTTPException(
@@ -461,7 +462,7 @@ def build_custom_component_template_from_inputs(
     else:
         frontend_node = ComponentFrontendNode.from_inputs(**custom_component.template_config)
         cc_instance = custom_component
-    frontend_node = add_code_field(frontend_node, custom_component._code)
+    frontend_node = add_code_field(frontend_node, custom_component.code)
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
         if output.types:
@@ -474,12 +475,12 @@ def build_custom_component_template_from_inputs(
     frontend_node.validate_component()
     # ! This should be removed when we have a better way to handle this
     frontend_node.set_base_classes_from_outputs()
-    reorder_fields(frontend_node, cc_instance._get_field_order())
+    reorder_fields(frontend_node, cc_instance.get_field_order())
     if module_name:
         frontend_node.metadata["module"] = module_name
 
         # Generate code hash for cache invalidation and debugging
-        code_hash = _generate_code_hash(custom_component._code, module_name, ctype_name)
+        code_hash = _generate_code_hash(custom_component.code, module_name, ctype_name)
         if code_hash:
             frontend_node.metadata["code_hash"] = code_hash
 
@@ -535,18 +536,18 @@ def build_custom_component_template(
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
 
-        frontend_node = add_code_field(frontend_node, custom_component._code)
+        frontend_node = add_code_field(frontend_node, custom_component.code)
 
-        add_base_classes(frontend_node, custom_component._get_function_entrypoint_return_type)
-        add_output_types(frontend_node, custom_component._get_function_entrypoint_return_type)
+        add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type())
+        add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type())
 
-        reorder_fields(frontend_node, custom_instance._get_field_order())
+        reorder_fields(frontend_node, custom_instance.get_field_order())
 
         if module_name:
             frontend_node.metadata["module"] = module_name
 
             # Generate code hash for cache invalidation and debugging
-            code_hash = _generate_code_hash(custom_component._code, module_name, custom_component.__class__.__name__)
+            code_hash = _generate_code_hash(custom_component.code, module_name, custom_component.__class__.__name__)
             if code_hash:
                 frontend_node.metadata["code_hash"] = code_hash
 

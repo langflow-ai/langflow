@@ -199,6 +199,14 @@ class CustomComponent(BaseComponent):
     def _get_field_order(self):
         return self.field_order or list(self.field_config.keys())
 
+    def get_field_order(self):
+        """Get the field order for the component."""
+        return self._get_field_order()
+
+    def get_function_entrypoint_return_type(self) -> list[Any]:
+        """Get the return type of the function entrypoint for the custom component."""
+        return self._get_function_entrypoint_return_type
+
     def custom_repr(self):
         """Returns the custom representation of the custom component.
 
