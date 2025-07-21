@@ -758,7 +758,7 @@ class Graph:
         # Process the graph
         try:
             cache_service = get_chat_service()
-            if self.flow_id:
+            if cache_service and self.flow_id:
                 await cache_service.set_cache(self.flow_id, self)
         except Exception:  # noqa: BLE001
             logger.exception("Error setting cache")
@@ -1554,6 +1554,19 @@ class Graph:
         to_process = deque(first_layer)
         layer_index = 0
         chat_service = get_chat_service()
+
+        # Provide fallback cache functions if chat service is unavailable
+        if chat_service is not None:
+            get_cache_func = chat_service.get_cache
+            set_cache_func = chat_service.set_cache
+        else:
+            # Fallback no-op cache functions for tests or when service unavailable
+            async def get_cache_func(*args, **kwargs):  # noqa: ARG001
+                return None
+
+            async def set_cache_func(*args, **kwargs):
+                pass
+
         await self.initialize_run()
         lock = asyncio.Lock()
         while to_process:
@@ -1568,8 +1581,8 @@ class Graph:
                         user_id=self.user_id,
                         inputs_dict={},
                         fallback_to_env_vars=fallback_to_env_vars,
-                        get_cache=chat_service.get_cache,
-                        set_cache=chat_service.set_cache,
+                        get_cache=get_cache_func,
+                        set_cache=set_cache_func,
                         event_manager=event_manager,
                     ),
                     name=f"{vertex.id} Run {vertex_task_run_count.get(vertex_id, 0)}",

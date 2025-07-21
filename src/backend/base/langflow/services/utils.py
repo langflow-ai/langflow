@@ -224,8 +224,51 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         # Don't re-raise since this is a cleanup task
 
 
+def register_all_service_factories() -> None:
+    """Register all available service factories with the service manager."""
+    # Import all service factories
+    from langflow.services.auth import factory as auth_factory
+    from langflow.services.cache import factory as cache_factory
+    from langflow.services.chat import factory as chat_factory
+    from langflow.services.database import factory as database_factory
+    from langflow.services.job_queue import factory as job_queue_factory
+    from langflow.services.manager import service_manager
+    from langflow.services.session import factory as session_factory
+    from langflow.services.settings import factory as settings_factory
+    from langflow.services.shared_component_cache import factory as shared_component_cache_factory
+    from langflow.services.socket import factory as socket_factory
+    from langflow.services.state import factory as state_factory
+    from langflow.services.storage import factory as storage_factory
+    from langflow.services.store import factory as store_factory
+    from langflow.services.task import factory as task_factory
+    from langflow.services.telemetry import factory as telemetry_factory
+    from langflow.services.tracing import factory as tracing_factory
+    from langflow.services.variable import factory as variable_factory
+
+    # Register all factories
+    service_manager.register_factory(settings_factory.SettingsServiceFactory())
+    service_manager.register_factory(cache_factory.CacheServiceFactory())
+    service_manager.register_factory(chat_factory.ChatServiceFactory())
+    service_manager.register_factory(database_factory.DatabaseServiceFactory())
+    service_manager.register_factory(session_factory.SessionServiceFactory())
+    service_manager.register_factory(storage_factory.StorageServiceFactory())
+    service_manager.register_factory(variable_factory.VariableServiceFactory())
+    service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
+    service_manager.register_factory(tracing_factory.TracingServiceFactory())
+    service_manager.register_factory(state_factory.StateServiceFactory())
+    service_manager.register_factory(socket_factory.SocketIOServiceFactory())
+    service_manager.register_factory(job_queue_factory.JobQueueServiceFactory())
+    service_manager.register_factory(task_factory.TaskServiceFactory())
+    service_manager.register_factory(store_factory.StoreServiceFactory())
+    service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
+    service_manager.register_factory(auth_factory.AuthServiceFactory())
+
+
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
+    # Register all service factories first
+    register_all_service_factories()
+
     cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Test external cache connection
     if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
