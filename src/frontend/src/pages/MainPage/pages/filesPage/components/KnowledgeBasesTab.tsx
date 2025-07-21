@@ -1,10 +1,17 @@
-import type { NewValueParams, SelectionChangedEvent } from 'ag-grid-community';
+import type {
+  NewValueParams,
+  SelectionChangedEvent,
+  RowClickedEvent,
+} from 'ag-grid-community';
 import type { AgGridReact } from 'ag-grid-react';
 import { useRef, useState } from 'react';
 import TableComponent from '@/components/core/parameterRenderComponent/components/tableComponent';
 import { Input } from '@/components/ui/input';
 import Loading from '@/components/ui/loading';
-import { useGetKnowledgeBases } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
+import {
+  useGetKnowledgeBases,
+  type KnowledgeBaseInfo,
+} from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
 import { useDeleteKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base';
 import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
 import useAlertStore from '@/stores/alertStore';
@@ -21,6 +28,7 @@ interface KnowledgeBasesTabProps {
   quantitySelected: number;
   setQuantitySelected: (quantity: number) => void;
   isShiftPressed: boolean;
+  onRowClick?: (knowledgeBase: KnowledgeBaseInfo) => void;
 }
 
 const KnowledgeBasesTab = ({
@@ -31,6 +39,7 @@ const KnowledgeBasesTab = ({
   quantitySelected,
   setQuantitySelected,
   isShiftPressed,
+  onRowClick,
 }: KnowledgeBasesTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
   const setErrorData = useAlertStore(state => state.setErrorData);
@@ -117,6 +126,14 @@ const KnowledgeBasesTab = ({
     setSelectedFiles([]);
   };
 
+  const handleRowClick = (event: RowClickedEvent) => {
+    // Only open drawer if clicking on a data cell, not action buttons
+    const clickedElement = event.event?.target as HTMLElement;
+    if (clickedElement && !clickedElement.closest('button') && onRowClick) {
+      onRowClick(event.data);
+    }
+  };
+
   // Get column definitions
   const columnDefs = createKnowledgeBaseColumns(handleRename, handleDelete);
 
@@ -174,6 +191,7 @@ const KnowledgeBasesTab = ({
             ]}
             rowSelection="multiple"
             onSelectionChanged={handleSelectionChanged}
+            onRowClicked={handleRowClick}
             columnDefs={columnDefs}
             rowData={knowledgeBases}
             className={cn(

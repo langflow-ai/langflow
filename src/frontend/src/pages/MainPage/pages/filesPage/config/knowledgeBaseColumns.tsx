@@ -12,7 +12,7 @@ export const createKnowledgeBaseColumns = (
   onDelete?: (knowledgeBase: any) => void
 ): ColDef[] => {
   const cellClassStyles =
-    'text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none';
+    'text-muted-foreground cursor-pointer select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none';
 
   return [
     {
