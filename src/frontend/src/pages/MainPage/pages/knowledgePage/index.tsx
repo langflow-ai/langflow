@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { KnowledgeBaseInfo } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
-import KnowledgeBasesTab from '../filesPage/components/KnowledgeBasesTab';
-import KnowledgeBaseDrawer from '../filesPage/components/KnowledgeBaseDrawer';
+import { useEffect, useRef, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
+import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
 
 export const KnowledgePage = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [quickFilterText, setQuickFilterText] = useState('');
+  const [quickFilterText, setQuickFilterText] = useState("");
 
   // State for drawer
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -19,23 +19,23 @@ export const KnowledgePage = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -49,7 +49,7 @@ export const KnowledgePage = () => {
       ) {
         // Only prevent closing if it's specifically a table row click
         const clickedElement = event.target as HTMLElement;
-        const isTableRowClick = clickedElement.closest('.ag-row');
+        const isTableRowClick = clickedElement.closest(".ag-row");
 
         if (!isTableRowClick) {
           // Close drawer for all clicks outside drawer that are not on table rows
@@ -59,28 +59,28 @@ export const KnowledgePage = () => {
     };
 
     if (isDrawerOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isDrawerOpen]);
 
   const handleRowClick = (knowledgeBase: KnowledgeBaseInfo) => {
     console.log(
-      'Row clicked, drawer open:',
+      "Row clicked, drawer open:",
       isDrawerOpen,
-      'KB:',
-      knowledgeBase.name
+      "KB:",
+      knowledgeBase.name,
     );
     if (isDrawerOpen) {
       // If drawer is already open, close it regardless of which row is clicked
-      console.log('Closing drawer due to row click');
+      console.log("Closing drawer due to row click");
       handleCloseDrawer();
     } else {
       // If drawer is closed, open it with the selected knowledge base
-      console.log('Opening drawer with KB:', knowledgeBase.name);
+      console.log("Opening drawer with KB:", knowledgeBase.name);
       setSelectedKnowledgeBase(knowledgeBase);
       setIsDrawerOpen(true);
     }
@@ -107,7 +107,7 @@ export const KnowledgePage = () => {
       {/* Main Content */}
       <div
         className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
-          isDrawerOpen ? 'mr-80' : ''
+          isDrawerOpen ? "mr-80" : ""
         }`}
       >
         <div className="flex h-full w-full flex-col xl:container">

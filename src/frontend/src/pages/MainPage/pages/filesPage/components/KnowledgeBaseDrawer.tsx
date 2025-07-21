@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import type { KnowledgeBaseInfo } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
-import { formatFileSize } from '@/utils/stringManipulation';
-import { formatNumber } from '../utils/knowledgeBaseUtils';
+import { useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { formatFileSize } from "@/utils/stringManipulation";
+import { formatNumber } from "../utils/knowledgeBaseUtils";
 
 interface KnowledgeBaseDrawerProps {
   isOpen: boolean;
@@ -15,14 +15,14 @@ interface KnowledgeBaseDrawerProps {
 
 // Mock data for source files and linked flows - can be replaced with real data later
 const mockSourceFiles = [
-  { id: '1', name: 'fake_document1.pdf', type: 'PDF', icon: 'File' },
-  { id: '2', name: 'fake_data.csv', type: 'CSV', icon: 'File' },
-  { id: '3', name: 'fake_manual.docx', type: 'DOCX', icon: 'File' },
+  { id: "1", name: "fake_document1.pdf", type: "PDF", icon: "File" },
+  { id: "2", name: "fake_data.csv", type: "CSV", icon: "File" },
+  { id: "3", name: "fake_manual.docx", type: "DOCX", icon: "File" },
 ];
 
 const mockLinkedFlows = [
-  { id: '1', name: 'Fake Customer Support Bot', icon: 'Flow' },
-  { id: '2', name: 'Fake Document Q&A System', icon: 'Flow' },
+  { id: "1", name: "Fake Customer Support Bot", icon: "Flow" },
+  { id: "2", name: "Fake Document Q&A System", icon: "Flow" },
 ];
 
 const KnowledgeBaseDrawer = ({
@@ -31,7 +31,7 @@ const KnowledgeBaseDrawer = ({
   knowledgeBase,
 }: KnowledgeBaseDrawerProps) => {
   const [description, setDescription] = useState(
-    'This is a description of the knowledge base. Need to replace with actual description.'
+    "This is a description of the knowledge base. Need to replace with actual description.",
   );
 
   if (!isOpen || !knowledgeBase) {
@@ -55,7 +55,7 @@ const KnowledgeBaseDrawer = ({
           <div className="px-4">
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                {description || 'No description available.'}
+                {description || "No description available."}
               </div>
             </div>
           </div>
@@ -67,7 +67,7 @@ const KnowledgeBaseDrawer = ({
             <label className="text-sm font-medium">Embedding Provider</label>
             <div className="flex items-center gap-2">
               <div className="text-sm font-medium text-muted-foreground">
-                {knowledgeBase.embedding_model || 'Unknown'}
+                {knowledgeBase.embedding_model || "Unknown"}
               </div>
             </div>
           </div>
@@ -76,7 +76,7 @@ const KnowledgeBaseDrawer = ({
           <div className="space-y-3 px-4">
             <h4 className="text-sm font-medium ">Source Files</h4>
             <div className="space-y-2">
-              {mockSourceFiles.map(file => (
+              {mockSourceFiles.map((file) => (
                 <div
                   key={file.id}
                   className="flex items-center justify-between py-1"
@@ -107,7 +107,7 @@ const KnowledgeBaseDrawer = ({
           <div className="space-y-3 px-4">
             <h4 className="text-sm font-medium ">Linked Flows</h4>
             <div className="space-y-2">
-              {mockLinkedFlows.map(flow => (
+              {mockLinkedFlows.map((flow) => (
                 <div
                   key={flow.id}
                   className="flex items-center justify-between py-2"
