@@ -47,8 +47,8 @@ test(
 
     await page.getByTestId("code-button-modal").click();
 
-    let code = await extractAndCleanCode(page);
-    let updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
+    const code = await extractAndCleanCode(page);
+    const updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
 
     expect(updatedCode).not.toBe(code);
 
