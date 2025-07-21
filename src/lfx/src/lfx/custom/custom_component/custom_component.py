@@ -14,9 +14,10 @@ from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
 from pydantic import BaseModel
 
+from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
 from lfx.type_extraction import post_process_type
-from lfx.utils.util import list_flows, load_flow, run_flow, run_until_complete, validate
+from lfx.utils.util import list_flows, load_flow, run_flow, run_until_complete
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
