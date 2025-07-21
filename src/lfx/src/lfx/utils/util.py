@@ -394,3 +394,18 @@ def extract_class_name(code: str) -> str:
     except SyntaxError as e:
         msg = f"Invalid Python code: {e!s}"
         raise ValueError(msg) from e
+
+
+def unescape_string(s: str) -> str:
+    """Replace escaped new line characters with actual new line characters."""
+    return s.replace("\\n", "\n")
+
+
+def sync_to_async(func):
+    """Decorator to convert a sync function to an async function."""
+    from functools import wraps
+
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return async_wrapper
