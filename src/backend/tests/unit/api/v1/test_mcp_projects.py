@@ -214,6 +214,13 @@ async def test_update_project_mcp_settings_success(
             "mcp_enabled": False,
             "name": test_flow_for_update.name,
             "description": test_flow_for_update.description,
+            "auth_settings": {
+                "auth_type": "none",
+                "api_key": None,
+                "username": None,
+                "password": None,
+                "bearer_token": None,
+            },
         }
     ]
 

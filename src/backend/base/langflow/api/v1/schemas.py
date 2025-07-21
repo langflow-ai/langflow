@@ -444,7 +444,7 @@ class CancelFlowResponse(BaseModel):
 class AuthSettings(BaseModel):
     """Model representing authentication settings for MCP."""
 
-    auth_type: Literal["none", "apikey", "userpass", "bearer", "iam"] = "none"
+    auth_type: Literal["none", "apikey", "basic", "bearer", "iam"] = "none"
     api_key: SecretStr | None = None
     username: str | None = None
     password: SecretStr | None = None

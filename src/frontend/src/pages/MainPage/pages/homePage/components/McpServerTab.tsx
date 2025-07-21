@@ -14,7 +14,7 @@ import {
 } from "@/controllers/API/queries/mcp";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
-import { ENABLE_MCP_AUTH } from "@/customization/feature-flags";
+import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
@@ -173,8 +173,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     }));
 
     // Prepare the request with both settings and auth_settings
-    // If ENABLE_MCP_AUTH is false, always use "none" for auth_type
-    const finalAuthSettings = ENABLE_MCP_AUTH
+    // If ENABLE_MCP_COMPOSER is false, always use "none" for auth_type
+    const finalAuthSettings = ENABLE_MCP_COMPOSER
       ? currentAuthSettings
       : { auth_type: "none" };
 
@@ -228,7 +228,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   // Generate auth headers based on the authentication type
   const getAuthHeaders = () => {
     // If MCP auth is disabled, use the previous API key behavior
-    if (!ENABLE_MCP_AUTH) {
+    if (!ENABLE_MCP_COMPOSER) {
       if (isAutoLogin) return "";
       return `
         "--headers",
@@ -246,7 +246,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "--headers",
         "x-api-key",
         "${currentAuthSettings.api_key || "YOUR_API_KEY"}",`;
-      case "userpass":
+      case "basic":
         return `
         "--headers",
         "Authorization",
@@ -297,7 +297,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               ? `"uvx",
         `
               : ""
-        }"mcp-proxy",${getAuthHeaders()}
+        }"${ENABLE_MCP_COMPOSER ? "mcp-composer" : "mcp-proxy"}",${getAuthHeaders()}
         "${apiUrl}"
       ]
     }
@@ -379,7 +379,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-          {ENABLE_MCP_AUTH && (
+          {ENABLE_MCP_COMPOSER && (
             <div className="flex justify-between">
               <span className="flex gap-2 items-center">
                 Auth:
@@ -416,7 +416,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               </Button>
             </div>
           )}
-          <div className={cn("flex flex-col", !ENABLE_MCP_AUTH && "mt-2")}>
+          <div className={cn("flex flex-col", !ENABLE_MCP_COMPOSER && "mt-2")}>
             <div className="flex flex-row justify-start border-b border-border">
               {[{ name: "Auto install" }, { name: "JSON" }].map((item) => (
                 <Button
@@ -579,7 +579,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           )}
         </div>
       </div>
-      {ENABLE_MCP_AUTH && (
+      {ENABLE_MCP_COMPOSER && (
         <AuthModal
           open={authModalOpen}
           setOpen={setAuthModalOpen}

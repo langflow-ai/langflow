@@ -63,7 +63,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     const authSettingsToSave: AuthSettingsType = {
       auth_type: authType,
       ...(authType === "apikey" && { api_key: authFields.apiKey }),
-      ...(authType === "userpass" && {
+      ...(authType === "basic" && {
         username: authFields.username,
         password: authFields.password,
       }),
@@ -138,7 +138,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                 </div>
               )}
 
-              {authType === "userpass" && (
+              {authType === "basic" && (
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="username" className="!text-mmd font-medium">

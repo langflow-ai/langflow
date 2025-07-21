@@ -39,6 +39,7 @@ from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 logger = logging.getLogger(__name__)
 
@@ -367,7 +368,8 @@ async def install_mcp_config(
         # Determine command and args based on operating system
         os_type = platform.system()
         command = "uvx"
-        args = ["mcp-proxy", sse_url]
+        mcp_tool = "mcp-composer" if FEATURE_FLAGS.mcp_composer else "mcp-proxy"
+        args = [mcp_tool, sse_url]
 
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
         is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
@@ -400,7 +402,7 @@ async def install_mcp_config(
 
         if os_type == "Windows":
             command = "cmd"
-            args = ["/c", "uvx", "mcp-proxy", sse_url]
+            args = ["/c", "uvx", mcp_tool, sse_url]
             logger.debug("Windows detected, using cmd command")
 
         name = project.name

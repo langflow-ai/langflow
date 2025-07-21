@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { ENABLE_MCP_AUTH } from "@/customization/feature-flags";
+import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import ToolsModal from "@/modals/toolsModal";
 import { cn, testIdCase } from "@/utils/utils";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
@@ -73,7 +73,7 @@ export default function ToolsComponent({
               <div
                 className={cn(
                   "flex items-center hover:cursor-help",
-                  !ENABLE_MCP_AUTH && "text-mmd",
+                  !ENABLE_MCP_COMPOSER && "text-mmd",
                 )}
               >
                 Flows/Tools
@@ -87,14 +87,14 @@ export default function ToolsComponent({
           </div>
           {(visibleActions.length > 0 || isAction) && (
             <Button
-              variant={ENABLE_MCP_AUTH ? "outline" : "ghost"}
+              variant={ENABLE_MCP_COMPOSER ? "outline" : "ghost"}
               disabled={!value || disabled}
               size="sm"
               data-testid="button_open_actions"
               onClick={() => setIsModalOpen(true)}
             >
               <ForwardedIconComponent
-                name={ENABLE_MCP_AUTH ? "wrench" : "Settings2"}
+                name={ENABLE_MCP_COMPOSER ? "wrench" : "Settings2"}
                 className="icon-size"
                 strokeWidth={ICON_STROKE_WIDTH}
               />
