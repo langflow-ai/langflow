@@ -65,6 +65,14 @@ class Message(Data):
             value = Properties.model_validate(value)
         return value
 
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def validate_timestamp(cls, value):
+        """Convert datetime objects to string format."""
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+        return value
+
     @field_serializer("flow_id")
     def serialize_flow_id(self, value):
         if isinstance(value, UUID):
@@ -73,12 +81,13 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        try:
-            # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-        except ValueError:
-            # Try parsing without timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        """Serialize timestamp to string format."""
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+        if isinstance(value, str):
+            return value
+        # If it's neither datetime nor string, return current timestamp as string
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
 
     def set_flow_id(self, flow_id: str) -> None:
         """Set the flow ID for this message."""
