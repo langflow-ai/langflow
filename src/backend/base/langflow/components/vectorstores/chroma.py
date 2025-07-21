@@ -135,10 +135,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             from chromadb import Client
             from langchain_chroma import Chroma
         except ImportError as e:
-            msg = (
-                "Could not import Chroma integration package. "
-                "Please install it with `pip install langchain-chroma`."
-            )
+            msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
             raise ImportError(msg) from e
 
         chroma_settings = None
@@ -153,11 +150,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             )
             client = Client(settings=chroma_settings)
 
-        persist_directory = (
-            self.resolve_path(self.persist_directory)
-            if self.persist_directory is not None
-            else None
-        )
+        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
 
         chroma = Chroma(
             persist_directory=persist_directory,
