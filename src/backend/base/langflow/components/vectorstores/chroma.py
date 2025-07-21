@@ -122,9 +122,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             try:
                 self.advance_search_filter = raw_filter
             except json.JSONDecodeError as err:
-                raise ValueError(
-                    "The 'advance_search_filter' must be a valid JSON dictionary."
-                ) from err
+                msg = "The metadata filter must be a valid JSON dictionary."
+                raise ValueError(msg) from err
         else:
             self.advance_search_filter = None
 
@@ -243,8 +242,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Number of results: {k}")
         self.log(f"Similarity threshold: {threshold}")
 
-        if mode.lower() in ["similarity", "mmr"]:
-            if hasattr(vs, "search"):
+        if mode.lower() in ["similarity", "mmr"] and hasattr(vs, "search")::
                 search_args = {
                     "query": query,
                     "search_type": mode.lower(),
