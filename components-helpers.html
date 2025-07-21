@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.b5204e6b.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.09a48b8f.js" defer="defer"></script>
 <script src="/assets/js/main.5570ad66.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -60,7 +60,7 @@ In <strong>Store</strong> mode, this component stores chat messages in Langflow 
 <p>To configure Langflow to store and retrieve messages from an external database instead of local Langflow memory, follow these steps.</p>
 <ol>
 <li>Add two <strong>Memory</strong> components to your flow.
-This example uses <strong>Redit Chat Memory</strong>.</li>
+This example uses <strong>Redis Chat Memory</strong>.</li>
 <li>To enable external memory ports, in both <strong>Memory</strong> components, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> <strong>Controls</strong>, and then enable <strong>External Memory</strong>.</li>
 <li>Connect the <strong>Memory</strong> ports to the <strong>Message History</strong> components.
 The flow looks like this:
