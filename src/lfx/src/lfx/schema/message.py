@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import traceback
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
@@ -48,6 +49,7 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     # Core fields
+    id: str | None = None
     text_key: str = "text"
     text: str | AsyncIterator | Iterator | None = Field(default="")
     sender: str | None = None
@@ -193,6 +195,16 @@ class Message(Data):
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
 
+    def get_text(self) -> str:
+        """Get the message text as a string.
+
+        Returns:
+            str: The text content of the message.
+        """
+        if isinstance(self.text, str):
+            return self.text
+        return str(self.text) if self.text else ""
+
     def format_text(self) -> str:
         """Format the message text.
 
@@ -201,3 +213,53 @@ class Message(Data):
         if isinstance(self.text, str):
             return self.text
         return str(self.text) if self.text else ""
+
+
+class ErrorMessage(Message):
+    """Error message with traceback formatting."""
+
+    def __init__(
+        self,
+        *,
+        text: str = "",
+        exception: BaseException | None = None,
+        traceback_str: str = "",
+        **data,
+    ):
+        if exception:
+            text = self._format_markdown_reason(exception)
+        elif traceback_str:
+            text = traceback_str
+
+        super().__init__(
+            text=text,
+            category="error",
+            error=True,
+            **data,
+        )
+
+    @staticmethod
+    def _format_markdown_reason(exception: BaseException) -> str:
+        """Format exception as markdown."""
+        exception_type = type(exception).__name__
+        exception_message = str(exception)
+        traceback_str = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+
+        return f"""## {exception_type}
+
+{exception_message}
+
+### Traceback
+```python
+{traceback_str}
+```
+"""
+
+    @staticmethod
+    def _format_plain_reason(exception: BaseException) -> str:
+        """Format exception as plain text."""
+        exception_type = type(exception).__name__
+        exception_message = str(exception)
+        traceback_str = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+
+        return f"{exception_type}: {exception_message}\n\nTraceback:\n{traceback_str}"
