@@ -11,8 +11,6 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from langflow.template.field.base import Input
-from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from loguru import logger
 from pydantic import BaseModel
 
@@ -28,6 +26,8 @@ from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import MissingDefault
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.schema.dotdict import dotdict
+from lfx.template.field.base import Input
+from lfx.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from lfx.type_extraction import extract_inner_type
 from lfx.utils.util import format_type, get_base_classes
 
@@ -750,7 +750,7 @@ async def load_custom_component(component_name: str, components_paths: list[str]
         component_name: Name of the component to load
         components_paths: List of paths to search for components
     """
-    from langflow.interface.custom_component import get_custom_component_from_name
+    from lfx.interface.custom_component import get_custom_component_from_name
 
     try:
         # First try to get the component from the registered components

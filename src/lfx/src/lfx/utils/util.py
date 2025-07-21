@@ -11,12 +11,12 @@ from typing import Any
 from uuid import UUID
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
-
-# Import dependencies that are still in langflow for now
-from langflow.field_typing.constants import DEFAULT_IMPORT_STRING
-from langflow.schema.schema import INPUT_FIELD_NAME
 from loguru import logger
 from pydantic import ValidationError
+
+# Import from lfx modules
+from lfx.field_typing.constants import DEFAULT_IMPORT_STRING
+from lfx.schema.schema import INPUT_FIELD_NAME
 
 
 # === Validation utilities ===

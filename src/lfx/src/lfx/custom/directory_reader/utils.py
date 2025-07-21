@@ -1,9 +1,9 @@
 import asyncio
 
-from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from loguru import logger
 
 from lfx.custom.directory_reader.directory_reader import DirectoryReader
+from lfx.template.frontend_node.custom_components import CustomComponentFrontendNode
 
 
 def merge_nested_dicts_with_renaming(dict1, dict2):

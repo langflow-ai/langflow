@@ -145,10 +145,10 @@ def serialize_log(record):
 def patching(record) -> None:
     record["extra"]["serialized"] = serialize_log(record)
     # Default to development mode behavior unless specified otherwise
-    # Check langflow DEV setting first, then fallback to env var
-    from langflow.settings import DEV
+    # Check lfx DEV setting which already handles env var fallback
+    from lfx.settings import DEV
 
-    dev_mode = DEV if DEV is not None else os.getenv("LANGFLOW_DEV", "true").lower() == "true"
+    dev_mode = DEV
     if not dev_mode:
         record.pop("exception", None)
 

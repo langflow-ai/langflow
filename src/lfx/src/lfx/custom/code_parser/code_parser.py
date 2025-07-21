@@ -19,7 +19,7 @@ class CodeSyntaxError(HTTPException):
 
 
 def get_data_type():
-    from langflow.field_typing import Data
+    from lfx.schema.data import Data
 
     return Data
 
