@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
+from loguru import logger
 from pydantic import BaseModel
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
@@ -81,9 +82,7 @@ def detect_embedding_provider(kb_path: Path) -> str:
                         return provider
 
         except (OSError, json.JSONDecodeError) as _:
-            import logging
-
-            logging.exception("Error reading config file '%s'", config_file)
+            logger.exception("Error reading config file '%s'", config_file)
             continue
 
     # Fallback to directory structure
@@ -103,16 +102,13 @@ def detect_embedding_model(kb_path: Path) -> str:
         try:
             with metadata_file.open("r", encoding="utf-8") as f:
                 metadata = json.load(f)
-                if isinstance(metadata, dict):
+                if isinstance(metadata, dict) and "embedding_model" in metadata:
                     # Check for embedding model field
-                    if "embedding_model" in metadata:
-                        model_value = str(metadata["embedding_model"])
-                        if model_value and model_value.lower() != "unknown":
-                            return model_value
+                    model_value = str(metadata.get("embedding_model", "unknown"))
+                    if model_value and model_value.lower() != "unknown":
+                        return model_value
         except (OSError, json.JSONDecodeError) as _:
-            import logging
-
-            logging.exception("Error reading embedding metadata file '%s'", metadata_file)
+            logger.exception("Error reading embedding metadata file '%s'", metadata_file)
 
     # Check other JSON config files for model information
     for config_file in kb_path.glob("*.json"):
@@ -151,9 +147,7 @@ def detect_embedding_model(kb_path: Path) -> str:
                         return model_name
 
         except (OSError, json.JSONDecodeError) as _:
-            import logging
-
-            logging.exception("Error reading config file '%s'", config_file)
+            logger.exception("Error reading config file '%s'", config_file)
             continue
 
     return "Unknown"
@@ -221,9 +215,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
                         if "embedding_model" in embedding_metadata:
                             metadata["embedding_model"] = embedding_metadata["embedding_model"]
             except (OSError, json.JSONDecodeError) as _:
-                import logging
-
-                logging.exception("Error reading embedding metadata file '%s'", metadata_file)
+                logger.exception("Error reading embedding metadata file '%s'", metadata_file)
 
         # Fallback to detection if not found in metadata file
         if metadata["embedding_provider"] == "Unknown":
@@ -241,9 +233,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
                     if not isinstance(schema_data, list):
                         schema_data = None
             except (ValueError, TypeError, OSError) as _:
-                import logging
-
-                logging.exception("Error reading schema file '%s'", schema_file)
+                logger.exception("Error reading schema file '%s'", schema_file)
 
         # Process source.parquet for text metrics
         source_file = kb_path / "source.parquet"
@@ -264,14 +254,10 @@ def get_kb_metadata(kb_path: Path) -> dict:
                         metadata["avg_chunk_size"] = round(int(characters) / int(metadata["chunks"]), 1)
 
             except (OSError, ValueError, TypeError) as _:
-                import logging
+                logger.exception("Error processing source.parquet file '%s'", source_file)
 
-                logging.exception("Error processing source.parquet file '%s'", source_file)
-
-    except Exception as _:
-        import logging
-
-        logging.exception("Error processing knowledge base directory '%s'", kb_path)
+    except (OSError, ValueError, TypeError) as _:
+        logger.exception("Error processing knowledge base directory '%s'", kb_path)
 
     return metadata
 
@@ -315,9 +301,7 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
 
             except OSError as _:
                 # Log the exception and skip directories that can't be read
-                import logging
-
-                logging.exception("Error reading knowledge base directory '%s'", kb_dir)
+                logger.exception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
 
         # Sort by name alphabetically
@@ -376,12 +360,12 @@ async def delete_knowledge_base(kb_name: str) -> dict[str, str]:
         # Delete the entire knowledge base directory
         shutil.rmtree(kb_path)
 
-        return {"message": f"Knowledge base '{kb_name}' deleted successfully"}
-
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting knowledge base '{kb_name}': {e!s}") from e
+    else:
+        return {"message": f"Knowledge base '{kb_name}' deleted successfully"}
 
 
 @router.delete("", status_code=HTTPStatus.OK)
@@ -404,10 +388,8 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, s
                 # Delete the entire knowledge base directory
                 shutil.rmtree(kb_path)
                 deleted_count += 1
-            except Exception as e:
-                import logging
-
-                logging.exception("Error deleting knowledge base '%s': %s", kb_name, e)
+            except (OSError, PermissionError) as e:
+                logger.exception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:
@@ -419,11 +401,11 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, s
         }
 
         if not_found_kbs:
-            result["not_found"] = not_found_kbs
-
-        return result
+            result["not_found"] = ", ".join(not_found_kbs)
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting knowledge bases: {e!s}") from e
+    else:
+        return result
