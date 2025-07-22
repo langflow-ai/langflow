@@ -11,7 +11,6 @@ from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 
 # Import schema functions from lfx
-from lfx.io.schema import create_input_schema, create_input_schema_from_dict
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
@@ -177,6 +176,8 @@ class ComponentToolkit:
         callbacks: Callbacks | None = None,
         flow_mode_inputs: list[dotdict] | None = None,
     ) -> list[BaseTool]:
+        from lfx.io.schema import create_input_schema, create_input_schema_from_dict
+
         tools = []
         for output in self.component.outputs:
             if self._should_skip_output(output):

@@ -1,6 +1,5 @@
+from lfx.template.frontend_node.base import FrontendNode
 from pydantic import BaseModel, field_validator, model_serializer
-
-from langflow.template.frontend_node.base import FrontendNode
 
 
 class CacheResponse(BaseModel):

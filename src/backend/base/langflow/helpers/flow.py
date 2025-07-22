@@ -182,7 +182,7 @@ async def flow_function({func_args}):
     tweaks = {{ {arg_mappings} }}
     from langflow.helpers.flow import run_flow
     from langchain_core.tools import ToolException
-    from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
+    from lfx.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
     try:
         run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},

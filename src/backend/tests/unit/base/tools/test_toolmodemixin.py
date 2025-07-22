@@ -1,4 +1,3 @@
-from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.custom import Component
 
 # Import all input types
@@ -22,6 +21,8 @@ from langflow.io import (
 )
 from langflow.schema import Data
 from pydantic import BaseModel
+
+from lfx.base.tools.component_tool import ComponentToolkit
 
 
 class AllInputsComponent(Component):

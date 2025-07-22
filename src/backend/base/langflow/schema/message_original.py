@@ -14,10 +14,10 @@ from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
 from langchain_core.prompts.prompt import PromptTemplate
+from lfx.base.prompts.utils import dict_values_to_string
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
-from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data

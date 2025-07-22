@@ -14,6 +14,8 @@ from uuid import UUID
 from anyio import BrokenResourceError
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -30,8 +32,6 @@ from langflow.api.v1.mcp_utils import (
     handle_read_resource,
 )
 from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings
-from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, session_scope
 

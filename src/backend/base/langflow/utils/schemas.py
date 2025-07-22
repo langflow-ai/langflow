@@ -1,10 +1,10 @@
 import enum
 
 from langchain_core.messages import BaseMessage
+from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import TypedDict
 
-from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 

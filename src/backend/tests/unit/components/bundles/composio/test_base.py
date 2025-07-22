@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.base.composio.composio_base import ComposioBaseComponent
 
+from lfx.base.composio.composio_base import ComposioBaseComponent
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 

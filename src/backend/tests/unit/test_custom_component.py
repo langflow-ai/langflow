@@ -417,7 +417,7 @@ def test_custom_component_multiple_outputs(code_component_with_multiple_outputs)
 def test_custom_component_subclass_from_lctoolcomponent():
     # Import LCToolComponent and create a subclass
     code = dedent("""
-    from langflow.base.langchain_utilities.model import LCToolComponent
+    from lfx.base.langchain_utilities.model import LCToolComponent
     from langchain_core.tools import Tool
     class MyComponent(LCToolComponent):
         name: str = "MyComponent"
