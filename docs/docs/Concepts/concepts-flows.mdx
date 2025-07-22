@@ -79,35 +79,19 @@ From the **Projects** page, you can manage flows within each of your projects:
 * **Delete a flow**: Locate the flow you want to delete, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Delete**.
 * **Serve flows as MCP tools**: See [Use Langflow as an MCP server](/mcp-server).
 
-## Flow storage
+## Flow storage and logs
 
-Flows and [flow logs](#flow-logs) are stored on local disk at the following default locations:
+By default, flows and [flow logs](/logging) are stored on local disk at the following default locations:
 
 - **macOS Desktop**: `/Users/<username>/.langflow/cache`
 - **Windows Desktop**: `C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
 - **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
 - **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/cache`
 
-The flow storage location can be customized with the [`LANGFLOW_CONFIG_DIR`](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable.
-
-## Flow logs
-
-When viewing a flow in the **Workspace**, click **Logs** to examine logs for that flow and its components.
-
-![Logs pane](/img/logs.png)
-
-Langflow logs are stored in `.log` files in the same place as your flows.
-For filepaths, see [Flow storage](/concepts-flows#flow-storage).
-
-The flow storage location can be customized with the [`LANGFLOW_CONFIG_DIR`](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable:
-
-1. Add `LANGFLOW_LOG_FILE=path/to/logfile.log` in your `.env` file.
-
-    An example `.env` file is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
-
-2. Start Langflow with the values from your `.env` file by running `uv run langflow run --env-file .env`.
+The flow storage location can be customized with the [`LANGFLOW_CONFIG_DIR`](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable, and the flow log storage location can be customized with the [`LANGFLOW_LOG_FILE`](/environment-variables#LANGFLOW_LOG_FILE) environment variable.
 
 ## See also
 
 * [Share and embed flows](/concepts-publish)
 * [Import and export flows](/concepts-flows-import)
+* [Langflow environment variables](/environment-variables)

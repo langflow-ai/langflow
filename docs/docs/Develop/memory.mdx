@@ -6,38 +6,47 @@ slug: /memory
 Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
 This includes essential Langflow database tables, file management, and caching, as well as chat memory.
 
+## Storage options and paths
+
 Langflow supports both local memory and external memory options.
 
-## Local Langflow database tables
-
-The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
+Langflow's default storage option is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory.
+The default storage path depends on your operation system and installation method:
 
 - **macOS Desktop**: `/Users/<username>/.langflow/data/database.db`
 - **Windows Desktop**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
-- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version may vary)
-- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
+- **OSS macOS/Windows/Linux/WSL (`uv pip install`)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version may vary)
+- **OSS macOS/Windows/Linux/WSL (`git clone`)**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
+
+Alternatively, you can use an external PostgreSQL database for all of your Langflow storage.
+You can also selectively use external storage for chat memory, separate from other Langflow storage.
+For more information, see [Configure external memory](#configure-external-memory) and [Store chat memory](#store-chat-memory).
+
+## Local Langflow database tables
 
 The following tables are stored in `langflow.db`:
 
-• **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
+• **User**: Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
 
-• **Flow** - Contains flow configurations. For more information, see [Build flows](/concepts-flows).
+• **Flow**: Contains flow configurations. For more information, see [Build flows](/concepts-flows).
 
-• **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message).
+• **Message**: Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message).
 
-• **Transaction** - Records execution history and results of flow runs. This information is used for [logging](/logging).
+• **Transaction**: Records execution history and results of flow runs. This information is used for [logging](/logging).
 
-• **ApiKey** - Manages API authentication keys for users. For more information, see [API keys](/configuration-api-keys).
+• **ApiKey**: Manages API authentication keys for users. For more information, see [API keys](/configuration-api-keys).
 
-• **Project** - Provides a structure for flow storage. For more information, see [Projects](/concepts-flows#projects).
+• **Project**: Provides a structure for flow storage. For more information, see [Projects](/concepts-flows#projects).
 
-• **Variables** - Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
+• **Variables**: Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
-• **VertexBuild** - Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the Playground](/concepts-playground).
+• **VertexBuild**: Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the Playground](/concepts-playground).
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
 ## Store chat memory
+
+<!-- TODO: Message History not reqd with Agent. Message history alone vs external chat storage -->
 
 To store and retrieve messages in local Langflow memory, use **Message History** components in your flow.
 
@@ -50,7 +59,7 @@ For more information and examples, see the [**Message History** component](/comp
 
 ## Configure external memory
 
-To replace the default Langflow SQLite database with another database, modify the `LANGFLOW_DATABASE_URL` and start Langflow with this value.
+To replace the default Langflow SQLite database with another database, modify the `LANGFLOW_DATABASE_URL` environment variable, and then start Langflow with your `.env` file:
 
 ```
 LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
@@ -58,7 +67,7 @@ LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 
 For an example, see [Configure an external PostgreSQL database](/configuration-custom-database).
 
-## Configure the external database connection
+### Configure the external database connection
 
 The following settings allow you to fine-tune your database connection pool and timeout settings:
 
@@ -89,3 +98,4 @@ The default behavior is suitable for most use cases.
 ## See also
 
 * [Langflow file management](/concepts-file-management)
+* [Langflow logs](/logging)
