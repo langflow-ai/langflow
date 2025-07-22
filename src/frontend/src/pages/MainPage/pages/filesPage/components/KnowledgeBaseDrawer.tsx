@@ -1,7 +1,7 @@
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import type { KnowledgeBaseInfo } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 
 interface KnowledgeBaseDrawerProps {
   isOpen: boolean;
@@ -41,7 +41,7 @@ const KnowledgeBaseDrawer = ({
             <label className="text-sm font-medium">Embedding Provider</label>
             <div className="flex items-center gap-2">
               <div className="text-sm font-medium text-muted-foreground">
-                {knowledgeBase.embedding_model || 'Unknown'}
+                {knowledgeBase.embedding_model || "Unknown"}
               </div>
             </div>
           </div>

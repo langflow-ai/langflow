@@ -2,23 +2,23 @@ import type {
   NewValueParams,
   RowClickedEvent,
   SelectionChangedEvent,
-} from 'ag-grid-community';
-import type { AgGridReact } from 'ag-grid-react';
-import { useRef, useState } from 'react';
-import TableComponent from '@/components/core/parameterRenderComponent/components/tableComponent';
-import { Input } from '@/components/ui/input';
-import Loading from '@/components/ui/loading';
-import { useDeleteKnowledgeBase } from '@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base';
+} from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useRef, useState } from "react";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Input } from "@/components/ui/input";
+import Loading from "@/components/ui/loading";
+import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
 import {
   type KnowledgeBaseInfo,
   useGetKnowledgeBases,
-} from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
-import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
-import useAlertStore from '@/stores/alertStore';
-import { cn } from '@/utils/utils';
-import { createKnowledgeBaseColumns } from '../config/knowledgeBaseColumns';
-import KnowledgeBaseEmptyState from './KnowledgeBaseEmptyState';
-import KnowledgeBaseSelectionOverlay from './KnowledgeBaseSelectionOverlay';
+} from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
+import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
+import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
+import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
 
 interface KnowledgeBasesTabProps {
   quickFilterText: string;
@@ -42,7 +42,7 @@ const KnowledgeBasesTab = ({
   onRowClick,
 }: KnowledgeBasesTabProps) => {
   const tableRef = useRef<AgGridReact<any>>(null);
-  const { setErrorData, setSuccessData } = useAlertStore(state => ({
+  const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
     setSuccessData: state.setSuccessData,
   }));
@@ -55,7 +55,7 @@ const KnowledgeBasesTab = ({
 
   const deleteKnowledgeBaseMutation = useDeleteKnowledgeBase(
     {
-      kb_name: knowledgeBaseToDelete?.id || '',
+      kb_name: knowledgeBaseToDelete?.id || "",
     },
     {
       onSuccess: () => {
@@ -66,22 +66,22 @@ const KnowledgeBasesTab = ({
       },
       onError: (error: any) => {
         setErrorData({
-          title: 'Failed to delete knowledge base',
+          title: "Failed to delete knowledge base",
           list: [
             error?.response?.data?.detail ||
               error?.message ||
-              'An unknown error occurred',
+              "An unknown error occurred",
           ],
         });
         resetDeleteState();
       },
-    }
+    },
   );
 
   if (error) {
     setErrorData({
-      title: 'Failed to load knowledge bases',
-      list: [error?.message || 'An unknown error occurred'],
+      title: "Failed to load knowledge bases",
+      list: [error?.message || "An unknown error occurred"],
     });
   }
 
@@ -92,7 +92,7 @@ const KnowledgeBasesTab = ({
 
   const handleRename = (params: NewValueParams<any, any>) => {
     setSuccessData({
-      title: 'Knowledge Base renamed successfully!',
+      title: "Knowledge Base renamed successfully!",
     });
   };
 
@@ -126,7 +126,7 @@ const KnowledgeBasesTab = ({
 
   const handleRowClick = (event: RowClickedEvent) => {
     const clickedElement = event.event?.target as HTMLElement;
-    if (clickedElement && !clickedElement.closest('button') && onRowClick) {
+    if (clickedElement && !clickedElement.closest("button") && onRowClick) {
       onRowClick(event.data);
     }
   };
@@ -155,8 +155,8 @@ const KnowledgeBasesTab = ({
             type="text"
             placeholder="Search knowledge bases..."
             className="mr-2 w-full"
-            value={quickFilterText || ''}
-            onChange={event => setQuickFilterText(event.target.value)}
+            value={quickFilterText || ""}
+            onChange={(event) => setQuickFilterText(event.target.value)}
           />
         </div>
       </div>
@@ -173,7 +173,7 @@ const KnowledgeBasesTab = ({
             suppressRowClickSelection={!isShiftPressed}
             editable={[
               {
-                field: 'name',
+                field: "name",
                 onUpdate: handleRename,
                 editableCell: true,
               },
@@ -184,8 +184,8 @@ const KnowledgeBasesTab = ({
             columnDefs={columnDefs}
             rowData={knowledgeBases}
             className={cn(
-              'ag-no-border ag-knowledge-table group w-full',
-              isShiftPressed && quantitySelected > 0 && 'no-select-cells'
+              "ag-no-border ag-knowledge-table group w-full",
+              isShiftPressed && quantitySelected > 0 && "no-select-cells",
             )}
             pagination
             ref={tableRef}
@@ -193,7 +193,7 @@ const KnowledgeBasesTab = ({
             gridOptions={{
               stopEditingWhenCellsLoseFocus: true,
               ensureDomOrder: true,
-              colResizeDefault: 'shift',
+              colResizeDefault: "shift",
             }}
           />
 
@@ -209,7 +209,7 @@ const KnowledgeBasesTab = ({
         open={isDeleteModalOpen}
         setOpen={setIsDeleteModalOpen}
         onConfirm={confirmDelete}
-        description={`knowledge base "${knowledgeBaseToDelete?.name || ''}"`}
+        description={`knowledge base "${knowledgeBaseToDelete?.name || ""}"`}
         note="This action cannot be undone"
       >
         <></>

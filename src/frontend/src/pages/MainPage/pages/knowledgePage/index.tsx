@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { KnowledgeBaseInfo } from '@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases';
-import KnowledgeBaseDrawer from '../filesPage/components/KnowledgeBaseDrawer';
-import KnowledgeBasesTab from '../filesPage/components/KnowledgeBasesTab';
+import { useEffect, useRef, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
+import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
 
 export const KnowledgePage = () => {
   const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<any[]>(
-    []
+    [],
   );
   const [selectionCount, setSelectionCount] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] =
     useState<KnowledgeBaseInfo | null>(null);
@@ -20,23 +20,23 @@ export const KnowledgePage = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === "Shift") {
         setIsShiftPressed(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -48,7 +48,7 @@ export const KnowledgePage = () => {
         !drawerRef.current.contains(event.target as Node)
       ) {
         const clickedElement = event.target as HTMLElement;
-        const isTableRowClick = clickedElement.closest('.ag-row');
+        const isTableRowClick = clickedElement.closest(".ag-row");
 
         if (!isTableRowClick) {
           closeDrawer();
@@ -57,11 +57,11 @@ export const KnowledgePage = () => {
     };
 
     if (isDrawerOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isDrawerOpen]);
 
@@ -94,7 +94,7 @@ export const KnowledgePage = () => {
     <div className="flex h-full w-full" data-testid="cards-wrapper">
       <div
         className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
-          isDrawerOpen ? 'mr-80' : ''
+          isDrawerOpen ? "mr-80" : ""
         }`}
       >
         <div className="flex h-full w-full flex-col xl:container">
