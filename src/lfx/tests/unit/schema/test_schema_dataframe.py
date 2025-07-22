@@ -48,15 +48,15 @@ class TestDataFrameSchema:
         assert new_df.iloc[-2:]["name"].tolist() == ["Bob", "Alice"]
         assert new_df.iloc[-2:]["text"].tolist() == ["name is Bob", "name is Alice"]
 
-    def test_to_lc_documents(self, sample_dataframe):
-        """Test conversion to LangChain documents."""
-        data_frame = DataFrame(sample_dataframe)
-        documents = data_frame.to_lc_documents()
+    def test_to_lc_document(self, dataframe_with_metadata):
+        documents = dataframe_with_metadata.to_lc_document()
         assert isinstance(documents, list)
         assert all(isinstance(doc, Document) for doc in documents)
-        assert len(documents) == 2
+        expected_documents_len = 2
+        assert len(documents) == expected_documents_len
         assert documents[0].page_content == "name is John"
         assert documents[0].metadata == {"name": "John"}
+        assert documents[1].page_content == "name is Jane"
 
     def test_bool_operator(self):
         """Test boolean operator behavior."""

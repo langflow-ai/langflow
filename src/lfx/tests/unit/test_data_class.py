@@ -44,7 +44,8 @@ def test_add_method_for_integers():
     record1 = Data(data={"number": 5})
     record2 = Data(data={"number": 10})
     combined = record1 + record2
-    assert combined.number == 15
+    expected_number = 15
+    assert combined.number == expected_number
 
 
 def test_add_method_with_non_overlapping_keys():
@@ -52,7 +53,8 @@ def test_add_method_with_non_overlapping_keys():
     record2 = Data(data={"number": 10})
     combined = record1 + record2
     assert combined.text == "Hello"
-    assert combined.number == 10
+    expected_number = 10
+    assert combined.number == expected_number
 
 
 def test_custom_attribute_get_set_del():
@@ -68,7 +70,8 @@ def test_deep_copy():
     record1 = Data(data={"text": "Hello", "number": 10})
     record2 = copy.deepcopy(record1)
     assert record2.text == "Hello"
-    assert record2.number == 10
+    expected_number = 10
+    assert record2.number == expected_number
     record2.text = "World"
     assert record1.text == "Hello"  # Ensure original is unchanged
 
@@ -140,3 +143,30 @@ def test_get_text_with_none_data():
     result = schema.get_text()
     assert result == "default"
     assert schema.data == {}
+
+
+def test_data_concatenation_different_fields():
+    record1 = Data(data={"text": "Hello"})
+    record2 = Data(data={"number": 10})
+    combined = record1 + record2
+    assert combined.text == "Hello"
+    expected_number = 10
+    assert combined.number == expected_number
+
+
+def test_data_copy():
+    record1 = Data(data={"text": "Hello", "number": 10})
+    record2 = copy.deepcopy(record1)
+    assert record2.text == "Hello"
+    expected_number = 10
+    assert record2.number == expected_number
+    record2.text = "World"
+    assert record1.text == "Hello"  # Ensure original is unchanged
+    assert record2.text == "World"
+
+
+def test_data_field_access():
+    record = Data()
+    record.name = "John"
+    assert "name" in record.data
+    assert record.data["name"] == "John"

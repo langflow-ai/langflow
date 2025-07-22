@@ -62,6 +62,24 @@ external = ["RUF027"]
     "S101",
     "SLF001",
 ]
+"tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+]
+"src/lfx/base/*" = [
+    "SLF001",
+]
+"src/lfx/components/*" = [
+    "SLF001",
+]
+"src/lfx/custom/*" = [
+    "SLF001",
+]
+"src/lfx/graph/*" = [
+    "SLF001",
+]
 
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]

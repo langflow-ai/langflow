@@ -41,7 +41,8 @@ class TestContentBlock:
         ]
 
         content_block = ContentBlock(title="Test", contents=contents)
-        assert len(content_block.contents) == 6
+        expected_len = 6
+        assert len(content_block.contents) == expected_len
         assert isinstance(content_block.contents[0], TextContent)
         assert isinstance(content_block.contents[1], CodeContent)
         assert isinstance(content_block.contents[2], ErrorContent)
@@ -71,7 +72,8 @@ class TestContentBlock:
         serialized = block.serialize_contents(block.contents)
 
         assert isinstance(serialized, list)
-        assert len(serialized) == 2
+        expected_len = 2
+        assert len(serialized) == expected_len
         assert serialized[0]["type"] == "text"
         assert serialized[1]["type"] == "code"
         assert serialized[1]["language"] == "python"

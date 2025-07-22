@@ -28,10 +28,12 @@ def test_from_data_list_basic():
 
     assert isinstance(dataset, DataFrame)
     assert isinstance(dataset, pd.DataFrame)
-    assert len(dataset) == 2
+    expected_len = 2
+    assert len(dataset) == expected_len
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
-    assert dataset.iloc[1]["age"] == 25
+    expected_age = 25
+    assert dataset.iloc[1]["age"] == expected_age
 
 
 def test_from_data_list_empty():
@@ -100,7 +102,8 @@ def test_to_data_list_modified_data(sample_dataset):
     assert isinstance(result, list)
     assert all(isinstance(item, Data) for item in result)
     assert result[0].data["new_column"] == 1
-    assert result[0].data["age"] == 31
+    expected_age = 31
+    assert result[0].data["age"] == expected_age
 
 
 def test_dataset_pandas_operations(sample_dataset):
@@ -108,17 +111,20 @@ def test_dataset_pandas_operations(sample_dataset):
     # Test filtering
     filtered = sample_dataset[sample_dataset["age"] > 30]
     assert isinstance(filtered, DataFrame), f"Expected DataFrame, got {type(filtered)}"
-    assert len(filtered) == 1
+    expected_len = 1
+    assert len(filtered) == expected_len
     assert filtered.iloc[0]["name"] == "Bob"
 
     # Test aggregation
     mean_age = sample_dataset["age"].mean()
-    assert mean_age == 30
+    expected_mean = 30
+    assert mean_age == expected_mean
 
     # Test groupby
     grouped = sample_dataset.groupby("city").agg({"age": "mean"})
     assert isinstance(grouped, pd.DataFrame)
-    assert len(grouped) == 3
+    expected_len = 3
+    assert len(grouped) == expected_len
 
 
 def test_dataset_with_null_values():
@@ -168,7 +174,8 @@ def test_add_row_with_dict(sample_dataset):
     assert isinstance(result, DataFrame)
     assert len(result) == len(sample_dataset) + 1
     assert result.iloc[-1]["name"] == "Alice"
-    assert result.iloc[-1]["age"] == 28
+    expected_age = 28
+    assert result.iloc[-1]["age"] == expected_age
     assert result.iloc[-1]["city"] == "Seattle"
 
 
@@ -180,7 +187,8 @@ def test_add_row_with_data_object(sample_dataset):
     assert isinstance(result, DataFrame)
     assert len(result) == len(sample_dataset) + 1
     assert result.iloc[-1]["name"] == "Alice"
-    assert result.iloc[-1]["age"] == 28
+    expected_age = 28
+    assert result.iloc[-1]["age"] == expected_age
     assert result.iloc[-1]["city"] == "Seattle"
 
 
@@ -229,10 +237,12 @@ def test_init_with_data_objects():
     dataset = DataFrame(data_objects)
 
     assert isinstance(dataset, DataFrame)
-    assert len(dataset) == 2
+    expected_len = 2
+    assert len(dataset) == expected_len
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
-    assert dataset.iloc[1]["age"] == 25
+    expected_age = 25
+    assert dataset.iloc[1]["age"] == expected_age
 
 
 def test_init_with_dicts():
@@ -241,10 +251,12 @@ def test_init_with_dicts():
     dataset = DataFrame(data_dicts)
 
     assert isinstance(dataset, DataFrame)
-    assert len(dataset) == 2
+    expected_len = 2
+    assert len(dataset) == expected_len
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
-    assert dataset.iloc[1]["age"] == 25
+    expected_age = 25
+    assert dataset.iloc[1]["age"] == expected_age
 
 
 def test_init_with_dict_of_lists():
@@ -253,10 +265,12 @@ def test_init_with_dict_of_lists():
     dataset = DataFrame(data)
 
     assert isinstance(dataset, DataFrame)
-    assert len(dataset) == 2
+    expected_len = 2
+    assert len(dataset) == expected_len
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
-    assert dataset.iloc[1]["age"] == 25
+    expected_age = 25
+    assert dataset.iloc[1]["age"] == expected_age
 
 
 def test_init_with_pandas_dataframe():
@@ -265,10 +279,12 @@ def test_init_with_pandas_dataframe():
     dataset = DataFrame(test_df)
 
     assert isinstance(dataset, DataFrame)
-    assert len(dataset) == 2
+    expected_len = 2
+    assert len(dataset) == expected_len
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
-    assert dataset.iloc[1]["age"] == 25
+    expected_age = 25
+    assert dataset.iloc[1]["age"] == expected_age
 
 
 def test_init_with_none():
@@ -294,7 +310,9 @@ def test_init_with_kwargs():
     dataset = DataFrame(data=data, index=["a", "b"])
 
     assert isinstance(dataset, DataFrame)
-    assert len(dataset) == 2
+    expected_len = 2
+    assert len(dataset) == expected_len
     assert list(dataset.index) == ["a", "b"]
     assert dataset.loc["a"]["name"] == "John"
-    assert dataset.loc["b"]["age"] == 25
+    expected_age = 25
+    assert dataset.loc["b"]["age"] == expected_age

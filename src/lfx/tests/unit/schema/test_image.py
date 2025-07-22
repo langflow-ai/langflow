@@ -42,18 +42,26 @@ def test_is_image_file__not_image(file_txt):
 
 def test_get_file_paths(file_image, file_txt):
     files = [file_image, file_txt]
-
     result = get_file_paths(files)
+    expected_len = 2
+    assert len(result) == expected_len
+    assert result[0].endswith(".png")
+    assert result[1].endswith(".txt")
 
-    assert len(result) == 2
+
+def test_get_file_paths_with_dicts():
+    files = [{"path": "test.png"}, {"path": "test.txt"}]
+    result = get_file_paths(files)
+    expected_len = 2
+    assert len(result) == expected_len
     assert result[0].endswith(".png")
     assert result[1].endswith(".txt")
 
 
 def test_get_file_paths__empty():
     result = get_file_paths([])
-
-    assert len(result) == 0
+    expected_len = 0
+    assert len(result) == expected_len
 
 
 @pytest.mark.asyncio

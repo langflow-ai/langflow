@@ -56,8 +56,9 @@ def test_get_messages():
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
         ]
     )
-    messages = get_messages(sender="User", session_id="session_id2", limit=2)
-    assert len(messages) == 2
+    limit = 2
+    messages = get_messages(sender="User", session_id="session_id2", limit=limit)
+    assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
 
@@ -70,8 +71,9 @@ async def test_aget_messages():
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
         ]
     )
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=2)
-    assert len(messages) == 2
+    limit = 2
+    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit)
+    assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
 
@@ -166,7 +168,8 @@ def test_convert_to_langchain(method_name):
     lc_message = convert(Message(text=iterator, sender="AI", session_id="session_id2"))
     assert lc_message.content == ""
     assert lc_message.type == "ai"
-    assert len(list(iterator)) == 2
+    expected_len = 2
+    assert len(list(iterator)) == expected_len
 
 
 @pytest.mark.usefixtures("client")
@@ -296,13 +299,15 @@ async def test_aupdate_message_with_content_blocks(created_message):
     # Verify the content block structure
     updated_block = updated[0].content_blocks[0]
     assert updated_block.title == "Test Block"
-    assert len(updated_block.contents) == 2
+    expected_len = 2
+    assert len(updated_block.contents) == expected_len
 
     # Verify text content
     text_content = updated_block.contents[0]
     assert text_content.type == "text"
     assert text_content.text == "Test content"
-    assert text_content.duration == 5
+    duration = 5
+    assert text_content.duration == duration
     assert text_content.header["title"] == "Test Header"
 
     # Verify tool content
@@ -310,7 +315,8 @@ async def test_aupdate_message_with_content_blocks(created_message):
     assert tool_content.type == "tool_use"
     assert tool_content.name == "test_tool"
     assert tool_content.tool_input == {"param": "value"}
-    assert tool_content.duration == 10
+    duration = 10
+    assert tool_content.duration == duration
 
 
 @pytest.mark.usefixtures("client")

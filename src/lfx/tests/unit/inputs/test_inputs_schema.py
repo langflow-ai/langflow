@@ -192,7 +192,8 @@ def test_schema_to_langflow_inputs():
     inputs = schema_to_langflow_inputs(TestSchema)
 
     # Verify the number of inputs matches the schema fields
-    assert len(inputs) == 5
+    expected_len = 5
+    assert len(inputs) == expected_len
 
     # Helper function to find input by name
     def find_input(name: str) -> InputTypes | None:

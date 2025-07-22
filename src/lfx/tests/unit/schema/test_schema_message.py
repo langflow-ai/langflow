@@ -90,7 +90,8 @@ def test_message_with_single_image(sample_image):
 
     assert isinstance(lc_message, HumanMessage)
     assert isinstance(lc_message.content, list)
-    assert len(lc_message.content) == 2
+    expected_len = 2
+    assert len(lc_message.content) == expected_len
 
     # Check text content
     assert lc_message.content[0] == {"type": "text", "text": text}
@@ -125,7 +126,8 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
 
     assert isinstance(lc_message, HumanMessage)
     assert isinstance(lc_message.content, list)
-    assert len(lc_message.content) == 3  # text + 2 images
+    expected_len = 3  # text + 2 images
+    assert len(lc_message.content) == expected_len
 
     # Check text content
     assert lc_message.content[0] == {"type": "text", "text": text}

@@ -34,10 +34,12 @@ class TestDataSchema:
 
         assert isinstance(message, HumanMessage)
         assert isinstance(message.content, list)
-        assert len(message.content) == 2
+        expected_content_len = 2
+        assert len(message.content) == expected_content_len
 
         # Check text content
-        assert message.content[0] == {"type": "text", "text": "Check out this image"}
+        text_content = message.content[0]
+        assert text_content == {"type": "text", "text": "Check out this image"}
 
         # Check image content
         assert message.content[1]["type"] == "image"
@@ -62,10 +64,12 @@ class TestDataSchema:
 
         assert isinstance(message, HumanMessage)
         assert isinstance(message.content, list)
-        assert len(message.content) == 3  # text + 2 images
+        expected_content_len = 3  # text + 2 images
+        assert len(message.content) == expected_content_len
 
         # Check text content
-        assert message.content[0]["type"] == "text"
+        text_content = message.content[0]
+        assert text_content["type"] == "text"
 
         # Check both images
         assert message.content[1]["type"] == "image"

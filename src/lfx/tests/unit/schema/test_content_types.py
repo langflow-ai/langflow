@@ -34,8 +34,14 @@ class TestBaseContent:
 
     def test_base_content_with_duration(self):
         """Test BaseContent with duration field."""
-        content = BaseContent(type="test", duration=1000)
-        assert content.duration == 1000
+        duration = 1000
+        content = BaseContent(type="test", duration=duration)
+        assert content.duration == duration
+
+    def test_base_content_without_duration(self):
+        """Test BaseContent without duration field."""
+        content = BaseContent(type="test")
+        assert content.duration is None
 
 
 class TestErrorContent:
@@ -72,8 +78,16 @@ class TestTextContent:
 
     def test_text_content_with_duration(self):
         """Test TextContent with duration."""
-        text = TextContent(text="Hello", duration=500)
-        assert text.duration == 500
+        duration = 500
+        text = TextContent(text="Hello", duration=duration)
+        assert text.text == "Hello"
+        assert text.duration == duration
+        assert text.type == "text"
+
+    def test_text_content_without_duration(self):
+        """Test TextContent without duration."""
+        text = TextContent(text="Hello")
+        assert text.duration is None
 
 
 class TestMediaContent:
@@ -124,17 +138,33 @@ class TestCodeContent:
 class TestToolContent:
     def test_tool_content_creation(self):
         """Test ToolContent creation and fields."""
-        tool = ToolContent(name="test_tool", tool_input={"param": "value"}, output="result", duration=100)
+        duration = 100
+        tool = ToolContent(name="test_tool", tool_input={"param": "value"}, output="result", duration=duration)
         assert tool.type == "tool_use"
         assert tool.name == "test_tool"
         assert tool.tool_input == {"param": "value"}
         assert tool.output == "result"
-        assert tool.duration == 100
+        assert tool.duration == duration
+
+    def test_tool_content(self):
+        """Test ToolContent."""
+        duration = 100
+        tool = ToolContent(
+            name="TestTool",
+            tool_input={"param": "value"},
+            output="result",
+            duration=duration,
+        )
+        assert tool.name == "TestTool"
+        assert tool.tool_input == {"param": "value"}
+        assert tool.output == "result"
+        assert tool.duration == duration
 
     def test_tool_content_with_error(self):
         """Test ToolContent with error field."""
-        tool = ToolContent(name="test_tool", tool_input={}, error="Something went wrong")
-        assert tool.error == "Something went wrong"
+        error_message = "Something went wrong"
+        tool = ToolContent(name="test_tool", tool_input={}, error=error_message)
+        assert tool.error == error_message
         assert tool.output is None
 
     def test_tool_content_minimal(self):
@@ -145,6 +175,24 @@ class TestToolContent:
         assert tool.name is None
         assert tool.output is None
         assert tool.error is None
+
+    def test_tool_content_serialization(self):
+        """Test ToolContent serialization."""
+        duration = 100
+        tool = ToolContent(
+            name="TestTool",
+            tool_input={"param": "value"},
+            output="result",
+            duration=duration,
+        )
+        serialized = tool.model_dump()
+        assert serialized["name"] == "TestTool"
+        assert serialized["tool_input"] == {"param": "value"}
+        assert serialized["output"] == "result"
+        assert serialized["duration"] == duration
+
+        deserialized = ToolContent.model_validate(serialized)
+        assert deserialized == tool
 
 
 def test_content_type_discrimination():
