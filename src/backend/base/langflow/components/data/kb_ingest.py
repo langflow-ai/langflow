@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
 from loguru import logger
 from platformdirs import user_cache_dir
 
@@ -28,6 +29,7 @@ from langflow.schema import Message
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
+from langflow.services.auth.utils import encrypt_api_key
 from langflow.services.deps import get_settings_service
 
 
@@ -100,7 +102,7 @@ class KBIngestionComponent(Component):
             ],
             value=[
                 {
-                    "column_name": "content",
+                    "column_name": "text",
                     "data_type": "string",
                     "vectorize": True,
                     "citation": False,
@@ -108,18 +110,25 @@ class KBIngestionComponent(Component):
                 }
             ],
         ),
-        DropdownInput(
-            name="embedding_provider",
-            display_name="Embedding Provider",
-            options=["OpenAI", "HuggingFace", "Cohere", "Custom"],
-            value="OpenAI",
-            info="Select the embedding model provider",
-            real_time_refresh=True,
+        StrInput(
+            name="kb_name",
+            display_name="KB Name",
+            info="New or existing KB folder name (ASCII & dashes only).",
+            required=True,
         ),
         DropdownInput(
             name="embedding_model",
             display_name="Model Name",
-            options=["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
+            options=[
+                "text-embedding-3-small",
+                "text-embedding-3-large",
+                "text-embedding-ada-002",
+            ],
+            options_metadata=[
+                {"icon": "OpenAI"},
+                {"icon": "OpenAI"},
+                {"icon": "OpenAI"},
+            ],
             value="text-embedding-3-small",
             info="Select the embedding model to use",
         ),
@@ -128,6 +137,7 @@ class KBIngestionComponent(Component):
             display_name="API Key",
             info="Provider API key for embedding model",
             required=True,
+            value="OPENAI_API_KEY",
         ),
         IntInput(
             name="dimensions",
@@ -141,12 +151,6 @@ class KBIngestionComponent(Component):
             info="Batch size for processing embeddings",
             advanced=True,
             value=1000,
-        ),
-        StrInput(
-            name="kb_name",
-            display_name="KB Name",
-            info="New or existing KB folder name (ASCII & dashes only).",
-            required=True,
         ),
         StrInput(
             name="kb_root_path",
@@ -227,10 +231,11 @@ class KBIngestionComponent(Component):
 
     def _build_embeddings(self):
         """Build embedding model using provider patterns."""
-        from langchain_openai import OpenAIEmbeddings
-
-        provider = self.embedding_provider
-        model = self.embedding_model
+        provider, model = (
+            self.embedding_model.split(": ", 1)
+            if ": " in self.embedding_model
+            else ("OpenAI", self.embedding_model)
+        )
         api_key = self.api_key
         dimensions = self.dimensions
         chunk_size = self.chunk_size
@@ -311,7 +316,11 @@ class KBIngestionComponent(Component):
 
     def _build_embedding_metadata(self) -> dict[str, Any]:
         """Build embedding model metadata."""
-        from langflow.services.auth import utils as auth_utils
+        provider, model = (
+            self.embedding_model.split(": ", 1)
+            if ": " in self.embedding_model
+            else ("OpenAI", self.embedding_model)
+        )
 
         api_key_to_save = None
         if self.api_key and hasattr(self.api_key, "get_secret_value"):
@@ -323,14 +332,14 @@ class KBIngestionComponent(Component):
         if api_key_to_save:
             settings_service = get_settings_service()
             try:
-                encrypted_api_key = auth_utils.encrypt_api_key(api_key_to_save, settings_service=settings_service)
+                encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)
             except (TypeError, ValueError) as e:
                 self.log(f"Could not encrypt API key: {e}")
                 logger.error(f"Could not encrypt API key: {e}")
 
         return {
-            "embedding_provider": self.embedding_provider,
-            "embedding_model": self.embedding_model,
+            "embedding_provider": provider,
+            "embedding_model": model,
             "api_key": encrypted_api_key,
             "api_key_used": bool(self.api_key),
             "dimensions": self.dimensions,
@@ -351,13 +360,15 @@ class KBIngestionComponent(Component):
             # Create directory (following File Component patterns)
             kb_path.mkdir(parents=True, exist_ok=True)
 
-            # Save source DataFrame
+            # Save updated DataFrame
             df_path = kb_path / "source.parquet"
             df_source.to_parquet(df_path, index=False)
 
             # Save column configuration
+            # Only do this if the file doesn't exist already
             cfg_path = kb_path / "schema.json"
-            cfg_path.write_text(json.dumps(config_list, indent=2))
+            if not cfg_path.exists():
+                cfg_path.write_text(json.dumps(config_list, indent=2))
 
             # Save embedding model metadata
             embedding_metadata = self._build_embedding_metadata()
@@ -366,8 +377,17 @@ class KBIngestionComponent(Component):
 
             # Save embeddings and IDs if available
             if embeddings.size > 0:
-                np.save(kb_path / "vectors.npy", embeddings)
-                (kb_path / "ids.json").write_text(json.dumps(embed_index))
+                vectors_path = kb_path / "vectors.npy"
+                # Instead of just overwriting, we want to append to existing vectors
+                if vectors_path.exists():
+                    existing_vectors = np.load(vectors_path, allow_pickle=True)
+                    embeddings = np.concatenate((existing_vectors, embeddings), axis=0)
+                np.save(vectors_path, embeddings)
+
+                # Instead of just overwriting, we want to append to existing IDs
+                if (kb_path / "ids.json").exists():
+                    existing_ids = json.loads((kb_path / "ids.json").read_text())
+                    embed_index = existing_ids + embed_index
 
         except Exception as e:
             if not self.silent_errors:
@@ -552,6 +572,16 @@ class KBIngestionComponent(Component):
             kb_root = self._get_kb_root()
             kb_path = kb_root / self.kb_name
 
+            # Save source DataFrame
+            df_path = kb_path / "source.parquet"
+
+            # Instead of just overwriting this file, i want to read it and append to it if it exists
+            if df_path.exists():
+                # Read existing DataFrame
+                existing_df = pd.read_parquet(df_path)
+                # Append new data
+                df_source = pd.concat([existing_df, df_source], ignore_index=True)
+
             # Process embeddings (using Embedding Model patterns)
             embeddings, embed_index = self._process_embeddings(df_source, config_list)
 
@@ -559,7 +589,7 @@ class KBIngestionComponent(Component):
             self._save_kb_files(kb_path, df_source, config_list, embeddings, embed_index)
 
             # Create vector store following Local DB component pattern
-            self._create_vector_store(df_source, config_list)  # TODO: Restore  embeddings, embed_index
+            self._create_vector_store(df_source, config_list)
 
             # Calculate text statistics
             text_stats = self._calculate_text_stats(df_source, config_list)
