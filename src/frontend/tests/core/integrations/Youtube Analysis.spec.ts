@@ -11,12 +11,12 @@ withEventDeliveryModes(
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test"
+      "OPENAI_API_KEY required to run this test",
     );
 
     test.skip(
       !process?.env?.YOUTUBE_API_KEY,
-      "YOUTUBE_API_KEY required to run this test"
+      "YOUTUBE_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -66,5 +66,5 @@ withEventDeliveryModes(
     expect(concatAllText).toContain("Synthesis");
     expect(concatAllText).toContain("Audience Reception");
     expect(concatAllText).toContain("Content Summary");
-  }
+  },
 );
