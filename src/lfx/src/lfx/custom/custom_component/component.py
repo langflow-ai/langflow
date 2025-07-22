@@ -356,15 +356,15 @@ class Component(CustomComponent):
         kwargs = deepcopy(self.__config, memo)
         kwargs["inputs"] = deepcopy(self.__inputs, memo)
         new_component = type(self)(**kwargs)
-        new_component._code = self._code  # noqa: SLF001
-        new_component._outputs_map = self._outputs_map  # noqa: SLF001
-        new_component._inputs = self._inputs  # noqa: SLF001
-        new_component._edges = self._edges  # noqa: SLF001
-        new_component._components = self._components  # noqa: SLF001
-        new_component._parameters = self._parameters  # noqa: SLF001
-        new_component._attributes = self._attributes  # noqa: SLF001
-        new_component._output_logs = self._output_logs  # noqa: SLF001
-        new_component._logs = self._logs  # type: ignore[attr-defined]  # noqa: SLF001
+        new_component._code = self._code
+        new_component._outputs_map = self._outputs_map
+        new_component._inputs = self._inputs
+        new_component._edges = self._edges
+        new_component._components = self._components
+        new_component._parameters = self._parameters
+        new_component._attributes = self._attributes
+        new_component._output_logs = self._output_logs
+        new_component._logs = self._logs  # type: ignore[attr-defined]
         memo[id(self)] = new_component
         return new_component
 
@@ -765,12 +765,12 @@ class Component(CustomComponent):
         """Add a special loop feedback edge that targets an output instead of an input."""
         self._edges.append(
             {
-                "source": source_component._id,  # noqa: SLF001
+                "source": source_component._id,
                 "target": self._id,
                 "data": {
                     "sourceHandle": {
                         "dataType": source_component.name or source_component.__class__.__name__,
-                        "id": source_component._id,  # noqa: SLF001
+                        "id": source_component._id,
                         "name": source_output.name,
                         "output_types": source_output.types,
                     },
@@ -814,12 +814,12 @@ class Component(CustomComponent):
     def _add_edge(self, component, key, output, input_) -> None:
         self._edges.append(
             {
-                "source": component._id,  # noqa: SLF001
+                "source": component._id,
                 "target": self._id,
                 "data": {
                     "sourceHandle": {
                         "dataType": component.name or component.__class__.__name__,
-                        "id": component._id,  # noqa: SLF001
+                        "id": component._id,
                         "name": output.name,
                         "output_types": output.types,
                     },
