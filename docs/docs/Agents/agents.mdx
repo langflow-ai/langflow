@@ -143,12 +143,12 @@ To allow agents to use tools from MCP servers, use the [**MCP Tools** component]
 Langflow agents have built-in chat memory that is enabled by default.
 This memory allows them to retrieve and reference messages from previous conversations, maintaining a rolling context window for each chat session ID.
 
-Chat memory is grouped by session ID (`session_id`), and it is recommended to use custom session IDs if you need to segregate chat memory for different users or applications that run the same flow.
+Chat memories are grouped by [session ID (`session_id`)](/session-id).
+It is recommended to use custom session IDs if you need to segregate chat memory for different users or applications that run the same flow.
 
 By default, the **Agent** component uses your Langflow installation's storage, and it provides limited chat memory configuration options, such as **Number of Chat History Messages**.
 
-Although a **Message History** component is not required to enable chat memory, it provides more options for sorting, filtering, and limiting memories.
-Additionally, a **Message History** component is required if you want to use dedicated, external chat memory, such as Redis.
+Although the **Message History** component isn't required for default chat memory, it provides more options for sorting, filtering, and limiting memories, and the **Message History** component is required to use external chat memory like Mem0.
 
 For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/components-helpers#message-history).
 
