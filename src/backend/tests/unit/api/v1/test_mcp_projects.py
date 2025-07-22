@@ -206,28 +206,30 @@ async def test_update_project_mcp_settings_success(
 ):
     """Test successful update of MCP settings using real database."""
     # Create settings for updating the flow
-    settings = [
-        {
-            "id": str(test_flow_for_update.id),
-            "action_name": "updated_action",
-            "action_description": "Updated description",
-            "mcp_enabled": False,
-            "name": test_flow_for_update.name,
-            "description": test_flow_for_update.description,
-            "auth_settings": {
-                "auth_type": "none",
-                "api_key": None,
-                "iam_endpoint": None,
-                "username": None,
-                "password": None,
-                "bearer_token": None,
-            },
-        }
-    ]
+    json_payload = {
+        "settings": [
+            {
+                "id": str(test_flow_for_update.id),
+                "action_name": "updated_action",
+                "action_description": "Updated description",
+                "mcp_enabled": False,
+                "name": test_flow_for_update.name,
+                "description": test_flow_for_update.description,
+            }
+        ],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the real PATCH request
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Assert response

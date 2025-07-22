@@ -471,7 +471,6 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
-    auth_settings: AuthSettings | None = None
 
 
 class MCPProjectUpdateRequest(BaseModel):
