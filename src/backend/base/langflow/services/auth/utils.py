@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
-from fastapi import Depends, HTTPException, Security, WebSocketException, status
+from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
@@ -256,6 +256,48 @@ async def get_current_active_superuser(current_user: Annotated[User, Depends(get
     if not current_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges")
     return current_user
+
+
+async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
+    """Get the user for webhook execution.
+
+    When AUTO_LOGIN=false, requires API key authentication and validates flow ownership.
+    When AUTO_LOGIN=true, allows execution as the flow owner without API key.
+
+    Args:
+        flow_id: The ID of the flow being executed
+        request: The FastAPI request object
+
+    Returns:
+        UserRead: The user to execute the webhook as
+
+    Raises:
+        HTTPException: If authentication fails or user doesn't have permission
+    """
+    from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
+
+    settings_service = get_settings_service()
+
+    if settings_service.auth_settings.AUTO_LOGIN:
+        # When auto login is enabled, run webhook as the flow owner without requiring API key
+        return await get_user_by_flow_id_or_endpoint_name(flow_id)
+    # When auto login is disabled, require API key authentication
+    api_key = request.headers.get("x-api-key")
+    if not api_key:
+        raise HTTPException(status_code=403, detail="API key required when auto login is disabled")
+
+    # Validate the API key and get the authenticated user
+    async with get_db_service().with_session() as db:
+        authenticated_user = await check_key(db, api_key)
+        if not authenticated_user:
+            raise HTTPException(status_code=403, detail="Invalid API key")
+
+        # Get flow owner to check if authenticated user owns this flow
+        flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+        if flow_owner.id != authenticated_user.id:
+            raise HTTPException(status_code=403, detail="You don't have permission to run this flow")
+
+        return UserRead.model_validate(authenticated_user, from_attributes=True)
 
 
 def verify_password(plain_password, hashed_password):
