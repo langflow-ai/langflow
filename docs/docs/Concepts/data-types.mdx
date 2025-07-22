@@ -208,11 +208,11 @@ The strictness depends on the component.
 
 ### Message data in Input/Output components
 
-In flows with [**Chat Input/Output** components](/components-io#chat-io), `Message` data provides a consistent structure for chat interactions, and it is ideal for chatbots, conversational analysis, and other use cases based on a dialog with an LLM or agent.
+In flows with [**Chat Input/Output** components](/components-io), `Message` data provides a consistent structure for chat interactions, and it is ideal for chatbots, conversational analysis, and other use cases based on a dialog with an LLM or agent.
 In these flows, the **Playground** chat interface prints only the `Message` attributes that are relevant to the conversation, such as `text`, `files`, and error messages from `content_blocks`.
 To see all `Message` attributes, inspect the message logs in the **Playground**.
 
-In flows with [**Text Input/Output** components](/components-io#text-io), `Message` data is used to pass simple text strings without the chat-related metadata.
+In flows with [**Text Input/Output** components](/components-io), `Message` data is used to pass simple text strings without the chat-related metadata.
 These components handle `Message` data as independent text strings, not as part of an ongoing conversation.
 For this reason, a flow with only **Text Input/Output** components isn't compatible with the **Playground**.
 For more information, see [Input/Output components](/components-io).

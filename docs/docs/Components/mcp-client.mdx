@@ -89,7 +89,7 @@ In SSE mode, all flows available from the targeted server are treated as tools.
 |------|------|-------------|
 | command | String | Input parameter. Stdio mode only. The MCP server startup command. Default: `uvx mcp-sse-shim@latest`. |
 | sse_url | String | Input parameter. SSE mode only. The SSE URL for a Langflow project's MCP server. Default for Langflow Desktop: `http://localhost:7868/`. Default for other installations: `http://localhost:7860/api/v1/mcp/sse` |
-| tools | List[Tool] | Output parameter. [`Tools`](/data-types#tools) object containing a list of tools exposed by the MCP server. |
+| tools | List[Tool] | Output parameter. [`Tool`](/data-types#tool) object containing a list of tools exposed by the MCP server. |
 
 ## Manage connected MCP servers
 
