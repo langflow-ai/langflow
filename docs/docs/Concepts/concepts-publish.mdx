@@ -15,7 +15,7 @@ Langflow provides several ways to run flows from external applications:
 * [Serve flows through a Langflow MCP server](#serve-flows-through-a-langflow-mcp-server)
 
 Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have [deployed a Langflow server](/deployment-overview) or packaged Langflow as a dependency of an application.
-For package dependencies, see [Application development overview](/develop-application) and [Package a flow as a Docker image](/deployment-docker#package-your-flow-as-a-docker-image).
+For package dependencies, see [Develop an application with Langflow](/develop-application) and [Package a flow as a Docker image](/deployment-docker#package-your-flow-as-a-docker-image).
 
 ## Use the Langflow API to run flows {#api-access}
 
@@ -66,7 +66,7 @@ For more information, see [API keys](/configuration-api-keys) and [Get started w
 
 ### Input Schema (tweaks) {#input-schema}
 
-Tweaks are one-time overrides that modify component parameters for at runtime, rather than permanently modifying the flow itself.
+Tweaks are one-time overrides that modify component parameters at runtime, rather than permanently modifying the flow itself.
 For an example of tweaks in a script, see the [Quickstart](/get-started-quickstart).
 
 :::tip
@@ -81,6 +81,25 @@ Changes to a flow's **Input Schema** are saved exclusively as tweaks for that fl
 These tweaks don't change the flow parameters set in the **Workspace**, and they don't apply to other flows.
 
 Adding tweaks through the **Input Schema** can help you troubleshoot formatting issues with tweaks that you manually added to Langflow API requests.
+
+For example, the following curl command includes a tweak that disables the **Store Messages** setting in a flow's **Chat Input** component:
+
+```bash
+curl --request POST \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
+  --data '{
+  "input_value": "Text to input to the flow",
+  "output_type": "chat",
+  "input_type": "chat",
+  "tweaks": {
+    "ChatInput-4WKag": {
+      "should_store_message": false
+    }
+  }
+}'
+```
 
 ### Use a flow ID alias
 
@@ -104,7 +123,7 @@ For each flow, Langflow provides a code snippet that you can insert into the `<b
 The chat widget only supports flows that have **Chat Input** and **Chat Output** components, which are required for the chat experience.
 **Text Input** and **Text Output** components can send and receive messages, but they don't include ongoing LLM chat context.
 
-Attempting to chat with a flow that doesn't have a valid input component will trigger the flow, but the response only indicates that the input was empty.
+Attempting to chat with a flow that doesn't have [**Chat Input** component](/components-io) will trigger the flow, but the response only indicates that the input was empty.
 :::
 
 ### Get a langflow-chat snippet
@@ -504,7 +523,9 @@ export class AppComponent {
 
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to generate responses.
 
-You can also use Langflow as an MCP client, and you can serve your flows as tools to a Langflow MCP client.
+In addition to serving flows through Langflow MCP servers, you can use Langflow as an MCP client to access any MCP server, including Langflow MCP servers.
+
+Interactions with Langflow MCP servers happen through the Langflow API's `/mcp` endpoints.
 
 For more information, see [Use Langflow as an MCP server](/mcp-server) and [Use Langflow as an MCP client](/mcp-client).
 
