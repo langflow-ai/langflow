@@ -138,6 +138,16 @@ unit_tests: ## run unit tests
 unit_tests_looponfail:
 	@make unit_tests args="-f"
 
+lfx_tests: ## run lfx package unit tests
+	@echo 'Running LFX Package Tests...'
+
+	cd src/lfx && \
+	uv venv --python 3.13 .venv && \
+	source .venv/bin/activate && \
+	uv sync --active --frozen && \
+	uv run --active pytest tests/unit -v $(args)
+	deactivate
+
 integration_tests:
 	uv run pytest src/backend/tests/integration \
 		--instafail -ra \
