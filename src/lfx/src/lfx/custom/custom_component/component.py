@@ -15,7 +15,7 @@ import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
-from lfx.custom.tools import (
+from lfx.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
     TOOLS_METADATA_INFO,
@@ -44,7 +44,7 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from lfx.custom.tools import ComponentToolkit
+    from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.vertex.base import Vertex
@@ -59,7 +59,7 @@ _ComponentToolkit = None
 def get_component_toolkit():
     global _ComponentToolkit  # noqa: PLW0603
     if _ComponentToolkit is None:
-        from lfx.custom.tools import ComponentToolkit
+        from lfx.base.tools.component_tool import ComponentToolkit
 
         _ComponentToolkit = ComponentToolkit
     return _ComponentToolkit
@@ -1790,6 +1790,6 @@ class Component(CustomComponent):
 
 
 def _get_component_toolkit():
-    from lfx.custom.tools import ComponentToolkit
+    from lfx.base.tools.component_tool import ComponentToolkit
 
     return ComponentToolkit

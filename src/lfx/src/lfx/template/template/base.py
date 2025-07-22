@@ -3,7 +3,7 @@ from typing import cast
 
 from pydantic import BaseModel, Field, model_serializer
 
-from lfx.inputs.inputs import InputTypes, instantiate_input
+from lfx.inputs.inputs import InputTypes
 from lfx.template.field.base import Input
 from lfx.utils.constants import DIRECT_TYPES
 
@@ -38,6 +38,8 @@ class Template(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict) -> "Template":
+        from lfx.inputs.inputs import instantiate_input
+
         for key, value in data.copy().items():
             if key == "_type":
                 data["type_name"] = value

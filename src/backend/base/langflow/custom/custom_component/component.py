@@ -5,6 +5,6 @@ from lfx.custom.custom_component.component import *  # noqa: F403
 
 # For backwards compatibility
 def _get_component_toolkit():
-    from lfx.custom.tools import ComponentToolkit
+    from lfx.base.tools.component_tool import ComponentToolkit
 
     return ComponentToolkit
