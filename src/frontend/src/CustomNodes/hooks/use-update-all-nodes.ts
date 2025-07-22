@@ -1,7 +1,7 @@
-import { cloneDeep } from 'lodash';
-import { useCallback } from 'react';
-import type { AllNodeType } from '@/types/flow';
-import { type APIClassType } from '../../types/api';
+import { cloneDeep } from "lodash";
+import { useCallback } from "react";
+import type { AllNodeType } from "@/types/flow";
+import { type APIClassType } from "../../types/api";
 
 export type UpdateNodesType = {
   nodeId: string;
@@ -13,17 +13,17 @@ export type UpdateNodesType = {
 
 const useUpdateAllNodes = (
   setNodes: (
-    update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[])
+    update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
   ) => void,
-  updateNodeInternals: (nodeId: string) => void
+  updateNodeInternals: (nodeId: string) => void,
 ) => {
   const updateAllNodes = useCallback(
     (updates: UpdateNodesType[]) => {
-      setNodes(oldNodes => {
+      setNodes((oldNodes) => {
         const newNodes = cloneDeep(oldNodes);
 
         updates.forEach(({ nodeId, newNode, code, name, type }) => {
-          const nodeIndex = newNodes.findIndex(n => n.id === nodeId);
+          const nodeIndex = newNodes.findIndex((n) => n.id === nodeId);
           if (nodeIndex === -1) return;
 
           const updatedNode = newNodes[nodeIndex];
@@ -53,7 +53,7 @@ const useUpdateAllNodes = (
         return newNodes;
       });
     },
-    [setNodes, updateNodeInternals]
+    [setNodes, updateNodeInternals],
   );
 
   return updateAllNodes;
