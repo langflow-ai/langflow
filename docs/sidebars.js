@@ -110,7 +110,6 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        "Develop/develop-application",
         {
           type: "doc",
           id: "Develop/install-custom-dependencies",
@@ -190,6 +189,7 @@ module.exports = {
           type: "category",
           label: "Containerized deployments",
           items: [
+            "Develop/develop-application",
             {
               type: "doc",
               id: "Deployment/deployment-docker",
