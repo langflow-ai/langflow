@@ -278,11 +278,21 @@ async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, u
     # Use real database objects instead of mocks to avoid the coroutine issue
 
     # Empty settings list
-    settings: list = []
+    json_payload = {
+        "settings": [],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the request to the actual endpoint
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Verify response - the real endpoint should handle empty settings correctly
