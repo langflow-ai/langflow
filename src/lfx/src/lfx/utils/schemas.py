@@ -4,11 +4,7 @@ from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import TypedDict
 
-# Constants moved from langflow.utils.constants
-MESSAGE_SENDER_AI = "Machine"
-MESSAGE_SENDER_USER = "User"
-MESSAGE_SENDER_NAME_AI = "AI"
-MESSAGE_SENDER_NAME_USER = "User"
+from .constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 # File types moved from lfx.base.data.utils
 TEXT_FILE_TYPES = [

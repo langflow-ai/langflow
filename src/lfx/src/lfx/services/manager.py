@@ -97,3 +97,13 @@ class ServiceManager:
 
 # Global service manager instance
 service_manager = ServiceManager()
+
+
+def get_settings_service():
+    """Get settings service with fallback for lfx package.
+
+    This is a stub implementation that returns None since lfx
+    doesn't have full service infrastructure like langflow.
+    Components should handle None gracefully with fallback values.
+    """
+    return

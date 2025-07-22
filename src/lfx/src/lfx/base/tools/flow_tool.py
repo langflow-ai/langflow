@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.tools import BaseTool, ToolException
-from langflow.utils.async_helpers import run_until_complete
 from loguru import logger
 from typing_extensions import override
 
 from lfx.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
 from lfx.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
+from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig

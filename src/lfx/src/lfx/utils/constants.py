@@ -1,5 +1,10 @@
 """Constants for lfx utils."""
 
+MESSAGE_SENDER_AI = "Machine"
+MESSAGE_SENDER_USER = "User"
+MESSAGE_SENDER_NAME_AI = "AI"
+MESSAGE_SENDER_NAME_USER = "User"
+
 DIRECT_TYPES = [
     "str",
     "bool",

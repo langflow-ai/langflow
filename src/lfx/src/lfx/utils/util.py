@@ -443,3 +443,20 @@ def format_exception_message(exc: Exception) -> str:
     if isinstance(causing_exception, SyntaxError):
         return format_syntax_error_message(causing_exception)
     return str(exc)
+
+
+def build_loader_repr_from_data(data: list) -> str:
+    """Builds a string representation of the loader based on the given data.
+
+    Args:
+        data (List[Data]): A list of data.
+
+    Returns:
+        str: A string representation of the loader.
+    """
+    if data:
+        avg_length = sum(len(doc.text) for doc in data) / len(data)
+        return f"""{len(data)} data
+        \nAvg. Data Length (characters): {int(avg_length)}
+        Data: {data[:3]}..."""
+    return "0 data"

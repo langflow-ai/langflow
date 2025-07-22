@@ -7,6 +7,7 @@ from composio.client.exceptions import NoItemsFound
 from composio.exceptions import ApiKeyError
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
+from loguru import logger
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
@@ -16,7 +17,6 @@ from lfx.inputs.inputs import (
     SortableListInput,
 )
 from lfx.io import Output
-from lfx.logging import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message

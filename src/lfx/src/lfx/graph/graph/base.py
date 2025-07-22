@@ -39,14 +39,9 @@ from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, Stat
 from lfx.logging.logger import LogConfig, configure
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
+from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.util import run_until_complete
-
-
-# Define CacheMiss locally since cache utils were removed from lfx
-class CacheMiss:
-    """Sentinel object for cache misses."""
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable

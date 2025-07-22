@@ -108,3 +108,22 @@ async def session_scope():
         from lfx.services.session import NoopSession
 
         yield NoopSession()
+
+
+def get_session():
+    """Get database session.
+
+    Returns a session from the database service if available, otherwise NoopSession.
+    """
+    db_service = get_db_service()
+    if db_service is None:
+        from lfx.services.session import NoopSession
+
+        return NoopSession()
+
+    try:
+        return db_service.get_session()
+    except Exception:  # noqa: BLE001
+        from lfx.services.session import NoopSession
+
+        return NoopSession()

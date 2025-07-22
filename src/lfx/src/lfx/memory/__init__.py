@@ -31,6 +31,9 @@ if _LANGFLOW_AVAILABLE:
     try:
         # Import from full langflow implementation
         from lfx.memory import (
+            aadd_messages,
+            aadd_messagetables,
+            add_messages,
             adelete_messages,
             aget_messages,
             astore_message,
@@ -43,6 +46,9 @@ if _LANGFLOW_AVAILABLE:
     except ImportError:
         # Fall back to stubs if langflow import fails
         from lfx.memory.stubs import (
+            aadd_messages,
+            aadd_messagetables,
+            add_messages,
             adelete_messages,
             aget_messages,
             astore_message,
@@ -55,6 +61,9 @@ if _LANGFLOW_AVAILABLE:
 else:
     # Use lfx stub implementations
     from lfx.memory.stubs import (
+        aadd_messages,
+        aadd_messagetables,
+        add_messages,
         adelete_messages,
         aget_messages,
         astore_message,
@@ -67,6 +76,9 @@ else:
 
 # Export the available functions and classes
 __all__ = [
+    "aadd_messages",
+    "aadd_messagetables",
+    "add_messages",
     "adelete_messages",
     "aget_messages",
     "astore_message",

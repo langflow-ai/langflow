@@ -29,17 +29,19 @@ class SQLComponent(ComponentWithCache):
 
     def maybe_create_db(self):
         if self.database_url != "":
-            cached_db = self._shared_component_cache.get(self.database_url)
-            if not isinstance(cached_db, CacheMiss):
-                self.db = cached_db
-                return
-            self.log("Connecting to database")
+            if self._shared_component_cache:
+                cached_db = self._shared_component_cache.get(self.database_url)
+                if not isinstance(cached_db, CacheMiss):
+                    self.db = cached_db
+                    return
+                self.log("Connecting to database")
             try:
                 self.db = SQLDatabase.from_uri(self.database_url)
             except Exception as e:
                 msg = f"An error occurred while connecting to the database: {e}"
                 raise ValueError(msg) from e
-            self._shared_component_cache.set(self.database_url, self.db)
+            if self._shared_component_cache:
+                self._shared_component_cache.set(self.database_url, self.db)
 
     inputs = [
         MessageTextInput(name="database_url", display_name="Database URL", required=True),

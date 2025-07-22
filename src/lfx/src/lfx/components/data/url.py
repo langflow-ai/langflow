@@ -11,28 +11,12 @@ from lfx.helpers.data import safe_convert
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.manager import get_settings_service
+from lfx.utils.request_utils import get_user_agent
 
 # Constants
 DEFAULT_TIMEOUT = 30
 DEFAULT_MAX_DEPTH = 1
 DEFAULT_FORMAT = "Text"
-DEFAULT_USER_AGENT = "Langflow 1.0"
-
-
-def get_user_agent():
-    """Get user agent with fallback."""
-    try:
-        settings_service = get_settings_service()
-        if (
-            settings_service
-            and hasattr(settings_service, "settings")
-            and hasattr(settings_service.settings, "user_agent")
-        ):
-            return settings_service.settings.user_agent
-    except (AttributeError, TypeError):
-        pass
-    return DEFAULT_USER_AGENT
 
 
 URL_REGEX = re.compile(

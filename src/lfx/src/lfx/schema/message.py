@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import traceback
+from collections.abc import AsyncIterator, Iterator  # noqa: TC003
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
@@ -11,11 +13,12 @@ from pydantic import ConfigDict, Field, field_serializer, field_validator
 
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
+from lfx.schema.image import Image  # noqa: TC001
 from lfx.schema.properties import Properties
-from lfx.utils.schemas import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
+from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from lfx.schema.dataframe import DataFrame
 
 
 def timestamp_to_datetime_validator(value: Any) -> datetime:
@@ -50,12 +53,13 @@ class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     # Core fields
-    id: str | None = None
+    id: str | UUID | None = None
     text_key: str = "text"
     text: str | AsyncIterator | Iterator | None = Field(default="")
     sender: str | None = None
     sender_name: str | None = None
-    files: list[str] | None = Field(default=[])
+    files: list[str | Image] | None = Field(default=[])
+    content_blocks: list[ContentBlock] = Field(default_factory=list)
     session_id: str | UUID | None = Field(default="")
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
     flow_id: str | UUID | None = None
@@ -70,6 +74,19 @@ class Message(Data):
     def validate_flow_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
+        return value
+
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def validate_content_blocks(cls, value):
+        """Convert content_blocks from dicts to ContentBlock objects."""
+        if isinstance(value, list):
+            return [
+                ContentBlock.model_validate_json(v) if isinstance(v, str) else ContentBlock.model_validate(v)
+                for v in value
+            ]
+        if isinstance(value, str):
+            value = json.loads(value) if value.startswith("[") else [ContentBlock.model_validate_json(value)]
         return value
 
     @field_validator("properties", mode="before")
@@ -138,6 +155,15 @@ class Message(Data):
         # For other types, return current time
         return datetime.now(timezone.utc)
 
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, value):
+        if not value:
+            value = []
+        elif not isinstance(value, list):
+            value = [value]
+        return value
+
     def set_flow_id(self, flow_id: str) -> None:
         """Set the flow ID for this message."""
         self.flow_id = flow_id
@@ -195,6 +221,14 @@ class Message(Data):
         if "files" in kwargs:
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
+
+    def to_data(self) -> Data:
+        return Data(data=self.data)
+
+    def to_dataframe(self) -> DataFrame:
+        from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
+
+        return DataFrame(data=[self])
 
     def get_text(self) -> str:
         """Get the message text as a string.
@@ -265,5 +299,7 @@ class ErrorMessage(Message):
 
         return f"{exception_type}: {exception_message}\n\nTraceback:\n{traceback_str}"
 
+
+Message.model_rebuild()
 
 __all__ = ["ContentBlock", "ErrorMessage", "Message"]

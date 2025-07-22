@@ -237,3 +237,48 @@ def delete_messages(session_id: str) -> None:
     DEPRECATED: Use `adelete_messages` instead.
     """
     return run_until_complete(adelete_messages(session_id))
+
+
+async def aadd_messages(messages: Message | list[Message]) -> list[Message]:
+    """Add messages to the memory.
+
+    Args:
+        messages: Message or list of messages to add.
+
+    Returns:
+        List[Message]: Added messages.
+    """
+    if not isinstance(messages, list):
+        messages = [messages]
+
+    result = []
+    for message in messages:
+        stored = await astore_message(message)
+        result.extend(stored)
+    return result
+
+
+def add_messages(messages: Message | list[Message]) -> list[Message]:
+    """Add messages to the memory (synchronous version).
+
+    Args:
+        messages: Message or list of messages to add.
+
+    Returns:
+        List[Message]: Added messages.
+    """
+    return run_until_complete(aadd_messages(messages))
+
+
+async def aadd_messagetables(messages: Message | list[Message]) -> list[Message]:
+    """Add message tables to the memory.
+
+    This is an alias for aadd_messages for backwards compatibility.
+
+    Args:
+        messages: Message or list of messages to add.
+
+    Returns:
+        List[Message]: Added messages.
+    """
+    return await aadd_messages(messages)

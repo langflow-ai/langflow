@@ -1,4 +1,3 @@
-from langflow.template.field.base import Input
 from typing_extensions import TypedDict
 
 from lfx.base.models.model import LCModelComponent
@@ -11,6 +10,7 @@ from lfx.components.nvidia.nvidia import NVIDIAModelComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.sambanova.sambanova import SambaNovaComponent
 from lfx.inputs.inputs import InputTypes, SecretStrInput
+from lfx.template.field.base import Input
 
 
 class ModelProvidersDict(TypedDict):

@@ -13,11 +13,11 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
 from langchain_core.tools import BaseTool
-from langflow.services.cache.base import CacheService
+from loguru import logger
 from pydantic import BaseModel
 
-from lfx.logging import logger
 from lfx.schema.data import Data
+from lfx.services.cache.base import CacheService
 from lfx.services.cache.utils import CacheMiss
 
 from .default_prompts import XML_AGENT_PROMPT

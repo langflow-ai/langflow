@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output
 from lfx.schema import DataFrame
-from lfx.services.deps import get_settings_service
+from lfx.utils.request_utils import get_user_agent
 
 
 class WebSearchComponent(Component):
@@ -62,7 +62,7 @@ class WebSearchComponent(Component):
         if not query:
             msg = "Empty search query"
             raise ValueError(msg)
-        headers = {"User-Agent": get_settings_service().settings.user_agent}
+        headers = {"User-Agent": get_user_agent()}
         params = {"q": query, "kl": "us-en"}
         url = "https://html.duckduckgo.com/html/"
 

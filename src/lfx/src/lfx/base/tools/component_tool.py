@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from langflow.io.schema import create_input_schema, create_input_schema_from_dict
-from langflow.serialization.serialization import serialize
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+from lfx.io.schema import create_input_schema, create_input_schema_from_dict
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.serialization.serialization import serialize
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -94,11 +94,11 @@ def _build_output_function(component: Component, output_method: Callable, event_
     def output_function(*args, **kwargs):
         try:
             if event_manager:
-                event_manager.on_build_start(data={"id": component._id})
+                event_manager.on_build_start(data={"id": component.get_id()})
             component.set(*args, **kwargs)
             result = output_method()
             if event_manager:
-                event_manager.on_build_end(data={"id": component._id})
+                event_manager.on_build_end(data={"id": component.get_id()})
         except Exception as e:
             raise ToolException(e) from e
 
@@ -118,11 +118,11 @@ def _build_output_async_function(
     async def output_function(*args, **kwargs):
         try:
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_start, data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_start, data={"id": component.get_id()})
             component.set(*args, **kwargs)
             result = await output_method()
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_end, data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_end, data={"id": component.get_id()})
         except Exception as e:
             raise ToolException(e) from e
         if isinstance(result, Message):
@@ -197,7 +197,7 @@ class ComponentToolkit:
                 args_schema = create_input_schema(tool_mode_inputs)
             elif output.required_inputs:
                 inputs = [
-                    self.component._inputs[input_name]
+                    self.component.get_underscore_inputs()[input_name]
                     for input_name in output.required_inputs
                     if getattr(self.component, input_name) is None
                 ]
@@ -225,7 +225,7 @@ class ComponentToolkit:
 
             name = f"{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
-            event_manager = self.component._event_manager
+            event_manager = self.component.get_event_manager()
             if asyncio.iscoroutinefunction(output_method):
                 tools.append(
                     StructuredTool(
