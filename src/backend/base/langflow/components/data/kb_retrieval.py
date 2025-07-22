@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from langflow.custom import Component
 from langflow.io import DropdownInput, MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
-from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.deps import get_settings_service
 
 KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
@@ -108,7 +109,7 @@ class KBRetrievalComponent(Component):
 
     def _get_kb_metadata(self, kb_path: Path) -> dict:
         """Load and process knowledge base metadata."""
-        metadata = {}
+        metadata: dict[str, Any] = {}
         metadata_file = kb_path / "embedding_metadata.json"
         if not metadata_file.exists():
             logger.warning(f"Embedding metadata file not found at {metadata_file}")
@@ -125,7 +126,7 @@ class KBRetrievalComponent(Component):
         if "api_key" in metadata and metadata.get("api_key"):
             settings_service = get_settings_service()
             try:
-                decrypted_key = auth_utils.decrypt_api_key(metadata["api_key"], settings_service)
+                decrypted_key = decrypt_api_key(metadata["api_key"], settings_service)
                 metadata["api_key"] = decrypted_key
             except (InvalidToken, TypeError, ValueError) as e:
                 logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
