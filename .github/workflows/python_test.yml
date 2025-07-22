@@ -124,6 +124,30 @@ jobs:
           PYLEAK_LOG_LEVEL: debug # enable pyleak logging
           DO_NOT_TRACK: true # disable telemetry reporting
 
+  lfx-tests:
+    name: LFX Tests - Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
+      - name: Run lfx tests
+        run: make lfx_tests
+        env:
+          DO_NOT_TRACK: true # disable telemetry reporting
+
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
