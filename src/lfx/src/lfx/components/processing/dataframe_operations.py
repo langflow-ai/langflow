@@ -1,4 +1,5 @@
 import pandas as pd
+from loguru import logger
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs import SortableListInput
@@ -11,7 +12,6 @@ from lfx.io import (
     Output,
     StrInput,
 )
-from lfx.logging import logger
 from lfx.schema.dataframe import DataFrame
 
 

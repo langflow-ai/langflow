@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
 from langflow.api.v2.mcp import get_server
-from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.services.auth.utils import create_user_longterm_token
 
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
+from loguru import logger
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import (
@@ -21,7 +21,7 @@ from lfx.base.mcp.util import (
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.io import DropdownInput, McpInput, MessageTextInput, Output
-from lfx.logging import logger
+from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.deps import get_session, get_settings_service, get_storage_service

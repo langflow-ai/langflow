@@ -1,10 +1,10 @@
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from loguru import logger
 
 from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output
-from lfx.logging import logger
 from lfx.schema import DataFrame
 
 

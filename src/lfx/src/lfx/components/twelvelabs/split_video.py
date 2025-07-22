@@ -5,11 +5,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from langflow.template import Output
-
 from lfx.custom import Component
 from lfx.inputs import BoolInput, DropdownInput, HandleInput, IntInput
 from lfx.schema import Data
+from lfx.template import Output
 
 
 class SplitVideoComponent(Component):

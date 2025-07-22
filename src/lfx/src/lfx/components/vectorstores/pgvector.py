@@ -1,10 +1,10 @@
 from langchain_community.vectorstores import PGVector
-from langflow.utils.connection_string_parser import transform_connection_string
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.connection_string_parser import transform_connection_string
 
 
 class PGVectorStoreComponent(LCVectorStoreComponent):

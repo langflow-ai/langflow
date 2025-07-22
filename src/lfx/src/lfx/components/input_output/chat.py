@@ -9,7 +9,7 @@ from lfx.io import (
     Output,
 )
 from lfx.schema.message import Message
-from lfx.utils.schemas import (
+from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,

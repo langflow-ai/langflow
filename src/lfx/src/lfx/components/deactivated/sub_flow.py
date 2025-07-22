@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, Any
 
-from langflow.template.field.base import Input
 from loguru import logger
 
 from lfx.base.flow_processing.utils import build_data_from_result_data
@@ -10,6 +9,7 @@ from lfx.graph.vertex.base import Vertex
 from lfx.helpers.flow import get_flow_inputs
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
+from lfx.template.field.base import Input
 
 if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs

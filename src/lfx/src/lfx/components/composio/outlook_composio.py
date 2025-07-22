@@ -2,10 +2,10 @@ import json
 from typing import Any
 
 from composio import Action
+from loguru import logger
 
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.inputs import BoolInput, FileInput, IntInput, MessageTextInput
-from lfx.logging import logger
 
 
 class ComposioOutlookAPIComponent(ComposioBaseComponent):

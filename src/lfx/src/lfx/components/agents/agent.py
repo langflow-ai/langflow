@@ -1,4 +1,5 @@
 from langchain_core.tools import StructuredTool
+from loguru import logger
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
@@ -17,7 +18,6 @@ from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.field_typing import Tool
 from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
-from lfx.logging import logger
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 

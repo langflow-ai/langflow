@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from composio import Action
+from loguru import logger
 
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.inputs import (
@@ -9,7 +10,6 @@ from lfx.inputs import (
     IntInput,
     MessageTextInput,
 )
-from lfx.logging import logger
 
 
 class ComposioGitHubAPIComponent(ComposioBaseComponent):

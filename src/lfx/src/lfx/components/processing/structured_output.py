@@ -1,9 +1,9 @@
-from langflow.helpers.base_model import build_model_from_schema
 from pydantic import BaseModel, Field, create_model
 from trustcall import create_extractor
 
 from lfx.base.models.chat_result import get_chat_result
 from lfx.custom.custom_component.component import Component
+from lfx.helpers.base_model import build_model_from_schema
 from lfx.io import (
     HandleInput,
     MessageTextInput,

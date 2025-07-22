@@ -26,7 +26,6 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
-from lfx.services.deps import get_settings_service
 from lfx.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
 
 # Define fields for each mode
@@ -131,7 +130,7 @@ class APIRequestComponent(Component):
                     "description": "Header value",
                 },
             ],
-            value=[{"key": "User-Agent", "value": get_settings_service().settings.user_agent}],
+            value=[{"key": "User-Agent", "value": "Langflow/1.0"}],
             advanced=True,
             input_types=["Data"],
             real_time_refresh=True,

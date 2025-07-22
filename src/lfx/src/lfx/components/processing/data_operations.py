@@ -1,10 +1,11 @@
 import ast
 from typing import TYPE_CHECKING, Any
 
+from loguru import logger
+
 from lfx.custom import Component
 from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
 from lfx.io import DataInput, Output
-from lfx.logging import logger
 from lfx.schema import Data
 from lfx.schema.dotdict import dotdict
 from lfx.utils.component_utils import set_current_fields, set_field_display

@@ -5,11 +5,11 @@ from typing import Any
 from astrapy import Collection, DataAPIClient, Database
 from astrapy.admin import parse_api_endpoint
 from langchain_core.tools import StructuredTool, Tool
+from loguru import logger
 from pydantic import BaseModel, Field, create_model
 
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
-from lfx.logging import logger
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 

@@ -12,7 +12,7 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.schema.properties import Source
 from lfx.template.field.base import Output
-from lfx.utils.schemas import (
+from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_USER,
