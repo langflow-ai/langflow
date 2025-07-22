@@ -5473,6 +5473,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "pydantic" },
     { name = "typer" },
+    { name = "typing-extensions" },
     { name = "uvicorn" },
 ]
 
@@ -5494,6 +5495,7 @@ requires-dist = [
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.16.0" },
+    { name = "typing-extensions", specifier = ">=4.14.0" },
     { name = "uvicorn", specifier = ">=0.34.3" },
 ]
 

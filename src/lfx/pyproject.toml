@@ -18,6 +18,7 @@ dependencies = [
     "typer>=0.16.0",
     "platformdirs>=4.3.8",
     "aiofiles>=24.1.0",
+    "typing-extensions>=4.14.0",
 ]
 
 [build-system]
