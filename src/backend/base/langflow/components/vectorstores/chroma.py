@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 from chromadb.config import Settings
 from langchain_chroma import Chroma
-from langchain_community.vectorstores.utils import filter_complex_metadata
 from typing_extensions import override
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -155,7 +154,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
         if documents and self.embedding is not None:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
+            # Filter complex metadata to prevent ChromaDB errors
             try:
+                from langchain_community.vectorstores.utils import filter_complex_metadata
+
                 filtered_documents = filter_complex_metadata(documents)
                 vector_store.add_documents(filtered_documents)
             except ImportError:
