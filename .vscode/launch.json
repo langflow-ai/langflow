@@ -19,7 +19,9 @@
         "--loop",
         "asyncio",
         "--reload-include",
-        "./src/backend/*"
+        "./src/backend/*",
+        "--reload-include",
+        "./src/lfx/*"
       ],
       "jinja": true,
       "justMyCode": false,
