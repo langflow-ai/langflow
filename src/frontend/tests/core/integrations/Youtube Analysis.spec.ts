@@ -6,17 +6,17 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
-  "Youtube Analysis",
+  "YouTube Analysis",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
+      "OPENAI_API_KEY required to run this test"
     );
 
     test.skip(
       !process?.env?.YOUTUBE_API_KEY,
-      "YOUTUBE_API_KEY required to run this test",
+      "YOUTUBE_API_KEY required to run this test"
     );
 
     if (!process.env.CI) {
@@ -27,7 +27,7 @@ withEventDeliveryModes(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Youtube Analysis" }).click();
+    await page.getByRole("heading", { name: "YouTube Analysis" }).click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
@@ -66,5 +66,5 @@ withEventDeliveryModes(
     expect(concatAllText).toContain("Synthesis");
     expect(concatAllText).toContain("Audience Reception");
     expect(concatAllText).toContain("Content Summary");
-  },
+  }
 );
