@@ -5464,11 +5464,13 @@ name = "lfx"
 version = "0.1.0"
 source = { editable = "src/lfx" }
 dependencies = [
+    { name = "aiofiles" },
     { name = "fastapi" },
     { name = "langchain-core" },
     { name = "loguru" },
     { name = "pandas" },
     { name = "pillow" },
+    { name = "platformdirs" },
     { name = "pydantic" },
     { name = "typer" },
     { name = "uvicorn" },
@@ -5483,11 +5485,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiofiles", specifier = ">=24.1.0" },
     { name = "fastapi", specifier = ">=0.115.13" },
     { name = "langchain-core", specifier = ">=0.3.66" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pillow", specifier = ">=10.0.0" },
+    { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.16.0" },
     { name = "uvicorn", specifier = ">=0.34.3" },

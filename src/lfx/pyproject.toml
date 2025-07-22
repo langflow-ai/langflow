@@ -16,6 +16,8 @@ dependencies = [
     "fastapi>=0.115.13",
     "uvicorn>=0.34.3",
     "typer>=0.16.0",
+    "platformdirs>=4.3.8",
+    "aiofiles>=24.1.0",
 ]
 
 [build-system]
