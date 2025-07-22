@@ -33,17 +33,9 @@ jobs:
 
       - name: Run backend smoke tests (critical tests only)
         run: |
-          uv run pytest \
-            src/backend/tests/unit/test_version.py \
-            src/backend/tests/unit/test_load_components.py \
-            src/backend/tests/unit/test_schema.py \
-            src/backend/tests/unit/test_validate_code.py \
-            src/backend/tests/unit/serialization/test_serialization.py \
-            src/backend/tests/unit/schema/test_schema_data.py \
-            src/backend/tests/unit/helpers/test_data.py \
-            src/backend/tests/unit/test_async_helpers.py \
-            src/backend/tests/unit/io/test_io_schema.py \
-            src/backend/tests/unit/utils/test_util_strings.py \
+          uv run pytest src/backend/tests/unit \
+            --ignore=src/backend/tests/integration \
+            -m 'not api_key_required' \
             --tb=short \
             --maxfail=5 \
             -v
