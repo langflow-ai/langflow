@@ -6,6 +6,8 @@ This module automatically chooses between full langflow implementations
 
 import importlib.util
 
+from loguru import logger
+
 
 def _has_langflow_memory():
     """Check if langflow.memory with database support is available."""
@@ -17,6 +19,8 @@ def _has_langflow_memory():
         )
     except ImportError:
         pass
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error checking for langflow.memory: {e}")
     return False
 
 
