@@ -1,8 +1,8 @@
 import pytest
-from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
 
 from lfx.components.processing.parser import ParserComponent
+from lfx.schema import Data, DataFrame
+from lfx.schema.message import Message
 from tests.base import ComponentTestBaseWithoutClient
 
 

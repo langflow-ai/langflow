@@ -2,9 +2,9 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
-from langflow.schema import DataFrame
 
 from lfx.components.google.google_search_api_core import GoogleSearchAPICore
+from lfx.schema import DataFrame
 from tests.base import ComponentTestBaseWithoutClient
 
 

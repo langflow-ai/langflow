@@ -6,10 +6,10 @@ import httpx
 import pytest
 import respx
 from httpx import Response
-from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
 
 from lfx.components.data import APIRequestComponent
+from lfx.schema import Data
+from lfx.schema.dotdict import dotdict
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -79,9 +79,9 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             url=url,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, Data), result
         assert result.data["source"] == url
-        assert "result" in result.data
+        assert "result" in result.data, result.data
         assert result.data["result"]["key"] == "value"
 
     @respx.mock

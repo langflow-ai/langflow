@@ -3,9 +3,6 @@ import operator
 from textwrap import dedent
 
 import pytest
-from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
-from langflow.schema.message import Message
 
 from lfx.components.data import FileComponent
 from lfx.components.input_output import ChatInput, ChatOutput
@@ -16,6 +13,9 @@ from lfx.components.processing.split_text import SplitTextComponent
 from lfx.components.vectorstores import AstraDBVectorStoreComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.graph.constants import Finish
+from lfx.schema import Data
+from lfx.schema.dataframe import DataFrame
+from lfx.schema.message import Message
 
 
 @pytest.fixture

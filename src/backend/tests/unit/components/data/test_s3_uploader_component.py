@@ -5,9 +5,9 @@ from pathlib import Path
 
 import boto3
 import pytest
-from langflow.schema.data import Data
 
 from lfx.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
+from lfx.schema.data import Data
 from tests.base import ComponentTestBaseWithoutClient
 
 

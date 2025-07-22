@@ -6,7 +6,6 @@ import orjson
 import pytest
 from httpx import AsyncClient
 from langflow.memory import aget_messages
-from langflow.schema.data import Data
 from langflow.services.database.models.flow import FlowCreate
 
 from lfx.components.data.url import URLComponent
@@ -20,6 +19,7 @@ from lfx.components.processing import (
     StructuredOutputComponent,
 )
 from lfx.graph import Graph
+from lfx.schema.data import Data
 from tests.base import ComponentTestBaseWithClient
 from tests.unit.build_utils import build_flow, get_build_events
 

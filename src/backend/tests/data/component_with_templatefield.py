@@ -1,7 +1,7 @@
 import random
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import Input
+from lfx.custom import CustomComponent
+from lfx.field_typing import Input
 
 
 class TestComponent(CustomComponent):

@@ -2,7 +2,8 @@ import copy
 
 import pytest
 from langchain_core.documents import Document
-from langflow.schema import Data
+
+from lfx.schema import Data
 
 
 def test_data_initialization():

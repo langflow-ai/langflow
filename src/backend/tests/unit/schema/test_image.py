@@ -2,12 +2,13 @@ import tempfile
 
 import aiofiles
 import pytest
-from langflow.schema.image import (
+from PIL import Image as PILImage
+
+from lfx.schema.image import (
     get_file_paths,
     get_files,
     is_image_file,
 )
-from PIL import Image as PILImage
 
 
 @pytest.fixture

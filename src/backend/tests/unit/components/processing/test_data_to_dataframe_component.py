@@ -1,7 +1,7 @@
 import pytest
-from langflow.schema import Data, DataFrame
 
 from lfx.components.processing.data_to_dataframe import DataToDataFrameComponent
+from lfx.schema import Data, DataFrame
 from tests.base import ComponentTestBaseWithoutClient
 
 

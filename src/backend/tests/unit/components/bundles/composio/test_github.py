@@ -2,9 +2,9 @@ from unittest.mock import patch
 
 import pytest
 from composio import Action
-from langflow.schema.dataframe import DataFrame
 
 from lfx.components.composio.github_composio import ComposioGitHubAPIComponent
+from lfx.schema.dataframe import DataFrame
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 from .test_base import MockComposioToolSet

@@ -1,7 +1,8 @@
 import pandas as pd
 import pytest
-from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
+
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
 
 
 @pytest.fixture

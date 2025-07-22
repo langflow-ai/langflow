@@ -1,6 +1,5 @@
-from langflow.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
-
 from lfx.components.huggingface.huggingface import DEFAULT_MODEL, HuggingFaceEndpointsComponent
+from lfx.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 
 def test_huggingface_inputs():
@@ -27,7 +26,7 @@ def test_huggingface_inputs():
     # Check if all expected inputs are present and have correct type
     for name, input_type in expected_inputs.items():
         matching_inputs = [inp for inp in inputs if isinstance(inp, input_type) and inp.name == name]
-        assert matching_inputs, f"Missing or incorrect input: {name}"
+        assert matching_inputs, f"Missing or incorrect input: {name} {input_type}"
 
         if name == "model_id":
             input_field = matching_inputs[0]

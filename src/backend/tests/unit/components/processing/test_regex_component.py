@@ -1,8 +1,8 @@
 import pytest
-from langflow.schema import Data
-from langflow.schema.message import Message
 
 from lfx.components.processing.regex import RegexExtractorComponent
+from lfx.schema import Data
+from lfx.schema.message import Message
 from tests.base import ComponentTestBaseWithoutClient
 
 

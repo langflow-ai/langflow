@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from composio import Action
-from langflow.schema.dataframe import DataFrame
 
 from lfx.components.composio.googlecalendar_composio import ComposioGoogleCalendarAPIComponent
+from lfx.schema.dataframe import DataFrame
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 from .test_base import MockComposioToolSet

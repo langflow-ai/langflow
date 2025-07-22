@@ -3,13 +3,14 @@ from types import NoneType
 from typing import Union
 
 import pytest
-from langflow.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput
-from langflow.io.schema import schema_to_langflow_inputs
-from langflow.schema.data import Data
-from langflow.template import Input, Output
-from langflow.template.field.base import UNDEFINED
-from langflow.type_extraction.type_extraction import post_process_type
 from pydantic import BaseModel, Field, ValidationError
+
+from lfx.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput
+from lfx.io.schema import schema_to_langflow_inputs
+from lfx.schema.data import Data
+from lfx.template import Input, Output
+from lfx.template.field.base import UNDEFINED
+from lfx.type_extraction.type_extraction import post_process_type
 
 
 class TestInput:

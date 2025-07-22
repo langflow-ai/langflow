@@ -1,7 +1,11 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.inputs.inputs import (
+
+from lfx.components.xai.xai import XAIModelComponent
+from lfx.custom.custom_component.component import Component
+from lfx.custom.utils import build_custom_component_template
+from lfx.inputs.inputs import (
     BoolInput,
     DictInput,
     DropdownInput,
@@ -10,10 +14,6 @@ from langflow.inputs.inputs import (
     SecretStrInput,
     SliderInput,
 )
-
-from lfx.components.xai.xai import XAIModelComponent
-from lfx.custom.custom_component.component import Component
-from lfx.custom.utils import build_custom_component_template
 from tests.base import ComponentTestBaseWithoutClient
 
 

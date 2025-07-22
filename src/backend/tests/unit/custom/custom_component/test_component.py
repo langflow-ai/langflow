@@ -2,16 +2,16 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.schema import dotdict
-from langflow.schema.message import Message
 from langflow.services.database.session import NoopSession
-from langflow.template import Output
 
 from lfx.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
+from lfx.schema import dotdict
+from lfx.schema.message import Message
+from lfx.template import Output
 
 crewai_available = False
 try:

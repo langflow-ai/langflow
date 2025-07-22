@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-from langflow.schema import Data, Message
 
 from lfx.components.processing.save_file import SaveToFileComponent
+from lfx.schema import Data, Message
 from tests.base import ComponentTestBaseWithoutClient
 
 # TODO: Re-enable this test when the SaveToFileComponent is ready for use.

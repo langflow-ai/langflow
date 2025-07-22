@@ -375,7 +375,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -715,7 +715,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -768,7 +768,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -813,7 +813,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -855,7 +855,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -907,7 +907,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             result = component.build_structured_dataframe()
 
             # Check that result is a DataFrame object
-            from langflow.schema.dataframe import DataFrame
+            from lfx.schema.dataframe import DataFrame
 
             assert isinstance(result, DataFrame)
             assert len(result) == 1
@@ -956,7 +956,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             result = component.build_structured_dataframe()
 
             # Check that result is a DataFrame object
-            from langflow.schema.dataframe import DataFrame
+            from lfx.schema.dataframe import DataFrame
 
             assert isinstance(result, DataFrame)
             assert len(result) == 3

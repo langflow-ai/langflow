@@ -4,10 +4,10 @@ import pytest
 from astrapy import DataAPIClient
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_core.documents import Document
-from langflow.schema.data import Data
 
 from lfx.components.openai.openai import OpenAIEmbeddingsComponent
 from lfx.components.vectorstores import AstraDBVectorStoreComponent
+from lfx.schema.data import Data
 from tests.api_keys import get_astradb_api_endpoint, get_astradb_application_token, get_openai_api_key
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, run_single_component

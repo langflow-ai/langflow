@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
-from langflow.schema.message import Message
-
 from lfx.components import helpers, processing
+from lfx.custom.utils import build_custom_component_template
+from lfx.schema import Data
+from lfx.schema.message import Message
 
 # def test_update_data_component():
 #     # Arrange

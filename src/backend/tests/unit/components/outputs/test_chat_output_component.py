@@ -1,10 +1,10 @@
 import pytest
-from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
-from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 from lfx.components.input_output import ChatOutput
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
+from lfx.schema.message import Message
 from tests.base import ComponentTestBaseWithClient
 
 

@@ -1,9 +1,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from langflow.schema import Data
 
 from lfx.components.processing.lambda_filter import LambdaFilterComponent
+from lfx.schema import Data
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -113,10 +113,11 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         structure = component.get_data_structure(test_data)
 
         # Assertions
-        assert structure["string"]["structure"] == "str"
-        assert structure["number"]["structure"] == "int"
-        assert structure["list"]["structure"] == "list(int)[size=3]"
-        assert structure["dict"]["structure"]["key"] == "str"
-        assert "structure" in structure["nested"]
-        assert "a" in structure["nested"]["structure"]
-        assert "list" in structure["nested"]["structure"]["a"]
+        assert "structure" in structure, structure
+        assert structure["string"]["structure"] == "str", structure
+        assert structure["number"]["structure"] == "int", structure
+        assert structure["list"]["structure"] == "list(int)[size=3]", structure
+        assert structure["dict"]["structure"]["key"] == "str", structure
+        assert "structure" in structure["nested"], structure
+        assert "a" in structure["nested"]["structure"], structure
+        assert "list" in structure["nested"]["structure"]["a"], structure

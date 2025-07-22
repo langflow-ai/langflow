@@ -19,10 +19,10 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from langflow.schema import Data
 from pydantic import BaseModel
 
 from lfx.base.tools.component_tool import ComponentToolkit
+from lfx.schema import Data
 
 
 class AllInputsComponent(Component):

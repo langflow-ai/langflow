@@ -6,11 +6,11 @@ import httpx
 import pytest
 import respx
 from httpx import Response
-from langflow.schema.data import Data
-from langflow.schema.dotdict import dotdict
 
 from lfx.base.langwatch.utils import get_cached_evaluators
 from lfx.components.langwatch.langwatch import LangWatchComponent
+from lfx.schema.data import Data
+from lfx.schema.dotdict import dotdict
 from tests.base import ComponentTestBaseWithoutClient
 
 

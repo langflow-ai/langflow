@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from langflow.schema.data import Data
 
 from lfx.components.vectorstores.chroma import ChromaVectorStoreComponent
+from lfx.schema.data import Data
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 

@@ -1,7 +1,7 @@
 from langflow.memory import aget_messages
-from langflow.schema.message import Message
 
 from lfx.components.input_output import ChatOutput
+from lfx.schema.message import Message
 from tests.integration.utils import run_single_component
 
 

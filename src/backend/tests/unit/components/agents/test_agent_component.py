@@ -127,8 +127,8 @@ class TestAgentComponentWithoutClient(ComponentTestBaseWithoutClient):
             patch.object(NoopSession, "commit", new_callable=AsyncMock) as mock_commit,
         ):
             response = await agent.message_response()
-            assert mock_add.called
-            assert mock_commit.called
+            assert mock_add.called, "add was not called"
+            assert mock_commit.called, "commit was not called"
         assert "4" in response.data.get("text")
 
     @pytest.mark.api_key_required

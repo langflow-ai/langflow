@@ -1,7 +1,7 @@
 import pytest
-from langflow.schema.message import Message
 
 from lfx.components.input_output.chat import ChatInput
+from lfx.schema.message import Message
 
 
 @pytest.fixture

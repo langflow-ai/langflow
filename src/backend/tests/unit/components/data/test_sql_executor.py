@@ -2,9 +2,9 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from langflow.schema import DataFrame, Message
 
 from lfx.components.data.sql_executor import SQLComponent
+from lfx.schema import DataFrame, Message
 from tests.base import ComponentTestBaseWithoutClient
 
 

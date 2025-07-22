@@ -1,7 +1,6 @@
-from langflow.schema import Data
-
 from lfx.components.input_output import ChatInput
 from lfx.components.processing.parse_json_data import ParseJSONDataComponent
+from lfx.schema import Data
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, pyleak_marker, run_single_component
 

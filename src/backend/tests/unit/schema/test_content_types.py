@@ -1,4 +1,4 @@
-from langflow.schema.content_types import (
+from lfx.schema.content_types import (
     BaseContent,
     CodeContent,
     ErrorContent,
