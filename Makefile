@@ -140,13 +140,9 @@ unit_tests_looponfail:
 
 lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
-
-	cd src/lfx && \
-	uv venv --python 3.13 .venv && \
-	source .venv/bin/activate && \
-	uv sync --active --frozen && \
-	uv run --active pytest tests/unit -v $(args)
-	deactivate
+	@cd src/lfx && \
+	uv sync && \
+	uv run pytest tests/unit -v $(args)
 
 integration_tests:
 	uv run pytest src/backend/tests/integration \
