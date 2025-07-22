@@ -280,7 +280,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
-  { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
+  { display_name: "Not Diamond", name: "notdiamond", icon: "NotDiamond" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Novita", name: "novita", icon: "Novita" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
