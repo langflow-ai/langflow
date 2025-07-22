@@ -28,7 +28,7 @@ class PartialEventCallback(Protocol):
 
 
 class EventManager:
-    def __init__(self, queue: asyncio.Queue):
+    def __init__(self, queue: asyncio.Queue[tuple[str | None, bytes | None, float]]) -> None:
         self.queue = queue
         self.events: dict[str, PartialEventCallback] = {}
 
