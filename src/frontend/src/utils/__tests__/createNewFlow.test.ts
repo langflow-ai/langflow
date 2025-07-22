@@ -12,7 +12,7 @@
  * - Immutability and consistency
  */
 
-import type { ReactFlowJsonObject } from '@xyflow/react';
+import type { ReactFlowJsonObject } from "@xyflow/react";
 
 // Define minimal types needed for testing
 type FlowType = {
@@ -30,19 +30,19 @@ type FlowType = {
 };
 
 // Mock the getRandomDescription function
-const mockGetRandomDescription = jest.fn(() => 'Random Description');
+const mockGetRandomDescription = jest.fn(() => "Random Description");
 
 // Define the function to test directly
 const createNewFlow = (
   flowData: ReactFlowJsonObject<any, any>,
   folderId: string,
-  flow?: FlowType
+  flow?: FlowType,
 ) => {
   return {
     description: flow?.description ?? mockGetRandomDescription(),
-    name: flow?.name ? flow.name : 'New Flow',
+    name: flow?.name ? flow.name : "New Flow",
     data: flowData,
-    id: '',
+    id: "",
     icon: flow?.icon ?? undefined,
     gradient: flow?.gradient ?? undefined,
     is_component: flow?.is_component ?? false,
@@ -53,7 +53,7 @@ const createNewFlow = (
   };
 };
 
-describe('createNewFlow', () => {
+describe("createNewFlow", () => {
   // Mock data setup
   const mockFlowData: ReactFlowJsonObject<any, any> = {
     nodes: [],
@@ -61,36 +61,36 @@ describe('createNewFlow', () => {
     viewport: { x: 0, y: 0, zoom: 1 },
   };
 
-  const mockFolderId = 'test-folder-id';
+  const mockFolderId = "test-folder-id";
 
   const mockFlow: FlowType = {
-    id: 'test-flow-id',
-    name: 'Test Flow',
-    description: 'Test Description',
+    id: "test-flow-id",
+    name: "Test Flow",
+    description: "Test Description",
     data: mockFlowData,
-    icon: 'test-icon',
-    gradient: 'test-gradient',
+    icon: "test-icon",
+    gradient: "test-gradient",
     is_component: true,
-    folder_id: 'original-folder-id',
-    endpoint_name: 'test-endpoint',
-    tags: ['tag1', 'tag2'],
+    folder_id: "original-folder-id",
+    endpoint_name: "test-endpoint",
+    tags: ["tag1", "tag2"],
     mcp_enabled: false,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetRandomDescription.mockReturnValue('Random Description');
+    mockGetRandomDescription.mockReturnValue("Random Description");
   });
 
-  describe('when no flow parameter is provided', () => {
-    it('should create a new flow with default values', () => {
+  describe("when no flow parameter is provided", () => {
+    it("should create a new flow with default values", () => {
       const result = createNewFlow(mockFlowData, mockFolderId);
 
       expect(result).toEqual({
-        description: 'Random Description',
-        name: 'New Flow',
+        description: "Random Description",
+        name: "New Flow",
         data: mockFlowData,
-        id: '',
+        id: "",
         icon: undefined,
         gradient: undefined,
         is_component: false,
@@ -103,26 +103,26 @@ describe('createNewFlow', () => {
       expect(mockGetRandomDescription).toHaveBeenCalledTimes(1);
     });
 
-    it('should use the provided flowData and folderId', () => {
+    it("should use the provided flowData and folderId", () => {
       const customFlowData: ReactFlowJsonObject<any, any> = {
         nodes: [
           {
-            id: 'node-1',
-            type: 'genericNode',
+            id: "node-1",
+            type: "genericNode",
             position: { x: 0, y: 0 },
             data: {},
           },
         ],
         edges: [
           {
-            id: 'edge-1',
-            source: 'node-1',
-            target: 'node-2',
+            id: "edge-1",
+            source: "node-1",
+            target: "node-2",
           },
         ],
         viewport: { x: 10, y: 20, zoom: 1.5 },
       };
-      const customFolderId = 'custom-folder-id';
+      const customFolderId = "custom-folder-id";
 
       const result = createNewFlow(customFlowData, customFolderId);
 
@@ -131,32 +131,32 @@ describe('createNewFlow', () => {
     });
   });
 
-  describe('when flow parameter is provided', () => {
-    it('should use flow properties when available', () => {
+  describe("when flow parameter is provided", () => {
+    it("should use flow properties when available", () => {
       const result = createNewFlow(mockFlowData, mockFolderId, mockFlow);
 
       expect(result).toEqual({
-        description: 'Test Description',
-        name: 'Test Flow',
+        description: "Test Description",
+        name: "Test Flow",
         data: mockFlowData,
-        id: '',
-        icon: 'test-icon',
-        gradient: 'test-gradient',
+        id: "",
+        icon: "test-icon",
+        gradient: "test-gradient",
         is_component: true,
         folder_id: mockFolderId, // Should use new folderId, not original
-        endpoint_name: 'test-endpoint',
-        tags: ['tag1', 'tag2'],
+        endpoint_name: "test-endpoint",
+        tags: ["tag1", "tag2"],
         mcp_enabled: true, // Always true regardless of input
       });
 
       expect(mockGetRandomDescription).not.toHaveBeenCalled();
     });
 
-    it('should fallback to defaults when flow properties are undefined', () => {
+    it("should fallback to defaults when flow properties are undefined", () => {
       const partialFlow: FlowType = {
-        id: 'test-id',
-        name: 'Test Name',
-        description: '', // Empty string, not undefined, so it won't fall back
+        id: "test-id",
+        name: "Test Name",
+        description: "", // Empty string, not undefined, so it won't fall back
         data: null,
         // All optional properties undefined
       };
@@ -164,10 +164,10 @@ describe('createNewFlow', () => {
       const result = createNewFlow(mockFlowData, mockFolderId, partialFlow);
 
       expect(result).toEqual({
-        description: '', // Empty string is preserved, doesn't trigger fallback
-        name: 'Test Name',
+        description: "", // Empty string is preserved, doesn't trigger fallback
+        name: "Test Name",
         data: mockFlowData,
-        id: '',
+        id: "",
         icon: undefined,
         gradient: undefined,
         is_component: false,
@@ -180,23 +180,23 @@ describe('createNewFlow', () => {
       expect(mockGetRandomDescription).not.toHaveBeenCalled();
     });
 
-    it('should handle flow with empty description', () => {
+    it("should handle flow with empty description", () => {
       const flowWithEmptyDescription: FlowType = {
         ...mockFlow,
-        description: '',
+        description: "",
       };
 
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithEmptyDescription
+        flowWithEmptyDescription,
       );
 
-      expect(result.description).toBe(''); // Empty string is preserved
+      expect(result.description).toBe(""); // Empty string is preserved
       expect(mockGetRandomDescription).not.toHaveBeenCalled();
     });
 
-    it('should handle flow with null/undefined description', () => {
+    it("should handle flow with null/undefined description", () => {
       const flowWithNullDescription: FlowType = {
         ...mockFlow,
         description: undefined as any,
@@ -205,51 +205,51 @@ describe('createNewFlow', () => {
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithNullDescription
+        flowWithNullDescription,
       );
 
-      expect(result.description).toBe('Random Description');
+      expect(result.description).toBe("Random Description");
       expect(mockGetRandomDescription).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle flow with empty name', () => {
+    it("should handle flow with empty name", () => {
       const flowWithEmptyName: FlowType = {
         ...mockFlow,
-        name: '',
+        name: "",
       };
 
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithEmptyName
+        flowWithEmptyName,
       );
 
-      expect(result.name).toBe('New Flow');
+      expect(result.name).toBe("New Flow");
     });
 
-    it('should handle flow with whitespace-only name', () => {
+    it("should handle flow with whitespace-only name", () => {
       const flowWithWhitespaceName: FlowType = {
         ...mockFlow,
-        name: '   ',
+        name: "   ",
       };
 
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithWhitespaceName
+        flowWithWhitespaceName,
       );
 
-      expect(result.name).toBe('   '); // Preserves whitespace as per current logic
+      expect(result.name).toBe("   "); // Preserves whitespace as per current logic
     });
   });
 
-  describe('special properties handling', () => {
-    it('should always set id to empty string', () => {
+  describe("special properties handling", () => {
+    it("should always set id to empty string", () => {
       const result = createNewFlow(mockFlowData, mockFolderId, mockFlow);
-      expect(result.id).toBe('');
+      expect(result.id).toBe("");
     });
 
-    it('should always set mcp_enabled to true', () => {
+    it("should always set mcp_enabled to true", () => {
       const flowWithMcpDisabled: FlowType = {
         ...mockFlow,
         mcp_enabled: false,
@@ -258,21 +258,21 @@ describe('createNewFlow', () => {
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithMcpDisabled
+        flowWithMcpDisabled,
       );
 
       expect(result.mcp_enabled).toBe(true);
     });
 
-    it('should always use the provided folderId, not the flows folder_id', () => {
-      const newFolderId = 'different-folder-id';
+    it("should always use the provided folderId, not the flows folder_id", () => {
+      const newFolderId = "different-folder-id";
       const result = createNewFlow(mockFlowData, newFolderId, mockFlow);
 
       expect(result.folder_id).toBe(newFolderId);
       expect(result.folder_id).not.toBe(mockFlow.folder_id);
     });
 
-    it('should handle undefined tags as empty array', () => {
+    it("should handle undefined tags as empty array", () => {
       const flowWithUndefinedTags: FlowType = {
         ...mockFlow,
         tags: undefined,
@@ -281,54 +281,54 @@ describe('createNewFlow', () => {
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithUndefinedTags
+        flowWithUndefinedTags,
       );
 
       expect(result.tags).toEqual([]);
     });
 
-    it('should preserve non-empty tags array', () => {
+    it("should preserve non-empty tags array", () => {
       const flowWithTags: FlowType = {
         ...mockFlow,
-        tags: ['ai', 'ml', 'workflow'],
+        tags: ["ai", "ml", "workflow"],
       };
 
       const result = createNewFlow(mockFlowData, mockFolderId, flowWithTags);
 
-      expect(result.tags).toEqual(['ai', 'ml', 'workflow']);
+      expect(result.tags).toEqual(["ai", "ml", "workflow"]);
     });
   });
 
-  describe('edge cases', () => {
-    it('should handle empty folder id', () => {
-      const result = createNewFlow(mockFlowData, '', mockFlow);
-      expect(result.folder_id).toBe('');
+  describe("edge cases", () => {
+    it("should handle empty folder id", () => {
+      const result = createNewFlow(mockFlowData, "", mockFlow);
+      expect(result.folder_id).toBe("");
     });
 
-    it('should handle complex flowData structure', () => {
+    it("should handle complex flowData structure", () => {
       const complexFlowData: ReactFlowJsonObject<any, any> = {
         nodes: [
           {
-            id: 'node-1',
-            type: 'genericNode',
+            id: "node-1",
+            type: "genericNode",
             position: { x: 100, y: 200 },
             data: {
-              id: 'node-1',
-              type: 'TestNode',
+              id: "node-1",
+              type: "TestNode",
               node: {
-                display_name: 'Test Node',
-                description: 'A test node',
+                display_name: "Test Node",
+                description: "A test node",
               },
             },
           },
         ],
         edges: [
           {
-            id: 'edge-1',
-            source: 'node-1',
-            target: 'node-2',
-            sourceHandle: 'output',
-            targetHandle: 'input',
+            id: "edge-1",
+            source: "node-1",
+            target: "node-2",
+            sourceHandle: "output",
+            targetHandle: "input",
           },
         ],
         viewport: { x: -50, y: 100, zoom: 0.8 },
@@ -342,11 +342,11 @@ describe('createNewFlow', () => {
       expect(result.data.viewport).toEqual({ x: -50, y: 100, zoom: 0.8 });
     });
 
-    it('should handle flow with all optional properties as null', () => {
+    it("should handle flow with all optional properties as null", () => {
       const minimalFlow: FlowType = {
-        id: 'minimal-id',
-        name: 'Minimal Flow',
-        description: 'Minimal description',
+        id: "minimal-id",
+        name: "Minimal Flow",
+        description: "Minimal description",
         data: null,
         icon: null as any,
         gradient: null as any,
@@ -359,10 +359,10 @@ describe('createNewFlow', () => {
       const result = createNewFlow(mockFlowData, mockFolderId, minimalFlow);
 
       expect(result).toEqual({
-        description: 'Minimal description',
-        name: 'Minimal Flow',
+        description: "Minimal description",
+        name: "Minimal Flow",
         data: mockFlowData,
-        id: '',
+        id: "",
         icon: undefined, // null becomes undefined due to ?? operator
         gradient: undefined, // null becomes undefined due to ?? operator
         is_component: false, // null becomes false due to ?? operator
@@ -374,9 +374,9 @@ describe('createNewFlow', () => {
     });
   });
 
-  describe('function behavior consistency', () => {
-    it('should produce the same result for the same inputs', () => {
-      mockGetRandomDescription.mockReturnValue('Consistent Description');
+  describe("function behavior consistency", () => {
+    it("should produce the same result for the same inputs", () => {
+      mockGetRandomDescription.mockReturnValue("Consistent Description");
 
       const result1 = createNewFlow(mockFlowData, mockFolderId, mockFlow);
       const result2 = createNewFlow(mockFlowData, mockFolderId, mockFlow);
@@ -384,7 +384,7 @@ describe('createNewFlow', () => {
       expect(result1).toEqual(result2);
     });
 
-    it('should not mutate input parameters', () => {
+    it("should not mutate input parameters", () => {
       const originalFlowData = { ...mockFlowData };
       const originalFlow = { ...mockFlow };
 
@@ -395,44 +395,44 @@ describe('createNewFlow', () => {
     });
   });
 
-  describe('description logic', () => {
-    it('should use flow description when truthy', () => {
+  describe("description logic", () => {
+    it("should use flow description when truthy", () => {
       const flowWithDescription = {
         ...mockFlow,
-        description: 'Custom Description',
+        description: "Custom Description",
       };
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithDescription
+        flowWithDescription,
       );
 
-      expect(result.description).toBe('Custom Description');
+      expect(result.description).toBe("Custom Description");
       expect(mockGetRandomDescription).not.toHaveBeenCalled();
     });
 
-    it('should use random description for null/undefined descriptions only', () => {
+    it("should use random description for null/undefined descriptions only", () => {
       const nullishTestCases = [
         { ...mockFlow, description: null as any },
         { ...mockFlow, description: undefined as any },
       ];
 
-      nullishTestCases.forEach(testFlow => {
+      nullishTestCases.forEach((testFlow) => {
         mockGetRandomDescription.mockClear();
         const result = createNewFlow(mockFlowData, mockFolderId, testFlow);
 
-        expect(result.description).toBe('Random Description');
+        expect(result.description).toBe("Random Description");
         expect(mockGetRandomDescription).toHaveBeenCalledTimes(1);
       });
 
       // These falsy values should NOT trigger random description
       const falsyTestCases = [
-        { ...mockFlow, description: '' },
+        { ...mockFlow, description: "" },
         { ...mockFlow, description: 0 as any },
         { ...mockFlow, description: false as any },
       ];
 
-      falsyTestCases.forEach(testFlow => {
+      falsyTestCases.forEach((testFlow) => {
         mockGetRandomDescription.mockClear();
         const result = createNewFlow(mockFlowData, mockFolderId, testFlow);
 
@@ -442,38 +442,38 @@ describe('createNewFlow', () => {
     });
   });
 
-  describe('name logic', () => {
-    it('should use flow name when truthy', () => {
-      const flowWithName = { ...mockFlow, name: 'Custom Name' };
+  describe("name logic", () => {
+    it("should use flow name when truthy", () => {
+      const flowWithName = { ...mockFlow, name: "Custom Name" };
       const result = createNewFlow(mockFlowData, mockFolderId, flowWithName);
 
-      expect(result.name).toBe('Custom Name');
+      expect(result.name).toBe("Custom Name");
     });
 
-    it('should use default name for falsy names', () => {
+    it("should use default name for falsy names", () => {
       const testCases = [
-        { ...mockFlow, name: '' },
+        { ...mockFlow, name: "" },
         { ...mockFlow, name: null as any },
         { ...mockFlow, name: undefined as any },
         { ...mockFlow, name: 0 as any },
         { ...mockFlow, name: false as any },
       ];
 
-      testCases.forEach(testFlow => {
+      testCases.forEach((testFlow) => {
         const result = createNewFlow(mockFlowData, mockFolderId, testFlow);
-        expect(result.name).toBe('New Flow');
+        expect(result.name).toBe("New Flow");
       });
     });
 
-    it('should preserve whitespace in names', () => {
-      const flowWithWhitespace = { ...mockFlow, name: '   Test   ' };
+    it("should preserve whitespace in names", () => {
+      const flowWithWhitespace = { ...mockFlow, name: "   Test   " };
       const result = createNewFlow(
         mockFlowData,
         mockFolderId,
-        flowWithWhitespace
+        flowWithWhitespace,
       );
 
-      expect(result.name).toBe('   Test   ');
+      expect(result.name).toBe("   Test   ");
     });
   });
 });
