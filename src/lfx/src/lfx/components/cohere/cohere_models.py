@@ -15,7 +15,7 @@ class CohereComponent(LCModelComponent):
     name = "CohereModel"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         SecretStrInput(
             name="cohere_api_key",
             display_name="Cohere API Key",

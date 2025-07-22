@@ -58,7 +58,7 @@ class DoclingRemoteComponent(BaseFileComponent):
     ]
 
     inputs = [
-        *BaseFileComponent._base_inputs,
+        *BaseFileComponent.get_base_inputs(),
         StrInput(
             name="api_url",
             display_name="Server address",
@@ -99,7 +99,7 @@ class DoclingRemoteComponent(BaseFileComponent):
     ]
 
     outputs = [
-        *BaseFileComponent._base_outputs,
+        *BaseFileComponent.get_base_outputs(),
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:

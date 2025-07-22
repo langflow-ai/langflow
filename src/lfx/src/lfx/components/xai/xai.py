@@ -26,7 +26,7 @@ class XAIModelComponent(LCModelComponent):
     name = "xAIModel"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

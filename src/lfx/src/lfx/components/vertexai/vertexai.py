@@ -13,7 +13,7 @@ class ChatVertexAIComponent(LCModelComponent):
     name = "VertexAiModel"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         FileInput(
             name="credentials",
             display_name="Credentials",

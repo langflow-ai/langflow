@@ -118,7 +118,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
     # Combine base inputs with Gmail-specific inputs
     inputs = [
-        *ComposioBaseComponent._base_inputs,
+        *ComposioBaseComponent.get_base_inputs(),
         # Email composition fields
         MessageTextInput(
             name="recipient_email",

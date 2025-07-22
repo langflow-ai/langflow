@@ -178,7 +178,7 @@ class ComposioGoogleCalendarAPIComponent(ComposioBaseComponent):
     }
 
     inputs = [
-        *ComposioBaseComponent._base_inputs,
+        *ComposioBaseComponent.get_base_inputs(),
         IntInput(
             name="GOOGLECALENDAR_LIST_CALENDARS_max_results",
             display_name="Max Results",

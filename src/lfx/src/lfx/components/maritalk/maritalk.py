@@ -12,7 +12,7 @@ class MaritalkModelComponent(LCModelComponent):
     icon = "Maritalk"
     name = "Maritalk"
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

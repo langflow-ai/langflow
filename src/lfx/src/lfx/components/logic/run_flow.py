@@ -18,8 +18,8 @@ class RunFlowComponent(RunFlowBaseComponent):
     name = "RunFlow"
     icon = "Workflow"
 
-    inputs = RunFlowBaseComponent._base_inputs
-    outputs = RunFlowBaseComponent._base_outputs
+    inputs = RunFlowBaseComponent.get_base_inputs()
+    outputs = RunFlowBaseComponent.get_base_outputs()
 
     async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name_selected":

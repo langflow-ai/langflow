@@ -21,7 +21,7 @@ class CSVAgentComponent(LCAgentComponent):
     icon = "LangChain"
 
     inputs = [
-        *LCAgentComponent._base_inputs,
+        *LCAgentComponent.get_base_inputs(),
         HandleInput(
             name="llm",
             display_name="Language Model",

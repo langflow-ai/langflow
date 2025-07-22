@@ -92,7 +92,7 @@ class VideoFileComponent(BaseFileComponent):
     ]
 
     outputs = [
-        *BaseFileComponent._base_outputs,
+        *BaseFileComponent.get_base_outputs(),
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:

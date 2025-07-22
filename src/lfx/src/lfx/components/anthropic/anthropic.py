@@ -24,7 +24,7 @@ class AnthropicModelComponent(LCModelComponent):
     name = "AnthropicModel"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

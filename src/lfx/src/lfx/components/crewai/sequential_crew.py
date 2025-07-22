@@ -11,7 +11,7 @@ class SequentialCrewComponent(BaseCrewComponent):
     legacy = True
 
     inputs = [
-        *BaseCrewComponent._base_inputs,
+        *BaseCrewComponent.get_base_inputs(),
         HandleInput(name="tasks", display_name="Tasks", input_types=["SequentialTask"], is_list=True),
     ]
 

@@ -138,7 +138,7 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
     }
 
     inputs = [
-        *ComposioBaseComponent._base_inputs,
+        *ComposioBaseComponent.get_base_inputs(),
         IntInput(
             name="SLACK_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION_limit",
             display_name="Limit",

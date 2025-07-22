@@ -13,7 +13,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
     name = "BaiduQianfanChatModel"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         DropdownInput(
             name="model",
             display_name="Model Name",

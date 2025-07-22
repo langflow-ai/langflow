@@ -17,7 +17,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
     name = "ToolCallingAgent"
 
     inputs = [
-        *LCToolsAgentComponent._base_inputs,
+        *LCToolsAgentComponent.get_base_inputs(),
         HandleInput(
             name="llm",
             display_name="Language Model",

@@ -50,7 +50,7 @@ class UnstructuredComponent(BaseFileComponent):
     ]
 
     inputs = [
-        *BaseFileComponent._base_inputs,
+        *BaseFileComponent.get_base_inputs(),
         SecretStrInput(
             name="api_key",
             display_name="Unstructured.io Serverless API Key",
@@ -83,7 +83,7 @@ class UnstructuredComponent(BaseFileComponent):
     ]
 
     outputs = [
-        *BaseFileComponent._base_outputs,
+        *BaseFileComponent.get_base_outputs(),
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:

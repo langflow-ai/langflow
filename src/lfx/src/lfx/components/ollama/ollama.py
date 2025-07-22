@@ -137,7 +137,7 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="template", display_name="Template", info="Template to use for generating text.", advanced=True
         ),
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

@@ -164,7 +164,7 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
     }
 
     inputs = [
-        *ComposioBaseComponent._base_inputs,
+        *ComposioBaseComponent.get_base_inputs(),
         MessageTextInput(
             name="OUTLOOK_OUTLOOK_LIST_EVENTS_user_id",
             display_name="User Id",

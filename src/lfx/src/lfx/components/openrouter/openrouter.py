@@ -27,7 +27,7 @@ class OpenRouterComponent(LCModelComponent):
     icon = "OpenRouter"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         SecretStrInput(
             name="api_key", display_name="OpenRouter API Key", required=True, info="Your OpenRouter API key"
         ),

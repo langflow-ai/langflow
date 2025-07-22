@@ -27,7 +27,7 @@ class NvidiaIngestComponent(BaseFileComponent):
         VALID_EXTENSIONS = [msg]
 
     inputs = [
-        *BaseFileComponent._base_inputs,
+        *BaseFileComponent.get_base_inputs(),
         MessageTextInput(
             name="base_url",
             display_name="Base URL",
@@ -153,7 +153,7 @@ class NvidiaIngestComponent(BaseFileComponent):
     ]
 
     outputs = [
-        *BaseFileComponent._base_outputs,
+        *BaseFileComponent.get_base_outputs(),
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:

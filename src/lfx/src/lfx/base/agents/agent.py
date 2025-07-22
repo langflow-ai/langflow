@@ -225,7 +225,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             required=False,
             info="These are the tools that the agent can use to help with tasks.",
         ),
-        *LCAgentComponent._base_inputs,
+        *LCAgentComponent.get_base_inputs(),
     ]
 
     def build_agent(self) -> AgentExecutor:

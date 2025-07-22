@@ -22,7 +22,7 @@ class FileComponent(BaseFileComponent):
 
     VALID_EXTENSIONS = TEXT_FILE_TYPES
 
-    _base_inputs = deepcopy(BaseFileComponent._base_inputs)
+    _base_inputs = deepcopy(BaseFileComponent.get_base_inputs())
 
     for input_item in _base_inputs:
         if isinstance(input_item, FileInput) and input_item.name == "path":

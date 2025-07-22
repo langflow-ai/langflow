@@ -109,14 +109,14 @@ class BaseFileComponent(Component, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Dynamically update FileInput to include valid extensions and bundles
-        self._base_inputs[0].file_types = [
+        self.get_base_inputs()[0].file_types = [
             *self.valid_extensions,
             *self.SUPPORTED_BUNDLE_EXTENSIONS,
         ]
 
         file_types = ", ".join(self.valid_extensions)
         bundles = ", ".join(self.SUPPORTED_BUNDLE_EXTENSIONS)
-        self._base_inputs[
+        self.get_base_inputs()[
             0
         ].info = f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
 

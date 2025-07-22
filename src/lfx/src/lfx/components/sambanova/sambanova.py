@@ -16,7 +16,7 @@ class SambaNovaComponent(LCModelComponent):
     name = "SambaNovaModel"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         StrInput(
             name="base_url",
             display_name="SambaNova Cloud Base Url",

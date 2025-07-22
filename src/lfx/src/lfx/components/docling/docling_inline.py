@@ -45,7 +45,7 @@ class DoclingInlineComponent(BaseFileComponent):
     ]
 
     inputs = [
-        *BaseFileComponent._base_inputs,
+        *BaseFileComponent.get_base_inputs(),
         DropdownInput(
             name="pipeline",
             display_name="Pipeline",
@@ -66,7 +66,7 @@ class DoclingInlineComponent(BaseFileComponent):
     ]
 
     outputs = [
-        *BaseFileComponent._base_outputs,
+        *BaseFileComponent.get_base_outputs(),
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:

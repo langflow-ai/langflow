@@ -133,7 +133,7 @@ class ComposioGitHubAPIComponent(ComposioBaseComponent):
     }
 
     inputs = [
-        *ComposioBaseComponent._base_inputs,
+        *ComposioBaseComponent.get_base_inputs(),
         MessageTextInput(
             name="GITHUB_CREATE_AN_ISSUE_owner",
             display_name="Owner",

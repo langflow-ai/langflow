@@ -26,7 +26,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     name = "GoogleGenerativeAIModel"
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         IntInput(
             name="max_output_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."
         ),

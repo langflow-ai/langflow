@@ -17,7 +17,7 @@ class OpenAPIAgentComponent(LCAgentComponent):
     name = "OpenAPIAgent"
     icon = "LangChain"
     inputs = [
-        *LCAgentComponent._base_inputs,
+        *LCAgentComponent.get_base_inputs(),
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
         BoolInput(name="allow_dangerous_requests", display_name="Allow Dangerous Requests", value=False, required=True),

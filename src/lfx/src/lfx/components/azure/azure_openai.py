@@ -31,7 +31,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
     ]
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        *LCModelComponent.get_base_inputs(),
         MessageTextInput(
             name="azure_endpoint",
             display_name="Azure Endpoint",
