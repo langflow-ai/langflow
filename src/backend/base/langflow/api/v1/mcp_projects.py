@@ -29,11 +29,17 @@ from langflow.api.v1.mcp_utils import (
     handle_mcp_errors,
     handle_read_resource,
 )
-from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings
+from langflow.api.v1.schemas import (
+    MCPInstallRequest,
+    MCPProjectResponse,
+    MCPProjectUpdateRequest,
+    MCPSettings,
+)
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +66,7 @@ async def list_project_tools(
     current_user: CurrentActiveMCPUser,
     *,
     mcp_enabled: bool = True,
-) -> list[MCPSettings]:
+) -> MCPProjectResponse:
     """List all tools in a project that are enabled for MCP."""
     tools: list[MCPSettings] = []
     try:
@@ -114,12 +120,19 @@ async def list_project_tools(
                     logger.warning(msg)
                     continue
 
+            # Get project-level auth settings
+            auth_settings = None
+            if project.auth_settings:
+                from langflow.api.v1.schemas import AuthSettings
+
+                auth_settings = AuthSettings(**project.auth_settings)
+
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
         logger.exception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return tools
+    return MCPProjectResponse(tools=tools, auth_settings=auth_settings)
 
 
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
@@ -218,10 +231,10 @@ async def handle_project_messages_with_slash(project_id: UUID, request: Request,
 @router.patch("/{project_id}", status_code=200)
 async def update_project_mcp_settings(
     project_id: UUID,
-    settings: list[MCPSettings],
+    request: MCPProjectUpdateRequest,
     current_user: CurrentActiveMCPUser,
 ):
-    """Update the MCP settings of all flows in a project."""
+    """Update the MCP settings of all flows in a project and project-level auth settings."""
     try:
         async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
@@ -236,9 +249,16 @@ async def update_project_mcp_settings(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
+            # Update project-level auth settings
+            if request.auth_settings:
+                project.auth_settings = request.auth_settings.model_dump(mode="json")
+            else:
+                project.auth_settings = None
+            session.add(project)
+
             # Query flows in the project
             flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
-            flows_to_update = {x.id: x for x in settings}
+            flows_to_update = {x.id: x for x in request.settings}
 
             updated_flows = []
             for flow in flows:
@@ -256,7 +276,7 @@ async def update_project_mcp_settings(
 
             await session.commit()
 
-            return {"message": f"Updated MCP settings for {len(updated_flows)} flows"}
+            return {"message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"}
 
     except Exception as e:
         msg = f"Error updating project MCP settings: {e!s}"
@@ -348,7 +368,8 @@ async def install_mcp_config(
         # Determine command and args based on operating system
         os_type = platform.system()
         command = "uvx"
-        args = ["mcp-proxy", sse_url]
+        mcp_tool = "mcp-composer" if FEATURE_FLAGS.mcp_composer else "mcp-proxy"
+        args = [mcp_tool, sse_url]
 
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
         is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
@@ -381,7 +402,7 @@ async def install_mcp_config(
 
         if os_type == "Windows":
             command = "cmd"
-            args = ["/c", "uvx", "mcp-proxy", sse_url]
+            args = ["/c", "uvx", mcp_tool, sse_url]
             logger.debug("Windows detected, using cmd command")
 
         name = project.name
