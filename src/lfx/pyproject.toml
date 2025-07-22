@@ -10,6 +10,12 @@ requires-python = ">=3.10,<3.14"
 dependencies = [
     "langchain-core>=0.3.66",
     "loguru>=0.7.3",
+    "pandas>=2.0.0",
+    "pydantic>=2.0.0",
+    "pillow>=10.0.0",
+    "fastapi>=0.115.13",
+    "uvicorn>=0.34.3",
+    "typer>=0.16.0",
 ]
 
 [build-system]
@@ -60,7 +66,12 @@ external = ["RUF027"]
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [dependency-groups]
 dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=0.26.0",
     "ruff>=0.9.10",
 ]

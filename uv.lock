@@ -5464,23 +5464,41 @@ name = "lfx"
 version = "0.1.0"
 source = { editable = "src/lfx" }
 dependencies = [
+    { name = "fastapi" },
     { name = "langchain-core" },
     { name = "loguru" },
+    { name = "pandas" },
+    { name = "pillow" },
+    { name = "pydantic" },
+    { name = "typer" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.115.13" },
     { name = "langchain-core", specifier = ">=0.3.66" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "pillow", specifier = ">=10.0.0" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "typer", specifier = ">=0.16.0" },
+    { name = "uvicorn", specifier = ">=0.34.3" },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.9.10" }]
+dev = [
+    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=0.26.0" },
+    { name = "ruff", specifier = ">=0.9.10" },
+]
 
 [[package]]
 name = "libcst"
