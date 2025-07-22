@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from langchain_chroma import Chroma
+from loguru import logger
 from platformdirs import user_cache_dir
 
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
@@ -27,6 +28,7 @@ from langflow.schema import Message
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
+from langflow.services.deps import get_settings_service
 
 
 class KBIngestionComponent(Component):
@@ -307,6 +309,35 @@ class KBIngestionComponent(Component):
         else:
             return embeddings, embed_index
 
+    def _build_embedding_metadata(self) -> dict[str, Any]:
+        """Build embedding model metadata."""
+        from langflow.services.auth import utils as auth_utils
+
+        api_key_to_save = None
+        if self.api_key and hasattr(self.api_key, "get_secret_value"):
+            api_key_to_save = self.api_key.get_secret_value()
+        elif isinstance(self.api_key, str):
+            api_key_to_save = self.api_key
+
+        encrypted_api_key = None
+        if api_key_to_save:
+            settings_service = get_settings_service()
+            try:
+                encrypted_api_key = auth_utils.encrypt_api_key(api_key_to_save, settings_service=settings_service)
+            except (TypeError, ValueError) as e:
+                self.log(f"Could not encrypt API key: {e}")
+                logger.error(f"Could not encrypt API key: {e}")
+
+        return {
+            "embedding_provider": self.embedding_provider,
+            "embedding_model": self.embedding_model,
+            "api_key": encrypted_api_key,
+            "api_key_used": bool(self.api_key),
+            "dimensions": self.dimensions,
+            "chunk_size": self.chunk_size,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
     def _save_kb_files(
         self,
         kb_path: Path,
@@ -329,14 +360,7 @@ class KBIngestionComponent(Component):
             cfg_path.write_text(json.dumps(config_list, indent=2))
 
             # Save embedding model metadata
-            embedding_metadata = {
-                "embedding_provider": self.embedding_provider,
-                "embedding_model": self.embedding_model,
-                "api_key_used": bool(self.api_key),  # Don't save the actual key
-                "dimensions": self.dimensions,
-                "chunk_size": self.chunk_size,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
+            embedding_metadata = self._build_embedding_metadata()
             metadata_path = kb_path / "embedding_metadata.json"
             metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
