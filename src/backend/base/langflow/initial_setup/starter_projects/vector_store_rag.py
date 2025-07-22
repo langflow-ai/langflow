@@ -1,14 +1,13 @@
 from textwrap import dedent
 
+from lfx.components.data import FileComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.models import LanguageModelComponent
+from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+from lfx.components.processing import ParserComponent, PromptComponent
+from lfx.components.processing.split_text import SplitTextComponent
+from lfx.components.vectorstores import AstraDBVectorStoreComponent
 from lfx.graph import Graph
-
-from langflow.components.data import FileComponent
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.models import LanguageModelComponent
-from langflow.components.openai.openai import OpenAIEmbeddingsComponent
-from langflow.components.processing import ParserComponent, PromptComponent
-from langflow.components.processing.split_text import SplitTextComponent
-from langflow.components.vectorstores import AstraDBVectorStoreComponent
 
 
 def ingestion_graph():
