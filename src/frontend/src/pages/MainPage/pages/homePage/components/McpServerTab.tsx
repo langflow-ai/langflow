@@ -282,6 +282,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       return "";
     if (currentAuthSettings?.auth_type === "oauth") {
       return `
+      "env": {
         "OAUTH_HOST": "${currentAuthSettings.oauth_host || "YOUR_OAUTH_HOST"}",
         "OAUTH_PORT": "${currentAuthSettings.oauth_port || "YOUR_OAUTH_PORT"}",
         "OAUTH_SERVER_URL": "${currentAuthSettings.oauth_server_url || "YOUR_OAUTH_SERVER_URL"}",
@@ -292,7 +293,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "OAUTH_TOKEN_URL": "${currentAuthSettings.oauth_token_url || "YOUR_OAUTH_TOKEN_URL"}",
         "OAUTH_MCP_SCOPE": "${currentAuthSettings.oauth_mcp_scope || "YOUR_OAUTH_MCP_SCOPE"}",
         "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope || "YOUR_OAUTH_PROVIDER_SCOPE"}",
-      `;
+      }`;
     }
     return "";
   };
@@ -387,7 +388,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         </div>
       </div>
       <div className="flex flex-col justify-between gap-8 xl:flex-row">
-        <div className="w-full xl:w-3/5">
+        <div className="w-full xl:w-2/5">
           <div className="flex flex-row flex-wrap gap-2">
             <ToolsComponent
               value={flowsMCPData}

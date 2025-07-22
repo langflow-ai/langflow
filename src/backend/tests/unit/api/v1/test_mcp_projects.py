@@ -401,6 +401,14 @@ async def test_user_can_update_own_flow_mcp_settings(
             "mcp_enabled": False,
             "name": "User Test Flow",
             "description": "This flow belongs to the active user",
+            "auth_settings": {
+                "auth_type": "none",
+                "api_key": None,
+                "iam_endpoint": None,
+                "username": None,
+                "password": None,
+                "bearer_token": None,
+            },
         }
     ]
 
