@@ -6,21 +6,24 @@ import copy
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langflow.utils.image import create_image_content_dict
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
+
+from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+
+if TYPE_CHECKING:
+    from lfx.schema.dataframe import DataFrame
+    from lfx.schema.message import Message
 
 
 class Data(BaseModel):
     """Represents a record with text and optional data.
-
-    This is a lightweight base implementation that contains only methods
-    without langflow-specific dependencies. The full Data class in langflow
-    inherits from this and adds additional methods.
 
     Attributes:
         data (dict, optional): Additional data associated with the record.
@@ -147,25 +150,41 @@ class Data(BaseModel):
             return Document(page_content=text, metadata=data_copy)
         return Document(page_content=str(text), metadata=data_copy)
 
-    def to_lc_message_simple(self) -> BaseMessage:
-        """Converts the Data to a BaseMessage (simple version without file support).
-
-        This is a simplified version that doesn't handle files/images.
-        The full langflow version handles files and images with additional dependencies.
+    def to_lc_message(
+        self,
+    ) -> BaseMessage:
+        """Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
         """
-        # Simple implementation without file handling
-        if not all(key in self.data for key in ["text"]):
-            msg = f"Missing required keys ('text') in Data: {self.data}"
+        # The idea of this function is to be a helper to convert a Data to a BaseMessage
+        # It will use the "sender" key to determine if the message is Human or AI
+        # If the key is not present, it will default to AI
+        # But first we check if all required keys are present in the data dictionary
+        # they are: "text", "sender"
+        if not all(key in self.data for key in ["text", "sender"]):
+            msg = f"Missing required keys ('text', 'sender') in Data: {self.data}"
             raise ValueError(msg)
-
+        sender = self.data.get("sender", MESSAGE_SENDER_AI)
         text = self.data.get("text", "")
-        sender = self.data.get("sender", "AI")  # Default to AI without langflow constants
+        files = self.data.get("files", [])
+        if sender == MESSAGE_SENDER_USER:
+            if files:
+                from lfx.schema.image import get_file_paths
 
-        if sender == "User":
-            return HumanMessage(content=[{"type": "text", "text": text}])
+                resolved_file_paths = get_file_paths(files)
+                contents = [create_image_content_dict(file_path) for file_path in resolved_file_paths]
+                # add to the beginning of the list
+                contents.insert(0, {"type": "text", "text": text})
+                human_message = HumanMessage(content=contents)
+            else:
+                human_message = HumanMessage(
+                    content=[{"type": "text", "text": text}],
+                )
+
+            return human_message
+
         return AIMessage(content=text)
 
     def __getattr__(self, key):
@@ -212,7 +231,7 @@ class Data(BaseModel):
         return super().__dir__() + list(self.data.keys())
 
     def __str__(self) -> str:
-        # return a JSON string representation of the Data attributes
+        # return a JSON string representation of the Data atributes
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return serialize_data(data)  # use the custom serializer
@@ -226,9 +245,41 @@ class Data(BaseModel):
     def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
+    def filter_data(self, filter_str: str) -> Data:
+        """Filters the data dictionary based on the filter string.
+
+        Args:
+            filter_str (str): The filter string to apply to the data dictionary.
+
+        Returns:
+            Data: The filtered Data.
+        """
+        from langflow.template.utils import apply_json_filter
+
+        return apply_json_filter(self.data, filter_str)
+
+    def to_message(self) -> Message:
+        from lfx.schema.message import Message  # Local import to avoid circular import
+
+        if self.text_key in self.data:
+            return Message(text=self.get_text())
+        return Message(text=str(self.data))
+
+    def to_dataframe(self) -> DataFrame:
+        from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
+
+        data_dict = self.data
+        # If data contains only one key and the value is a list of dictionaries, convert to DataFrame
+        if (
+            len(data_dict) == 1
+            and isinstance(next(iter(data_dict.values())), list)
+            and all(isinstance(item, dict) for item in next(iter(data_dict.values())))
+        ):
+            return DataFrame(data=next(iter(data_dict.values())))
+        return DataFrame(data=[self])
+
 
 def custom_serializer(obj):
-    """Custom JSON serializer for Data objects."""
     if isinstance(obj, datetime):
         utc_date = obj.replace(tzinfo=timezone.utc)
         return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -246,5 +297,4 @@ def custom_serializer(obj):
 
 
 def serialize_data(data):
-    """Serialize data to JSON string."""
     return json.dumps(data, indent=4, default=custom_serializer)
