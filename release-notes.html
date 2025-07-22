@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.b2cbf1cd.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.6df31775.js" defer="defer"></script>
 <script src="/assets/js/main.cdf1e15a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -90,35 +90,32 @@ The only exceptions are the MCP endpoints <code>/v1/mcp</code>, <code>/v1/mcp-pr
 For more information, see <a href="/configuration-api-keys">API keys</a>.</p>
 </li>
 <li>
-<p>New Language Model and Embedding Model components</p>
-<p>The <strong>Language Model</strong> and <strong>Embedding Model</strong> components have been promoted to be the main components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment without swapping out single-provider components.
-The single-provider components are still available for your flows in the components sidebar under <a href="/components-bundle-components">Bundles</a>.
-For more information, see the <a href="/components-models">Language model</a> and <a href="/components-embedding-models">Embedding model</a> components.</p>
+<p>Centralized <strong>Language Model</strong> and <strong>Embedding Model</strong> components</p>
+<p>The <a href="/components-models"><strong>Language Model</strong></a> and <a href="/components-embedding-models"><strong>Embedding Model</strong></a> components are now core components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment with different models without swapping out single-provider components.
+Find them in the <strong>Components</strong> menu in the <strong>Models</strong> category.</p>
+<p>The single-provider components are still available for your flows in the <strong>Components</strong> menu in the <a href="/components-bundle-components"><strong>Bundles</strong></a> section.</p>
 </li>
 <li>
-<p>MCP one-click installation</p>
-<p>In the <strong>MCP server</strong> page, click <strong>Auto install</strong> to install your Langflow MCP server to MCP clients with just one click.
+<p>MCP server one-click installation</p>
+<p>On your Langflow project&#x27;s <strong>MCP server</strong> page, click <strong>Auto install</strong> to install your Langflow MCP server to MCP clients with just one click.
 The option to install with a JSON configuration file is available for macOS, Windows, and WSL.
-For more information, see <a href="/mcp-server">MCP server</a>.</p>
+For more information, see <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
 </li>
 <li>
 <p>MCP server management</p>
-<p>Add, remove, and edit your MCP servers in the <strong>MCP Tools</strong> and <strong>Settings</strong> page.
-For more information, see <a href="/mcp-client">MCP client</a>.</p>
+<p>You can now add, remove, and edit your MCP servers in the <strong>MCP Tools</strong> components and through your Langflow <strong>Settings</strong> page.
+For more information, see <a href="/mcp-client">Use Langflow as an MCP client</a>.</p>
 </li>
 <li>
 <p>Input schema replaces temporary overrides</p>
 <p>The <strong>Input schema</strong> pane replaces the need to manage tweak values in the <strong>API access</strong> pane. When you enable a parameter in the <strong>Input schema</strong> pane, the parameter is automatically added to your flow&#x27;s code snippets, providing ready-to-use templates for making requests in your preferred programming language.</p>
 </li>
 <li>
-<p>Tools category is now legacy</p>
-<p>All components in the <strong>Tools</strong> category are now <strong>Legacy</strong> or have moved to <a href="/components-bundle-components">Bundles</a>.</p>
-<p>The <a href="/mcp-client">MCP Tools</a> component is available in the components sidebar under <strong>Agents</strong>.</p>
-<p>Many of the <strong>Tools</strong> components performed the same functions, like web search and API requests, so we combined this functionality into single components:</p>
-<ul>
-<li>To replace legacy search components, use the <a href="/components-data#web-search">Web search</a> component.</li>
-<li>To replace legacy news aggregation components, use the <a href="/components-data#news-search">News search</a> component.</li>
-</ul>
+<p>Tool components are redistributed</p>
+<p>All components in the <strong>Tools</strong> category were moved to other core component categories, <a href="/components-bundle-components">bundles</a>, or marked as legacy.</p>
+<p>The <a href="/mcp-client"><strong>MCP Tools</strong> component</a> is now under the <strong>Agents</strong> core components category.</p>
+<p>Tools that performed the same function were combined into single components that support multiple providers, such as the <a href="/components-data#web-search"><strong>Web Search</strong> component</a> and the <a href="/components-data#news-search"><strong>News Search</strong> component</a>.</p>
+<p>For more information, see the <a href="/components-tools">Tools components</a> page.</p>
 </li>
 <li>
 <p>Stability improvements</p>
