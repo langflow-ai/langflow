@@ -32,6 +32,9 @@ from langflow.schema.table import EditMode
 from langflow.services.auth.utils import encrypt_api_key
 from langflow.services.deps import get_settings_service
 
+HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
+COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
+
 
 class KBIngestionComponent(Component):
     """Create or append to a Langflow Knowledge Base from a DataFrame."""
@@ -119,15 +122,13 @@ class KBIngestionComponent(Component):
         DropdownInput(
             name="embedding_model",
             display_name="Model Name",
-            options=[
-                "text-embedding-3-small",
-                "text-embedding-3-large",
-                "text-embedding-ada-002",
-            ],
+            options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
             options_metadata=[
-                {"icon": "OpenAI"},
-                {"icon": "OpenAI"},
-                {"icon": "OpenAI"},
+                {"icon": "OpenAI"} for _ in OPENAI_EMBEDDING_MODEL_NAMES
+            ] + [
+                {"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES
+            ] + [
+                {"icon": "Cohere"} for _ in COHERE_MODEL_NAMES
             ],
             value="text-embedding-3-small",
             info="Select the embedding model to use",
@@ -231,8 +232,12 @@ class KBIngestionComponent(Component):
 
     def _build_embeddings(self):
         """Build embedding model using provider patterns."""
-        provider, model = (
-            self.embedding_model.split(": ", 1) if ": " in self.embedding_model else ("OpenAI", self.embedding_model)
+        model = self.embedding_model
+        # Get provider by matching model name to lists
+        provider = (
+            "OpenAI" if model in OPENAI_EMBEDDING_MODEL_NAMES
+            else "HuggingFace" if model in HUGGINGFACE_MODEL_NAMES
+            else "Cohere"
         )
         api_key = self.api_key
         dimensions = self.dimensions
@@ -314,8 +319,12 @@ class KBIngestionComponent(Component):
 
     def _build_embedding_metadata(self) -> dict[str, Any]:
         """Build embedding model metadata."""
-        provider, model = (
-            self.embedding_model.split(": ", 1) if ": " in self.embedding_model else ("OpenAI", self.embedding_model)
+        model = self.embedding_model
+        # Get provider by matching model name to lists
+        provider = (
+            "OpenAI" if model in OPENAI_EMBEDDING_MODEL_NAMES
+            else "HuggingFace" if model in HUGGINGFACE_MODEL_NAMES
+            else "Cohere"
         )
 
         api_key_to_save = None
@@ -625,25 +634,13 @@ class KBIngestionComponent(Component):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on provider selection."""
-        if field_name == "embedding_provider":
-            if field_value == "OpenAI":
-                build_config["embedding_model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
-                build_config["embedding_model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
-                build_config["api_key"]["display_name"] = "OpenAI API Key"
-            elif field_value == "HuggingFace":
-                build_config["embedding_model"]["options"] = [
-                    "sentence-transformers/all-MiniLM-L6-v2",
-                    "sentence-transformers/all-mpnet-base-v2",
-                ]
-                build_config["embedding_model"]["value"] = "sentence-transformers/all-MiniLM-L6-v2"
-                build_config["api_key"]["display_name"] = "HuggingFace API Key"
-            elif field_value == "Cohere":
-                build_config["embedding_model"]["options"] = ["embed-english-v3.0", "embed-multilingual-v3.0"]
-                build_config["embedding_model"]["value"] = "embed-english-v3.0"
-                build_config["api_key"]["display_name"] = "Cohere API Key"
-            elif field_value == "Custom":
-                build_config["embedding_model"]["options"] = ["custom-model"]
-                build_config["embedding_model"]["value"] = "custom-model"
-                build_config["api_key"]["display_name"] = "Custom API Key"
+        if field_name == "embedding_model":
+            # Get provider by matching model name to lists
+            provider = (
+                "OpenAI" if field_value in OPENAI_EMBEDDING_MODEL_NAMES
+                else "HuggingFace" if field_value in HUGGINGFACE_MODEL_NAMES
+                else "Cohere"
+            )
+            build_config["api_key"]["display_name"] = f"{provider} API Key"
 
         return build_config
