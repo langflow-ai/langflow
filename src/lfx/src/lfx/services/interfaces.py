@@ -28,6 +28,16 @@ class StorageServiceProtocol(Protocol):
         """Get file from storage."""
         ...
 
+    @abstractmethod
+    def get_file_paths(self, files: list[str | dict]) -> list[str]:
+        """Get file paths from storage."""
+        ...
+
+    @abstractmethod
+    def build_full_path(self, flow_id: str, file_name: str) -> str:
+        """Build the full path of a file in the storage."""
+        ...
+
 
 class SettingsServiceProtocol(Protocol):
     """Protocol for settings service."""

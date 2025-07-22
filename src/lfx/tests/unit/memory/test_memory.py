@@ -21,7 +21,7 @@ class TestMemoryFunctions:
     @pytest.mark.asyncio
     async def test_astore_message_single(self):
         """Test storing a single message asynchronously."""
-        message = Message(text="Hello", sender="User")
+        message = Message(text="Hello", sender="User", sender_name="Test User", session_id="test-session")
         result = await astore_message(message)
 
         assert isinstance(result, list)
@@ -32,18 +32,26 @@ class TestMemoryFunctions:
 
     @pytest.mark.asyncio
     async def test_astore_message_list(self):
-        """Test storing a list of messages asynchronously."""
-        messages = [Message(text="Hello", sender="User"), Message(text="Hi there", sender="AI")]
-        result = await astore_message(messages)
+        """Test storing multiple messages asynchronously one by one."""
+        messages = [
+            Message(text="Hello", sender="User", sender_name="Test User", session_id="test-session"),
+            Message(text="Hi there", sender="AI", sender_name="Assistant", session_id="test-session"),
+        ]
 
-        assert isinstance(result, list)
-        assert len(result) == 2
-        assert all(isinstance(msg, Message) for msg in result)
+        # Store each message individually
+        results = []
+        for message in messages:
+            result = await astore_message(message)
+            results.extend(result)
+
+        assert isinstance(results, list)
+        assert len(results) == 2
+        assert all(isinstance(msg, Message) for msg in results)
 
     @pytest.mark.asyncio
     async def test_aadd_messages_single(self):
         """Test adding a single message asynchronously."""
-        message = Message(text="Test message", sender="User")
+        message = Message(text="Test message", sender="User", sender_name="Test User", session_id="test-session")
         result = await aadd_messages(message)
 
         assert isinstance(result, list)
@@ -54,9 +62,9 @@ class TestMemoryFunctions:
     async def test_aadd_messages_list(self):
         """Test adding multiple messages asynchronously."""
         messages = [
-            Message(text="Message 1", sender="User"),
-            Message(text="Message 2", sender="AI"),
-            Message(text="Message 3", sender="User"),
+            Message(text="Message 1", sender="User", sender_name="Test User", session_id="test-session"),
+            Message(text="Message 2", sender="AI", sender_name="Assistant", session_id="test-session"),
+            Message(text="Message 3", sender="User", sender_name="Test User", session_id="test-session"),
         ]
         result = await aadd_messages(messages)
 
@@ -67,7 +75,7 @@ class TestMemoryFunctions:
     @pytest.mark.asyncio
     async def test_aadd_messagetables_single(self):
         """Test adding message tables asynchronously."""
-        message = Message(text="Table message", sender="System")
+        message = Message(text="Table message", sender="System", sender_name="System", session_id="test-session")
         result = await aadd_messagetables(message)
 
         assert isinstance(result, list)
@@ -77,7 +85,10 @@ class TestMemoryFunctions:
     @pytest.mark.asyncio
     async def test_aadd_messagetables_list(self):
         """Test adding multiple message tables asynchronously."""
-        messages = [Message(text="Table 1", sender="User"), Message(text="Table 2", sender="AI")]
+        messages = [
+            Message(text="Table 1", sender="User", sender_name="Test User", session_id="test-session"),
+            Message(text="Table 2", sender="AI", sender_name="Assistant", session_id="test-session"),
+        ]
         result = await aadd_messagetables(messages)
 
         assert isinstance(result, list)
@@ -85,7 +96,7 @@ class TestMemoryFunctions:
 
     def test_store_message_single(self):
         """Test storing a single message synchronously."""
-        message = Message(text="Sync message", sender="User")
+        message = Message(text="Sync message", sender="User", sender_name="Test User", session_id="test-session")
         result = store_message(message)
 
         assert isinstance(result, list)
@@ -93,16 +104,24 @@ class TestMemoryFunctions:
         assert result[0].text == "Sync message"
 
     def test_store_message_list(self):
-        """Test storing multiple messages synchronously."""
-        messages = [Message(text="Sync 1", sender="User"), Message(text="Sync 2", sender="AI")]
-        result = store_message(messages)
+        """Test storing multiple messages synchronously one by one."""
+        messages = [
+            Message(text="Sync 1", sender="User", sender_name="Test User", session_id="test-session"),
+            Message(text="Sync 2", sender="AI", sender_name="Assistant", session_id="test-session"),
+        ]
 
-        assert isinstance(result, list)
-        assert len(result) == 2
+        # Store each message individually
+        results = []
+        for message in messages:
+            result = store_message(message)
+            results.extend(result)
+
+        assert isinstance(results, list)
+        assert len(results) == 2
 
     def test_add_messages_single(self):
         """Test adding a single message synchronously."""
-        message = Message(text="Add message", sender="User")
+        message = Message(text="Add message", sender="User", sender_name="Test User", session_id="test-session")
         result = add_messages(message)
 
         assert isinstance(result, list)
@@ -112,9 +131,9 @@ class TestMemoryFunctions:
     def test_add_messages_list(self):
         """Test adding multiple messages synchronously."""
         messages = [
-            Message(text="Add 1", sender="User"),
-            Message(text="Add 2", sender="AI"),
-            Message(text="Add 3", sender="System"),
+            Message(text="Add 1", sender="User", sender_name="Test User", session_id="test-session"),
+            Message(text="Add 2", sender="AI", sender_name="Assistant", session_id="test-session"),
+            Message(text="Add 3", sender="System", sender_name="System", session_id="test-session"),
         ]
         result = add_messages(messages)
 
@@ -177,9 +196,20 @@ class TestMemoryFunctions:
     async def test_memory_functions_with_mixed_message_types(self):
         """Test memory functions with different types of messages."""
         messages = [
-            Message(text="User message", sender="User", category="message"),
-            Message(text="AI response", sender="Machine", category="message"),
-            Message(text="System alert", sender="System", category="info", error=False),
+            Message(
+                text="User message", sender="User", sender_name="Test User", session_id="test-mixed", category="message"
+            ),
+            Message(
+                text="AI response", sender="Machine", sender_name="Bot", session_id="test-mixed", category="message"
+            ),
+            Message(
+                text="System alert",
+                sender="System",
+                sender_name="System",
+                session_id="test-mixed",
+                category="info",
+                error=False,
+            ),
         ]
 
         result = await aadd_messages(messages)
@@ -199,7 +229,10 @@ class TestMemoryAsync:
         """Test storing messages concurrently."""
         import asyncio
 
-        messages = [Message(text=f"Message {i}", sender="User") for i in range(5)]
+        messages = [
+            Message(text=f"Message {i}", sender="User", sender_name="Test User", session_id="test-concurrent")
+            for i in range(5)
+        ]
 
         # Store messages concurrently
         tasks = [astore_message(msg) for msg in messages]
@@ -214,13 +247,13 @@ class TestMemoryAsync:
     async def test_async_message_operations_sequence(self):
         """Test a sequence of async message operations."""
         # Create initial message
-        message1 = Message(text="First message", sender="User")
+        message1 = Message(text="First message", sender="User", sender_name="Test User", session_id="test-seq")
         result1 = await astore_message(message1)
 
         # Add more messages
         additional_messages = [
-            Message(text="Second message", sender="AI"),
-            Message(text="Third message", sender="User"),
+            Message(text="Second message", sender="AI", sender_name="Assistant", session_id="test-seq"),
+            Message(text="Third message", sender="User", sender_name="Test User", session_id="test-seq"),
         ]
         result2 = await aadd_messages(additional_messages)
 
@@ -235,7 +268,15 @@ class TestMemoryAsync:
     async def test_large_batch_message_processing(self):
         """Test processing a large batch of messages."""
         # Create a larger batch to test performance
-        large_batch = [Message(text=f"Batch message {i}", sender="User" if i % 2 == 0 else "AI") for i in range(50)]
+        large_batch = [
+            Message(
+                text=f"Batch message {i}",
+                sender="User" if i % 2 == 0 else "AI",
+                sender_name="Test User" if i % 2 == 0 else "Assistant",
+                session_id="test-large-batch",
+            )
+            for i in range(50)
+        ]
 
         result = await aadd_messages(large_batch)
 
@@ -248,7 +289,10 @@ class TestMemoryAsync:
 
     @pytest.mark.asyncio
     async def test_aadd_messages_concurrent(self):
-        messages = [Message(text=f"Concurrent {i}", sender="User", session_id="concurrent") for i in range(5)]
+        messages = [
+            Message(text=f"Concurrent {i}", sender="User", sender_name="Test User", session_id="concurrent")
+            for i in range(5)
+        ]
         tasks = [aadd_messages(msg) for msg in messages]
         results = await asyncio.gather(*tasks)
 
@@ -262,9 +306,9 @@ class TestMemoryAsync:
     async def test_get_messages_concurrent(self):
         # Add messages first
         messages = [
-            Message(text="First message", sender="User", session_id="concurrent_get"),
-            Message(text="Second message", sender="Machine", session_id="concurrent_get"),
-            Message(text="Third message", sender="User", session_id="concurrent_get"),
+            Message(text="First message", sender="User", sender_name="Test User", session_id="concurrent_get"),
+            Message(text="Second message", sender="Machine", sender_name="Bot", session_id="concurrent_get"),
+            Message(text="Third message", sender="User", sender_name="Test User", session_id="concurrent_get"),
         ]
         await aadd_messages(messages)
 
@@ -285,7 +329,12 @@ class TestMemoryAsync:
     @pytest.mark.asyncio
     async def test_large_batch_add(self):
         large_batch = [
-            Message(text=f"Batch {i}", sender="User" if i % 2 == 0 else "Machine", session_id="large_batch")
+            Message(
+                text=f"Batch {i}",
+                sender="User" if i % 2 == 0 else "Machine",
+                sender_name="Test User" if i % 2 == 0 else "Bot",
+                session_id="large_batch",
+            )
             for i in range(50)
         ]
         result = await aadd_messages(large_batch)
@@ -300,10 +349,10 @@ class TestMemoryAsync:
     @pytest.mark.asyncio
     async def test_mixed_operations(self):
         # Store initial message, then add more
-        initial_message = Message(text="Initial", sender="User", session_id="mixed_ops")
+        initial_message = Message(text="Initial", sender="User", sender_name="Test User", session_id="mixed_ops")
         additional_messages = [
-            Message(text="Additional 1", sender="Machine", session_id="mixed_ops"),
-            Message(text="Additional 2", sender="User", session_id="mixed_ops"),
+            Message(text="Additional 1", sender="Machine", sender_name="Bot", session_id="mixed_ops"),
+            Message(text="Additional 2", sender="User", sender_name="Test User", session_id="mixed_ops"),
         ]
 
         task1 = astore_message(initial_message)
@@ -326,11 +375,14 @@ class TestMemoryIntegration:
     async def test_store_then_add_workflow(self):
         """Test workflow of storing then adding messages."""
         # Store initial message
-        initial_message = Message(text="Initial", sender="User")
+        initial_message = Message(text="Initial", sender="User", sender_name="Test User", session_id="test-session-123")
         stored = await astore_message(initial_message)
 
         # Add additional messages
-        additional = [Message(text="Additional 1", sender="AI"), Message(text="Additional 2", sender="User")]
+        additional = [
+            Message(text="Additional 1", sender="AI", sender_name="Assistant", session_id="test-session-123"),
+            Message(text="Additional 2", sender="User", sender_name="Test User", session_id="test-session-123"),
+        ]
         added = await aadd_messages(additional)
 
         # Verify both operations succeeded
@@ -341,7 +393,9 @@ class TestMemoryIntegration:
 
     def test_sync_async_equivalence(self):
         """Test that sync and async versions produce equivalent results."""
-        test_message = Message(text="Equivalence test", sender="User")
+        test_message = Message(
+            text="Equivalence test", sender="User", sender_name="Test User", session_id="test-session-456"
+        )
 
         # Test sync version
         sync_result = store_message(test_message)

@@ -12,6 +12,13 @@ def sample_dataframe():
     return pd.DataFrame({"name": ["John", "Jane"], "text": ["name is John", "name is Jane"]})
 
 
+@pytest.fixture
+def dataframe_with_metadata():
+    """Create a DataFrame instance with metadata for testing."""
+    data_df = pd.DataFrame({"name": ["John", "Jane"], "text": ["name is John", "name is Jane"]})
+    return DataFrame(data_df)
+
+
 class TestDataFrameSchema:
     def test_to_data_list(self, sample_dataframe):
         """Test conversion of DataFrame to list of Data objects."""
@@ -49,7 +56,7 @@ class TestDataFrameSchema:
         assert new_df.iloc[-2:]["text"].tolist() == ["name is Bob", "name is Alice"]
 
     def test_to_lc_document(self, dataframe_with_metadata):
-        documents = dataframe_with_metadata.to_lc_document()
+        documents = dataframe_with_metadata.to_lc_documents()
         assert isinstance(documents, list)
         assert all(isinstance(doc, Document) for doc in documents)
         expected_documents_len = 2

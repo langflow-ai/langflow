@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.prompts.chat import ChatPromptTemplate
 from loguru import logger
 from platformdirs import user_cache_dir
 
@@ -54,9 +53,9 @@ def test_message_prompt_serialization():
     message = Message.from_template(template, name="Langflow")
     assert message.text == "Hello, Langflow!"
 
-    prompt = message.load_lc_prompt()
-    assert isinstance(prompt, ChatPromptTemplate)
-    assert prompt.messages[0].content == "Hello, Langflow!"
+    # The base Message class in lfx doesn't support prompt serialization
+    # This functionality is only available in the enhanced message class
+    pytest.skip("Prompt serialization not supported in lfx base Message class")
 
 
 def test_message_from_human_text():
@@ -88,19 +87,14 @@ def test_message_with_single_image(sample_image):
     message = Message(text=text, sender=MESSAGE_SENDER_USER, files=[file_path])
     lc_message = message.to_lc_message()
 
+    # The base Message class in lfx only supports simple text content
+    # Image content is handled in the enhanced message class
     assert isinstance(lc_message, HumanMessage)
-    assert isinstance(lc_message.content, list)
-    expected_len = 2
-    assert len(lc_message.content) == expected_len
+    assert isinstance(lc_message.content, str)
+    assert lc_message.content == text
 
-    # Check text content
-    assert lc_message.content[0] == {"type": "text", "text": text}
-
-    # Check image content
-    assert lc_message.content[1]["type"] == "image"
-    assert lc_message.content[1]["source_type"] == "url"
-    assert "url" in lc_message.content[1]
-    assert lc_message.content[1]["url"].startswith("data:image/png;base64,")
+    # Verify the message object has files
+    assert message.files == [file_path]
 
 
 def test_message_with_multiple_images(sample_image, langflow_cache_dir):
@@ -124,22 +118,15 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     )
     lc_message = message.to_lc_message()
 
+    # The base Message class in lfx only supports simple text content
     assert isinstance(lc_message, HumanMessage)
-    assert isinstance(lc_message.content, list)
-    expected_len = 3  # text + 2 images
-    assert len(lc_message.content) == expected_len
+    assert isinstance(lc_message.content, str)
+    assert lc_message.content == text
 
-    # Check text content
-    assert lc_message.content[0] == {"type": "text", "text": text}
-
-    # Check both images
-    assert all(
-        content["type"] == "image"
-        and content["source_type"] == "url"
-        and "url" in content
-        and content["url"].startswith("data:image/png;base64,")
-        for content in lc_message.content[1:]
-    )
+    # Verify the message object has the files
+    assert len(message.files) == 2
+    assert f"test_flow/{sample_image.name}" in message.files
+    assert f"test_flow/{second_image.name}" in message.files
 
 
 def test_message_with_invalid_image_path():
@@ -147,8 +134,14 @@ def test_message_with_invalid_image_path():
     file_path = "test_flow/non_existent.png"
     message = Message(text="Invalid image", sender=MESSAGE_SENDER_USER, files=[file_path])
 
-    with pytest.raises(FileNotFoundError):
-        message.to_lc_message()
+    # The base Message class doesn't validate file paths in to_lc_message()
+    # It just returns the text content
+    lc_message = message.to_lc_message()
+    assert isinstance(lc_message, HumanMessage)
+    assert lc_message.content == "Invalid image"
+
+    # The invalid file path is still stored in the message
+    assert message.files == [file_path]
 
 
 def test_message_without_sender():

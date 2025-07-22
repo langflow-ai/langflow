@@ -1,17 +1,11 @@
 import base64
 from pathlib import Path
 
+import aiofiles
 from PIL import Image as PILImage
 from pydantic import BaseModel
 
-try:
-    from lfx.services.deps import get_storage_service
-except ImportError:
-    # Fallback for when langflow services are not available
-    def get_storage_service():
-        """Fallback storage service when langflow is not available."""
-        return
-
+from lfx.services.deps import get_storage_service
 
 IMAGE_ENDPOINT = "/files/images/"
 
@@ -26,16 +20,30 @@ def is_image_file(file_path) -> bool:
     return True
 
 
-def get_file_paths(files: list[str]):
+def get_file_paths(files: list[str | dict]):
     """Get file paths for a list of files."""
     storage_service = get_storage_service()
     if not storage_service:
-        # Return files as-is if no storage service
-        return files
+        # Extract paths from dicts if present
+        extracted_files = []
+        for file in files:
+            if isinstance(file, dict) and "path" in file:
+                extracted_files.append(file["path"])
+            else:
+                extracted_files.append(file)
+        return extracted_files
 
     file_paths = []
     for file in files:
-        file_path = Path(file.path) if hasattr(file, "path") and file.path else Path(file)
+        # Handle dict case
+        if storage_service is None:
+            continue
+        if isinstance(file, dict) and "path" in file:
+            file_path = Path(file["path"])
+        elif hasattr(file, "path") and file.path:
+            file_path = Path(file.path)
+        else:
+            file_path = Path(file)
         flow_id, file_name = str(file_path.parent), file_path.name
         file_paths.append(storage_service.build_full_path(flow_id=flow_id, file_name=file_name))
     return file_paths
@@ -49,13 +57,31 @@ async def get_files(
     """Get files from storage service."""
     storage_service = get_storage_service()
     if not storage_service:
-        msg = "Storage service not available"
-        raise ValueError(msg)
+        # For testing purposes, read files directly when no storage service
+        file_objects: list[str | bytes] = []
+        for file_path_str in file_paths:
+            file_path = Path(file_path_str)
+            if file_path.exists():
+                # Use async read for compatibility
+
+                async with aiofiles.open(file_path, "rb") as f:
+                    file_content = await f.read()
+                if convert_to_base64:
+                    file_base64 = base64.b64encode(file_content).decode("utf-8")
+                    file_objects.append(file_base64)
+                else:
+                    file_objects.append(file_content)
+            else:
+                msg = f"File not found: {file_path}"
+                raise FileNotFoundError(msg)
+        return file_objects
 
     file_objects: list[str | bytes] = []
     for file in file_paths:
         file_path = Path(file)
         flow_id, file_name = str(file_path.parent), file_path.name
+        if not storage_service:
+            continue
         file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
         if convert_to_base64:
             file_base64 = base64.b64encode(file_object).decode("utf-8")
