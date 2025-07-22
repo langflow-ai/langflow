@@ -10,7 +10,7 @@ MESSAGE_SENDER_USER = "User"
 MESSAGE_SENDER_NAME_AI = "AI"
 MESSAGE_SENDER_NAME_USER = "User"
 
-# File types moved from langflow.base.data.utils
+# File types moved from lfx.base.data.utils
 TEXT_FILE_TYPES = [
     "txt",
     "md",

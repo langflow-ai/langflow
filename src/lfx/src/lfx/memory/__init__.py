@@ -26,7 +26,7 @@ _LANGFLOW_AVAILABLE = _has_langflow_memory()
 if _LANGFLOW_AVAILABLE:
     try:
         # Import from full langflow implementation
-        from langflow.memory import (
+        from lfx.memory import (
             adelete_messages,
             aget_messages,
             astore_message,

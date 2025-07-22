@@ -180,7 +180,7 @@ async def list_flows(*, user_id: str | None = None):
     # TODO: We may need to build a list flows that relies on calling
     # the API or the db like langflow's list_flows does.
     try:
-        from langflow.helpers.flow import list_flows as langflow_list_flows
+        from lfx.helpers.flow import list_flows as langflow_list_flows
 
         return await langflow_list_flows(user_id=user_id)
     except ImportError:
@@ -260,10 +260,10 @@ def create_class(code, class_name):
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
 
-    code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
+    code = code.replace("from langflow import CustomComponent", "from lfx.custom import CustomComponent")
     code = code.replace(
         "from langflow.interface.custom.custom_component import CustomComponent",
-        "from langflow.custom import CustomComponent",
+        "from lfx.custom import CustomComponent",
     )
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
