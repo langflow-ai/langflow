@@ -1,4 +1,7 @@
-from langchain_core.tools import StructuredTool
+import json
+import re
+
+from langchain_core.tools import StructuredTool, Tool
 from loguru import logger
 
 from lfx.base.agents.agent import LCToolsAgentComponent
@@ -16,8 +19,8 @@ from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
-from lfx.field_typing import Tool
 from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
+from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 
@@ -40,6 +43,13 @@ class AgentComponent(ToolCallingAgentComponent):
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
+    # Filter out json_mode from OpenAI inputs since we handle structured output differently
+    openai_inputs_filtered = [
+        input_field
+        for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
+        if not (hasattr(input_field, "name") and input_field.name == "json_mode")
+    ]
+
     inputs = [
         DropdownInput(
             name="agent_llm",
@@ -51,7 +61,7 @@ class AgentComponent(ToolCallingAgentComponent):
             input_types=[],
             options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
         ),
-        *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
+        *openai_inputs_filtered,
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
@@ -78,7 +88,10 @@ class AgentComponent(ToolCallingAgentComponent):
             value=True,
         ),
     ]
-    outputs = [Output(name="response", display_name="Response", method="message_response")]
+    outputs = [
+        Output(name="response", display_name="Response", method="message_response"),
+        Output(name="structured_response", display_name="Structured Response", method="json_response", tool_mode=False),
+    ]
 
     async def message_response(self) -> Message:
         try:
@@ -114,7 +127,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_prompt=self.system_prompt,
             )
             agent = self.create_agent_runnable()
-            return await self.run_agent(agent)
+            result = await self.run_agent(agent)
+
+            # Store result for potential JSON output
+            self._agent_result = result
+            # return result
 
         except (ValueError, TypeError, KeyError) as e:
             logger.error(f"{type(e).__name__}: {e!s}")
@@ -125,6 +142,41 @@ class AgentComponent(ToolCallingAgentComponent):
         except Exception as e:
             logger.error(f"Unexpected error: {e!s}")
             raise
+        else:
+            return result
+
+    async def json_response(self) -> Data:
+        """Convert agent response to structured JSON Data output."""
+        # Run the regular message response first to get the result
+        if not hasattr(self, "_agent_result"):
+            await self.message_response()
+
+        result = self._agent_result
+
+        # Extract content from result
+        if hasattr(result, "content"):
+            content = result.content
+        elif hasattr(result, "text"):
+            content = result.text
+        else:
+            content = str(result)
+
+        # Try to parse as JSON
+        try:
+            json_data = json.loads(content)
+            return Data(data=json_data)
+        except json.JSONDecodeError:
+            # If it's not valid JSON, try to extract JSON from the content
+            json_match = re.search(r"\{.*\}", content, re.DOTALL)
+            if json_match:
+                try:
+                    json_data = json.loads(json_match.group())
+                    return Data(data=json_data)
+                except json.JSONDecodeError:
+                    pass
+
+            # If we can't extract JSON, return the raw content as data
+            return Data(data={"content": content, "error": "Could not parse as JSON"})
 
     async def get_memory_data(self):
         # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
@@ -171,7 +223,11 @@ class AgentComponent(ToolCallingAgentComponent):
         if provider_info:
             inputs = provider_info.get("inputs")
             prefix = provider_info.get("prefix")
-            model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+            # Filter out json_mode and only use attributes that exist on this component
+            model_kwargs = {}
+            for input_ in inputs:
+                if hasattr(self, f"{prefix}{input_.name}"):
+                    model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
 
             return component.set(**model_kwargs)
         return component
