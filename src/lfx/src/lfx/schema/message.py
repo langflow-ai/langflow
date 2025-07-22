@@ -9,6 +9,7 @@ from uuid import UUID
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from pydantic import ConfigDict, Field, field_serializer, field_validator
 
+from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.properties import Properties
 from lfx.utils.schemas import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
@@ -263,3 +264,6 @@ class ErrorMessage(Message):
         traceback_str = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
 
         return f"{exception_type}: {exception_message}\n\nTraceback:\n{traceback_str}"
+
+
+__all__ = ["ContentBlock", "ErrorMessage", "Message"]
