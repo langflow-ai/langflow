@@ -48,7 +48,7 @@ class ComposioBaseComponent(Component):
             auth_tooltip="Please insert a valid Composio API Key.",
         ),
         SortableListInput(
-            name="action",
+            name="action_button",
             display_name="Action",
             placeholder="Select action",
             options=[],
@@ -598,7 +598,7 @@ class ComposioBaseComponent(Component):
 
     def _remove_inputs_from_build_config(self, build_config: dict, keep_for_action: str) -> None:
         """Remove parameter UI fields that belong to other actions."""
-        protected_keys = {"code", "entity_id", "api_key", "auth_link", "action", "tool_mode"}
+        protected_keys = {"code", "entity_id", "api_key", "auth_link", "action_button", "tool_mode"}
 
         for action_key, lf_inputs in self._get_inputs_for_all_actions().items():
             if action_key == keep_for_action:
@@ -645,10 +645,10 @@ class ComposioBaseComponent(Component):
     def _set_action_visibility(self, build_config: dict, *, force_show: bool | None = None) -> None:
         """Set action field visibility based on tool_mode state or forced value."""
         if force_show is not None:
-            build_config["action"]["show"] = force_show
+            build_config["action_button"]["show"] = force_show
         else:
             # When tool_mode is enabled, hide action field
-            build_config["action"]["show"] = not self._is_tool_mode_enabled()
+            build_config["action_button"]["show"] = not self._is_tool_mode_enabled()
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Simplified build config updates."""
@@ -680,7 +680,7 @@ class ComposioBaseComponent(Component):
 
         # CRITICAL: If tool_mode is enabled from ANY source, immediately hide action field and return
         if current_tool_mode:
-            build_config["action"]["show"] = False
+            build_config["action_button"]["show"] = False
 
             # CRITICAL: Hide ALL action parameter fields when tool mode is enabled
             logger.debug(f"Available fields in _all_fields: {list(self._all_fields)}")
@@ -697,7 +697,7 @@ class ComposioBaseComponent(Component):
             for field_name_in_config in build_config:  # noqa: PLC0206
                 # Skip base fields like api_key, tool_mode, action, etc.
                 if (
-                    field_name_in_config not in ["api_key", "tool_mode", "action", "auth_link", "entity_id"]
+                    field_name_in_config not in ["api_key", "tool_mode", "action_button", "auth_link", "entity_id"]
                     and isinstance(build_config[field_name_in_config], dict)
                     and "show" in build_config[field_name_in_config]
                 ):
@@ -722,16 +722,16 @@ class ComposioBaseComponent(Component):
         if field_name == "tool_mode":
             logger.error(f"Tool mode changed: field_value={field_value}, field_name={field_name}")
             if field_value is True:
-                build_config["action"]["show"] = False  # Hide action field when tool mode is enabled
+                build_config["action_button"]["show"] = False  # Hide action field when tool mode is enabled
                 for field in self._all_fields:
                     build_config[field]["show"] = False  # Update show status for all fields based on tool mode
             elif field_value is False:
-                build_config["action"]["show"] = True  # Show action field when tool mode is disabled
+                build_config["action_button"]["show"] = True  # Show action field when tool mode is disabled
                 for field in self._all_fields:
                     build_config[field]["show"] = True  # Update show status for all fields based on tool mode
             return build_config
 
-        if field_name == "action":
+        if field_name == "action_button":
             self._update_action_config(build_config, field_value)
             # Keep the existing show/hide behaviour
             self.show_hide_fields(build_config, field_value)
@@ -741,9 +741,9 @@ class ComposioBaseComponent(Component):
         if field_name == "api_key" and len(field_value) == 0:
             build_config["auth_link"]["value"] = ""
             build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
-            build_config["action"]["options"] = []
-            build_config["action"]["helper_text"] = "Please connect before selecting actions."
-            build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+            build_config["action_button"]["options"] = []
+            build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
+            build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
             return build_config
 
         # Only proceed with connection logic if we have an API key
@@ -752,17 +752,17 @@ class ComposioBaseComponent(Component):
 
         # CRITICAL: If tool_mode is enabled (check both instance and build_config), skip all connection logic
         if current_tool_mode:
-            build_config["action"]["show"] = False
+            build_config["action_button"]["show"] = False
             return build_config
 
         # Update action options only if tool_mode is disabled
         self._build_action_maps()
-        build_config["action"]["options"] = [
+        build_config["action_button"]["options"] = [
             {"name": self.sanitize_action_name(action), "metadata": action} for action in self._actions_data
         ]
         # Only set show=True if tool_mode is not enabled
         if not current_tool_mode:
-            build_config["action"]["show"] = True
+            build_config["action_button"]["show"] = True
 
         try:
             toolset = self._build_wrapper()
@@ -843,8 +843,8 @@ class ComposioBaseComponent(Component):
                     # User has active connection
                     build_config["auth_link"]["value"] = "validated"
                     build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                    build_config["action"]["helper_text"] = ""
-                    build_config["action"]["helper_text_metadata"] = {}
+                    build_config["action_button"]["helper_text"] = ""
+                    build_config["action_button"]["helper_text_metadata"] = {}
                 else:
                     # No active connection - create OAuth connection and set redirect URL immediately
                     try:
@@ -872,34 +872,34 @@ class ComposioBaseComponent(Component):
                         # Set the redirect URL directly - like the old implementation
                         build_config["auth_link"]["value"] = redirect_url
                         build_config["auth_link"]["auth_tooltip"] = "Connect"
-                        build_config["action"]["helper_text"] = "Please connect before selecting actions."
-                        build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+                        build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
+                        build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
                     except ValueError as e:
                         logger.error(f"Error creating OAuth connection: {e}")
                         build_config["auth_link"]["value"] = "connect"
                         build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
-                        build_config["action"]["helper_text"] = "Please connect before selecting actions."
-                        build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+                        build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
+                        build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
 
             except ValueError as e:
                 logger.error(f"Error checking connection status for {toolkit_slug}: {e}")
                 # Default to disconnected state on error
                 build_config["auth_link"]["value"] = "connect"
                 build_config["auth_link"]["auth_tooltip"] = "Connect"
-                build_config["action"]["helper_text"] = "Please connect before selecting actions."
-                build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+                build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
+                build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
 
         except ValueError as e:
             build_config["auth_link"]["value"] = ""
             build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
-            build_config["action"]["helper_text"] = "Please connect before selecting actions."
-            build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+            build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
+            build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
             logger.error(f"Error in auth flow: {e}")
 
         # CRITICAL: Final check to ensure action field is hidden when tool_mode is enabled
         # This overrides any other logic that might have set it to visible
         if self._is_tool_mode_enabled():
-            build_config["action"]["show"] = False
+            build_config["action_button"]["show"] = False
             logger.debug("Final check: Hiding action field because tool_mode is enabled")
 
         return build_config
@@ -948,7 +948,9 @@ class ComposioBaseComponent(Component):
         self._build_action_maps()
 
         display_name = (
-            self.action[0]["name"] if isinstance(getattr(self, "action", None), list) and self.action else self.action
+            self.action_button[0]["name"]
+            if isinstance(getattr(self, "action_button", None), list) and self.action_button
+            else self.action_button
         )
         action_key = self._display_to_key_map.get(display_name)
 
