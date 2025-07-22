@@ -1,8 +1,6 @@
-from langchain.chains import ConversationChain
-
 from lfx.base.chains.model import LCChainComponent
-from lfx.field_typing import Message
 from lfx.inputs.inputs import HandleInput, MultilineInput
+from lfx.schema.message import Message
 
 
 class ConversationChainComponent(LCChainComponent):
@@ -33,6 +31,15 @@ class ConversationChainComponent(LCChainComponent):
     ]
 
     def invoke_chain(self) -> Message:
+        try:
+            from langchain.chains import ConversationChain
+        except ImportError as e:
+            msg = (
+                "ConversationChain requires langchain to be installed. Please install it with "
+                "`uv pip install langchain`."
+            )
+            raise ImportError(msg) from e
+
         if not self.memory:
             chain = ConversationChain(llm=self.llm)
         else:
