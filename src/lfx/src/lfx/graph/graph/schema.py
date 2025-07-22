@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple, NotRequired, Protocol
+from typing import TYPE_CHECKING, NamedTuple, Protocol
 
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
     from lfx.graph.edge.schema import EdgeData
