@@ -161,15 +161,17 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
 
-    def get_base_inputs(self):
-        if not hasattr(self, "_base_inputs"):
+    @classmethod
+    def get_base_inputs(cls):
+        if not hasattr(cls, "_base_inputs"):
             return []
-        return self.get_base_inputs()
+        return cls._base_inputs
 
-    def get_base_outputs(self):
-        if not hasattr(self, "_base_outputs"):
+    @classmethod
+    def get_base_outputs(cls):
+        if not hasattr(cls, "_base_outputs"):
             return []
-        return self._base_outputs
+        return cls._base_outputs
 
     def get_undesrcore_inputs(self) -> dict[str, InputTypes]:
         return self._inputs
@@ -1503,7 +1505,7 @@ class Component(CustomComponent):
 
         Only sets default values if the fields are not already provided.
         """
-        from lfx.utils.schemas import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
+        from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
         # Set default session_id from graph if not already set
         if (
@@ -1782,3 +1784,9 @@ class Component(CustomComponent):
             str: The formatted error message with component display name.
         """
         return f"[Component: {self.display_name or self.__class__.__name__}] {message}"
+
+
+def _get_component_toolkit():
+    from lfx.custom.tools import ComponentToolkit
+
+    return ComponentToolkit
