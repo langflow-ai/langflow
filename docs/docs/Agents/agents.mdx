@@ -32,12 +32,15 @@ These instructions are applied in addition to the **Input**, which is provided a
 Langflow Agents have built-in memory enabled by default that allows them to remember previous messages in a conversation.
 This memory acts as a rolling chat history window, ensuring the Agent can reference earlier exchanges and maintain context without requiring a separate [Message History](/components-helpers#message-history) component.
 
-The Agent’s internal chat history is stored in the Langflow database, just like the [Message History](/components-helpers#message-history) helper component. The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
+The Agent’s internal chat history is stored in the Langflow database, just like the [Message History](/components-helpers#message-history) helper component.
+The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
 
-- Linux/WSL: `~/.cache/langflow/langflow.db`
-- macOS: `/Users/<username>/Library/Caches/langflow/langflow.db`
-- Windows: `%LOCALAPPDATA%\langflow\langflow\Cache\langflow.db`
+- **macOS Desktop**: `/Users/<username>/.langflow/data/database.db`
+- **Windows Desktop**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
+- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version may vary)
+- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
 
+If your Langflow deployment has `LANGFLOW_DATABASE_URL` set to PostgreSQL, the Agent memory will use the PostgreSQL database.
 Each conversation is associated with a session ID, so messages are grouped and retrieved per session.
 This means your chat history is saved and can be accessed or retrieved later, even if you refresh or revisit the flow.
 
