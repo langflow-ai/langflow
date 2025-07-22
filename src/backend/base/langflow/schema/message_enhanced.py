@@ -10,13 +10,13 @@ from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
 from langchain_core.prompts.prompt import PromptTemplate
+from lfx.schema.image import Image, get_file_paths, is_image_file
 from lfx.schema.message import Message as LfxMessage
 from loguru import logger
 from pydantic import ConfigDict, Field, field_serializer, field_validator
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.data import Data
-from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,

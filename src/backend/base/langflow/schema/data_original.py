@@ -169,7 +169,7 @@ class Data(BaseModel):
         files = self.data.get("files", [])
         if sender == MESSAGE_SENDER_USER:
             if files:
-                from langflow.schema.image import get_file_paths
+                from lfx.schema.image import get_file_paths
 
                 resolved_file_paths = get_file_paths(files)
                 contents = [create_image_content_dict(file_path) for file_path in resolved_file_paths]

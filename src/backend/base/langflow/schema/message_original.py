@@ -15,13 +15,13 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
 from langchain_core.prompts.prompt import PromptTemplate
 from lfx.base.prompts.utils import dict_values_to_string
+from lfx.schema.image import Image, get_file_paths, is_image_file
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
-from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties, Source
 from langflow.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from langflow.utils.constants import (
