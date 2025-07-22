@@ -173,6 +173,9 @@ class Component(CustomComponent):
             return []
         return cls._base_outputs
 
+    def get_event_manager(self) -> EventManager | None:
+        return self._event_manager
+
     def get_undesrcore_inputs(self) -> dict[str, InputTypes]:
         return self._inputs
 
