@@ -66,7 +66,7 @@ class Data(BaseData):
         Returns:
             Data: The filtered Data.
         """
-        from langflow.template.utils import apply_json_filter
+        from lfx.template.utils import apply_json_filter
 
         return apply_json_filter(self.data, filter_str)
 

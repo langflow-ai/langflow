@@ -9,11 +9,11 @@ from loguru import logger
 from typing_extensions import override
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
-from langflow.services.deps import get_chat_service, get_socket_service
+from langflow.services.deps import get_chat_service
 from langflow.utils.util import remove_ansi_escape_codes
 
 if TYPE_CHECKING:
-    from langflow.services.socket.service import SocketIOService
+    pass
 
 
 # https://github.com/hwchase17/chat-langchain/blob/master/callback.py
@@ -28,9 +28,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     def __init__(self, session_id: str):
         self.chat_service = get_chat_service()
         self.client_id = session_id
-        self.socketio_service: SocketIOService = get_socket_service()
         self.sid = session_id
-        # self.socketio_service = self.chat_service.active_connections[self.client_id]
 
     @override
     async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:  # type: ignore[misc]
