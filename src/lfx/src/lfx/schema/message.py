@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
 
+from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from pydantic import ConfigDict, Field, field_serializer, field_validator
 
@@ -182,6 +183,28 @@ class Message(Data):
             sender=sender,
             sender_name=sender_name,
         )
+
+    def load_lc_prompt(self):
+        if "prompt" not in self:
+            msg = "Prompt is required."
+            raise ValueError(msg)
+        # self.prompt was passed through jsonable_encoder
+        # so inner messages are not BaseMessage
+        # we need to convert them to BaseMessage
+        messages = []
+        for message in self.prompt.get("kwargs", {}).get("messages", []):
+            match message:
+                case HumanMessage():
+                    messages.append(message)
+                case _ if message.get("type") == "human":
+                    messages.append(HumanMessage(content=message.get("content")))
+                case _ if message.get("type") == "system":
+                    messages.append(SystemMessage(content=message.get("content")))
+                case _ if message.get("type") == "ai":
+                    messages.append(AIMessage(content=message.get("content")))
+
+        self.prompt["kwargs"]["messages"] = messages
+        return load(self.prompt)
 
     def to_lc_message(self) -> BaseMessage:
         """Convert to LangChain message.

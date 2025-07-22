@@ -8,7 +8,6 @@ from pydantic import Field, field_validator, model_validator
 from lfx.inputs.validators import CoalesceBool
 from lfx.schema.data import Data
 from lfx.schema.message import Message
-from lfx.template.field.base import Input
 
 from .input_mixin import (
     AuthMixin,
@@ -640,6 +639,8 @@ class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
 
 
 DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
+
+from lfx.template.field.base import Input  # noqa: E402
 
 
 class DefaultPromptField(Input):
