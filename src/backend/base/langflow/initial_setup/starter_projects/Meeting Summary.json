@@ -1718,7 +1718,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "5ca89b168f3f",
+              "code_hash": "254367730030",
               "module": "langflow.components.helpers.memory.MemoryComponent"
             },
             "minimized": false,
