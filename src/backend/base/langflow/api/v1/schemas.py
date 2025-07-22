@@ -455,7 +455,7 @@ class AuthSettings(BaseModel):
     oauth_server_url: str | None = None
     oauth_callback_path: str | None = None
     oauth_client_id: str | None = None
-    oauth_client_secret: SecretStr | None = None
+    oauth_client_secret: str | None = None
     oauth_auth_url: str | None = None
     oauth_token_url: str | None = None
     oauth_mcp_scope: str | None = None

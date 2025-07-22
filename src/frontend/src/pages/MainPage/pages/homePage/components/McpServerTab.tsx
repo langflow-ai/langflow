@@ -268,6 +268,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "--headers",
         "x-iam-endpoint",
         "${currentAuthSettings.iam_endpoint || "YOUR_IAM_ENDPOINT"}",`;
+      case "oauth":
+        return `
+        "--auth-type",
+        "oauth"`;
       default:
         return "";
     }
@@ -278,16 +282,16 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       return "";
     if (currentAuthSettings?.auth_type === "oauth") {
       return `
-        "OAUTH_HOST": "${currentAuthSettings.oauth_host}",
-        "OAUTH_PORT": "${currentAuthSettings.oauth_port}",
-        "OAUTH_SERVER_URL": "${currentAuthSettings.oauth_server_url}",
-        "OAUTH_CALLBACK_PATH": "${currentAuthSettings.oauth_callback_path}",
-        "OAUTH_CLIENT_ID": "${currentAuthSettings.oauth_client_id}",
-        "OAUTH_CLIENT_SECRET": "${currentAuthSettings.oauth_client_secret}",
-        "OAUTH_AUTH_URL": "${currentAuthSettings.oauth_auth_url}",
-        "OAUTH_TOKEN_URL": "${currentAuthSettings.oauth_token_url}",
-        "OAUTH_MCP_SCOPE": "${currentAuthSettings.oauth_mcp_scope}",
-        "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope}",
+        "OAUTH_HOST": "${currentAuthSettings.oauth_host || "YOUR_OAUTH_HOST"}",
+        "OAUTH_PORT": "${currentAuthSettings.oauth_port || "YOUR_OAUTH_PORT"}",
+        "OAUTH_SERVER_URL": "${currentAuthSettings.oauth_server_url || "YOUR_OAUTH_SERVER_URL"}",
+        "OAUTH_CALLBACK_PATH": "${currentAuthSettings.oauth_callback_path || "YOUR_OAUTH_CALLBACK_PATH"}",
+        "OAUTH_CLIENT_ID": "${currentAuthSettings.oauth_client_id || "YOUR_OAUTH_CLIENT_ID"}",
+        "OAUTH_CLIENT_SECRET": "${currentAuthSettings.oauth_client_secret || "YOUR_OAUTH_CLIENT_SECRET"}",
+        "OAUTH_AUTH_URL": "${currentAuthSettings.oauth_auth_url || "YOUR_OAUTH_AUTH_URL"}",
+        "OAUTH_TOKEN_URL": "${currentAuthSettings.oauth_token_url || "YOUR_OAUTH_TOKEN_URL"}",
+        "OAUTH_MCP_SCOPE": "${currentAuthSettings.oauth_mcp_scope || "YOUR_OAUTH_MCP_SCOPE"}",
+        "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope || "YOUR_OAUTH_PROVIDER_SCOPE"}",
       `;
     }
     return "";
