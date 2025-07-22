@@ -293,7 +293,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Redis", name: "redis", icon: "Redis" },
   { display_name: "SambaNova", name: "sambanova", icon: "SambaNova" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
-  { display_name: "SearchAPI", name: "searchapi", icon: "SearchAPI" },
+  { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
   { display_name: "Twelve Labs", name: "twelvelabs", icon: "TwelveLabs" },
