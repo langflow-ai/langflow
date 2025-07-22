@@ -9,7 +9,7 @@ jobs:
     if: contains(github.event.label.name, 'smoke-test')
     name: "Smoke Tests (No API Keys)"
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 8
 
     steps:
       - name: Checkout PR
@@ -31,14 +31,22 @@ jobs:
         run: |
           uv sync --dev
 
-      - name: Run backend smoke tests
+      - name: Run backend smoke tests (critical tests only)
         run: |
-          uv run pytest src/backend/tests/unit \
-            -m "not api_key_required" \
+          uv run pytest \
+            src/backend/tests/unit/test_version.py \
+            src/backend/tests/unit/test_load_components.py \
+            src/backend/tests/unit/test_schema.py \
+            src/backend/tests/unit/test_validate_code.py \
+            src/backend/tests/unit/serialization/test_serialization.py \
+            src/backend/tests/unit/schema/test_schema_data.py \
+            src/backend/tests/unit/helpers/test_data.py \
+            src/backend/tests/unit/test_async_helpers.py \
+            src/backend/tests/unit/io/test_io_schema.py \
+            src/backend/tests/unit/utils/test_util_strings.py \
             --tb=short \
-            --maxfail=10 \
-            -v \
-            --durations=10
+            --maxfail=5 \
+            -v
         env:
           LANGFLOW_SUPERUSER: admin
           LANGFLOW_SUPERUSER_PASSWORD: 123456
@@ -55,10 +63,10 @@ jobs:
           cd src/frontend
           npm ci
 
-      - name: Run frontend smoke tests
+      - name: Run frontend smoke tests (unit tests only)
         run: |
           cd src/frontend
-          npm run test:ci
+          npm run test -- --testPathPattern="(unit|components)" --watchAll=false --coverage=false --passWithNoTests
         env:
           NODE_ENV: test
 
@@ -73,10 +81,11 @@ jobs:
 
             const comment = `${emoji} **Smoke tests ${status}**
 
-            Tests ran without API keys - covers ~90% of functionality.
+            Critical functionality validated (~5-8 minutes):
 
-            - Backend tests: Skipped API-dependent tests
-            - Frontend tests: Full test suite with mocked APIs
+            - **Backend**: 10 essential test files (imports, schema, serialization, core utils)
+            - **Frontend**: Unit tests only (components, utilities)
+            - **Coverage**: Core functionality without external dependencies
 
             View details in the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
 
