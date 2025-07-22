@@ -33,8 +33,23 @@ jobs:
 
       - name: Run backend smoke tests (critical tests only)
         run: |
-          uv run pytest src/backend/tests/unit \
-            --ignore=src/backend/tests/integration \
+          uv run pytest \
+            src/backend/tests/unit/test_database.py \
+            src/backend/tests/unit/test_login.py \
+            src/backend/tests/unit/api/v1/test_validate.py \
+            src/backend/tests/unit/test_endpoints.py \
+            src/backend/tests/unit/api/v1/test_flows.py \
+            src/backend/tests/unit/graph/test_graph.py \
+            src/backend/tests/unit/services/flow/test_flow_runner.py \
+            src/backend/tests/unit/test_chat_endpoint.py \
+            src/backend/tests/unit/api/v1/test_api_key.py \
+            src/backend/tests/unit/api/v1/test_endpoints.py \
+            src/backend/tests/unit/components/languagemodels/test_openai_model.py \
+            src/backend/tests/unit/components/agents/test_agent_component.py \
+            src/backend/tests/unit/services/tracing/test_tracing_service.py \
+            src/backend/tests/unit/custom/component/test_component_instance_attributes.py \
+            src/backend/tests/unit/test_initial_setup.py \
+            src/backend/tests/unit/schema/test_schema_message.py \
             -m 'not api_key_required' \
             --tb=short \
             --maxfail=5 \
