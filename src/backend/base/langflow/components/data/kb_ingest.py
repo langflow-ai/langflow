@@ -123,13 +123,9 @@ class KBIngestionComponent(Component):
             name="embedding_model",
             display_name="Model Name",
             options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
-            options_metadata=[
-                {"icon": "OpenAI"} for _ in OPENAI_EMBEDDING_MODEL_NAMES
-            ] + [
-                {"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES
-            ] + [
-                {"icon": "Cohere"} for _ in COHERE_MODEL_NAMES
-            ],
+            options_metadata=[{"icon": "OpenAI"} for _ in OPENAI_EMBEDDING_MODEL_NAMES]
+            + [{"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES]
+            + [{"icon": "Cohere"} for _ in COHERE_MODEL_NAMES],
             value="text-embedding-3-small",
             info="Select the embedding model to use",
         ),
@@ -235,8 +231,10 @@ class KBIngestionComponent(Component):
         model = self.embedding_model
         # Get provider by matching model name to lists
         provider = (
-            "OpenAI" if model in OPENAI_EMBEDDING_MODEL_NAMES
-            else "HuggingFace" if model in HUGGINGFACE_MODEL_NAMES
+            "OpenAI"
+            if model in OPENAI_EMBEDDING_MODEL_NAMES
+            else "HuggingFace"
+            if model in HUGGINGFACE_MODEL_NAMES
             else "Cohere"
         )
         api_key = self.api_key
@@ -322,8 +320,10 @@ class KBIngestionComponent(Component):
         model = self.embedding_model
         # Get provider by matching model name to lists
         provider = (
-            "OpenAI" if model in OPENAI_EMBEDDING_MODEL_NAMES
-            else "HuggingFace" if model in HUGGINGFACE_MODEL_NAMES
+            "OpenAI"
+            if model in OPENAI_EMBEDDING_MODEL_NAMES
+            else "HuggingFace"
+            if model in HUGGINGFACE_MODEL_NAMES
             else "Cohere"
         )
 
@@ -637,8 +637,10 @@ class KBIngestionComponent(Component):
         if field_name == "embedding_model":
             # Get provider by matching model name to lists
             provider = (
-                "OpenAI" if field_value in OPENAI_EMBEDDING_MODEL_NAMES
-                else "HuggingFace" if field_value in HUGGINGFACE_MODEL_NAMES
+                "OpenAI"
+                if field_value in OPENAI_EMBEDDING_MODEL_NAMES
+                else "HuggingFace"
+                if field_value in HUGGINGFACE_MODEL_NAMES
                 else "Cohere"
             )
             build_config["api_key"]["display_name"] = f"{provider} API Key"
