@@ -228,7 +228,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "AI/ML", name: "aiml", icon: "AI/ML" },
+  { display_name: "AI/ML API", name: "aiml", icon: "AI/ML" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
