@@ -41,7 +41,7 @@ For a prebuilt example, use the [**Simple Agent** template](/simple-agent) or tr
     If you want to use a different provider, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
     For more information, see [Agent component parameters](#agent-component-parameters).
 
-4. Add [**Chat input** and **Chat output** components](/components-io) to your flow, and then connect them to the **Agent** component.
+4. Add [**Chat Input** and **Chat Output** components](/components-io) to your flow, and then connect them to the **Agent** component.
 
     At this point, you have created a basic LLM-based chat flow that you can test in the <Icon name="Play" aria-hidden="true" /> **Playground**.
     However, this flow only chats with the LLM.
@@ -94,20 +94,23 @@ For a multi-agent example, see [Use an agent as a tool](/agents-tools#use-an-age
 
 You can configure the **Agent** component to use your preferred provider and model, custom instructions, and tools.
 
+:::tip
+Many optional **Agent** component input parameters are hidden by default in the visual editor.
+You can view and toggle all parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+:::
+
 ### Provider and model
 
 Use the **Model Provider** (`agent_llm`) and **Model Name** (`llm_model`) settings to select the model provider and LLM that you want the agent to use.
 
 The **Agent** component includes many models from several popular model providers.
-To access other providers and models, set **Model Provider** to **Custom**, and then connect a [**Language Model** component](/components-models).
+To access other providers and models, set **Model Provider** to **Custom**, and then connect any [**Language Model** component](/components-models).
 
-:::tip
 If you need to generate embeddings in your flow, use an [**Embedding Model** component](/components-embedding-models).
-:::
 
 ### Model provider API key
 
-In the **API Key** field, enter a valid authentication key for your selected model provider, if you selected one of the built-in providers.
+In the **API Key** field, enter a valid authentication key for your selected model provider, if you are using a built-in provider.
 For example, to use the default OpenAI model, you must provide a valid OpenAI API key for an OpenAI account that has credits and permission to call OpenAI LLMs.
 
 You can enter the key directly, but it is recommended that you follow industry best practices for storing and referencing API keys.
@@ -122,25 +125,6 @@ In the **Agent Instructions** (`system_prompt`) field, you can provide custom in
 
 These instructions are applied in addition to the **Input** (`input_value`), which can be entered directly or provided through another component, such as a **Chat Input** component.
 
-### Agent memory
-
-Langflow Agents have built-in memory enabled by default that allows them to remember previous messages in a conversation.
-This memory acts as a rolling chat history window, ensuring the Agent can reference earlier exchanges and maintain context without requiring a separate [Message History](/components-helpers#message-history) component.
-
-The Agent’s internal chat history is stored in the Langflow database, just like the [Message History](/components-helpers#message-history) helper component.
-The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
-
-- **macOS Desktop**: `/Users/<username>/.langflow/data/database.db`
-- **Windows Desktop**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
-- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version may vary)
-- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
-
-If your Langflow deployment has `LANGFLOW_DATABASE_URL` set to PostgreSQL, the Agent memory will use the PostgreSQL database.
-Each conversation is associated with a session ID, so messages are grouped and retrieved per session.
-This means your chat history is saved and can be accessed or retrieved later, even if you refresh or revisit the flow.
-
-The number of stored messages can be configured in the **Number of Chat History Messages** field in the Agent component.
-
 ### Tools
 
 Agents are most useful when they have the appropriate tools available to complete requests.
@@ -153,6 +137,20 @@ For more information, see [Configure tools for agents](/agents-tools).
 :::tip
 To allow agents to use tools from MCP servers, use the [**MCP Tools** component](/components-agents#mcp-connection).
 :::
+
+### Agent memory
+
+Langflow agents have built-in chat memory that is enabled by default.
+This memory allows them to retrieve and reference messages from previous conversations, maintaining a rolling context window for each chat session ID.
+
+Chat memory is grouped by session ID (`session_id`), and it is recommended to use custom session IDs if you need to segregate chat memory for different users or applications that run the same flow.
+
+By default, the **Agent** component uses your Langflow installation's storage, and it provides limited chat memory configuration options, such as **Number of Chat History Messages**.
+
+Although a **Message History** component is not required to enable chat memory, it provides more options for sorting, filtering, and limiting memories.
+Additionally, a **Message History** component is required if you want to use dedicated, external chat memory, such as Redis.
+
+For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/components-helpers#message-history).
 
 ### Additional parameters
 

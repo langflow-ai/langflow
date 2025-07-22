@@ -36,29 +36,14 @@ The Current Date component returns the current date and time in a selected timez
 
 ## Message History
 
-
-<!-- TODO: Message History component isn't required with Agent when using built in storage bc agent automatically uses the built in storage and message history. -->
-
 <!-- Message history component doesn't require Type Convert unless you need to convert the type. -->
-
-<!-- Built-in Storage - Align w. info on /memory, /agents, /components-agents pages:
-
-This component handles chat history and message storage using Langflow’s SQLite database or an external memory source to save and retrieve chat messages. The default storage option is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
-
-- **macOS Desktop**: `/Users/<username>/.langflow/data/database.db`
-- **Windows Desktop**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
-- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version may vary)
-- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
-
-If your Langflow deployment has `LANGFLOW_DATABASE_URL` set to PostgreSQL, the Message History component will use the PostgreSQL database.
--->
 
 
 The **Message History** component provides combined chat history and message storage functionality.
 
-This component can use Langflow's SQLite database _or_ external chat memory to store and retrieve chat messages.
+It can use either your Langflow installation's storage _or_ external chat memory to store and retrieve chat messages.
 
-This component replaces the legacy **Chat History** and **Message Store** components.
+It replaces the legacy **Chat History** and **Message Store** components.
 
 <details>
 <summary>How does chat memory work?</summary>
@@ -68,7 +53,7 @@ For example, if a user has already told the LLM their name, the LLM can retrieve
 
 Chat memory is distinct from vector store memory because it is built specifically for storing and retrieving chat messages from databases.
 
-The **Message History** component and provider-specific chat memory components provide access to their respective external databases _as memory_.
+Components that support chat memory (such as the **Agent**, **Language Model**, **Message History**, or third-party **Chat Memory** components) provide access to their respective databases _as memory_.
 Retrieval as memory is an important distinction for LLMs and agents because this storage and retrieval mechanism is specifically designed to recall context from past conversations.
 Unlike vector stores, which are designed for semantic search and retrieval of text chunks, chat memory is designed to store and retrieve chat messages in a way that is optimized for conversation history.
 
@@ -77,7 +62,11 @@ Unlike vector stores, which are designed for semantic search and retrieval of te
 The **Message History** component uses the [session ID](/session-id) to identify related chat memories.
 For example, if you use user IDs as session IDs, then each user's chat history is stored separately, isolating the context of their chats from other users' chats.
 
-For more information about memory in Langflow, see [Memory](/memory).
+For more information about chat memory and Langflow storage, see [Memory management options](/memory).
+
+### When to use the Message History component
+
+
 
 ### Use the Message History component in a flow
 
