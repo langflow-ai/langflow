@@ -7,16 +7,24 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a suite of components for parsing documents.
+Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing documents.
 
 ## Install Docling dependency
 
-* Install the Docling extra in Langflow OSS with `uv pip install langflow[docling]` or `uv pip install docling`.
+:::important
+You must install the Docling dependency to use the Docling components in Langflow.
+:::
 
-    To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
-    For more information, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+Install the Docling extra in Langflow OSS with `uv pip install 'langflow[docling]'`.
+
+To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
+For more information, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
 ## Use Docling components in a flow
+
+:::tip
+To learn more about content extraction with Docling, see the video tutorial [Docling + Langflow: Document Processing for AI Workflows](https://www.youtube.com/watch?v=5DuS6uRI5OM).
+:::
 
 This example demonstrates how to use Docling components to split a PDF in a flow:
 
@@ -141,7 +149,3 @@ This component exports DoclingDocument to Markdown, HTML, and other formats.
 | dataframe | DataFrame | The exported data as a DataFrame. |
 
 </details>
-
-## Docling video tutorial
-
-To learn more about content extraction with Docling, see the video tutorial [Docling + Langflow: Document Processing for AI Workflows](https://www.youtube.com/watch?v=5DuS6uRI5OM).
