@@ -1,74 +1,88 @@
 ---
-title: Voice mode
+title: Use voice mode
 slug: /concepts-voice-mode
 ---
 
 import Icon from "@site/src/components/icon";
 
-<!-- TODO: Combine & redirect to /concepts-playground -->
+You can use Langflow's voice mode to interact with your flows verbally through a microphone and speakers.
 
-The Langflow **Playground** supports **voice mode** for interacting with your applications through a microphone.
+## Prerequisites
 
-An [OpenAI API key](https://platform.openai.com/) is required to use **voice mode**. An [ElevenLabs](https://elevenlabs.io) API key enables more voices in the chat, but is optional.
+Voice mode requires the following:
 
-Your flow must have a [Chat input](/components-io#chat-input) component to interact with the **Playground**.
+* A flow with **Chat Input**, **Language Model**, and **Chat Output** components.
 
-## Prerequisite
+    If your flow has an **Agent** component, make sure the tools in your flow have accurate names and descriptions to help the agent choose which tools to use.
 
-- [An OpenAI API key](https://platform.openai.com/)
+    Additionally, be aware that voice mode overrides typed instructions in the **Agent** component's **Agent Instructions** field.
 
-## Use voice mode in the Langflow Playground
+* An [OpenAI](https://platform.openai.com/) account and an OpenAI API key because Langflow uses the OpenAI API to process voice input and generate responses.
 
-Chat with an agent in the **Playground**, and get more recent results by asking the agent to use tools.
+* Optional: An [ElevenLabs](https://elevenlabs.io) API key to enable voice options for the LLM's response.
 
-1. Create a [Simple agent starter project](/simple-agent).
+* A microphone and speakers.
+
+    A high quality microphone and minimal background noise are recommended for optimal voice comprehension.
+
+## Test voice mode in the Playground
+
+In the **Playground**, click the <Icon name="Mic" aria-hidden="true"/> **Microphone** to enable voice mode and verbally interact with your flows through a microphone and speakers.
+
+The following steps use the [**Simple Agent** template](/simple-agent) to demonstrate how to enable voice mode:
+
+1. Create a flow based on the **Simple Agent** template.
+
 2. Add your **OpenAI API key** credentials to the **Agent** component.
-3. To start a chat session, click **Playground**.
-4. To enable voice mode, click the <Icon name="Mic" aria-hidden="true"/> **Microphone** icon.
-The **Voice mode** pane opens.
-5. In the **OpenAI API Key** field, add your **OpenAI API key** credentials.
-This key is saved as a [global variable](/configuration-global-variables) in Langflow and is accessible from any component or flow.
-6. Your browser may prompt you for microphone access.
-Browser access is **required** to use voice mode.
-To continue, allow microphone access in your browser.
-7. In the **Audio Input** menu, select the input device to use with voice mode.
-:::tip
-A higher quality microphone improves OpenAI's voice chat comprehension.
-:::
-8. Optionally, add your **ElevenLabs API key** in the **ElevenLabs API Key** field.
-This makes more voices available for your AI responses.
-This key is saved as a [global variable](/configuration-global-variables) in Langflow and is accessible from any component or flow.
-9. In the **Preferred Language** menu, select your language for conversing with Langflow.
-This option changes both the spoken conversation and the chat responses in the **Playground**.
-10. Talk into your microphone.
-The waveform in the voice mode pane should register your input, and the agent should respond in voice and in the **Playground**.
-11. Ask the agent to use the tools available to find recent news about a subject.
 
-The agent describes its search process, including accessing the **URL** tool to fetch recent news.
-The agent summarizes the recent news in speech and in the **Playground**.
+3. Click **Playground**.
 
-Be aware of the following considerations when using voice mode:
+4. Click the <Icon name="Mic" aria-hidden="true"/> **Microphone** icon to open the **Voice mode** dialog.
 
-* Name and describe your tools accurately, so the **Agent** chooses tools correctly.
-* Voice mode does not use the instructions in the Agent component's **Agent Instructions** field, because your spoken instructions override this value.
-* Voice mode only maintains context within the conversation session you are currently in.
-If you exit a conversation and close the **Playground**, your conversational context is not available in the next chat session.
+5. Enter your OpenAI API key, and then click **Save**. Langflow saves the key as a [global variable](/configuration-global-variables).
 
-## Langflow voice mode endpoints
+6. If you are prompted to grant microphone access, you must allow microphone access to use voice mode.
+If microphone access is blocked, you won't be able to provide verbal input.
 
-Langflow exposes OpenAI Realtime API-compatible websocket endpoints for your flows. You can build voice applications against these endpoints the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
+7. For **Audio Input**, select the input device to use with voice mode.
 
-The WebSockets endpoints require an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and they support an optional [ElevenLabs](https://elevenlabs.io) integration.
+8. Optional: Add an ElevenLabs API key to enable more voices for the LLM's response.
+Langflow saves this key as a global variable.
 
-Langflow exposes two WebSockets endpoints:
+9. For **Preferred Language**, select the language you want to use for your conversations with the LLM.
+This option changes both the expected input language and the response language.
 
-* `/ws/flow_as_tool/{flow_id}` or `/ws/flow_as_tool/{flow_id}/{session_id}`: Establishes a connection to OpenAI Realtime voice, and then invokes flows as tools by the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
-This approach is ideal for low latency applications, but it is less deterministic since the OpenAI voice-to-voice model determines when to call your flow.
+10. Speak into your microphone to start the chat.
 
-* `/ws/flow_tts/{flow_id}` or `/ws/flow_tts/{flow_id}/{session_id}`: Converts audio to text using [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription), and then each flow is invoked directly for each transcript.
+    If configured correctly, the waveform in the voice mode dialog registers your input, and then the agent's logic and response are described verbally and in the **Playground**.
+
+## Develop applications with websockets endpoints
+
+Langflow exposes two OpenAI Realtime API-compatible websocket endpoints for your flows.
+You can build applications against these endpoints the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
+
+The Langflow API's websockets endpoints require an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and they support an optional [ElevenLabs](https://elevenlabs.io) integration with an ElevenLabs API key.
+
+Additionally, both endpoints require that you provide the flow ID in the endpoint path.
+
+### Voice-to-voice audio streaming
+
+The `/ws/flow_as_tool/$FLOW_ID` endpoint establishes a connection to OpenAI Realtime voice, and then invokes the specified flow as a tool according to the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
+
+This approach is ideal for low latency applications, but it is less deterministic because the OpenAI voice-to-voice model determines when to call your flow.
+
+### Speech-to-text audio transcription
+
+The `/ws/flow_tts/$FLOW_ID` endpoint converts audio to text using [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription), and then directly invokes the specified flow for each transcript.
+
 This approach is more deterministic but has higher latency.
-This is the mode used in the Langflow Playground.
 
-Path parameters:
-* `flow_id`: Required path parameter. The ID of the flow to be used as a tool.
-* `session_id`: Optional path parameter. A unique identifier for the conversation session. If not provided, one is automatically generated.
+This is the mode used in the Langflow **Playground**.
+
+### Session IDs for websockets endpoints
+
+Both endpoints accept an optional `/$SESSION_ID` path parameter to provide a unique ID for the conversation.
+If omitted, Langflow uses the flow ID as the [session ID](/session-id).
+
+However, be aware that voice mode only maintains context within the current conversation instance.
+When you close the **Playground** or end a chat, verbal chat history is discarded and not available for future chat sessions.
