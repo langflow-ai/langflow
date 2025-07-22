@@ -296,7 +296,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
-  { display_name: "Twelve Labs", name: "twelvelabs", icon: "TwelveLabs" },
+  { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "VertexAI", name: "vertexai", icon: "VertexAI" },
