@@ -1,15 +1,15 @@
-import type { Page } from 'playwright/test';
-import { addFlowToTestOnEmptyLangflow } from './add-flow-to-test-on-empty-langflow';
+import type { Page } from "playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "./add-flow-to-test-on-empty-langflow";
 
 export const awaitBootstrapTest = async (
   page: Page,
   options?: {
     skipGoto?: boolean;
     skipModal?: boolean;
-  }
+  },
 ) => {
   if (!options?.skipGoto) {
-    await page.goto('/');
+    await page.goto("/");
   }
 
   await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -17,7 +17,7 @@ export const awaitBootstrapTest = async (
   });
 
   const countEmptyButton = await page
-    .getByTestId('new_project_btn_empty_page')
+    .getByTestId("new_project_btn_empty_page")
     .count();
   if (countEmptyButton > 0) {
     await addFlowToTestOnEmptyLangflow(page);
@@ -30,7 +30,7 @@ export const awaitBootstrapTest = async (
   if (!options?.skipModal) {
     let modalCount = 0;
     try {
-      const modalTitleElement = await page?.getByTestId('modal-title');
+      const modalTitleElement = await page?.getByTestId("modal-title");
       if (modalTitleElement) {
         modalCount = await modalTitleElement.count();
       }
@@ -39,11 +39,11 @@ export const awaitBootstrapTest = async (
     }
 
     while (modalCount === 0) {
-      await page.getByTestId('new-project-btn').click();
+      await page.getByTestId("new-project-btn").click();
       await page.waitForSelector('[data-testid="modal-title"]', {
         timeout: 3000,
       });
-      modalCount = await page.getByTestId('modal-title')?.count();
+      modalCount = await page.getByTestId("modal-title")?.count();
     }
   }
 };
