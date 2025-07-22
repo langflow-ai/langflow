@@ -169,12 +169,12 @@ test(
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
     if (valueBadgeOne != "prompt") {
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
+    const valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
     if (valueBadgeTwo != "prompt1") {
       expect(false).toBeTruthy();
     }

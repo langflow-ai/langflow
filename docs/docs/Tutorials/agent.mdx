@@ -45,19 +45,19 @@ When connected to an **Agent** component as tools, the agent has the option to u
     Given the example prompt, the LLM would respond with recommendations and web links for items based on previous orders in `customer_orders.csv`.
 
     The **Playground** prints the agent's chain of thought as it selects tools to use and interacts with functionality provided by those tools.
-    For example, the agent can use the **Directory** component's `as_dataframe` tool to retrieve a [DataFrame](/concepts-objects#dataframe-object), and the **Web search** component's `perform_search` tool to find links to related items.
+    For example, the agent can use the **Directory** component's `as_dataframe` tool to retrieve a [DataFrame](/data-types#dataframe), and the **Web search** component's `perform_search` tool to find links to related items.
 
-## Add a prompt component to the flow
+## Add a Prompt Template component to the flow
 
 In this example, the application sends a customer's email address to the Langflow agent. The agent compares the customer's previous orders within the Directory component, searches the web for used versions of those items, and returns three results.
 
-1. To include the email address as a value in your flow, add a [Prompt](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
-2. In the Prompt component's **Template** field, enter `Recommend 3 used items for {email}, based on previous orders.`
-Adding the `{email}` value in curly braces creates a new input in the **Prompt** component, and the component connected to the `{email}` port is supplying the value for that variable.
+1. To include the email address as a value in your flow, add a [**Prompt Template**](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
+2. In the **Prompt Template** component's **Template** field, enter `Recommend 3 used items for {email}, based on previous orders.`
+Adding the `{email}` value in curly braces creates a new input in the **Prompt Template** component, and the component connected to the `{email}` port is supplying the value for that variable.
 This creates a point for the user's email to enter the flow from your request.
 If you aren't using the `customer_orders.csv` example file, modify the input to search for a value in your dataset.
 
-    At this point your flow has six components. The Chat Input is connected to the Prompt component's `email` input port. Then, the Prompt component's output port is connected to the Agent component's input port. The Directory and Web search components are connected to the Agent's Tools port. Finally, the Agent component's output port is connected to the Chat Output component, which returns the final response to the application.
+    At this point your flow has six components. The **Chat Input** is connected to the **Prompt Template** component's **email** port. Then, the **Prompt Template** output is connected to the **Agent** component's **System Message** port. The **Directory** and **Web Search** components are connected to the **Agent** component's **Tools** port. Finally, the **Agent** component's output is connected to the **Chat Output** component, which returns the final response to the application.
 
     ![An agent component connected to web search and directory components](/img/tutorial-agent-with-directory.png)
 

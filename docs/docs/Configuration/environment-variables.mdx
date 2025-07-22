@@ -32,13 +32,13 @@ export VARIABLE_NAME='VALUE'
 ```
 </TabItem>
 
-<TabItem value="windows" label="Windows" default>
+<TabItem value="windows" label="Windows">
 ```
 set VARIABLE_NAME='VALUE'
 ```
 </TabItem>
 
-<TabItem value="docker" label="Docker" default>
+<TabItem value="docker" label="Docker">
 ```bash
 docker run -it --rm \
     -p 7860:7860 \
@@ -107,7 +107,7 @@ If it detects a supported environment variable, then it automatically adopts the
     ```
 
     </TabItem>
-    <TabItem value="docker" label="Docker" default>
+    <TabItem value="docker" label="Docker">
 
     ```bash
     docker run -it --rm \
@@ -194,6 +194,7 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_COMPONENTS_PATH"/><span class="env-prefix">LANGFLOW_</span>COMPONENTS_PATH | String | `langflow/components` | Path to the directory containing custom components.<br/>See [`--components-path` option](./configuration-cli.mdx#run-components-path). |
 | <Link id="LANGFLOW_CONFIG_DIR"/><span class="env-prefix">LANGFLOW_</span>CONFIG_DIR | String | See description | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. Defaults: **Linux/WSL**: `~/.cache/langflow/`<br/>**macOS**: `/Users/<username>/Library/Caches/langflow/`<br/>**Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`|
 | <Link id="LANGFLOW_DATABASE_URL"/><span class="env-prefix">LANGFLOW_</span>DATABASE_URL | String | Not set | Set the database URL for Langflow. If not provided, Langflow uses a SQLite database. |
+| <Link id="LANGFLOW_USE_NOOP_DATABASE"/><span class="env-prefix">LANGFLOW_</span>USE_NOOP_DATABASE | Boolean | `false` | Use a no-op database, which avoids database connections and operations. Useful for running flows without a database. |
 | <Link id="LANGFLOW_DATABASE_CONNECTION_RETRY"/><span class="env-prefix">LANGFLOW_</span>DATABASE_CONNECTION_RETRY | Boolean | `false` | If True, Langflow tries to connect to the database again if it fails. |
 | <Link id="LANGFLOW_DB_POOL_SIZE"/><span class="env-prefix">LANGFLOW_</span>DB_POOL_SIZE | Integer | `10` | **DEPRECATED:** Use <span class="env-prefix">LANGFLOW_</span>DB_CONNECTION_SETTINGS instead. The number of connections to keep open in the connection pool. |
 | <Link id="LANGFLOW_DB_MAX_OVERFLOW"/><span class="env-prefix">LANGFLOW_</span>DB_MAX_OVERFLOW | Integer | `20` | **DEPRECATED:** Use <span class="env-prefix">LANGFLOW_</span>DB_CONNECTION_SETTINGS instead. The number of connections to allow that can be opened beyond the pool size. |

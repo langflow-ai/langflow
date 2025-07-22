@@ -13,7 +13,7 @@ They may perform some processing or type checking, like converting raw HTML data
 
 ## Use data components in a flow
 
-Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe-object) format, or can be connected to an **Agent** component to be used as tools.
+Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/data-types#dataframe) format, or can be connected to an **Agent** component to be used as tools.
 
 For example, to connect all three components to an Agent component, do the following:
 
@@ -110,7 +110,7 @@ This component recursively loads files from a directory, with options for file t
 
 ## File
 
-This component loads and parses files of various supported formats and converts the content into a [Data](/concepts-objects) object. It supports multiple file types and provides options for parallel processing and error handling.
+This component loads and parses files of various supported formats and converts the content into a [Data](/data-types#data) object. It supports multiple file types and provides options for parallel processing and error handling.
 
 To load a document, follow these steps:
 
@@ -147,13 +147,13 @@ For more information, expand the following **Parameters** section, and then revi
 The outputs change dynamically based on the number and type of files selected.
 
 If a single file is selected:
-- **Structured Content** [DataFrame](/concepts-objects#dataframe-object): If a CSV or Excel file is selected, the component outputs tabular data.
-- **Structured Content** [Data](/concepts-objects#data-object): If a JSON file is selected, the component outputs parsed JSON data.
-- **Raw Content** [Message](/concepts-objects#message-object): Outputs the file's raw text content.
-- **File Path** [Message](/concepts-objects#message-object): Outputs the path to the file on the Langflow server.
+- **Structured Content** [DataFrame](/data-types#dataframe): If a CSV or Excel file is selected, the component outputs tabular data.
+- **Structured Content** [Data](/data-types#data): If a JSON file is selected, the component outputs parsed JSON data.
+- **Raw Content** [Message](/data-types#message): Outputs the file's raw text content.
+- **File Path** [Message](/data-types#message): Outputs the path to the file on the Langflow server.
 
 If multiple files are selected:
-- **Files** [DataFrame](/concepts-objects#dataframe-object): A table containing the content and metadata of all selected files.
+- **Files** [DataFrame](/data-types#dataframe): A table containing the content and metadata of all selected files.
 
 If no files are selected:
 - No outputs are displayed.
@@ -329,7 +329,7 @@ It seems there are duplicate entries for the users.
 
 ## Web search
 
-This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/concepts-objects#dataframe-object) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
+This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/data-types#dataframe) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
 
 To use this component in a flow, do the following:
 
@@ -420,9 +420,9 @@ The text contents of the URL are returned as unstructured raw text, which you ca
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A list of [Data](/concepts-objects) objects containing fetched content and metadata. |
+| data | Data | A list of [Data](/data-types#data) objects containing fetched content and metadata. |
 | text | Message | The fetched content as formatted text. |
-| dataframe | DataFrame | The content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
+| dataframe | DataFrame | The content formatted as a [DataFrame](/data-types#dataframe) object. |
 
 </details>
 
@@ -476,7 +476,7 @@ For more information, see [Trigger flows with webhooks](/webhook).
 
 | Name | Display Name | Description |
 |------|--------------|-------------|
-| output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
+| output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/data-types#data) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
 
 </details>
 
@@ -485,6 +485,12 @@ For more information, see [Trigger flows with webhooks](/webhook).
 Legacy components are available for use but are no longer supported.
 
 ### Gmail Loader
+
+:::warning Legacy Google OAuth Components
+Google OAuth Components are in **Legacy**, which means they are available for use but no longer in active development as of Langflow 1.4.0.
+They may not work in newer versions of Langflow.
+To connect your flows to Google OAuth services, use [Composio](/integrations-composio).
+:::
 
 This component loads emails from Gmail using provided credentials and filters.
 
@@ -511,7 +517,11 @@ For more information about creating a service account JSON, see [Service Account
 
 ### Google Drive Loader
 
-This component loads documents from Google Drive using provided credentials and a single document ID.
+:::warning Legacy Google OAuth Components
+Google OAuth Components are in **Legacy**, which means they are available for use but no longer in active development as of Langflow 1.4.0.
+They may not work in newer versions of Langflow.
+To connect your flows to Google OAuth services, use [Composio](/integrations-composio).
+:::
 
 For more information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
 
@@ -534,6 +544,12 @@ For more information about creating a service account JSON, see [Service Account
 </details>
 
 ### Google Drive Search
+
+:::warning Legacy Google OAuth Components
+Google OAuth Components are in **Legacy**, which means they are available for use but no longer in active development as of Langflow 1.4.0.
+They may not work in newer versions of Langflow.
+To connect your flows to Google OAuth services, use [Composio](/integrations-composio).
+:::
 
 This component searches Google Drive files using provided credentials and query parameters.
 
