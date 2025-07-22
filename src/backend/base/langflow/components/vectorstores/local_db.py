@@ -2,7 +2,6 @@ from copy import deepcopy
 from pathlib import Path
 
 from langchain_chroma import Chroma
-from langchain_community.vectorstores.utils import filter_complex_metadata
 from loguru import logger
 from typing_extensions import override
 
@@ -253,12 +252,7 @@ class LocalDBComponent(LCVectorStoreComponent):
 
         if documents and self.embedding is not None:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
-            try:
-                filtered_documents = filter_complex_metadata(documents)
-                vector_store.add_documents(filtered_documents)
-            except ImportError:
-                self.log("Warning: Could not import filter_complex_metadata. Adding documents without filtering.")
-                vector_store.add_documents(documents)
+            vector_store.add_documents(documents)
         else:
             self.log("No documents to add to the Vector Store.")
 
