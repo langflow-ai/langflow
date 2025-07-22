@@ -3,37 +3,41 @@ title: LangWatch
 slug: /integrations-langwatch
 ---
 
+[LangWatch](https://app.langwatch.ai/) is an all-in-one LLMOps platform for monitoring, observability, analytics, evaluations and alerting for getting user insights and improve your LLM workflows.
 
+## Integrate LangWatch observability
 
-# LangWatch {#938674091aac4d9d9aa4aa6eb5c215b4}
+To integrate with Langflow, add your LangWatch API key as a Langflow environment variable:
 
+1. Get a LangWatch API key from your LangWatch account.
 
-LangWatch is an all-in-one LLMOps platform for monitoring, observability, analytics, evaluations and alerting for getting user insights and improve your LLM workflows.
+2. Add the key to your Langflow `.env` file:
 
+    ```shell
+    LANGWATCH_API_KEY="API_KEY_STRING"
+    ```
 
-To integrate with Langflow, just add your LangWatch API as a Langflow environment variable and you are good to go!
+    Alternatively, you can set the environment variable in your terminal session:
 
+    ```shell
+    export LANGWATCH_API_KEY="API_KEY_STRING"
+    ```
 
-## Step-by-step Configuration {#6f1d56ff6063417491d100d522dfcf1a}
+3. Restart Langflow with your `.env` file, if you modified the Langflow `.env`:
 
-1. Obtain your LangWatch API key from [https://app.langwatch.ai/](https://app.langwatch.ai/)
-2. Add the following key to Langflow .env file:
+    ```
+    langflow run --env-file .env
+    ```
 
-```shell
-LANGWATCH_API_KEY="your-api-key"
-```
+4. Run a flow.
 
-
-or export it in your terminal:
-
-
-```shell
-export LANGWATCH_API_KEY="your-api-key"
-```
-
-3. Restart Langflow using `langflow run --env-file .env`
-4. Run a project in Langflow.
 5. View the LangWatch dashboard for monitoring and observability.
 
-![](/img/langwatch-dashboard.png)
+![LangWatch dashboard](/img/langwatch-dashboard.png)
 
+## Use the LangWatch Evaluator
+
+In your flows, you can use the **LangWatch Evaluator** component to use LangWatch's evaluation endpoints to assess a model's performance.
+
+This component is available in the LangWatch bundle in the **Components** menu.
+For more information, see [Bundles](/components-bundle-components).

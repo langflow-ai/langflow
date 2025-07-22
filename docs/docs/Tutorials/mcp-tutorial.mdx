@@ -17,7 +17,7 @@ Then, you interact with the client, and the client uses tools from the connected
 You can run Langflow as an MCP client and an MCP server:
 
 * [Use Langflow as an MCP client](/mcp-client): When run as an MCP client, an **Agent** component in a Langflow flow can use connected components as tools to handle requests.
-You can use existing components as tools, and you can connect any MCP server to you flow to make that server's tools available to the agent.
+You can use existing components as tools, and you can connect any MCP server to your flow to make that server's tools available to the agent.
 
 * [Use Langflow as an MCP server](/mcp-server): When run as an MCP server, your flows become tools that can be used by an MCP client, which could be an external client or another Langflow flow.
 
@@ -131,7 +131,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     For this tutorial, don't enter anything in this field.
     Instead, you will add a geolocation MCP server in the next step, which the agent will use to detect your location.
 
-6. Click the **MCP Tools** component, enable **Tool Mode** in the component's header menu, and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
+6. Click the **MCP Tools** component, enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus), and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
 
     At this point your flow has four connected components:
 
@@ -194,7 +194,7 @@ To add the Toolkip MCP server to your flow, do the following:
 
 5. Click **Add Server**, and then wait for the **Actions** list to populate. This means that the MCP server successfully connected.
 
-6. Click the **MCP Tools** component, enable **Tool Mode** in the component's header menu, and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
+6. Click the **MCP Tools** component, enable **Tool Mode** in the [component's header menu](/concepts-components#component-menus), and then connect the component's **Toolset** port to the **Agent** component's **Tools** port.
 
     Your flow now has an additional **MCP Tools** component for a total of five components.
 

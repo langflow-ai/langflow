@@ -20,7 +20,7 @@ To try building and running a flow in a few minutes, see the [Langflow quickstar
 When building a [flow](/concepts-flows), you primarily interact with the **Workspace**.
 This is where you add [components](/concepts-components), configure them, and attach them together.
 
-![Empty langflow workspace](/img/workspace.png)
+![Empty Langflow workspace](/img/workspace.png)
 
 From the **Workspace**, you can also access the [**Playground**](#playground), [**Share** menu](#share-menu), and [**Logs**](/concepts-flows#flow-logs).
 
@@ -43,17 +43,14 @@ From the **Workspace**, you can also access the [**Playground**](#playground), [
 
 ## Playground
 
-From the **Workspace**, click <Icon name="Play" aria-hidden="true"/> **Playground** to test your flow.
+If your flow has a **Chat Input** component, you can use the **Playground** to run your flow, chat with your flow, view inputs and outputs, and modify the LLM's memories to tune the flow's responses in real time.
 
-If your flow has a **Chat Input** component, you can use the **Playground** to run your flow, chat with your flow, view inputs and outputs, and modify your AI's memories to tune your responses in real time.
-
-For example, if your flow has **Chat Input**, **Language Model**, and **Chat Output** components, then you can chat with the LLM in the **Playround** to test the flow.
-To try this for yourself, you can use the [**Basic Prompting** template](/basic-prompting).
+To try this for yourself, create a flow with the [**Basic Prompting** template](/basic-prompting), and then click <Icon name="Play" aria-hidden="true"/> **Playground** when editing the flow in the **Workspace**.
 
 ![Playground window](/img/playground.png)
 
 If you have an **Agent** component in your flow, the **Playground** displays its tool calls and outputs so you can monitor the agent's tool use and understand the reasoning behind its responses.
-To try this for yourself, you can use the [**Simple Agent** template](/simple-agent).
+To try an agentic flow in the **Playground**, use the [**Simple Agent** template](/simple-agent).
 
 ![Playground window with agent response](/img/playground-with-agent.png)
 
