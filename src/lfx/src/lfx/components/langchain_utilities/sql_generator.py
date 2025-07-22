@@ -4,8 +4,8 @@ from langchain.chains import create_sql_query_chain
 from langchain_core.prompts import PromptTemplate
 
 from lfx.base.chains.model import LCChainComponent
-from lfx.field_typing import Message
 from lfx.inputs.inputs import HandleInput, IntInput, MultilineInput
+from lfx.schema import Message
 from lfx.template.field.base import Output
 
 if TYPE_CHECKING:

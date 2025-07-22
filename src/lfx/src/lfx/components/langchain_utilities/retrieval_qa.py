@@ -1,8 +1,8 @@
 from langchain.chains import RetrievalQA
 
 from lfx.base.chains.model import LCChainComponent
-from lfx.field_typing import Message
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MultilineInput
+from lfx.schema import Message
 
 
 class RetrievalQAComponent(LCChainComponent):

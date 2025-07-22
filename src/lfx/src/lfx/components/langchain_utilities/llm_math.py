@@ -1,8 +1,8 @@
 from langchain.chains import LLMMathChain
 
 from lfx.base.chains.model import LCChainComponent
-from lfx.field_typing import Message
 from lfx.inputs.inputs import HandleInput, MultilineInput
+from lfx.schema import Message
 from lfx.template.field.base import Output
 
 
