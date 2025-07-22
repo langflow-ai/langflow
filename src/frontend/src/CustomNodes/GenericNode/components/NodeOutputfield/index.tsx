@@ -1,5 +1,5 @@
-import { useUpdateNodeInternals } from "@xyflow/react";
-import { cloneDeep } from "lodash";
+import { useUpdateNodeInternals } from '@xyflow/react';
+import { cloneDeep } from 'lodash';
 import {
   forwardRef,
   memo,
@@ -8,35 +8,34 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { Badge } from "@/components/ui/badge";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { useShortcutsStore } from "@/stores/shortcuts";
-import type { targetHandleType } from "@/types/flow";
+} from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { Badge } from '@/components/ui/badge';
+import { ICON_STROKE_WIDTH } from '@/constants/constants';
+import { useShortcutsStore } from '@/stores/shortcuts';
 import ForwardedIconComponent, {
   default as IconComponent,
-} from "../../../../components/common/genericIconComponent";
-import ShadTooltip from "../../../../components/common/shadTooltipComponent";
-import { Button } from "../../../../components/ui/button";
-import useFlowStore from "../../../../stores/flowStore";
-import { useTypesStore } from "../../../../stores/typesStore";
-import type { NodeOutputFieldComponentType } from "../../../../types/components";
+} from '../../../../components/common/genericIconComponent';
+import ShadTooltip from '../../../../components/common/shadTooltipComponent';
+import { Button } from '../../../../components/ui/button';
+import useFlowStore from '../../../../stores/flowStore';
+import { useTypesStore } from '../../../../stores/typesStore';
+import type { NodeOutputFieldComponentType } from '../../../../types/components';
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
   scapeJSONParse,
-} from "../../../../utils/reactflowUtils";
+} from '../../../../utils/reactflowUtils';
+import { cn } from '../../../../utils/utils';
 import {
-  cn,
-  logFirstMessage,
-  logHasMessage,
-  logTypeIsError,
-  logTypeIsUnknown,
-} from "../../../../utils/utils";
-import HandleRenderComponent from "../handleRenderComponent";
-import OutputComponent from "../OutputComponent";
-import OutputModal from "../outputModal";
+  determineOutputStatus,
+  isOutputEmpty,
+  detectLooping,
+  isOutputShortcutOpenable,
+} from '../NodeOutputParameter/nodeOutputUtils';
+import HandleRenderComponent from '../handleRenderComponent';
+import OutputComponent from '../OutputComponent';
+import OutputModal from '../outputModal';
 
 const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
@@ -64,7 +63,7 @@ const InspectButton = memo(
         onClick: () => void;
         id: string;
       },
-      ref: React.ForwardedRef<HTMLButtonElement>,
+      ref: React.ForwardedRef<HTMLButtonElement>
     ) => (
       <Button
         ref={ref}
@@ -77,22 +76,22 @@ const InspectButton = memo(
           name="TextSearchIcon"
           strokeWidth={ICON_STROKE_WIDTH}
           className={cn(
-            "icon-size",
+            'icon-size',
             isToolMode
               ? displayOutputPreview && !unknownOutput && !disabled
-                ? "text-background hover:text-secondary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-80"
+                ? 'text-background hover:text-secondary-hover'
+                : 'cursor-not-allowed text-placeholder-foreground opacity-80'
               : displayOutputPreview && !unknownOutput && !disabled
-                ? "text-foreground hover:text-primary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-60",
-            errorOutput ? "text-destructive" : "",
+              ? 'text-foreground hover:text-primary-hover'
+              : 'cursor-not-allowed text-placeholder-foreground opacity-60',
+            errorOutput ? 'text-destructive' : ''
           )}
         />
       </Button>
-    ),
-  ),
+    )
+  )
 );
-InspectButton.displayName = "InspectButton";
+InspectButton.displayName = 'InspectButton';
 
 const MemoizedOutputComponent = memo(OutputComponent);
 
@@ -117,18 +116,18 @@ function NodeOutputField({
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  const edges = useFlowStore((state) => state.edges);
-  const setNode = useFlowStore((state) => state.setNode);
-  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
-  const flowPool = useFlowStore((state) => state.flowPool);
-  const myData = useTypesStore((state) => state.data);
+  const edges = useFlowStore(state => state.edges);
+  const setNode = useFlowStore(state => state.setNode);
+  const setFilterEdge = useFlowStore(state => state.setFilterEdge);
+  const flowPool = useFlowStore(state => state.flowPool);
+  const myData = useTypesStore(state => state.data);
 
   const { flowPoolId, internalOutputName } = useMemo(() => {
     if (data.node?.flow && outputProxy) {
       const realOutput = getGroupOutputNodeId(
         data.node.flow,
         outputProxy.name,
-        outputProxy.id,
+        outputProxy.id
       );
       if (realOutput) {
         return {
@@ -146,64 +145,39 @@ function NodeOutputField({
   }, [flowPool, flowPoolId]);
 
   const { displayOutputPreview, unknownOutput, errorOutput } = useMemo(
-    () => ({
-      displayOutputPreview:
-        !!flowPool[flowPoolId] &&
-        logHasMessage(flowPoolNode?.data, internalOutputName),
-      unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
-      errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
-    }),
-    [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
+    () => determineOutputStatus(flowPool, flowPoolId, internalOutputName || ''),
+    [flowPool, flowPoolId, internalOutputName]
   );
 
   const emptyOutput = useMemo(() => {
-    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
-      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
-    );
-  }, [flowPoolNode?.data?.outputs]);
+    return isOutputEmpty(flowPoolNode?.data);
+  }, [flowPoolNode?.data]);
 
   const looping = useMemo(() => {
-    return edges.some((edge) => {
-      const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!,
-      );
-      return (
-        targetHandleObject.output_types &&
-        edge.sourceHandle === scapedJSONStringfy(id)
-      );
-    });
+    return detectLooping(edges, scapedJSONStringfy(id));
   }, [edges, id]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
   const outputShortcutOpenable = useMemo(() => {
-    if (!displayOutputPreview || !selected) return;
-
-    const sortedEdges = edges
-      .filter((edge) => edge.source === data.id)
-      .toSorted((a, b) => {
-        const indexA =
-          data?.node?.outputs?.findIndex(
-            (output) => output.name === a.data?.sourceHandle?.name,
-          ) ?? 0;
-        const indexB =
-          data?.node?.outputs?.findIndex(
-            (output) => output.name === b.data?.sourceHandle?.name,
-          ) ?? 0;
-        return indexA - indexB;
-      });
-
-    const isFirstOutput =
-      sortedEdges[0]?.sourceHandle === scapedJSONStringfy(id);
-    const hasNoEdges = !edges.some((edge) => edge.source === data.id);
-    const isValidFirstMessage =
-      hasNoEdges && logFirstMessage(flowPoolNode?.data, internalOutputName);
-
-    if (isFirstOutput || isValidFirstMessage) {
-      return true;
-    }
-    return false;
-  }, [displayOutputPreview, edges, data.id, data?.node?.outputs, selected]);
+    return isOutputShortcutOpenable({
+      displayOutputPreview,
+      selected,
+      edges,
+      nodeData: data,
+      id: scapedJSONStringfy(id),
+      flowPoolNode,
+      internalOutputName: internalOutputName || '',
+    });
+  }, [
+    displayOutputPreview,
+    selected,
+    edges,
+    data,
+    id,
+    flowPoolNode,
+    internalOutputName,
+  ]);
 
   const handleOpenOutputModal = () => {
     if (outputShortcutOpenable) {
@@ -211,7 +185,7 @@ function NodeOutputField({
     }
   };
 
-  const outputInspection = useShortcutsStore((state) => state.outputInspection);
+  const outputInspection = useShortcutsStore(state => state.outputInspection);
   useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
   const LoopHandle = useMemo(() => {
@@ -227,7 +201,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          testIdComplement={`${data?.type?.toLowerCase()}-${
+            showNode ? 'shownode' : 'noshownode'
+          }`}
           colorName={colorName}
         />
       );
@@ -257,7 +233,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+        testIdComplement={`${data?.type?.toLowerCase()}-${
+          showNode ? 'shownode' : 'noshownode'
+        }`}
         colorName={colorName}
       />
     ),
@@ -272,7 +250,7 @@ function NodeOutputField({
       showNode,
       data?.type,
       colorName,
-    ],
+    ]
   );
 
   const disabledInspectButton =
@@ -284,9 +262,9 @@ function NodeOutputField({
     <div
       ref={ref}
       className={cn(
-        "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
-        lastOutput ? "rounded-b-[0.69rem]" : "",
-        isToolMode && "bg-primary",
+        'relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2',
+        lastOutput ? 'rounded-b-[0.69rem]' : '',
+        isToolMode && 'bg-primary'
       )}
     >
       {LoopHandle}
@@ -306,12 +284,12 @@ function NodeOutputField({
         )}
 
         <div className="flex items-center gap-2">
-          <span className={data.node?.frozen ? "text-ice" : ""}>
+          <span className={data.node?.frozen ? 'text-ice' : ''}>
             <MemoizedOutputComponent
               proxy={outputProxy}
               outputs={outputs}
               idx={index}
-              types={type?.split("|") ?? []}
+              types={type?.split('|') ?? []}
               selected={
                 data.node?.outputs![index].selected ??
                 data.node?.outputs![index].types[0] ??
@@ -331,8 +309,8 @@ function NodeOutputField({
               displayOutputPreview
                 ? unknownOutput || emptyOutput
                   ? "Output can't be displayed"
-                  : "Inspect output"
-                : "Please build the component first"
+                  : 'Inspect output'
+                : 'Please build the component first'
             }
             styleClasses="z-40"
           >
