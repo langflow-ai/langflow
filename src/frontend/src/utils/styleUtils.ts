@@ -307,7 +307,7 @@ export const SIDEBAR_BUNDLES = [
     icon: "WolframAlphaAPI",
   },
   { display_name: "xAI", name: "xai", icon: "xAI" },
-  { display_name: "yfinance", name: "yahoosearch", icon: "trending-up" },
+  { display_name: "Yahoo! Finance", name: "yahoosearch", icon: "trending-up" },
   { display_name: "YouTube", name: "youtube", icon: "YouTube" },
   { display_name: "Zep", name: "zep", icon: "ZepMemory" },
 ];
