@@ -11,11 +11,11 @@ from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langflow.utils.image import create_image_content_dict
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from lfx.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
