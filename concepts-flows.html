@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.be2c9ab4.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.b2cbf1cd.js" defer="defer"></script>
 <script src="/assets/js/main.cdf1e15a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -99,9 +99,10 @@ To create a project, click <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="flow-storage">Flow storage<a href="#flow-storage" class="hash-link" aria-label="Direct link to Flow storage" title="Direct link to Flow storage">​</a></h2>
 <p>Flows and <a href="#flow-logs">flow logs</a> are stored on local disk at the following default locations:</p>
 <ul>
-<li><strong>Linux and WSL</strong>: <code>home/&lt;username&gt;/.cache/langflow/</code></li>
-<li><strong>macOS</strong>: <code>/Users/&lt;username&gt;/Library/Caches/langflow/</code></li>
-<li><strong>Windows</strong>: <code>%LOCALAPPDATA%\langflow\langflow\Cache</code></li>
+<li><strong>macOS Desktop</strong>: <code>/Users/&lt;username&gt;/.langflow/cache</code></li>
+<li><strong>Windows Desktop</strong>: <code>C:\Users\&lt;username&gt;\AppData\Roaming\com.Langflow\cache</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (uv pip install)</strong>: <code>&lt;path_to_venv&gt;/lib/python3.12/site-packages/langflow/cache</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (git clone)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/cache</code></li>
 </ul>
 <p>The flow storage location can be customized with the <a href="/environment-variables#LANGFLOW_CONFIG_DIR"><code>LANGFLOW_CONFIG_DIR</code></a> environment variable.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="flow-logs">Flow logs<a href="#flow-logs" class="hash-link" aria-label="Direct link to Flow logs" title="Direct link to Flow logs">​</a></h2>

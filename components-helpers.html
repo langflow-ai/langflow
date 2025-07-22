@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.be2c9ab4.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.b2cbf1cd.js" defer="defer"></script>
 <script src="/assets/js/main.cdf1e15a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -59,7 +59,14 @@
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Parameters</summary><div><div class="collapsibleContent_i85q"><p><strong>Inputs</strong></p><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>timezone</td><td>String</td><td>The timezone for the current date and time.</td></tr></tbody></table><p><strong>Outputs</strong></p><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>current_date</td><td>String</td><td>The resulting current date and time in the selected timezone.</td></tr></tbody></table></div></div></details>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="message-history">Message history<a href="#message-history" class="hash-link" aria-label="Direct link to Message history" title="Direct link to Message history">​</a></h2>
 <div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>Prior to Langflow 1.5, this component was two separate components called <strong>Chat History</strong> and <strong>Message Store</strong>.</p></div></div>
-<p>This component provides combined chat history and message store functionality. This component can use Langflow&#x27;s SQLite database or external memory to store and retrieve chat messages.</p>
+<p>This component handles chat history and message storage using Langflow’s SQLite database or an external memory source to save and retrieve chat messages. The default storage option is a <a href="https://www.sqlite.org/" target="_blank" rel="noopener noreferrer">SQLite</a> database stored in your system&#x27;s cache directory:</p>
+<ul>
+<li><strong>macOS Desktop</strong>: <code>/Users/&lt;username&gt;/.langflow/data/database.db</code></li>
+<li><strong>Windows Desktop</strong>: <code>C:\Users\&lt;name&gt;\AppData\Roaming\com.Langflow\data\langflow.db</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (uv pip install)</strong>: <code>&lt;path_to_venv&gt;/lib/python3.12/site-packages/langflow/langflow.db</code> (Python version may vary)</li>
+<li><strong>OSS macOS/Windows/Linux/WSL (git clone)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/langflow.db</code></li>
+</ul>
+<p>If your Langflow deployment has <code>LANGFLOW_DATABASE_URL</code> set to PostgreSQL, the Message History component will use the PostgreSQL database.</p>
 <p>Chat memory is distinct from vector store memory, because it is built specifically for storing and retrieving chat messages from databases.</p>
 <p>Memory components provide access to their respective external databases <strong>as memory</strong>. This allows Large Language Models (LLMs) or <a href="/agents">agents</a> to access external memory for persistence and context retention.</p>
 <p>In <strong>Retrieve</strong> mode, this component retrieves chat messages from Langflow tables or external memory.

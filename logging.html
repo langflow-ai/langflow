@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.be2c9ab4.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.b2cbf1cd.js" defer="defer"></script>
 <script src="/assets/js/main.cdf1e15a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -55,9 +55,10 @@
 <p>The default <code>log_level</code> is <code>ERROR</code>. Other options are <code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>, and <code>CRITICAL</code>.</p>
 <p>The default logfile is called <code>langflow.log</code>, and its location depends on your operating system.</p>
 <ul>
-<li>Linux/WSL: <code>\~/.cache/langflow/</code></li>
-<li>macOS: <code>/Users/\&lt;username\&gt;/Library/Caches/langflow/</code></li>
-<li>Windows: <code>%LOCALAPPDATA%\langflow\langflow\Cache</code></li>
+<li><strong>macOS Desktop</strong>:<code>/Users/&lt;username&gt;/.langflow/cache</code></li>
+<li><strong>Windows Desktop</strong>:<code>C:\Users\&lt;username&gt;\AppData\Roaming\com.Langflow\cache</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (uv pip install)</strong>: <code>&lt;path_to_venv&gt;/lib/python3.12/site-packages/langflow/cache</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (git clone)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/cache</code></li>
 </ul>
 <p>The <code>LANGFLOW_LOG_ENV</code> controls log output and formatting. The <code>container</code> option outputs serialized JSON to stdout. The <code>container_csv</code> option outputs CSV-formatted plain text to stdout. The <code>default</code> (or not set) logging option outputs prettified output with <a href="https://rich.readthedocs.io/en/stable/reference/logging.html" target="_blank" rel="noopener noreferrer">RichHandler</a>.</p>
 <p>To modify Langflow&#x27;s logging configuration, add them to your <code>.env</code> file and start Langflow.</p>

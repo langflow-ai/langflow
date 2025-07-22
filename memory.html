@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.be2c9ab4.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.b2cbf1cd.js" defer="defer"></script>
 <script src="/assets/js/main.cdf1e15a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -54,9 +54,10 @@ This includes essential Langflow database tables, file management, and caching, 
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="local-langflow-database-tables">Local Langflow database tables<a href="#local-langflow-database-tables" class="hash-link" aria-label="Direct link to Local Langflow database tables" title="Direct link to Local Langflow database tables">​</a></h2>
 <p>The default storage option in Langflow is a <a href="https://www.sqlite.org/" target="_blank" rel="noopener noreferrer">SQLite</a> database stored in your system&#x27;s cache directory:</p>
 <ul>
-<li>Linux/WSL: <code>~/.cache/langflow/langflow.db</code></li>
-<li>macOS: <code>/Users/&lt;username&gt;/Library/Caches/langflow/langflow.db</code></li>
-<li>Windows: <code>%LOCALAPPDATA%\langflow\langflow\Cache\langflow.db</code></li>
+<li><strong>macOS Desktop</strong>: <code>/Users/&lt;username&gt;/.langflow/data/database.db</code></li>
+<li><strong>Windows Desktop</strong>: <code>C:\Users\&lt;name&gt;\AppData\Roaming\com.Langflow\data\langflow.db</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (uv pip install)</strong>: <code>&lt;path_to_venv&gt;/lib/python3.12/site-packages/langflow/langflow.db</code> (Python version may vary)</li>
+<li><strong>OSS macOS/Windows/Linux/WSL (git clone)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/langflow.db</code></li>
 </ul>
 <p>The following tables are stored in <code>langflow.db</code>:</p>
 <p>• <strong>User</strong> - Stores user account information including credentials, permissions, and profiles. For more information, see <a href="/configuration-authentication">Authentication</a>.</p>
