@@ -10,7 +10,7 @@ import threading
 import traceback
 import uuid
 from collections import defaultdict, deque
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
@@ -97,7 +97,7 @@ class Graph:
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
         self._session_id = ""
-        self._start_time = datetime.now(UTC)
+        self._start_time = datetime.now(timezone.UTC)
         self.inactivated_vertices: set = set()
         self.activated_vertices: list[str] = []
         self.vertices_layers: list[list[str]] = []
@@ -649,7 +649,7 @@ class Graph:
     async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         if not self.tracing_service:
             return
-        self._end_time = datetime.now(UTC)
+        self._end_time = datetime.now(timezone.UTC)
         if outputs is None:
             outputs = {}
         outputs |= self.metadata
