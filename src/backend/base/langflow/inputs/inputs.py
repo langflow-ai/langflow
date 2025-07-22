@@ -644,6 +644,110 @@ class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
 
 
+class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a model input dropdown field with Provider:ModelName format.
+
+    This class provides a unified dropdown interface for selecting language models or embedding models
+    with options formatted as "Provider:ModelName" (e.g., "OpenAI:gpt-4o").
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input.
+        model_type (str): The type of model - either "language" or "embedding".
+        options (list[str]): List of available model options in "Provider:ModelName" format.
+        value (str): Selected model option in "Provider:ModelName" format.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.TEXT
+    model_type: str = "language"
+    options: list[str] = Field(default_factory=list)
+    value: str = ""
+
+    def __init__(self, **kwargs):
+        """Initialize ModelInput with default options based on model_type."""
+        super().__init__(**kwargs)
+        if not self.options:
+            self.options = self._get_options_for_model_type(self.model_type)
+        if not self.value and self.options:
+            self.value = self.options[0]
+
+    def _get_language_model_options(self) -> list[str]:
+        """Get language model options in Provider:ModelName format."""
+        options = []
+
+        # OpenAI language models
+        openai_models = [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4-turbo",
+            "gpt-4-turbo-preview",
+            "gpt-3.5-turbo",
+            "o1-preview",
+            "o1-mini",
+        ]
+        options.extend([f"OpenAI:{model}" for model in openai_models])
+
+        # Anthropic language models
+        anthropic_models = [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+        ]
+        options.extend([f"Anthropic:{model}" for model in anthropic_models])
+
+        return options
+
+    def _get_embedding_model_options(self) -> list[str]:
+        """Get embedding model options in Provider:ModelName format."""
+        options = []
+
+        # OpenAI embedding models
+        openai_embed_models = [
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-ada-002",
+        ]
+        options.extend([f"OpenAI:{model}" for model in openai_embed_models])
+
+        # Note: Anthropic doesn't have embedding models
+
+        return options
+
+    def _get_options_for_model_type(self, model_type: str) -> list[str]:
+        """Get options based on model type."""
+        if model_type == "language":
+            return self._get_language_model_options()
+        if model_type == "embedding":
+            return self._get_embedding_model_options()
+        return self._get_language_model_options()  # Default to language models
+
+    def parse_model_selection(self, selection: str) -> tuple[str, str]:
+        """Parse Provider:ModelName selection into provider and model_name.
+
+        Args:
+            selection: String in format "Provider:ModelName"
+
+        Returns:
+            Tuple of (provider, model_name)
+        """
+        if ":" in selection:
+            provider, model_name = selection.split(":", 1)
+            return provider.strip(), model_name.strip()
+        # Fallback if format is incorrect
+        return "OpenAI", selection
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        """Validates the model input value."""
+        if isinstance(v, str):
+            return v
+        if v is None:
+            return ""
+        return str(v)
+
+
 DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
 
 
@@ -674,6 +778,7 @@ InputTypes: TypeAlias = (
     | HandleInput
     | IntInput
     | McpInput
+    | ModelInput
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput
