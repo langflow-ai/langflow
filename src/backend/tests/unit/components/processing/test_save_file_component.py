@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-from langflow.components.processing.save_file import SaveToFileComponent
 from langflow.schema import Data, Message
 
+from lfx.components.processing.save_file import SaveToFileComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 # TODO: Re-enable this test when the SaveToFileComponent is ready for use.
@@ -90,7 +90,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             mock_file.expanduser.return_value = mock_file
 
             # Mock Path at the module level where it's imported
-            with patch("langflow.components.processing.save_to_file.Path") as mock_path:
+            with patch("lfx.components.processing.save_to_file.Path") as mock_path:
                 mock_path.return_value = mock_file
 
                 component = component_class()
@@ -118,7 +118,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         mock_file.parent = mock_parent
         mock_file.expanduser.return_value = mock_file
 
-        with patch("langflow.components.processing.save_to_file.Path") as mock_path:
+        with patch("lfx.components.processing.save_to_file.Path") as mock_path:
             mock_path.return_value = mock_file
 
             component = component_class()
@@ -145,7 +145,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         mock_file.parent = mock_parent
         mock_file.expanduser.return_value = mock_file
 
-        with patch("langflow.components.processing.save_to_file.Path") as mock_path:
+        with patch("lfx.components.processing.save_to_file.Path") as mock_path:
             mock_path.return_value = mock_file
             with patch.object(pd.DataFrame, "to_csv") as mock_to_csv:
                 component = component_class()

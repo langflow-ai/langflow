@@ -1,6 +1,6 @@
-from langflow.components.input_output import TextInputComponent
 from langflow.schema.message import Message
 
+from lfx.components.input_output import TextInputComponent
 from tests.integration.utils import pyleak_marker, run_single_component
 
 pytestmark = pyleak_marker()

@@ -343,7 +343,7 @@ class LCModelComponent(Component):
                     "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
                 )
                 warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
-                models_module = importlib.import_module("langflow.components.models")
+                models_module = importlib.import_module("lfx.components.models")
                 component_class = getattr(models_module, str(module_name))
                 component = component_class()
 

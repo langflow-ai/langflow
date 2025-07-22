@@ -4,19 +4,19 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
-from langflow.base.models.model_input_constants import (
-    MODEL_PROVIDERS,
-)
-from langflow.base.models.openai_constants import (
-    OPENAI_CHAT_MODEL_NAMES,
-    OPENAI_REASONING_MODEL_NAMES,
-)
-from langflow.components.agents.agent import AgentComponent
-from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
 from langflow.services.database.session import NoopSession
 
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
+from lfx.base.models.model_input_constants import (
+    MODEL_PROVIDERS,
+)
+from lfx.base.models.openai_constants import (
+    OPENAI_CHAT_MODEL_NAMES,
+    OPENAI_REASONING_MODEL_NAMES,
+)
+from lfx.components.agents.agent import AgentComponent
+from lfx.components.tools.calculator import CalculatorToolComponent
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 

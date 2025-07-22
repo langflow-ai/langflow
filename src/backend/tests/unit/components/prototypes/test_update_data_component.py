@@ -1,8 +1,9 @@
 import re
 
 import pytest
-from langflow.components.processing import UpdateDataComponent
 from langflow.schema import Data
+
+from lfx.components.processing import UpdateDataComponent
 
 
 @pytest.fixture

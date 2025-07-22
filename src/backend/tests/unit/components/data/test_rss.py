@@ -2,9 +2,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from langflow.components.data.rss import RSSReaderComponent
 from langflow.schema import DataFrame
 
+from lfx.components.data.rss import RSSReaderComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

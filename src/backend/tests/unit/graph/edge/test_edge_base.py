@@ -1,10 +1,10 @@
 import re
 
 import pytest
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.processing import PromptComponent
 
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import PromptComponent
 from lfx.graph.graph.base import Graph
 
 

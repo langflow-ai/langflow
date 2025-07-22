@@ -42,7 +42,7 @@ component_cache = ComponentCache()
 async def import_langflow_components():
     """Asynchronously discovers and loads all built-in Langflow components with module-level parallelization.
 
-    Scans the `langflow.components` package and its submodules in parallel, instantiates classes that are subclasses
+    Scans the `lfx.components` package and its submodules in parallel, instantiates classes that are subclasses
     of `Component` or `CustomComponent`, and generates their templates. Components are grouped by their
     top-level subpackage name.
 
@@ -53,7 +53,7 @@ async def import_langflow_components():
     try:
         import lfx.components as components_pkg
     except ImportError as e:
-        logger.error(f"Failed to import langflow.components package: {e}", exc_info=True)
+        logger.error(f"Failed to import lfx.components package: {e}", exc_info=True)
         return {"components": modules_dict}
 
     # Collect all module names to process
@@ -106,8 +106,8 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     except (ImportError, AttributeError) as e:
         logger.error(f"Error importing module {modname}: {e}", exc_info=True)
         return None
-    # Extract the top-level subpackage name after "langflow.components."
-    # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
+    # Extract the top-level subpackage name after "lfx.components."
+    # e.g., "lfx.components.Notion.add_content_to_page" -> "Notion"
     mod_parts = modname.split(".")
     if len(mod_parts) <= MIN_MODULE_PARTS:
         return None

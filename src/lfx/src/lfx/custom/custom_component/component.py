@@ -161,6 +161,11 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
 
+    def get_base_inputs(self):
+        if not hasattr(self, "_base_inputs"):
+            return []
+        return self.get_base_inputs()
+
     def get_undesrcore_inputs(self) -> dict[str, InputTypes]:
         return self._inputs
 

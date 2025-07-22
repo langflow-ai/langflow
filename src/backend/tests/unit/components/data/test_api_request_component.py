@@ -6,10 +6,10 @@ import httpx
 import pytest
 import respx
 from httpx import Response
-from langflow.components.data import APIRequestComponent
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
+from lfx.components.data import APIRequestComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

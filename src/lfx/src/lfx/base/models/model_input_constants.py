@@ -1,15 +1,15 @@
-from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
-from langflow.components.anthropic.anthropic import AnthropicModelComponent
-from langflow.components.azure.azure_openai import AzureChatOpenAIComponent
-from langflow.components.google.google_generative_ai import GoogleGenerativeAIComponent
-from langflow.components.groq.groq import GroqModel
-from langflow.components.nvidia.nvidia import NVIDIAModelComponent
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.sambanova.sambanova import SambaNovaComponent
 from langflow.template.field.base import Input
 from typing_extensions import TypedDict
 
 from lfx.base.models.model import LCModelComponent
+from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+from lfx.components.anthropic.anthropic import AnthropicModelComponent
+from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
+from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
+from lfx.components.groq.groq import GroqModel
+from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.sambanova.sambanova import SambaNovaComponent
 from lfx.inputs.inputs import InputTypes, SecretStrInput
 
 
@@ -23,7 +23,7 @@ class ModelProvidersDict(TypedDict):
 
 
 def get_filtered_inputs(component_class):
-    base_input_names = {field.name for field in LCModelComponent._base_inputs}
+    base_input_names = {field.name for field in LCModelComponent.get_base_inputs()}
     component_instance = component_class()
 
     return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
@@ -89,7 +89,7 @@ def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Inpu
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
-        from langflow.components.google.google_generative_ai import GoogleGenerativeAIComponent
+        from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
@@ -103,7 +103,7 @@ def _get_google_generative_ai_inputs_and_fields():
 
 def _get_openai_inputs_and_fields():
     try:
-        from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+        from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -114,7 +114,7 @@ def _get_openai_inputs_and_fields():
 
 def _get_azure_inputs_and_fields():
     try:
-        from langflow.components.azure.azure_openai import AzureChatOpenAIComponent
+        from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
 
         azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
     except ImportError as e:
@@ -125,7 +125,7 @@ def _get_azure_inputs_and_fields():
 
 def _get_groq_inputs_and_fields():
     try:
-        from langflow.components.groq.groq import GroqModel
+        from lfx.components.groq.groq import GroqModel
 
         groq_inputs = get_filtered_inputs(GroqModel)
     except ImportError as e:
@@ -136,7 +136,7 @@ def _get_groq_inputs_and_fields():
 
 def _get_anthropic_inputs_and_fields():
     try:
-        from langflow.components.anthropic.anthropic import AnthropicModelComponent
+        from lfx.components.anthropic.anthropic import AnthropicModelComponent
 
         anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
     except ImportError as e:
@@ -147,7 +147,7 @@ def _get_anthropic_inputs_and_fields():
 
 def _get_nvidia_inputs_and_fields():
     try:
-        from langflow.components.nvidia.nvidia import NVIDIAModelComponent
+        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
 
         nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
     except ImportError as e:
@@ -158,7 +158,7 @@ def _get_nvidia_inputs_and_fields():
 
 def _get_amazon_bedrock_inputs_and_fields():
     try:
-        from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+        from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
         amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
     except ImportError as e:
@@ -169,7 +169,7 @@ def _get_amazon_bedrock_inputs_and_fields():
 
 def _get_sambanova_inputs_and_fields():
     try:
-        from langflow.components.sambanova.sambanova import SambaNovaComponent
+        from lfx.components.sambanova.sambanova import SambaNovaComponent
 
         sambanova_inputs = get_filtered_inputs(SambaNovaComponent)
     except ImportError as e:

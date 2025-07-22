@@ -1,7 +1,7 @@
 import pytest
-from langflow.components.data.web_search import WebSearchComponent
 from langflow.schema import DataFrame
 
+from lfx.components.data.web_search import WebSearchComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

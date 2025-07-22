@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from composio import Action
-from langflow.components.composio.slack_composio import ComposioSlackAPIComponent
 from langflow.schema.dataframe import DataFrame
 
+from lfx.components.composio.slack_composio import ComposioSlackAPIComponent
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 from .test_base import MockComposioToolSet

@@ -1,10 +1,10 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from langflow.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
 from langflow.schema import Data, DataFrame, Message
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
 
+from lfx.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -44,7 +44,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert component.chunk_size_seconds == default_kwargs["chunk_size_seconds"]
         assert component.translation == default_kwargs["translation"]
 
-    @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
+    @patch("lfx.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_get_dataframe_output_success(self, mock_loader, component_class, default_kwargs, mock_transcript_data):
         """Test successful DataFrame output generation."""
         mock_loader.from_youtube_url.return_value.load.return_value = mock_transcript_data
@@ -61,7 +61,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert result_df.iloc[1]["timestamp"] == "01:00"
         assert result_df.iloc[0]["text"] == "First part of the transcript"
 
-    @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
+    @patch("lfx.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_get_message_output_success(self, mock_loader, component_class, default_kwargs, mock_transcript_data):
         """Test successful Message output generation."""
         mock_loader.from_youtube_url.return_value.load.return_value = mock_transcript_data
@@ -73,7 +73,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "First part of the transcript"
 
-    @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
+    @patch("lfx.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_get_data_output_success(self, mock_loader, component_class, default_kwargs, mock_transcript_data):
         """Test successful Data output generation."""
         mock_loader.from_youtube_url.return_value.load.return_value = mock_transcript_data
@@ -87,7 +87,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert result.data["transcript"] == "First part of the transcript Second part of the transcript"
         assert "error" not in result.data
 
-    @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
+    @patch("lfx.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_transcript_disabled_error(self, mock_loader, component_class, default_kwargs):
         """Test handling of TranscriptsDisabled error."""
         error_message = "Transcripts are disabled for this video"
@@ -119,7 +119,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert "error" in data_result.data
         assert data_result.data["transcript"] == ""
 
-    @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
+    @patch("lfx.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_no_transcript_found_error(self, mock_loader, component_class, default_kwargs):
         """Test handling of NoTranscriptFound error."""
         video_id = "test123"
@@ -149,7 +149,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
             component.set_attributes({"url": "https://youtube.com/watch?v=test", "translation": lang})
             assert component.translation == lang
 
-    @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
+    @patch("lfx.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_empty_transcript_handling(self, mock_loader, component_class, default_kwargs):
         """Test handling of empty transcript response."""
         mock_loader.from_youtube_url.return_value.load.return_value = []

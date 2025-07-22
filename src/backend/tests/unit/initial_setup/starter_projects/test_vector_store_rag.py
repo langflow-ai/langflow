@@ -3,17 +3,17 @@ import operator
 from textwrap import dedent
 
 import pytest
-from langflow.components.data import FileComponent
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.openai.openai import OpenAIEmbeddingsComponent
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.processing import ParseDataComponent, PromptComponent
-from langflow.components.processing.split_text import SplitTextComponent
-from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
+from lfx.components.data import FileComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import ParseDataComponent, PromptComponent
+from lfx.components.processing.split_text import SplitTextComponent
+from lfx.components.vectorstores import AstraDBVectorStoreComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.graph.constants import Finish
 

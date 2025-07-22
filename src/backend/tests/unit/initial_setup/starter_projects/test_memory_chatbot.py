@@ -3,12 +3,12 @@ from collections import deque
 from typing import TYPE_CHECKING
 
 import pytest
-from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.processing import PromptComponent
-from langflow.components.processing.converter import TypeConverterComponent
 
+from lfx.components.helpers.memory import MemoryComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import PromptComponent
+from lfx.components.processing.converter import TypeConverterComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.graph.constants import Finish
 

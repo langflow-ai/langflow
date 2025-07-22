@@ -1,9 +1,9 @@
 import re
 
 import pytest
-from langflow.components.processing.batch_run import BatchRunComponent
 from langflow.schema import DataFrame
 
+from lfx.components.processing.batch_run import BatchRunComponent
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 

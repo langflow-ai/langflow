@@ -2,10 +2,10 @@ import logging
 from collections import deque
 
 import pytest
-from langflow.components.input_output import ChatInput, ChatOutput, TextOutputComponent
-from langflow.components.langchain_utilities import ToolCallingAgentComponent
-from langflow.components.tools import YfinanceToolComponent
 
+from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
+from lfx.components.langchain_utilities import ToolCallingAgentComponent
+from lfx.components.tools import YfinanceToolComponent
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
 

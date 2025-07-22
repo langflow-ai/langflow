@@ -2,9 +2,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from langflow.components.data.news_search import NewsSearchComponent
 from langflow.schema import DataFrame
 
+from lfx.components.data.news_search import NewsSearchComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

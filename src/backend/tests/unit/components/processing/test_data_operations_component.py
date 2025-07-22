@@ -1,7 +1,7 @@
 import pytest
-from langflow.components.processing.data_operations import DataOperationsComponent
 from langflow.schema import Data
 
+from lfx.components.processing.data_operations import DataOperationsComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

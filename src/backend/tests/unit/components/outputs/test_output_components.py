@@ -1,6 +1,6 @@
 import pytest
-from langflow.components.input_output import TextOutputComponent
 
+from lfx.components.input_output import TextOutputComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

@@ -1,8 +1,8 @@
 import pytest
-from langflow.components.data import URLComponent
-from langflow.components.processing import SplitTextComponent
 from langflow.schema import Data, DataFrame
 
+from lfx.components.data import URLComponent
+from lfx.components.processing import SplitTextComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

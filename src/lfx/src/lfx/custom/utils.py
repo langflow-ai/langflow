@@ -714,7 +714,7 @@ async def get_single_component_dict(component_type: str, component_name: str, co
         module_path = Path(base_path) / component_type / f"{component_name}.py"
         if module_path.exists():
             # Try to import the module
-            module_name = f"langflow.components.{component_type}.{component_name}"
+            module_name = f"lfx.components.{component_type}.{component_name}"
             try:
                 # This is a simplified example - actual implementation may vary
                 import importlib.util
@@ -779,7 +779,7 @@ async def load_custom_component(component_name: str, components_paths: list[str]
                         component_file = category_dir / f"{component_name}.py"
                         if component_file.exists():
                             # Try to import the module
-                            module_name = f"langflow.components.{category_dir.name}.{component_name}"
+                            module_name = f"lfx.components.{category_dir.name}.{component_name}"
                             try:
                                 import importlib.util
 

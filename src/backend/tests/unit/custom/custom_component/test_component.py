@@ -2,13 +2,13 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
-from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.schema import dotdict
 from langflow.schema.message import Message
 from langflow.services.database.session import NoopSession
 from langflow.template import Output
 
+from lfx.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
+from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
@@ -136,7 +136,7 @@ async def test_send_message_without_database(monkeypatch):  # noqa: ARG001
 @pytest.mark.usefixtures("use_noop_session")
 @pytest.mark.asyncio
 async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
-    from langflow.components.agents.agent import AgentComponent
+    from lfx.components.agents.agent import AgentComponent
 
     event_manager = MagicMock()
     agent = AgentComponent(

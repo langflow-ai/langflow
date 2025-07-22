@@ -2,8 +2,8 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.components.agents.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
 
+from lfx.components.agents.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 # TODO: This test suite is incomplete and is in need of an update to handle the latest MCP component changes.

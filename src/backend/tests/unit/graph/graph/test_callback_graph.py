@@ -1,13 +1,13 @@
 import asyncio
 
 import pytest
-from langflow.components.input_output import ChatOutput
 from langflow.custom import Component
 from langflow.events.event_manager import EventManager
 from langflow.inputs import IntInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
+from lfx.components.input_output import ChatOutput
 from lfx.graph import Graph
 
 

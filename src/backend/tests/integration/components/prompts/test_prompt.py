@@ -1,6 +1,6 @@
-from langflow.components.processing import PromptComponent
 from langflow.schema.message import Message
 
+from lfx.components.processing import PromptComponent
 from tests.integration.utils import pyleak_marker, run_single_component
 
 pytestmark = pyleak_marker()

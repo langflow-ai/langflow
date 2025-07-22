@@ -1,7 +1,7 @@
-from langflow.components.input_output import ChatInput
 from langflow.memory import aget_messages
 from langflow.schema.message import Message
 
+from lfx.components.input_output import ChatInput
 from tests.integration.utils import pyleak_marker, run_single_component
 
 pytestmark = pyleak_marker()
