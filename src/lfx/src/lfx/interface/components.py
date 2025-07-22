@@ -51,7 +51,7 @@ async def import_langflow_components():
     """
     modules_dict = {}
     try:
-        import langflow.components as components_pkg
+        import lfx.components as components_pkg
     except ImportError as e:
         logger.error(f"Failed to import langflow.components package: {e}", exc_info=True)
         return {"components": modules_dict}
