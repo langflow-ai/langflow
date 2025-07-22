@@ -3,15 +3,10 @@ title: Memory management options
 slug: /memory
 ---
 
-Langflow provides flexible memory management options for storage and retrieval.
+Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
+This includes essential Langflow database tables, file management, and caching, as well as chat memory.
 
-This page details the following memory configuration options in Langflow.
-
-- [Local Langflow database tables](#local-langflow-database-tables)
-- [Store messages in local memory](#store-messages-in-local-memory)
-- [Configure external memory](#configure-external-memory)
-- [Configure the external database connection](#configure-the-external-database-connection)
-- [Configure cache memory](#configure-cache-memory)
+Langflow supports both local memory and external memory options.
 
 ## Local Langflow database tables
 
@@ -91,3 +86,7 @@ LANGFLOW_CACHE_TYPE=Async
 
 Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
 The default behavior is suitable for most use cases.
+
+## See also
+
+* [Langflow file management](/concepts-file-management)
