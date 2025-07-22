@@ -217,6 +217,7 @@ async def test_update_project_mcp_settings_success(
             "auth_settings": {
                 "auth_type": "none",
                 "api_key": None,
+                "iam_endpoint": None,
                 "username": None,
                 "password": None,
                 "bearer_token": None,
