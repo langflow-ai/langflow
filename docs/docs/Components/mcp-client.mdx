@@ -65,7 +65,7 @@ This component has two modes, depending on the type of server you want to access
 7.  Test your flow to make sure the MCP server is connected and the selected tool is used by the agent: Click **Playground**, and then enter a prompt that uses the tool you connected through the **MCP Tools** component.
 For example, if you use `mcp-server-fetch` with the `fetch` tool, you could ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch`, and then returns the response.
 
-8. If you want the agent to be able to use more tools, repeat these steps to add more **Tools** components with different servers or tools.
+8. If you want the agent to be able to use more tools, repeat these steps to add more tools components with different servers or tools.
 
 ### Connect a Langflow MCP server {#mcp-sse-mode}
 
@@ -83,20 +83,13 @@ In SSE mode, all flows available from the targeted server are treated as tools.
 5. Test your flow to make sure the agent uses your flows to respond to queries: Click **Playground**, and then enter a prompt that uses a flow that you connected through the **MCP Tools** component.
 6. If you want the agent to be able to use more flows, repeat these steps to add more **MCP Tools** components with different servers or tools selected.
 
-## MCP tools component parameters
-
-**Inputs**
+## MCP Tools parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| command | String | Stdio mode only. The MCP server startup command. Default: `uvx mcp-sse-shim@latest`. |
-| sse_url | String | SSE mode only. The SSE URL for a Langflow project's MCP server. Default for Langflow Desktop: `http://localhost:7868/`. Default for other installations: `http://localhost:7860/api/v1/mcp/sse` |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| tools | List[Tool] | A list of tools exposed by the MCP server. |
+| command | String | Input parameter. Stdio mode only. The MCP server startup command. Default: `uvx mcp-sse-shim@latest`. |
+| sse_url | String | Input parameter. SSE mode only. The SSE URL for a Langflow project's MCP server. Default for Langflow Desktop: `http://localhost:7868/`. Default for other installations: `http://localhost:7860/api/v1/mcp/sse` |
+| tools | List[Tool] | Output parameter. [`Tools`](/data-types#tools) object containing a list of tools exposed by the MCP server. |
 
 ## Manage connected MCP servers
 
