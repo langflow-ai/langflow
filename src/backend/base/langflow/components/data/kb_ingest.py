@@ -232,9 +232,7 @@ class KBIngestionComponent(Component):
     def _build_embeddings(self):
         """Build embedding model using provider patterns."""
         provider, model = (
-            self.embedding_model.split(": ", 1)
-            if ": " in self.embedding_model
-            else ("OpenAI", self.embedding_model)
+            self.embedding_model.split(": ", 1) if ": " in self.embedding_model else ("OpenAI", self.embedding_model)
         )
         api_key = self.api_key
         dimensions = self.dimensions
@@ -317,9 +315,7 @@ class KBIngestionComponent(Component):
     def _build_embedding_metadata(self) -> dict[str, Any]:
         """Build embedding model metadata."""
         provider, model = (
-            self.embedding_model.split(": ", 1)
-            if ": " in self.embedding_model
-            else ("OpenAI", self.embedding_model)
+            self.embedding_model.split(": ", 1) if ": " in self.embedding_model else ("OpenAI", self.embedding_model)
         )
 
         api_key_to_save = None
