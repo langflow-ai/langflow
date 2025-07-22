@@ -25,12 +25,32 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     username?: string;
     password?: string;
     bearerToken?: string;
+    oauthHost?: string;
+    oauthPort?: string;
+    oauthServerUrl?: string;
+    oauthCallbackPath?: string;
+    oauthClientId?: string;
+    oauthClientSecret?: string;
+    oauthAuthUrl?: string;
+    oauthTokenUrl?: string;
+    oauthMcpScope?: string;
+    oauthProviderScope?: string;
   }>({
     apiKey: authSettings?.api_key || "",
     iamEndpoint: authSettings?.iam_endpoint || "",
     username: authSettings?.username || "",
     password: authSettings?.password || "",
     bearerToken: authSettings?.bearer_token || "",
+    oauthHost: authSettings?.oauth_host || "",
+    oauthPort: authSettings?.oauth_port || "",
+    oauthServerUrl: authSettings?.oauth_server_url || "",
+    oauthCallbackPath: authSettings?.oauth_callback_path || "",
+    oauthClientId: authSettings?.oauth_client_id || "",
+    oauthClientSecret: authSettings?.oauth_client_secret || "",
+    oauthAuthUrl: authSettings?.oauth_auth_url || "",
+    oauthTokenUrl: authSettings?.oauth_token_url || "",
+    oauthMcpScope: authSettings?.oauth_mcp_scope || "",
+    oauthProviderScope: authSettings?.oauth_provider_scope || "",
   });
 
   // Update auth state when authSettings prop changes
@@ -43,6 +63,16 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
         username: authSettings.username || "",
         password: authSettings.password || "",
         bearerToken: authSettings.bearer_token || "",
+        oauthHost: authSettings.oauth_host || "",
+        oauthPort: authSettings.oauth_port || "",
+        oauthServerUrl: authSettings.oauth_server_url || "",
+        oauthCallbackPath: authSettings.oauth_callback_path || "",
+        oauthClientId: authSettings.oauth_client_id || "",
+        oauthClientSecret: authSettings.oauth_client_secret || "",
+        oauthAuthUrl: authSettings.oauth_auth_url || "",
+        oauthTokenUrl: authSettings.oauth_token_url || "",
+        oauthMcpScope: authSettings.oauth_mcp_scope || "",
+        oauthProviderScope: authSettings.oauth_provider_scope || "",
       });
     }
   }, [authSettings]);
@@ -72,6 +102,18 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
         api_key: authFields.apiKey,
       }),
       ...(authType === "bearer" && { bearer_token: authFields.bearerToken }),
+      ...(authType === "oauth" && {
+        oauth_host: authFields.oauthHost,
+        oauth_port: authFields.oauthPort,
+        oauth_server_url: authFields.oauthServerUrl,
+        oauth_callback_path: authFields.oauthCallbackPath,
+        oauth_client_id: authFields.oauthClientId,
+        oauth_client_secret: authFields.oauthClientSecret,
+        oauth_auth_url: authFields.oauthAuthUrl,
+        oauth_token_url: authFields.oauthTokenUrl,
+        oauth_mcp_scope: authFields.oauthMcpScope,
+        oauth_provider_scope: authFields.oauthProviderScope,
+      }),
     };
 
     onSave(authSettingsToSave);
@@ -79,19 +121,14 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   };
 
   return (
-    <BaseModal
-      open={open}
-      setOpen={setOpen}
-      size="small-h-full"
-      className="p-4"
-    >
+    <BaseModal open={open} setOpen={setOpen} size="small" className="p-4">
       <BaseModal.Header>
         <div className="flex items-center gap-2 text-base">Authentication</div>
       </BaseModal.Header>
       <BaseModal.Content className="h-full" overflowHidden>
-        <div className="flex items-center  gap-6 border rounded-md p-4 h-[180px]">
+        <div className="flex gap-6 border rounded-md p-4 h-full min-h-[180px]">
           {/* Left column - Radio buttons */}
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1 items-start">
             <RadioGroup value={authType} onValueChange={handleAuthTypeChange}>
               {AUTH_METHODS_ARRAY.map((option) => (
                 <div key={option.id} className="flex items-center space-x-2">
@@ -122,7 +159,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
           {authType !== "none" && (
             <div className="w-3/5 min-h-[136px]">
               {authType === "apikey" && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col items-start gap-2">
                   <Label htmlFor="api-key" className="!text-mmd font-medium">
                     API Key Value
                   </Label>
@@ -223,6 +260,194 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                         handleAuthFieldChange("apiKey", e.target.value)
                       }
                     />
+                  </div>
+                </div>
+              )}
+
+              {authType === "oauth" && (
+                <div className="flex flex-col gap-3 h-full overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="oauth-host"
+                        className="!text-mmd font-medium"
+                      >
+                        OAuth Host
+                      </Label>
+                      <Input
+                        id="oauth-host"
+                        type="text"
+                        placeholder="localhost"
+                        value={authFields.oauthHost || ""}
+                        onChange={(e) =>
+                          handleAuthFieldChange("oauthHost", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="oauth-port"
+                        className="!text-mmd font-medium"
+                      >
+                        OAuth Port
+                      </Label>
+                      <Input
+                        id="oauth-port"
+                        type="text"
+                        placeholder="1234"
+                        value={authFields.oauthPort || ""}
+                        onChange={(e) =>
+                          handleAuthFieldChange("oauthPort", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="oauth-server-url"
+                      className="!text-mmd font-medium"
+                    >
+                      OAuth Server URL
+                    </Label>
+                    <Input
+                      id="oauth-server-url"
+                      type="text"
+                      placeholder="http://localhost:1234"
+                      value={authFields.oauthServerUrl || ""}
+                      onChange={(e) =>
+                        handleAuthFieldChange("oauthServerUrl", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="oauth-callback-path"
+                      className="!text-mmd font-medium"
+                    >
+                      OAuth Callback Path
+                    </Label>
+                    <Input
+                      id="oauth-callback-path"
+                      type="text"
+                      placeholder="http://localhost:9000/auth/idaas/callback"
+                      value={authFields.oauthCallbackPath || ""}
+                      onChange={(e) =>
+                        handleAuthFieldChange(
+                          "oauthCallbackPath",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="oauth-client-id"
+                        className="!text-mmd font-medium"
+                      >
+                        Client ID
+                      </Label>
+                      <Input
+                        id="oauth-client-id"
+                        type="text"
+                        placeholder="Enter Client ID"
+                        value={authFields.oauthClientId || ""}
+                        onChange={(e) =>
+                          handleAuthFieldChange("oauthClientId", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="oauth-client-secret"
+                        className="!text-mmd font-medium"
+                      >
+                        Client Secret
+                      </Label>
+                      <Input
+                        id="oauth-client-secret"
+                        type="password"
+                        placeholder="Enter Client Secret"
+                        value={authFields.oauthClientSecret || ""}
+                        onChange={(e) =>
+                          handleAuthFieldChange(
+                            "oauthClientSecret",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="oauth-auth-url"
+                      className="!text-mmd font-medium"
+                    >
+                      Authorization URL
+                    </Label>
+                    <Input
+                      id="oauth-auth-url"
+                      type="text"
+                      value={authFields.oauthAuthUrl || ""}
+                      onChange={(e) =>
+                        handleAuthFieldChange("oauthAuthUrl", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="oauth-token-url"
+                      className="!text-mmd font-medium"
+                    >
+                      Token URL
+                    </Label>
+                    <Input
+                      id="oauth-token-url"
+                      type="text"
+                      value={authFields.oauthTokenUrl || ""}
+                      onChange={(e) =>
+                        handleAuthFieldChange("oauthTokenUrl", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="oauth-mcp-scope"
+                        className="!text-mmd font-medium"
+                      >
+                        MCP Scope
+                      </Label>
+                      <Input
+                        id="oauth-mcp-scope"
+                        type="text"
+                        placeholder="user"
+                        value={authFields.oauthMcpScope || ""}
+                        onChange={(e) =>
+                          handleAuthFieldChange("oauthMcpScope", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label
+                        htmlFor="oauth-provider-scope"
+                        className="!text-mmd font-medium"
+                      >
+                        Provider Scope
+                      </Label>
+                      <Input
+                        id="oauth-provider-scope"
+                        type="text"
+                        placeholder="openid"
+                        value={authFields.oauthProviderScope || ""}
+                        onChange={(e) =>
+                          handleAuthFieldChange(
+                            "oauthProviderScope",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
               )}

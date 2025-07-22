@@ -444,12 +444,22 @@ class CancelFlowResponse(BaseModel):
 class AuthSettings(BaseModel):
     """Model representing authentication settings for MCP."""
 
-    auth_type: Literal["none", "apikey", "basic", "bearer", "iam"] = "none"
+    auth_type: Literal["none", "apikey", "basic", "bearer", "iam", "oauth"] = "none"
     api_key: SecretStr | None = None
     username: str | None = None
     password: SecretStr | None = None
     bearer_token: SecretStr | None = None
     iam_endpoint: str | None = None
+    oauth_host: str | None = None
+    oauth_port: str | None = None
+    oauth_server_url: str | None = None
+    oauth_callback_path: str | None = None
+    oauth_client_id: str | None = None
+    oauth_client_secret: SecretStr | None = None
+    oauth_auth_url: str | None = None
+    oauth_token_url: str | None = None
+    oauth_mcp_scope: str | None = None
+    oauth_provider_scope: str | None = None
 
 
 class MCPSettings(BaseModel):

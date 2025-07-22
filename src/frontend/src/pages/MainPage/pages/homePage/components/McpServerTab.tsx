@@ -273,6 +273,26 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     }
   };
 
+  const getEnvVars = () => {
+    if (!ENABLE_MCP_COMPOSER || currentAuthSettings?.auth_type === "none")
+      return "";
+    if (currentAuthSettings?.auth_type === "oauth") {
+      return `
+        "OAUTH_HOST": "${currentAuthSettings.oauth_host}",
+        "OAUTH_PORT": "${currentAuthSettings.oauth_port}",
+        "OAUTH_SERVER_URL": "${currentAuthSettings.oauth_server_url}",
+        "OAUTH_CALLBACK_PATH": "${currentAuthSettings.oauth_callback_path}",
+        "OAUTH_CLIENT_ID": "${currentAuthSettings.oauth_client_id}",
+        "OAUTH_CLIENT_SECRET": "${currentAuthSettings.oauth_client_secret}",
+        "OAUTH_AUTH_URL": "${currentAuthSettings.oauth_auth_url}",
+        "OAUTH_TOKEN_URL": "${currentAuthSettings.oauth_token_url}",
+        "OAUTH_MCP_SCOPE": "${currentAuthSettings.oauth_mcp_scope}",
+        "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope}",
+      `;
+    }
+    return "";
+  };
+
   const MCP_SERVER_JSON = `{
   "mcpServers": {
     "lf-${parseString(folderName ?? "project", [
@@ -299,7 +319,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               : ""
         }"${ENABLE_MCP_COMPOSER ? "mcp-composer" : "mcp-proxy"}",${getAuthHeaders()}
         "${apiUrl}"
-      ]
+      ]${ENABLE_MCP_COMPOSER && currentAuthSettings?.auth_type === "oauth" ? `,` : ""}${getEnvVars()}
     }
   }
 }`;

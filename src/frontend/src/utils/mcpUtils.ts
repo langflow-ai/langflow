@@ -6,6 +6,7 @@ export enum AuthMethodId {
   BASIC = "basic",
   BEARER = "bearer",
   IAM = "iam",
+  OAUTH = "oauth",
 }
 
 export const AUTH_METHODS = {
@@ -17,6 +18,7 @@ export const AUTH_METHODS = {
   },
   [AuthMethodId.BEARER]: { id: AuthMethodId.BEARER, label: "Bearer Token" },
   [AuthMethodId.IAM]: { id: AuthMethodId.IAM, label: "IAM" },
+  [AuthMethodId.OAUTH]: { id: AuthMethodId.OAUTH, label: "OAuth" },
 } as const;
 
 export const AUTH_METHODS_ARRAY = Object.values(AUTH_METHODS);
