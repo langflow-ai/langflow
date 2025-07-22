@@ -268,7 +268,7 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
-  { display_name: "HuggingFace", name: "huggingface", icon: "HuggingFace" },
+  { display_name: "Hugging Face", name: "huggingface", icon: "HuggingFace" },
   { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
   { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
