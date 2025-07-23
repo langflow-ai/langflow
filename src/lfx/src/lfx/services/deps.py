@@ -95,14 +95,7 @@ async def session_scope():
     This ensures code can always call session methods without None checking.
     """
     db_service = get_db_service()
-    if db_service is None:
-        from lfx.services.session import NoopSession
-
-        yield NoopSession()
-        return
-
-    if inspect.isabstract(type(db_service)):
-        # This means we are using the Protocol, so we need to use the NoopSession
+    if db_service is None or inspect.isabstract(type(db_service)):
         from lfx.services.session import NoopSession
 
         yield NoopSession()

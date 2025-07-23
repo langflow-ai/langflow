@@ -28,7 +28,6 @@ def _has_langflow_memory():
 # Consider refactoring to lazy loading or a more robust service discovery mechanism
 # that can handle runtime availability changes.
 _LANGFLOW_AVAILABLE = _has_langflow_memory()
-logger.info(f"lfx.memory: langflow memory available: {_LANGFLOW_AVAILABLE}")
 
 # Import the appropriate implementations
 if _LANGFLOW_AVAILABLE:
