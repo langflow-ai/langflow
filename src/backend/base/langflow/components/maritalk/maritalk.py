@@ -7,8 +7,8 @@ from langflow.inputs.inputs import DropdownInput, FloatInput, IntInput, SecretSt
 
 
 class MaritalkModelComponent(LCModelComponent):
-    display_name = "Maritalk"
-    description = "Generates text using Maritalk LLMs."
+    display_name = "MariTalk"
+    description = "Generates text using MariTalk LLMs."
     icon = "Maritalk"
     name = "Maritalk"
     inputs = [
@@ -29,8 +29,8 @@ class MaritalkModelComponent(LCModelComponent):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="Maritalk API Key",
-            info="The Maritalk API Key to use for the OpenAI model.",
+            display_name="MariTalk API Key",
+            info="The MariTalk API Key to use for authentication.",
             advanced=False,
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),

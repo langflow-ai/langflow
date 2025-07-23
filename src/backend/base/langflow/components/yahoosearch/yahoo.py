@@ -49,9 +49,9 @@ class YahooFinanceSchema(BaseModel):
 
 
 class YfinanceComponent(Component):
-    display_name = "Yahoo Finance"
+    display_name = "Yahoo! Finance"
     description = """Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \
-to access financial data and market information from Yahoo Finance."""
+to access financial data and market information from Yahoo! Finance."""
     icon = "trending-up"
 
     inputs = [

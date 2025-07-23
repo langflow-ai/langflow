@@ -6,8 +6,8 @@ from langflow.schema.data import Data
 
 
 class FirecrawlCrawlApi(Component):
-    display_name: str = "FirecrawlCrawlApi"
-    description: str = "Firecrawl Crawl API."
+    display_name: str = "Firecrawl Crawl API"
+    description: str = "Crawls a URL and returns the results."
     name = "FirecrawlCrawlApi"
 
     documentation: str = "https://docs.firecrawl.dev/v1/api-reference/endpoint/crawl-post"

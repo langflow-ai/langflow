@@ -8,10 +8,10 @@ globs:
 alwaysApply: false
 ---
 
-
 # Component Icon Rules
 
 ## Purpose
+
 To ensure consistent, clear, and functional icon usage for components, covering both backend (Python) and frontend (React/TypeScript) steps.
 
 ---
@@ -36,17 +36,19 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 - **Where:**
   In a new directory for your icon, e.g., `src/frontend/src/icons/AstraDB/`.
 - **How:**
+
   - Add your SVG as a React component, e.g., `AstraSVG` in `AstraDB.jsx`.
     ```jsx
     const AstraSVG = (props) => (
       <svg {...props}>
         <path
-          // ...
+        // ...
         />
       </svg>
     );
     ```
   - Create an `index.tsx` that exports your icon using `forwardRef`:
+
     ```tsx
     import React, { forwardRef } from "react";
     import AstraSVG from "./AstraDB";
@@ -118,6 +120,7 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 ---
 
 **Example for AstraDB:**
+
 - Backend:
   ```python
   icon = "AstraDB"

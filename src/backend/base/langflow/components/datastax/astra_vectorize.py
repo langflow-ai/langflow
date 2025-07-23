@@ -12,6 +12,7 @@ class AstraVectorizeComponent(Component):
         "This component is deprecated. Please use the Astra DB Component directly."
     )
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"
+    legacy = True
     icon = "AstraDB"
     name = "AstraVectorize"
 

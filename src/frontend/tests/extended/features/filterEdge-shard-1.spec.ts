@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -78,7 +77,7 @@ test(
       "mem0Mem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
-      "langchain_utilitiesCharacterTextSplitter",
+      "langchain_utilitiesCharacter Text Splitter",
     ];
 
     await Promise.all(
@@ -104,7 +103,7 @@ test(
       "cohereCohere Language Models",
       "groqGroq",
       "lmstudioLM Studio",
-      "maritalkMaritalk",
+      "maritalkMariTalk",
       "mistralMistralAI",
       "perplexityPerplexity",
       "baiduQianfan",

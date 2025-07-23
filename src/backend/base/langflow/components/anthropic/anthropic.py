@@ -19,7 +19,7 @@ from langflow.schema.dotdict import dotdict
 
 class AnthropicModelComponent(LCModelComponent):
     display_name = "Anthropic"
-    description = "Generate text using Anthropic Chat&Completion LLMs with prefill support."
+    description = "Generate text using Anthropic's Messages API and models."
     icon = "Anthropic"
     name = "AnthropicModel"
 
@@ -73,9 +73,6 @@ class AnthropicModelComponent(LCModelComponent):
             advanced=False,
             value=False,
             real_time_refresh=True,
-        ),
-        MessageTextInput(
-            name="prefill", display_name="Prefill", info="Prefill text to guide the model's response.", advanced=True
         ),
     ]
 
