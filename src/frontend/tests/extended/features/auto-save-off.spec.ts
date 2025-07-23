@@ -118,7 +118,11 @@ test(
 
     await page.getByText("Save And Exit", { exact: true }).click();
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow.click();
 
     await page.waitForSelector("text=loading", {
       state: "hidden",
@@ -166,7 +170,11 @@ test(
       await page.getByText("Save And Exit", { exact: true }).last().click();
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow2 = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow2.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,

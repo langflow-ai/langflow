@@ -1,90 +1,54 @@
 {
-    "extends": [
-        "eslint:recommended",
-        "plugin:react/recommended",
-        "plugin:prettier/recommended"
-    ],
-    "plugins": [
-        "react",
-        "import-helpers",
-        "prettier"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-        "project": [
-            "./tsconfig.node.json",
-            "./tsconfig.json"
-        ],
-        "extraFileExtensions:": [
-            ".mdx"
-        ],
-        "extensions:": [
-            ".mdx"
-        ]
-    },
-    "env": {
-        "browser": true,
-        "es2021": true
-    },
-    "settings": {
-        "react": {
-            "version": "detect"
-        }
-    },
-    "rules": {
-        "no-console": "warn",
-        "no-self-assign": "warn",
-        "no-self-compare": "warn",
-        "complexity": [
-            "error",
-            {
-                "max": 15
-            }
-        ],
-        "indent": [
-            "error",
-            2,
-            {
-                "SwitchCase": 1
-            }
-        ],
-        "no-dupe-keys": "error",
-        "no-invalid-regexp": "error",
-        "no-undef": "error",
-        "no-return-assign": "error",
-        "no-redeclare": "error",
-        "no-empty": "error",
-        "no-await-in-loop": "error",
-        "react/react-in-jsx-scope": 0,
-        "node/exports-style": [
-            "error",
-            "module.exports"
-        ],
-        "node/file-extension-in-import": [
-            "error",
-            "always"
-        ],
-        "node/prefer-global/buffer": [
-            "error",
-            "always"
-        ],
-        "node/prefer-global/console": [
-            "error",
-            "always"
-        ],
-        "node/prefer-global/process": [
-            "error",
-            "always"
-        ],
-        "node/prefer-global/url-search-params": [
-            "error",
-            "always"
-        ],
-        "node/prefer-global/url": [
-            "error",
-            "always"
-        ],
-        "node/prefer-promises/dns": "error",
-        "node/prefer-promises/fs": "error"
+  "extends": ["eslint:recommended", "plugin:react/recommended"],
+  "plugins": ["react", "import-helpers"],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": ["./tsconfig.node.json", "./tsconfig.json"],
+    "extraFileExtensions:": [".mdx"],
+    "extensions:": [".mdx"]
+  },
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
     }
+  },
+  "rules": {
+    "no-console": "warn",
+    "no-self-assign": "warn",
+    "no-self-compare": "warn",
+    "complexity": [
+      "error",
+      {
+        "max": 15
+      }
+    ],
+    "indent": [
+      "error",
+      2,
+      {
+        "SwitchCase": 1
+      }
+    ],
+    "no-dupe-keys": "error",
+    "no-invalid-regexp": "error",
+    "no-undef": "error",
+    "no-return-assign": "error",
+    "no-redeclare": "error",
+    "no-empty": "error",
+    "no-await-in-loop": "error",
+    "react/react-in-jsx-scope": 0,
+    "node/exports-style": ["error", "module.exports"],
+    "node/file-extension-in-import": ["error", "always"],
+    "node/prefer-global/buffer": ["error", "always"],
+    "node/prefer-global/console": ["error", "always"],
+    "node/prefer-global/process": ["error", "always"],
+    "node/prefer-global/url-search-params": ["error", "always"],
+    "node/prefer-global/url": ["error", "always"],
+    "node/prefer-promises/dns": "error",
+    "node/prefer-promises/fs": "error"
+  }
 }
