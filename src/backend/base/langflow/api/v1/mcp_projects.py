@@ -400,7 +400,7 @@ async def install_mcp_config(
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
         # Configure args based on the MCP tool
-        env = None
+        oauth_env = None
         if FEATURE_FLAGS.mcp_composer:
             args = [mcp_tool, "--sse-url", sse_url]
 
@@ -411,7 +411,7 @@ async def install_mcp_config(
                 auth_settings = AuthSettings(**project.auth_settings)
                 args.extend(["--auth_type", auth_settings.auth_type])
 
-                env = {
+                oauth_env = {
                     "OAUTH_HOST": auth_settings.oauth_host,
                     "OAUTH_PORT": auth_settings.oauth_port,
                     "OAUTH_SERVER_URL": auth_settings.oauth_server_url,
@@ -440,8 +440,8 @@ async def install_mcp_config(
         }
 
         # Add environment variables if mcp-composer feature flag is enabled and auth settings exist
-        if FEATURE_FLAGS.mcp_composer and env is not None:
-            server_config["env"] = env
+        if FEATURE_FLAGS.mcp_composer and oauth_env is not None:
+            server_config["env"] = oauth_env
 
         mcp_config = {
             "mcpServers": {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": server_config}
