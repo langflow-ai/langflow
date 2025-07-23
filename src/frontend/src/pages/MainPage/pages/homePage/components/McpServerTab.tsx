@@ -270,8 +270,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "${currentAuthSettings.iam_endpoint || "YOUR_IAM_ENDPOINT"}",`;
       case "oauth":
         return `
-        "--auth-type",
-        "oauth"`;
+        "--auth_type",
+        "oauth",
+        "--sse-url",`;
       default:
         return "";
     }
