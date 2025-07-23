@@ -36,26 +36,13 @@ class ModelInputExampleComponent(Component):
 
     def build_model(self) -> LanguageModel:
         """Build and return the language model using ModelInput with API keys."""
-        # Find the ModelInput object from self.inputs
-        model_input = None
-        for input_obj in self.inputs:
-            if input_obj.name == "model_selection":
-                model_input = input_obj
-                break
-        if not model_input:
-            msg = "ModelInput field 'model_selection' not found"
-            raise ValueError(msg)
-        # Set the current value from the component attribute
-        model_input.value = self.model_selection
-        # Build the model using ModelInput's build_model method
-        model = model_input.build_model(
-            api_key=self.api_key,
-        )
+        # Now it's super simple! self.model_selection is automatically the ModelInput object
+        model = self.model_selection.build_model(api_key=self.api_key)
 
         if not model:
             # Parse the selection to show a helpful error message
-            if ":" in self.model_selection:
-                provider, model_name = self.model_selection.split(":", 1)
+            if ":" in self.model_selection.value:
+                provider, model_name = self.model_selection.value.split(":", 1)
                 msg = f"Failed to build {provider} model '{model_name}'. Check API key configuration."
             else:
                 msg = "Failed to build model. Invalid selection format."
