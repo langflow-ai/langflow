@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
-
-from loguru import logger
 
 from lfx.services.schema import ServiceType
 
@@ -102,15 +101,15 @@ async def session_scope():
         yield NoopSession()
         return
 
-    # If we have a database service, try to get a real session
-    try:
-        async with db_service.with_session() as session:
-            yield session
-    except Exception as e:  # noqa: BLE001
-        logger.error("Error getting database session: {}", e)
+    if inspect.isabstract(type(db_service)):
+        # This means we are using the Protocol, so we need to use the NoopSession
         from lfx.services.session import NoopSession
 
         yield NoopSession()
+        return
+
+    async with db_service.with_session() as session:
+        yield session
 
 
 def get_session():
