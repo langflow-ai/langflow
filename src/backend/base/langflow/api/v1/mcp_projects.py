@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Any
 from uuid import UUID
 
 from anyio import BrokenResourceError
@@ -435,14 +434,14 @@ async def install_mcp_config(
         name = project.name
 
         # Create the MCP configuration
-        server_config: dict[str, Any] = {
+        server_config = {
             "command": command,
             "args": args,
         }
 
         # Add environment variables if mcp-composer feature flag is enabled and auth settings exist
         if FEATURE_FLAGS.mcp_composer and oauth_env is not None:
-            server_config["env"] = oauth_env
+            server_config["env"] = oauth_env  # type: ignore[assignment]
 
         mcp_config = {
             "mcpServers": {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": server_config}
