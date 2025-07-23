@@ -94,7 +94,8 @@ export default function TableAutoCellRender({
             editNode={true}
             id={"toggle" + colDef?.colId + uniqueId()}
             disabled={
-              colDef?.cellRendererParams?.isVectorizeColumn && colDef?.cellRendererParams?.checkVectorizeEditable
+              colDef?.cellRendererParams?.isVectorizeColumn &&
+              colDef?.cellRendererParams?.checkVectorizeEditable
                 ? !colDef.cellRendererParams.checkVectorizeEditable(props)
                 : false
             }
