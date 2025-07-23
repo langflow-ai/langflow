@@ -244,17 +244,17 @@ If you're creating custom components in a different location using the [LANGFLOW
 ```
 
 Components must be placed inside **category folders**, not directly in the base directory.
-The category folder name determines where the component appears in the UI menu.
+The category folder name determines where the component appears in the Langflow **Components** menu.
 
-For example, to add a component to the **Helpers** menu, place it in a `helpers` subfolder:
+For example, to add a component to the **Helpers** category, place it in a `helpers` subfolder:
 
 ```
 /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
-    └── helpers/                 # Displayed within the "Helpers" menu
+    └── helpers/                 # Displayed within the "Helpers" category
         └── custom_component.py  # Your component
 ```
 
-You can have **multiple category folders** to organize components into different menus:
+You can have multiple category folders to organize components into different categories:
 ```
 /app/custom_components/
     ├── helpers/

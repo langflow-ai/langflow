@@ -1,0 +1,85 @@
+codecov:
+  # Don't block CI if codecov fails to process reports
+  require_ci_to_pass: false
+  notify:
+    after_n_builds: 1  # Comment after each report (don't wait for all)
+
+coverage:
+  precision: 2
+  round: down
+  # Display range from 30-100% to provide meaningful color gradients
+  range: "30...100"
+
+  status:
+    project:
+      # Overall project coverage target
+      default:
+        target: 60%
+        threshold: 3%
+
+      # Backend coverage strategy: Aspirational target for progress tracking
+      # Current coverage: ~33%, Target: 55% (intentionally higher than current)
+      # This creates visual progress indicators (red->yellow->green) without blocking PRs
+      # Shows improvement over time while encouraging better test coverage
+      backend:
+        target: 55%
+        # Threshold: Allowable drop in coverage before failing the check
+        # 5% = coverage can drop from 33% to 28% without failing status
+        # Higher threshold to avoid blocking PRs during improvement phase
+        threshold: 5%
+        flags:
+          - backend
+
+      # Frontend coverage: Realistic target based on current state
+      # Current coverage: ~70%, maintains existing high standards
+      frontend:
+        target: 70%
+        # Threshold: Allowable drop in coverage before failing the check
+        # 2% = coverage can drop from 70% to 68% without failing status
+        # Stricter threshold to maintain established quality standards
+        threshold: 2%
+        flags:
+          - frontend
+
+    # New code coverage requirements - encourages well-tested new features
+    patch:
+      default:
+        target: 70%
+        threshold: 3%
+
+# PR comment configuration - what information to show in coverage reports
+comment:
+  layout: "reach,diff,flags,tree"  # Show coverage, changes, flags, and file tree
+  behavior: default
+  require_changes: false  # Comment even if no changes
+  require_base: false     # Don't require base branch comparison
+  require_head: true      # Require current branch coverage
+
+# Define separate coverage tracking for frontend and backend
+flags:
+  backend:
+    paths:
+      - src/backend/
+    carryforward: true  # Preserve coverage data across builds if missing
+  frontend:
+    paths:
+      - src/frontend/
+    carryforward: true  # Preserve coverage data across builds if missing
+
+# Files/directories to exclude from coverage calculations
+ignore:
+  # Database migrations - infrastructure code, not business logic
+  - "src/backend/base/langflow/alembic/**"
+  # Test files themselves don't need coverage
+  - "src/backend/tests/**"
+  - "src/frontend/tests/**"
+  - "src/frontend/test-results/**"
+  # Build artifacts and dependencies
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "**/node_modules/**"
+  - "**/coverage/**"
+  # Python package init files - typically just imports
+  - "**/__init__.py"
+  # Database migrations
+  - "**/migrations/**"

@@ -3,23 +3,19 @@ title: Memory management options
 slug: /memory
 ---
 
-Langflow provides flexible memory management options for storage and retrieval.
+Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
+This includes essential Langflow database tables, file management, and caching, as well as chat memory.
 
-This page details the following memory configuration options in Langflow.
-
-- [Local Langflow database tables](#local-langflow-database-tables)
-- [Store messages in local memory](#store-messages-in-local-memory)
-- [Configure external memory](#configure-external-memory)
-- [Configure the external database connection](#configure-the-external-database-connection)
-- [Configure cache memory](#configure-cache-memory)
+Langflow supports both local memory and external memory options.
 
 ## Local Langflow database tables
 
 The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
 
-- Linux/WSL: `~/.cache/langflow/langflow.db`
-- macOS: `/Users/<username>/Library/Caches/langflow/langflow.db`
-- Windows: `%LOCALAPPDATA%\langflow\langflow\Cache\langflow.db`
+- **macOS Desktop**: `/Users/<username>/.langflow/data/database.db`
+- **Windows Desktop**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
+- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version may vary)
+- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
 
 The following tables are stored in `langflow.db`:
 
@@ -27,7 +23,7 @@ The following tables are stored in `langflow.db`:
 
 • **Flow** - Contains flow configurations. For more information, see [Build flows](/concepts-flows).
 
-• **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/concepts-objects#message-object).
+• **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message).
 
 • **Transaction** - Records execution history and results of flow runs. This information is used for [logging](/logging).
 
@@ -91,3 +87,7 @@ LANGFLOW_CACHE_TYPE=Async
 
 Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
 The default behavior is suitable for most use cases.
+
+## See also
+
+* [Langflow file management](/concepts-file-management)

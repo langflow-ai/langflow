@@ -19,7 +19,7 @@ The main focus of this tutorial is to show you how to provide files as input to 
 - [A Langflow API key](/configuration-api-keys)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
 
-    This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
+This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
 ## Create a flow that accepts file input
 
@@ -185,7 +185,11 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
 
 ## Next steps
 
-To process multiple files in a single flow run, add a separate File component for each file you want to ingest. Then, modify your script to upload each file, retrieve each returned file path, and then pass a unique file path to each File component ID.
+To continue building on this tutorial, try these next steps.
+
+### Process multiple files loaded at runtime
+
+To process multiple files in a single flow run, add a separate **File** component for each file you want to ingest. Then, modify your script to upload each file, retrieve each returned file path, and then pass a unique file path to each **File** component ID.
 
 For example, you can modify `tweaks` to accept multiple file components.
 The following code is just an example; it is not working code:
@@ -206,4 +210,18 @@ def chat_with_flow(input_message, file_paths):
         tweaks[component_id] = {"path": file_path}
 ```
 
-To upload files from another machine that is not your local environment, your Langflow server must first be accessible over the internet. Then, authenticated users can upload files your public Langflow server's `/v2/files/` endpoint, as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
+You can also use a [**Directory** component](/components-data#directory) to load all files in a directory or pass an archive file to the **File** component.
+
+### Upload external files at runtime
+
+To upload files from another machine that is not your local environment, your Langflow server must first be accessible over the internet. Then, authenticated users can upload files to your public Langflow server's `/v2/files/` endpoint, as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
+
+### Preload files outside the chat session
+
+You can use the **File** component to load files anywhere in a flow, not just in a chat session.
+
+In the visual editor, you can preload files to the file component by selecting them from your local machine or [Langflow file management](/concepts-file-management).
+
+For example, you can preload an instructions file for a prompt template, or you can preload a vector store with documents that you want to query in a Retrieval Augmented Generation (RAG) flow.
+
+For more information about the **File** component and other data loading components, see [Data components](/components-data).
