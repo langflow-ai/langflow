@@ -13,6 +13,21 @@ from langflow.utils.template_validation import (
 )
 
 
+class AsyncIteratorMock:
+    """Mock class that provides proper async iteration."""
+
+    def __init__(self, items):
+        self.items = items
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if not self.items:
+            raise StopAsyncIteration
+        return self.items.pop(0)
+
+
 class TestValidateTemplateStructure:
     """Test cases for validate_template_structure function."""
 
@@ -318,16 +333,15 @@ class TestValidateFlowExecution:
         # Mock events response
         events_response = Mock()
         events_response.status_code = 200
-
-        async def async_lines():
-            for line in [
-                '{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1"]}}',
-                '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {}}}',
-                '{"event": "end", "job_id": "job123"}',
-            ]:
-                yield line
-
-        events_response.aiter_lines = AsyncMock(return_value=async_lines())
+        events_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1"]}}',
+                    '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
 
         # Set up call sequence
         mock_client.post.side_effect = [create_response, build_response]
@@ -429,6 +443,7 @@ class TestValidateEventStream:
     async def test_valid_event_stream(self):
         """Test validation passes for valid event stream."""
         mock_response = Mock()
+<<<<<<< HEAD
 
         async def async_lines():
             for line in [
@@ -440,6 +455,17 @@ class TestValidateEventStream:
                 yield line
 
         mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+=======
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1", "v2"]}}',
+                    '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
+                    '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -449,12 +475,11 @@ class TestValidateEventStream:
     async def test_missing_end_event(self):
         """Test validation fails when end event is missing."""
         mock_response = Mock()
-
-        async def async_lines():
-            for line in ['{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1"]}}']:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                ['{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1"]}}']
+            )
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -465,15 +490,14 @@ class TestValidateEventStream:
     async def test_job_id_mismatch(self):
         """Test validation fails when job ID doesn't match."""
         mock_response = Mock()
-
-        async def async_lines():
-            for line in [
-                '{"event": "vertices_sorted", "job_id": "wrong_job", "data": {"ids": ["v1"]}}',
-                '{"event": "end", "job_id": "job123"}',
-            ]:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "vertices_sorted", "job_id": "wrong_job", "data": {"ids": ["v1"]}}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -484,12 +508,9 @@ class TestValidateEventStream:
     async def test_invalid_json_in_stream(self):
         """Test validation handles invalid JSON in event stream."""
         mock_response = Mock()
-
-        async def async_lines():
-            for line in ["invalid json", '{"event": "end", "job_id": "job123"}']:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(["invalid json", '{"event": "end", "job_id": "job123"}'])
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -500,17 +521,16 @@ class TestValidateEventStream:
     async def test_error_event_handling(self):
         """Test validation handles error events properly."""
         mock_response = Mock()
-
-        async def async_lines():
-            for line in [
-                '{"event": "error", "job_id": "job123", "data": {"error": "Something went wrong"}}',
-                '{"event": "error", "job_id": "job123", "data": {"error": "False"}}',  # Should be ignored
-                '{"event": "error", "job_id": "job123", "data": "String error"}',
-                '{"event": "end", "job_id": "job123"}',
-            ]:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "error", "job_id": "job123", "data": {"error": "Something went wrong"}}',
+                    '{"event": "error", "job_id": "job123", "data": {"error": "False"}}',  # Should be ignored
+                    '{"event": "error", "job_id": "job123", "data": "String error"}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -522,15 +542,14 @@ class TestValidateEventStream:
     async def test_missing_vertex_ids(self):
         """Test validation fails when vertices_sorted event missing IDs."""
         mock_response = Mock()
-
-        async def async_lines():
-            for line in [
-                '{"event": "vertices_sorted", "job_id": "job123", "data": {}}',
-                '{"event": "end", "job_id": "job123"}',
-            ]:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "vertices_sorted", "job_id": "job123", "data": {}}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -541,15 +560,14 @@ class TestValidateEventStream:
     async def test_missing_build_data(self):
         """Test validation fails when end_vertex event missing build_data."""
         mock_response = Mock()
-
-        async def async_lines():
-            for line in [
-                '{"event": "end_vertex", "job_id": "job123", "data": {}}',
-                '{"event": "end", "job_id": "job123"}',
-            ]:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "end_vertex", "job_id": "job123", "data": {}}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -559,13 +577,18 @@ class TestValidateEventStream:
     @pytest.mark.asyncio
     async def test_event_stream_timeout(self):
         """Test validation handles timeout gracefully."""
+        class SlowAsyncIterator:
+            """Async iterator that will cause timeout."""
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                await asyncio.sleep(10)  # Will cause timeout
+                return '{"event": "end", "job_id": "job123"}'
+
         mock_response = Mock()
-
-        async def slow_iter():
-            await asyncio.sleep(10)  # Will cause timeout
-            yield '{"event": "end", "job_id": "job123"}'
-
-        mock_response.aiter_lines = AsyncMock(return_value=slow_iter())
+        mock_response.aiter_lines = Mock(return_value=SlowAsyncIterator())
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
@@ -576,18 +599,17 @@ class TestValidateEventStream:
     async def test_common_event_types_ignored(self):
         """Test that common event types don't cause errors."""
         mock_response = Mock()
-
-        async def async_lines():
-            for line in [
-                '{"event": "message", "job_id": "job123"}',
-                '{"event": "token", "job_id": "job123"}',
-                '{"event": "add_message", "job_id": "job123"}',
-                '{"event": "stream_closed", "job_id": "job123"}',
-                '{"event": "end", "job_id": "job123"}',
-            ]:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "message", "job_id": "job123"}',
+                    '{"event": "token", "job_id": "job123"}',
+                    '{"event": "add_message", "job_id": "job123"}',
+                    '{"event": "stream_closed", "job_id": "job123"}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
 
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
