@@ -91,7 +91,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Agents and MCP",
+      label: "Agents",
       items: [
         "Agents/agents",
         "Agents/agents-tools",
