@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
 import numpy as np
 import pandas as pd
 from cryptography.fernet import InvalidToken
@@ -59,6 +61,12 @@ class KBRetrievalComponent(Component):
 
     outputs = [
         Output(
+            name="chroma_kb_data",
+            display_name="Results",
+            method="get_chroma_kb_data",
+            info="Returns the data from the selected knowledge base.",
+        ),
+        Output(
             name="kb_data",
             display_name="Knowledge Base Data",
             method="get_kb_data",
@@ -114,7 +122,7 @@ class KBRetrievalComponent(Component):
                 metadata["api_key"] = None
         return metadata
 
-    def _build_embedder(self, metadata: dict):
+    def _build_embeddings(self, metadata: dict):
         """Build embedding model from metadata."""
         provider = metadata.get("embedding_provider")
         model = metadata.get("embedding_model")
@@ -126,6 +134,7 @@ class KBRetrievalComponent(Component):
         if self.api_key and self.api_key.get_secret_value():
             api_key = self.api_key.get_secret_value()
 
+        # TODO: Support other embedding providers in the future
         if provider == "OpenAI":
             from langchain_openai import OpenAIEmbeddings
 
@@ -141,6 +150,52 @@ class KBRetrievalComponent(Component):
         # Add other providers here if they become supported in ingest
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
+
+    def get_chroma_kb_data(self) -> DataFrame:
+        """Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.
+
+        Returns:
+            A DataFrame containing the data rows from the knowledge base.
+        """
+        kb_root_path = Path(self.kb_root_path).expanduser()
+        kb_path = kb_root_path / self.knowledge_base
+
+        metadata = self._get_kb_metadata(kb_path)
+        if not metadata:
+            msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
+            raise ValueError(msg)
+
+        # Build the embedder for the knowledge base
+        embedding_function = self._build_embeddings(metadata)
+
+        # Load vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            embedding_function=embedding_function,
+            collection_name=self.knowledge_base,
+        )
+
+        # With scores
+        results = chroma.similarity_search_with_score(
+            query=self.search_query or "",
+            k=5,
+        )
+
+        # Assuming Data class has fields like 'content' and other metadata fields
+        data_list = [
+            Data(
+                content=doc[0].page_content,
+                score=doc[1],
+                **doc[0].metadata  # spread the metadata as additional fields
+            )
+            for doc in results
+        ]
+
+        # Arrange data_list by the score in descending order
+        data_list.sort(key=lambda x: x.score, reverse=True)
+
+        # Return the DataFrame containing the data
+        return DataFrame(data=data_list)
 
     def get_kb_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.
@@ -178,7 +233,7 @@ class KBRetrievalComponent(Component):
 
             # If a search query is provided, by using OpenAI to perform a vector search against the data
             if self.search_query:
-                embedder = self._build_embedder(metadata)
+                embedder = self._build_embeddings(metadata)
                 logger.info(f"Embedder: {embedder}")
                 top_indices, scores = self.vector_search(
                     df=pd.DataFrame(parquet_df), query=self.search_query, embedder=embedder, top_k=5

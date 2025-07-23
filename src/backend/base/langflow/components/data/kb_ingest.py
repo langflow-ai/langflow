@@ -246,6 +246,7 @@ class KBIngestionComponent(Component):
         )
         chunk_size = self.chunk_size
 
+        # TODO: Support all embedding providers
         if provider == "OpenAI":
             if not api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
