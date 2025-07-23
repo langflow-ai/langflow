@@ -30,6 +30,7 @@ class KBRetrievalComponent(Component):
             name="knowledge_base",
             display_name="Knowledge Base",
             info="Select the knowledge base to load files from.",
+            required=True,
             options=[
                 str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
             ]
