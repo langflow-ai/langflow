@@ -649,18 +649,23 @@ class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixi
 
     This class provides a unified dropdown interface for selecting language models or embedding models
     with options formatted as "Provider:ModelName" (e.g., "OpenAI:gpt-4o").
+    API keys should be passed to the build_model() method from the component.
 
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input.
         model_type (str): The type of model - either "language" or "embedding".
         options (list[str]): List of available model options in "Provider:ModelName" format.
         value (str): Selected model option in "Provider:ModelName" format.
+        temperature (float): Temperature setting for language models.
+        max_tokens (int): Maximum tokens for language models.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     model_type: str = "language"
     options: list[str] = Field(default_factory=list)
     value: str = ""
+    temperature: float = 0.1
+    max_tokens: int = 256
 
     def __init__(self, **kwargs):
         """Initialize ModelInput with default options based on model_type."""
@@ -746,6 +751,87 @@ class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixi
         if v is None:
             return ""
         return str(v)
+
+    def build_model(self, api_key: str = "", **kwargs) -> Any | None:
+        """Build and return the configured model instance based on selection.
+
+        Args:
+            api_key: API key (should be passed from component)
+            **kwargs: Additional parameters to pass to the model
+
+        Returns:
+            Language model instance for language models, Embedding model instance for embedding models.
+        """
+        if not self.value or ":" not in self.value:
+            return None
+
+        # Parse the selection
+        provider, model_name = self.value.split(":", 1)
+        provider = provider.strip()
+        model_name = model_name.strip()
+
+        if not provider or not model_name:
+            return None
+
+        if not api_key:
+            return None
+
+        if self.model_type == "language":
+            return self._build_language_model(provider, model_name, api_key, **kwargs)
+        if self.model_type == "embedding":
+            return self._build_embedding_model(provider, model_name, api_key, **kwargs)
+        return None
+
+    def _build_language_model(self, provider: str, model_name: str, api_key: str, **kwargs) -> Any | None:
+        """Build a language model instance."""
+        try:
+            if not api_key:
+                return None
+
+            # Use provided kwargs or instance attributes for model parameters
+            temperature = kwargs.get("temperature", self.temperature)
+            max_tokens = kwargs.get("max_tokens", self.max_tokens)
+
+            if provider == "OpenAI":
+                from langchain_openai import ChatOpenAI
+
+                return ChatOpenAI(
+                    openai_api_key=api_key,
+                    model_name=model_name,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            if provider == "Anthropic":
+                from langchain_anthropic import ChatAnthropic
+
+                return ChatAnthropic(
+                    anthropic_api_key=api_key,
+                    model=model_name,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+        except ImportError:
+            # If the required package is not installed, return None
+            pass
+        return None
+
+    def _build_embedding_model(self, provider: str, model_name: str, api_key: str, **_kwargs) -> Any | None:
+        """Build an embedding model instance."""
+        try:
+            if not api_key:
+                return None
+
+            if provider == "OpenAI":
+                from langchain_openai import OpenAIEmbeddings
+
+                return OpenAIEmbeddings(
+                    openai_api_key=api_key,
+                    model=model_name,
+                )
+        except ImportError:
+            # If the required package is not installed, return None
+            pass
+        return None
 
 
 DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
