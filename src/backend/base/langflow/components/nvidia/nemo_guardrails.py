@@ -10,7 +10,7 @@ from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs import BoolInput, DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput
+from langflow.inputs import BoolInput, DropdownInput, MessageInput, MessageTextInput, MultiselectInput, SecretStrInput
 from langflow.io import HandleInput, MultilineInput
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import MESSAGE_SENDER_AI, AIMessage, Message
@@ -105,7 +105,15 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
     file_types = ["yaml"]
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        MessageInput(name="input_value", display_name="Input"),
+        # override system message input from base class to default to hidden
+        MultilineInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=True,
+        ),
+        BoolInput(name="stream", display_name="Stream", info="Stream the response from the model.", advanced=True),
         MultiselectInput(
             name="rails",
             display_name="Rails",
