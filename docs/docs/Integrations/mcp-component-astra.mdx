@@ -1,0 +1,74 @@
+---
+title: Connect an Astra DB MCP server to Langflow
+slug: /mcp-component-astra
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
+Use the [MCP Tools component](/mcp-client) to connect Langflow to a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp).
+
+1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+
+2. Create an [OpenAI](https://platform.openai.com/) API key.
+
+3. Create an [Astra DB Serverless (Vector) database](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html#create-vector-database), if you don't already have one.
+
+4. Get your database's Astra DB API endpoint and an Astra application token with the **Database Administrator** role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
+
+5. To follow along with this guide, create a flow based on the [**Simple Agent** template](/simple-agent).
+
+    You can also use an existing flow or create a blank flow.
+
+6. Remove the **URL** tool, and then replace it with an [**MCP Tools** component](/mcp-client).
+
+7. Configure the **MCP Tools** component as follows:
+
+    1. Select **Stdio** mode.
+    2. In the **MCP server** field, add the following code to connect to an Astra DB MCP server:
+
+        ```bash
+        npx -y @datastax/astra-db-mcp
+        ```
+
+    3. In the **Env** fields, add variables for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT` with the values from your Astra database.
+
+        :::important
+        Environment variables declared in your Langflow `.env` file can be referenced in your MCP server commands, but you cannot reference global variables declared in Langflow.
+
+        If you want to use variables for `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT`, add them to Langflow's `.env` file, and then restart Langflow.
+        For more information, see [global variables](/configuration-global-variables).
+        :::
+
+        Add each variable separately.
+        To add another variable field click <Icon name="Plus" aria-hidden="true"/> **Add More**.
+
+        ```bash
+        ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
+        ```
+
+        ```bash
+        ASTRA_DB_API_ENDPOINT=https://...-us-east-2.apps.astra.datastax.com
+        ```
+
+8. In the **Agent** component, add your **OpenAI API key**.
+
+    The default model is an OpenAI model.
+    If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+    ![The Simple Agent flow with the URL tool replaced by an MCP Tools component, and the MCP Tools component launching an Astra DB MCP server](/img/component-mcp-astra-db.png)
+
+9. Open the **Playground**, and then ask the agent, `What collections are available?`
+
+    Since Langflow is connected to your Astra DB database through the MCP server, the agent chooses the correct tool and connects to your database to retrieve the answer.
+    For example:
+
+    ```text
+    The available collections in your database are:
+    collection_002
+    hardware_requirements
+    load_collection
+    nvidia_collection
+    software_requirements
+    ```

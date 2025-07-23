@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { Outlet } from "react-router-dom";
 import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
@@ -9,12 +11,13 @@ import { CustomLoadingPage } from "@/customization/components/custom-loading-pag
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useEffect } from "react";
-import { Outlet } from "react-router-dom";
 import { LoadingPage } from "../LoadingPage";
 
 export function AppInitPage() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
+  const refreshDiscordCount = useDarkStore(
+    (state) => state.refreshDiscordCount,
+  );
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
@@ -31,6 +34,7 @@ export function AppInitPage() {
   useEffect(() => {
     if (isFetched) {
       refreshStars();
+      refreshDiscordCount();
     }
 
     if (isConfigFetched) {

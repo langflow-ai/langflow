@@ -2,11 +2,12 @@ from langchain.agents import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.base.agents.agent import LCToolsAgentComponent
-from langflow.custom.custom_component.component import _get_component_toolkit
-from langflow.field_typing import Tool
-from langflow.inputs import MessageTextInput
-from langflow.inputs.inputs import DataInput, HandleInput
-from langflow.schema import Data
+from langflow.inputs.inputs import (
+    DataInput,
+    HandleInput,
+    MessageTextInput,
+)
+from langflow.schema.data import Data
 
 
 class ToolCallingAgentComponent(LCToolsAgentComponent):
@@ -56,11 +57,3 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         except NotImplementedError as e:
             message = f"{self.display_name} does not support tool calling. Please try using a compatible model."
             raise NotImplementedError(message) from e
-
-    async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
-        toolkit = component_toolkit(component=self)
-        tools = toolkit.get_tools(callbacks=self.get_langchain_callbacks())
-        if hasattr(self, "tools_metadata"):
-            tools = toolkit.update_tools_metadata(tools=tools)
-        return tools

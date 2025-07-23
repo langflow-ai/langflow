@@ -1,5 +1,5 @@
-import { APIClassType, APIDataType } from "@/types/api";
-import { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import type { APIClassType, APIDataType } from "@/types/api";
 
 export interface NodeColors {
   [key: string]: string;
@@ -14,7 +14,7 @@ export interface CategoryGroupProps {
     icon: string;
   }[];
   openCategories: string[];
-  setOpenCategories: (categories: string[]) => void;
+  setOpenCategories: Dispatch<SetStateAction<string[]>>;
   search: string;
   nodeColors: NodeColors;
   onDragStart: (
@@ -22,10 +22,6 @@ export interface CategoryGroupProps {
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
-  uniqueInputsComponents: {
-    chatInput: boolean;
-    webhookInput: boolean;
-  };
 }
 
 export interface SidebarGroupProps {
@@ -39,15 +35,12 @@ export interface SidebarGroupProps {
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
-  openCategories: string[];
-  setOpenCategories: (
-    categories: string[] | ((prev: string[]) => string[]),
-  ) => void;
   handleKeyDownInput: (
     event: React.KeyboardEvent<HTMLDivElement>,
     name: string,
   ) => void;
-  uniqueInputsComponents: UniqueInputsComponents;
+  openCategories: string[];
+  setOpenCategories: Dispatch<SetStateAction<string[]>>;
 }
 
 export interface BundleItemProps {
@@ -56,11 +49,10 @@ export interface BundleItemProps {
     display_name: string;
     icon: string;
   };
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
+  openCategories: string[];
+  setOpenCategories: Dispatch<SetStateAction<string[]>>;
   dataFilter: APIDataType;
   nodeColors: NodeColors;
-  uniqueInputsComponents: UniqueInputsComponents;
   onDragStart: (
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },

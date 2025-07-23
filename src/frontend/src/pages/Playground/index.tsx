@@ -1,20 +1,18 @@
-import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
-import IOModal from "@/modals/IOModal/new-modal";
-import useFlowStore from "@/stores/flowStore";
-import { useStoreStore } from "@/stores/storeStore";
-import { useUtilityStore } from "@/stores/utilityStore";
-import { CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";
-import { getComponent } from "../../controllers/API";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
+import { CustomIOModal } from "@/customization/components/custom-new-modal";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import cloneFLowWithParent, {
-  getInputsAndOutputs,
-} from "../../utils/storeUtils";
+import { getInputsAndOutputs } from "../../utils/storeUtils";
 export default function PlaygroundPage() {
+  useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setClientId = useUtilityStore((state) => state.setClientId);
@@ -26,13 +24,14 @@ export default function PlaygroundPage() {
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
+  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
 
   async function getFlowData() {
     try {
       const flow = await getFlow({ id: id!, public: true });
       return flow;
     } catch (error: any) {
-      console.log(error);
+      console.error(error);
       navigate("/");
     }
   }
@@ -56,6 +55,7 @@ export default function PlaygroundPage() {
 
   useEffect(() => {
     if (id) track("Playground Page Loaded", { flowId: id });
+    setPlaygroundPage(true);
   }, []);
 
   useEffect(() => {
@@ -93,9 +93,14 @@ export default function PlaygroundPage() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
       {currentSavedFlow && (
-        <IOModal open={true} setOpen={() => {}} isPlayground playgroundPage>
+        <CustomIOModal
+          open={true}
+          setOpen={() => {}}
+          isPlayground
+          playgroundPage
+        >
           <></>
-        </IOModal>
+        </CustomIOModal>
       )}
     </div>
   );

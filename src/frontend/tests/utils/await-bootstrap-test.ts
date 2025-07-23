@@ -1,4 +1,5 @@
-import { Page } from "playwright/test";
+import type { Page } from "playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "./add-flow-to-test-on-empty-langflow";
 
 export const awaitBootstrapTest = async (
   page: Page,
@@ -15,6 +16,13 @@ export const awaitBootstrapTest = async (
     timeout: 30000,
   });
 
+  const countEmptyButton = await page
+    .getByTestId("new_project_btn_empty_page")
+    .count();
+  if (countEmptyButton > 0) {
+    await addFlowToTestOnEmptyLangflow(page);
+  }
+
   await page.waitForSelector('[id="new-project-btn"]', {
     timeout: 30000,
   });
@@ -26,7 +34,7 @@ export const awaitBootstrapTest = async (
       if (modalTitleElement) {
         modalCount = await modalTitleElement.count();
       }
-    } catch (error) {
+    } catch (_error) {
       modalCount = 0;
     }
 

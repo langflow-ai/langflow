@@ -20,9 +20,9 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("add-folder-button").click();
+    await page.getByTestId("add-project-button").click();
 
-    await page.getByText("New Folder").last().click();
+    await page.getByText("New Project").last().click();
 
     await page.waitForSelector("text=new flow", { timeout: 30000 });
 
@@ -39,12 +39,12 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector("text=playground", { timeout: 30000 });
-    await page.waitForSelector("text=publish", { timeout: 30000 });
+    await page.waitForSelector("text=share", { timeout: 30000 });
 
     await expect(page.getByTestId("button_run_chat output")).toBeVisible({
       timeout: 30000,
     });
-    await expect(page.getByTestId("button_run_openai")).toBeVisible({
+    await expect(page.getByTestId("button_run_language model")).toBeVisible({
       timeout: 30000,
     });
     await expect(page.getByTestId("button_run_prompt")).toBeVisible({

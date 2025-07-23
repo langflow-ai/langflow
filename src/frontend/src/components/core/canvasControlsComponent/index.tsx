@@ -1,20 +1,21 @@
-import IconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useFlowStore from "@/stores/flowStore";
-import { cn } from "@/utils/utils";
 import {
   ControlButton,
   Panel,
+  type ReactFlowState,
   useReactFlow,
   useStore,
   useStoreApi,
-  type ReactFlowState,
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { shallow } from "zustand/shallow";
+import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { cn } from "@/utils/utils";
 
 type CustomControlButtonProps = {
   iconName: string;
@@ -38,17 +39,20 @@ export const CustomControlButton = ({
   return (
     <ControlButton
       data-testid={testId}
-      className="!h-8 !w-8 rounded !p-0"
+      className="group !h-8 !w-8 rounded !p-0"
       onClick={onClick}
       disabled={disabled}
       title={testId?.replace(/_/g, " ")}
     >
-      <ShadTooltip content={tooltipText}>
+      <ShadTooltip content={tooltipText} side="right">
         <div className={cn("rounded p-2.5", backgroundClasses)}>
           <IconComponent
             name={iconName}
             aria-hidden="true"
-            className={cn("scale-150 text-muted-foreground", iconClasses)}
+            className={cn(
+              "scale-150 text-muted-foreground group-hover:text-primary",
+              iconClasses,
+            )}
           />
         </div>
       </ShadTooltip>
@@ -70,20 +74,26 @@ const CanvasControls = ({ children }) => {
     shallow,
   );
   const saveFlow = useSaveFlow();
-  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const isLocked = useFlowStore(
+    useShallow((state) => state.currentFlow?.locked),
+  );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+  const setHelperLineEnabled = useFlowStore(
+    (state) => state.setHelperLineEnabled,
+  );
+  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
   useEffect(() => {
-    const isLocked = currentFlow?.locked;
     store.setState({
       nodesDraggable: !isLocked,
       nodesConnectable: !isLocked,
       elementsSelectable: !isLocked,
     });
-  }, [currentFlow?.locked]);
+  }, [isLocked]);
 
-  const handleSaveFlow = () => {
+  const handleSaveFlow = useCallback(() => {
+    const currentFlow = useFlowStore.getState().currentFlow;
     if (!currentFlow) return;
     const newFlow = cloneDeep(currentFlow);
     newFlow.locked = isInteractive;
@@ -92,21 +102,25 @@ const CanvasControls = ({ children }) => {
     } else {
       setCurrentFlow(newFlow);
     }
-  };
+  }, [isInteractive, autoSaving, saveFlow, setCurrentFlow]);
 
-  const onToggleInteractivity = () => {
+  const onToggleInteractivity = useCallback(() => {
     store.setState({
       nodesDraggable: !isInteractive,
       nodesConnectable: !isInteractive,
       elementsSelectable: !isInteractive,
     });
     handleSaveFlow();
-  };
+  }, [isInteractive, store, handleSaveFlow]);
+
+  const onToggleHelperLines = useCallback(() => {
+    setHelperLineEnabled(!helperLineEnabled);
+  }, [setHelperLineEnabled, helperLineEnabled]);
 
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls !m-2 flex !flex-row gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+      className="react-flow__controls !left-auto !m-2 flex !flex-col gap-1.5 rounded-md border border-border bg-background fill-foreground stroke-foreground p-0.5 text-primary [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
       position="bottom-left"
     >
       {/* Zoom In */}
@@ -132,6 +146,7 @@ const CanvasControls = ({ children }) => {
         onClick={fitView}
         testId="fit_view"
       />
+      {children}
       {/* Lock/Unlock */}
       <CustomControlButton
         iconName={isInteractive ? "LockOpen" : "Lock"}
@@ -143,7 +158,17 @@ const CanvasControls = ({ children }) => {
         }
         testId="lock_unlock"
       />
-      {children}
+      {/* Display Helper Lines */}
+      <CustomControlButton
+        iconName={helperLineEnabled ? "FoldHorizontal" : "UnfoldHorizontal"}
+        tooltipText={
+          helperLineEnabled ? "Hide Helper Lines" : "Show Helper Lines"
+        }
+        onClick={onToggleHelperLines}
+        backgroundClasses={cn(helperLineEnabled && "bg-muted")}
+        iconClasses={cn(helperLineEnabled && "text-muted-foreground")}
+        testId="helper_lines"
+      />
     </Panel>
   );
 };

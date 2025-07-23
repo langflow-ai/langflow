@@ -30,7 +30,7 @@ test(
       .getByTestId("popover-anchor-input-collection_name")
       .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-    let value = await page
+    const value = await page
       .getByTestId("popover-anchor-input-collection_name")
       .inputValue();
 
@@ -40,8 +40,7 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
@@ -105,7 +104,7 @@ test(
         .isChecked(),
     ).toBeFalsy();
 
-    let valueEditNode = await page
+    const valueEditNode = await page
       .getByTestId("popover-anchor-input-collection_name-edit")
       .inputValue();
 
@@ -126,12 +125,11 @@ test(
 
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("more-options-modal").click();
-      await page.getByTestId("advanced-button-modal").click();
+      await page.getByTestId("edit-button-modal").last().click();
 
       await page.getByText("Close").last().click();
 
-      let value = await page
+      const value = await page
         .getByTestId("popover-anchor-input-collection_name")
         .inputValue();
 

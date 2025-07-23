@@ -1,12 +1,13 @@
 import json
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class WebhookComponent(Component):
     display_name = "Webhook"
+    documentation: str = "https://docs.langflow.org/components-data#webhook"
     name = "Webhook"
     icon = "webhook"
 
@@ -43,7 +44,8 @@ class WebhookComponent(Component):
             self.status = "No data provided."
             return Data(data={})
         try:
-            body = json.loads(self.data or "{}")
+            my_data = self.data.replace('"\n"', '"\\n"')
+            body = json.loads(my_data or "{}")
         except json.JSONDecodeError:
             body = {"payload": self.data}
             message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"

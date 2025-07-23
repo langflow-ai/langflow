@@ -1,10 +1,10 @@
-import { Textarea } from "@/components/ui/textarea";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useFlowStore from "@/stores/flowStore";
-import { handleKeyDown } from "@/utils/reactflowUtils";
-import { cn } from "@/utils/utils";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { Textarea } from "@/components/ui/textarea";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { handleKeyDown } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 
 export default function NodeDescription({
   description,
@@ -78,7 +78,8 @@ export default function NodeDescription({
       <MemoizedMarkdown
         linkTarget="_blank"
         className={cn(
-          "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+          "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+          stickyNote ? "text-mmd" : "text-xs",
           mdClassName,
         )}
       >
@@ -142,9 +143,9 @@ export default function NodeDescription({
   return (
     <div
       className={cn(
-        !editNameDescription ? "overflow-auto" : "",
+        !editNameDescription ? "overflow-auto" : "overflow-hidden",
         hasScroll ? "nowheel" : "",
-        charLimit ? "px-2 pb-4" : "",
+        charLimit ? "flex flex-col" : "",
         "w-full",
       )}
     >
@@ -153,7 +154,10 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel h-full w-full p-0 text-[13px] focus:border-primary focus:ring-0",
+              "nowheel w-full text-xs focus:border-primary focus:ring-0",
+              stickyNote
+                ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
+                : "px-2 py-0.5",
               inputClassName,
             )}
             autoFocus
@@ -166,7 +170,7 @@ export default function NodeDescription({
           {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
-                "pt-1 text-left text-[13px]",
+                "pt-1 text-left !text-mmd",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
@@ -183,7 +187,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-[13px] text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}

@@ -14,7 +14,7 @@ on:
       release_type:
         required: true
         type: string
-        description: "Release type. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
+        description: "Release type. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base', 'main-all', 'nightly-main-all'."
       pre_release:
         required: false
         type: boolean
@@ -35,10 +35,11 @@ on:
         required: false
         type: string
       release_type:
-        description: "Type of release. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
+        description: "Type of release. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base', 'main-all', 'nightly-main-all'."
         required: true
         type: string
       pre_release:
+        description: "Whether this is a pre-release."
         required: false
         type: boolean
         default: false
@@ -49,7 +50,7 @@ on:
 
 
 env:
-  POETRY_VERSION: "1.8.2"
+  PYTHON_VERSION: "3.13"
   TEST_TAG: "langflowai/langflow:test"
 
 jobs:
@@ -88,7 +89,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ inputs.release_type }}" == "main" && "${{ inputs.main_version }}" == '' ]]; then
+          if [[ ("${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-all") && "${{ inputs.main_version }}" == '' ]]; then
             echo "Must specify a main version for main release type."
             exit 1
           fi
@@ -98,7 +99,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ inputs.release_type }}" == "nightly-main" && "${{ inputs.main_version }}" == '' ]]; then
+          if [[ ("${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all") && "${{ inputs.main_version }}" == '' ]]; then
             echo "Must specify a main version for nightly-main release type."
             exit 1
           fi
@@ -108,7 +109,7 @@ jobs:
             echo "base version=${{ inputs.base_version }}"
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             version=${{ inputs.main_version }}
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
@@ -120,7 +121,7 @@ jobs:
         if: ${{ inputs.base_version == '' && (inputs.release_type == 'base' || inputs.release_type == 'nightly-base') }}
         id: get-version-base
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
           if [ -z "$version" ]; then
             echo "Failed to extract version from uv tree output"
             exit 1
@@ -128,7 +129,7 @@ jobs:
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
-        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main') }}
+        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main' || inputs.release_type == 'main-all' || inputs.release_type == 'nightly-main-all') }}
         id: get-version-main
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
@@ -146,7 +147,7 @@ jobs:
         id: set-vars
         run: |
           nightly_suffix=''
-          if [[ "${{ inputs.release_type }}" == "nightly-base" || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          if [[ "${{ inputs.release_type }}" == "nightly-base" || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             nightly_suffix="-nightly"
           fi
 
@@ -171,6 +172,11 @@ jobs:
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+            elif [[ "${{ inputs.release_type }}" == "main-all" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
+              # LANGFLOW-MAIN (ALL OPTIONAL DEPS) RELEASE
+              echo "docker_tags=langflowai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push_with_extras.Dockerfile" >> $GITHUB_OUTPUT
             else
               echo "Invalid release type. Exiting the workflow."
               exit 1
@@ -186,7 +192,12 @@ jobs:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
       - name: Install the project
         run: |
           if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
@@ -197,6 +208,12 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:v0.22.0
+            network=host
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -271,6 +288,13 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:v0.22.0
+            network=host
+
 
       - name: Login to Docker Hub
         if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
@@ -319,9 +343,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
 
       - name: Restart HuggingFace Spaces Build
         run: |

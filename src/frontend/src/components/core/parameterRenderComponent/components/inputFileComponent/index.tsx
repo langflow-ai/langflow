@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
@@ -7,7 +8,6 @@ import FileManagerModal from "@/modals/fileManagerModal";
 import FilesRendererComponent from "@/modals/fileManagerModal/components/filesRendererComponent";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
-import { useEffect } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
@@ -18,7 +18,7 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { FileComponentType, InputProps } from "../../types";
+import type { FileComponentType, InputProps } from "../../types";
 
 export default function InputFileComponent({
   value,
@@ -27,7 +27,7 @@ export default function InputFileComponent({
   disabled,
   fileTypes,
   isList,
-  tempFile = false,
+  tempFile = true,
   editNode = false,
   id,
 }: InputProps<string, FileComponentType>): JSX.Element {
@@ -44,12 +44,12 @@ export default function InputFileComponent({
 
   function checkFileType(fileName: string): boolean {
     if (fileTypes === undefined) return true;
-    for (let index = 0; index < fileTypes.length; index++) {
-      if (fileName.endsWith(fileTypes[index])) {
-        return true;
-      }
-    }
-    return false;
+
+    // Extract the file extension
+    const fileExtension = fileName.split(".").pop();
+
+    // Check if the extracted extension is in the list of accepted file types
+    return fileTypes.includes(fileExtension || "");
   }
 
   const { mutateAsync, isPending } = usePostUploadFile();
@@ -111,7 +111,7 @@ export default function InputFileComponent({
           ),
         )
           .then((results) => {
-            console.log(results);
+            console.warn(results);
             // Filter out any failed uploads
             const successfulUploads = results.filter(
               (r): r is { file_name: string; file_path: string } => r !== null,
@@ -134,7 +134,7 @@ export default function InputFileComponent({
             }
           })
           .catch((e) => {
-            console.log(e);
+            console.error(e);
             // Error handling is done in the onError callback above
           });
       },
@@ -202,7 +202,7 @@ export default function InputFileComponent({
           {ENABLE_FILE_MANAGEMENT && !tempFile ? (
             files && (
               <div className="relative flex w-full flex-col gap-2">
-                <div className="flex flex-col">
+                <div className="nopan nowheel flex max-h-44 flex-col overflow-y-auto">
                   <FilesRendererComponent
                     files={files.filter((file) =>
                       selectedFiles.includes(file.path),
@@ -246,7 +246,7 @@ export default function InputFileComponent({
                   isList={isList}
                 >
                   {(selectedFiles.length === 0 || isList) && (
-                    <div data-testid="input-file-component">
+                    <div data-testid="input-file-component" className="w-full">
                       <Button
                         disabled={isDisabled}
                         variant={
@@ -254,8 +254,9 @@ export default function InputFileComponent({
                         }
                         size={selectedFiles.length !== 0 ? "iconMd" : "default"}
                         className={cn(
-                          selectedFiles.length !== 0 &&
-                            "hit-area-icon absolute -top-8 right-0",
+                          selectedFiles.length !== 0
+                            ? "hit-area-icon absolute -top-8 right-0"
+                            : "w-full",
                           "font-semibold",
                         )}
                         data-testid="button_open_file_management"

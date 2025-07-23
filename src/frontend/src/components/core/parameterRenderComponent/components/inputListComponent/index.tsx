@@ -2,13 +2,11 @@ import _ from "lodash";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "../../../../ui/input";
-import { ButtonInputList } from "./components/button-input-list";
-
-import { GRADIENT_CLASS } from "@/constants/constants";
 import { cn } from "../../../../../utils/utils";
+import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputListComponentType, InputProps } from "../../types";
+import type { InputListComponentType, InputProps } from "../../types";
+import { ButtonInputList } from "./components/button-input-list";
 import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({
@@ -21,7 +19,7 @@ export default function InputListComponent({
   placeholder,
   listAddLabel,
 }: InputProps<string[], InputListComponentType>): JSX.Element {
-  const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
+  const [_dropdownOpen, setDropdownOpen] = useState<number | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -78,7 +76,7 @@ export default function InputListComponent({
   // );
 
   return (
-    <div className={cn("w-full", editNode && "max-h-52")}>
+    <div className={cn("relative w-full", editNode && "max-h-52")}>
       {!editNode && !disabled && (
         <ButtonInputList
           index={0}
@@ -90,22 +88,9 @@ export default function InputListComponent({
         />
       )}
 
-      <div className="mt-2 flex w-full flex-col gap-3">
+      <div className="flex w-full flex-col gap-2">
         {value.map((singleValue, index) => (
           <div key={index} className="flex w-full items-center">
-            {focusedIndex !== index && !disabled && (
-              <div
-                className={cn(
-                  "absolute z-50 h-6 w-16",
-                  editNode ? "translate-x-[12rem]" : "translate-x-[11.1rem]",
-                )}
-                style={{
-                  pointerEvents: "none",
-                  background: GRADIENT_CLASS,
-                }}
-                aria-hidden="true"
-              />
-            )}
             <div className="group relative flex-1">
               <Input
                 ref={index === 0 ? inputRef : null}
@@ -113,7 +98,8 @@ export default function InputListComponent({
                 type="text"
                 value={singleValue}
                 className={cn(
-                  "w-full pr-10 text-primary",
+                  "w-full text-primary",
+                  value.length > 1 && "pr-10",
                   editNode ? "input-edit-node" : "",
                   disabled ? "disabled-state" : "",
                 )}
@@ -137,20 +123,18 @@ export default function InputListComponent({
                   />
                 </div>
               )}
-
-              {/*
-              We will add this back in a future release
-              {!disabled && (
-                <DropdownMenuInputList
-                  index={index}
-                  dropdownOpen={dropdownOpen!}
-                  setDropdownOpen={setDropdownOpen}
-                  editNode={editNode}
-                  handleDuplicateInput={handleDuplicateInput}
-                  removeInput={removeInput}
-                  canDelete={value.length > 1}
-                />
-              )} */}
+              {focusedIndex !== index && !disabled && (
+                <div className="pointer-events-none absolute top-1/2 flex w-full -translate-y-1/2">
+                  <div
+                    className={cn(
+                      "flex-1 cursor-text select-text text-nowrap pl-3 text-sm text-muted-foreground truncate-background",
+                      value.length > 1 ? "mr-10" : "mr-3",
+                    )}
+                  >
+                    <span className="opacity-0">{singleValue}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}

@@ -1,11 +1,10 @@
-import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useState } from "react";
+import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { getComponent } from "../../../controllers/API";
 import useAlertStore from "../../../stores/alertStore";
-import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../stores/storeStore";
-import { FlowType } from "../../../types/flow";
-import { storeComponent } from "../../../types/store";
+import type { FlowType } from "../../../types/flow";
+import type { storeComponent } from "../../../types/store";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
 } from "../../../utils/storeUtils";
@@ -42,21 +41,16 @@ export default function StoreCardComponent({
   const [downloadsCount, setDownloadsCount] = useState(
     data?.downloads_count ?? 0,
   );
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-  // const [openPlayground, setOpenPlayground] = useState(false);
-  const [loadingPlayground, setLoadingPlayground] = useState(false);
-  const playground =
-    data.last_tested_version?.includes("1.0.0") && !data.is_component;
 
   const name = data.is_component ? "Component" : "Flow";
 
-  async function getFlowData() {
+  async function _getFlowData() {
     const res = await getComponent(data.id);
     const newFlow = cloneFLowWithParent(res, res.id, data.is_component, true);
     return newFlow;
   }
 
-  function hasPlayground(flow?: FlowType) {
+  function _hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
     }
@@ -202,45 +196,6 @@ export default function StoreCardComponent({
         <CardFooter>
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
-              {/* {playground && (
-                <Button
-                  disabled={loadingPlayground || !authorized}
-                  key={data.id}
-                  tabIndex={-1}
-                  variant="outline"
-                  size="sm"
-                  className="z-50 gap-2 whitespace-nowrap"
-                  data-testid={"playground-flow-button-" + data.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setLoadingPlayground(true);
-                    getFlowData().then((res) => {
-                      if (!hasPlayground(res)) {
-                        setErrorData({
-                          title: "Error",
-                          list: ["This flow doesn't have a playground."],
-                        });
-                        setLoadingPlayground(false);
-                        return;
-                      }
-                      setCurrentFlow(res);
-                      setOpenPlayground(true);
-                      setLoadingPlayground(false);
-                    });
-                  }}
-                >
-                  {!loadingPlayground ? (
-                    <IconComponent
-                      name="BotMessageSquareIcon"
-                      className="h-4 w-4 select-none"
-                    />
-                  ) : (
-                    <Loading className="h-4 w-4 text-medium-indigo" />
-                  )}
-                  Playground
-                </Button>
-              )} */}
               <div className="flex gap-0.5">
                 <ShadTooltip
                   content={authorized ? "Like" : "Please review your API key."}
@@ -311,16 +266,6 @@ export default function StoreCardComponent({
           </div>
         </CardFooter>
       </Card>
-      {/* {openPlayground && (
-        <IOModal
-          key={data.id}
-          cleanOnClose={true}
-          open={openPlayground}
-          setOpen={setOpenPlayground}
-        >
-          <></>
-        </IOModal>
-      )} */}
     </>
   );
 }

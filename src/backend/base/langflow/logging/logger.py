@@ -231,17 +231,21 @@ def configure(
 
         if log_format is None or not is_valid_log_format(log_format):
             log_format = DEFAULT_LOG_FORMAT
-
-        # Configure loguru to use RichHandler
-        logger.configure(
-            handlers=[
-                {
-                    "sink": RichHandler(rich_tracebacks=True, markup=True),
-                    "format": log_format,
-                    "level": log_level.upper(),
-                }
-            ]
-        )
+        # pretty print to rich stdout development-friendly but poor performance, It's better for debugger.
+        # suggest directly print to stdout in production
+        log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
+        if log_stdout_pretty:
+            logger.configure(
+                handlers=[
+                    {
+                        "sink": RichHandler(rich_tracebacks=True, markup=True),
+                        "format": log_format,
+                        "level": log_level.upper(),
+                    }
+                ]
+            )
+        else:
+            logger.add(sys.stdout, level=log_level.upper(), format=log_format, backtrace=True, diagnose=True)
 
         if not log_file:
             cache_dir = Path(user_cache_dir("langflow"))

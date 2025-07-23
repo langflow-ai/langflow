@@ -1,15 +1,15 @@
+import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
+import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-// import "ace-builds/webpack-resolver";
-import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
-import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import useFlowStore from "@/stores/flowStore";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
-import ReactAce from "react-ace/lib/ace";
+import type ReactAce from "react-ace/lib/ace";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -26,8 +26,8 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import { CodeErrorDataTypeAPI } from "../../types/api";
-import { codeAreaModalPropsType } from "../../types/components";
+import type { CodeErrorDataTypeAPI } from "../../types/api";
+import type { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
 
@@ -54,13 +54,12 @@ export default function CodeAreaModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
   const codeRef = useRef<ReactAce | null>(null);
-  const { mutate, isPending } = usePostValidateCode();
+  const { mutate } = usePostValidateCode();
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
-  const setNode = useFlowStore((state) => state.setNode);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -76,15 +75,14 @@ export default function CodeAreaModal({
       {
         onSuccess: (apiReturn) => {
           if (apiReturn) {
-            let importsErrors = apiReturn.imports.errors;
-            let funcErrors = apiReturn.function.errors;
+            const importsErrors = apiReturn.imports.errors;
+            const funcErrors = apiReturn.function.errors;
             if (funcErrors.length === 0 && importsErrors.length === 0) {
               setSuccessData({
                 title: CODE_SUCCESS_ALERT,
               });
               setOpen(false);
               setValue(code);
-              // setValue(code);
             } else {
               if (funcErrors.length !== 0) {
                 setErrorData({
@@ -122,6 +120,8 @@ export default function CodeAreaModal({
         onSuccess: ({ data, type }) => {
           if (data && type) {
             setValue(code);
+            clearHandlesFromAdvancedFields(componentId!, data);
+
             setNodeClass(data, type);
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
@@ -177,6 +177,8 @@ export default function CodeAreaModal({
         } else {
           if (
             !(
+              codeRef.current?.editor.completer &&
+              "popup" in codeRef.current?.editor.completer &&
               codeRef.current?.editor.completer.popup &&
               codeRef.current?.editor.completer.popup.isOpen
             )
@@ -198,7 +200,7 @@ export default function CodeAreaModal({
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Content>
+      <BaseModal.Content overflowHidden={true}>
         <Input
           value={code}
           readOnly
@@ -254,6 +256,7 @@ export default function CodeAreaModal({
               type="submit"
               id="checkAndSaveBtn"
               disabled={readonly}
+              data-testid="checkAndSaveBtn"
             >
               Check & Save
             </Button>

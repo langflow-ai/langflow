@@ -1,175 +1,299 @@
-import asyncio
-import json
 import re
 
-import aiohttp
-from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
+import requests
+from bs4 import BeautifulSoup
+from langchain_community.document_loaders import RecursiveUrlLoader
+from loguru import logger
 
-from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output, StrInput
-from langflow.schema import Data
+from langflow.custom.custom_component.component import Component
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.helpers.data import safe_convert
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.services.deps import get_settings_service
+
+# Constants
+DEFAULT_TIMEOUT = 30
+DEFAULT_MAX_DEPTH = 1
+DEFAULT_FORMAT = "Text"
+URL_REGEX = re.compile(
+    r"^(https?:\/\/)?" r"(www\.)?" r"([a-zA-Z0-9.-]+)" r"(\.[a-zA-Z]{2,})?" r"(:\d+)?" r"(\/[^\s]*)?$",
+    re.IGNORECASE,
+)
 
 
 class URLComponent(Component):
+    """A component that loads and parses content from web pages recursively.
+
+    This component allows fetching content from one or more URLs, with options to:
+    - Control crawl depth
+    - Prevent crawling outside the root domain
+    - Use async loading for better performance
+    - Extract either raw HTML or clean text
+    - Configure request headers and timeouts
+    """
+
     display_name = "URL"
-    description = (
-        "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, "
-        "or JSON, with options for cleaning and separating multiple outputs."
-    )
+    description = "Fetch content from one or more web pages, following links recursively."
+    documentation: str = "https://docs.langflow.org/components-data#url"
     icon = "layout-template"
-    name = "URL"
+    name = "URLComponent"
 
     inputs = [
         MessageTextInput(
             name="urls",
             display_name="URLs",
+            info="Enter one or more URLs to crawl recursively, by clicking the '+' button.",
             is_list=True,
             tool_mode=True,
             placeholder="Enter a URL...",
             list_add_label="Add URL",
+            input_types=[],
+        ),
+        SliderInput(
+            name="max_depth",
+            display_name="Depth",
+            info=(
+                "Controls how many 'clicks' away from the initial page the crawler will go:\n"
+                "- depth 1: only the initial page\n"
+                "- depth 2: initial page + all pages linked directly from it\n"
+                "- depth 3: initial page + direct links + links found on those direct link pages\n"
+                "Note: This is about link traversal, not URL path depth."
+            ),
+            value=DEFAULT_MAX_DEPTH,
+            range_spec=RangeSpec(min=1, max=5, step=1),
+            required=False,
+            min_label=" ",
+            max_label=" ",
+            min_label_icon="None",
+            max_label_icon="None",
+            # slider_input=True
+        ),
+        BoolInput(
+            name="prevent_outside",
+            display_name="Prevent Outside",
+            info=(
+                "If enabled, only crawls URLs within the same domain as the root URL. "
+                "This helps prevent the crawler from going to external websites."
+            ),
+            value=True,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="use_async",
+            display_name="Use Async",
+            info=(
+                "If enabled, uses asynchronous loading which can be significantly faster "
+                "but might use more system resources."
+            ),
+            value=True,
+            required=False,
+            advanced=True,
         ),
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info=(
-                "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML "
-                "content, or 'JSON' to extract JSON from the HTML."
-            ),
-            options=["Text", "Raw HTML", "JSON"],
-            value="Text",
-            real_time_refresh=True,
+            info="Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
+            options=["Text", "HTML"],
+            value=DEFAULT_FORMAT,
+            advanced=True,
         ),
-        StrInput(
-            name="separator",
-            display_name="Separator",
-            value="\n\n",
-            show=True,
-            info=(
-                "Specify the separator to use between multiple outputs. Default for Text is '\\n\\n'. "
-                "Default for Raw HTML is '\\n<!-- Separator -->\\n'."
-            ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout for the request in seconds.",
+            value=DEFAULT_TIMEOUT,
+            required=False,
+            advanced=True,
+        ),
+        TableInput(
+            name="headers",
+            display_name="Headers",
+            info="The headers to send with the request",
+            table_schema=[
+                {
+                    "name": "key",
+                    "display_name": "Header",
+                    "type": "str",
+                    "description": "Header name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "type": "str",
+                    "description": "Header value",
+                },
+            ],
+            value=[{"key": "User-Agent", "value": get_settings_service().settings.user_agent}],
+            advanced=True,
+            input_types=["DataFrame"],
         ),
         BoolInput(
-            name="clean_extra_whitespace",
-            display_name="Clean Extra Whitespace",
+            name="filter_text_html",
+            display_name="Filter Text/HTML",
+            info="If enabled, filters out text/css content type from the results.",
             value=True,
-            show=True,
-            info="Whether to clean excessive blank lines in the text output. Only applies to 'Text' format.",
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="continue_on_failure",
+            display_name="Continue on Failure",
+            info="If enabled, continues crawling even if some requests fail.",
+            value=True,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="check_response_status",
+            display_name="Check Response Status",
+            info="If enabled, checks the response status of the request.",
+            value=False,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="autoset_encoding",
+            display_name="Autoset Encoding",
+            info="If enabled, automatically sets the encoding of the request.",
+            value=True,
+            required=False,
+            advanced=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Text", name="text", method="fetch_content_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Extracted Pages", name="page_results", method="fetch_content"),
+        Output(display_name="Raw Content", name="raw_results", method="fetch_content_as_message", tool_mode=False),
     ]
 
-    async def validate_json_content(self, url: str) -> bool:
-        """Validates if the URL content is actually JSON."""
-        try:
-            async with aiohttp.ClientSession() as session, session.get(url) as response:
-                http_ok = 200
-                if response.status != http_ok:
-                    return False
+    @staticmethod
+    def validate_url(url: str) -> bool:
+        """Validates if the given string matches URL pattern.
 
-                content = await response.text()
-                try:
-                    json.loads(content)
-                except json.JSONDecodeError:
-                    return False
-                else:
-                    return True
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            # Log specific error for debugging if needed
-            return False
+        Args:
+            url: The URL string to validate
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        """Dynamically update fields based on selected format."""
-        if field_name == "format":
-            is_text_mode = field_value == "Text"
-            is_json_mode = field_value == "JSON"
-            build_config["separator"]["value"] = "\n\n" if is_text_mode else "\n<!-- Separator -->\n"
-            build_config["clean_extra_whitespace"]["show"] = is_text_mode
-            build_config["separator"]["show"] = not is_json_mode
-        return build_config
+        Returns:
+            bool: True if the URL is valid, False otherwise
+        """
+        return bool(URL_REGEX.match(url))
 
-    def ensure_url(self, string: str) -> str:
-        """Ensures the given string is a valid URL."""
-        if not string.startswith(("http://", "https://")):
-            string = "http://" + string
+    def ensure_url(self, url: str) -> str:
+        """Ensures the given string is a valid URL.
 
-        url_regex = re.compile(
-            r"^(https?:\/\/)?"
-            r"(www\.)?"
-            r"([a-zA-Z0-9.-]+)"
-            r"(\.[a-zA-Z]{2,})?"
-            r"(:\d+)?"
-            r"(\/[^\s]*)?$",
-            re.IGNORECASE,
+        Args:
+            url: The URL string to validate and normalize
+
+        Returns:
+            str: The normalized URL
+
+        Raises:
+            ValueError: If the URL is invalid
+        """
+        url = url.strip()
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        if not self.validate_url(url):
+            msg = f"Invalid URL: {url}"
+            raise ValueError(msg)
+
+        return url
+
+    def _create_loader(self, url: str) -> RecursiveUrlLoader:
+        """Creates a RecursiveUrlLoader instance with the configured settings.
+
+        Args:
+            url: The URL to load
+
+        Returns:
+            RecursiveUrlLoader: Configured loader instance
+        """
+        headers_dict = {header["key"]: header["value"] for header in self.headers}
+        extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+
+        return RecursiveUrlLoader(
+            url=url,
+            max_depth=self.max_depth,
+            prevent_outside=self.prevent_outside,
+            use_async=self.use_async,
+            extractor=extractor,
+            timeout=self.timeout,
+            headers=headers_dict,
+            check_response_status=self.check_response_status,
+            continue_on_failure=self.continue_on_failure,
+            base_url=url,  # Add base_url to ensure consistent domain crawling
+            autoset_encoding=self.autoset_encoding,  # Enable automatic encoding detection
+            exclude_dirs=[],  # Allow customization of excluded directories
+            link_regex=None,  # Allow customization of link filtering
         )
 
-        error_msg = "Invalid URL - " + string
-        if not url_regex.match(string):
-            raise ValueError(error_msg)
+    def fetch_url_contents(self) -> list[dict]:
+        """Load documents from the configured URLs.
 
-        return string
+        Returns:
+            List[Data]: List of Data objects containing the fetched content
 
-    def fetch_content(self) -> list[Data]:
-        """Fetch content based on selected format."""
-        urls = list({self.ensure_url(url.strip()) for url in self.urls if url.strip()})
+        Raises:
+            ValueError: If no valid URLs are provided or if there's an error loading documents
+        """
+        try:
+            urls = list({self.ensure_url(url) for url in self.urls if url.strip()})
+            logger.debug(f"URLs: {urls}")
+            if not urls:
+                msg = "No valid URLs provided."
+                raise ValueError(msg)
 
-        no_urls_msg = "No valid URLs provided."
-        if not urls:
-            raise ValueError(no_urls_msg)
-
-        # If JSON format is selected, validate JSON content first
-        if self.format == "JSON":
+            all_docs = []
             for url in urls:
-                is_json = asyncio.run(self.validate_json_content(url))
-                if not is_json:
-                    error_msg = "Invalid JSON content from URL - " + url
-                    raise ValueError(error_msg)
+                logger.debug(f"Loading documents from {url}")
 
-        if self.format == "Raw HTML":
-            loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
-        else:
-            loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
-
-        docs = loader.load()
-
-        if self.format == "JSON":
-            data = []
-            for doc in docs:
                 try:
-                    json_content = json.loads(doc.page_content)
-                    data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
-                    data.append(Data(**data_dict))
-                except json.JSONDecodeError as err:
-                    source = doc.metadata.get("source", "unknown URL")
-                    error_msg = "Invalid JSON content from " + source
-                    raise ValueError(error_msg) from err
-            return data
+                    loader = self._create_loader(url)
+                    docs = loader.load()
 
-        return [Data(text=doc.page_content, **doc.metadata) for doc in docs]
+                    if not docs:
+                        logger.warning(f"No documents found for {url}")
+                        continue
 
-    def fetch_content_text(self) -> Message:
-        """Fetch content and return as formatted text."""
-        data = self.fetch_content()
+                    logger.debug(f"Found {len(docs)} documents from {url}")
+                    all_docs.extend(docs)
 
-        if self.format == "JSON":
-            text_list = [item.text for item in data]
-            result = "\n".join(text_list)
-        else:
-            text_list = [item.text for item in data]
-            if self.format == "Text" and self.clean_extra_whitespace:
-                text_list = [re.sub(r"\n{3,}", "\n\n", text) for text in text_list]
-            result = self.separator.join(text_list)
+                except requests.exceptions.RequestException as e:
+                    logger.exception(f"Error loading documents from {url}: {e}")
+                    continue
 
-        self.status = result
-        return Message(text=result)
+            if not all_docs:
+                msg = "No documents were successfully loaded from any URL"
+                raise ValueError(msg)
 
-    def as_dataframe(self) -> DataFrame:
-        """Return fetched content as a DataFrame."""
-        return DataFrame(self.fetch_content())
+            # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
+            data = [
+                {
+                    "text": safe_convert(doc.page_content, clean_data=True),
+                    "url": doc.metadata.get("source", ""),
+                    "title": doc.metadata.get("title", ""),
+                    "description": doc.metadata.get("description", ""),
+                    "content_type": doc.metadata.get("content_type", ""),
+                    "language": doc.metadata.get("language", ""),
+                }
+                for doc in all_docs
+            ]
+        except Exception as e:
+            error_msg = e.message if hasattr(e, "message") else e
+            msg = f"Error loading documents: {error_msg!s}"
+            logger.exception(msg)
+            raise ValueError(msg) from e
+        return data
+
+    def fetch_content(self) -> DataFrame:
+        """Convert the documents to a DataFrame."""
+        return DataFrame(data=self.fetch_url_contents())
+
+    def fetch_content_as_message(self) -> Message:
+        """Convert the documents to a Message."""
+        url_contents = self.fetch_url_contents()
+        return Message(text="\n\n".join([x["text"] for x in url_contents]), data={"data": url_contents})

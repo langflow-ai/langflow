@@ -3,17 +3,18 @@ import json
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-from langflow.custom import Component
-from langflow.inputs import DropdownInput, MessageTextInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import DropdownInput, MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.schema import Data
-from langflow.template import Output
+from langflow.schema.data import Data
+from langflow.template.field.base import Output
 
 
 class GoogleDriveSearchComponent(Component):
     display_name = "Google Drive Search"
     description = "Searches Google Drive files using provided credentials and query parameters."
     icon = "Google"
+    legacy: bool = True
 
     inputs = [
         SecretStrInput(

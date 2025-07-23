@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlmodel import paginate
+from fastapi_pagination.ext.sqlmodel import apaginate
 from sqlalchemy import delete
 from sqlmodel import col, select
 
@@ -40,6 +40,24 @@ async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSes
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@router.get("/messages/sessions", dependencies=[Depends(get_current_active_user)])
+async def get_message_sessions(
+    session: DbSession,
+    flow_id: Annotated[UUID | None, Query()] = None,
+) -> list[str]:
+    try:
+        stmt = select(MessageTable.session_id).distinct()
+        stmt = stmt.where(col(MessageTable.session_id).isnot(None))
+
+        if flow_id:
+            stmt = stmt.where(MessageTable.flow_id == flow_id)
+
+        session_ids = await session.exec(stmt)
+        return list(session_ids)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @router.get("/messages")
 async def get_messages(
     session: DbSession,
@@ -54,7 +72,10 @@ async def get_messages(
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
         if session_id:
-            stmt = stmt.where(MessageTable.session_id == session_id)
+            from urllib.parse import unquote
+
+            decoded_session_id = unquote(session_id)
+            stmt = stmt.where(MessageTable.session_id == decoded_session_id)
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
@@ -171,6 +192,12 @@ async def get_transactions(
             .where(TransactionTable.flow_id == flow_id)
             .order_by(col(TransactionTable.timestamp))
         )
-        return await paginate(session, stmt, params=params, transformer=transform_transaction_table)
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+            )
+            return await apaginate(session, stmt, params=params, transformer=transform_transaction_table)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

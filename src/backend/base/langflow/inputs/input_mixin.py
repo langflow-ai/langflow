@@ -24,6 +24,9 @@ class FieldTypes(str, Enum):
     BOOLEAN = "bool"
     DICT = "dict"
     NESTED_DICT = "NestedDict"
+    SORTABLE_LIST = "sortableList"
+    CONNECTION = "connect"
+    AUTH = "auth"
     FILE = "file"
     PROMPT = "prompt"
     CODE = "code"
@@ -32,6 +35,9 @@ class FieldTypes(str, Enum):
     LINK = "link"
     SLIDER = "slider"
     TAB = "tab"
+    QUERY = "query"
+    TOOLS = "tools"
+    MCP = "mcp"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -135,6 +141,15 @@ class DatabaseLoadMixin(BaseModel):
     load_from_db: bool = Field(default=True)
 
 
+class AuthMixin(BaseModel):
+    auth_tooltip: str | None = Field(default="")
+
+
+class QueryMixin(BaseModel):
+    separator: str | None = Field(default=None)
+    """Separator for the query input. Defaults to None."""
+
+
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
     file_path: list[str] | str | None = Field(default="")
@@ -189,6 +204,48 @@ class DropDownMixin(BaseModel):
     """Variable that defines if the user can insert custom values in the dropdown."""
     dialog_inputs: dict[str, Any] | None = None
     """Dictionary of dialog inputs for the field. Default is an empty object."""
+    toggle: bool = False
+    """Variable that defines if a toggle button is shown."""
+    toggle_value: bool | None = None
+    """Variable that defines the value of the toggle button. Defaults to None."""
+    toggle_disable: bool | None = None
+    """Variable that defines if the toggle button is disabled. Defaults to None."""
+
+    @field_validator("toggle_value")
+    @classmethod
+    def validate_toggle_value(cls, v):
+        if v is not None and not isinstance(v, bool):
+            msg = "toggle_value must be a boolean or None"
+            raise ValueError(msg)
+        return v
+
+
+class SortableListMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    helper_text_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the helper text."""
+    search_category: list[str] = Field(default=[])
+    """Specifies the category of the field. Defaults to an empty list."""
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    """List of dictionaries with metadata for each option."""
+    limit: int | None = None
+    """Specifies the limit of the field. Defaults to None."""
+
+
+class ConnectionMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    helper_text_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the helper text."""
+    connection_link: str | None = None
+    """Specifies the link of the connection. Defaults to an empty string."""
+    button_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the button."""
+    search_category: list[str] = Field(default=[])
+    """Specifies the category of the field. Defaults to an empty list."""
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    """List of dictionaries with metadata for each option."""
 
 
 class TabMixin(BaseModel):

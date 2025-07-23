@@ -1,10 +1,11 @@
+import Fuse from "fuse.js";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { IS_MAC } from "@/constants/constants";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import { CustomLink } from "@/customization/components/custom-link";
 import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
-import { FileType } from "@/types/file_management";
-import Fuse from "fuse.js";
-import { useEffect, useMemo, useState } from "react";
+import type { FileType } from "@/types/file_management";
 import FilesRendererComponent from "../filesRendererComponent";
 
 export default function RecentFilesComponent({
@@ -20,47 +21,122 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
-  const filesWithType = files.map((file) => ({
-    ...file,
-    type: file.path.split(".").pop()?.toLowerCase(),
-  }));
-  const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
+  const filesWithDisabled = useMemo(
+    () =>
+      files.map((file) => {
+        const fileExtension = file.path.split(".").pop()?.toLowerCase();
+        return {
+          ...file,
+          type: fileExtension,
+          disabled: !fileExtension || !types.includes(fileExtension),
+        };
+      }),
+    [files, types],
+  );
+  const fuse = useMemo(
+    () =>
+      new Fuse(filesWithDisabled, {
+        keys: ["name", "type"],
+        threshold: 0.3,
+      }),
+    [filesWithDisabled],
+  );
   const [searchQuery, setSearchQuery] = useState("");
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
 
   const { mutate: renameFile } = usePostRenameFileV2();
 
   const searchResults = useMemo(() => {
-    const filteredFiles = (
-      searchQuery
-        ? fuse.search(searchQuery).map(({ item }) => item)
-        : (filesWithType ?? [])
-    ).filter((file) => {
-      const fileExtension = file.path.split(".").pop()?.toLowerCase();
-      return fileExtension && (!types || types.includes(fileExtension));
-    });
+    const filteredFiles = searchQuery
+      ? fuse.search(searchQuery).map(({ item }) => item)
+      : (filesWithDisabled ?? []);
     return filteredFiles;
-  }, [searchQuery, filesWithType, selectedFiles, types]);
+  }, [searchQuery, filesWithDisabled, types]);
+
+  const sortedSearchResults = useMemo(() => {
+    return searchResults.toSorted((a, b) => {
+      const selectedOrder = sortByBoolean(
+        a.progress !== undefined,
+        b.progress !== undefined,
+      );
+      return selectedOrder === 0
+        ? sortByDate(a.updated_at ?? a.created_at, b.updated_at ?? b.created_at)
+        : selectedOrder;
+    });
+  }, [searchResults]);
 
   useEffect(() => {
-    if (filesWithType) {
-      setFuse(
-        new Fuse(filesWithType, {
-          keys: ["name", "type"],
-          threshold: 0.3,
-        }),
-      );
-    }
-  }, [filesWithType]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(true);
+      }
+    };
 
-  const handleFileSelect = (filePath: string) => {
-    setSelectedFiles(
-      selectedFiles.includes(filePath)
-        ? selectedFiles.filter((path) => path !== filePath)
-        : isList
-          ? [...selectedFiles, filePath]
-          : [filePath],
-    );
-  };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+      }
+    };
+
+    // Reset key states when window loses focus
+    const handleBlur = () => {
+      setIsShiftPressed(false);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
+
+    // Clean up event listeners when component unmounts
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+
+      // Reset key state on unmount
+      setIsShiftPressed(false);
+    };
+  }, []);
+
+  const handleFileSelect = useCallback(
+    (filePath: string, index: number) => {
+      // Standard file selection behavior:
+      // 1. Click: Select only this file
+      // 2. Ctrl/Cmd + Click: Toggle selection for this file, keeping other selections
+      // 3. Shift + Click: Select range from last clicked to current file
+
+      if (isShiftPressed && lastClickedIndex !== null) {
+        // Select range - keep existing selection and add the range
+        const start = Math.min(lastClickedIndex, index);
+        const end = Math.max(lastClickedIndex, index);
+
+        // Get all file paths in the range
+        const rangeFilePaths = sortedSearchResults
+          .slice(start, end + 1)
+          .filter((file) => !file.disabled)
+          .map((file) => file.path);
+
+        return setSelectedFiles(rangeFilePaths);
+      } else {
+        // Ctrl/Cmd + Click: Toggle selection for this item while keeping others
+        setLastClickedIndex(index);
+
+        if (selectedFiles.includes(filePath)) {
+          setSelectedFiles(selectedFiles.filter((path) => path !== filePath));
+        } else {
+          setSelectedFiles([...selectedFiles, filePath]);
+        }
+      }
+    },
+    [
+      selectedFiles,
+      lastClickedIndex,
+      sortedSearchResults,
+      isShiftPressed,
+      setSelectedFiles,
+    ],
+  );
 
   const handleRename = (id: string, name: string) => {
     renameFile({ id, name });
@@ -88,23 +164,11 @@ export default function RecentFilesComponent({
       >
         {searchResults.length > 0 ? (
           <FilesRendererComponent
-            files={searchResults
-              .toSorted((a, b) => {
-                const selectedOrder = sortByBoolean(
-                  selectedFiles.includes(a.path) || a.progress !== undefined,
-                  selectedFiles.includes(b.path) || b.progress !== undefined,
-                );
-                return selectedOrder === 0
-                  ? sortByDate(
-                      a.updated_at ?? a.created_at,
-                      b.updated_at ?? b.created_at,
-                    )
-                  : selectedOrder;
-              })
-              .slice(0, 10)}
+            files={sortedSearchResults}
             handleFileSelect={handleFileSelect}
             selectedFiles={selectedFiles}
             handleRename={handleRename}
+            isShiftPressed={isShiftPressed}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm">

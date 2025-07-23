@@ -1,18 +1,18 @@
+import { memo } from "react";
+
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
 import {
   Disclosure,
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
-
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { Button } from "@/components/ui/button";
 import { SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
-import { memo } from "react";
-import { SidebarFilterComponent } from "../../../extraSidebarComponent/sidebarFilterComponent";
-import { SidebarHeaderComponentProps } from "../../types";
+import type { SidebarHeaderComponentProps } from "../../types";
 import FeatureToggles from "../featureTogglesComponent";
 import { SearchInput } from "../searchInput";
+import { SidebarFilterComponent } from "../sidebarFilterComponent";
 
 export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   showConfig,

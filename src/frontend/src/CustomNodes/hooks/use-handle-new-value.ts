@@ -1,14 +1,17 @@
+import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep, debounce } from "lodash";
+import { useCallback, useMemo, useRef } from "react";
+import { DEBOUNCE_FIELD_LIST } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { AllNodeType } from "@/types/flow";
-import { useUpdateNodeInternals } from "@xyflow/react";
-import { cloneDeep } from "lodash";
-import { useCallback, useMemo } from "react";
+import type { APIClassType, InputFieldType } from "@/types/api";
+import type { AllNodeType } from "@/types/flow";
 import { mutateTemplate } from "../helpers/mutate-template";
+
+const DEBOUNCE_TIME_1_SECOND = 1000;
 
 export type handleOnNewValueType = (
   changes: Partial<InputFieldType>,
@@ -72,7 +75,8 @@ const useHandleOnNewValue = ({
     [nodeId, setNode, updateNodeInternals],
   );
 
-  // Memoize the handleOnNewValue function
+  const debouncedMutateRef = useRef<any>(null);
+
   const handleOnNewValue: handleOnNewValueType = useCallback(
     async (changes, options?) => {
       const newNode = cloneDeep(node);
@@ -97,6 +101,10 @@ const useHandleOnNewValue = ({
         return;
       }
 
+      const shouldDebounce = DEBOUNCE_FIELD_LIST.includes(
+        parameter?._input_type,
+      );
+
       if (!options?.skipSnapshot) takeSnapshot();
 
       Object.entries(changes).forEach(([key, value]) => {
@@ -111,7 +119,28 @@ const useHandleOnNewValue = ({
       };
 
       if (shouldUpdate && changes.value !== undefined) {
-        await mutateTemplate(
+        if (!debouncedMutateRef.current) {
+          debouncedMutateRef.current = debounce(
+            async (
+              value,
+              node,
+              setNodeClassFn,
+              postTemplateFn,
+              setErrorDataFn,
+            ) => {
+              await mutateTemplate(
+                value,
+                nodeId,
+                node,
+                setNodeClassFn,
+                postTemplateFn,
+                setErrorDataFn,
+              );
+            },
+            shouldDebounce ? DEBOUNCE_TIME_1_SECOND : 0,
+          );
+        }
+        debouncedMutateRef.current(
           changes.value,
           newNode,
           setNodeClass,

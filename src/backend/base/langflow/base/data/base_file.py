@@ -1,17 +1,23 @@
+import ast
+import json
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class BaseFileComponent(Component, ABC):
@@ -174,9 +180,7 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="Data", name="data", method="load_files"),
-        Output(display_name="DataFrame", name="dataframe", method="load_dataframe"),
-        Output(display_name="Message", name="message", method="load_message"),
+        Output(display_name="Files", name="dataframe", method="load_files"),
     ]
 
     @abstractmethod
@@ -227,7 +231,7 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_files(self) -> list[Data]:
+    def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects.
 
         Returns:
@@ -238,68 +242,150 @@ class BaseFileComponent(Component, ABC):
             return [Data()]
         return data_list
 
-    def load_dataframe(self) -> DataFrame:
+    def load_files_message(self) -> Message:
+        """Load files and return as Message.
+
+        Returns:
+            Message: Message containing all file data
+        """
+        data_list = self.load_files_core()
+        if not data_list:
+            return Message()  # No data -> empty message
+
+        sep: str = getattr(self, "separator", "\n\n") or "\n\n"
+
+        parts: list[str] = []
+        for d in data_list:
+            # Prefer explicit text if available, fall back to full dict, lastly str()
+            text = (getattr(d, "get_text", lambda: None)() or d.data.get("text")) if isinstance(d.data, dict) else None
+            parts.append(text if text is not None else str(d))
+
+        return Message(text=sep.join(parts))
+
+    def load_files_path(self) -> Message:
+        """Returns a Message containing file paths from loaded files.
+
+        Returns:
+            Message: Message containing file paths
+        """
+        files = self._validate_and_resolve_paths()
+        paths = [file.path.as_posix() for file in files if file.path.exists()]
+
+        return Message(text="\n".join(paths) if paths else "")
+
+    def load_files_structured_helper(self, file_path: str) -> list[dict] | None:
+        if not file_path:
+            return None
+
+        # Map file extensions to pandas read functions with type annotation
+        file_readers: dict[str, Callable[[str], pd.DataFrame]] = {
+            ".csv": pd.read_csv,
+            ".xlsx": pd.read_excel,
+            ".parquet": pd.read_parquet,
+            # TODO: sqlite and json support?
+        }
+
+        # Get file extension in lowercase
+        ext = Path(file_path).suffix.lower()
+
+        # Get the appropriate reader function or None
+        reader = file_readers.get(ext)
+
+        if reader:
+            result = reader(file_path)  # MyPy now knows reader is callable
+            return result.to_dict("records")
+
+        return None
+
+    def load_files_structured(self) -> DataFrame:
+        """Load files and return as DataFrame with structured content.
+
+        Returns:
+            DataFrame: DataFrame containing structured content from all files
+        """
+        data_list = self.load_files_core()
+        if not data_list:
+            return DataFrame()
+
+        # Get the file path from the first Data object
+        file_path = data_list[0].data.get(self.SERVER_FILE_PATH_FIELDNAME, None)
+
+        # If file_path is provided and is a CSV, read it directly
+        if file_path and str(file_path).lower().endswith((".csv", ".xlsx", ".parquet")):
+            rows = self.load_files_structured_helper(file_path)
+        else:
+            # Convert Data objects to a list of dictionaries
+            # TODO: Parse according to docling standards
+            rows = [data_list[0].data]
+
+        self.status = DataFrame(rows)
+
+        return DataFrame(rows)
+
+    def parse_string_to_dict(self, s: str) -> dict:
+        # Try JSON first (handles true/false/null)
+        try:
+            result = json.loads(s)
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+        # Fall back to Python literal evaluation
+        try:
+            result = ast.literal_eval(s)
+            if isinstance(result, dict):
+                return result
+        except (SyntaxError, ValueError):
+            pass
+
+        # If all parsing fails, return the fallback
+        return {"value": s}
+
+    def load_files_json(self) -> Data:
+        """Load files and return as a single Data object containing JSON content.
+
+        Returns:
+            Data: Data object containing JSON content from all files
+        """
+        data_list = self.load_files_core()
+        if not data_list:
+            return Data()
+
+        # Grab the JSON data
+        json_data = data_list[0].data[data_list[0].text_key]
+        json_data = self.parse_string_to_dict(json_data)
+
+        self.status = Data(data=json_data)
+
+        return Data(data=json_data)
+
+    def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
         Returns:
             DataFrame: DataFrame containing all file data
         """
-        data_list = self.load_files()
+        data_list = self.load_files_core()
         if not data_list:
             return DataFrame()
 
-        # First handle CSV files specially
-        csv_data = []
-        non_csv_rows = []
-
+        # Convert Data objects to a list of dictionaries
+        all_rows = []
         for data in data_list:
             file_path = data.data.get(self.SERVER_FILE_PATH_FIELDNAME)
-            if file_path and str(file_path).lower().endswith(".csv"):
-                try:
-                    csv_data.extend(pd.read_csv(file_path).to_dict("records"))
-                except Exception as e:
-                    self.log(f"Error processing CSV file {file_path}: {e}")
-                    if not self.silent_errors:
-                        raise
-            else:
-                # Handle non-CSV files as before
-                row = dict(data.data) if data.data else {}
-                if data.text:
-                    row["text"] = data.text
-                if file_path:
-                    row["file_path"] = file_path
-                non_csv_rows.append(row)
+            row = dict(data.data) if data.data else {}
 
-        # Combine CSV and non-CSV data
-        all_rows = csv_data + non_csv_rows
+            # Add text if available, otherwise use the data's text property
+            if "text" in data.data:
+                row["text"] = data.data["text"]
+            if file_path:
+                row["file_path"] = file_path
+            all_rows.append(row)
+
+        self.status = DataFrame(all_rows)
+
         return DataFrame(all_rows)
-
-    def load_message(self) -> Message:
-        """Load files and return as Message with concatenated content.
-
-        Returns:
-            Message: Message containing concatenated file content
-        """
-        data_list = self.load_files()
-        if not data_list:
-            return Message(text="")
-
-        # Concatenate all text content
-        text_content = []
-        for data in data_list:
-            content = data.text if data.text else ""
-            text_content.append(content)
-
-        # Join with separator
-        final_text = self.separator.join(text_content)
-
-        # Create message with all metadata
-        all_data = {}
-        for data in data_list:
-            if data.data:
-                all_data.update(data.data)
-
-        return Message(text=final_text, data=all_data)
 
     @property
     def valid_extensions(self) -> list[str]:

@@ -14,6 +14,7 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    if: "! github.event.pull_request.head.repo.fork"
 
     steps:
       - name: Checkout Repository
@@ -22,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: yarn
           cache-dependency-path: ./docs/yarn.lock
 
@@ -84,6 +85,7 @@ jobs:
         env:
           BASE_URL: /langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}
           FORCE_COLOR: 0 # Disable color output
+          SEGMENT_PUBLIC_WRITE_KEY: ${{ vars.DOCS_DRAFT_SEGMENT_PUBLIC_WRITE_KEY }}
 
       - name: Check Build Result
         id: buildLogFail
@@ -138,6 +140,25 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.DOCS_AWS_SECRET_ACCESS_KEY }}
           aws configure set region us-west-2
 
+      - name: Check for New Assets
+        run: |
+          set -o pipefail
+          echo "Checking for new assets." |& tee -a $GITHUB_WORKSPACE/deploy.log
+          echo "aws s3 sync docs/build/assets/ s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/assets/ --size-only --dryrun --no-progress" | tee -a $GITHUB_WORKSPACE/deploy.log
+          aws s3 sync docs/build/assets/ "s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/assets/" --size-only --dryrun --no-progress | tee $GITHUB_WORKSPACE/assets.log
+
+      - name: Determine Standard or Full Publish
+        id: check_full_publish
+        run: |
+          # Determine if a full publish is required because of new assets.
+          if grep -qE '(upload:|delete:)' "$GITHUB_WORKSPACE/assets.log"; then
+            echo "New assets. Perform full publish: true" | tee -a "$GITHUB_WORKSPACE/deploy.log"
+            echo "perform_full_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No new assets. Perform full publish: false" | tee -a "$GITHUB_WORKSPACE/deploy.log"
+            echo "perform_full_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy to S3
         if: success()
         run: |
@@ -154,13 +175,14 @@ jobs:
           s3_params=(
             # Hide upload progress for a cleaner sync log
             --no-progress
-            # Because the build will produce new timestamps
-            # on each build, sync files based on size.
-            --size-only
             --delete
             --exclude "*"
             --include "${{ steps.extract_branch.outputs.draft_directory }}/*"
           )
+
+          if [[ "${{ steps.check_full_publish.outputs.perform_full_publish }}" == "false" ]]; then
+            s3_params+=(--size-only)
+          fi
 
           echo "Deploying draft to S3." |& tee -a $GITHUB_WORKSPACE/deploy.log
           echo "aws s3 sync . s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts ${s3_params[@]}" |& tee -a $GITHUB_WORKSPACE/deploy.log

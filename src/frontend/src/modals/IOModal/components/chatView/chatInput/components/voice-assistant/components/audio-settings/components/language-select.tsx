@@ -1,3 +1,4 @@
+import { ALL_LANGUAGES } from "@/constants/constants";
 import IconComponent from "../../../../../../../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../../../../../../../components/common/shadTooltipComponent";
 import {
@@ -12,13 +13,11 @@ import {
 interface LanguageSelectProps {
   language: string;
   handleSetLanguage: (value: string) => void;
-  allLanguages: { value: string; name: string }[];
 }
 
 const LanguageSelect = ({
   language,
   handleSetLanguage,
-  allLanguages,
 }: LanguageSelectProps) => {
   return (
     <div className="grid w-full items-center gap-2">
@@ -41,7 +40,7 @@ const LanguageSelect = ({
         </SelectTrigger>
         <SelectContent className="max-h-[200px]">
           <SelectGroup>
-            {allLanguages.map((lang) => (
+            {ALL_LANGUAGES?.map((lang) => (
               <SelectItem key={lang?.value} value={lang?.value}>
                 <div className="max-w-[220px] truncate text-left">
                   {lang?.name}

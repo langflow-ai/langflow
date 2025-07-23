@@ -1,6 +1,9 @@
-import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
-import { FilePreviewType } from "@/types/components";
-import React from "react";
+import type React from "react";
+import {
+  ENABLE_IMAGE_ON_PLAYGROUND,
+  ENABLE_VOICE_ASSISTANT,
+} from "@/customization/feature-flags";
+import type { FilePreviewType } from "@/types/components";
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
@@ -80,16 +83,17 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           ))}
         </div>
         <div className="flex w-full items-end justify-between">
-          {!playgroundPage && (
-            <div className={isBuilding ? "cursor-not-allowed" : ""}>
+          <div className={isBuilding ? "cursor-not-allowed" : ""}>
+            {(!playgroundPage ||
+              (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
               <UploadFileButton
                 isBuilding={isBuilding}
                 fileInputRef={fileInputRef}
                 handleFileChange={handleFileChange}
                 handleButtonClick={handleButtonClick}
               />
-            </div>
-          )}
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {ENABLE_VOICE_ASSISTANT && (
               <VoiceButton toggleRecording={() => setShowAudioInput(true)} />

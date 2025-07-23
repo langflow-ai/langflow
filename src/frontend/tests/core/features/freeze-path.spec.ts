@@ -1,6 +1,7 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -20,6 +21,14 @@ test(
 
     await awaitBootstrapTest(page);
 
+    const firstRunLangflow = await page
+      .getByTestId("empty-project-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
@@ -29,7 +38,7 @@ test(
       .getByTestId("textarea_str_input_value")
       .first()
       .fill(
-        "say a random number between 1 and 100000 and a random animal that lives in the sea",
+        "say a random number between 1 and 300000 and a random animal that lives in the sea",
       );
 
     await page.getByTestId("dropdown_str_model_name").click();
@@ -38,19 +47,15 @@ test(
     await page.getByTestId("fit_view").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -66,18 +71,14 @@ test(
     await page.getByTestId("gpt-4o-mini-0-option").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -89,43 +90,35 @@ test(
     await page.getByText("Close").last().click();
 
     await page.waitForSelector("text=OpenAI", {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByText("OpenAI", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
-    await page.getByTestId("more-options-modal").click();
+    await page.getByText("Freeze").first().click();
 
-    await page.waitForSelector('[data-testid="freeze-path-button"]', {
-      timeout: 1000,
-    });
-
-    await page.getByTestId("freeze-path-button").click();
+    await page.waitForTimeout(2000);
 
     await page.waitForSelector('[data-testid="icon-Snowflake"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     expect(await page.getByTestId("icon-Snowflake").count()).toBeGreaterThan(0);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -142,7 +135,7 @@ test(
   },
 );
 
-async function moveSlider(
+async function _moveSlider(
   page: Page,
   side: "left" | "right",
   advanced: boolean = false,

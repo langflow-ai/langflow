@@ -8,14 +8,14 @@ import {
 } from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
-import { TableOptionsTypeAPI } from "@/types/api";
+import type { ColDef } from "ag-grid-community";
+import type { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
-import { ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
-import { AgGridReact, AgGridReactProps } from "ag-grid-react";
+import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
-import { ElementRef, forwardRef, useRef, useState } from "react";
+import { type ElementRef, forwardRef, useRef, useState } from "react";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
 
@@ -38,6 +38,7 @@ export interface TableComponentProps extends AgGridReactProps {
   onDuplicate?: () => void;
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
+  paginationInfo?: string;
 }
 
 const TableComponent = forwardRef<
@@ -53,7 +54,7 @@ const TableComponent = forwardRef<
     },
     ref,
   ) => {
-    let colDef = props.columnDefs
+    const colDef = props.columnDefs
       .filter((col) => !col.hide)
       .map((col, index, filteredArray) => {
         let newCol = {
@@ -204,22 +205,20 @@ const TableComponent = forwardRef<
     }
 
     if (colDef.length === 0) {
-      {
-        return (
-          <div className="flex h-full w-full items-center justify-center rounded-md border">
-            <Alert variant={"default"} className="w-fit">
-              <ForwardedIconComponent
-                name="AlertCircle"
-                className="h-5 w-5 text-primary"
-              />
-              <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
-              <AlertDescription>
-                {NO_COLUMN_DEFINITION_ALERT_DESCRIPTION}
-              </AlertDescription>
-            </Alert>
-          </div>
-        );
-      }
+      return (
+        <div className="flex h-full w-full items-center justify-center rounded-md border">
+          <Alert variant={"default"} className="w-fit">
+            <ForwardedIconComponent
+              name="AlertCircle"
+              className="h-5 w-5 text-primary"
+            />
+            <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
+            <AlertDescription>
+              {NO_COLUMN_DEFINITION_ALERT_DESCRIPTION}
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
     }
     return (
       <div
@@ -268,6 +267,7 @@ const TableComponent = forwardRef<
           <TableOptions
             tableOptions={props.tableOptions}
             stateChange={columnStateChange}
+            paginationInfo={props.paginationInfo}
             hasSelection={realRef.current?.api?.getSelectedRows()?.length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
             deleteRow={props.onDelete ? props.onDelete : undefined}

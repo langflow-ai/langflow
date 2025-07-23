@@ -19,7 +19,6 @@ body {
 }
 
 .react-flow__node {
-  width: fit-content !important;
   height: auto;
   border-radius: auto;
   min-width: inherit;
@@ -113,12 +112,7 @@ body {
 }
 
 .custom-hover:hover {
-  background-color: rgba(
-    99,
-    102,
-    241,
-    0.1
-  ); /* Medium indigo color with 20% opacity */
+  background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
 }
 
 /* This CSS is to not apply the border for the column having 'no-border' class */
@@ -218,32 +212,6 @@ code {
   border: 0px !important;
   box-shadow: none !important;
   border-radius: 0px !important;
-}
-
-.jse-space {
-  border-radius: var(--radius) !important;
-}
-.jse-button.jse-first {
-  border-radius: 5px !important;
-  border-top-right-radius: 0px !important;
-  border-bottom-right-radius: 0px !important;
-}
-.jse-group-button.jse-button:not(.jse-first) {
-  border-radius: 5px !important;
-  border-top-left-radius: 0px !important;
-  border-bottom-left-radius: 0px !important;
-  border-right: solid !important;
-}
-.jse-group-button.jse-button.jse-selected:not(.jse-first) {
-  border-right: none !important;
-}
-
-.jse-menu .jse-button.jse-group-button {
-  border: 1px solid var(--jse-menu-color, var(--jse-text-color-inverse, #fff)) !important;
-}
-
-.jse-menu .jse-separator {
-  margin-left: 10px !important;
 }
 
 .cm-gutters {

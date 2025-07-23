@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import Depends, HTTPException, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
@@ -31,6 +32,12 @@ api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 MINIMUM_KEY_LENGTH = 32
+AUTO_LOGIN_WARNING = "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
+AUTO_LOGIN_ERROR = (
+    "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. "
+    "Set LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true to skip this check. "
+    "Please update your authentication method."
+)
 
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
@@ -49,8 +56,16 @@ async def api_key_security(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Missing first superuser credentials",
                 )
-
-            result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+            if not query_param and not header_param:
+                if settings_service.auth_settings.skip_auth_auto_login:
+                    result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    logger.warning(AUTO_LOGIN_WARNING)
+                    return UserRead.model_validate(result, from_attributes=True)
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=AUTO_LOGIN_ERROR,
+                )
+            result = await check_key(db, query_param or header_param)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -58,21 +73,71 @@ async def api_key_security(
                 detail="An API key must be passed as query or header",
             )
 
-        elif query_param:
-            result = await check_key(db, query_param)
-
         else:
-            result = await check_key(db, header_param)
+            result = await check_key(db, query_param or header_param)
 
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid or missing API key",
             )
+
         if isinstance(result, User):
             return UserRead.model_validate(result, from_attributes=True)
+
     msg = "Invalid result type"
     raise ValueError(msg)
+
+
+async def ws_api_key_security(
+    api_key: str | None,
+) -> UserRead:
+    settings = get_settings_service()
+    async with get_db_service().with_session() as db:
+        if settings.auth_settings.AUTO_LOGIN:
+            if not settings.auth_settings.SUPERUSER:
+                # internal server misconfiguration
+                raise WebSocketException(
+                    code=status.WS_1011_INTERNAL_ERROR,
+                    reason="Missing first superuser credentials",
+                )
+            if not api_key:
+                if settings.auth_settings.skip_auth_auto_login:
+                    result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+                    logger.warning(AUTO_LOGIN_WARNING)
+                else:
+                    raise WebSocketException(
+                        code=status.WS_1008_POLICY_VIOLATION,
+                        reason=AUTO_LOGIN_ERROR,
+                    )
+            else:
+                result = await check_key(db, api_key)
+
+        # normal path: must provide an API key
+        else:
+            if not api_key:
+                raise WebSocketException(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason="An API key must be passed as query or header",
+                )
+            result = await check_key(db, api_key)
+
+        # key was invalid or missing
+        if not result:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid or missing API key",
+            )
+
+        # convert SQL-model User → pydantic UserRead
+        if isinstance(result, User):
+            return UserRead.model_validate(result, from_attributes=True)
+
+    # fallback: something unexpected happened
+    raise WebSocketException(
+        code=status.WS_1011_INTERNAL_ERROR,
+        reason="Authentication subsystem error",
+    )
 
 
 async def get_current_user(
@@ -156,16 +221,28 @@ async def get_current_user_by_jwt(
 
 async def get_current_user_for_websocket(
     websocket: WebSocket,
-    db: Annotated[AsyncSession, Depends(get_session)],
-    query_param: Annotated[str, Security(api_key_query)],
-) -> User | None:
-    token = websocket.query_params.get("token")
-    api_key = websocket.query_params.get("x-api-key")
+    db: AsyncSession,
+) -> User | UserRead:
+    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
     if token:
-        return await get_current_user_by_jwt(token, db)
+        user = await get_current_user_by_jwt(token, db)
+        if user:
+            return user
+
+    api_key = (
+        websocket.query_params.get("x-api-key")
+        or websocket.query_params.get("api_key")
+        or websocket.headers.get("x-api-key")
+        or websocket.headers.get("api_key")
+    )
     if api_key:
-        return await api_key_security(api_key, query_param)
-    return None
+        user_read = await ws_api_key_security(api_key)
+        if user_read:
+            return user_read
+
+    raise WebSocketException(
+        code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
+    )
 
 
 async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
@@ -223,8 +300,17 @@ async def create_super_user(
         )
 
         db.add(super_user)
-        await db.commit()
-        await db.refresh(super_user)
+        try:
+            await db.commit()
+            await db.refresh(super_user)
+        except IntegrityError:
+            # Race condition - another worker created the user
+            await db.rollback()
+            super_user = await get_user_by_username(db, username)
+            if not super_user:
+                raise  # Re-raise if it's not a race condition
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error creating superuser.")
 
     return super_user
 
@@ -401,3 +487,81 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
             )
             return fernet.decrypt(encrypted_api_key).decode()
     return ""
+
+
+# MCP-specific authentication functions that always behave as if skip_auth_auto_login is True
+async def get_current_user_mcp(
+    token: Annotated[str, Security(oauth2_login)],
+    query_param: Annotated[str, Security(api_key_query)],
+    header_param: Annotated[str, Security(api_key_header)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> User:
+    """MCP-specific user authentication that always allows fallback to username lookup.
+
+    This function provides authentication for MCP endpoints with special handling:
+    - If a JWT token is provided, it uses standard JWT authentication
+    - If no API key is provided and AUTO_LOGIN is enabled, it falls back to
+      username lookup using the configured superuser credentials
+    - Otherwise, it validates the provided API key (from query param or header)
+    """
+    if token:
+        return await get_current_user_by_jwt(token, db)
+
+    # MCP-specific authentication logic - always behaves as if skip_auth_auto_login is True
+    settings_service = get_settings_service()
+    result: ApiKey | User | None
+
+    if settings_service.auth_settings.AUTO_LOGIN:
+        # Get the first user
+        if not settings_service.auth_settings.SUPERUSER:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing first superuser credentials",
+            )
+        if not query_param and not header_param:
+            # For MCP endpoints, always fall back to username lookup when no API key is provided
+            result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+            if result:
+                logger.warning(AUTO_LOGIN_WARNING)
+                return result
+        else:
+            result = await check_key(db, query_param or header_param)
+
+    elif not query_param and not header_param:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="An API key must be passed as query or header",
+        )
+
+    elif query_param:
+        result = await check_key(db, query_param)
+
+    else:
+        result = await check_key(db, header_param)
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing API key",
+        )
+
+    # If result is a User, return it directly
+    if isinstance(result, User):
+        return result
+
+    # If result is an ApiKey, we need to get the associated user
+    # This should not happen in normal flow, but adding for completeness
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid authentication result",
+    )
+
+
+async def get_current_active_user_mcp(current_user: Annotated[User, Depends(get_current_user_mcp)]):
+    """MCP-specific active user dependency.
+
+    This dependency is temporary and will be removed once MCP is fully integrated.
+    """
+    if not current_user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+    return current_user

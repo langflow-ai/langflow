@@ -1,3 +1,7 @@
+import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
+
 export function CustomProfileIcon() {
-  return <></>;
+  return <ProfileIcon />;
 }
+
+export default CustomProfileIcon;

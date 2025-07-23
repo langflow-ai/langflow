@@ -1,7 +1,7 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text, data_to_text_list
 from langflow.io import DataInput, MultilineInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 
@@ -10,6 +10,7 @@ class ParseDataComponent(Component):
     description = "Convert Data objects into Messages using any {field_name} from input data."
     icon = "message-square"
     name = "ParseData"
+    legacy = True
     metadata = {
         "legacy_name": "Parse Data",
     }

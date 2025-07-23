@@ -1,8 +1,10 @@
 import { test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
+
 // TODO: fix this test
 test(
   "user must be able to stop a building",
@@ -11,13 +13,15 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
+    await addLegacyComponents(page);
+
     //first component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 0 },
       });
@@ -63,7 +67,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 600, y: 300 },
       });
@@ -76,52 +80,26 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    const urlOutput = await page
-      .getByTestId("handle-url-shownode-data-right")
-      .nth(0);
-    await urlOutput.hover();
-    await page.mouse.down();
-    const splitTextInputData = await page.getByTestId(
-      "handle-splittext-shownode-data or dataframe-left",
-    );
-    await splitTextInputData.hover();
-    await page.mouse.up();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
+    await page.getByTestId("handle-splittext-shownode-input-left").click();
 
     //connection 2
-    const textOutput = await page
-      .getByTestId("handle-textinput-shownode-message-right")
-      .nth(0);
-    await textOutput.hover();
-    await page.mouse.down();
-    const splitTextInput = await page.getByTestId(
-      "handle-splittext-shownode-separator-left",
-    );
-    await splitTextInput.hover();
-    await page.mouse.up();
+    await page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .click();
+    await page.getByTestId("handle-splittext-shownode-separator-left").click();
 
     //connection 3
-    const splitTextOutput = await page
-      .getByTestId("handle-splittext-shownode-chunks-right")
-      .nth(0);
-    await splitTextOutput.hover();
-    await page.mouse.down();
-    const parseDataInput = await page.getByTestId(
-      "handle-parsedata-shownode-data-left",
-    );
-    await parseDataInput.hover();
-    await page.mouse.up();
+    await page.getByTestId("handle-splittext-shownode-chunks-right").click();
+    await page.getByTestId("handle-parsedata-shownode-data-left").click();
 
     //connection 4
-    const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-message-right")
-      .nth(0);
-    await parseDataOutput.hover();
-    await page.mouse.down();
-    const chatOutputInput = await page.getByTestId(
-      "handle-chatoutput-noshownode-text-target",
-    );
-    await chatOutputInput.hover();
-    await page.mouse.up();
+    await page.getByTestId("handle-parsedata-shownode-message-right").click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
 
     await page.getByTestId("fit_view").click();
 

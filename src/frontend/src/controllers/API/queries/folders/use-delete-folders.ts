@@ -1,6 +1,6 @@
+import type { UseMutationResult } from "@tanstack/react-query";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -20,7 +20,7 @@ export const useDeleteFolders: useMutationFunctionType<
   const deleteFolder = async ({
     folder_id,
   }: DeleteFoldersParams): Promise<any> => {
-    await api.delete(`${getURL("FOLDERS")}/${folder_id}`);
+    await api.delete(`${getURL("PROJECTS")}/${folder_id}`);
     setFolders(folders.filter((f) => f.id !== folder_id));
     return folder_id;
   };

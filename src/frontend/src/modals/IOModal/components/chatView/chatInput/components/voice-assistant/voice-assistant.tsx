@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
@@ -7,6 +8,8 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import { customUseStartConversation } from "@/customization/hooks/use-custom-start-conversation";
+import { customUseStartRecording } from "@/customization/hooks/use-custom-start-recording";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
@@ -14,8 +17,6 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import { AxiosError } from "axios";
-import { useEffect, useMemo, useRef, useState } from "react";
 import IconComponent from "../../../../../../../components/common/genericIconComponent";
 import SettingsVoiceModal from "./components/audio-settings/audio-settings-dialog";
 import { checkProvider } from "./helpers/check-provider";
@@ -26,11 +27,9 @@ import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message"
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
 import { useInterruptPlayback } from "./hooks/use-interrupt-playback";
 import { usePlayNextAudioChunk } from "./hooks/use-play-next-audio-chunk";
-import { useStartConversation } from "./hooks/use-start-conversation";
-import { useStartRecording } from "./hooks/use-start-recording";
 import { useStopRecording } from "./hooks/use-stop-recording";
 
-interface VoiceAssistantProps {
+export interface VoiceAssistantProps {
   flowId: string;
   setShowAudioInput: (value: boolean) => void;
 }
@@ -41,9 +40,9 @@ export function VoiceAssistant({
 }: VoiceAssistantProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [status, setStatus] = useState("");
-  const [message, setMessage] = useState("");
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [_status, setStatus] = useState("");
+  const [_message, setMessage] = useState("");
+  const [showSettingsModal, _setShowSettingsModal] = useState(false);
   const [addKey, setAddKey] = useState(false);
   const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
   const [preferredLanguage, setPreferredLanguage] = useState(
@@ -61,6 +60,9 @@ export function VoiceAssistant({
   const analyserRef = useRef<AnalyserNode | null>(null);
 
   const soundDetected = useVoiceStore((state) => state.soundDetected);
+  const _setIsVoiceAssistantActive = useVoiceStore(
+    (state) => state.setIsVoiceAssistantActive,
+  );
   const setSoundDetected = useVoiceStore((state) => state.setSoundDetected);
   const messagesStore = useMessagesStore();
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
@@ -86,19 +88,14 @@ export function VoiceAssistant({
   const currentSessionId = useUtilityStore((state) => state.currentSessionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { data: globalVariables } = useGetGlobalVariables();
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlowId = currentFlow?.id;
 
   const hasOpenAIAPIKey = useMemo(() => {
     return (
       variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
     );
   }, [variables, open, addKey]);
-
-  const hasElevenLabsApiKey = useMemo(() => {
-    return (
-      variables?.find((variable) => variable === "ELEVENLABS_API_KEY")
-        ?.length! > 0
-    );
-  }, [variables, addKey, open]);
 
   const openaiApiKey = useMemo(() => {
     return variables?.find((variable) => variable === "OPENAI_API_KEY");
@@ -136,7 +133,7 @@ export function VoiceAssistant({
   };
 
   const startRecording = async () => {
-    useStartRecording(
+    customUseStartRecording(
       audioContextRef,
       microphoneRef,
       analyserRef,
@@ -190,7 +187,7 @@ export function VoiceAssistant({
   };
 
   const startConversation = () => {
-    useStartConversation(
+    customUseStartConversation(
       flowId,
       wsRef,
       setStatus,
@@ -216,7 +213,7 @@ export function VoiceAssistant({
   const handleGetMessagesMutation = () => {
     getMessagesMutation.mutate({
       mode: "union",
-      id: currentSessionId,
+      id: currentFlowId,
     });
   };
 
@@ -289,12 +286,22 @@ export function VoiceAssistant({
         audioContextRef.current = null;
       }
     };
-  }, []);
+  }, [setShowAudioInput]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      const chatContainer = document.querySelector(".chat-message-div");
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }, 300);
+  };
 
   const handleCloseAudioInput = () => {
-    setIsRecording;
+    setIsRecording(false);
     stopRecording();
     setShowAudioInput(false);
+    scrollToBottom();
   };
 
   const handleSetShowSettingsModal = async (
@@ -430,6 +437,7 @@ export function VoiceAssistant({
               handleClickSaveOpenAIApiKey={handleClickSaveOpenAIApiKey}
               isEditingOpenAIKey={isEditingOpenAIKey}
               setIsEditingOpenAIKey={setIsEditingOpenAIKey}
+              isPlayingRef={isPlayingRef}
             >
               {hasOpenAIAPIKey ? (
                 <>
@@ -449,14 +457,12 @@ export function VoiceAssistant({
                     variant={"outlineAmber"}
                     size={"icon"}
                     data-testid="voice-assistant-settings-icon-without-openai"
-                    className="group h-8 w-8"
+                    className="h-8 w-8"
                   >
                     <IconComponent
-                      name="Settings"
+                      name="Key"
                       strokeWidth={ICON_STROKE_WIDTH}
-                      className={cn(
-                        "h-4 w-4 text-accent-amber-foreground group-hover:text-accent-amber",
-                      )}
+                      className={cn("h-4 w-4 text-accent-amber-foreground")}
                     />
                   </Button>
                 </>

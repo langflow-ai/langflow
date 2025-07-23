@@ -41,6 +41,7 @@ on:
         default: true
 
 
+
 jobs:
   ci:
     if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
@@ -50,6 +51,8 @@ jobs:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+    secrets: inherit
+
 
   release-base:
     name: Release Langflow Base
@@ -63,13 +66,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
       - name: Install the project
         run: uv sync
+      - name: Check for dependency incompatibility
+        run: uv pip check
       - name: Check Version
         id: check-version
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -89,10 +99,10 @@ jobs:
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
           uv pip install src/backend/base/dist/*.whl
-          uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
@@ -127,9 +137,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
       - name: Install the project
         run: uv sync
+      - name: Check for dependency incompatibility
+        run: uv pip check
 
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
@@ -163,10 +180,10 @@ jobs:
       - name: Test CLI
         run: |
           uv pip install dist/*.whl
-          uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
@@ -200,10 +217,21 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: inputs.build_docker_ep == true
+    needs: [release-main, call_docker_build_base]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      main_version: ${{ needs.release-main.outputs.version }}
+      release_type: main-ep
+      pre_release: False
+    secrets: inherit
+
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main == true
-    needs: [release-main]
+    needs: [release-main, call_docker_build_main_ep]
     uses: ./.github/workflows/docker-build.yml
     with:
       main_version: ${{ needs.release-main.outputs.version }}
@@ -211,16 +239,17 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
-  call_docker_build_main_ep:
-    name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: inputs.build_docker_ep == true
+  call_docker_build_main_all:
+    name: Call Docker Build Workflow for langflow-all
+    if: inputs.build_docker_main == true
     needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
       main_version: ${{ needs.release-main.outputs.version }}
-      release_type: main-ep
-      pre_release: False
+      release_type: main-all
+      pre_release: ${{ inputs.pre_release }}
     secrets: inherit
+
 
   create_release:
     name: Create Release

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
-import { ChatViewWrapperProps } from "../types/chat-view-wrapper";
+import type { ChatViewWrapperProps } from "../types/chat-view-wrapper";
 import ChatView from "./chatView/components/chat-view";
 
 export const ChatViewWrapper = ({
@@ -33,7 +33,7 @@ export const ChatViewWrapper = ({
     >
       <div
         className={cn(
-          "mb-4 flex h-[5%] items-center text-[16px] font-semibold",
+          "mb-4 flex h-[5%] items-center text-base font-semibold",
           playgroundPage ? "justify-between" : "lg:justify-start",
         )}
       >
@@ -91,30 +91,23 @@ export const ChatViewWrapper = ({
           {!playgroundPage && <Separator orientation="vertical" />}
         </div>
       </div>
-      <div
-        className={cn(
-          visibleSession ? "h-[95%]" : "h-full",
-          sidebarOpen
-            ? "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
-            : "",
-        )}
-      >
-        {messagesFetched && (
-          <ChatView
-            focusChat={sessionId}
-            sendMessage={sendMessage}
-            visibleSession={visibleSession}
-            closeChat={
-              !canvasOpen
-                ? undefined
-                : () => {
-                    setOpen(false);
-                  }
-            }
-            playgroundPage={playgroundPage}
-          />
-        )}
-      </div>
+
+      {messagesFetched && (
+        <ChatView
+          focusChat={sessionId}
+          sendMessage={sendMessage}
+          visibleSession={visibleSession}
+          closeChat={
+            !canvasOpen
+              ? undefined
+              : () => {
+                  setOpen(false);
+                }
+          }
+          playgroundPage={playgroundPage}
+          sidebarOpen={sidebarOpen}
+        />
+      )}
     </div>
   );
 };

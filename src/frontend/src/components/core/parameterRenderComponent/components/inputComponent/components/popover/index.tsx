@@ -1,3 +1,7 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { uniqueId } from "lodash";
+import { X } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +18,6 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import { X } from "lucide-react";
-import { ReactNode, useMemo, useState } from "react";
 
 const OptionBadge = ({
   option,
@@ -137,7 +138,7 @@ const getInputClassName = (
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
-    selectedOptions?.length >= 0 && "cursor-default",
+    selectedOptions?.length > 0 && "cursor-default",
   );
 };
 
@@ -185,6 +186,7 @@ const CustomInputPopover = ({
   popoverWidth,
   commandWidth,
   blockAddNewGlobalVariable,
+  hasRefreshButton,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
@@ -229,7 +231,7 @@ const CustomInputPopover = ({
           className={getAnchorClassName(editNode, disabled, isFocused)}
           onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
         >
-          {selectedOptions?.length > 0 ? (
+          {!disabled && selectedOptions?.length > 0 ? (
             <div className="mr-5 flex flex-wrap gap-2">
               {selectedOptions.map((option) => (
                 <OptionBadge
@@ -240,7 +242,7 @@ const CustomInputPopover = ({
                 />
               ))}
             </div>
-          ) : selectedOption?.length > 0 ? (
+          ) : !disabled && selectedOption?.length > 0 ? (
             <ShadTooltip content={selectedOption} side="left">
               <div
                 style={{
@@ -254,27 +256,28 @@ const CustomInputPopover = ({
                   className={cn(
                     editNode && "text-xs",
                     nodeStyle
-                      ? "max-w-60 rounded-[3px] px-1 font-mono"
+                      ? "max-w-56 rounded-[3px] px-1 font-mono"
                       : "bg-muted",
+                    hasRefreshButton && "max-w-48",
                   )}
                 />
               </div>
             </ShadTooltip>
           ) : null}
 
-          {!selectedOption?.length && !selectedOptions?.length && (
+          {(!selectedOption?.length && !selectedOptions?.length) || disabled ? (
             <input
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
-              id={id}
+              id={id + uniqueId()}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
               onBlur={() => {
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={value || ""}
+              value={disabled ? "" : value || ""}
               disabled={disabled}
               required={required}
               className={getInputClassName(
@@ -285,7 +288,9 @@ const CustomInputPopover = ({
                 blockAddNewGlobalVariable,
               )}
               placeholder={
-                selectedOptions?.length > 0 || selectedOption ? "" : placeholder
+                !disabled && (selectedOptions?.length > 0 || selectedOption)
+                  ? ""
+                  : placeholder
               }
               onChange={(e) => onChange?.(e.target.value)}
               onKeyDown={(e) => {
@@ -294,7 +299,7 @@ const CustomInputPopover = ({
               }}
               data-testid={editNode ? id + "-edit" : id}
             />
-          )}
+          ) : null}
         </div>
       </PopoverAnchor>
 

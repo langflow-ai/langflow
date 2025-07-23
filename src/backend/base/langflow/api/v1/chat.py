@@ -27,6 +27,7 @@ from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTask
 from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
+    EventDeliveryType,
     build_and_cache_graph_from_data,
     build_graph_from_db,
     format_elapsed_time,
@@ -58,7 +59,7 @@ from langflow.services.deps import (
     get_telemetry_service,
     session_scope,
 )
-from langflow.services.job_queue.service import JobQueueService
+from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -152,11 +153,12 @@ async def build_flow(
     current_user: CurrentActiveUser,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
+    event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
     """Build and process a flow, returning a job ID for event polling.
 
     This endpoint requires authentication through the CurrentActiveUser dependency.
-    For public flows that don't require authentication, use the /build_public_tmp/{flow_id}/flow endpoint.
+    For public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.
 
     Args:
         flow_id: UUID of the flow to build
@@ -170,6 +172,7 @@ async def build_flow(
         current_user: The authenticated user
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
+        event_delivery: Optional event delivery type - default is streaming
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -193,7 +196,15 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    return {"job_id": job_id}
+
+    # This is required to support FE tests - we need to be able to set the event delivery to direct
+    if event_delivery != EventDeliveryType.DIRECT:
+        return {"job_id": job_id}
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        event_delivery=event_delivery,
+    )
 
 
 @router.get("/build/{job_id}/events")
@@ -201,13 +212,13 @@ async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     *,
-    stream: bool = True,
+    event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
     """Get events for a specific build job."""
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
-        stream=stream,
+        event_delivery=event_delivery,
     )
 
 
@@ -233,6 +244,9 @@ async def cancel_build(
     except ValueError as exc:
         # Job not found
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except JobQueueNotFoundError as exc:
+        logger.error(f"Job not found: {job_id}. Error: {exc!s}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job not found: {exc!s}") from exc
     except Exception as exc:
         # Any other unexpected error
         logger.exception(f"Error cancelling flow build for job_id {job_id}: {exc}")
@@ -534,9 +548,14 @@ async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user)
         background_tasks=background_tasks,
         current_user=current_user,
         queue_service=queue_service,
+        event_delivery=EventDeliveryType.STREAMING,
     )
     job_id = build_response["job_id"]
-    return await get_build_events(job_id, queue_service)
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        event_delivery=EventDeliveryType.STREAMING,
+    )
 
 
 @router.post("/build_public_tmp/{flow_id}/flow")
@@ -553,6 +572,7 @@ async def build_public_tmp(
     flow_name: str | None = None,
     request: Request,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
     """Build a public flow without requiring authentication.
 
@@ -580,6 +600,7 @@ async def build_public_tmp(
         flow_name: Optional name for the flow
         request: FastAPI request object (needed for cookie access)
         queue_service: Queue service for job management
+        event_delivery: Optional event delivery type - default is streaming
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -608,4 +629,10 @@ async def build_public_tmp(
         if isinstance(exc, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return {"job_id": job_id}
+    if event_delivery != EventDeliveryType.DIRECT:
+        return {"job_id": job_id}
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        event_delivery=event_delivery,
+    )

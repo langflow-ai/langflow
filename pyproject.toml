@@ -1,7 +1,6 @@
-
 [project]
 name = "langflow"
-version = "1.2.0"
+version = "1.5.0.post1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -11,7 +10,6 @@ maintainers = [
     { name = "Carlos Coelho", email = "carlos@langflow.org" },
     { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
     { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
-    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
     { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
     { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
     { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
@@ -19,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.2.0",
+    "langflow-base~=0.5.0",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
@@ -36,7 +34,8 @@ dependencies = [
     "supabase==2.6.0",
     "certifi>=2023.11.17,<2025.0.0",
     "certifi==2024.8.30",
-    "fastavro==1.9.7",
+    'fastavro==1.9.7; python_version < "3.13"',
+    'fastavro>=1.9.8; python_version >= "3.13"',
     "redis==5.2.1",
     "metaphor-python==0.1.23",
     'pywin32==307; sys_platform == "win32"',
@@ -47,10 +46,11 @@ dependencies = [
     "numexpr==2.10.2",
     "qianfan==0.3.5",
     "pgvector==0.3.6",
-    "langchain==0.3.10",
+    "langchain==0.3.21",
     "elasticsearch==8.16.0",
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
+    "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm==1.60.2",
     "chromadb==0.5.23",
@@ -62,28 +62,27 @@ dependencies = [
     "kubernetes==31.0.0",
     "json_repair==0.30.3",
     "langwatch==0.1.16",
-    "langsmith==0.1.147",
+    "langsmith>=0.3.42,<1.0.0",
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
-    "astra-assistants[tools]~=2.2.11",
-    "composio-langchain==0.7.1",
-    "composio-core==0.7.1",
+    "astra-assistants[tools]~=2.2.12",
+    "composio-langchain==0.7.15",
+    "composio-core==0.7.15",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
     "jq==1.8.0",
-    "pydantic-settings==2.4.0",
-    "ragstack-ai-knowledge-store==0.2.1",
+    "pydantic-settings>=2.2.0,<3.0.0",
     "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
-    "langchain-anthropic==0.3.0",
-    "langchain-astradb==0.5.3",
-    "langchain-openai==0.2.12",
+    "langchain-anthropic==0.3.14",
+    "langchain-astradb~=0.6.0",
+    "langchain-openai>=0.2.12",
     "langchain-google-vertexai==2.0.7",
     "langchain-groq==0.2.1",
-    "langchain-pinecone==0.2.2",
+    "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
     "langchain-chroma==0.1.4",
     "langchain-aws==0.2.7",
@@ -96,7 +95,7 @@ dependencies = [
     "langchain-elasticsearch==0.3.0",
     "langchain-ollama==0.2.1",
     "langchain-sambanova==0.1.0",
-    "langchain-community~=0.3.10",
+    "langchain-community~=0.3.20",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     "atlassian-python-api==3.41.16",
     "mem0ai==0.1.34",
@@ -105,12 +104,10 @@ dependencies = [
     "sseclient-py==1.8.0",
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
-    "crewai==0.102.0",
-    "mcp>=0.9.1",
+    # "crewai>=0.126.0",
+    "mcp>=1.10.1",
     "uv>=0.5.7",
-    "webrtcvad>=2.0.10",
     "scipy>=1.14.1",
-    "ag2>=0.1.0",
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
@@ -119,6 +116,16 @@ dependencies = [
     "ruff>=0.9.7",
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
+    "ibm-watsonx-ai>=1.3.1",
+    "langchain-ibm>=0.3.8",
+    "opik>=1.6.3",
+    "openai>=1.68.2",
+    "cleanlab-tlm>=1.1.2",
+    'gassist>=0.0.1; sys_platform == "win32"',
+    "twelvelabs>=0.4.7",
+    "docling_core>=2.36.1",
+    "filelock>=3.18.0",
+    "jigsawstack==0.2.7",
 ]
 
 [dependency-groups]
@@ -155,7 +162,6 @@ dev = [
     "packaging>=24.1,<25.0",
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
-    "pytest-codspeed>=3.0.0",
     "blockbuster>=1.5.20,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
@@ -164,8 +170,12 @@ dev = [
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
     "pydantic-ai>=0.0.19",
-    "elevenlabs>=1.52.0",
+    'elevenlabs==1.58.1; python_version == "3.12"',
+    'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
+    "pytest-timeout>=2.3.1",
+    "pyyaml>=6.0.2",
+    "pyleak>=0.1.14",
 ]
 
 [tool.uv.sources]
@@ -178,16 +188,19 @@ members = ["src/backend/base", "."]
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
 
-
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
-deploy = [
-    "celery[redis]>=5.3.6",
-    "flower>=2.0.0"
+docling = [
+    "docling>=2.36.1",
 ]
+
+audio = [
+    "webrtcvad>=2.0.10",
+]
+
 couchbase = [
     "couchbase>=4.2.1"
 ]
@@ -204,22 +217,23 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    # nv-ingest-client 2025.2.7.dev0 does not correctly install its
-    # dependencies, so we need to install some manually.
-    "nv-ingest-client==2025.2.7.dev0",
-    "python-pptx==0.6.23",
-    "pymilvus[bulk_writer,model]==2.5.0",
-    "llama-index-embeddings-nvidia==0.1.5",
+    "nv-ingest-api==2025.4.22.dev20250422",
+    "nv-ingest-client==2025.4.22.dev20250422",
 ]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
 
+[tool.uv]
+override-dependencies = [
+    # temporary force a newer python-pptx
+    "python-pptx>=1.0.2"
 ]
 
 [project.scripts]
-langflow = "langflow.__main__:main"
+langflow = "langflow.langflow_launcher:main"
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
@@ -228,14 +242,16 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
+timeout = 120
+timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["tests", "integration"]
+testpaths = ["src/backend/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required"]
+markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 

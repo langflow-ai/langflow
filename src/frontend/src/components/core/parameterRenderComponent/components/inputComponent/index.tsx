@@ -1,11 +1,11 @@
+import * as Form from "@radix-ui/react-form";
+import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { InputComponentType } from "@/types/components";
+import type { InputComponentType } from "@/types/components";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
-import * as Form from "@radix-ui/react-form";
-import { useEffect, useRef, useState } from "react";
 import { getIconName } from "./components/helpers/get-icon-name";
 import CustomInputPopover from "./components/popover";
 import CustomInputPopoverObject from "./components/popoverObject";
@@ -42,6 +42,7 @@ export default function InputComponent({
   popoverWidth,
   commandWidth,
   blockAddNewGlobalVariable = false,
+  hasRefreshButton = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -155,6 +156,7 @@ export default function InputComponent({
               popoverWidth={popoverWidth}
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
+              hasRefreshButton={hasRefreshButton}
             />
           )}
         </>

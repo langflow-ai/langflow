@@ -1,11 +1,12 @@
 import json
-import logging
 import os
 from typing import Any
 
 import httpx
+from loguru import logger
 
-from langflow.custom import Component
+from langflow.base.langwatch.utils import get_cached_evaluators
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import (
     BoolInput,
@@ -17,11 +18,8 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class LangWatchComponent(Component):
@@ -84,36 +82,24 @@ class LangWatchComponent(Component):
         Output(name="evaluation_result", display_name="Evaluation Result", method="evaluate"),
     ]
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.evaluators = self.get_evaluators()
-        self.dynamic_inputs = {}
-        self._code = data.get("_code", "")
-        self.current_evaluator = None
-        if self.evaluators:
-            self.current_evaluator = next(iter(self.evaluators))
-
-    def get_evaluators(self) -> dict[str, Any]:
-        url = f"{os.getenv('LANGWATCH_ENDPOINT', 'https://app.langwatch.ai')}/api/evaluations/list"
-        try:
-            response = httpx.get(url, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("evaluators", {})
-        except httpx.RequestError as e:
-            self.status = f"Error fetching evaluators: {e}"
-            return {}
+    def set_evaluators(self, endpoint: str):
+        url = f"{endpoint}/api/evaluations/list"
+        self.evaluators = get_cached_evaluators(url)
+        if not self.evaluators or len(self.evaluators) == 0:
+            self.status = f"No evaluators found from {endpoint}"
+            msg = f"No evaluators found from {endpoint}"
+            raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         try:
-            logger.info("Updating build config. Field name: %s, Field value: %s", field_name, field_value)
+            logger.info(f"Updating build config. Field name: {field_name}, Field value: {field_value}")
 
             if field_name is None or field_name == "evaluator_name":
-                self.evaluators = self.get_evaluators()
+                self.evaluators = self.get_evaluators(os.getenv("LANGWATCH_ENDPOINT", "https://app.langwatch.ai"))
                 build_config["evaluator_name"]["options"] = list(self.evaluators.keys())
 
                 # Set a default evaluator if none is selected
-                if not self.current_evaluator and self.evaluators:
+                if not getattr(self, "current_evaluator", None) and self.evaluators:
                     self.current_evaluator = next(iter(self.evaluators))
                     build_config["evaluator_name"]["value"] = self.current_evaluator
 
@@ -153,7 +139,7 @@ class LangWatchComponent(Component):
                 # Validate presence of default keys
                 missing_keys = [key for key in default_keys if key not in build_config]
                 if missing_keys:
-                    logger.warning("Missing required keys in build_config: %s", missing_keys)
+                    logger.warning(f"Missing required keys in build_config: {missing_keys}")
                     # Add missing keys with default values
                     for key in missing_keys:
                         build_config[key] = {"value": None, "type": "str"}
@@ -161,14 +147,11 @@ class LangWatchComponent(Component):
             # Ensure the current_evaluator is always set in the build_config
             build_config["evaluator_name"]["value"] = self.current_evaluator
 
-            logger.info("Current evaluator set to: %s", self.current_evaluator)
-            return build_config
+            logger.info(f"Current evaluator set to: {self.current_evaluator}")
 
         except (KeyError, AttributeError, ValueError) as e:
             self.status = f"Error updating component: {e!s}"
-            return build_config
-        else:
-            return build_config
+        return build_config
 
     def get_dynamic_inputs(self, evaluator: dict[str, Any]):
         try:
@@ -232,13 +215,18 @@ class LangWatchComponent(Component):
         if not self.api_key:
             return Data(data={"error": "API key is required"})
 
+        self.set_evaluators(os.getenv("LANGWATCH_ENDPOINT", "https://app.langwatch.ai"))
+        self.dynamic_inputs = {}
+        if getattr(self, "current_evaluator", None) is None and self.evaluators:
+            self.current_evaluator = next(iter(self.evaluators))
+
         # Prioritize evaluator_name if it exists
         evaluator_name = getattr(self, "evaluator_name", None) or self.current_evaluator
 
         if not evaluator_name:
             if self.evaluators:
                 evaluator_name = next(iter(self.evaluators))
-                logger.info("No evaluator was selected. Using default: %s", evaluator_name)
+                logger.info(f"No evaluator was selected. Using default: {evaluator_name}")
             else:
                 return Data(
                     data={"error": "No evaluator selected and no evaluators available. Please choose an evaluator."}
@@ -249,7 +237,7 @@ class LangWatchComponent(Component):
             if not evaluator:
                 return Data(data={"error": f"Selected evaluator '{evaluator_name}' not found."})
 
-            logger.info("Evaluating with evaluator: %s", evaluator_name)
+            logger.info(f"Evaluating with evaluator: {evaluator_name}")
 
             endpoint = f"/api/evaluations/{evaluator_name}/evaluate"
             url = f"{os.getenv('LANGWATCH_ENDPOINT', 'https://app.langwatch.ai')}{endpoint}"

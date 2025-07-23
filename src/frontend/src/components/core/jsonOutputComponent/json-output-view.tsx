@@ -1,6 +1,6 @@
+import type React from "react";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType } from "@/types/api";
-import React from "react";
+import type { APIClassType } from "@/types/api";
 import JsonEditor from "../jsonEditor";
 
 interface JsonOutputViewComponentProps {
@@ -24,7 +24,7 @@ const JsonOutputViewComponent: React.FC<JsonOutputViewComponentProps> = ({
   const initialFilter = output?.options?.filter;
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex h-full flex-1 flex-col">
       <JsonEditor
         data={{ json: jsonData }}
         readOnly={true}

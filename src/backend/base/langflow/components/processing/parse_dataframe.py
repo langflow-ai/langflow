@@ -1,4 +1,4 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataFrameInput, MultilineInput, Output, StrInput
 from langflow.schema.message import Message
 
@@ -11,6 +11,7 @@ class ParseDataFrameComponent(Component):
     )
     icon = "braces"
     name = "ParseDataFrame"
+    legacy = True
 
     inputs = [
         DataFrameInput(name="df", display_name="DataFrame", info="The DataFrame to convert to text rows."),

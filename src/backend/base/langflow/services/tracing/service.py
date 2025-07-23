@@ -47,6 +47,12 @@ def _get_arize_phoenix_tracer():
     return ArizePhoenixTracer
 
 
+def _get_opik_tracer():
+    from langflow.services.tracing.opik import OpikTracer
+
+    return OpikTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -126,7 +132,7 @@ class TracingService(Service):
                 trace_context.traces_queue.task_done()
 
     async def _start(self, trace_context: TraceContext) -> None:
-        if trace_context.running:
+        if trace_context.running or self.deactivated:
             return
         try:
             trace_context.running = True
@@ -144,6 +150,8 @@ class TracingService(Service):
         )
 
     def _initialize_langwatch_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
         if (
             "langwatch" not in trace_context.tracers
             or trace_context.tracers["langwatch"].trace_id != trace_context.run_id
@@ -157,6 +165,8 @@ class TracingService(Service):
             )
 
     def _initialize_langfuse_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
         langfuse_tracer = _get_langfuse_tracer()
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
@@ -168,12 +178,27 @@ class TracingService(Service):
         )
 
     def _initialize_arize_phoenix_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
         arize_phoenix_tracer = _get_arize_phoenix_tracer()
         trace_context.tracers["arize_phoenix"] = arize_phoenix_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
             project_name=trace_context.project_name,
             trace_id=trace_context.run_id,
+        )
+
+    def _initialize_opik_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        opik_tracer = _get_opik_tracer()
+        trace_context.tracers["opik"] = opik_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
         )
 
     async def start_tracers(
@@ -201,6 +226,7 @@ class TracingService(Service):
             self._initialize_langwatch_tracer(trace_context)
             self._initialize_langfuse_tracer(trace_context)
             self._initialize_arize_phoenix_tracer(trace_context)
+            self._initialize_opik_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error initializing tracers: {e}")
 
@@ -229,7 +255,7 @@ class TracingService(Service):
                         metadata=outputs,
                     )
                 except Exception:  # noqa: BLE001
-                    logger.exception("Error ending all traces")
+                    logger.error("Error ending all traces")
 
     async def end_tracers(self, outputs: dict, error: Exception | None = None) -> None:
         """End the trace for a graph run.

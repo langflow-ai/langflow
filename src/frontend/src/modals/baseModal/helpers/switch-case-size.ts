@@ -2,6 +2,10 @@ export const switchCaseModalSize = (size: string) => {
   let minWidth: string;
   let height: string;
   switch (size) {
+    case "notice":
+      minWidth = "min-w-[400px] max-w-[400px]";
+      height = "";
+      break;
     case "x-small":
       minWidth = "min-w-[20vw]";
       height = "";
@@ -14,12 +18,20 @@ export const switchCaseModalSize = (size: string) => {
       minWidth = "min-w-[40vw]";
       height = "";
       break;
+    case "small-update":
+      minWidth = "min-w-[480px] max-w-[480px]";
+      height = "";
+      break;
     case "small":
       minWidth = "min-w-[40vw]";
       height = "h-[40vh]";
       break;
+    case "small-query":
+      minWidth = "min-w-[35vw]";
+      height = "h-fit";
+      break;
     case "medium-small-tall":
-      minWidth = "min-w-[50vw]";
+      minWidth = "w-[900px] max-w-[98vw]";
       height = "h-[70vh]";
       break;
     case "small-h-full":
@@ -45,7 +57,7 @@ export const switchCaseModalSize = (size: string) => {
     case "templates":
       minWidth = "w-[97vw] max-w-[1200px]";
       height =
-        "min-h-[700px] lg:min-h-0 h-[90vh] md:h-[80vh] lg:h-[50vw] lg:max-h-[620px]";
+        "min-h-[500px] h-[90vh] md:h-[85vh] lg:h-[80vh] lg:max-h-[620px] max-h-[90vh]";
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";

@@ -35,12 +35,12 @@ test(
     //connection 1
 
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt-shownode-prompt-right")
       .first()
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
       .first()
       .click();
 
@@ -66,9 +66,12 @@ test(
 
     await page.getByText("Prompt", { exact: true }).last().click();
 
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 1000,
+    });
     await page.getByTestId("more-options-modal").click();
 
-    await page.getByText("Freeze", { exact: true }).last().click();
+    await page.getByText("Freeze", { exact: true }).first().click();
 
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 

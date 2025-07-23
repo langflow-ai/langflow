@@ -1,11 +1,12 @@
-import React, { forwardRef, memo, useMemo } from "react";
-import { ShadToolTipType } from "../../../types/components";
+import type React from "react";
+import { forwardRef, memo, useMemo } from "react";
+import type { ShadToolTipType } from "../../../types/components";
 import { cn } from "../../../utils/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 
 // Extract static styles
 const BASE_TOOLTIP_CLASSES =
-  "z-[99] max-w-96 bg-tooltip text-[12px] text-tooltip-foreground";
+  "z-[99] max-w-96 bg-tooltip text-xs text-tooltip-foreground";
 
 // Memoize the tooltip content component
 const MemoizedTooltipContent = memo(

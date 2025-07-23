@@ -1,3 +1,4 @@
+import { OPENAI_VOICES } from "@/constants/constants";
 import IconComponent from "../../../../../../../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../../../../../../../components/common/shadTooltipComponent";
 import {
@@ -21,6 +22,8 @@ const VoiceSelect = ({
   handleSetVoice,
   allVoices,
 }: VoiceSelectProps) => {
+  allVoices = allVoices?.length === 0 || !allVoices ? OPENAI_VOICES : allVoices;
+
   return (
     <div className="grid w-full items-center gap-2">
       <span className="flex w-full items-center text-sm">

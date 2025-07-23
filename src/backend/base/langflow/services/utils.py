@@ -9,6 +9,7 @@ from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
 
 from langflow.services.auth.utils import create_super_user, verify_password
+from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -28,7 +29,8 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     from langflow.services.database.models.user.model import User
 
     stmt = select(User).where(User.username == username)
-    user = (await session.exec(stmt)).first()
+    result = await session.exec(stmt)
+    user = result.first()
 
     if user and user.is_superuser:
         return None  # Superuser already exists
@@ -63,16 +65,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
         logger.debug("Creating default superuser.")
     else:
         logger.debug("Creating superuser.")
-    try:
-        return await create_super_user(username, password, db=session)
-    except Exception as exc:  # noqa: BLE001
-        if "UNIQUE constraint failed: user.username" in str(exc):
-            # This is to deal with workers running this
-            # at startup and trying to create the superuser
-            # at the same time.
-            logger.opt(exception=True).debug("Superuser already exists.")
-            return None
-        logger.opt(exception=True).debug("Error creating superuser.")
+    return await create_super_user(username, password, db=session)
 
 
 async def setup_superuser(settings_service, session: AsyncSession) -> None:
@@ -113,7 +106,8 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
             from langflow.services.database.models.user.model import User
 
             stmt = select(User).where(User.username == username)
-            user = (await session.exec(stmt)).first()
+            result = await session.exec(stmt)
+            user = result.first()
             # Check if super was ever logged in, if not delete it
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
@@ -130,17 +124,12 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
 
 async def teardown_services() -> None:
     """Teardown all the services."""
-    try:
-        async with get_db_service().with_session() as session:
-            await teardown_superuser(get_settings_service(), session)
-    except Exception as exc:  # noqa: BLE001
-        logger.exception(exc)
-    try:
-        from langflow.services.manager import service_manager
+    async with get_db_service().with_session() as session:
+        await teardown_superuser(get_settings_service(), session)
 
-        await service_manager.teardown()
-    except Exception as exc:  # noqa: BLE001
-        logger.exception(exc)
+    from langflow.services.manager import service_manager
+
+    await service_manager.teardown()
 
 
 def initialize_settings_service() -> None:
@@ -228,8 +217,12 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
 
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
-    # Test cache connection
-    get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
+    cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
+    # Test external cache connection
+    if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
+        msg = "Cache service failed to connect to external database"
+        raise ConnectionError(msg)
+
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()

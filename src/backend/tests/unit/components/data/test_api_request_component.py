@@ -1,5 +1,4 @@
 from pathlib import Path
-from unittest.mock import patch
 
 import aiofiles
 import aiofiles.os
@@ -8,7 +7,8 @@ import pytest
 import respx
 from httpx import Response
 from langflow.components.data import APIRequestComponent
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema import Data
+from langflow.schema.dotdict import dotdict
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -23,16 +23,17 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "urls": ["https://example.com/api/test"],
+            "url_input": "https://example.com/api/test",
             "method": "GET",
-            "headers": [],
+            "headers": [{"key": "User-Agent", "value": "test-agent"}],
             "body": [],
-            "timeout": 5,
+            "timeout": 30,
             "follow_redirects": True,
             "save_to_file": False,
             "include_httpx_metadata": False,
-            "use_curl": False,
-            "curl": "",
+            "mode": "URL",
+            "curl_input": "",
+            "query_params": {},
         }
 
     @pytest.fixture
@@ -50,16 +51,18 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         curl_cmd = (
             "curl -X GET https://example.com/api/test -H 'Content-Type: application/json' -d '{\"key\": \"value\"}'"
         )
-        build_config = {
-            "method": {"value": ""},
-            "urls": {"value": []},
-            "headers": {},
-            "body": {},
-        }
+        build_config = dotdict(
+            {
+                "method": {"value": ""},
+                "url_input": {"value": ""},
+                "headers": {"value": []},
+                "body": {"value": []},
+            }
+        )
         new_build_config = component.parse_curl(curl_cmd, build_config.copy())
 
         assert new_build_config["method"]["value"] == "GET"
-        assert new_build_config["urls"]["value"] == ["https://example.com/api/test"]
+        assert new_build_config["url_input"]["value"] == "https://example.com/api/test"
         assert new_build_config["headers"]["value"] == [{"key": "Content-Type", "value": "application/json"}]
         assert new_build_config["body"]["value"] == [{"key": "key", "value": "value"}]
 
@@ -78,8 +81,8 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, Data)
         assert result.data["source"] == url
-        assert "key" in result.data
-        assert result.data["key"] == "value"
+        assert "result" in result.data
+        assert result.data["result"]["key"] == "value"
 
     @respx.mock
     async def test_make_request_with_metadata(self, component):
@@ -144,7 +147,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
 
         assert isinstance(result, Data)
         assert result.data["source"] == url
-        assert result.data["data"] == binary_content
+        assert result.data["result"] == binary_content
 
     @respx.mock
     async def test_make_request_timeout(self, component):
@@ -160,8 +163,8 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         )
 
         assert isinstance(result, Data)
-        assert result.data["status_code"] == 408
-        assert result.data["error"] == "Request timed out"
+        assert result.data["status_code"] == 500
+        assert "Request timed out" in result.data["error"]
 
     @respx.mock
     async def test_make_request_with_redirects(self, component):
@@ -235,58 +238,55 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert "param1=value1" in result
         assert "param2=value2" in result
 
-    async def test_output_formats(self, component):
-        # Test different output formats
-        with patch.object(component, "make_requests") as mock_make_requests:
-            mock_make_requests.return_value = [Data(data={"key": "value"})]
+    async def test_make_api_request(self, component):
+        # Test making API requests
+        url = "https://example.com/api/test"
+        response_data = {"key": "value"}
 
-            # Test DataFrame output
-            df_result = await component.as_dataframe()
-            assert isinstance(df_result, DataFrame)
+        with respx.mock:
+            respx.get(url).mock(return_value=Response(200, json=response_data))
 
-            # Test Message output
-            msg_result = await component.as_message()
-            assert isinstance(msg_result, Message)
+            result = await component.make_api_request()
 
-            # Test Data output
-            data_result = await component.as_data()
-            assert isinstance(data_result, Data)
-            assert isinstance(data_result.data["output"], list)
+            assert isinstance(result, Data)
+            assert result.data["source"] == url
+            assert result.data["result"]["key"] == "value"
 
     async def test_invalid_urls(self, component):
         # Test invalid URL handling
-        component.urls = ["not_a_valid_url"]
-        with pytest.raises(ValueError, match="Invalid URLs provided"):
-            await component.make_requests()
+        component.url_input = "not_a_valid_url"
+        with pytest.raises(ValueError, match="Invalid URL provided"):
+            await component.make_api_request()
 
     async def test_update_build_config(self, component):
         # Test build config updates
-        build_config = {
-            "method": {"value": "GET", "advanced": False},
-            "urls": {"value": [], "advanced": False},
-            "headers": {"value": [], "advanced": True},
-            "body": {"value": [], "advanced": True},
-            "use_curl": {"value": False, "advanced": False},
-            "curl": {"value": "", "advanced": True},
-            "timeout": {"value": 5, "advanced": True},
-            "follow_redirects": {"value": True, "advanced": True},
-            "save_to_file": {"value": False, "advanced": True},
-            "include_httpx_metadata": {"value": False, "advanced": True},
-            "query_params": {"value": {}, "advanced": True},
-        }
-
-        # Test curl mode update
-        updated = component.update_build_config(
-            build_config=build_config.copy(), field_value=True, field_name="use_curl"
+        build_config = dotdict(
+            {
+                "method": {"value": "GET", "advanced": False},
+                "url_input": {"value": "", "advanced": False},
+                "headers": {"value": [], "advanced": True},
+                "body": {"value": [], "advanced": True},
+                "mode": {"value": "URL", "advanced": False},
+                "curl_input": {"value": "curl -X GET https://example.com/api/test", "advanced": True},
+                "timeout": {"value": 30, "advanced": True},
+                "follow_redirects": {"value": True, "advanced": True},
+                "save_to_file": {"value": False, "advanced": True},
+                "include_httpx_metadata": {"value": False, "advanced": True},
+                "query_params": {"value": {}, "advanced": True},
+            }
         )
-        assert updated["curl"]["advanced"] is False
-        assert updated["urls"]["advanced"] is True
 
-        # Test method update
-        updated = component.update_build_config(
-            build_config=build_config.copy(), field_value="POST", field_name="method"
-        )
-        assert updated["body"]["advanced"] is False
+        # Test URL mode
+        updated = component.update_build_config(build_config=build_config.copy(), field_value="URL", field_name="mode")
+        assert updated["curl_input"]["advanced"] is True
+        assert updated["url_input"]["advanced"] is False
+
+        # Set the component's curl_input attribute to match the build_config before switching to cURL mode
+        component.curl_input = build_config["curl_input"]["value"]
+        # Test cURL mode
+        updated = component.update_build_config(build_config=build_config.copy(), field_value="cURL", field_name="mode")
+        assert updated["curl_input"]["advanced"] is False
+        assert updated["url_input"]["advanced"] is True
 
     @respx.mock
     async def test_error_handling(self, component):
@@ -310,3 +310,24 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
                 method="INVALID",
                 url=url,
             )
+
+    async def test_response_info(self, component):
+        # Test response info handling
+        url = "https://example.com/api/test"
+        request = httpx.Request("GET", url)
+        response = Response(200, text="test content", request=request)
+        is_binary, file_path = await component._response_info(response, with_file_path=True)
+
+        assert not is_binary
+        assert file_path is not None
+        assert file_path.suffix == ".txt"
+
+        # Test binary response
+        binary_response = Response(
+            200, content=b"binary content", headers={"Content-Type": "application/octet-stream"}, request=request
+        )
+        is_binary, file_path = await component._response_info(binary_response, with_file_path=True)
+
+        assert is_binary
+        assert file_path is not None
+        assert file_path.suffix == ".bin"

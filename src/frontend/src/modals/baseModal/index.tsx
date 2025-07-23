@@ -1,24 +1,21 @@
-import { ReactNode, useEffect } from "react";
-
-import React from "react";
+import { DialogClose } from "@radix-ui/react-dialog";
+import * as Form from "@radix-ui/react-form";
+import React, { type ReactNode, useEffect } from "react";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogContentWithouFixed,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-
 import {
   Dialog as Modal,
   DialogContent as ModalContent,
 } from "../../components/ui/dialog-with-no-close";
-
-import { DialogClose } from "@radix-ui/react-dialog";
-import * as Form from "@radix-ui/react-form";
-import { Button } from "../../components/ui/button";
-import { modalHeaderType } from "../../types/components";
+import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
 
@@ -167,10 +164,13 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   size?:
+    | "notice"
     | "x-small"
     | "retangular"
     | "smaller"
     | "small"
+    | "small-update"
+    | "small-query"
     | "medium"
     | "medium-tall"
     | "large"
@@ -193,6 +193,7 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   closeButtonClassName?: string;
+  dialogContentWithouFixed?: boolean;
 }
 function BaseModal({
   className,
@@ -205,6 +206,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   closeButtonClassName,
+  dialogContentWithouFixed = false,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -219,7 +221,7 @@ function BaseModal({
     (child) => (child as React.ReactElement).type === Footer,
   );
 
-  let { minWidth, height } = switchCaseModalSize(size);
+  const { minWidth, height } = switchCaseModalSize(size);
 
   useEffect(() => {
     if (onChangeOpenModal) {
@@ -259,27 +261,51 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent
-            onClick={(e) => e.stopPropagation()}
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            onEscapeKeyDown={onEscapeKeyDown}
-            className={contentClasses}
-            closeButtonClassName={closeButtonClassName}
-          >
-            {onSubmit ? (
-              <Form.Root
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  onSubmit();
-                }}
-                className={formClasses}
-              >
-                {modalContent}
-              </Form.Root>
-            ) : (
-              modalContent
-            )}
-          </DialogContent>
+          {dialogContentWithouFixed ? (
+            <DialogContentWithouFixed
+              onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onEscapeKeyDown={onEscapeKeyDown}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
+            >
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContentWithouFixed>
+          ) : (
+            <DialogContent
+              onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onEscapeKeyDown={onEscapeKeyDown}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
+            >
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContent>
+          )}
         </Dialog>
       )}
     </>

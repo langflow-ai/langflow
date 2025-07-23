@@ -15,20 +15,19 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon bedrock");
 
-    await page.waitForSelector('[data-testid="modelsAmazon Bedrock"]', {
+    await page.waitForSelector('[data-testid="amazonAmazon Bedrock"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsAmazon Bedrock")
+      .getByTestId("amazonAmazon Bedrock")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await adjustScreenView(page);
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page.getByTestId("showmodel_kwargs").click();
     expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
@@ -70,8 +69,7 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page.getByText("Close").last().click();
 
@@ -81,8 +79,7 @@ test(
       expect(true).toBeTruthy();
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("more-options-modal").click();
-      await page.getByTestId("advanced-button-modal").click();
+      await page.getByTestId("edit-button-modal").last().click();
 
       await page.locator('//*[@id="editNodekeypair0"]').click();
       await page

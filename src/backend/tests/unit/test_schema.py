@@ -3,11 +3,13 @@ from types import NoneType
 from typing import Union
 
 import pytest
+from langflow.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput
+from langflow.io.schema import schema_to_langflow_inputs
 from langflow.schema.data import Data
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 
 class TestInput:
@@ -125,11 +127,6 @@ class TestOutput:
         output_obj.add_types(["str", "int"])
         assert output_obj.types == ["str", "int"]
 
-    def test_output_set_selected(self):
-        output_obj = Output(name="test_output", types=["str", "int"])
-        output_obj.set_selected()
-        assert output_obj.selected == "str"
-
     def test_output_to_dict(self):
         output_obj = Output(name="test_output")
         assert output_obj.to_dict() == {
@@ -137,6 +134,7 @@ class TestOutput:
             "types": [],
             "name": "test_output",
             "display_name": "test_output",
+            "group_outputs": False,
             "cache": True,
             "value": "__UNDEFINED__",
             "tool_mode": True,
@@ -178,3 +176,65 @@ class TestPostProcessType:
             pass
 
         assert set(post_process_type(Union[CustomType, int])) == {CustomType, int}  # noqa: UP007
+
+
+def test_schema_to_langflow_inputs():
+    # Define a test Pydantic model with various field types
+    class TestSchema(BaseModel):
+        text_field: str = Field(title="Custom Text Title", description="A text field")
+        number_field: int = Field(description="A number field")
+        bool_field: bool = Field(description="A boolean field")
+        dict_field: dict = Field(description="A dictionary field")
+        list_field: list[str] = Field(description="A list of strings")
+
+    # Convert schema to Langflow inputs
+    inputs = schema_to_langflow_inputs(TestSchema)
+
+    # Verify the number of inputs matches the schema fields
+    assert len(inputs) == 5
+
+    # Helper function to find input by name
+    def find_input(name: str) -> InputTypes | None:
+        for _input in inputs:
+            if _input.name == name:
+                return _input
+        return None
+
+    # Test text field
+    text_input = find_input("text_field")
+    assert text_input.display_name == "Custom Text Title"
+    assert text_input.info == "A text field"
+    assert isinstance(text_input, MessageTextInput)  # Check the instance type instead of field_type
+
+    # Test number field
+    number_input = find_input("number_field")
+    assert number_input.display_name == "Number Field"
+    assert number_input.info == "A number field"
+    assert isinstance(number_input, IntInput | FloatInput)
+
+    # Test boolean field
+    bool_input = find_input("bool_field")
+    assert isinstance(bool_input, BoolInput)
+
+    # Test dictionary field
+    dict_input = find_input("dict_field")
+    assert isinstance(dict_input, DictInput)
+
+    # Test list field
+    list_input = find_input("list_field")
+    assert list_input.is_list is True
+    assert isinstance(list_input, MessageTextInput)
+
+
+def test_schema_to_langflow_inputs_invalid_type():
+    # Define a schema with an unsupported type
+    class CustomType:
+        pass
+
+    class InvalidSchema(BaseModel):
+        model_config = {"arbitrary_types_allowed": True}  # Add this line
+        invalid_field: CustomType
+
+    # Test that attempting to convert an unsupported type raises TypeError
+    with pytest.raises(TypeError, match="Unsupported field type:"):
+        schema_to_langflow_inputs(InvalidSchema)

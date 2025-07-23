@@ -1,5 +1,6 @@
 import base64
 import mimetypes
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -67,3 +68,35 @@ def create_data_url(image_path: str | Path, mime_type: str | None = None) -> str
         msg = f"Failed to create data URL: {e}"
         raise type(e)(msg) from e
     return f"data:{mime_type};base64,{base64_data}"
+
+
+@lru_cache(maxsize=50)
+def create_image_content_dict(image_path: str | Path, mime_type: str | None = None) -> dict:
+    """Create a content dictionary for multimodal inputs from an image file.
+
+    Args:
+        image_path (str | Path): Path to the image file.
+        mime_type (Optional[str], optional): MIME type of the image.
+            If None, it will be guessed from the file extension.
+
+    Returns:
+        dict: Content dictionary with type, source_type, data, and mime_type fields.
+
+    Raises:
+        FileNotFoundError: If the image file does not exist.
+        IOError: If there's an error reading the image file.
+        ValueError: If the image path is empty or invalid.
+    """
+    if not mime_type:
+        mime_type = mimetypes.guess_type(str(image_path))[0]
+        if not mime_type:
+            msg = f"Could not determine MIME type for: {image_path}"
+            raise ValueError(msg)
+
+    try:
+        base64_data = convert_image_to_base64(image_path)
+    except (OSError, FileNotFoundError, ValueError) as e:
+        msg = f"Failed to create image content dict: {e}"
+        raise type(e)(msg) from e
+
+    return {"type": "image", "source_type": "url", "url": f"data:{mime_type};base64,{base64_data}"}

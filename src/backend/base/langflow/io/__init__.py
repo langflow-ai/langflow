@@ -12,6 +12,7 @@ from langflow.inputs import (
     HandleInput,
     IntInput,
     LinkInput,
+    McpInput,
     MessageInput,
     MessageTextInput,
     MultilineInput,
@@ -19,11 +20,13 @@ from langflow.inputs import (
     MultiselectInput,
     NestedDictInput,
     PromptInput,
+    QueryInput,
     SecretStrInput,
     SliderInput,
     StrInput,
     TabInput,
     TableInput,
+    ToolsInput,
 )
 from langflow.template import Output
 
@@ -42,6 +45,7 @@ __all__ = [
     "IntInput",
     "LinkInput",
     "LinkInput",
+    "McpInput",
     "MessageInput",
     "MessageTextInput",
     "MultilineInput",
@@ -50,9 +54,11 @@ __all__ = [
     "NestedDictInput",
     "Output",
     "PromptInput",
+    "QueryInput",
     "SecretStrInput",
     "SliderInput",
     "StrInput",
     "TabInput",
     "TableInput",
+    "ToolsInput",
 ]

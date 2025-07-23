@@ -5,10 +5,17 @@ import time
 from collections import OrderedDict
 from typing import Generic, Union
 
+import dill
 from loguru import logger
 from typing_extensions import override
 
-from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType, CacheService, LockType
+from langflow.services.cache.base import (
+    AsyncBaseCacheService,
+    AsyncLockType,
+    CacheService,
+    ExternalAsyncBaseCacheService,
+    LockType,
+)
 from langflow.services.cache.utils import CACHE_MISS
 
 
@@ -168,7 +175,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(AsyncBaseCacheService, Generic[LockType]):
+class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     """A Redis-based cache implementation.
 
     This cache supports setting an expiration time for cached items.
@@ -200,14 +207,9 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
             expiration_time (int, optional): Time in seconds after which a
                 cached item expires. Default is 1 hour.
         """
-        try:
-            from redis.asyncio import StrictRedis
-        except ImportError as exc:
-            msg = (
-                "RedisCache requires the redis-py package."
-                " Please install Langflow with the deploy extra: pip install langflow[deploy]"
-            )
-            raise ImportError(msg) from exc
+        # Redis is a main dependency, no need to import check
+        from redis.asyncio import StrictRedis
+
         logger.warning(
             "RedisCache is an experimental feature and may not work as expected."
             " Please report any issues to our GitHub repository."
@@ -218,15 +220,15 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
             self._client = StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
 
-    # check connection
-    def is_connected(self) -> bool:
+    async def is_connected(self) -> bool:
         """Check if the Redis client is connected."""
         import redis
 
         try:
-            asyncio.run(self._client.ping())
+            await self._client.ping()
         except redis.exceptions.ConnectionError:
-            logger.exception("RedisCache could not connect to the Redis server")
+            msg = "RedisCache could not connect to the Redis server"
+            logger.exception(msg)
             return False
         return True
 
@@ -235,17 +237,17 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         if key is None:
             return CACHE_MISS
         value = await self._client.get(str(key))
-        return pickle.loads(value) if value else CACHE_MISS
+        return dill.loads(value) if value else CACHE_MISS
 
     @override
     async def set(self, key, value, lock=None) -> None:
         try:
-            if pickled := pickle.dumps(value):
+            if pickled := dill.dumps(value, recurse=True):
                 result = await self._client.setex(str(key), self.expiration_time, pickled)
                 if not result:
                     msg = "RedisCache could not set the value."
                     raise ValueError(msg)
-        except TypeError as exc:
+        except pickle.PicklingError as exc:
             msg = "RedisCache only accepts values that can be pickled. "
             raise TypeError(msg) from exc
 

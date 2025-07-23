@@ -2,6 +2,13 @@ name: Python tests
 
 on:
   workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      ANTHROPIC_API_KEY:
+        required: true
+      CODECOV_TOKEN:
+        required: false
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
@@ -28,13 +35,14 @@ env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
   PYTEST_RUN_PATH: "src/backend/tests"
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
 jobs:
   build:
+
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
-    env:
-      UV_CACHE_DIR: /tmp/.uv-cache
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
@@ -44,25 +52,53 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
+
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
+
       - name: Install the project
         run: uv sync
+
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-report=xml --cov-report=html"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: matrix.python-version == '3.10'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: backend
+          name: backend-coverage-group-${{ matrix.group }}
+          fail_ci_if_error: false
+          directory: ./
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.10'
+        with:
+          name: backend-coverage-report-group-${{ matrix.group }}
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 30
+
+
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -74,15 +110,20 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+        env:
+          PYLEAK_LOG_LEVEL: debug # enable pyleak logging
+          DO_NOT_TRACK: true # disable telemetry reporting
+
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -95,16 +136,19 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
 
       - name: Check Version
         id: check-version
         # We need to print $3 because langflow-base is a dependency of langflow
         # For langlow we'd use print $2
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
           url="https://pypi.org/pypi/langflow-base/json"
           if [ ${{ inputs.nightly }} == true ]; then
             url="https://pypi.org/pypi/langflow-base-nightly/json"
@@ -133,10 +177,10 @@ jobs:
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           source new-venv/bin/activate
-          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
@@ -147,5 +191,4 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+

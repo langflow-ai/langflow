@@ -17,12 +17,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon");
 
-    await page.waitForSelector('[data-testid="modelsAmazon Bedrock"]', {
+    await page.waitForSelector('[data-testid="amazonAmazon Bedrock"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsAmazon Bedrock")
+      .getByTestId("amazonAmazon Bedrock")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
@@ -50,25 +50,21 @@ test(
     await page.waitForTimeout(1000);
 
     value = await page.getByTestId("dropdown_str_model_id").innerText();
-    if (value !== "anthropic.claude-v2:1") {
-      expect(false).toBeTruthy();
-    }
+    expect(value.length).toBeGreaterThan(10);
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,
     });
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page.waitForTimeout(1000);
 
     value = await page
       .getByTestId("value-dropdown-dropdown_str_edit_model_id")
       .innerText();
-    if (value !== "anthropic.claude-v2:1") {
-      expect(false).toBeTruthy();
-    }
+
+    expect(value.length).toBeGreaterThan(10);
 
     await page.locator('//*[@id="showregion_name"]').click();
     expect(

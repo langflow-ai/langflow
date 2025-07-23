@@ -1,19 +1,30 @@
-import * as Form from "@radix-ui/react-form";
-import { Label } from "@radix-ui/react-form";
 import { useEffect, useRef, useState } from "react";
-import { Input } from "../../components/ui/input";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { useGenerateToken } from "@/customization/hooks/use-custom-generate-token";
 import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
 import { createApiKey } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import { ApiKeyType } from "../../types/components";
+import type { ApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
 import { ContentRenderKey } from "./components/content-render";
 import { FormKeyRender } from "./components/form-key-render";
 import { HeaderRender } from "./components/header-render";
 
-interface ModalProps {
-  generatedKeyMessage?: React.ReactNode;
+// Add this interface for the modal props
+interface ModalConfigProps {
+  title?: string;
   description?: React.ReactNode;
+  inputLabel?: React.ReactNode;
+  inputPlaceholder?: string;
+  buttonText?: string;
+  generatedKeyMessage?: React.ReactNode;
+  showIcon?: boolean;
+}
+
+interface SecretKeyModalProps {
+  userId?: string;
+  size?: string;
+  modalProps?: ModalConfigProps;
 }
 
 export default function SecretKeyModal({
@@ -21,7 +32,7 @@ export default function SecretKeyModal({
   data,
   onCloseModal,
   modalProps,
-}: ApiKeyType & { modalProps?: ModalProps }) {
+}: ApiKeyType & { modalProps: SecretKeyModalProps }) {
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
   const [apiKeyValue, setApiKeyValue] = useState("");
@@ -29,6 +40,8 @@ export default function SecretKeyModal({
   const [textCopied, setTextCopied] = useState(true);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const generateToken = useGenerateToken();
+  const modalConfigProps = modalProps?.modalProps ?? modalProps;
 
   useEffect(() => {
     if (open) {
@@ -68,14 +81,33 @@ export default function SecretKeyModal({
       .catch((err) => {});
   }
 
-  function handleSubmitForm() {
+  async function handleSubmitForm() {
+    if (apiKeyValue) setOpen(false);
+    if (ENABLE_DATASTAX_LANGFLOW) {
+      handleDataStaxKey();
+    } else {
+      handleOSSKey();
+    }
+  }
+
+  const handleDataStaxKey = async () => {
+    try {
+      const { token } = await generateToken();
+      setApiKeyValue(token);
+      setRenderKey(true);
+    } catch (error) {
+      console.error("Error generating token:", error);
+    }
+  };
+
+  const handleOSSKey = () => {
     if (!renderKey) {
       setRenderKey(true);
       handleAddNewKey();
     } else {
       setOpen(false);
     }
-  }
+  };
 
   return (
     <BaseModal
@@ -89,30 +121,32 @@ export default function SecretKeyModal({
         clampDescription={3}
         description={
           renderKey ? (
-            <>{modalProps?.generatedKeyMessage}</>
+            <>{modalConfigProps?.generatedKeyMessage}</>
           ) : (
-            <>{modalProps?.description}</>
+            <>{modalConfigProps?.description}</>
           )
         }
       >
         <HeaderRender
-          title={modalProps?.title}
-          showIcon={modalProps?.showIcon}
+          title={modalConfigProps?.title}
+          showIcon={modalConfigProps?.showIcon}
         />
       </BaseModal.Header>
       <BaseModal.Content>
         {renderKey ? (
           <ContentRenderKey
-            inputLabel={String(modalProps?.inputLabel ?? "")}
+            inputLabel={String(modalConfigProps?.inputLabel ?? "")}
             inputRef={inputRef}
             apiKeyValue={apiKeyValue}
             handleCopyClick={handleCopyClick}
             textCopied={textCopied}
             renderKey={renderKey}
           />
+        ) : ENABLE_DATASTAX_LANGFLOW ? (
+          <></>
         ) : (
           <FormKeyRender
-            modalProps={modalProps}
+            modalProps={modalConfigProps}
             apiKeyName={apiKeyName}
             inputRef={inputRef}
             setApiKeyName={setApiKeyName}
@@ -120,7 +154,9 @@ export default function SecretKeyModal({
         )}
       </BaseModal.Content>
       <BaseModal.Footer
-        submit={{ label: renderKey ? "Done" : (modalProps?.buttonText ?? "") }}
+        submit={{
+          label: renderKey ? "Done" : (modalConfigProps?.buttonText ?? ""),
+        }}
       />
     </BaseModal>
   );

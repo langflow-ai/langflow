@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -16,7 +17,10 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
+    await addLegacyComponents(page);
+
     //first component
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
     await page.waitForSelector("text=OpenAI Embeddings", {
@@ -88,7 +92,7 @@ test(
     });
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
@@ -155,7 +159,7 @@ test(
 
     //connection 1
     const openAiEmbeddingOutput_0 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
+      .getByTestId("handle-openaiembeddings-shownode-embedding model-right")
       .nth(0);
     await openAiEmbeddingOutput_0.hover();
     await page.mouse.down();
@@ -168,7 +172,7 @@ test(
 
     //connection 2
     const openAiEmbeddingOutput_1 = await page
-      .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
+      .getByTestId("handle-openaiembeddings-shownode-embedding model-right")
       .nth(0);
     await openAiEmbeddingOutput_1.hover();
     await page.mouse.down();
@@ -234,7 +238,7 @@ test(
     await parseDataOutput.hover();
     await page.mouse.down();
     const textOutputInput = await page
-      .getByTestId("handle-textoutput-shownode-text-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .nth(0);
     await textOutputInput.hover();
     await page.mouse.up();
@@ -245,7 +249,7 @@ test(
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
-      .getByTestId("output-inspection-message-textoutput")
+      .getByTestId("output-inspection-output text-textoutput")
       .first()
       .click();
     const valueSimilarity = await page.getByTestId("textarea").textContent();

@@ -1,10 +1,11 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import { regexHighlight } from "@/constants/constants";
 import PromptModal from "@/modals/promptModal";
 import { cn } from "../../../../../utils/utils";
 import { Button } from "../../../../ui/button";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps, PromptAreaComponentType } from "../../types";
+import type { InputProps, PromptAreaComponentType } from "../../types";
 
 const promptContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap bg-background h-fit max-h-28",
@@ -25,21 +26,33 @@ export default function PromptAreaComponent({
   readonly = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const coloredContent = (typeof value === "string" ? value : "")
+    // escape HTML first
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(regexHighlight, (match, p1, p2) => {
-      // Decide which group was matched. If p1 is not undefined, do nothing
-      // we don't want to change the text. If p2 is not undefined, then we
-      // have a variable, so we should highlight it.
-      // ! This will not work with multiline or indented json yet
-      if (p1 !== undefined) {
-        return match;
-      } else if (p2 !== undefined) {
-        return `<span class="chat-message-highlight">{${p2}}</span>`;
-      }
+    // highlight variables
+    .replace(regexHighlight, (match, codeFence, openRun, varName, closeRun) => {
+      // 1) Leave ```code``` blocks untouched
+      if (codeFence) return match;
 
-      return match;
+      // 2) Balanced & odd-length brace runs mean “real variable”
+      const lenOpen = openRun?.length ?? 0;
+      const lenClose = closeRun?.length ?? 0;
+      const isVariable = lenOpen === lenClose && lenOpen % 2 === 1;
+
+      if (!isVariable) return match; // even runs are just escapes
+
+      // 3) Number of literal braces outside the span
+      const outerCount = Math.floor(lenOpen / 2);
+      const outerLeft = "{".repeat(outerCount);
+      const outerRight = "}".repeat(outerCount);
+
+      return (
+        `${outerLeft}` +
+        `<span class="chat-message-highlight">{${varName}}</span>` +
+        `${outerRight}`
+      );
     })
+    // preserve new-lines
     .replace(/\n/g, "<br />");
 
   const renderPromptText = () => (
@@ -66,6 +79,19 @@ export default function PromptAreaComponent({
     </span>
   );
 
+  const renderExternalLinkIcon = () =>
+    !value || value == "" ? (
+      <ForwardedIconComponent
+        name={disabled ? "lock" : "Scan"}
+        className={cn(
+          "icons-parameters-comp pointer-events-none absolute right-3 top-1/2 h-4 w-4 shrink-0 -translate-y-1/2",
+          disabled ? "text-placeholder-foreground" : "text-foreground",
+        )}
+      />
+    ) : (
+      <></>
+    );
+
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <PromptModal
@@ -82,7 +108,10 @@ export default function PromptAreaComponent({
           className="w-full"
           data-testid="button_open_prompt_modal"
         >
-          <div className="relative w-full">{renderPromptText()}</div>
+          <div className="relative w-full">
+            {renderPromptText()}
+            {renderExternalLinkIcon()}
+          </div>
         </Button>
       </PromptModal>
     </div>
