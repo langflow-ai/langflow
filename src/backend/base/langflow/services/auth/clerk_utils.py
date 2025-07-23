@@ -7,8 +7,8 @@ import httpx
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwk, jwt
 from sqlmodel.ext.asyncio.session import AsyncSession
-from langflow.logging.logger import logger
 
+from langflow.logging.logger import logger
 from langflow.services.database.models.user import User, UserCreate
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service
@@ -19,7 +19,7 @@ auth_header_ctx: ContextVar[dict | None] = ContextVar("auth_header_ctx", default
 _jwks_cache: dict[str, dict[str, Any]] = {}
 
 # APIs that require Clerk token decoding in middleware
-PROTECTED_PATHS = ["/api/v1/users/"]
+PROTECTED_PATHS = ["/api/v1/users/","/api/v1/login/"]
 
 
 async def _get_jwks(issuer: str) -> dict[str, Any]:
