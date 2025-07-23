@@ -17,7 +17,7 @@ def _has_langflow_memory():
             importlib.util.find_spec("langflow.memory") is not None
             and importlib.util.find_spec("langflow.services.database.models.message.model") is not None
         )
-    except ImportError:
+    except (ImportError, ModuleNotFoundError):
         pass
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error checking for langflow.memory: {e}")
