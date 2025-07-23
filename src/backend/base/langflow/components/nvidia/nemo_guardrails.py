@@ -158,7 +158,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             advanced=False,
             info="The base URL specifically for content safety models.",
             real_time_refresh=True,
-            show=False,
+            show=True,
         ),
         SecretStrInput(
             name="content_safety_model_api_key",
@@ -166,19 +166,21 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             info="The API Key for content safety models.",
             advanced=False,
             value="NVIDIA_API_KEY",
-            show=False,
+            show=True,
         ),
         MultilineInput(
             name="content_safety_input_prompt",
             display_name="Content Safety Check Input Prompt",
             advanced=False,
             value=DEFAULT_CONTENT_SAFETY_INPUT_PROMPT,
+            show=True,
         ),
         MultilineInput(
             name="content_safety_output_prompt",
             display_name="Content Safety Check Output Prompt",
             advanced=False,
             value=DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT,
+            show=False,
         ),
         # Topic Control Rail Configuration
         MessageTextInput(
@@ -203,6 +205,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             display_name="Topic Control Check Input Prompt",
             advanced=False,
             value=DEFAULT_TOPIC_CONTROL_INPUT_PROMPT,
+            show=False,
         ),
         MultilineInput(
             name="off_topic_message",
@@ -213,6 +216,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "Message to display when the input is off-topic. "
                 "Use [your specific domain/topic] as a placeholder for your domain."
             ),
+            show=False,
         ),
         # Jailbreak Detection Rail Configuration
         MessageTextInput(
@@ -264,18 +268,21 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             display_name="Self Check Input Prompt",
             advanced=False,
             value=DEFAULT_SELF_CHECK_INPUT_PROMPT,
+            show=False,
         ),
         MultilineInput(
             name="self_check_output_prompt",
             display_name="Self Check Output Prompt",
             advanced=False,
             value=DEFAULT_SELF_CHECK_OUTPUT_PROMPT,
+            show=False,
         ),
         MultilineInput(
             name="self_check_hallucination_prompt",
             display_name="Self Check Hallucination Prompt",
             advanced=False,
             value=DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT,
+            show=False,
         ),
         # Advanced Configuration
         MultilineInput(
