@@ -2,7 +2,7 @@ name: Smoke Tests
 
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, labeled, synchronize, reopened]
 
 jobs:
   smoke-tests:
