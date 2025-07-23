@@ -12,6 +12,7 @@ from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from pydantic import ConfigDict, Field, field_serializer, field_validator
 
+from lfx.base.prompts.utils import dict_values_to_string
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.image import Image  # noqa: TC001
@@ -225,8 +226,11 @@ class Message(Data):
 
         This is a simplified version for the base class.
         """
+        # Convert various types to their string representation
+        processed_variables = dict_values_to_string(variables)
+
         try:
-            formatted_text = template.format(**variables)
+            formatted_text = template.format(**processed_variables)
         except KeyError:
             # If template variables are missing, use the template as-is
             formatted_text = template
