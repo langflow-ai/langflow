@@ -162,16 +162,16 @@ async def _determine_loading_strategy(settings_service: SettingsService) -> dict
     Returns:
         Dictionary containing loaded component types and templates
     """
+    custom_components_paths = [
+        path for path in settings_service.settings.components_path if path != BASE_COMPONENTS_PATH
+    ]
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
         logger.debug("Using partial component loading")
-        return await aget_component_metadata(settings_service.settings.components_path)
-    if (
-        settings_service.settings.components_path
-        and BASE_COMPONENTS_PATH not in settings_service.settings.components_path
-    ):
+        return await aget_component_metadata(custom_components_paths)
+    if (custom_components_paths):
         # Traditional full loading
-        return await get_all_types_dict(settings_service.settings.components_path)
+        return await get_all_types_dict(custom_components_paths)
     # No custom components to load
     return {}
 
