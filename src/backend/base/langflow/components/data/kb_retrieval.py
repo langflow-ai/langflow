@@ -2,8 +2,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
@@ -74,12 +72,6 @@ class KBRetrievalComponent(Component):
             method="get_chroma_kb_data",
             info="Returns the data from the selected knowledge base.",
         ),
-        # Output(
-        #    name="kb_data",
-        #    display_name="Knowledge Base Data",
-        #    method="get_kb_data",
-        #    info="Returns the data from the selected knowledge base.",
-        # ),
     ]
 
     def _get_knowledge_bases(self) -> list[str]:
@@ -197,6 +189,7 @@ class KBRetrievalComponent(Component):
                 k=self.top_k,
             )
 
+        # TODO: Figure out how to get embeddings for the results
         # doc_ids = [doc.metadata.get("id") for doc, _ in results]
 
         # Access underlying client to get embeddings
@@ -222,79 +215,3 @@ class KBRetrievalComponent(Component):
 
         # Return the DataFrame containing the data
         return DataFrame(data=data_list)
-
-    def get_kb_data(self) -> DataFrame:
-        """Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.
-
-        Returns:
-            A DataFrame containing the data rows from the knowledge base.
-        """
-        kb_root_path = Path(self.kb_root_path).expanduser()
-        kb_path = kb_root_path / self.knowledge_base
-
-        metadata = self._get_kb_metadata(kb_path)
-
-        parquet_file = kb_path / "source.parquet"
-        vectors_file = kb_path / "vectors.npy"
-
-        if not vectors_file.exists():
-            msg = f"Vectors file not found: {vectors_file}. Please ensure the knowledge base has been indexed."
-            raise ValueError(msg)
-        try:
-            # Load the vectors from the .npy file
-            vectors = np.load(vectors_file, allow_pickle=True)
-        except Exception as e:
-            msg = f"Failed to load vectors from '{vectors_file}': {e}"
-            raise RuntimeError(msg) from e
-
-        if not parquet_file.exists():
-            msg = f"Parquet file not found: {parquet_file}"
-            raise ValueError(msg)
-        try:
-            parquet_df = pd.read_parquet(parquet_file).to_dict(orient="records")
-
-            # Append a embeddings column to the DataFrame
-            for i, record in enumerate(parquet_df):
-                record["_embedding"] = vectors[i].tolist() if i < len(vectors) else None
-
-            # If a search query is provided, by using OpenAI to perform a vector search against the data
-            if self.search_query:
-                embedder = self._build_embeddings(metadata)
-                logger.info(f"Embedder: {embedder}")
-                top_indices, scores = self.vector_search(
-                    df=pd.DataFrame(parquet_df), query=self.search_query, embedder=embedder, top_k=self.top_k
-                )
-
-                # Filter the DataFrame to only include the top results
-                parquet_df = [parquet_df[i] for i in top_indices]
-                logger.info("Top indices: {top_indices}")
-                # Append a scores column to the DataFrame
-                for i, record in enumerate(parquet_df):
-                    record["_score"] = scores[i]
-
-            # Convert each record (dict) to a Data object, then create a DataFrame from the list of Data
-            data_list = [Data(**record) for record in parquet_df]
-
-            # Return the DataFrame containing the data
-            return DataFrame(data=data_list)
-
-        except Exception as e:
-            raise RuntimeError from e
-
-    def cosine_similarity_np(self, a, b):
-        """Lightweight cosine similarity using only numpy."""
-        return np.dot(a, b.T) / (np.linalg.norm(a) * np.linalg.norm(b, axis=1))
-
-    def vector_search(self, df, query, embedder, top_k):
-        """Perform vector search on DataFrame."""
-        # Get query embedding
-        query_embedding = np.array(embedder.embed_query(query))
-
-        # Convert embeddings to matrix
-        embeddings_matrix = np.vstack(df["_embedding"].values)
-
-        # Calculate similarities using lightweight numpy function
-        similarities = self.cosine_similarity_np(query_embedding, embeddings_matrix)
-
-        # Get top k results
-        return np.argsort(similarities)[::-1][:top_k], similarities[np.argsort(similarities)[::-1][:top_k]]

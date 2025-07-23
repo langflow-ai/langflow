@@ -364,8 +364,6 @@ class KBIngestionComponent(Component):
         kb_path: Path,
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
-        embeddings: np.ndarray,
-        embed_index: list[str],
     ) -> None:
         """Save KB files using File Component storage patterns."""
         try:
@@ -381,20 +379,6 @@ class KBIngestionComponent(Component):
             cfg_path = kb_path / "schema.json"
             if not cfg_path.exists():
                 cfg_path.write_text(json.dumps(config_list, indent=2))
-
-            # Save embeddings and IDs if available
-            if embeddings.size > 0 and embeddings.size <= 0:  # TODO: This is disabled for now
-                vectors_path = kb_path / "vectors.npy"
-                # Instead of just overwriting, we want to append to existing vectors
-                if vectors_path.exists():
-                    existing_vectors = np.load(vectors_path, allow_pickle=True)
-                    embeddings = np.concatenate((existing_vectors, embeddings), axis=0)
-                np.save(vectors_path, embeddings)
-
-                # Instead of just overwriting, we want to append to existing IDs
-                if (kb_path / "ids.json").exists():
-                    existing_ids = json.loads((kb_path / "ids.json").read_text())
-                    embed_index = existing_ids + embed_index
 
         except Exception as e:
             if not self.silent_errors:
@@ -540,8 +524,7 @@ class KBIngestionComponent(Component):
             page_content_hash = hashlib.sha256(page_content.encode()).hexdigest()
             data_dict["_id"] = page_content_hash
 
-            # Add special metadata flags
-            data_dict["_kb_name"] = str(self.knowledge_base)
+            # TODO: If duplicates are disallowed, and hash exists, prevent adding this row
 
             # Create Data object - everything except "text" becomes metadata
             data_obj = Data(data=data_dict)
@@ -600,7 +583,7 @@ class KBIngestionComponent(Component):
             self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
 
             # Save KB files (using File Component storage patterns)
-            self._save_kb_files(kb_path, df_source_combined, config_list, embeddings, embed_index)
+            self._save_kb_files(kb_path, df_source_combined, config_list)
 
             # Calculate text statistics
             text_stats = self._calculate_text_stats(df_source_combined, config_list)
