@@ -13,7 +13,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import { useLogout } from "./use-post-logout";
-import { IS_CLERK_AUTH } from "@/clerk/constants";
+import { IS_CLERK_AUTH } from "@/clerk/auth";
 
 export interface AutoLoginResponse {
   frontend_timeout: number;
