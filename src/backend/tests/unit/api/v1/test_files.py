@@ -16,11 +16,11 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
+from lfx.services.deps import session_scope
 from tests.conftest import _delete_transactions_and_vertex_builds
 
 
@@ -33,8 +33,7 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
         api_key="random_key",
         hashed_api_key=hashed,
     )
-    db_manager = get_db_service()
-    async with session_getter(db_manager) as session:
+    async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
             yield existing_api_key
@@ -126,7 +125,7 @@ async def files_client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-            from langflow.services.manager import service_manager
+            from lfx.services.manager import service_manager
 
             service_manager.factories.clear()
             service_manager.services.clear()  # Clear the services cache
