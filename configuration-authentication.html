@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.6df31775.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.7074028a.js" defer="defer"></script>
 <script src="/assets/js/main.cdf1e15a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -61,9 +61,9 @@ If <code>AUTO_LOGIN</code> is enabled and user management is disabled (<code>LAN
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_AUTO_LOGIN=True</span></div></div><br></code></div></div>
 <p>In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when <code>AUTO_LOGIN</code> is set to <code>True</code>.
 The only exceptions are the MCP endpoints <code>/v1/mcp</code>, <code>/v1/mcp-projects</code>, and <code>/v2/mcp</code>, which never require authentication.</p>
-<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>AUTO_LOGIN and SKIP_AUTH options</summary><div><div class="collapsibleContent_i85q"><p>In Langflow versions earlier than 1.5, if <code>AUTO_LOGIN=true</code>, then Langflow automatically logs users in as a superuser without requiring authentication.
-In this case, API requests don&#x27;t require a Langflow API key.</p><p>In Langflow version 1.5, you can set <code>SKIP_AUTH_AUTO_LOGIN=true</code> and <code>AUTO_LOGIN=true</code> to skip authentication for API requests.
-However, the <code>SKIP_AUTH_AUTO_LOGIN</code> option will be removed in a future release.</p></div></div></details>
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>AUTO_LOGIN and SKIP_AUTH options</summary><div><div class="collapsibleContent_i85q"><p>In Langflow versions earlier than 1.5, if <code>LANGFLOW_AUTO_LOGIN=true</code>, then Langflow automatically logs users in as a superuser without requiring authentication.
+In this case, API requests don&#x27;t require a Langflow API key.</p><p>In Langflow version 1.5, you can set <code>LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true</code> and <code>LANGFLOW_AUTO_LOGIN=true</code> to skip authentication for API requests.
+However, the <code>LANGFLOW_SKIP_AUTH_AUTO_LOGIN</code> option will be removed in a future release.</p></div></div></details>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow_superuser-and-langflow_superuser_password">LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD<a href="#langflow_superuser-and-langflow_superuser_password" class="hash-link" aria-label="Direct link to LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD" title="Direct link to LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD">​</a></h3>
 <p>These environment variables are only relevant when <code>LANGFLOW_AUTO_LOGIN</code> is set to <code>False</code>.
 They specify the username and password for the superuser, which is essential for administrative tasks:</p>
