@@ -153,8 +153,8 @@ async def handle_project_sse(
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
 
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
     # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
