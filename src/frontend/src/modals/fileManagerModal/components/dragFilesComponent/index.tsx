@@ -1,10 +1,10 @@
 import { useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { formatFileSize } from "@/utils/stringManipulation";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 
 export default function DragFilesComponent({
   onUpload,
@@ -106,15 +106,16 @@ export default function DragFilesComponent({
         </h3>
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-          <span>{types.slice(0, 3).join(", ")}</span>
-          {types.length > 3 && (
-            <ShadTooltip content={types.slice(3).join(", ")}>
-              <span className="text-muted-foreground flex items-center gap-1">
-                +{types.length - 3} more 
-                <ForwardedIconComponent name="info" className="w-3 h-3" />
-              </span>
-            </ShadTooltip>
-          )}</div>
+            <span>{types.slice(0, 3).join(", ")}</span>
+            {types.length > 3 && (
+              <ShadTooltip content={types.slice(3).join(", ")}>
+                <span className="text-muted-foreground flex items-center gap-1">
+                  +{types.length - 3} more
+                  <ForwardedIconComponent name="info" className="w-3 h-3" />
+                </span>
+              </ShadTooltip>
+            )}
+          </div>
           <span className="font-semibold">
             {formatFileSize(maxFileSizeUpload)} max
           </span>
