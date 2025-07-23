@@ -6,31 +6,39 @@ import { useLogout as useLogoutMutation } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import { ClerkProvider, useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { Users } from "@/types/api";
-import { IS_CLERK_AUTH, CLERK_PUBLISHABLE_KEY, CLERK_DUMMY_PASSWORD } from "./constants";
-import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
+import { LANGFLOW_ACCESS_TOKEN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
 import { Cookies } from "react-cookie";
 
-console.log(useAuthStore.getState().isAuthenticated, "useAuthStore.isAuthenticated");
+export const IS_CLERK_AUTH =
+  String(import.meta.env.VITE_CLERK_AUTH_ENABLED).toLowerCase() === "true";
+
+export const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
+export const CLERK_DUMMY_PASSWORD = "clerk_dummy_password";
+
+export enum HttpStatusCode {
+  UNAUTHORIZED = 401,
+  FORBIDDEN = 403,
+  NOT_FOUND = 404,
+  INTERNAL_SERVER_ERROR = 500
+}
 
 // Backend synchronization helpers
 export async function ensureLangflowUser(token: string, username: string): Promise<{
   justCreated: boolean;
   user: Users | null;
 }> {
-  console.log("[ensureLangflowUser] START");
 
   try {
     const whoAmIRes = await api.get<Users>(`${getURL("USERS")}/whoami`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const user = whoAmIRes.data;
-    // useAuthStore.getState().setUserData(user);
     console.log(`[ensureLangflowUser] user exists: ${username}`);
     return { justCreated: false, user };
   } catch (err: any) {
     const status = err?.response?.status;
     console.warn(`[ensureLangflowUser] whoami failed (${status})`);
-    if (status === 401) {
+    if (status === HttpStatusCode.UNAUTHORIZED) {
       console.log("[ensureLangflowUser] trying to create user...");
       const createRes = await api.post(
         `${getURL("USERS")}/`,
@@ -43,7 +51,7 @@ export async function ensureLangflowUser(token: string, username: string): Promi
   }
 }
 
-export async function backendLogin(username: string) {
+export async function backendLogin(username: string,token:string) {
   const res = await api.post(
     `${getURL("LOGIN")}`,
     new URLSearchParams({
@@ -81,14 +89,6 @@ export function ClerkAuthAdapter() {
         console.warn("[ClerkAuthAdapter] No Clerk token available");
         return;
       }
-      const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
-      if (token === current) {
-        return;
-      }else{
-        console.log("[ClerkAuthAdapter] Clerk token changed, syncing...");
-        cookie.set(LANGFLOW_ACCESS_TOKEN, token, { path: "/" });
-        useAuthStore.getState().setAccessToken?.(token); // if you have this
-      }
       const username =
         user?.username ||
         user?.primaryEmailAddress?.emailAddress ||
@@ -105,7 +105,7 @@ export function ClerkAuthAdapter() {
           return;
         }
 
-        const { refresh_token } = await backendLogin(username);
+        const { refresh_token } = await backendLogin(username, token);
         login(token, "login", refresh_token);
         justLoggedIn.current = true;
         console.log("[ClerkAuthAdapter] login complete");
@@ -139,8 +139,8 @@ useEffect(() => {
         prevTokenRef.current = token;
         const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
         if (token !== current) {
-          cookie.set(LANGFLOW_ACCESS_TOKEN, token, { path: "/" });
-          useAuthStore.getState().setAccessToken?.(token);
+          const currentRefreshToken = cookie.get(LANGFLOW_REFRESH_TOKEN);
+          login(token,"login",currentRefreshToken)
         }
       }
     });
