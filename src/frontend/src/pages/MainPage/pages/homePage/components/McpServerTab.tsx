@@ -270,8 +270,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "${currentAuthSettings.iam_endpoint || "YOUR_IAM_ENDPOINT"}",`;
       case "oauth":
         return `
-        "--auth-type",
-        "oauth"`;
+        "--auth_type",
+        "oauth",
+        "--sse-url",`;
       default:
         return "";
     }
@@ -292,7 +293,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "OAUTH_AUTH_URL": "${currentAuthSettings.oauth_auth_url || "YOUR_OAUTH_AUTH_URL"}",
         "OAUTH_TOKEN_URL": "${currentAuthSettings.oauth_token_url || "YOUR_OAUTH_TOKEN_URL"}",
         "OAUTH_MCP_SCOPE": "${currentAuthSettings.oauth_mcp_scope || "YOUR_OAUTH_MCP_SCOPE"}",
-        "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope || "YOUR_OAUTH_PROVIDER_SCOPE"}",
+        "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope || "YOUR_OAUTH_PROVIDER_SCOPE"}"
       }`;
     }
     return "";
