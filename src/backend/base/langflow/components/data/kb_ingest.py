@@ -570,9 +570,9 @@ class KBIngestionComponent(Component):
 
             # Instead of just overwriting this file, i want to read it and append to it if it exists
             # if df_path.exists():
-                # Read existing DataFrame
+            # Read existing DataFrame
             #     existing_df = pd.read_parquet(df_path)
-                # Append new data
+            # Append new data
             #     df_source = pd.concat([existing_df, df_source], ignore_index=True)
 
             # Read the embedding info from the knowledge base folder

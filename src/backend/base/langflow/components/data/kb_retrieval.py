@@ -63,7 +63,7 @@ class KBRetrievalComponent(Component):
             value=5,
             advanced=True,
             required=False,
-        )
+        ),
     ]
 
     outputs = [
