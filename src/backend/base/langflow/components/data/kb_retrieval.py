@@ -5,6 +5,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from cryptography.fernet import InvalidToken
+from langchain_chroma import Chroma
 from loguru import logger
 
 from langflow.custom import Component
@@ -19,8 +20,8 @@ KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
 
 
 class KBRetrievalComponent(Component):
-    display_name = "Retrieve KB"
-    description = "Load a particular knowledge base."
+    display_name = "Load Knowledge"
+    description = "Load and perform searches against a particular knowledge base."
     icon = "database"
     name = "KBRetrieval"
 
@@ -59,17 +60,17 @@ class KBRetrievalComponent(Component):
 
     outputs = [
         Output(
-            name="kb_info",
-            display_name="Knowledge Base Info",
-            method="retrieve_kb_info",
-            info="Returns basic metadata of the selected knowledge base.",
-        ),
-        Output(
-            name="kb_data",
-            display_name="Knowledge Base Data",
-            method="get_kb_data",
+            name="chroma_kb_data",
+            display_name="Results",
+            method="get_chroma_kb_data",
             info="Returns the data from the selected knowledge base.",
         ),
+        # Output(
+        #    name="kb_data",
+        #    display_name="Knowledge Base Data",
+        #    method="get_kb_data",
+        #    info="Returns the data from the selected knowledge base.",
+        # ),
     ]
 
     def _get_knowledge_bases(self) -> list[str]:
@@ -93,19 +94,6 @@ class KBRetrievalComponent(Component):
             build_config["knowledge_base"]["value"] = None
 
         return build_config
-
-    def retrieve_kb_info(self) -> DataFrame:
-        """Retrieve basic metadata of the selected knowledge base.
-
-        Returns:
-            A DataFrame containing basic metadata of the knowledge base.
-        """
-        data = Data(
-            name=self.knowledge_base,
-            description=f"Metadata for {self.knowledge_base}",
-            documents_count=0,
-        )
-        return DataFrame(data=[data])
 
     def _get_kb_metadata(self, kb_path: Path) -> dict:
         """Load and process knowledge base metadata."""
@@ -133,7 +121,7 @@ class KBRetrievalComponent(Component):
                 metadata["api_key"] = None
         return metadata
 
-    def _build_embedder(self, metadata: dict):
+    def _build_embeddings(self, metadata: dict):
         """Build embedding model from metadata."""
         provider = metadata.get("embedding_provider")
         model = metadata.get("embedding_model")
@@ -145,6 +133,7 @@ class KBRetrievalComponent(Component):
         if self.api_key and self.api_key.get_secret_value():
             api_key = self.api_key.get_secret_value()
 
+        # TODO: Support other embedding providers in the future
         if provider == "OpenAI":
             from langchain_openai import OpenAIEmbeddings
 
@@ -160,6 +149,72 @@ class KBRetrievalComponent(Component):
         # Add other providers here if they become supported in ingest
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
+
+    def get_chroma_kb_data(self) -> DataFrame:
+        """Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.
+
+        Returns:
+            A DataFrame containing the data rows from the knowledge base.
+        """
+        kb_root_path = Path(self.kb_root_path).expanduser()
+        kb_path = kb_root_path / self.knowledge_base
+
+        metadata = self._get_kb_metadata(kb_path)
+        if not metadata:
+            msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
+            raise ValueError(msg)
+
+        # Build the embedder for the knowledge base
+        embedding_function = self._build_embeddings(metadata)
+
+        # Load vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            embedding_function=embedding_function,
+            collection_name=self.knowledge_base,
+        )
+
+        # If a search query is provided, perform a similarity search
+        if self.search_query:
+            # Use the search query to perform a similarity search
+            logger.info(f"Performing similarity search with query: {self.search_query}")
+            results = chroma.similarity_search_with_score(
+                query=self.search_query or "",
+                k=5,
+            )
+        else:
+            results = chroma.similarity_search(
+                query=self.search_query or "",
+                k=5,
+            )
+
+        # doc_ids = [doc.metadata.get("id") for doc, _ in results]
+
+        # Access underlying client to get embeddings
+        # collection = chroma._client.get_collection(name=self.knowledge_base)
+        # embeddings_result = collection.get(
+        #     ids=doc_ids,
+        #     include=["embeddings"]
+        # )
+
+        # Create a mapping from document ID to embedding
+        # id_to_embedding = dict(zip(embeddings_result["ids"], embeddings_result["embeddings"], strict=False))
+
+        # Append embeddings to each element
+        data_list = [
+            Data(
+                content=doc[0].page_content,
+                **doc[0].metadata,
+                score=-1 * doc[1],
+                # embeddings=id_to_embedding.get(doc[0].metadata.get("id"))
+            )
+            for doc in results
+        ]
+        # Arrange data_list by the score in descending order
+        data_list.sort(key=lambda x: x.score, reverse=True)
+
+        # Return the DataFrame containing the data
+        return DataFrame(data=data_list)
 
     def get_kb_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.
@@ -197,7 +252,7 @@ class KBRetrievalComponent(Component):
 
             # If a search query is provided, by using OpenAI to perform a vector search against the data
             if self.search_query:
-                embedder = self._build_embedder(metadata)
+                embedder = self._build_embeddings(metadata)
                 logger.info(f"Embedder: {embedder}")
                 top_indices, scores = self.vector_search(
                     df=pd.DataFrame(parquet_df), query=self.search_query, embedder=embedder, top_k=5
