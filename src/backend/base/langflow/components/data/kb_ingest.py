@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,7 @@ from langflow.io import (
     DropdownInput,
     IntInput,
     Output,
-    SecretStrInput,
+    # SecretStrInput,  TODO: Restore when bug fixed in dialog
     StrInput,
     TableInput,
 )
@@ -34,6 +35,9 @@ from langflow.services.deps import get_settings_service
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
+
+KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
+KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
 
 
 class KBIngestionComponent(Component):
@@ -48,8 +52,60 @@ class KBIngestionComponent(Component):
     icon = "database"
     name = "KBIngestion"
 
+    @dataclass
+    class NewKnowledgeBaseInput:
+        functionality: str = "create"
+        fields: dict[str, dict] = field(
+            default_factory=lambda: {
+                "data": {
+                    "node": {
+                        "name": "create_knowledge_base",
+                        "description": "Create a new knowledge base in Langflow.",
+                        "display_name": "Create new knowledge base",
+                        "field_order": ["01_new_kb_name", "02_embedding_model", "03_api_key"],
+                        "template": {
+                            "01_new_kb_name": StrInput(
+                                name="new_kb_name",
+                                display_name="Knowledge Base Name",
+                                info="Name of the new knowledge base to create.",
+                                required=True,
+                            ),
+                            "02_embedding_model": DropdownInput(
+                                name="embedding_model",
+                                display_name="Model Name",
+                                info="Select the embedding model to use for this knowledge base.",
+                                required=True,
+                                options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
+                                options_metadata=[{"icon": "OpenAI"} for _ in OPENAI_EMBEDDING_MODEL_NAMES]
+                                + [{"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES]
+                                + [{"icon": "Cohere"} for _ in COHERE_MODEL_NAMES],
+                            ),
+                            "03_api_key": StrInput(
+                                name="api_key",
+                                display_name="API Key",
+                                info="Provider API key for embedding model",
+                                required=True,
+                            ),
+                        }
+                    },
+                }
+            }
+        )
+
     # ------ Inputs --------------------------------------------------------
     inputs = [
+        DropdownInput(
+            name="knowledge_base",
+            display_name="Knowledge Base",
+            info="Select the knowledge base to load files from.",
+            options=[
+                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
+            ]
+            if KNOWLEDGE_BASES_ROOT_PATH.exists()
+            else [],
+            refresh_button=True,
+            dialog_inputs=asdict(NewKnowledgeBaseInput()),
+        ),
         DataFrameInput(
             name="input_df",
             display_name="Source DataFrame",
@@ -70,27 +126,10 @@ class KBIngestionComponent(Component):
                     "edit_mode": EditMode.INLINE,
                 },
                 {
-                    "name": "data_type",
-                    "display_name": "Data Type",
-                    "type": "str",
-                    "description": "Data type for proper indexing and filtering",
-                    "options": ["string", "number", "boolean", "date", "json"],
-                    "default": "string",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
                     "name": "vectorize",
                     "display_name": "Vectorize",
                     "type": "boolean",
                     "description": "Create embeddings for this column",
-                    "default": False,
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "citation",
-                    "display_name": "Citation",
-                    "type": "boolean",
-                    "description": "Use this column for citation/reference",
                     "default": False,
                     "edit_mode": EditMode.INLINE,
                 },
@@ -106,41 +145,10 @@ class KBIngestionComponent(Component):
             value=[
                 {
                     "column_name": "text",
-                    "data_type": "string",
                     "vectorize": True,
-                    "citation": False,
                     "identifier": False,
                 }
             ],
-        ),
-        StrInput(
-            name="kb_name",
-            display_name="KB Name",
-            info="New or existing KB folder name (ASCII & dashes only).",
-            required=True,
-        ),
-        DropdownInput(
-            name="embedding_model",
-            display_name="Model Name",
-            options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
-            options_metadata=[{"icon": "OpenAI"} for _ in OPENAI_EMBEDDING_MODEL_NAMES]
-            + [{"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES]
-            + [{"icon": "Cohere"} for _ in COHERE_MODEL_NAMES],
-            value="text-embedding-3-small",
-            info="Select the embedding model to use",
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Provider API key for embedding model",
-            required=True,
-            value="OPENAI_API_KEY",
-        ),
-        IntInput(
-            name="dimensions",
-            display_name="Dimensions",
-            info="Number of dimensions for embeddings (if supported)",
-            advanced=True,
         ),
         IntInput(
             name="chunk_size",
@@ -238,7 +246,6 @@ class KBIngestionComponent(Component):
             else "Cohere"
         )
         api_key = self.api_key
-        dimensions = self.dimensions
         chunk_size = self.chunk_size
 
         if provider == "OpenAI":
@@ -247,7 +254,6 @@ class KBIngestionComponent(Component):
                 raise ValueError(msg)
             return OpenAIEmbeddings(
                 model=model,
-                dimensions=dimensions or None,
                 api_key=api_key,
                 chunk_size=chunk_size,
             )
@@ -315,23 +321,22 @@ class KBIngestionComponent(Component):
         else:
             return embeddings, embed_index
 
-    def _build_embedding_metadata(self) -> dict[str, Any]:
+    def _build_embedding_metadata(self, embedding_model, api_key) -> dict[str, Any]:
         """Build embedding model metadata."""
-        model = self.embedding_model
         # Get provider by matching model name to lists
-        provider = (
+        embedding_provider = (
             "OpenAI"
-            if model in OPENAI_EMBEDDING_MODEL_NAMES
+            if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES
             else "HuggingFace"
-            if model in HUGGINGFACE_MODEL_NAMES
+            if embedding_model in HUGGINGFACE_MODEL_NAMES
             else "Cohere"
         )
 
         api_key_to_save = None
-        if self.api_key and hasattr(self.api_key, "get_secret_value"):
-            api_key_to_save = self.api_key.get_secret_value()
-        elif isinstance(self.api_key, str):
-            api_key_to_save = self.api_key
+        if api_key and hasattr(api_key, "get_secret_value"):
+            api_key_to_save = api_key.get_secret_value()
+        elif isinstance(api_key, str):
+            api_key_to_save = api_key
 
         encrypted_api_key = None
         if api_key_to_save:
@@ -343,14 +348,19 @@ class KBIngestionComponent(Component):
                 logger.error(f"Could not encrypt API key: {e}")
 
         return {
-            "embedding_provider": provider,
-            "embedding_model": model,
+            "embedding_provider": embedding_provider,
+            "embedding_model": embedding_model,
             "api_key": encrypted_api_key,
-            "api_key_used": bool(self.api_key),
-            "dimensions": self.dimensions,
+            "api_key_used": bool(api_key),
             "chunk_size": self.chunk_size,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
+
+    def _save_embedding_metadata(self, kb_path: Path, embedding_model: str, api_key: str) -> None:
+        """Save embedding model metadata."""
+        embedding_metadata = self._build_embedding_metadata(embedding_model, api_key)
+        metadata_path = kb_path / "embedding_metadata.json"
+        metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
     def _save_kb_files(
         self,
@@ -374,11 +384,6 @@ class KBIngestionComponent(Component):
             cfg_path = kb_path / "schema.json"
             if not cfg_path.exists():
                 cfg_path.write_text(json.dumps(config_list, indent=2))
-
-            # Save embedding model metadata
-            embedding_metadata = self._build_embedding_metadata()
-            metadata_path = kb_path / "embedding_metadata.json"
-            metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
             # Save embeddings and IDs if available
             if embeddings.size > 0:
@@ -406,10 +411,9 @@ class KBIngestionComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            data_type = config.get("data_type", "string")
 
             # Only count text-based columns
-            if data_type == "string" and col_name in df_source.columns:
+            if col_name in df_source.columns:
                 col_data = df_source[col_name].astype(str).fillna("")
 
                 # Count characters
@@ -427,23 +431,19 @@ class KBIngestionComponent(Component):
             "mapped_columns": len(config_list),
             "unmapped_columns": len(df_source.columns) - len(config_list),
             "columns": [],
-            "summary": {"vectorized_columns": [], "citation_columns": [], "identifier_columns": [], "data_types": {}},
+            "summary": {"vectorized_columns": [], "identifier_columns": []},
         }
 
         for config in config_list:
             col_name = config.get("column_name")
-            data_type = config.get("data_type", "string")
             vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            citation = config.get("citation") == "True" or config.get("citation") is True
             identifier = config.get("identifier") == "True" or config.get("identifier") is True
 
             # Add to columns list
             metadata["columns"].append(
                 {
                     "name": col_name,
-                    "data_type": data_type,
                     "vectorize": vectorize,
-                    "citation": citation,
                     "identifier": identifier,
                 }
             )
@@ -451,15 +451,8 @@ class KBIngestionComponent(Component):
             # Update summary
             if vectorize:
                 metadata["summary"]["vectorized_columns"].append(col_name)
-            if citation:
-                metadata["summary"]["citation_columns"].append(col_name)
             if identifier:
                 metadata["summary"]["identifier_columns"].append(col_name)
-
-            # Count data types
-            if data_type not in metadata["summary"]["data_types"]:
-                metadata["summary"]["data_types"][data_type] = 0
-            metadata["summary"]["data_types"][data_type] += 1
 
         return metadata
 
@@ -513,19 +506,15 @@ class KBIngestionComponent(Component):
 
         # Get column roles
         content_cols = []
-        citation_cols = []
         identifier_cols = []
 
         for config in config_list:
             col_name = config.get("column_name")
             vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            citation = config.get("citation") == "True" or config.get("citation") is True
             identifier = config.get("identifier") == "True" or config.get("identifier") is True
 
             if vectorize:
                 content_cols.append(col_name)
-            elif citation:
-                citation_cols.append(col_name)
             elif identifier:
                 identifier_cols.append(col_name)
 
@@ -634,15 +623,19 @@ class KBIngestionComponent(Component):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on provider selection."""
-        if field_name == "embedding_model":
-            # Get provider by matching model name to lists
-            provider = (
-                "OpenAI"
-                if field_value in OPENAI_EMBEDDING_MODEL_NAMES
-                else "HuggingFace"
-                if field_value in HUGGINGFACE_MODEL_NAMES
-                else "Cohere"
+        # Create a new knowledge base
+        if field_name == "knowledge_base" and isinstance(field_value, dict) and "01_new_kb_name" in field_value:
+            kb_path = Path(
+                KNOWLEDGE_BASES_ROOT_PATH,
+                field_value["01_new_kb_name"]
+            ).expanduser()
+            kb_path.mkdir(parents=True, exist_ok=True)
+
+            self.kb_name = field_value["01_new_kb_name"]
+            self._save_embedding_metadata(
+                kb_path=kb_path,
+                embedding_model=field_value["02_embedding_model"],
+                api_key=field_value["03_api_key"],
             )
-            build_config["api_key"]["display_name"] = f"{provider} API Key"
 
         return build_config
