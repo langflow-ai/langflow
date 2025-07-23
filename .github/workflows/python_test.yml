@@ -141,8 +141,6 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
-      - name: Install the project
-        run: uv sync
       - name: Run lfx tests
         run: make lfx_tests
         env:
