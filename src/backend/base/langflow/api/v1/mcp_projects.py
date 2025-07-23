@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
+from typing import Any
 from uuid import UUID
 
 from anyio import BrokenResourceError
@@ -434,7 +435,7 @@ async def install_mcp_config(
         name = project.name
 
         # Create the MCP configuration
-        server_config = {
+        server_config: dict[str, Any] = {
             "command": command,
             "args": args,
         }
