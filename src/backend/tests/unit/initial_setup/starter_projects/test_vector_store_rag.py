@@ -62,8 +62,8 @@ def rag_graph():
     )
     # Mock search_documents
     data_list = [
-        Data(data={"text": "Hello, world!"}),
-        Data(data={"text": "Goodbye, world!"}),
+            Data(data={"text": "Hello, world!"}),
+            Data(data={"text": "Goodbye, world!"}),
     ]
     rag_vector_store.set_on_output(
         name="search_results",
@@ -92,7 +92,8 @@ def rag_graph():
     chat_output = ChatOutput(_id="chatoutput-123")
     chat_output.set(input_value=openai_component.text_response)
 
-    return Graph(start=chat_input, end=chat_output)
+    graph = Graph(start=chat_input, end=chat_output)
+    return graph
 
 
 def test_vector_store_rag(ingestion_graph, rag_graph):
