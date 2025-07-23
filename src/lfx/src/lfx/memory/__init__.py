@@ -30,7 +30,7 @@ _LANGFLOW_AVAILABLE = _has_langflow_memory()
 if _LANGFLOW_AVAILABLE:
     try:
         # Import from full langflow implementation
-        from lfx.memory import (
+        from langflow.memory import (
             aadd_messages,
             aadd_messagetables,
             add_messages,

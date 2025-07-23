@@ -1,6 +1,7 @@
 """Unit tests for lfx.memory module."""
 
 import asyncio
+import importlib.util
 
 import pytest
 
@@ -12,7 +13,14 @@ from lfx.memory import (
     get_messages,
     store_message,
 )
-from lfx.schema.message import Message
+
+# Import the appropriate Message class based on what's available
+if importlib.util.find_spec("langflow.memory") is not None:
+    # When langflow is available, use its Message class
+    from langflow.schema.message import Message
+else:
+    # Otherwise use lfx's Message class
+    from lfx.schema.message import Message
 
 
 class TestMemoryFunctions:

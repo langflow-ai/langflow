@@ -15,11 +15,13 @@ from pydantic import ConfigDict, Field, field_serializer, field_validator
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
-from lfx.schema.image import Image  # noqa: TC001
+from lfx.schema.image import Image
 from lfx.schema.properties import Properties
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 
 if TYPE_CHECKING:
+    from langchain_core.prompts import BaseChatPromptTemplate
+
     from lfx.schema.dataframe import DataFrame
 
 
@@ -207,35 +209,80 @@ class Message(Data):
         self.prompt["kwargs"]["messages"] = messages
         return load(self.prompt)
 
+    def get_file_content_dicts(self):
+        """Get file content dictionaries for all files in the message."""
+        from lfx.schema.image import get_file_paths
+        from lfx.utils.image import create_image_content_dict
+
+        content_dicts = []
+        files = get_file_paths(self.files)
+
+        for file in files:
+            if isinstance(file, Image):
+                content_dicts.append(file.to_content_dict())
+            else:
+                content_dicts.append(create_image_content_dict(file))
+        return content_dicts
+
     def to_lc_message(self) -> BaseMessage:
-        """Convert to LangChain message.
+        """Converts the Data to a BaseMessage.
 
-        This is a simplified version that creates basic LangChain messages.
+        Returns:
+            BaseMessage: The converted BaseMessage.
         """
-        content = str(self.text) if self.text else ""
+        # The idea of this function is to be a helper to convert a Data to a BaseMessage
+        # It will use the "sender" key to determine if the message is Human or AI
+        # If the key is not present, it will default to AI
+        # But first we check if all required keys are present in the data dictionary
+        # they are: "text", "sender"
+        if self.text is None or not self.sender:
+            from loguru import logger
 
-        if self.sender == MESSAGE_SENDER_AI:
-            return AIMessage(content=content)
-        if self.sender == "System":
-            return SystemMessage(content=content)
-        return HumanMessage(content=content)
+            logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
+        text = "" if not isinstance(self.text, str) else self.text
+
+        if self.sender == MESSAGE_SENDER_USER or not self.sender:
+            if self.files:
+                contents = [{"type": "text", "text": text}]
+                contents.extend(self.get_file_content_dicts())
+                human_message = HumanMessage(content=contents)
+            else:
+                human_message = HumanMessage(content=text)
+            return human_message
+
+        return AIMessage(content=text)
+
+    @classmethod
+    def from_lc_prompt(cls, prompt: BaseChatPromptTemplate) -> Message:
+        """Create a Message from a LangChain prompt template."""
+        prompt_json = prompt.to_json()
+        return cls(prompt=prompt_json)
 
     @classmethod
     def from_template(cls, template: str, **variables) -> Message:
         """Create a Message from a template string with variables.
 
-        This is a simplified version for the base class.
+        This matches the message_original implementation exactly.
         """
-        # Convert various types to their string representation
-        processed_variables = dict_values_to_string(variables)
+        from fastapi.encoders import jsonable_encoder
+        from langchain_core.prompts.chat import ChatPromptTemplate
 
-        try:
-            formatted_text = template.format(**processed_variables)
-        except KeyError:
-            # If template variables are missing, use the template as-is
-            formatted_text = template
+        instance = cls(template=template, variables=variables)
+        text = instance.format_text()
+        message = HumanMessage(content=text)
+        contents = []
+        for value in variables.values():
+            if isinstance(value, cls) and value.files:
+                content_dicts = value.get_file_content_dicts()
+                contents.extend(content_dicts)
+        if contents:
+            message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
 
-        return cls(text=formatted_text)
+        prompt_template = ChatPromptTemplate.from_messages([message])
+
+        instance.data["prompt"] = jsonable_encoder(prompt_template.to_json())
+        instance.data["messages"] = instance.data["prompt"].get("kwargs", {}).get("messages", [])
+        return instance
 
     @classmethod
     async def from_template_and_variables(cls, template: str, **variables) -> Message:
@@ -268,10 +315,21 @@ class Message(Data):
         return str(self.text) if self.text else ""
 
     def format_text(self) -> str:
-        """Format the message text.
+        """Format the message text using template and variables.
 
-        This is a simplified version that just returns the text as string.
+        This matches the message_original implementation.
         """
+        # Check if we have template and variables in data
+        if "template" in self.data and "variables" in self.data:
+            from langchain_core.prompts.prompt import PromptTemplate
+
+            prompt_template = PromptTemplate.from_template(self.data["template"])
+            variables_with_str_values = dict_values_to_string(self.data["variables"])
+            formatted_prompt = prompt_template.format(**variables_with_str_values)
+            self.text = formatted_prompt
+            return formatted_prompt
+
+        # Fallback to simple text formatting
         if isinstance(self.text, str):
             return self.text
         return str(self.text) if self.text else ""

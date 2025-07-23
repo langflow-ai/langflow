@@ -2,14 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
-
-# Assuming you have these imports available
-from langflow.services.database.models.message import MessageCreate, MessageRead
-from langflow.services.database.models.message.model import MessageTable
-from langflow.services.deps import session_scope
-from langflow.services.tracing.utils import convert_to_langchain_type
-
-from lfx.memory import (
+from langflow.memory import (
     aadd_messages,
     aadd_messagetables,
     add_messages,
@@ -20,10 +13,16 @@ from lfx.memory import (
     delete_messages,
     get_messages,
 )
-from lfx.schema.content_block import ContentBlock
-from lfx.schema.content_types import TextContent, ToolContent
-from lfx.schema.message import Message
-from lfx.schema.properties import Properties, Source
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_types import TextContent, ToolContent
+from langflow.schema.message import Message
+from langflow.schema.properties import Properties, Source
+
+# Assuming you have these imports available
+from langflow.services.database.models.message import MessageCreate, MessageRead
+from langflow.services.database.models.message.model import MessageTable
+from langflow.services.deps import session_scope
+from langflow.services.tracing.utils import convert_to_langchain_type
 
 
 @pytest.fixture
