@@ -6,47 +6,49 @@ slug: /integrations-opik
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Integrate Opik with Langflow
-
 [Opik](https://www.comet.com/site/products/opik/) is an open-source platform designed for evaluating, testing, and monitoring large language model (LLM) applications. Developed by Comet, it aims to facilitate more intuitive collaboration, testing, and monitoring of LLM-based applications.
 
-This guide walks you through how to configure Langflow to collect [tracing](https://www.comet.com/docs/opik/tracing/log_traces) data about your flow executions and automatically send the data to Opik.
+You can configure Langflow to collect [tracing](https://www.comet.com/docs/opik/tracing/log_traces) data about your flow executions and automatically send the data to Opik.
 
 ## Prerequisites
 
-- A project in Langflow with a runnable flow
-- An Open-Source Opik server or an Opik Cloud account - You can learn more about the differences [here](https://www.comet.com/docs/opik/faq#what-is-the-difference-between-opik-cloud-and-the-open-source-opik-platform-)
-- If you are using Opik Cloud, you will also need your [Opik API key](https://www.comet.com/docs/opik/faq#where-can-i-find-my-opik-api-key-)
+- An [Open-Source Opik server or an Opik Cloud account](https://www.comet.com/docs/opik/faq#what-is-the-difference-between-opik-cloud-and-the-open-source-opik-platform-)
+- A [running Langflow server](/get-started-installation) with a [flow](/concepts-flows) that you want to trace
 
-## Set your Opik configuration as environment variables
+:::tip
+If you need a flow to test the Opik integration, see the [Langflow quickstart](/get-started-quickstart).
+:::
 
-Call the CLI `opik configure` to save your Opik configuration in the same environment where you run Langflow.
+## Integrate Opik with Langflow
 
-```bash
-opik configure
-```
+1. If you use Opik Cloud, get an [Opik API key](https://www.comet.com/docs/opik/faq#where-can-i-find-my-opik-api-key-).
 
-For self-hosted Opik, you can also configure it using the Opik CLI by running the following command:
+    An API key isn't required with an Open-Source Opik server.
 
-```bash
-opik configure --use_local
-```
+2. Call the `opik configure` CLI to save your Opik configuration in the same environment where you run Langflow:
 
-See the [Opik documentation](https://www.comet.com/docs/opik/tracing/sdk_configuration) for more ways to configure Opik SDKs.
+    ```bash
+    opik configure
+    ```
 
-## Start Langflow and run a flow
+    For self-hosted Opik, you can also use the following Opik CLI command:
 
-1. Start Langflow in the same terminal or environment where you set the environment variables:
+    ```bash
+    opik configure --use_local
+    ```
 
-```bash
-uv run langflow run
-```
+    For more information, see the [Opik SDK configuration documentation](https://www.comet.com/docs/opik/tracing/sdk_configuration).
 
-2. In Langflow, open an existing project, and then run a flow.
+3. Start Langflow in the same terminal or environment where you set the environment variables:
 
+    ```bash
+    uv run langflow run
+    ```
 
-3. Navigate to your Opik project dashboard and view the collected tracing data.
+4. In Langflow, run a flow to produce activity for Opik to trace.
+
+5. Navigate to your Opik project dashboard and view the collected tracing data.
 
 ## Disable the Opik integration
 
-To disable the Opik integration, remove the environment variables you set in the previous steps and restart Langflow.
+To disable the Opik integration, remove the environment variables you set with `opik configure`, and then restart Langflow.

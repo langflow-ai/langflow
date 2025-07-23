@@ -3,137 +3,178 @@ title: Agents
 slug: /components-agents
 ---
 
-# Agent components in Langflow
+Langflow's **Agent** and **MCP Tools** components are critical for building agentic flows.
+These components define the behavior and capabilities of AI agents in your flows.
 
-Agent components define the behavior and capabilities of AI agents in your flow.
+<details>
+<summary>How agents work</summary>
 
-Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
+Agents extend Large Language Models (LLMs) by integrating _tools_, which are functions that provide additional context and enable autonomous task execution.
+These integrations make agents more specialized and powerful than standalone LLMs.
 
-Tools in agentic functions are essentially functions that the agent can call to perform tasks or access external resources.
-A function is wrapped as a `Tool` object with a common interface the agent understands.
-Agents become aware of tools through tool registration where the agent is provided a list of available tools typically at agent initialization. The `Tool` object's description tells the agent what the tool can do.
+Whereas an LLM might generate acceptable, inert responses to general queries and tasks, an agent can leverage the integrated context and tools to provide more relevant responses and even take action.
+For example, you might create an agent that can access your company's knowledge base, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.
 
-The agent then uses a connected LLM to reason through the problem to decide which tool is best for the job.
+Agents use LLMs as a reasoning engine to process input, determine which actions to take to address the query, and then generate a response.
+The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.
 
-## Use an agent in a flow
+In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
+A function is wrapped as a `Tool` object with a common interface that the agent understands.
+Agents become aware of tools through tool registration, which is when the agent is provided a list of available tools typically at agent initialization.
+The `Tool` object's description tells the agent what the tool can do so that it can decide whether the tool is appropriate for a given request.
 
-The [simple agent starter project](/simple-agent) uses an [agent component](#agent-component) connected to URL and Calculator tools to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use. Tools are connected to agent components at the **Tools** port.
+</details>
 
-![Simple agent starter flow](/img/starter-flow-simple-agent.png)
+## Examples of agentic flows
 
-For a multi-agent example see [Create a flow with an agent](/agents).
+For examples of agentic flows using the **Agent** and **MCP Tools** components, see the following:
+
+* [**Simple Agent** template](/simple-agent): Create a basic agentic flow in Langflow with an **Agent** component that can use two other Langflow components as tools.
+The LLM specified in the **Agent** component's settings can use its own built-in functionality as well as the functionality provided by the connected tools when generating responses.
+
+* [Langflow quickstart](/get-started-quickstart): Modify the **Simple Agent** template to use different tools, and then learn how to use an agentic flow in an application.
+
+* [Use an agent as a tool](/agents-tools#use-an-agent-as-a-tool): Create a multi-agent flow.
+
+* [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server): Use the **Agent** and **MCP Tools** components to implement the Model Context Protocol (MCP) in your flows.
 
 ## Agent component {#agent-component}
 
-This component creates an agent that can use tools to answer questions and perform tasks based on given instructions.
+The **Agent** component is the primary agent actor in your agentic flows.
+This component uses an LLM integration to respond to input, such as a chat message or file upload.
 
-The component includes an LLM model integration, a system message prompt, and a **Tools** port to connect tools to extend its capabilities.
+The agent can use the tools already available in the base LLM model as well as additional tools that you connect to the **Agent** component's **Tools** port.
+You can connect any Langflow component as a tool, including other **Agent** components and MCP servers through the [**MCP Tools** component](#mcp-connection).
 
-For more information on this component, see the [Agent documentation](/agents).
+For more information about using this component, see [Use Langflow agents](/agents).
+
+## MCP Tools component {#mcp-connection}
+
+The **MCP Tools** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's functions as tools for Langflow agents to use to respond to input.
+
+In addition to publicly available MCP servers and your own custom-built MCP servers, you can connect Langflow MCP servers, which allow your agent to use your Langflow flows as tools.
+To do this, use the **MCP Tools** component's [SSE mode](/mcp-client#mcp-sse-mode) to connect to your Langflow MCP server at the `/api/v1/mcp/sse` endpoint.
+
+For more information about using this component and serving flows as MCP tools, see [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server).
 
 <details>
-<summary>Parameters</summary>
+<summary>Earlier versions of the MCP Tools component</summary>
 
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent_llm | Dropdown | The provider of the language model that the agent uses to generate responses. Options include OpenAI and other providers or Custom. |
-| system_prompt | String | The system prompt provides initial instructions and context to guide the agent's behavior. |
-| tools | List | The list of tools available for the agent to use. This field is optional and can be empty. |
-| input_value | String | The input task or question for the agent to process. |
-| add_current_date_tool | Boolean | When true this adds a tool to the agent that returns the current date. |
-| memory | Memory | An optional memory configuration for maintaining conversation history. |
-| max_iterations | Integer | The maximum number of iterations the agent can perform. |
-| handle_parsing_errors | Boolean | This determines whether to handle parsing errors during agent execution. |
-| verbose | Boolean | This enables verbose output for detailed logging. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| response | Message | The agent's response to the given input task. |
+* In Langflow version 1.5, the **MCP Connection** component was renamed to the **MCP Tools** component.
+* In Langflow version 1.3, the **MCP Tools (stdio)** and **MCP Tools (SSE)** components were deprecated and replaced by the unified **MCP Connection** component, which was later renamed to **MCP Tools**.
 
 </details>
 
-## MCP tools {#mcp-connection}
+## Legacy agent components
 
-:::important
-Prior to Langflow 1.5, this component was named **MCP connection**.
-:::
+The following components are legacy components.
+You can still use these components in your flows, but they are no longer maintained and they can be removed in future releases.
 
-The **MCP tools** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
+Replace these components with the **Agent** component or other Langflow components, depending on your use case.
 
-In addition to being an MCP client that can leverage MCP servers, the **MCP tools** component's [SSE mode](/mcp-client#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-flows#projects) as tools within a flow.
-
-For more information, see [MCP client](/mcp-client).
-
-## Legacy components
-
-**Legacy** components are available for use but are no longer supported.
-
-### JSON Agent
-
-This component creates a JSON agent from a JSON or YAML file and an LLM.
+* **CrewAI Hierarchical Task**
+* **CrewAI Sequential Task**
 
 <details>
-<summary>Parameters</summary>
+<summary>CrewAI Agent</summary>
 
-**Inputs**
+This component represents CrewAI agents, allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
+For more information, see the [CrewAI agents documentation](https://docs.crewai.com/core-concepts/Agents/).
 
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| path | File | The path to the JSON or YAML file. |
+This component accepts the following parameters:
 
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The JSON agent instance. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| role | Role | Input parameter. The role of the agent. |
+| goal | Goal | Input parameter. The objective of the agent. |
+| backstory | Backstory | Input parameter. The backstory of the agent. |
+| tools | Tools | Input parameter. The tools at the agent's disposal. |
+| llm | Language Model | Input parameter. The language model that runs the agent. |
+| memory | Memory | Input parameter. This determines whether the agent should have memory or not. |
+| verbose | Verbose | Input parameter. This enables verbose output. |
+| allow_delegation | Allow Delegation | Input parameter. This determines whether the agent is allowed to delegate tasks to other agents. |
+| allow_code_execution | Allow Code Execution | Input parameter. This determines whether the agent is allowed to execute code. |
+| kwargs | kwargs | Input parameter. Additional keyword arguments for the agent. |
+| output | Agent | Output parameter. The constructed CrewAI Agent object. |
 
 </details>
 
-### Vector Store Agent
-
-This component creates a Vector Store Agent using LangChain.
-
 <details>
-<summary>Parameters</summary>
+<summary>CrewAI Hierarchical Crew</summary>
 
-**Inputs**
+This component represents a group of agents managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
+For more information, see the [CrewAI hierarchical crew documentation](https://docs.crewai.com/how-to/Hierarchical/).
 
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| vectorstore | VectorStoreInfo | The vector store information for the agent to use. |
+It accepts the following parameters:
 
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The Vector Store Agent instance. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| agents | Agents | Input parameter. The list of Agent objects representing the crew members. |
+| tasks | Tasks | Input parameter. The list of HierarchicalTask objects representing the tasks to be executed. |
+| manager_llm | Manager LLM | Input parameter. The language model for the manager agent. |
+| manager_agent | Manager Agent | Input parameter. The specific agent to act as the manager. |
+| verbose | Verbose | Input parameter. This enables verbose output for detailed logging. |
+| memory | Memory | Input parameter. The memory configuration for the crew. |
+| use_cache | Use Cache | Input parameter. This enables caching of results. |
+| max_rpm | Max RPM | Input parameter. This sets the maximum requests per minute. |
+| share_crew | Share Crew | Input parameter. This determines if the crew information is shared among agents. |
+| function_calling_llm | Function Calling LLM | Input parameter. The language model for function calling. |
+| crew | Crew | Output parameter. The constructed Crew object with hierarchical task execution. |
 
 </details>
 
-### Vector Store Router Agent
-
-This component creates a Vector Store Router Agent using LangChain.
-
 <details>
-<summary>Parameters</summary>
+<summary>CrewAI Sequential Crew</summary>
 
-**Inputs**
+This component represents a group of agents with tasks that are executed sequentially. This component allows for the creation of a crew that performs tasks in a specific order.
+For more information, see the [CrewAI sequential crew documentation](https://docs.crewai.com/how-to/Sequential/).
 
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| vectorstores | List[VectorStoreInfo] | The list of vector store information for the agent to route between. |
+It accepts the following parameters:
 
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The Vector Store Router Agent instance. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| tasks | Tasks | Input parameter. The list of SequentialTask objects representing the tasks to be executed. |
+| verbose | Verbose | Input parameter. This enables verbose output for detailed logging. |
+| memory | Memory | Input parameter. The memory configuration for the crew. |
+| use_cache | Use Cache | Input parameter. This enables caching of results. |
+| max_rpm | Max RPM | Input parameter. This sets the maximum requests per minute. |
+| share_crew | Share Crew | Input parameter. This determines if the crew information is shared among agents. |
+| function_calling_llm | Function Calling LLM | Input parameter. The language model for function calling. |
+| crew | Crew | Output parameter. The constructed Crew object with sequential task execution. |
 
 </details>
+
+<details>
+<summary>CrewAI Sequential Task Agent</summary>
+
+This component creates a CrewAI Task and its associated Agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
+For more information, see the [CrewAI sequential agents documentation](https://docs.crewai.com/how-to/Sequential/).
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| role | Role | Input parameter. The role of the agent. |
+| goal | Goal | Input parameter. The objective of the agent. |
+| backstory | Backstory | Input parameter. The backstory of the agent. |
+| tools | Tools | Input parameter. The tools at the agent's disposal. |
+| llm | Language Model | Input parameter. The language model that runs the agent. |
+| memory | Memory | Input parameter. This determines whether the agent should have memory or not. |
+| verbose | Verbose | Input parameter. This enables verbose output. |
+| allow_delegation | Allow Delegation | Input parameter. This determines whether the agent is allowed to delegate tasks to other agents. |
+| allow_code_execution | Allow Code Execution | Input parameter. This determines whether the agent is allowed to execute code. |
+| agent_kwargs | Agent kwargs | Input parameter. The additional kwargs for the agent. |
+| task_description | Task Description | Input parameter. The descriptive text detailing the task's purpose and execution. |
+| expected_output | Expected Task Output | Input parameter. The clear definition of the expected task outcome. |
+| async_execution | Async Execution | Input parameter. The boolean flag indicating asynchronous task execution. |
+| previous_task | Previous Task | Input parameter. The previous task in the sequence for chaining. |
+| task_output | Sequential Task | Output parameter. The list of SequentialTask objects representing the created tasks. |
+
+</details>
+
+## See also
+
+* [**Message History** component](/components-helpers#message-history)
+* [Store chat memory](/memory#store-chat-memory)
+* [Bundles](/components-bundle-components)
+* [Legacy LangChain components](/bundles-langchain#legacy-langchain-components)

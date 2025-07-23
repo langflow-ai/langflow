@@ -1,0 +1,56 @@
+---
+title: LM Studio
+slug: /bundles-lmstudio
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+The components in the **LM Studio** bundle let you use models from a local or hosted instance of LM Studio.
+Components can require authentication with an LM Studio API key. For information about LM Studio models, connections, and credentials, see the [LM Studio documentation](https://lmstudio.ai/docs).
+
+## LM Studio text generation
+
+The **LM Studio** component generates text using LM Studio's local language models.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use an LM Studio model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### LM Studio text generation parameters
+
+Many **LM Studio** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| base_url | String | Input parameter. The URL where LM Studio is running. Default: `"http://localhost:1234"`. |
+| api_key | LM Studio API Key | Input parameter. The API key for authentication with LM Studio, if required. |
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate in the response. Default: `512`. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: `[0.0, 2.0]`. Default: `0.7`. |
+| top_p | Float | Input parameter. Controls diversity via nucleus sampling. Range: `[0.0, 1.0]`. Default: `1.0`. |
+| stop | List[String] | Input parameter. List of strings that stop generation when encountered. |
+| stream | Boolean | Input parameter. Whether to stream the response. Default: `False`. |
+| presence_penalty | Float | Input parameter. Penalizes repeated tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+| frequency_penalty | Float | Input parameter. Penalizes frequent tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+
+## LM Studio Embeddings
+
+The **LM Studio Embeddings** component generates embeddings using LM Studio models.
+
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+
+### LM Studio Embeddings parameters
+
+Many **LM Studio Embeddings** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| model | Model | Input parameter. The LM Studio model to use for generating embeddings. |
+| base_url | LM Studio Base URL | Input parameter. The base URL for the LM Studio API. |
+| api_key | LM Studio API Key | Input parameter. The API key for authentication with LM Studio. |
+| temperature | Model Temperature | Input parameter. The temperature setting for the model. |

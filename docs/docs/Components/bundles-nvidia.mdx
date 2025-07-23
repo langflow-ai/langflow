@@ -1,0 +1,59 @@
+---
+title: NVIDIA components
+slug: /bundles-nvidia
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **NVIDIA** bundle.
+
+## NVIDIA
+
+This component generates text using NVIDIA LLMs.
+For more information about NVIDIA LLMs, see the [NVIDIA AI documentation](https://developer.nvidia.com/generative-ai).
+
+For an example of this component in a flow, see [Integrate NVIDIA NIMs with Langflow](/integrations-nvidia-ingest-wsl2).
+
+### NVIDIA parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to `0` for unlimited tokens (advanced). |
+| model_name | String | Input parameter. The name of the NVIDIA model to use. Default: `mistralai/mixtral-8x7b-instruct-v0.1`. |
+| base_url | String | Input parameter. The base URL of the NVIDIA API. Default: `https://integrate.api.nvidia.com/v1`. |
+| nvidia_api_key | SecretString | Input parameter. The NVIDIA API Key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
+| seed | Integer | Input parameter. The seed controls the reproducibility of the job (advanced). Default: `1`. |
+| model | LanguageModel | Output parameter. An instance of ChatNVIDIA configured with the specified parameters. |
+
+## NVIDIA Embeddings
+
+The **NVIDIA Embeddings** component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
+
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+
+### NVIDIA Embeddings parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | String | Input parameter. The NVIDIA model to use for embeddings, such as `nvidia/nv-embed-v1`. |
+| base_url | String | Input parameter. The base URL for the NVIDIA API. Default: `https://integrate.api.nvidia.com/v1`. |
+| nvidia_api_key | SecretString | Input parameter. The API key for authenticating with NVIDIA's service. |
+| temperature | Float | Input parameter. The model temperature for embedding generation. Default: `0.1`. |
+| embeddings | Embeddings | Output parameter. An NVIDIAEmbeddings instance for generating embeddings. |
+
+## NVIDIA Rerank
+
+This component finds and reranks documents using the NVIDIA API.
+
+## NVIDIA Retriever Extraction
+
+This component uses the NVIDIA `nv-ingest` microservice for data ingestion, processing, and extraction of text files.
+For more information, see [Integrate NVIDIA Retriever Extraction with Langflow](/integrations-nvidia-ingest).
+
+## NVIDIA System-Assist
+
+This component requires a specific system environment.
+For information about this component, see [Integrate NVIDIA G-Assist with Langflow](/integrations-nvidia-g-assist).
