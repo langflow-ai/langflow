@@ -23,6 +23,7 @@ from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
+from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.directory_reader.utils import abuild_custom_component_list_from_path
 
 
@@ -141,7 +142,8 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    data_path = str(await Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
+    # Use lfx components path since components have been moved there
+    data_path = BASE_COMPONENTS_PATH
     components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")
