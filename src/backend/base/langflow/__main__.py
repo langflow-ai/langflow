@@ -636,7 +636,7 @@ def superuser(
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
     auth_token: str = typer.Option(None, help="Authentication token of existing superuser.", envvar="LANGFLOW_SUPERUSER_TOKEN"),
 ) -> None:
-    """Create a superuser. When AUTO_LOGIN is enabled, uses default credentials. In production mode, requires authentication for additional superusers."""
+    """Create a superuser. When AUTO_LOGIN is enabled, uses default credentials. In production mode, requires authentication."""
     configure(log_level=log_level)
     db_service = get_db_service()
     settings_service = get_settings_service()
@@ -650,10 +650,7 @@ def superuser(
             typer.echo("Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature.")
             raise typer.Exit(1)
             
-        # Import constants needed for both AUTO_LOGIN and display
         from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-        
-        # Handle credentials based on AUTO_LOGIN setting
         nonlocal username, password
         if settings_service.auth_settings.AUTO_LOGIN:
             # Force default credentials for AUTO_LOGIN mode
@@ -666,16 +663,12 @@ def superuser(
             if not password:
                 password = typer.prompt("Password", hide_input=True)
         
-        # Check if any superusers exist
         from langflow.services.database.models.user.crud import get_all_superusers
-        
         existing_superusers = []
         async with session_getter(db_service) as session:
             # Note that the default superuser is created by the initialize_services() function,
             # but leaving this check here in case we change that behavior
             existing_superusers = await get_all_superusers(session)
-        
-        # Determine if superuser creation is allowed
         is_first_setup = len(existing_superusers) == 0
         
         # If AUTO_LOGIN is true, only allow default superuser creation

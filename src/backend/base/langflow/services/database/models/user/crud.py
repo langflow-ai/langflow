@@ -67,13 +67,3 @@ async def get_all_superusers(db: AsyncSession) -> list[User]:
     stmt = select(User).where(User.is_superuser == True)  # noqa: E712
     result = await db.exec(stmt)
     return list(result.all())
-
-
-async def delete_user_by_username(db: AsyncSession, username: str) -> bool:
-    """Delete a user by username. Returns True if deleted, False if not found."""
-    user = await get_user_by_username(db, username)
-    if user:
-        await db.delete(user)
-        await db.commit()
-        return True
-    return False
