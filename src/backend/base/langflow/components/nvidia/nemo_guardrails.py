@@ -135,6 +135,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "Each category of guardrail such as content safety or topic control requires configuration of a model."
             ),
             advanced=False,
+            real_time_refresh=True,
         ),
         HandleInput(
             name="llm",
@@ -150,6 +151,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             value="https://integrate.api.nvidia.com/v1",
             info="The base URL of the API for the model that Guardrails uses for self-check rails.",
             real_time_refresh=True,
+            show=False,
         ),
         SecretStrInput(
             name="self_check_model_api_key",
@@ -157,6 +159,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             info="The API Key for the model that Guardrails uses for self-check rails.",
             value="NVIDIA_API_KEY",
             real_time_refresh=True,
+            show=False,
         ),
         DropdownInput(
             name="self_check_model_name",
@@ -166,6 +169,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             options=[],
             refresh_button=True,
             combobox=True,
+            show=False,
         ),
         MessageTextInput(
             name="content_safety_model_url",
@@ -174,6 +178,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             advanced=True,
             info="The base URL specifically for content safety models.",
             real_time_refresh=True,
+            show=False,
         ),
         MessageTextInput(
             name="topic_control_model_url",
@@ -182,6 +187,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             advanced=True,
             info="The base URL specifically for topic control models.",
             real_time_refresh=True,
+            show=False,
         ),
         MessageTextInput(
             name="jailbreak_detection_model_url",
@@ -190,6 +196,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             advanced=True,
             info="The base URL specifically for jailbreak detection models.",
             real_time_refresh=True,
+            show=False,
         ),
         SecretStrInput(
             name="guardrail_model_api_key",
@@ -197,6 +204,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             info="The API Key used for content safety, topic control, and jailbreak detection models.",
             advanced=True,
             value="NVIDIA_API_KEY",
+            show=False,
         ),
         # Advanced Inputs for Prompts
         MultilineInput(
@@ -596,8 +604,9 @@ define bot refuse to respond
         else:
             return suitable_models
 
-    def update_build_config(self, build_config: dotdict, _field_value: Any = None, field_name: str | None = None):
-        """Update build configuration with fresh model list when key fields change."""
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        """Update build configuration and show/hide inputs based on rails selection."""
+        # Handle model list updates for self-check models
         if field_name in {"self_check_model_url", "self_check_model_api_key", "self_check_model_name"}:
             try:
                 # Only try to fetch models if both URL and API key are provided
@@ -619,6 +628,49 @@ define bot refuse to respond
                 build_config["self_check_model_name"]["value"] = ""
                 build_config["self_check_model_name"]["options"] = []
                 raise ValueError(msg) from e
+
+        # Handle dynamic visibility based on rails selection
+        if field_name == "rails":
+            # Update the rails value in the component
+            self.rails = field_value
+
+            # Define which rails require which inputs
+            self_check_rails = {"self check input", "self check output", "self check hallucination"}
+            content_safety_rails = {"content safety input", "content safety output"}
+            topic_control_rails = {"topic control"}
+            jailbreak_detection_rails = {"jailbreak detection model"}
+
+            # Get current rails selection
+            selected_rails = set(field_value) if field_value else set()
+
+            # Debug logging
+            self.log(f"Rails selection changed to: {selected_rails}")
+
+            # Show/hide self-check related inputs
+            has_self_check = bool(selected_rails & self_check_rails)
+            build_config["self_check_model_url"]["show"] = has_self_check
+            build_config["self_check_model_api_key"]["show"] = has_self_check
+            build_config["self_check_model_name"]["show"] = has_self_check
+
+            self.log(f"Self-check inputs visibility: {has_self_check}")
+
+            # Show/hide content safety related inputs
+            has_content_safety = bool(selected_rails & content_safety_rails)
+            build_config["content_safety_model_url"]["show"] = has_content_safety
+            build_config["guardrail_model_api_key"]["show"] = (
+                has_content_safety
+                or bool(selected_rails & topic_control_rails)
+                or bool(selected_rails & jailbreak_detection_rails)
+            )
+
+            # Show/hide topic control related inputs
+            has_topic_control = bool(selected_rails & topic_control_rails)
+            build_config["topic_control_model_url"]["show"] = has_topic_control
+
+            # Show/hide jailbreak detection related inputs
+            has_jailbreak_detection = bool(selected_rails & jailbreak_detection_rails)
+            build_config["jailbreak_detection_model_url"]["show"] = has_jailbreak_detection
+
         return build_config
 
     def _safe_log_config(self, yaml_content: str):
