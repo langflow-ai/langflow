@@ -136,7 +136,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         result = await component.json_response()
 
-        from langflow.schema.data import Data
+        from lfx.schema.data import Data
 
         assert isinstance(result, Data)
         assert result.data == {"name": "test", "value": 123}
@@ -151,7 +151,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         result = await component.json_response()
 
-        from langflow.schema.data import Data
+        from lfx.schema.data import Data
 
         assert isinstance(result, Data)
         assert result.data == {"status": "success"}
@@ -166,7 +166,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         result = await component.json_response()
 
-        from langflow.schema.data import Data
+        from lfx.schema.data import Data
 
         assert isinstance(result, Data)
         assert "error" in result.data
