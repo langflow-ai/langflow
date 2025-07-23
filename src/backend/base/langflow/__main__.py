@@ -10,6 +10,7 @@ import warnings
 from contextlib import suppress
 from ipaddress import ip_address
 from pathlib import Path
+from jose import JWTError
 
 import click
 import httpx
@@ -29,10 +30,10 @@ from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.settings.constants import DEFAULT_SUPERUSER
+from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.utils import initialize_services
+from langflow.services.auth.utils import get_current_user_by_jwt, check_key
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
@@ -650,7 +651,6 @@ def superuser(
             typer.echo("Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature.")
             raise typer.Exit(1)
             
-        from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
         nonlocal username, password
         if settings_service.auth_settings.AUTO_LOGIN:
             # Force default credentials for AUTO_LOGIN mode
@@ -665,7 +665,7 @@ def superuser(
         
         from langflow.services.database.models.user.crud import get_all_superusers
         existing_superusers = []
-        async with session_getter(db_service) as session:
+        async with session_scope() as session:
             # Note that the default superuser is created by the initialize_services() function,
             # but leaving this check here in case we change that behavior
             existing_superusers = await get_all_superusers(session)
@@ -697,13 +697,12 @@ def superuser(
                 
                 # Validate the auth token
                 try:
-                    from langflow.services.auth.utils import get_current_user_by_jwt, check_key
-                    async with session_getter(db_service) as session:
+                    async with session_scope() as session:
                         # Try JWT first
                         user = None
                         try:
                             user = await get_current_user_by_jwt(auth_token, session)
-                        except Exception:
+                        except JWTError:
                             # Try API key
                             api_key_result = await check_key(session, auth_token)
                             if api_key_result and hasattr(api_key_result, 'is_superuser'):
@@ -717,7 +716,7 @@ def superuser(
                     raise typer.Exit(1)
         
         # Auth complete, create the superuser
-        async with session_getter(db_service) as session:
+        async with session_scope() as session:
             from langflow.services.auth.utils import create_super_user
 
             if await create_super_user(db=session, username=username, password=password):
