@@ -500,7 +500,7 @@ def build_custom_component_template_from_inputs(
         if code_hash:
             frontend_node.metadata["code_hash"] = code_hash
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"Error generating code hash for {custom_component.__class__.__name__}: {exc}")
+        logger.opt(exception=exc).debug(f"Error generating code hash for {custom_component.__class__.__name__}")
 
     return frontend_node.to_dict(keep_name=False), cc_instance
 
@@ -573,7 +573,7 @@ def build_custom_component_template(
             if code_hash:
                 frontend_node.metadata["code_hash"] = code_hash
         except Exception as exc:  # noqa: BLE001
-            logger.error(f"Error generating code hash for {custom_component.__class__.__name__}: {exc}")
+            logger.opt(exception=exc).debug(f"Error generating code hash for {custom_component.__class__.__name__}")
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
