@@ -36,7 +36,6 @@ from langflow.services.database.models.flow.utils import get_webhook_component_i
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
-from langflow.services.settings.service import SettingsService
 from langflow.utils.compression import compress_response
 
 # build router
@@ -84,7 +83,15 @@ async def _new_flow(
                 )
             ).all()
             if flows:
-                extract_number = re.compile(r"\((\d+)\)$")
+                # Use regex to extract numbers only from flows that follow the copy naming pattern:
+                # "{original_name} ({number})"
+                # This avoids extracting numbers from the original flow name if it naturally contains parentheses
+                #
+                # Examples:
+                # - For flow "My Flow": matches "My Flow (1)", "My Flow (2)" → extracts 1, 2
+                # - For flow "Analytics (Q1)": matches "Analytics (Q1) (1)" → extracts 1
+                #   but does NOT match "Analytics (Q1)" → avoids extracting the original "1"
+                extract_number = re.compile(rf"^{re.escape(flow.name)} \((\d+)\)$")
                 numbers = []
                 for _flow in flows:
                     result = extract_number.search(_flow.name)
@@ -92,6 +99,8 @@ async def _new_flow(
                         numbers.append(int(result.groups(1)[0]))
                 if numbers:
                     flow.name = f"{flow.name} ({max(numbers) + 1})"
+                else:
+                    flow.name = f"{flow.name} (1)"
             else:
                 flow.name = f"{flow.name} (1)"
         # Now check if the endpoint is unique
@@ -270,17 +279,10 @@ async def _read_flow(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
-    settings_service: SettingsService,
 ):
     """Read a flow."""
-    auth_settings = settings_service.auth_settings
-    stmt = select(Flow).where(Flow.id == flow_id)
-    if auth_settings.AUTO_LOGIN:
-        # If auto login is enable user_id can be current_user.id or None
-        # so write an OR
-        stmt = stmt.where(
-            (Flow.user_id == user_id) | (Flow.user_id == None)  # noqa: E711
-        )
+    stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == user_id)
+
     return (await session.exec(stmt)).first()
 
 
@@ -292,7 +294,7 @@ async def read_flow(
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    if user_flow := await _read_flow(session, flow_id, current_user.id, get_settings_service()):
+    if user_flow := await _read_flow(session, flow_id, current_user.id):
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")
 
@@ -327,7 +329,6 @@ async def update_flow(
             session=session,
             flow_id=flow_id,
             user_id=current_user.id,
-            settings_service=settings_service,
         )
 
         if not db_flow:
@@ -393,7 +394,6 @@ async def delete_flow(
         session=session,
         flow_id=flow_id,
         user_id=current_user.id,
-        settings_service=get_settings_service(),
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")

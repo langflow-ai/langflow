@@ -5,8 +5,31 @@ module.exports = {
       type: "category",
       label: "Get started",
       items: [
-        "Get-Started/get-started-installation",
-        "Get-Started/get-started-quickstart",
+        {
+          type: "doc",
+          id: "Get-Started/about-langflow",
+          label: "About Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-installation",
+          label: "Install Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-quickstart",
+          label: "Quickstart"
+        },
+        {
+          type: "category",
+          label: "Tutorials",
+          items: [
+            "Tutorials/chat-with-rag",
+            "Tutorials/chat-with-files",
+            "Tutorials/agent",
+            "Tutorials/mcp-tutorial",
+          ],
+        },
       ],
     },
     {
@@ -26,16 +49,48 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Concepts",
+      label: "Flows",
       items: [
-        "Concepts/concepts-overview",
-        "Concepts/concepts-playground",
-        "Concepts/concepts-flows",
-        "Concepts/concepts-objects",
-        "Concepts/concepts-publish",
-        "Concepts/embedded-chat-widget",
-        "Concepts/concepts-file-management",
-        "Concepts/concepts-voice-mode",
+        {
+          type: "doc",
+          id: "Concepts/concepts-overview",
+          label: "Use the visual editor"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-flows",
+          label: "Build flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-publish",
+          label: "Run flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-flows-import",
+          label: "Import and export flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-playground",
+          label: "Use the Playground"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-voice-mode",
+          label: "Use voice mode"
+        },
+        {
+          type: "doc",
+          id: "Concepts/data-types",
+          label: "Langflow data types"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-file-management",
+          label: "Manage files"
+        },
       ],
     },
     {
@@ -294,10 +349,14 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/Docling/integrations-docling",
+          label: "Docling",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
-            'Integrations/Google/integrations-setup-google-oauth-langflow',
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
             'Integrations/Google/integrations-google-big-query',
           ],
@@ -352,12 +411,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
         {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },
@@ -386,11 +445,20 @@ module.exports = {
       type: "html",
       className: "sidebar-ad",
       value: `
-        <a href="https://astra.datastax.com/signup?type=langflow" target="_blank" class="menu__link">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g clip-path="url(#clip0_1645_37)">
+              <path d="M12 17H20C21.1046 17 22 16.1046 22 15V13M12 17H4C2.89543 17 2 16.1046 2 15V5C2 3.89543 2.89543 3 4 3H10M12 17V21M8 21H12M12 21H16M11.75 10.2917H13.2083L16.125 7.375H17.5833L20.5 4.45833H21.9583M16.125 11.75H17.5833L20.5 8.83333H21.9583M11.75 5.91667H13.2083L16.125 3H17.5833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <defs>
+              <clipPath id="clip0_1645_37">
+                <rect width="24" height="24" fill="white"/>
+              </clipPath>
+            </defs>
+          </svg>
           <div class="sidebar-ad-text-container">
-            <span class="sidebar-ad-text">Use Langflow in the cloud</span>
-            <span class="sidebar-ad-text sidebar-ad-text-gradient">Sign up for DataStax Langflow</span>
+            <span class="sidebar-ad-text">Get started in minutes</span>
+            <span class="sidebar-ad-text sidebar-ad-text-gradient">Download Langflow Desktop</span>
           </div>
         </a>
       `,

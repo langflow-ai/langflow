@@ -37,7 +37,7 @@ jobs:
           cd src/frontend
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-      - name: Run Prettier
+      - name: Run Biome
         run: |
           cd src/frontend
           npm run format
