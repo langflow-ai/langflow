@@ -45,11 +45,8 @@ class KBIngestionComponent(Component):
     """Create or append to a Langflow Knowledge Base from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------
-    display_name = "Build KB"
-    description = (
-        "Takes a DataFrame, a column-level config table, and an Embedding Model handle, "
-        "then writes a fully-formed Knowledge Base folder ready for retrieval."
-    )
+    display_name = "Ingest Knowledge"
+    description = "Create or append to a Langflow Knowledge Base from a DataFrame."
     icon = "database"
     name = "KBIngestion"
 
@@ -109,7 +106,7 @@ class KBIngestionComponent(Component):
         ),
         DataFrameInput(
             name="input_df",
-            display_name="Source DataFrame",
+            display_name="Source Data",
             info="Table with all original columns (already chunked / processed).",
             required=True,
         ),
@@ -194,12 +191,6 @@ class KBIngestionComponent(Component):
             display_name="KB Info",
             method="build_kb_info",
             info="Returns basic metadata of the newly ingested KB.",
-        ),
-        Output(
-            name="status_msg",
-            display_name="Status",
-            method="status_message",
-            info="Short human-readable summary.",
         ),
     ]
 
