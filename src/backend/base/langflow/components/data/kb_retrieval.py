@@ -9,7 +9,7 @@ from langchain_chroma import Chroma
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DropdownInput, MessageTextInput, Output, SecretStrInput, StrInput
+from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
@@ -56,6 +56,14 @@ class KBRetrievalComponent(Component):
             display_name="Search Query",
             info="Optional search query to filter knowledge base data.",
         ),
+        IntInput(
+            name="top_k",
+            display_name="Top K Results",
+            info="Number of top results to return from the knowledge base.",
+            value=5,
+            advanced=True,
+            required=False,
+        )
     ]
 
     outputs = [
@@ -180,12 +188,12 @@ class KBRetrievalComponent(Component):
             logger.info(f"Performing similarity search with query: {self.search_query}")
             results = chroma.similarity_search_with_score(
                 query=self.search_query or "",
-                k=5,
+                k=self.top_k,
             )
         else:
             results = chroma.similarity_search(
                 query=self.search_query or "",
-                k=5,
+                k=self.top_k,
             )
 
         # doc_ids = [doc.metadata.get("id") for doc, _ in results]
@@ -205,13 +213,11 @@ class KBRetrievalComponent(Component):
             Data(
                 content=doc[0].page_content,
                 **doc[0].metadata,
-                score=-1 * doc[1],
+                _score=-1 * doc[1],
                 # embeddings=id_to_embedding.get(doc[0].metadata.get("id"))
             )
             for doc in results
         ]
-        # Arrange data_list by the score in descending order
-        data_list.sort(key=lambda x: x.score, reverse=True)
 
         # Return the DataFrame containing the data
         return DataFrame(data=data_list)
@@ -255,7 +261,7 @@ class KBRetrievalComponent(Component):
                 embedder = self._build_embeddings(metadata)
                 logger.info(f"Embedder: {embedder}")
                 top_indices, scores = self.vector_search(
-                    df=pd.DataFrame(parquet_df), query=self.search_query, embedder=embedder, top_k=5
+                    df=pd.DataFrame(parquet_df), query=self.search_query, embedder=embedder, top_k=self.top_k
                 )
 
                 # Filter the DataFrame to only include the top results
@@ -278,7 +284,7 @@ class KBRetrievalComponent(Component):
         """Lightweight cosine similarity using only numpy."""
         return np.dot(a, b.T) / (np.linalg.norm(a) * np.linalg.norm(b, axis=1))
 
-    def vector_search(self, df, query, embedder, top_k=5):
+    def vector_search(self, df, query, embedder, top_k):
         """Perform vector search on DataFrame."""
         # Get query embedding
         query_embedding = np.array(embedder.embed_query(query))

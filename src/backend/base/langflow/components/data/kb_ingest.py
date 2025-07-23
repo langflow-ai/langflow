@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -514,7 +515,7 @@ class KBIngestionComponent(Component):
                 identifier_cols.append(col_name)
 
         # Convert each row to a Data object
-        for idx, row in df_source.iterrows():
+        for _, row in df_source.iterrows():
             # Build content text from vectorized columns using list comprehension
             content_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
 
@@ -535,8 +536,11 @@ class KBIngestionComponent(Component):
                     else:
                         data_dict[col] = str(value)  # Convert complex types to string
 
+            # Hash the page_content for unique ID
+            page_content_hash = hashlib.sha256(page_content.encode()).hexdigest()
+            data_dict["_id"] = page_content_hash
+
             # Add special metadata flags
-            data_dict["id"] = str(uuid.uuid4())  # Unique ID for the Data object
             data_dict["_kb_name"] = str(self.knowledge_base)
 
             # Create Data object - everything except "text" becomes metadata
@@ -562,14 +566,14 @@ class KBIngestionComponent(Component):
             kb_path = kb_root / self.knowledge_base
 
             # Save source DataFrame
-            df_path = kb_path / "source.parquet"
+            # df_path = kb_path / "source.parquet"
 
             # Instead of just overwriting this file, i want to read it and append to it if it exists
-            if df_path.exists():
+            # if df_path.exists():
                 # Read existing DataFrame
-                existing_df = pd.read_parquet(df_path)
+            #     existing_df = pd.read_parquet(df_path)
                 # Append new data
-                df_source = pd.concat([existing_df, df_source], ignore_index=True)
+            #     df_source = pd.concat([existing_df, df_source], ignore_index=True)
 
             # Read the embedding info from the knowledge base folder
             metadata_path = kb_path / "embedding_metadata.json"
