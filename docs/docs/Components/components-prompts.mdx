@@ -1,76 +1,64 @@
 ---
-title: Prompts
+title: Prompt Template
 slug: /components-prompts
 ---
 
-# Prompt components in Langflow
+Use the **Prompt Template** core component to create a _prompt_ that supplies instructions and context to an LLM or agent, separate from other input like chat messages and file uploads.
 
-A prompt is a structured input to a language model that instructs the model how to handle user inputs and variables.
+Prompts are structured input that use natural language, fixed values, and dynamic variables to provide baseline context for the LLM.
+For example:
 
-Prompt components create prompt templates with custom fields and dynamic variables for providing your model structured, repeatable prompts.
+* Define a consistent structure for user queries, making it easier for the LLM to understand and respond appropriately.
+* Define a specific output format for the LLM, such as JSON or structured text.
+* Define a role for the LLM, such as `You are a helpful assistant` or `You are an expert in microbiology`.
+* Allow the LLM to reference chat memory.
 
-Prompts are a combination of natural language and variables created with curly braces.
+The **Prompt Template** component can also output variable instructions to other components later in the flow.
 
-## Use a prompt component in a flow
+## Prompt Template parameters
 
-An example of modifying a prompt can be found in the [Basic prompting starter flow](/basic-prompting).
+| Name     | Display Name   | Description                                                       |
+|----------|----------------|-------------------------------------------------------------------|
+| template | Template       | Input parameter. Create a prompt template with dynamic variables (`{VARIABLE_NAME}`). |
+| prompt   | Prompt Message | Output parameter. The built prompt message returned by the `build_prompt` method. |
 
-The default prompt in the **Prompt** component is `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
+## Define variables in prompts
 
-This prompt creates a "personality" for your LLM's chat interactions, but it doesn't include variables that you may find useful when templating prompts.
+Variables in a **Prompt Template** component dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from other components, Langflow global variables, or fixed input.
 
-To modify the prompt template, in the **Prompt** component, click the **Template** field. For example, the `{context}` variable gives the LLM model access to embedded vector data to return better answers.
+For example, with the [**Message History**](/components-helpers#message-history) component, you can use a `{memory}` variable to pass chat history to the prompt.
 
-```text
-Given the context
-{context}
-Answer the question
-{user_question}
-```
+The following steps demonstrate how to add variables to a **Prompt Template** component:
 
-When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components.
+1. Create a flow based on the [**Basic prompting** template](/basic-prompting).
 
-<details>
-<summary>Parameters</summary>
+    This template already has a **Prompt Template** component, but the template only contains natural language instructions: `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
 
-**Inputs**
+    This prompt defines a role for the LLM's chat interactions, but it doesn't include variables that help you create prompts that adapt dynamically to changing contexts, such as different users and environments.
 
-| Name     | Display Name | Info                                                              |
-|----------|--------------|-------------------------------------------------------------------|
-| template | Template     | Create a prompt template with dynamic variables.                  |
+2. Click the **Prompt Template** component, and then add some variables to the **Template** field.
 
-**Outputs**
+    Variables are declared by wrapping the variable name in curly braces, like `{variable_name}`.
+    For example, the following template creates `context` and `user_question` variables:
 
-| Name   | Display Name    | Info                                                   |
-|--------|----------------|--------------------------------------------------------|
-| prompt | Prompt Message  | The built prompt message returned by the `build_prompt` method. |
+    ```text
+    Given the context
+    {context}
+    Answer the question
+    {user_question}
+    ```
 
-</details>
+4. Click **Check & Save** to save the template.
 
-## Langchain Hub Prompt Template
+    After adding the variables to the template, new fields are added to the **Prompt Template** component for each variable.
 
-:::important
-This component is available in the **Components** menu under **Bundles**.
-:::
+5. Provide input for the variable fields:
 
-This component fetches prompts from the [Langchain Hub](https://docs.smith.langchain.com/old/category/prompt-hub).
+   * Connect the fields to other components to pass the output from those components to the variables.
+   * Use Langflow global variables.
+   * Enter fixed values directly into the fields.
 
-When a prompt is loaded, the component generates input fields for custom variables. For example, the default prompt "efriis/my-first-prompt" generates fields for `profession` and `question`.
+## See also
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name               | Display Name              | Info                                    |
-|--------------------|---------------------------|------------------------------------------|
-| langchain_api_key  | Your LangChain API Key    | The LangChain API Key to use.            |
-| langchain_hub_prompt| LangChain Hub Prompt     | The LangChain Hub prompt to use.         |
-
-**Outputs**
-
-| Name   | Display Name | Info                                                              |
-|--------|--------------|-------------------------------------------------------------------|
-| prompt | Build Prompt | The built prompt message returned by the `build_prompt` method.   |
-
-</details>
+* [LangChain Prompt Hub](/bundles-langchain#prompt-hub)
+* [Processing components](/components-processing)
