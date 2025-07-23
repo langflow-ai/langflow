@@ -17,7 +17,7 @@ from langflow.inputs.inputs import (
 
 
 class AIMLModelComponent(LCModelComponent):
-    display_name = "AI/ML API Model"
+    display_name = "AI/ML API"
     description = "Generates text using AI/ML API LLMs."
     icon = "AIML"
     name = "AIMLModel"
