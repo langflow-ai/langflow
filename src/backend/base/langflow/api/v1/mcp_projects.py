@@ -401,14 +401,14 @@ async def install_mcp_config(
 
         # Configure args based on the MCP tool
         if FEATURE_FLAGS.mcp_composer:
-            args = [mcp_tool, "--sse-url", "http://localhost:9000/sse"]
+            args = [mcp_tool, "--sse-url", sse_url]
 
             # Check for auth settings and add auth parameters
             if project.auth_settings:
                 from langflow.api.v1.schemas import AuthSettings
 
                 auth_settings = AuthSettings(**project.auth_settings)
-                args.extend(["--auth-type", auth_settings.auth_type])
+                args.extend(["--auth_type", auth_settings.auth_type])
 
                 env = {
                     "OAUTH_HOST": auth_settings.oauth_host,
