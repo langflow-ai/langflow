@@ -9,16 +9,16 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **AI/ML** bundle.
 
-## AI/ML text generation
+## AI/ML API text generation
 
 This component creates a `ChatOpenAI` model instance using the AI/ML API.
 The output is exclusively a **Language Model** ([`LanguageModel`](/data-types#languagemodel)) that you can connect to another LLM-driven component, such as a **Smart Function** component.
 
 For more information, see the [AI/ML API Langflow integration documentation](https://docs.aimlapi.com/integrations/langflow) and [**Language Model** components](/components-models).
 
-### AI/ML text generation parameters
+### AI/ML API text generation parameters
 
-Many **AI/ML** component input parameters are hidden by default in the visual editor.
+Many component input parameters are hidden by default in the visual editor.
 You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
@@ -30,16 +30,16 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | api_key | SecretString | Input parameter. The AIML API Key to use for the model. |
 | temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
 
-## AI/ML API embedding generation
+## AI/ML API Embeddings
 
-The **AI/ML API** component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
+The **AI/ML API Embeddings** component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
 
 The output is [`Embeddings`](/data-types#embeddings).
 Specifically, an instance of `AIMLEmbeddingsImpl`.
 
 For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
 
-### AI/ML API embedding generation parameters
+### AI/ML API Embeddings parameters
 
 Some **AI/ML API** component input parameters are hidden by default in the visual editor.
 You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).

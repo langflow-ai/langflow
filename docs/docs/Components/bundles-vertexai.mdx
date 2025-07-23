@@ -61,13 +61,13 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | max_output_tokens | Integer | Input parameter. The token limit determines the maximum amount of text output from one prompt. Default: `128`. |
 | model_name | String | Input parameter. The name of the Vertex AI large language model. Default: `text-bison`. |
 | project | String | Input parameter. The default GCP project to use when making Vertex API calls. |
-| request_parallelism | Integer | Input parameter. The amount of parallelism allowed for requests issued to VertexAI models. Default: `5`. |
+| request_parallelism | Integer | Input parameter. The amount of parallelism allowed for requests issued to Vertex AI models. Default: `5`. |
 | temperature | Float | Input parameter. Tunes the degree of randomness in text generations. Should be a non-negative value. Default: `0`. |
 | top_k | Integer | Input parameter. How the model selects tokens for output. The next token is selected from the top `k` tokens. Default: `40`. |
 | top_p | Float | Input parameter. Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value. Default: `0.95`. |
 | tuned_model_name | String | Input parameter. The name of a tuned model. If provided, `model_name` is ignored. |
 | verbose | Boolean | Input parameter. This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug. Default: `False`. |
-| embeddings | Embeddings | Output parameter. An instance for generating embeddings using VertexAI. |
+| embeddings | Embeddings | Output parameter. An instance for generating embeddings using Vertex AI. |
 
 ## Create a service account for Vertex AI authentication {#vertexai-credentials}
 
