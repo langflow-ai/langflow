@@ -96,6 +96,7 @@ class KBIngestionComponent(Component):
             name="knowledge_base",
             display_name="Knowledge Base",
             info="Select the knowledge base to load files from.",
+            required=True,
             options=[
                 str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
             ]
@@ -106,7 +107,7 @@ class KBIngestionComponent(Component):
         ),
         DataFrameInput(
             name="input_df",
-            display_name="Source Data",
+            display_name="Data",
             info="Table with all original columns (already chunked / processed).",
             required=True,
         ),
@@ -162,12 +163,6 @@ class KBIngestionComponent(Component):
             advanced=True,
             value=KNOWLEDGE_BASES_DIR,
         ),
-        StrInput(
-            name="collection_name",
-            display_name="Collection Name",
-            info="Name for the vector store collection (defaults to KB name)",
-            advanced=True,
-        ),
         SecretStrInput(
             name="api_key",
             display_name="Embedding Provider API Key",
@@ -188,7 +183,7 @@ class KBIngestionComponent(Component):
     outputs = [
         Output(
             name="kb_info",
-            display_name="KB Info",
+            display_name="Info",
             method="build_kb_info",
             info="Returns basic metadata of the newly ingested KB.",
         ),
@@ -387,7 +382,7 @@ class KBIngestionComponent(Component):
                 cfg_path.write_text(json.dumps(config_list, indent=2))
 
             # Save embeddings and IDs if available
-            if embeddings.size > 0:
+            if embeddings.size > 0 and embeddings.size <= 0:  # TODO: This is disabled for now
                 vectors_path = kb_path / "vectors.npy"
                 # Instead of just overwriting, we want to append to existing vectors
                 if vectors_path.exists():
@@ -462,16 +457,13 @@ class KBIngestionComponent(Component):
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
-            # Get collection name (default to KB name)
-            collection_name = self.collection_name if self.collection_name else self.knowledge_base
-
             # Set up vector store directory (following Local DB pattern)
             if self.kb_root_path:
                 base_dir = Path(self._resolve_path(self.kb_root_path))
             else:
                 base_dir = Path(user_cache_dir("langflow", "langflow"))
 
-            vector_store_dir = base_dir / collection_name
+            vector_store_dir = base_dir / self.knowledge_base
             vector_store_dir.mkdir(parents=True, exist_ok=True)
 
             # Create embeddings model
@@ -484,7 +476,7 @@ class KBIngestionComponent(Component):
             chroma = Chroma(
                 persist_directory=str(vector_store_dir),
                 embedding_function=embedding_function,
-                collection_name=collection_name,
+                collection_name=self.knowledge_base,
             )
 
             # Convert Data objects to LangChain Documents
@@ -496,7 +488,7 @@ class KBIngestionComponent(Component):
             # Add documents to vector store
             if documents:
                 chroma.add_documents(documents)
-                self.log(f"Added {len(documents)} documents to vector store '{collection_name}'")
+                self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
 
         except Exception as e:
             if not self.silent_errors:
@@ -544,7 +536,7 @@ class KBIngestionComponent(Component):
                         data_dict[col] = str(value)  # Convert complex types to string
 
             # Add special metadata flags
-            data_dict["_row_index"] = str(idx)
+            data_dict["id"] = str(uuid.uuid4())  # Unique ID for the Data object
             data_dict["_kb_name"] = str(self.knowledge_base)
 
             # Create Data object - everything except "text" becomes metadata

@@ -65,12 +65,12 @@ class KBRetrievalComponent(Component):
             method="get_chroma_kb_data",
             info="Returns the data from the selected knowledge base.",
         ),
-        Output(
-            name="kb_data",
-            display_name="Knowledge Base Data",
-            method="get_kb_data",
-            info="Returns the data from the selected knowledge base.",
-        ),
+        # Output(
+        #    name="kb_data",
+        #    display_name="Knowledge Base Data",
+        #    method="get_kb_data",
+        #    info="Returns the data from the selected knowledge base.",
+        # ),
     ]
 
     def _get_knowledge_bases(self) -> list[str]:
@@ -174,22 +174,42 @@ class KBRetrievalComponent(Component):
             collection_name=self.knowledge_base,
         )
 
-        # With scores
-        results = chroma.similarity_search_with_score(
-            query=self.search_query or "",
-            k=5,
-        )
+        # If a search query is provided, perform a similarity search
+        if self.search_query:
+            # Use the search query to perform a similarity search
+            logger.info(f"Performing similarity search with query: {self.search_query}")
+            results = chroma.similarity_search_with_score(
+                query=self.search_query or "",
+                k=5,
+            )
+        else:
+            results = chroma.similarity_search(
+                query=self.search_query or "",
+                k=5,
+            )
 
-        # Assuming Data class has fields like 'content' and other metadata fields
+        # doc_ids = [doc.metadata.get("id") for doc, _ in results]
+
+        # Access underlying client to get embeddings
+        # collection = chroma._client.get_collection(name=self.knowledge_base)
+        # embeddings_result = collection.get(
+        #     ids=doc_ids,
+        #     include=["embeddings"]
+        # )
+
+        # Create a mapping from document ID to embedding
+        # id_to_embedding = dict(zip(embeddings_result["ids"], embeddings_result["embeddings"], strict=False))
+
+        # Append embeddings to each element
         data_list = [
             Data(
                 content=doc[0].page_content,
-                score=doc[1],
-                **doc[0].metadata,  # spread the metadata as additional fields
+                **doc[0].metadata,
+                score=-1 * doc[1],
+                # embeddings=id_to_embedding.get(doc[0].metadata.get("id"))
             )
             for doc in results
         ]
-
         # Arrange data_list by the score in descending order
         data_list.sort(key=lambda x: x.score, reverse=True)
 
