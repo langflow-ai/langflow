@@ -18,7 +18,6 @@ class ModelInputExampleComponent(Component):
             display_name="Model",
             info="Select the model to use",
             model_type="language",
-            value="OpenAI:gpt-4o",
             temperature=0.7,
             max_tokens=1000,
         ),
@@ -41,8 +40,12 @@ class ModelInputExampleComponent(Component):
 
         if not model:
             # Parse the selection to show a helpful error message
-            if ":" in self.model_selection.value:
-                provider, model_name = self.model_selection.value.split(":", 1)
+            selection_value = ""
+            if self.model_selection.value and isinstance(self.model_selection.value, list):
+                first_item = self.model_selection.value[0]
+                selection_value = first_item.get("name", "") if isinstance(first_item, dict) else str(first_item)
+            if ":" in selection_value:
+                provider, model_name = selection_value.split(":", 1)
                 msg = f"Failed to build {provider} model '{model_name}'. Check API key configuration."
             else:
                 msg = "Failed to build model. Invalid selection format."

@@ -644,7 +644,7 @@ class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
 
 
-class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
+class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a model input dropdown field with Provider:ModelName format.
 
     This class provides a unified dropdown interface for selecting language models or embedding models
@@ -660,12 +660,14 @@ class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixi
         max_tokens (int): Maximum tokens for language models.
     """
 
-    field_type: SerializableFieldTypes = FieldTypes.TEXT
+    field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
     model_type: str = "language"
-    options: list[str] = Field(default_factory=list)
-    value: str = ""
+    options: list[dict[str, str]] = Field(default_factory=list)
+    placeholder: str = "Select a Model"
+    value: Any = Field(default_factory=list)
     temperature: float = 0.1
     max_tokens: int = 256
+    limit: int = 1  # Only allow single selection
 
     def __init__(self, **kwargs):
         """Initialize ModelInput with default options based on model_type."""
@@ -673,53 +675,47 @@ class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixi
         if not self.options:
             self.options = self._get_options_for_model_type(self.model_type)
         if not self.value and self.options:
-            self.value = self.options[0]
+            self.value = [self.options[0]]  # SortableListInput expects a list
 
-    def _get_language_model_options(self) -> list[str]:
-        """Get language model options in Provider:ModelName format."""
-        options = []
-
+    def _get_language_model_options(self) -> list[dict[str, str]]:
+        """Get language model options with Provider:ModelName format and icons."""
         # OpenAI language models
-        openai_models = [
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "gpt-4-turbo-preview",
-            "gpt-3.5-turbo",
-            "o1-preview",
-            "o1-mini",
+        from langflow.base.models.openai_constants import OPENAI_MODELS_DETAILED
+
+        openai_options = [
+            {
+                "name": f"OpenAI:{model_meta['name']}",
+                "icon": model_meta.get("icon", "OpenAI"),
+            }
+            for model_meta in OPENAI_MODELS_DETAILED
+            if not model_meta.get("not_supported", False)
         ]
-        options.extend([f"OpenAI:{model}" for model in openai_models])
 
         # Anthropic language models
-        anthropic_models = [
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307",
+        from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+
+        anthropic_options = [
+            {
+                "name": f"Anthropic:{model_meta['name']}",
+                "icon": model_meta.get("icon", "Anthropic"),
+            }
+            for model_meta in ANTHROPIC_MODELS_DETAILED
+            if not model_meta.get("deprecated", False)
         ]
-        options.extend([f"Anthropic:{model}" for model in anthropic_models])
 
-        return options
+        return openai_options + anthropic_options
 
-    def _get_embedding_model_options(self) -> list[str]:
-        """Get embedding model options in Provider:ModelName format."""
-        options = []
-
+    def _get_embedding_model_options(self) -> list[dict[str, str]]:
+        """Get embedding model options with Provider:ModelName format and icons."""
         # OpenAI embedding models
         openai_embed_models = [
             "text-embedding-3-small",
             "text-embedding-3-large",
             "text-embedding-ada-002",
         ]
-        options.extend([f"OpenAI:{model}" for model in openai_embed_models])
+        return [{"name": f"OpenAI:{model}", "icon": "OpenAI"} for model in openai_embed_models]
 
-        # Note: Anthropic doesn't have embedding models
-
-        return options
-
-    def _get_options_for_model_type(self, model_type: str) -> list[str]:
+    def _get_options_for_model_type(self, model_type: str) -> list[dict[str, str]]:
         """Get options based on model type."""
         if model_type == "language":
             return self._get_language_model_options()
@@ -746,11 +742,18 @@ class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixi
     @classmethod
     def validate_value(cls, v: Any, _info):
         """Validates the model input value."""
+        # Handle different input formats for SortableListInput
+        if isinstance(v, list):
+            return v  # Already a list, good for SortableListInput
         if isinstance(v, str):
-            return v
+            # Handle backward compatibility - convert string to list format
+            if v and ":" in v:
+                return [{"name": v, "icon": ""}]  # Convert string to list format
+            return []
         if v is None:
-            return ""
-        return str(v)
+            return []
+        # Try to convert other types to list
+        return [{"name": str(v), "icon": ""}]
 
     def build_model(self, api_key: str = "", **kwargs) -> Any | None:
         """Build and return the configured model instance based on selection.
@@ -762,11 +765,18 @@ class ModelInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixi
         Returns:
             Language model instance for language models, Embedding model instance for embedding models.
         """
-        if not self.value or ":" not in self.value:
+        # Extract the selected model from the list (SortableListInput returns a list)
+        if not self.value or not isinstance(self.value, list) or not self.value:
+            return None
+
+        # Get the first (and only) selected item
+        selected_item = self.value[0]
+        model_selection = selected_item.get("name", "") if isinstance(selected_item, dict) else str(selected_item)
+        if not model_selection or ":" not in model_selection:
             return None
 
         # Parse the selection
-        provider, model_name = self.value.split(":", 1)
+        provider, model_name = model_selection.split(":", 1)
         provider = provider.strip()
         model_name = model_name.strip()
 
