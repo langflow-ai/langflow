@@ -34,21 +34,6 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Templates",
-      items: [
-        'Templates/basic-prompting',
-        'Templates/simple-agent',
-        'Templates/blog-writer',
-        'Templates/document-qa',
-        'Templates/memory-chatbot',
-        'Templates/vector-store-rag',
-        'Templates/financial-report-parser',
-        'Templates/sequential-agent',
-        'Templates/travel-planning-agent',
-      ],
-    },
-    {
-      type: "category",
       label: "Flows",
       items: [
         {
@@ -62,61 +47,51 @@ module.exports = {
           label: "Build flows"
         },
         {
+          type: "category",
+          label: "Flow templates",
+          items: [
+            'Templates/basic-prompting',
+            'Templates/simple-agent',
+            'Templates/blog-writer',
+            'Templates/document-qa',
+            'Templates/memory-chatbot',
+            'Templates/vector-store-rag',
+            'Templates/financial-report-parser',
+            'Templates/sequential-agent',
+            'Templates/travel-planning-agent',
+          ],
+        },
+        {
+          type: "category",
+          label: "Run flows",
+          items: [
+            {
+              type: "doc",
+              id: "Concepts/concepts-publish",
+              label: "Trigger flows with the Langflow API"
+            },
+            {
+              type: "doc",
+              id: "Develop/webhook",
+              label: "Trigger flows with webhooks"
+            },
+          ],
+        },
+        {
           type: "doc",
-          id: "Concepts/concepts-publish",
-          label: "Run flows"
+          id: "Concepts/concepts-playground",
+          label: "Test flows"
         },
         {
           type: "doc",
           id: "Concepts/concepts-flows-import",
           label: "Import and export flows"
         },
-        {
-          type: "doc",
-          id: "Concepts/concepts-playground",
-          label: "Use the Playground"
-        },
-        {
-          type: "doc",
-          id: "Concepts/concepts-voice-mode",
-          label: "Use voice mode"
-        },
-        {
-          type: "doc",
-          id: "Concepts/data-types",
-          label: "Langflow data types"
-        },
-        {
-          type: "doc",
-          id: "Concepts/concepts-file-management",
-          label: "Manage files"
-        },
       ],
     },
     {
       type: "category",
-      label: "Components",
-      items: [
-        "Concepts/concepts-components",
-        "Components/components-agents",
-        "Components/components-bundles",
-        "Components/components-custom-components",
-        "Components/components-data",
-        "Components/components-embedding-models",
-        "Components/components-helpers",
-        "Components/components-io",
-        "Components/components-logic",
-        "Components/components-memories",
-        "Components/components-models",
-        "Components/components-processing",
-        "Components/components-prompts",
-        "Components/components-tools",
-        "Components/components-vector-stores",
-      ],
-    },
-    {
-      type: "category",
-      label: "Agents",
+      label: "Agents and MCP",
       items: [
         "Agents/agents",
         "Agents/agents-tools",
@@ -126,21 +101,9 @@ module.exports = {
       type: "category",
       label: "Model Context Protocol (MCP)",
       items: [
-        "Concepts/mcp-server",
         "Components/mcp-client",
-      ],
-    },
-    {
-      type: "category",
-      label: "Configuration",
-      items: [
-        "Configuration/configuration-api-keys",
-        "Configuration/configuration-authentication",
-        "Configuration/configuration-cli",
-        "Configuration/configuration-custom-database",
-        "Configuration/configuration-global-variables",
-        "Configuration/environment-variables",
-        "Contributing/contributing-telemetry",
+        "Concepts/mcp-server",
+        "Integrations/mcp-component-astra",
       ],
     },
     {
@@ -149,65 +112,73 @@ module.exports = {
       items: [
         {
           type: "doc",
-          id: "Develop/develop-overview",
-          label: "Overview"
-        },
-        {
-          type: "doc",
-          id: "Develop/develop-application",
-          label: "Develop an application in Langflow"
-        },
-        {
-          type: "doc",
           id: "Develop/install-custom-dependencies",
           label: "Install custom dependencies"
         },
-        {
-          type: "doc",
-          id: "Develop/memory",
-          label: "Memory management"
-        },
-        {
-          type: "doc",
-          id: "Develop/session-id",
-          label: "Session ID"
-        },
-        {
-          type: "doc",
-          id: "Develop/logging",
-          label: "Logging"
-        },
-        {
-          type: "doc",
-          id: "Develop/webhook",
-          label: "Webhook"
-        },
+        "Configuration/configuration-api-keys",
+        "Configuration/configuration-authentication",
+        "Configuration/configuration-global-variables",
+        "Configuration/environment-variables",
         {
           type: "category",
-          label: "Clients",
+          label: "Storage and memory",
           items: [
             {
               type: "doc",
-              id: "Develop/Clients/typescript-client",
-              label: "TypeScript Client"
-            }
-          ]
+              id: "Concepts/concepts-file-management",
+              label: "Manage files"
+            },
+            {
+              type: "doc",
+              id: "Develop/memory",
+              label: "Manage memory"
+            },
+            {
+              type: "doc",
+              id: "Develop/session-id",
+              label: "Use Session IDs"
+            },
+            "Configuration/configuration-custom-database",
+          ],
+        },
+        {
+          type: "category",
+          label: "Observability",
+          items: [
+            "Develop/logging",
+            "Integrations/Arize/integrations-arize",
+            "Integrations/integrations-langfuse",
+            "Integrations/integrations-langsmith",
+            "Integrations/integrations-langwatch",
+            "Integrations/integrations-opik",
+            "Contributing/contributing-telemetry",
+          ],
+        },
+        {
+          type: "doc",
+          id: "Concepts/data-types",
+          label: "Use Langflow data types"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-voice-mode",
+          label: "Use voice mode"
+        },
+        {
+          type: "doc",
+          id: "Configuration/configuration-cli",
+          label: "Use the Langflow CLI"
         },
       ],
     },
     {
       type: "category",
-      label: "Deployment",
+      label: "Deploy",
       items: [
         {
           type:"doc",
           id: "Deployment/deployment-overview",
-          label: "Deployment overview"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-docker",
-          label: "Docker"
+          label: "Langflow deployment overview"
         },
         {
           type: "doc",
@@ -215,51 +186,186 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
-          type: "doc",
-          id: "Deployment/deployment-caddyfile",
-          label: "Deploy Langflow on a remote server"
+          type: "category",
+          label: "Containerized deployments",
+          items: [
+            "Develop/develop-application",
+            {
+              type: "doc",
+              id: "Deployment/deployment-docker",
+              label: "Langflow Docker images"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-caddyfile",
+              label: "Deploy Langflow on a remote server"
+            },
+            {
+              type: "category",
+              label: "Kubernetes",
+              items: [
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-prod-best-practices",
+                  label: "Langflow architecture and best practices"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-kubernetes-dev",
+                  label: "Deploy in development"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-kubernetes-prod",
+                  label: "Deploy in production"
+                }
+              ]
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-gcp",
+              label: "Google Cloud Platform"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-hugging-face-spaces",
+              label: "Hugging Face Spaces"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-railway",
+              label: "Railway"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-render",
+              label: "Render"
+            },
+          ],
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Components reference",
+      items: [
+        "Concepts/concepts-components",
+        {
+          type: "category",
+          label: "Core components",
+          items: [
+            "Components/components-io",
+            "Components/components-agents",
+            {
+              type: "category",
+              label: "Models",
+              items: [
+                "Components/components-models",
+                "Components/components-embedding-models",
+              ]
+            },
+            "Components/components-data",
+            "Components/components-vector-stores",
+            {
+              type: "category",
+              label: "Processing",
+              items: [
+                "Components/components-processing",
+                "Components/components-prompts",
+              ]
+            },
+            "Components/components-logic",
+            "Components/components-helpers",
+            "Components/components-tools",
+            "Components/components-memories",
+          ],
         },
         {
           type: "category",
-          label: "Kubernetes",
+          label: "Bundles",
           items: [
+            "Components/components-bundles",
+            "Components/bundles-aiml",
+            "Components/bundles-amazon",
+            "Components/bundles-anthropic",
+            "Integrations/Apify/integrations-apify",
+            "Components/bundles-arxiv",
+            "Integrations/integrations-assemblyai",
+            "Components/bundles-azure",
+            "Components/bundles-baidu",
+            "Components/bundles-bing",
+            "Integrations/Cleanlab/integrations-cleanlab",
+            "Components/bundles-cloudflare",
+            "Components/bundles-cohere",
+            "Integrations/Composio/integrations-composio",
+            "Components/bundles-datastax",
+            "Components/bundles-deepseek",
+            "Integrations/Docling/integrations-docling",
+            "Components/bundles-duckduckgo",
+            "Components/bundles-exa",
+            "Components/bundles-glean",
             {
-              type: "doc",
-              id: "Deployment/deployment-prod-best-practices",
-              label: "Langflow architecture and best practices"
+              type: 'category',
+              label: 'Google',
+              items: [
+                "Components/bundles-google",
+                "Integrations/Google/integrations-google-big-query",
+              ],
             },
+            "Components/bundles-groq",
+            "Components/bundles-huggingface",
+            "Components/bundles-ibm",
+            "Components/bundles-icosacomputing",
+            "Components/bundles-langchain",
+            "Components/bundles-lmstudio",
+            "Components/bundles-maritalk",
+            "Components/bundles-mem0",
+            "Components/bundles-mistralai",
             {
-              type: "doc",
-              id: "Deployment/deployment-kubernetes-dev",
-              label: "Deploy in development"
+              type: "category",
+              label: "Notion",
+              items: [
+                "Integrations/Notion/integrations-notion",
+                "Integrations/Notion/notion-agent-conversational",
+                "Integrations/Notion/notion-agent-meeting-notes",
+              ],
             },
+            "Components/bundles-novita",
             {
-              type: "doc",
-              id: "Deployment/deployment-kubernetes-prod",
-              label: "Deploy in production"
-            }
-          ]
+              type: "category",
+              label: "NVIDIA",
+              items: [
+                "Components/bundles-nvidia",
+                {
+                  type: "doc",
+                  id: "Integrations/Nvidia/integrations-nvidia-ingest",
+                  label: "NVIDIA Ingest"
+                },
+                {
+                  type: "doc",
+                  id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+                  label: "NVIDIA NIM on WSL2"
+                },
+                {
+                  type: "doc",
+                  id: "Integrations/Nvidia/integrations-nvidia-g-assist",
+                  label: "NVIDIA G-Assist"
+                },
+              ],
+            },
+            "Components/bundles-ollama",
+            "Components/bundles-openai",
+            "Components/bundles-openrouter",
+            "Components/bundles-perplexity",
+            "Components/bundles-redis",
+            "Components/bundles-sambanova",
+            "Components/bundles-searchapi",
+            "Components/bundles-vertexai",
+            "Components/bundles-wikipedia",
+            "Components/bundles-xai",
+          ],
         },
-        {
-          type: "doc",
-          id: "Deployment/deployment-gcp",
-          label: "Google Cloud Platform"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-hugging-face-spaces",
-          label: "Hugging Face Spaces"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-railway",
-          label: "Railway"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-render",
-          label: "Render"
-        },
+        "Components/components-custom-components",
       ],
     },
     {
@@ -270,6 +376,11 @@ module.exports = {
           type: "doc",
           id: "API-Reference/api-reference-api-examples",
           label: "Get started with the Langflow API",
+        },
+        {
+          type: "doc",
+          id: "Develop/Clients/typescript-client",
+          label: "Use the TypeScript client"
         },
         {
           type: "doc",
@@ -315,85 +426,6 @@ module.exports = {
           type: "link",
           label: "Langflow API specification",
           href: "/api",
-        },
-      ],
-    },
-    {
-      type: "category",
-      label: "Integrations",
-      items: [
-        "Integrations/Apify/integrations-apify",
-        {
-          type: "doc",
-          id: "Integrations/Arize/integrations-arize",
-          label: "Arize",
-        },
-        {
-          type: "doc",
-          id: "Integrations/integrations-assemblyai",
-          label: "AssemblyAI",
-        },
-        {
-          type: "doc",
-          id: "Integrations/mcp-component-astra",
-          label: "Astra DB MCP server",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Cleanlab/integrations-cleanlab",
-          label: "Cleanlab",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Composio/integrations-composio",
-          label: "Composio",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Docling/integrations-docling",
-          label: "Docling",
-        },
-        {
-          type: 'category',
-          label: 'Google',
-          items: [
-            'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
-            'Integrations/Google/integrations-google-big-query',
-          ],
-        },
-        "Integrations/integrations-langfuse",
-        "Integrations/integrations-langsmith",
-        "Integrations/integrations-langwatch",
-        "Integrations/integrations-opik",
-        {
-          type: "category",
-          label: "Notion",
-          items: [
-            "Integrations/Notion/integrations-notion",
-            "Integrations/Notion/notion-agent-conversational",
-            "Integrations/Notion/notion-agent-meeting-notes",
-          ],
-        },
-        {
-          type: "category",
-          label: "NVIDIA",
-          items: [
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-ingest",
-              label: "NVIDIA Ingest"
-            },
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
-              label: "NVIDIA NIM on WSL2"
-            },
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-g-assist",
-              label: "NVIDIA G-Assist"
-            },
-          ],
         },
       ],
     },
