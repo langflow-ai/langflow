@@ -74,7 +74,8 @@ export default function ToolsComponent({
             data-testid="button_open_actions"
             onClick={() => setIsModalOpen(true)}
             className={cn(
-              "absolute -top-8 right-0 !text-mmd font-normal text-muted-foreground group-hover:text-primary",
+              "absolute -top-8 right-0 !text-mmd font-normal group-hover:text-primary",
+              !button_description ? "text-muted-foreground" : "",
             )}
           >
             <ForwardedIconComponent
