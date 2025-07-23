@@ -3,6 +3,7 @@ from pathlib import Path
 
 import aiofiles
 from PIL import Image as PILImage
+from platformdirs import user_cache_dir
 from pydantic import BaseModel
 
 from lfx.services.deps import get_storage_service
@@ -25,12 +26,25 @@ def get_file_paths(files: list[str | dict]):
     storage_service = get_storage_service()
     if not storage_service:
         # Extract paths from dicts if present
+
         extracted_files = []
+        cache_dir = Path(user_cache_dir("langflow"))
+
         for file in files:
-            if isinstance(file, dict) and "path" in file:
-                extracted_files.append(file["path"])
+            file_path = file["path"] if isinstance(file, dict) and "path" in file else file
+
+            # If it's a relative path like "flow_id/filename", resolve it to cache dir
+            path = Path(file_path)
+            if not path.is_absolute() and not path.exists():
+                # Check if it exists in the cache directory
+                cache_path = cache_dir / file_path
+                if cache_path.exists():
+                    extracted_files.append(str(cache_path))
+                else:
+                    # Keep the original path if not found
+                    extracted_files.append(file_path)
             else:
-                extracted_files.append(file)
+                extracted_files.append(file_path)
         return extracted_files
 
     file_paths = []

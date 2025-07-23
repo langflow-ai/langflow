@@ -87,11 +87,15 @@ def test_message_with_single_image(sample_image):
     message = Message(text=text, sender=MESSAGE_SENDER_USER, files=[file_path])
     lc_message = message.to_lc_message()
 
-    # The base Message class in lfx only supports simple text content
-    # Image content is handled in the enhanced message class
+    # The Message class now properly handles multimodal content
     assert isinstance(lc_message, HumanMessage)
-    assert isinstance(lc_message.content, str)
-    assert lc_message.content == text
+    assert isinstance(lc_message.content, list)
+    assert len(lc_message.content) == 2  # text + image
+    assert lc_message.content[0]["type"] == "text"
+    assert lc_message.content[0]["text"] == text
+    assert lc_message.content[1]["type"] == "image"
+    assert lc_message.content[1]["source_type"] == "url"
+    assert lc_message.content[1]["url"].startswith("data:image/")
 
     # Verify the message object has files
     assert message.files == [file_path]
@@ -118,10 +122,14 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     )
     lc_message = message.to_lc_message()
 
-    # The base Message class in lfx only supports simple text content
+    # The Message class now properly handles multimodal content
     assert isinstance(lc_message, HumanMessage)
-    assert isinstance(lc_message.content, str)
-    assert lc_message.content == text
+    assert isinstance(lc_message.content, list)
+    assert len(lc_message.content) == 3  # text + 2 images
+    assert lc_message.content[0]["type"] == "text"
+    assert lc_message.content[0]["text"] == text
+    assert lc_message.content[1]["type"] == "image"
+    assert lc_message.content[2]["type"] == "image"
 
     # Verify the message object has the files
     assert len(message.files) == 2
@@ -134,11 +142,9 @@ def test_message_with_invalid_image_path():
     file_path = "test_flow/non_existent.png"
     message = Message(text="Invalid image", sender=MESSAGE_SENDER_USER, files=[file_path])
 
-    # The base Message class doesn't validate file paths in to_lc_message()
-    # It just returns the text content
-    lc_message = message.to_lc_message()
-    assert isinstance(lc_message, HumanMessage)
-    assert lc_message.content == "Invalid image"
+    # When files don't exist and can't be found in cache, it should raise FileNotFoundError
+    with pytest.raises(FileNotFoundError, match="Image file not found"):
+        message.to_lc_message()
 
     # The invalid file path is still stored in the message
     assert message.files == [file_path]
