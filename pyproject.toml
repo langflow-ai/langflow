@@ -195,6 +195,9 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 docling = [
     "docling>=2.36.1",
+    "tesserocr>=2.8.0",
+    "rapidocr_onnxruntime>=1.4.4",
+    "ocrmac>=1.0.0",
 ]
 
 audio = [
