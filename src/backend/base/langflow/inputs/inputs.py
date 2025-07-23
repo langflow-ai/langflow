@@ -2,12 +2,14 @@ import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
+from lfx.schema.data import Data
 from lfx.template.field.base import Input
 from pandas import DataFrame
 from pydantic import Field, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
-from langflow.schema.data import Data
+
+# We have to import Message from langflow.schema.message because it is a subclass of lfx.schema.message.Message
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageBase
 
