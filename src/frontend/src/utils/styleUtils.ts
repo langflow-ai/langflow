@@ -1,10 +1,10 @@
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
+import { GradientSave } from "@/icons/GradientSparkles";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
-import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
-import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, any>();
 
@@ -122,6 +122,7 @@ export const nodeColors: { [char: string]: string } = {
   Document: "#65a30d",
   Data: "#dc2626",
   Message: "#4f46e5",
+  number: "#7E22CF",
   Prompt: "#7c3aed",
   Embeddings: "#10b981",
   BaseLanguageModel: "#c026d3",
@@ -166,6 +167,7 @@ export const nodeColorsName: { [char: string]: string } = {
   output_parsers: "yellow",
   retrievers: "yellow",
   str: "indigo",
+  number: "purple",
   Text: "indigo",
   unknown: "gray",
   Document: "lime",
