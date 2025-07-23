@@ -1486,7 +1486,7 @@
                 "type": "str",
                 "value": [
                   "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/agents/agent.py",
-                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/helpers/structured_output.py",
+                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/processing/structured_output.py",
                   "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/calculator.py",
                   "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/tavily_search.py",
                   "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/models/ollama.py",
