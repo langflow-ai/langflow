@@ -104,6 +104,12 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
 
     file_types = ["yaml"]
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Set default rails value if not already set
+        if not hasattr(self, "rails"):
+            self.rails = ["content safety input"]
+
     inputs = [
         MessageInput(name="input_value", display_name="Input"),
         # override system message input from base class to default to hidden
@@ -127,7 +133,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "self check output",
                 "self check hallucination",
             ],
-            value=["self check input", "self check output"],
+            value=["content safety input"],
             info=(
                 "Guardrails to be applied to the wrapped model's input and/or output. "
                 "See the documentation for more details on each guardrail. "
@@ -144,7 +150,65 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             input_types=["LanguageModel"],
             required=True,
         ),
-        # Guardrail API Settings
+        # Content Safety Rail Configuration
+        MessageTextInput(
+            name="content_safety_model_url",
+            display_name="Content Safety Model Base URL",
+            value="https://integrate.api.nvidia.com/v1",
+            advanced=False,
+            info="The base URL specifically for content safety models.",
+            real_time_refresh=True,
+            show=False,
+        ),
+        MultilineInput(
+            name="content_safety_input_prompt",
+            display_name="Content Safety Check Input Prompt",
+            advanced=False,
+            value=DEFAULT_CONTENT_SAFETY_INPUT_PROMPT,
+        ),
+        MultilineInput(
+            name="content_safety_output_prompt",
+            display_name="Content Safety Check Output Prompt",
+            advanced=False,
+            value=DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT,
+        ),
+        # Topic Control Rail Configuration
+        MessageTextInput(
+            name="topic_control_model_url",
+            display_name="Topic Control Model Base URL",
+            value="https://integrate.api.nvidia.com/v1",
+            advanced=False,
+            info="The base URL specifically for topic control models.",
+            real_time_refresh=True,
+            show=False,
+        ),
+        MultilineInput(
+            name="topic_control_input_prompt",
+            display_name="Topic Control Check Input Prompt",
+            advanced=False,
+            value=DEFAULT_TOPIC_CONTROL_INPUT_PROMPT,
+        ),
+        MultilineInput(
+            name="off_topic_message",
+            display_name="Off-Topic Message",
+            advanced=False,
+            value=DEFAULT_OFF_TOPIC_MESSAGE,
+            info=(
+                "Message to display when the input is off-topic. "
+                "Use [your specific domain/topic] as a placeholder for your domain."
+            ),
+        ),
+        # Jailbreak Detection Rail Configuration
+        MessageTextInput(
+            name="jailbreak_detection_model_url",
+            display_name="Jailbreak Detection Model Base URL",
+            value="https://ai.api.nvidia.com/v1/security/nvidia/nemoguard-jailbreak-detect",
+            advanced=False,
+            info="The base URL specifically for jailbreak detection models.",
+            real_time_refresh=True,
+            show=False,
+        ),
+        # Self-check Rail Configuration
         MessageTextInput(
             name="self_check_model_url",
             display_name="Self-check Model Base URL",
@@ -171,88 +235,34 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             combobox=True,
             show=False,
         ),
-        MessageTextInput(
-            name="content_safety_model_url",
-            display_name="Content Safety Model Base URL",
-            value="https://integrate.api.nvidia.com/v1",
-            advanced=True,
-            info="The base URL specifically for content safety models.",
-            real_time_refresh=True,
-            show=False,
-        ),
-        MessageTextInput(
-            name="topic_control_model_url",
-            display_name="Topic Control Model Base URL",
-            value="https://integrate.api.nvidia.com/v1",
-            advanced=True,
-            info="The base URL specifically for topic control models.",
-            real_time_refresh=True,
-            show=False,
-        ),
-        MessageTextInput(
-            name="jailbreak_detection_model_url",
-            display_name="Jailbreak Detection Model Base URL",
-            value="https://ai.api.nvidia.com/v1/security/nvidia/nemoguard-jailbreak-detect",
-            advanced=True,
-            info="The base URL specifically for jailbreak detection models.",
-            real_time_refresh=True,
-            show=False,
-        ),
-        SecretStrInput(
-            name="guardrail_model_api_key",
-            display_name="Guardrail Model API Key",
-            info="The API Key used for content safety, topic control, and jailbreak detection models.",
-            advanced=True,
-            value="NVIDIA_API_KEY",
-            show=False,
-        ),
-        # Advanced Inputs for Prompts
         MultilineInput(
             name="self_check_input_prompt",
             display_name="Self Check Input Prompt",
-            advanced=True,
+            advanced=False,
             value=DEFAULT_SELF_CHECK_INPUT_PROMPT,
         ),
         MultilineInput(
             name="self_check_output_prompt",
             display_name="Self Check Output Prompt",
-            advanced=True,
+            advanced=False,
             value=DEFAULT_SELF_CHECK_OUTPUT_PROMPT,
         ),
         MultilineInput(
             name="self_check_hallucination_prompt",
             display_name="Self Check Hallucination Prompt",
-            advanced=True,
+            advanced=False,
             value=DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT,
         ),
-        MultilineInput(
-            name="content_safety_input_prompt",
-            display_name="Content Safety Check Input Prompt",
-            advanced=True,
-            value=DEFAULT_CONTENT_SAFETY_INPUT_PROMPT,
+        # Shared Configuration
+        SecretStrInput(
+            name="guardrail_model_api_key",
+            display_name="Guardrail Model API Key",
+            info="The API Key used for content safety, topic control, and jailbreak detection models.",
+            advanced=False,
+            value="NVIDIA_API_KEY",
+            show=False,
         ),
-        MultilineInput(
-            name="content_safety_output_prompt",
-            display_name="Content Safety Check Output Prompt",
-            advanced=True,
-            value=DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT,
-        ),
-        MultilineInput(
-            name="topic_control_input_prompt",
-            display_name="Topic Control Check Input Prompt",
-            advanced=True,
-            value=DEFAULT_TOPIC_CONTROL_INPUT_PROMPT,
-        ),
-        MultilineInput(
-            name="off_topic_message",
-            display_name="Off-Topic Message",
-            advanced=True,
-            value=DEFAULT_OFF_TOPIC_MESSAGE,
-            info=(
-                "Message to display when the input is off-topic. "
-                "Use [your specific domain/topic] as a placeholder for your domain."
-            ),
-        ),
+        # Advanced Configuration
         MultilineInput(
             name="yaml_content",
             display_name="Guardrails configuration content (YAML)",
@@ -630,46 +640,64 @@ define bot refuse to respond
                 raise ValueError(msg) from e
 
         # Handle dynamic visibility based on rails selection
-        if field_name == "rails":
-            # Update the rails value in the component
-            self.rails = field_value
+        if field_name == "rails" or field_name is None:
+            # Update the rails value in the component if field_name is "rails"
+            if field_name == "rails":
+                self.rails = field_value
 
-            # Define which rails require which inputs
+            # Get current rails selection
+            if field_name == "rails":
+                selected_rails = set(field_value) if field_value else set()
+            # During initialization, use the default value from the component
+            elif hasattr(self, "rails"):
+                selected_rails = set(self.rails) if self.rails else set()
+            else:
+                # If rails attribute doesn't exist yet, use the default value
+                selected_rails = {"content safety input"}
+                self.rails = ["content safety input"]
+
+            # Define rail groups for visibility logic
             self_check_rails = {"self check input", "self check output", "self check hallucination"}
             content_safety_rails = {"content safety input", "content safety output"}
             topic_control_rails = {"topic control"}
             jailbreak_detection_rails = {"jailbreak detection model"}
 
-            # Get current rails selection
-            selected_rails = set(field_value) if field_value else set()
-
-            # Debug logging
-            self.log(f"Rails selection changed to: {selected_rails}")
-
-            # Show/hide self-check related inputs
+            # Show/hide inputs based on selected rails
             has_self_check = bool(selected_rails & self_check_rails)
+            has_content_safety = bool(selected_rails & content_safety_rails)
+            has_topic_control = bool(selected_rails & topic_control_rails)
+            has_jailbreak_detection = bool(selected_rails & jailbreak_detection_rails)
+
+            # Set visibility for self-check inputs
             build_config["self_check_model_url"]["show"] = has_self_check
             build_config["self_check_model_api_key"]["show"] = has_self_check
             build_config["self_check_model_name"]["show"] = has_self_check
 
-            self.log(f"Self-check inputs visibility: {has_self_check}")
-
-            # Show/hide content safety related inputs
-            has_content_safety = bool(selected_rails & content_safety_rails)
+            # Set visibility for content safety inputs
             build_config["content_safety_model_url"]["show"] = has_content_safety
             build_config["guardrail_model_api_key"]["show"] = (
-                has_content_safety
-                or bool(selected_rails & topic_control_rails)
-                or bool(selected_rails & jailbreak_detection_rails)
+                has_content_safety or has_topic_control or has_jailbreak_detection
             )
 
-            # Show/hide topic control related inputs
-            has_topic_control = bool(selected_rails & topic_control_rails)
+            # Set visibility for topic control inputs
             build_config["topic_control_model_url"]["show"] = has_topic_control
 
-            # Show/hide jailbreak detection related inputs
-            has_jailbreak_detection = bool(selected_rails & jailbreak_detection_rails)
+            # Set visibility for jailbreak detection inputs
             build_config["jailbreak_detection_model_url"]["show"] = has_jailbreak_detection
+
+            # Set visibility for prompt inputs based on specific rails
+            # Self-check prompts
+            build_config["self_check_input_prompt"]["show"] = "self check input" in selected_rails
+            build_config["self_check_output_prompt"]["show"] = "self check output" in selected_rails
+            build_config["self_check_hallucination_prompt"]["show"] = "self check hallucination" in selected_rails
+
+            # Content safety prompts
+            build_config["content_safety_input_prompt"]["show"] = "content safety input" in selected_rails
+            build_config["content_safety_output_prompt"]["show"] = "content safety output" in selected_rails
+
+            # Topic control prompts
+            build_config["topic_control_input_prompt"]["show"] = "topic control" in selected_rails
+            build_config["off_topic_message"]["show"] = "topic control" in selected_rails
 
         return build_config
 
