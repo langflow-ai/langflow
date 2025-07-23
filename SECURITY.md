@@ -55,7 +55,7 @@ To address, upgrade to >= 1.3.0.
 In Langflow versions earlier than 1.5, if `LANGFLOW_AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication. In this case, API requests don't require a Langflow API key.
 
 In Langflow version 1.5, a Langflow API key is required to authenticate requests.
-Setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` skips authentication for API requests. However, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
+Setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` skips authentication for API requests. However, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in v1.6.
 
 `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` is the default behavior, so users do not need to change existing workflows in 1.5. To update your workflows to require authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=false`.
 
