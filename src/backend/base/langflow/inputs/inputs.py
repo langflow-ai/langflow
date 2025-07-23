@@ -2,6 +2,7 @@ import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
+from loguru import logger
 from pandas import DataFrame
 from pydantic import Field, field_validator, model_validator
 
@@ -806,6 +807,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
             if provider == "OpenAI":
+                logger.info(f"Building OpenAI model: {model_name}")
                 from langchain_openai import ChatOpenAI
 
                 return ChatOpenAI(
@@ -815,6 +817,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
                     max_tokens=max_tokens,
                 )
             if provider == "Anthropic":
+                logger.info(f"Building Anthropic model: {model_name}")
                 from langchain_anthropic import ChatAnthropic
 
                 return ChatAnthropic(

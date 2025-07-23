@@ -23,9 +23,7 @@ const SearchBarComponent = ({
   placeholder = "Search tools...",
   onCategoryChange,
 }: SearchBarComponentProps) => {
-  const [selectedCategory, setSelectedCategory] = useState(
-    searchCategories?.[0] || "All",
-  );
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -48,6 +46,15 @@ const SearchBarComponent = ({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
+            <DropdownMenuItem
+              key="All"
+              onClick={() => handleCategoryChange("All")}
+              className="cursor-pointer"
+            >
+              <span className="flex items-center gap-2 truncate px-2 py-1 text-sm">
+                All
+              </span>
+            </DropdownMenuItem>
             {searchCategories.map((category) => (
               <DropdownMenuItem
                 key={category}
@@ -62,14 +69,19 @@ const SearchBarComponent = ({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <Input
-        icon="search"
-        placeholder={placeholder}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        inputClassName="border-none focus:ring-0"
-        data-testid="search_bar_input"
-      />
+      <div className="relative flex w-full items-center">
+        <Input
+          placeholder={placeholder}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full border-none focus:ring-0"
+          data-testid="search_bar_input"
+        />
+        <ForwardedIconComponent
+          name="search"
+          className="absolute right-3 h-4 w-4 text-muted-foreground"
+        />
+      </div>
     </div>
   );
 };
