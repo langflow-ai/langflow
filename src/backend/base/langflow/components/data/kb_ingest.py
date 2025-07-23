@@ -566,14 +566,15 @@ class KBIngestionComponent(Component):
             kb_path = kb_root / self.knowledge_base
 
             # Save source DataFrame
-            # df_path = kb_path / "source.parquet"
+            df_path = kb_path / "source.parquet"
 
             # Instead of just overwriting this file, i want to read it and append to it if it exists
-            # if df_path.exists():
-            # Read existing DataFrame
-            #     existing_df = pd.read_parquet(df_path)
-            # Append new data
-            #     df_source = pd.concat([existing_df, df_source], ignore_index=True)
+            df_source_combined = df_source.copy()
+            if df_path.exists():
+                # Read existing DataFrame
+                existing_df = pd.read_parquet(df_path)
+                # Append new data
+                df_source_combined = pd.concat([existing_df, df_source_combined], ignore_index=True)
 
             # Read the embedding info from the knowledge base folder
             metadata_path = kb_path / "embedding_metadata.json"
@@ -595,14 +596,14 @@ class KBIngestionComponent(Component):
                 api_key=api_key,
             )
 
-            # Save KB files (using File Component storage patterns)
-            self._save_kb_files(kb_path, df_source, config_list, embeddings, embed_index)
-
             # Create vector store following Local DB component pattern
             self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
 
+            # Save KB files (using File Component storage patterns)
+            self._save_kb_files(kb_path, df_source_combined, config_list, embeddings, embed_index)
+
             # Calculate text statistics
-            text_stats = self._calculate_text_stats(df_source, config_list)
+            text_stats = self._calculate_text_stats(df_source_combined, config_list)
 
             # Build metadata response
             meta: dict[str, Any] = {
