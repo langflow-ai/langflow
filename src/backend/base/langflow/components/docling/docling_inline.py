@@ -81,9 +81,7 @@ class DoclingInlineComponent(BaseFileComponent):
             from docling.models.factories import get_ocr_factory
             from docling.pipeline.vlm_pipeline import VlmPipeline
         except ImportError as e:
-            msg = (
-                "Docling is not installed. Please install it with `uv pip install 'langflow[docling]'`."
-            )
+            msg = "Docling is not installed. Please install it with `uv pip install 'langflow[docling]'`."
             raise ImportError(msg) from e
 
         # Configure the standard PDF pipeline
