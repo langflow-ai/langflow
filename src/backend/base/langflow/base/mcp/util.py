@@ -924,7 +924,7 @@ class MCPSseClient:
             self._component_cache.set("mcp_session_manager", session_manager)
         return session_manager
 
-    async def validate_url(self, url: str | None) -> tuple[bool, str]:
+    async def validate_url(self, url: str | None, headers: dict[str, str] | None = None ) -> tuple[bool, str]:
         """Validate the SSE URL before attempting connection."""
         try:
             parsed = urlparse(url)
@@ -935,7 +935,7 @@ class MCPSseClient:
                 try:
                     # For SSE endpoints, try a GET request with short timeout
                     # Many SSE servers don't support HEAD requests and return 404
-                    response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream"})
+                    response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream", **headers})
 
                     # For SSE, we expect the server to either:
                     # 1. Start streaming (200)
@@ -967,14 +967,14 @@ class MCPSseClient:
         except (httpx.HTTPError, ValueError, OSError) as e:
             return False, f"URL validation error: {e!s}"
 
-    async def pre_check_redirect(self, url: str | None) -> str | None:
+    async def pre_check_redirect(self, url: str | None, headers: dict[str, str] | None = None) -> str | None:
         """Check for redirects and return the final URL."""
         if url is None:
             return url
         try:
             async with httpx.AsyncClient(follow_redirects=False) as client:
                 # Use GET with SSE headers instead of HEAD since many SSE servers don't support HEAD
-                response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream"})
+                response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream", **headers})
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
                 # Don't treat 404 as an error here - let the main connection handle it
@@ -995,12 +995,12 @@ class MCPSseClient:
         if url is None:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
-        is_valid, error_msg = await self.validate_url(url)
+        is_valid, error_msg = await self.validate_url(url, headers)
         if not is_valid:
             msg = f"Invalid SSE URL ({url}): {error_msg}"
             raise ValueError(msg)
 
-        url = await self.pre_check_redirect(url)
+        url = await self.pre_check_redirect(url, headers)
 
         # Store connection parameters for later use in run_tool
         self._connection_params = {
