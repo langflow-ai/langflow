@@ -19,7 +19,7 @@ auth_header_ctx: ContextVar[dict | None] = ContextVar("auth_header_ctx", default
 _jwks_cache: dict[str, dict[str, Any]] = {}
 
 # APIs that require Clerk token decoding in middleware
-PROTECTED_PATHS = ["/api/v1/users/","/api/v1/login/"]
+PROTECTED_PATHS = ["/api/v1/users/"]
 
 
 async def _get_jwks(issuer: str) -> dict[str, Any]:
