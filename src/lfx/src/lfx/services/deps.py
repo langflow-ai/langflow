@@ -5,6 +5,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
+from lfx.services.schema import ServiceType
+
 if TYPE_CHECKING:
     from lfx.services.interfaces import (
         CacheServiceProtocol,
@@ -15,7 +17,6 @@ if TYPE_CHECKING:
         TracingServiceProtocol,
         VariableServiceProtocol,
     )
-    from lfx.services.schema import ServiceType
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -66,9 +67,9 @@ def get_variable_service() -> VariableServiceProtocol | None:
 
 def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     """Retrieves the shared component cache service instance."""
-    from lfx.services.schema import ServiceType
+    from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE)
+    return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
 
 
 def get_chat_service() -> ChatServiceProtocol | None:
