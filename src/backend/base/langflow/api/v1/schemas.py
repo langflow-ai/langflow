@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SecretStr,
     field_serializer,
     field_validator,
     model_serializer,
@@ -440,6 +441,27 @@ class CancelFlowResponse(BaseModel):
     message: str
 
 
+class AuthSettings(BaseModel):
+    """Model representing authentication settings for MCP."""
+
+    auth_type: Literal["none", "apikey", "basic", "bearer", "iam", "oauth"] = "none"
+    api_key: SecretStr | None = None
+    username: str | None = None
+    password: SecretStr | None = None
+    bearer_token: SecretStr | None = None
+    iam_endpoint: str | None = None
+    oauth_host: str | None = None
+    oauth_port: str | None = None
+    oauth_server_url: str | None = None
+    oauth_callback_path: str | None = None
+    oauth_client_id: str | None = None
+    oauth_client_secret: str | None = None
+    oauth_auth_url: str | None = None
+    oauth_token_url: str | None = None
+    oauth_mcp_scope: str | None = None
+    oauth_provider_scope: str | None = None
+
+
 class MCPSettings(BaseModel):
     """Model representing MCP settings for a flow."""
 
@@ -449,6 +471,20 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
+
+
+class MCPProjectUpdateRequest(BaseModel):
+    """Request model for updating MCP project settings including auth."""
+
+    settings: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
+
+
+class MCPProjectResponse(BaseModel):
+    """Response model for MCP project tools with auth settings."""
+
+    tools: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
 
 
 class MCPInstallRequest(BaseModel):
