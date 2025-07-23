@@ -59,12 +59,6 @@ class KBRetrievalComponent(Component):
 
     outputs = [
         Output(
-            name="kb_info",
-            display_name="Knowledge Base Info",
-            method="retrieve_kb_info",
-            info="Returns basic metadata of the selected knowledge base.",
-        ),
-        Output(
             name="kb_data",
             display_name="Knowledge Base Data",
             method="get_kb_data",
@@ -93,19 +87,6 @@ class KBRetrievalComponent(Component):
             build_config["knowledge_base"]["value"] = None
 
         return build_config
-
-    def retrieve_kb_info(self) -> DataFrame:
-        """Retrieve basic metadata of the selected knowledge base.
-
-        Returns:
-            A DataFrame containing basic metadata of the knowledge base.
-        """
-        data = Data(
-            name=self.knowledge_base,
-            description=f"Metadata for {self.knowledge_base}",
-            documents_count=0,
-        )
-        return DataFrame(data=[data])
 
     def _get_kb_metadata(self, kb_path: Path) -> dict:
         """Load and process knowledge base metadata."""

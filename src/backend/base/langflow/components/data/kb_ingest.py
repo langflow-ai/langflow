@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from loguru import logger
@@ -22,7 +23,7 @@ from langflow.io import (
     DropdownInput,
     IntInput,
     Output,
-    # SecretStrInput,  TODO: Restore when bug fixed in dialog
+    SecretStrInput,
     StrInput,
     TableInput,
 )
@@ -30,7 +31,7 @@ from langflow.schema import Message
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
-from langflow.services.auth.utils import encrypt_api_key
+from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.deps import get_settings_service
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
@@ -80,7 +81,7 @@ class KBIngestionComponent(Component):
                                 + [{"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES]
                                 + [{"icon": "Cohere"} for _ in COHERE_MODEL_NAMES],
                             ),
-                            "03_api_key": StrInput(
+                            "03_api_key": StrInput(  # TODO: Should be secret input
                                 name="api_key",
                                 display_name="API Key",
                                 info="Provider API key for embedding model",
@@ -162,12 +163,20 @@ class KBIngestionComponent(Component):
             display_name="KB Root Path",
             info="Root directory for knowledge bases (defaults to ~/.langflow/knowledge_bases)",
             advanced=True,
+            value=KNOWLEDGE_BASES_DIR,
         ),
         StrInput(
             name="collection_name",
             display_name="Collection Name",
             info="Name for the vector store collection (defaults to KB name)",
             advanced=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="Embedding Provider API Key",
+            info="API key for the embedding provider to generate embeddings.",
+            advanced=True,
+            required=False,
         ),
         BoolInput(
             name="silent_errors",
@@ -234,18 +243,16 @@ class KBIngestionComponent(Component):
 
         return config_list
 
-    def _build_embeddings(self):
+    def _build_embeddings(self, embedding_model: str, api_key: str):
         """Build embedding model using provider patterns."""
-        model = self.embedding_model
         # Get provider by matching model name to lists
         provider = (
             "OpenAI"
-            if model in OPENAI_EMBEDDING_MODEL_NAMES
+            if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES
             else "HuggingFace"
-            if model in HUGGINGFACE_MODEL_NAMES
+            if embedding_model in HUGGINGFACE_MODEL_NAMES
             else "Cohere"
         )
-        api_key = self.api_key
         chunk_size = self.chunk_size
 
         if provider == "OpenAI":
@@ -253,7 +260,7 @@ class KBIngestionComponent(Component):
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
             return OpenAIEmbeddings(
-                model=model,
+                model=embedding_model,
                 api_key=api_key,
                 chunk_size=chunk_size,
             )
@@ -268,6 +275,8 @@ class KBIngestionComponent(Component):
         self,
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
+        embedding_model: str,
+        api_key: str,
     ) -> tuple[np.ndarray, list[str]]:
         """Process embeddings using Embedding Model Component patterns."""
         # Find columns marked for vectorization
@@ -303,7 +312,7 @@ class KBIngestionComponent(Component):
 
         # Generate embeddings using the model (following Embedding Model patterns)
         try:
-            embedder = self._build_embeddings()
+            embedder = self._build_embeddings(embedding_model, api_key)
             if hasattr(embedder, "embed_documents"):
                 embeddings = np.array(embedder.embed_documents(texts))
             elif hasattr(embedder, "embed"):
@@ -456,11 +465,12 @@ class KBIngestionComponent(Component):
 
         return metadata
 
-    def _create_vector_store(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> None:
+    def _create_vector_store(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]],
+                             embedding_model: str, api_key: str) -> None:
         """Create vector store following Local DB component pattern."""
         try:
             # Get collection name (default to KB name)
-            collection_name = self.collection_name if self.collection_name else self.kb_name
+            collection_name = self.collection_name if self.collection_name else self.knowledge_base
 
             # Set up vector store directory (following Local DB pattern)
             if self.kb_root_path:
@@ -468,11 +478,11 @@ class KBIngestionComponent(Component):
             else:
                 base_dir = Path(user_cache_dir("langflow", "langflow"))
 
-            vector_store_dir = base_dir / "vector_stores" / collection_name
+            vector_store_dir = base_dir / collection_name
             vector_store_dir.mkdir(parents=True, exist_ok=True)
 
             # Create embeddings model
-            embedding_function = self._build_embeddings()
+            embedding_function = self._build_embeddings(embedding_model, api_key)
 
             # Convert DataFrame to Data objects (following Local DB pattern)
             data_objects = self._convert_df_to_data_objects(df_source, config_list)
@@ -542,7 +552,7 @@ class KBIngestionComponent(Component):
 
             # Add special metadata flags
             data_dict["_row_index"] = str(idx)
-            data_dict["_kb_name"] = str(self.kb_name)
+            data_dict["_kb_name"] = str(self.knowledge_base)
 
             # Create Data object - everything except "text" becomes metadata
             data_obj = Data(data=data_dict)
@@ -564,7 +574,7 @@ class KBIngestionComponent(Component):
 
             # Prepare KB folder (using File Component patterns)
             kb_root = self._get_kb_root()
-            kb_path = kb_root / self.kb_name
+            kb_path = kb_root / self.knowledge_base
 
             # Save source DataFrame
             df_path = kb_path / "source.parquet"
@@ -576,14 +586,31 @@ class KBIngestionComponent(Component):
                 # Append new data
                 df_source = pd.concat([existing_df, df_source], ignore_index=True)
 
+            # Read the embedding info from the knowledge base folder
+            metadata_path = kb_path / "embedding_metadata.json"
+            api_key = self.api_key or ""
+            if not api_key and metadata_path.exists():
+                settings_service = get_settings_service()
+                metadata = json.loads(metadata_path.read_text())
+                embedding_model = metadata.get("embedding_model")
+            try:
+                api_key = decrypt_api_key(metadata["api_key"], settings_service)
+            except (InvalidToken, TypeError, ValueError) as e:
+                logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+
             # Process embeddings (using Embedding Model patterns)
-            embeddings, embed_index = self._process_embeddings(df_source, config_list)
+            embeddings, embed_index = self._process_embeddings(
+                df_source,
+                config_list,
+                embedding_model=embedding_model,
+                api_key=api_key,
+            )
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, df_source, config_list, embeddings, embed_index)
 
             # Create vector store following Local DB component pattern
-            self._create_vector_store(df_source, config_list)
+            self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
 
             # Calculate text statistics
             text_stats = self._calculate_text_stats(df_source, config_list)
@@ -591,7 +618,7 @@ class KBIngestionComponent(Component):
             # Build metadata response
             meta: dict[str, Any] = {
                 "kb_id": str(uuid.uuid4()),
-                "kb_name": self.kb_name,
+                "kb_name": self.knowledge_base,
                 "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                 "rows": len(df_source),
                 "vectorised_rows": len(embeddings) if embeddings.size > 0 else 0,
@@ -606,7 +633,7 @@ class KBIngestionComponent(Component):
 
             # Set status message
             vector_count = len(embeddings) if embeddings.size > 0 else 0
-            self.status = f"✅ KB **{self.kb_name}** saved · {len(df_source)} rows, {vector_count} embedded."
+            self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} rows, {vector_count} embedded."
 
             return Data(data=meta)
 
@@ -615,27 +642,48 @@ class KBIngestionComponent(Component):
                 raise
             self.log(f"Error in KB ingestion: {e}")
             self.status = f"❌ KB ingestion failed: {e}"
-            return Data(data={"error": str(e), "kb_name": self.kb_name})
+            return Data(data={"error": str(e), "kb_name": self.knowledge_base})
 
     def status_message(self) -> Message:
         """Return the human-readable status string."""
         return Message(text=self.status or "KB ingestion completed.")
 
+    def _get_knowledge_bases(self) -> list[str]:
+        """Retrieve a list of available knowledge bases.
+
+        Returns:
+            A list of knowledge base names.
+        """
+        # Return the list of directories in the knowledge base root path
+        kb_root_path = Path(self.kb_root_path).expanduser()
+
+        if not kb_root_path.exists():
+            return []
+
+        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
+
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on provider selection."""
         # Create a new knowledge base
-        if field_name == "knowledge_base" and isinstance(field_value, dict) and "01_new_kb_name" in field_value:
-            kb_path = Path(
-                KNOWLEDGE_BASES_ROOT_PATH,
-                field_value["01_new_kb_name"]
-            ).expanduser()
-            kb_path.mkdir(parents=True, exist_ok=True)
+        if field_name == "knowledge_base":
+            if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
+                kb_path = Path(
+                    KNOWLEDGE_BASES_ROOT_PATH,
+                    field_value["01_new_kb_name"]
+                ).expanduser()
+                kb_path.mkdir(parents=True, exist_ok=True)
 
-            self.kb_name = field_value["01_new_kb_name"]
-            self._save_embedding_metadata(
-                kb_path=kb_path,
-                embedding_model=field_value["02_embedding_model"],
-                api_key=field_value["03_api_key"],
-            )
+                build_config["knowledge_base"]["value"] = field_value["01_new_kb_name"]
+                self._save_embedding_metadata(
+                    kb_path=kb_path,
+                    embedding_model=field_value["02_embedding_model"],
+                    api_key=field_value["03_api_key"],
+                )
+
+            # Update the knowledge base options dynamically
+            build_config["knowledge_base"]["options"] = self._get_knowledge_bases()
+            if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
+                build_config["knowledge_base"]["value"] = None
+
 
         return build_config
