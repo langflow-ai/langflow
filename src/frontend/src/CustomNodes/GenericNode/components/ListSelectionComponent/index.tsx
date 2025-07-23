@@ -40,20 +40,40 @@ const ListSelectionComponent = ({
 }: InputProps<any, ListSelectionComponentProps>) => {
   const { nodeClass } = baseInputProps;
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(
+    searchCategories && searchCategories.length > 0 ? "All" : "",
+  );
   const [hoveredItem, setHoveredItem] = useState<any | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isKeyboardNavActive, setIsKeyboardNavActive] = useState(false);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredList = useMemo(() => {
-    if (!search.trim()) {
-      return options;
+    let filtered = options;
+
+    // Filter by category first
+    if (
+      selectedCategory !== "All" &&
+      searchCategories &&
+      searchCategories.length > 0
+    ) {
+      filtered = filtered.filter((item) => item.category === selectedCategory);
     }
-    const searchTerm = search.toLowerCase();
-    return options.filter((item) =>
-      item.name.toLowerCase().includes(searchTerm),
-    );
-  }, [options, search]);
+
+    // Then filter by search term
+    if (search.trim()) {
+      const searchTerm = search.toLowerCase();
+      filtered = filtered.filter((item) =>
+        item.name.toLowerCase().includes(searchTerm),
+      );
+    }
+
+    return filtered;
+  }, [options, search, selectedCategory, searchCategories]);
+
+  const handleCategoryChange = useCallback((category: string) => {
+    setSelectedCategory(category);
+  }, []);
 
   const handleSelectAction = useCallback(
     (action: any) => {
@@ -198,14 +218,16 @@ const ListSelectionComponent = ({
             </div>
           )}
         </DialogHeader>
-        {(filteredList?.length > 20 || search) &&
-          !headerSearchPlaceholder &&
-          !nodeClass && (
+        {((searchCategories && searchCategories.length > 0) ||
+          filteredList?.length > 20 ||
+          search) &&
+          !headerSearchPlaceholder && (
             <div className="flex w-full items-center justify-between px-3">
               <SearchBarComponent
                 searchCategories={searchCategories}
                 search={search}
                 setSearch={setSearch}
+                onCategoryChange={handleCategoryChange}
               />
             </div>
           )}

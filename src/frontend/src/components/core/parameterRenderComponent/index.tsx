@@ -231,6 +231,7 @@ export function ParameterRenderComponent({
           />
         );
       case "sortableList":
+      case "ModelInput":
         return (
           <SortableListComponent
             {...baseInputProps}
