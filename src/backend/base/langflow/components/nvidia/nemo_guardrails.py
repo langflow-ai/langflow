@@ -118,17 +118,22 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             name="rails",
             display_name="Rails",
             options=[
-                "self check input",
-                "self check output",
-                "self check hallucination",
                 "content safety input",
                 "content safety output",
                 "topic control",
                 "jailbreak detection heuristics",
                 "jailbreak detection model",
+                "self check input",
+                "self check output",
+                "self check hallucination",
             ],
             value=["self check input", "self check output"],
-            info=("Message to display when the input is off-topic. Use [your specific domain/topic] as a placeholder."),
+            info=(
+                "Guardrails to be applied to the wrapped model's input and/or output. "
+                "See the documentation for more details on each guardrail. "
+                "If no guardrails are selected, this component serves as a pass through. "
+                "Each category of guardrail such as content safety or topic control requires configuration of a model."
+            ),
             advanced=False,
         ),
         HandleInput(
