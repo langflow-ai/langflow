@@ -87,7 +87,7 @@ class KBIngestionComponent(Component):
                                 info="Provider API key for embedding model",
                                 required=True,
                             ),
-                        }
+                        },
                     },
                 }
             }
@@ -465,8 +465,9 @@ class KBIngestionComponent(Component):
 
         return metadata
 
-    def _create_vector_store(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]],
-                             embedding_model: str, api_key: str) -> None:
+    def _create_vector_store(
+        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
+    ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
             # Get collection name (default to KB name)
@@ -667,10 +668,7 @@ class KBIngestionComponent(Component):
         # Create a new knowledge base
         if field_name == "knowledge_base":
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
-                kb_path = Path(
-                    KNOWLEDGE_BASES_ROOT_PATH,
-                    field_value["01_new_kb_name"]
-                ).expanduser()
+                kb_path = Path(KNOWLEDGE_BASES_ROOT_PATH, field_value["01_new_kb_name"]).expanduser()
                 kb_path.mkdir(parents=True, exist_ok=True)
 
                 build_config["knowledge_base"]["value"] = field_value["01_new_kb_name"]
@@ -684,6 +682,5 @@ class KBIngestionComponent(Component):
             build_config["knowledge_base"]["options"] = self._get_knowledge_bases()
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
                 build_config["knowledge_base"]["value"] = None
-
 
         return build_config
