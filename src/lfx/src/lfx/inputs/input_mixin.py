@@ -302,3 +302,15 @@ class TableMixin(BaseModel):
     trigger_icon: str = Field(default="Table")
     table_icon: str = Field(default="Table")
     table_options: dict | None = None
+
+
+class McpMixin(BaseModel):
+    """Mixin for MCP input fields."""
+
+
+class PromptFieldMixin(BaseModel):
+    """Mixin for prompt input fields."""
+
+
+class ToolsMixin(BaseModel):
+    """Mixin for tools input fields."""
