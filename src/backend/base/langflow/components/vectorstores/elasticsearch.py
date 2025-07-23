@@ -49,7 +49,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             name="query_field_name",
             display_name="Query Field Name",
             value="vector",
-            info="The query field name where the vectors will be stored in Elasticsearch cluster.",
+            info="The field name to use for vector similarity queries in the Elasticsearch index.",
         ),
         *LCVectorStoreComponent.inputs,
         StrInput(
