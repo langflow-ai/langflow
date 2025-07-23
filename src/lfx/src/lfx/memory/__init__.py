@@ -24,7 +24,11 @@ def _has_langflow_memory():
     return False
 
 
+#### TODO: This _LANGFLOW_AVAILABLE implementation should be changed later ####
+# Consider refactoring to lazy loading or a more robust service discovery mechanism
+# that can handle runtime availability changes.
 _LANGFLOW_AVAILABLE = _has_langflow_memory()
+logger.info(f"lfx.memory: langflow memory available: {_LANGFLOW_AVAILABLE}")
 
 # Import the appropriate implementations
 if _LANGFLOW_AVAILABLE:
@@ -43,8 +47,9 @@ if _LANGFLOW_AVAILABLE:
             get_messages,
             store_message,
         )
-    except ImportError:
+    except (ImportError, ModuleNotFoundError) as e:
         # Fall back to stubs if langflow import fails
+        logger.info(f"Falling back to lfx memory stubs due to: {e}")
         from lfx.memory.stubs import (
             aadd_messages,
             aadd_messagetables,
