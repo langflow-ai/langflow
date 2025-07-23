@@ -2,11 +2,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
 import numpy as np
 import pandas as pd
 from cryptography.fernet import InvalidToken
+from langchain_chroma import Chroma
 from loguru import logger
 
 from langflow.custom import Component
@@ -186,7 +185,7 @@ class KBRetrievalComponent(Component):
             Data(
                 content=doc[0].page_content,
                 score=doc[1],
-                **doc[0].metadata  # spread the metadata as additional fields
+                **doc[0].metadata,  # spread the metadata as additional fields
             )
             for doc in results
         ]
