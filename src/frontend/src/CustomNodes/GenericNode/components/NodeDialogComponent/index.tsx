@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,10 +25,6 @@ interface NodeDialogProps {
   nodeId: string;
   name: string;
   nodeClass: APIClassType;
-}
-
-interface ValueObject {
-  value: string;
 }
 
 export const NodeDialog: React.FC<NodeDialogProps> = ({
@@ -71,14 +68,37 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     setIsLoading(false);
   };
 
-  const updateFieldValue = (value: string | ValueObject, fieldKey: string) => {
-    const newValue = typeof value === "object" ? value.value : value;
+  const updateFieldValue = (changes: Parameters<handleOnNewValueType>[0], fieldKey: string) => {
+    // Handle both legacy string format and new object format
+    const newValue = typeof changes === "object" && changes !== null 
+      ? changes.value 
+      : changes;
+      
     const targetNode = nodes.find((node) => node.id === nodeId);
     if (!targetNode || !name) return;
 
+    // Update the main field value
     targetNode.data.node.template[name].dialog_inputs.fields.data.node.template[
       fieldKey
     ].value = newValue;
+    
+    // Handle additional properties like load_from_db for InputGlobalComponent
+    if (typeof changes === "object" && changes !== null) {
+      const fieldTemplate = targetNode.data.node.template[name].dialog_inputs.fields.data.node.template[fieldKey];
+      
+      // Update load_from_db if present (for InputGlobalComponent)
+      if ('load_from_db' in changes) {
+        fieldTemplate.load_from_db = changes.load_from_db;
+      }
+      
+      // Handle any other properties that might be needed
+      Object.keys(changes).forEach(key => {
+        if (key !== 'value' && key in fieldTemplate) {
+          fieldTemplate[key] = changes[key];
+        }
+      });
+    }
+    
     setNode(nodeId, targetNode);
     setFieldValues((prev) => ({ ...prev, [fieldKey]: newValue }));
 
@@ -198,8 +218,8 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                 })}
               </div>
               <ParameterRenderComponent
-                handleOnNewValue={(value: string) =>
-                  updateFieldValue(value, fieldKey)
+                handleOnNewValue={(changes) =>
+                  updateFieldValue(changes, fieldKey)
                 }
                 name={fieldKey}
                 nodeId={nodeId}

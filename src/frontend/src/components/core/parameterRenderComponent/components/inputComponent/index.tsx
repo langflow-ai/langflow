@@ -95,7 +95,7 @@ export default function InputComponent({
               handleKeyDown(e, value, "");
               if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
             }}
-          />
+          /> 
         </Form.Control>
       ) : (
         <>
@@ -205,7 +205,7 @@ export default function InputComponent({
               />
             </button>
           </span>
-        )}
+        )} 
 
       {password && (!setSelectedOption || selectedOption === "") && (
         <button

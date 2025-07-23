@@ -489,11 +489,11 @@ export default function Dropdown({
       <CommandSeparator />
       {dialogInputs && dialogInputs?.fields && (
         <CommandGroup className="p-0">
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
             <Button
-              className="w-full"
+              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
               unstyled
               onClick={() => {
+                console.log("dialogInputs");
                 setOpenDialog(true);
               }}
             >
@@ -505,10 +505,9 @@ export default function Dropdown({
                 {`New ${firstWord}`}
               </div>
             </Button>
-          </CommandItem>
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
+
             <Button
-              className="w-full"
+              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
               unstyled
               data-testid={`refresh-dropdown-list-${name}`}
               onClick={() => {
@@ -523,7 +522,6 @@ export default function Dropdown({
                 Refresh list
               </div>
             </Button>
-          </CommandItem>
           <NodeDialog
             open={openDialog}
             dialogInputs={dialogInputs}

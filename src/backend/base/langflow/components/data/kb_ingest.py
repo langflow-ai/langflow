@@ -22,7 +22,7 @@ from langflow.io import (
     DropdownInput,
     IntInput,
     Output,
-    # SecretStrInput,  TODO: Restore when bug fixed in dialog
+    SecretStrInput,
     StrInput,
     TableInput,
 )
@@ -80,7 +80,7 @@ class KBIngestionComponent(Component):
                                 + [{"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES]
                                 + [{"icon": "Cohere"} for _ in COHERE_MODEL_NAMES],
                             ),
-                            "03_api_key": StrInput(
+                            "03_api_key": SecretStrInput(
                                 name="api_key",
                                 display_name="API Key",
                                 info="Provider API key for embedding model",
