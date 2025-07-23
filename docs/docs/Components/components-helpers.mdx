@@ -37,23 +37,17 @@ The Current Date component returns the current date and time in a selected timez
 ## Message History
 
 The **Message History** component provides combined chat history and message storage functionality.
+It can store and retrieve chat messages from either [Langflow storage](/memory) _or_ a dedicated chat memory database like Mem0 or Redis.
+
 It replaces the legacy **Chat History** and **Message Store** components.
 
-The **Message History** component can store and retrieve chat messages in either [Langflow storage](/memory) _or_ external chat memory storage like Mem0 or Redis.
+:::important
+The **Language Model** and **Agent** components have built-in chat memory that is enabled by default and uses Langflow storage.
 
-For more information, see [Store chat memory](/memory#store-chat-memory).
+This built-in chat memory functionality is sufficient for most use cases.
 
-### When to use the Message History component
+Use the **Message History** component only if you need to access chat memories outside the chat context, such as sentiment analysis flow that retrieves and analyzes recently stored memories, or you want to store memories in a specific database, separate from Langflow storage.
 
-Use the **Message History** component when you want to do any of the following:
-
-* Customize chat memory settings, including options for sorting and filtering messages.
-* Store chat memory in external storage, such as Mem0 or Redis.
-* Access chat memories in a flow without chat, such as sentiment analysis and feedback flows that review recently stored memories.
-
-:::tip
-Chat-based flows with a **Language Model** or **Agent** component have built-in chat memory that is enabled by default.
-These flows don't require a **Message History** component unless you want to customize chat memory settings or use external chat memory storage.
 For more information, see [Store chat memory](/memory#store-chat-memory).
 :::
 
@@ -99,14 +93,6 @@ The following steps explain how to create a chat-based flow that uses **Message 
 8. Connect the **Chat Output** component's output to the **Message History** component's **Message** input.
 
     Each response from the LLM is output from the **Language Model** component to the **Chat Output** component, and then stored in chat memory by the final **Message History** component.
-
-:::important
-The following example shows the flow created in the preceding steps with an optional **Type Convert** component between the **Message History** and **Prompt Template** components.
-Type conversion is required only if you need to convert the memories into `Data` type because the **Message History** component can output `Message` and `DataFrame` [data types](/data-types) by default.
-This is only necessary when retrieving memories outside of a chat context and you specifically need to manipulate the memories in `Data` format.
-:::
-
-![A flow with Message History components](/img/component-message-history-message-store.png)
 
 </TabItem>
 <TabItem value="external" label="Use external chat memory">
@@ -178,8 +164,8 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | session_id | String | Input parameter. The [session ID](/session-id) of the chat memories to store or retrieve. If omitted or empty, the current session ID for the flow run is used. Use custom session IDs if you need to segregate chat memory for different users or applications that run the same flow. |
 | order | String | Input parameter. The order of the messages. |
 | template | String | Input parameter. The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
-| messages | Message | Output parameter. The retrieved memories as Message objects, including `messages_text` containing retrieved chat message text. |
-| dataframe | DataFrame | Output parameter. A DataFrame containing the message data. |
+| messages | Message | Output parameter. The retrieved memories as `Message` objects, including `messages_text` containing retrieved chat message text. This is the typical output format used to pass memories _as chat messages_ to another component. |
+| dataframe | DataFrame | Output parameter. A `DataFrame` containing the message data. Useful for cases where you need to retrieve memories in a tabular format rather than as chat messages. |
 
 ## Legacy helper components
 

@@ -16,6 +16,13 @@ The **Astra DB Chat Memory** component retrieves and stores chat messages using 
 Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
 Specifically, the component creates an instance of `AstraDBChatMessageHistory`, which is a LangChain chat message history class that uses Astra DB for storage.
 
+:::important
+The **Astra DB Chat Memory** component isn't recommended for most memory storage because memories tend to be long JSON objects or strings, often exceeding the maximum size of a document or object supported by Astra DB.
+
+However, Langflow's **Agent** and **Language Model** components include built-in chat memory that is enabled by default.
+Your flows don't need an external database to store chat memory.
+:::
+
 For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
 
 ### Astra DB Chat Memory parameters

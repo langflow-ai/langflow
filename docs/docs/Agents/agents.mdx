@@ -146,7 +146,7 @@ This memory allows them to retrieve and reference messages from previous convers
 Chat memories are grouped by [session ID (`session_id`)](/session-id).
 It is recommended to use custom session IDs if you need to segregate chat memory for different users or applications that run the same flow.
 
-By default, the **Agent** component uses your Langflow installation's storage, and it provides limited chat memory configuration options, such as **Number of Chat History Messages**.
+By default, the **Agent** component uses your Langflow installation's storage, and it retrieves a limited number of chat messages, which you can configure with the **Number of Chat History Messages** parameter.
 
 Although the **Message History** component isn't required for default chat memory, it provides more options for sorting, filtering, and limiting memories, and the **Message History** component is required to use external chat memory like Mem0.
 

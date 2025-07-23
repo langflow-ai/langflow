@@ -60,12 +60,13 @@ Click any cell in the message logs to view the full contents of that cell.
 ### Modify memories in the Playground
 
 To help debug and test your flows, you can edit or delete individual messages in [message logs](#view-chat-history).
-For example, you might want to delete messages that you send while testing a component that is no longer part of your flow.
+For example, you might want to delete messages that you sent while testing a component that is no longer part of your flow.
 
 You can also delete entire chat sessions from the sidebar: click <Icon name="Ellipsis" aria-hidden="true"/> **Options**, and then select **Delete**.
 
 Modifying memories influences the behavior of the chatbot responses if you continue the chat session or if you preserve memories over multiple chat sessions.
-However, the **Playground** is not a formal mechanism for chat memory management.
+
+**Editing message logs edits Langflow's internal `messages` table, which is the default chat memory storage.**
 For more information about managing sessions and chat memory in Langflow, see [Use custom session IDs](#session-ids) and [Memory management options](/memory).
 
 ## Set custom session IDs {#session-ids}

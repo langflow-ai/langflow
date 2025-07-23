@@ -30,7 +30,7 @@ The following tables are stored in `langflow.db`:
 
 • **Flow**: Contains flow configurations. For more information, see [Build flows](/concepts-flows).
 
-• **Message**: Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message).
+• **Message**: Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message) and [Store chat memory](#store-chat-memory).
 
 • **Transaction**: Records execution history and results of flow runs. This information is used for [logging](/logging).
 
@@ -85,7 +85,9 @@ The default behavior is suitable for most use cases.
 ## Store chat memory
 
 Chat-based flows with a **Language Model** or **Agent** component have built-in chat memory that is enabled by default.
-This memory allows them to retrieve and reference messages from previous conversations, maintaining a rolling context window for each chat session ID.
+This memory allows them to retrieve and reference messages from previous conversations associated with the same session ID.
+
+Built-in chat memory stores memories in the Langflow `messages` table.
 
 <details>
 <summary>How does chat memory work?</summary>
@@ -114,23 +116,23 @@ For example, if you use user IDs as session IDs, then each user's chat history i
 
 Where and how chat memory is stored depends on the components used in your flow:
 
-* **Language Model component**: All messages are stored in [Langflow storage](#storage-options-and-paths) with no additional memory configuration options.
-For more control over chat memory, use an **Agent** or **Message History** component.
+* **Language Model and Agent components**: All messages are stored in [Langflow storage](#storage-options-and-paths).
+The **Agent** component provides some memory configuration options, such as **Number of Chat History Messages**.
 
-* **Agent component**: Uses Langflow storage for chat memory with limited memory configuration options, such as **Number of Chat History Messages**.
-For more control over chat memory, use a **Message History** component along with the **Agent** component.
+    The **Language Model** and **Agent** component's built-in chat memory are sufficient for most use cases.
 
-* **Agent/Language Model and Message History components**: Uses Langflow storage for chat memory with more options for sorting, filtering, and limiting memories provided by the **Message History** component.
+    If you prefer to use dedicated, external chat memory storage, or you need to retrieve memories outside the context of a chat, you can add **Message History** and **Chat Memory** components to your flow.
 
-* **Agent/Language Model, Message History, and third-party Chat Memory components**: Provides the most control over your chat memory configuration by using external storage for chat memory, in addition to configuration options provided by both the **Message History** and the third-party **Chat Memory** components.
+* **Message History component**: By default, this component stores and retrieves memories from Langflow storage, unless you attach a **Chat Memory** component. It provides a few more options for sorting and filtering memories, although most of these options are built-in to the **Agent** component as configurable or fixed parameters.
 
-    This option is recommended if you want to completely separate chat memory from your other Langflow storage.
+    You can use the **Message History** component with or without a **Language Model** or **Agent** component.
+    For example, if you need to retrieve data from memories outside of chat, you can use the **Message History** component to fetch that data directly from your chat memory database without feeding it into a chat.
 
-    If your flow uses external storage for chat memory, then no chat messages are stored in local Langflow storage.
+* **Third-party Chat Memory components**: Use one of these components only if you need to specifically store or retrieve chat memories from a dedicated chat memory database.
+Typically, this is necessary only if you have specific storage needs that aren't met by Langflow storage.
+For example, if you want to manage chat memory data by directly working with the database, or if you want to use a different database than the default Langflow storage.
 
-For more information and examples, see [**Message History** component](/components-helpers#message-history), [Agent memory](/agents#agent-memory), and the [**Memory chatbot** template](/memory-chatbot).
-
-![Sample Flow storing Chat Memory in Redis](/img/component-message-history-external-memory.png)
+For more information and examples, see [**Message History** component](/components-helpers#message-history) and [Agent memory](/agents#agent-memory).
 
 ## See also
 
