@@ -160,6 +160,14 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             real_time_refresh=True,
             show=False,
         ),
+        SecretStrInput(
+            name="content_safety_model_api_key",
+            display_name="Content Safety Model API Key",
+            info="The API Key for content safety models.",
+            advanced=False,
+            value="NVIDIA_API_KEY",
+            show=False,
+        ),
         MultilineInput(
             name="content_safety_input_prompt",
             display_name="Content Safety Check Input Prompt",
@@ -180,6 +188,14 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             advanced=False,
             info="The base URL specifically for topic control models.",
             real_time_refresh=True,
+            show=False,
+        ),
+        SecretStrInput(
+            name="topic_control_model_api_key",
+            display_name="Topic Control Model API Key",
+            info="The API Key for topic control models.",
+            advanced=False,
+            value="NVIDIA_API_KEY",
             show=False,
         ),
         MultilineInput(
@@ -206,6 +222,14 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             advanced=False,
             info="The base URL specifically for jailbreak detection models.",
             real_time_refresh=True,
+            show=False,
+        ),
+        SecretStrInput(
+            name="jailbreak_detection_model_api_key",
+            display_name="Jailbreak Detection Model API Key",
+            info="The API Key for jailbreak detection models.",
+            advanced=False,
+            value="NVIDIA_API_KEY",
             show=False,
         ),
         # Self-check Rail Configuration
@@ -252,15 +276,6 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             display_name="Self Check Hallucination Prompt",
             advanced=False,
             value=DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT,
-        ),
-        # Shared Configuration
-        SecretStrInput(
-            name="guardrail_model_api_key",
-            display_name="Guardrail Model API Key",
-            info="The API Key used for content safety, topic control, and jailbreak detection models.",
-            advanced=False,
-            value="NVIDIA_API_KEY",
-            show=False,
         ),
         # Advanced Configuration
         MultilineInput(
@@ -360,7 +375,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                     "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",
                     "parameters": {
                         "base_url": self.content_safety_model_url,
-                        "api_key": self.guardrail_model_api_key,
+                        "api_key": self.content_safety_model_api_key,
                         "max_tokens": 256,
                     },
                 }
@@ -397,7 +412,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                     "model": "nvidia/llama-3.1-nemoguard-8b-topic-control",
                     "parameters": {
                         "base_url": self.topic_control_model_url,
-                        "api_key": self.guardrail_model_api_key,
+                        "api_key": self.topic_control_model_api_key,
                     },
                 }
             )
@@ -416,7 +431,7 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
         if "jailbreak detection model" in self.rails:
             config_dict["rails"]["config"]["jailbreak_detection"] = {
                 "nim_full_url": self.jailbreak_detection_model_url,
-                "nim_auth_token": self.guardrail_model_api_key,
+                "nim_auth_token": self.jailbreak_detection_model_api_key,
             }
             config_dict["rails"]["input"]["flows"].append("jailbreak detection model")
 
@@ -429,25 +444,40 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             if not self.self_check_model_url:
                 msg = "self_check_model_url must be set when self check rails are enabled"
                 raise ValueError(msg)
+            if not self.self_check_model_api_key:
+                msg = "self_check_model_api_key must be set when self check rails are enabled"
+                raise ValueError(msg)
             if not self.self_check_model_name:
                 msg = "You must select a self-check model when using self-check rails."
                 raise ValueError(msg)
 
         # --- Topic control validation ---
-        if "topic control" in self.rails and not self.topic_control_model_url:
-            msg = "topic_control_model_url must be set when topic control rails are enabled"
-            raise ValueError(msg)
+        if "topic control" in self.rails:
+            if not self.topic_control_model_url:
+                msg = "topic_control_model_url must be set when topic control rails are enabled"
+                raise ValueError(msg)
+            if not self.topic_control_model_api_key:
+                msg = "topic_control_model_api_key must be set when topic control rails are enabled"
+                raise ValueError(msg)
 
         # --- Content safety validation ---
         content_safety_rails = {"content safety input", "content safety output"}
-        if any(rail in self.rails for rail in content_safety_rails) and not self.content_safety_model_url:
-            msg = "content_safety_model_url must be set when content safety rails are enabled"
-            raise ValueError(msg)
+        if any(rail in self.rails for rail in content_safety_rails):
+            if not self.content_safety_model_url:
+                msg = "content_safety_model_url must be set when content safety rails are enabled"
+                raise ValueError(msg)
+            if not self.content_safety_model_api_key:
+                msg = "content_safety_model_api_key must be set when content safety rails are enabled"
+                raise ValueError(msg)
 
         # --- Jailbreak detection validation ---
-        if "jailbreak detection model" in self.rails and not self.jailbreak_detection_model_url:
-            msg = "jailbreak_detection_model_url must be set when jailbreak detection rails are enabled"
-            raise ValueError(msg)
+        if "jailbreak detection model" in self.rails:
+            if not self.jailbreak_detection_model_url:
+                msg = "jailbreak_detection_model_url must be set when jailbreak detection rails are enabled"
+                raise ValueError(msg)
+            if not self.jailbreak_detection_model_api_key:
+                msg = "jailbreak_detection_model_api_key must be set when jailbreak detection rails are enabled"
+                raise ValueError(msg)
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         self.validate_rails_config()
@@ -675,15 +705,15 @@ define bot refuse to respond
 
             # Set visibility for content safety inputs
             build_config["content_safety_model_url"]["show"] = has_content_safety
-            build_config["guardrail_model_api_key"]["show"] = (
-                has_content_safety or has_topic_control or has_jailbreak_detection
-            )
+            build_config["content_safety_model_api_key"]["show"] = has_content_safety
 
             # Set visibility for topic control inputs
             build_config["topic_control_model_url"]["show"] = has_topic_control
+            build_config["topic_control_model_api_key"]["show"] = has_topic_control
 
             # Set visibility for jailbreak detection inputs
             build_config["jailbreak_detection_model_url"]["show"] = has_jailbreak_detection
+            build_config["jailbreak_detection_model_api_key"]["show"] = has_jailbreak_detection
 
             # Set visibility for prompt inputs based on specific rails
             # Self-check prompts
