@@ -443,19 +443,6 @@ class TestValidateEventStream:
     async def test_valid_event_stream(self):
         """Test validation passes for valid event stream."""
         mock_response = Mock()
-<<<<<<< HEAD
-
-        async def async_lines():
-            for line in [
-                '{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1", "v2"]}}',
-                '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
-                '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
-                '{"event": "end", "job_id": "job123"}',
-            ]:
-                yield line
-
-        mock_response.aiter_lines = AsyncMock(return_value=async_lines())
-=======
         mock_response.aiter_lines = Mock(
             return_value=AsyncIteratorMock(
                 [
@@ -577,6 +564,7 @@ class TestValidateEventStream:
     @pytest.mark.asyncio
     async def test_event_stream_timeout(self):
         """Test validation handles timeout gracefully."""
+
         class SlowAsyncIterator:
             """Async iterator that will cause timeout."""
 
