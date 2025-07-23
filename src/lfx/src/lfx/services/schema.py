@@ -3,7 +3,7 @@
 from enum import Enum
 
 
-class ServiceType(Enum):
+class ServiceType(str, Enum):
     DATABASE_SERVICE = "database_service"
     STORAGE_SERVICE = "storage_service"
     SETTINGS_SERVICE = "settings_service"

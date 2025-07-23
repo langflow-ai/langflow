@@ -29,6 +29,16 @@ class ServiceManager:
         self.factories: dict[str, ServiceFactory] = {}
         self._lock = threading.RLock()
 
+    def register_factories(self, factories: list[ServiceFactory] | None = None) -> None:
+        """Register all available service factories."""
+        if factories is None:
+            return
+        for factory in factories:
+            try:
+                self.register_factory(factory)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error initializing {factory}")
+
     def register_factory(
         self,
         service_factory: ServiceFactory,

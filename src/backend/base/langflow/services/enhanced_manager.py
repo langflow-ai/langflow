@@ -29,9 +29,9 @@ class ServiceManager(BaseServiceManager):
         self.register_factories()
         self.keyed_lock = KeyedMemoryLockManager()
 
-    def register_factories(self) -> None:
+    def register_factories(self, factories: list[ServiceFactory] | None = None) -> None:
         """Register all available service factories."""
-        for factory in self.get_factories():
+        for factory in factories or self.get_factories():
             try:
                 self.register_factory(factory)
             except Exception:  # noqa: BLE001

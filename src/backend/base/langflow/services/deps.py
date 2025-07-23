@@ -39,12 +39,14 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from langflow.services.manager import service_manager
+    from lfx.services.manager import service_manager
 
     if not service_manager.factories:
         # ! This is a workaround to ensure that the service manager is initialized
         # ! Not optimal, but it works for now
-        service_manager.register_factories()
+        from langflow.services.manager import service_manager as langflow_service_manager
+
+        service_manager.register_factories(langflow_service_manager.get_factories())
     return service_manager.get(service_type, default)
 
 

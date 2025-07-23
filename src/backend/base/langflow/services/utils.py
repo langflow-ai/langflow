@@ -227,12 +227,13 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
 def register_all_service_factories() -> None:
     """Register all available service factories with the service manager."""
     # Import all service factories
+    from lfx.services.manager import service_manager
+
     from langflow.services.auth import factory as auth_factory
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
     from langflow.services.database import factory as database_factory
     from langflow.services.job_queue import factory as job_queue_factory
-    from langflow.services.manager import service_manager
     from langflow.services.session import factory as session_factory
     from langflow.services.settings import factory as settings_factory
     from langflow.services.shared_component_cache import factory as shared_component_cache_factory
