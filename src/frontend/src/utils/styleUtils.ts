@@ -1,10 +1,10 @@
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
+import { GradientSave } from "@/icons/GradientSparkles";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
-import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
-import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, any>();
 
@@ -295,6 +295,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
   { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
+  { display_name: "Serper", name: "serper", icon: "Serper" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
@@ -478,7 +479,7 @@ export const getLucideIconName = (name: string): string => {
 
 // Initialize icon mappings based on if we want to support lazy loading for cloud
 const iconMappingsPromise = import("../icons/lazyIconImports").then(
-  (module) => module.lazyIconsMapping,
+  (module) => module.lazyIconsMapping
 );
 
 export const eagerLoadedIconsMap = {
@@ -536,8 +537,8 @@ export const getNodeIcon = async (name: string) => {
     lazy(() =>
       Promise.resolve({
         default: () => null,
-      }),
-    ),
+      })
+    )
   );
 };
 
