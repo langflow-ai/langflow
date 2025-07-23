@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.7074028a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.b7091036.js" defer="defer"></script>
 <script src="/assets/js/main.cdf1e15a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -131,6 +131,39 @@
 Each output can have a different corresponding method.
 For example:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>outputs = [</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    Output(display_name=&quot;Processed Data&quot;, name=&quot;processed_data&quot;, method=&quot;process_data&quot;),</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    Output(display_name=&quot;Debug Info&quot;, name=&quot;debug_info&quot;, method=&quot;provide_debug_info&quot;),</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>]</span></div></div><br></code></div></div>
+<h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="output-grouping-behavior-with-group_outputs">Output Grouping Behavior with <code>group_outputs</code><a href="#output-grouping-behavior-with-group_outputs" class="hash-link" aria-label="Direct link to output-grouping-behavior-with-group_outputs" title="Direct link to output-grouping-behavior-with-group_outputs">​</a></h4>
+<p>By default, components in Langflow that define multiple outputs will display them as a dropdown in the UI. This behavior is controlled by the <code>group_outputs</code> parameter.</p>
+<ul>
+<li>
+<p><code>group_outputs=False</code> (default):<br>
+<!-- -->When a component has more than one output and <code>group_outputs</code> is not specified (or set to <code>False</code>), the outputs are grouped into a dropdown. The user can choose only one output at a time from the UI.</p>
+</li>
+<li>
+<p><code>group_outputs=True</code>:<br>
+<!-- -->All outputs will be shown simultaneously in the UI. This is useful when the component is expected to return multiple values that should be used in parallel downstream.</p>
+</li>
+</ul>
+<h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="example">Example:<a href="#example" class="hash-link" aria-label="Direct link to Example:" title="Direct link to Example:">​</a></h4>
+<ol>
+<li><code>group_outputs=False</code> (default behavior)</li>
+</ol>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>outputs = [</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    Output(</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        name=&quot;structured_output&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        display_name=&quot;Structured Output&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        method=&quot;build_structured_output&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    ),</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    Output(</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        name=&quot;dataframe_output&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        display_name=&quot;DataFrame Output&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        method=&quot;build_structured_dataframe&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    ),</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>]</span></div></div><br></code></div></div>
+<p>In this example, both outputs will be available via a dropdown selection in the UI.</p>
+<p>Note: Since <code>group_outputs=False</code> is the default behavior, it does not need to be explicitly set in the component.</p>
+<ol start="2">
+<li><code>group_outputs=True</code></li>
+</ol>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>outputs = [</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    Output(</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        name=&quot;true_result&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        display_name=&quot;True&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        method=&quot;true_response&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        group_outputs=True,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    ),</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    Output(</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        name=&quot;false_result&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        display_name=&quot;False&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        method=&quot;false_response&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        group_outputs=True,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    ),</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>]</span></div></div><br></code></div></div>
+<p>Here, both outputs will appear independently and be selectable directly in the UI.</p>
+<h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="when-to-use">When to Use<a href="#when-to-use" class="hash-link" aria-label="Direct link to When to Use" title="Direct link to When to Use">​</a></h4>
+<ul>
+<li>
+<p>Use <code>group_outputs=False</code> when the component is expected to return only one of the outputs depending on the flow logic.</p>
+</li>
+<li>
+<p>Use <code>group_outputs=True</code> when the component should expose multiple outputs simultaneously, such as structured data and a table that are meant to be used in parallel.</p>
+</li>
+</ul>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="common-internal-patterns">Common internal patterns<a href="#common-internal-patterns" class="hash-link" aria-label="Direct link to Common internal patterns" title="Direct link to Common internal patterns">​</a></h3>
 <h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="_pre_run_setup"><code>_pre_run_setup()</code><a href="#_pre_run_setup" class="hash-link" aria-label="Direct link to _pre_run_setup" title="Direct link to _pre_run_setup">​</a></h4>
 <p>To initialize a custom component with counters set:</p>
