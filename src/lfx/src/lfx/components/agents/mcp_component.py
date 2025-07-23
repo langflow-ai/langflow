@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
 from langflow.api.v2.mcp import get_server
@@ -20,14 +20,12 @@ from lfx.base.mcp.util import (
     update_tools,
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
+from lfx.inputs.inputs import InputTypes  # noqa: TC001
 from lfx.io import DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.deps import get_session, get_settings_service, get_storage_service
-
-if TYPE_CHECKING:
-    from lfx.inputs.inputs import InputTypes
 
 
 class MCPToolsComponent(ComponentWithCache):
