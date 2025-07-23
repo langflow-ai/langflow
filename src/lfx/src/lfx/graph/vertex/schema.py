@@ -1,7 +1,6 @@
 from enum import Enum
-from typing import NotRequired
 
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 
 class NodeTypeEnum(str, Enum):
