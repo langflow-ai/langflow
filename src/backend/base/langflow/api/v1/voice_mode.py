@@ -84,7 +84,14 @@ CLIENT_TO_LF = "Client → LF"
 
 @lru_cache(maxsize=1)
 def get_vad():
-    import webrtcvad
+    try:
+        import webrtcvad
+    except ImportError as e:
+        msg = (
+            "WebRTC VAD is an optional dependency. Install with `uv pip install 'langflow[audio]'` or refer to the "
+            "documentation on how to install optional dependencies."
+        )
+        raise ImportError(msg) from e
 
     return webrtcvad.Vad(mode=3)
 
