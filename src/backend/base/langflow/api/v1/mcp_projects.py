@@ -400,6 +400,7 @@ async def install_mcp_config(
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
         # Configure args based on the MCP tool
+        env = None
         if FEATURE_FLAGS.mcp_composer:
             args = [mcp_tool, "--sse-url", sse_url]
 
@@ -439,7 +440,7 @@ async def install_mcp_config(
         }
 
         # Add environment variables if mcp-composer feature flag is enabled and auth settings exist
-        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
+        if FEATURE_FLAGS.mcp_composer and env is not None:
             server_config["env"] = env
 
         mcp_config = {
