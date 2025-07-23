@@ -489,39 +489,39 @@ export default function Dropdown({
       <CommandSeparator />
       {dialogInputs && dialogInputs?.fields && (
         <CommandGroup className="p-0">
-            <Button
-              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-              unstyled
-              onClick={() => {
-                console.log("dialogInputs");
-                setOpenDialog(true);
-              }}
-            >
-              <div className="flex items-center gap-2 pl-1">
-                <ForwardedIconComponent
-                  name="Plus"
-                  className="h-3 w-3 text-primary"
-                />
-                {`New ${firstWord}`}
-              </div>
-            </Button>
+          <Button
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            unstyled
+            onClick={() => {
+              console.log("dialogInputs");
+              setOpenDialog(true);
+            }}
+          >
+            <div className="flex items-center gap-2 pl-1">
+              <ForwardedIconComponent
+                name="Plus"
+                className="h-3 w-3 text-primary"
+              />
+              {`New ${firstWord}`}
+            </div>
+          </Button>
 
-            <Button
-              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-              unstyled
-              data-testid={`refresh-dropdown-list-${name}`}
-              onClick={() => {
-                handleRefreshButtonPress();
-              }}
-            >
-              <div className="flex items-center gap-2 pl-1">
-                <ForwardedIconComponent
-                  name="RefreshCcw"
-                  className={cn("refresh-icon h-3 w-3 text-primary")}
-                />
-                Refresh list
-              </div>
-            </Button>
+          <Button
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            unstyled
+            data-testid={`refresh-dropdown-list-${name}`}
+            onClick={() => {
+              handleRefreshButtonPress();
+            }}
+          >
+            <div className="flex items-center gap-2 pl-1">
+              <ForwardedIconComponent
+                name="RefreshCcw"
+                className={cn("refresh-icon h-3 w-3 text-primary")}
+              />
+              Refresh list
+            </div>
+          </Button>
           <NodeDialog
             open={openDialog}
             dialogInputs={dialogInputs}

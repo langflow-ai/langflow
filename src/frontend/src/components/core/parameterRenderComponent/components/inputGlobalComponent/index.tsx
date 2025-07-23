@@ -1,6 +1,6 @@
+import { useEffect } from "react";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
-
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -8,13 +8,12 @@ import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModa
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputGlobalComponentType, InputProps } from "../../types";
 import InputComponent from "../inputComponent";
-import { 
-  useGlobalVariableValue, 
-  useUnavailableField, 
-  useInitialLoad 
+import {
+  useGlobalVariableValue,
+  useInitialLoad,
+  useUnavailableField,
 } from "./hooks";
 import type { GlobalVariable, GlobalVariableHandlers } from "./types";
-import { useEffect } from "react";
 
 export default function InputGlobalComponent({
   display_name,
@@ -30,24 +29,27 @@ export default function InputGlobalComponent({
   hasRefreshButton = false,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
   const { data: globalVariables } = useGetGlobalVariables();
-  
+
   // // Safely cast the data to our typed interface
   const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
   const currentValue = value ?? "";
   const isDisabled = disabled ?? false;
   const loadFromDb = load_from_db ?? false;
-  
+
   // // Extract complex logic into custom hooks
-  const valueExists = useGlobalVariableValue(currentValue, typedGlobalVariables);
+  const valueExists = useGlobalVariableValue(
+    currentValue,
+    typedGlobalVariables,
+  );
   const unavailableField = useUnavailableField(display_name, currentValue);
-  
+
   useInitialLoad(
     isDisabled,
     loadFromDb,
     typedGlobalVariables,
     valueExists,
     unavailableField,
-    handleOnNewValue
+    handleOnNewValue,
   );
 
   // Clean up when selected variable no longer exists
@@ -55,7 +57,7 @@ export default function InputGlobalComponent({
     if (loadFromDb && currentValue && !valueExists && !isDisabled) {
       handleOnNewValue(
         { value: "", load_from_db: false },
-        { skipSnapshot: true }
+        { skipSnapshot: true },
       );
     }
   }, [loadFromDb, currentValue, valueExists, isDisabled, handleOnNewValue]);
@@ -65,9 +67,9 @@ export default function InputGlobalComponent({
     // Handler for deleting global variables
     handleVariableDelete: (variableName: string) => {
       if (value === variableName) {
-        handleOnNewValue({ 
-          value: "", 
-          load_from_db: false 
+        handleOnNewValue({
+          value: "",
+          load_from_db: false,
         });
       }
     },
@@ -84,9 +86,9 @@ export default function InputGlobalComponent({
     handleInputChange: (inputValue: string, skipSnapshot?: boolean) => {
       handleOnNewValue(
         { value: inputValue, load_from_db: false },
-        { skipSnapshot }
+        { skipSnapshot },
       );
-    }
+    },
   };
 
   // Render add new variable button

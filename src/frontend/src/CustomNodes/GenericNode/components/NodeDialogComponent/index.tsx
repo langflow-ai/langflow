@@ -68,12 +68,14 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     setIsLoading(false);
   };
 
-  const updateFieldValue = (changes: Parameters<handleOnNewValueType>[0], fieldKey: string) => {
+  const updateFieldValue = (
+    changes: Parameters<handleOnNewValueType>[0],
+    fieldKey: string,
+  ) => {
     // Handle both legacy string format and new object format
-    const newValue = typeof changes === "object" && changes !== null 
-      ? changes.value 
-      : changes;
-      
+    const newValue =
+      typeof changes === "object" && changes !== null ? changes.value : changes;
+
     const targetNode = nodes.find((node) => node.id === nodeId);
     if (!targetNode || !name) return;
 
@@ -81,24 +83,26 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     targetNode.data.node.template[name].dialog_inputs.fields.data.node.template[
       fieldKey
     ].value = newValue;
-    
+
     // Handle additional properties like load_from_db for InputGlobalComponent
     if (typeof changes === "object" && changes !== null) {
-      const fieldTemplate = targetNode.data.node.template[name].dialog_inputs.fields.data.node.template[fieldKey];
-      
+      const fieldTemplate =
+        targetNode.data.node.template[name].dialog_inputs.fields.data.node
+          .template[fieldKey];
+
       // Update load_from_db if present (for InputGlobalComponent)
-      if ('load_from_db' in changes) {
+      if ("load_from_db" in changes) {
         fieldTemplate.load_from_db = changes.load_from_db;
       }
-      
+
       // Handle any other properties that might be needed
-      Object.keys(changes).forEach(key => {
-        if (key !== 'value' && key in fieldTemplate) {
+      Object.keys(changes).forEach((key) => {
+        if (key !== "value" && key in fieldTemplate) {
           fieldTemplate[key] = changes[key];
         }
       });
     }
-    
+
     setNode(nodeId, targetNode);
     setFieldValues((prev) => ({ ...prev, [fieldKey]: newValue }));
 

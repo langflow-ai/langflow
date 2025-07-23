@@ -3,16 +3,26 @@ import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVar
 import type { GlobalVariable } from "./types";
 
 // Custom hook for managing global variable value existence
-export const useGlobalVariableValue = (value: string, globalVariables: GlobalVariable[]) => {
+export const useGlobalVariableValue = (
+  value: string,
+  globalVariables: GlobalVariable[],
+) => {
   return useMemo(() => {
-    return globalVariables?.some((variable) => variable.name === value) ?? false;
+    return (
+      globalVariables?.some((variable) => variable.name === value) ?? false
+    );
   }, [globalVariables, value]);
 };
 
 // Custom hook for managing unavailable fields
-export const useUnavailableField = (displayName: string | undefined, value: string) => {
-  const unavailableFields = useGlobalVariablesStore((state) => state.unavailableFields);
-  
+export const useUnavailableField = (
+  displayName: string | undefined,
+  value: string,
+) => {
+  const unavailableFields = useGlobalVariablesStore(
+    (state) => state.unavailableFields,
+  );
+
   return useMemo(() => {
     if (
       displayName &&
@@ -33,11 +43,14 @@ export const useInitialLoad = (
   globalVariables: GlobalVariable[],
   valueExists: boolean,
   unavailableField: string | null,
-  handleOnNewValue: (value: { value: string; load_from_db: boolean }, options?: { skipSnapshot: boolean }) => void
+  handleOnNewValue: (
+    value: { value: string; load_from_db: boolean },
+    options?: { skipSnapshot: boolean },
+  ) => void,
 ) => {
   const initialLoadCompleted = useRef(false);
   const handleOnNewValueRef = useRef(handleOnNewValue);
-  
+
   // Keep the latest handleOnNewValue reference
   handleOnNewValueRef.current = handleOnNewValue;
 
@@ -49,7 +62,7 @@ export const useInitialLoad = (
 
     handleOnNewValueRef.current(
       { value: "", load_from_db: false },
-      { skipSnapshot: true }
+      { skipSnapshot: true },
     );
   }, [disabled, loadFromDb, globalVariables.length, valueExists]);
 
@@ -61,9 +74,9 @@ export const useInitialLoad = (
 
     handleOnNewValueRef.current(
       { value: unavailableField, load_from_db: true },
-      { skipSnapshot: true }
+      { skipSnapshot: true },
     );
 
     initialLoadCompleted.current = true;
   }, [unavailableField, disabled]);
-}; 
+};

@@ -51,7 +51,7 @@ export function StrRenderComponent({
       );
     }
 
-    return ( 
+    return (
       <InputGlobalComponent
         {...baseInputProps}
         password={templateData.password}
