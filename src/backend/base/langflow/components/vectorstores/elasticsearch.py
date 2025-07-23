@@ -45,6 +45,12 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             value="langflow",
             info="The index name where the vectors will be stored in Elasticsearch cluster.",
         ),
+        StrInput(
+            name="query_field_name",
+            display_name="Query Field Name",
+            value="vector",
+            info="The query field name where the vectors will be stored in Elasticsearch cluster.",
+        ),
         *LCVectorStoreComponent.inputs,
         StrInput(
             name="username",
@@ -120,6 +126,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         es_params = {
             "index_name": self.index_name,
+            "vector_query_field": self.query_field_name,
             "embedding": self.embedding,
             "es_user": self.username or None,
             "es_password": self.password or None,
@@ -131,7 +138,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             es_params["es_url"] = self.elasticsearch_url
 
         if self.api_key:
-            es_params["api_key"] = self.api_key
+            es_params["es_api_key"] = self.api_key
 
         # Check if we need to verify SSL certificates
         if self.verify_certs is False:
