@@ -67,12 +67,25 @@ class MyCustomSource(EnvSettingsSource):
 class Settings(BaseSettings):
     # Define the default LANGFLOW_DIR
     config_dir: str | None = None
-    # Define if langflow db should be saved in config dir or
-    # in the langflow directory
+    """The configuration directory where Langflow stores persistent data including:
+    - Secret keys for API key encryption
+    - User uploaded files (PDFs, images, documents)
+    - Application logs
+    - Database (if save_db_in_config_dir=True)
+
+    Defaults to platform-specific config directory:
+    - macOS: ~/Library/Application Support/langflow/
+    - Linux: ~/.config/langflow/
+    - Windows: %APPDATA%\\langflow\\
+
+    This location is designed for persistent data and is typically included in system backups.
+    For production use, consider setting LANGFLOW_CONFIG_DIR to a custom location.
+
+    Note: If an existing installation has data in the cache directory, it will be automatically
+    migrated to the config directory on first run."""
     save_db_in_config_dir: bool = False
     """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
     (i.e. in the package directory)."""
-
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -327,18 +340,46 @@ class Settings(BaseSettings):
     @classmethod
     def set_langflow_dir(cls, value):
         if not value:
-            from platformdirs import user_cache_dir
+            from platformdirs import user_cache_dir, user_config_dir
 
             # Define the app name and author
             app_name = "langflow"
             app_author = "langflow"
 
-            # Get the cache directory for the application
-            cache_dir = user_cache_dir(app_name, app_author)
+            # NOTE: This change, done in v1.5.0, changes the default directory for Files,
+            # secret keys, and more from the user's cache directory to the user's config directory.
+            # It maintains backward compatibility by migrating data from the cache directory
+            # to the config directory.
+            config_dir = user_config_dir(app_name, app_author)
 
-            # Create a .langflow directory inside the cache directory
-            value = Path(cache_dir)
-            value.mkdir(parents=True, exist_ok=True)
+            # Check if we need to migrate from cache to config directory
+            cache_dir = user_cache_dir(app_name, app_author)
+            cache_path = Path(cache_dir)
+            config_path = Path(config_dir)
+
+            # If cache directory exists but config doesn't, we need to migrate
+            if cache_path.exists() and not config_path.exists():
+                logger.debug(f"Migrating data from cache directory {cache_path} to config directory {config_path}")
+                try:
+                    import shutil
+
+                    config_path.mkdir(parents=True, exist_ok=True)
+                    for item in cache_path.iterdir():
+                        if item.is_file():
+                            shutil.copy2(item, config_path / item.name)
+                        elif item.is_dir():
+                            shutil.copytree(item, config_path / item.name, dirs_exist_ok=True)
+                    logger.debug("Successfully migrated data to config directory")
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Failed to migrate data from cache to config directory: {e}")
+                    # Fall back to cache directory if migration fails
+                    value = cache_path
+                else:
+                    value = config_path
+            else:
+                # Use config directory
+                value = config_path
+                value.mkdir(parents=True, exist_ok=True)
 
         if isinstance(value, str):
             value = Path(value)
