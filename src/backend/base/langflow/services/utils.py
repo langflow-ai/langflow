@@ -68,15 +68,19 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     return await create_super_user(username, password, db=session)
 
 
-async def setup_superuser(settings_service, session: AsyncSession) -> None:
+async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
+        username = DEFAULT_SUPERUSER
+        password = DEFAULT_SUPERUSER_PASSWORD
     else:
         # Remove the default superuser if it exists
         await teardown_superuser(settings_service, session)
+        username = settings_service.auth_settings.SUPERUSER
+        password = settings_service.auth_settings.SUPERUSER_PASSWORD
 
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    if not username or not password:
+        raise ValueError("Username and password must be set")
 
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
 

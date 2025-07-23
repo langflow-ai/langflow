@@ -27,11 +27,24 @@ class AuthSettings(BaseSettings):
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 
-    AUTO_LOGIN: bool = True
+    AUTO_LOGIN: bool = Field(
+        default=True,  # TODO: Set to False in v1.6
+        description=(
+            "Enable automatic login with default credentials. "
+            "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
+            "Set to False in production."
+        ),
+    )
     """If True, the application will attempt to log in automatically as a super user."""
     skip_auth_auto_login: bool = True
     """If True, the application will skip authentication when AUTO_LOGIN is enabled.
     This will be removed in v1.6"""
+    
+    ENABLE_SUPERUSER_CLI: bool = Field(
+        default=True,
+        description="Allow creation of superusers via CLI. Set to False in production for security.",
+    )
+    """If True, allows creation of superusers via the CLI 'langflow superuser' command."""
 
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER

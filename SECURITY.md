@@ -60,3 +60,73 @@ Setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` skip
 `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` is the default behavior, so users do not need to change existing workflows in 1.5. To update your workflows to require authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=false`.
 
 For more information, see [Authentication](https://docs.langflow.org/configuration-authentication).
+
+## Security Configuration Guidelines
+
+### Superuser Creation Security
+
+The `langflow superuser` CLI command can present a privilege escalation risk if not properly secured.
+
+#### Security Measures
+
+1. **Authentication Required in Production**
+   - When `LANGFLOW_AUTO_LOGIN=false`, superuser creation requires authentication
+   - Use `--auth-token` parameter with a valid superuser API key or JWT token
+
+2. **Disable CLI Superuser Creation**
+   - Set `LANGFLOW_ENABLE_SUPERUSER_CLI=false` to disable the command entirely
+   - Strongly recommended for production environments
+
+3. **Secure AUTO_LOGIN Setting**
+   - Default is `true` for <=1.5. This may change in a future release.
+   - When `true`, creates default superuser `langflow/langflow` - **ONLY USE IN DEVELOPMENT**
+
+#### Production Security Configuration
+
+```bash
+# Recommended production settings
+export LANGFLOW_AUTO_LOGIN=false
+export LANGFLOW_ENABLE_SUPERUSER_CLI=false
+export LANGFLOW_SUPERUSER="<your-superuser-username>"
+export LANGFLOW_SUPERUSER_PASSWORD="<your-superuser-password>"
+export LANGFLOW_DATABASE_URL="<your-production-database-url>" # e.g. "postgresql+psycopg://langflow:secure_pass@db.internal:5432/langflow"
+export LANGFLOW_SECRET_KEY="your-strong-random-secret-key"
+```
+
+#### Secure Superuser Creation Methods
+
+**Option 1: Initial Setup Only**
+```bash
+# Temporarily enable for first superuser
+export LANGFLOW_ENABLE_SUPERUSER_CLI=true
+export LANGFLOW_AUTO_LOGIN=true
+langflow superuser
+# Immediately disable after creation
+export LANGFLOW_ENABLE_SUPERUSER_CLI=false
+export LANGFLOW_AUTO_LOGIN=false
+```
+
+**Option 2: With Authentication (Recommended)**
+```bash
+# Using existing superuser credentials
+langflow superuser --auth-token "existing-superuser-token"
+```
+
+#### Audit and Monitoring
+
+All superuser creation attempts are logged with:
+- Username and timestamp
+- Success/failure status
+- Authentication method used
+
+Monitor security events:
+```bash
+grep "SECURITY AUDIT" /path/to/langflow.log
+```
+
+### Additional Security Best Practices
+
+1. **Access Control**: Restrict who can execute `langflow` CLI commands
+2. **Strong Secrets**: Always set custom `LANGFLOW_SECRET_KEY`
+3. **Authentication**: Never use `AUTO_LOGIN=true` in production
+4. **Monitoring**: Enable audit logging and monitor authentication attempts
