@@ -155,9 +155,9 @@ class LangWatchTracer(BaseTracer):
         return autoconvert_typed_values(converted)
 
     def _convert_to_langwatch_type(self, value):
+        from langchain_core.messages import BaseMessage
         from langwatch.langchain import langchain_message_to_chat_message, langchain_messages_to_chat_messages
-
-        from langflow.schema.message import BaseMessage, Message
+        from lfx.schema.message import Message
 
         if isinstance(value, dict):
             value = {key: self._convert_to_langwatch_type(val) for key, val in value.items()}

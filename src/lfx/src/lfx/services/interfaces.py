@@ -10,7 +10,7 @@ class DatabaseServiceProtocol(Protocol):
     """Protocol for database service."""
 
     @abstractmethod
-    def get_session(self) -> Any:
+    def with_session(self) -> Any:
         """Get database session."""
         ...
 
