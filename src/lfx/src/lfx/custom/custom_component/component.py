@@ -173,6 +173,12 @@ class Component(CustomComponent):
             return []
         return cls._base_outputs
 
+    def get_results(self) -> dict[str, Any]:
+        return self._results
+
+    def get_artifacts(self) -> dict[str, Any]:
+        return self._artifacts
+
     def get_event_manager(self) -> EventManager | None:
         return self._event_manager
 
