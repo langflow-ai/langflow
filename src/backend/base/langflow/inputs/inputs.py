@@ -668,6 +668,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
     temperature: float = 0.1
     max_tokens: int = 256
     limit: int = 1  # Only allow single selection
+    search_category: list[str] = Field(default=["OpenAI", "Anthropic"])
 
     def __init__(self, **kwargs):
         """Initialize ModelInput with default options based on model_type."""
@@ -686,6 +687,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             {
                 "name": f"OpenAI:{model_meta['name']}",
                 "icon": model_meta.get("icon", "OpenAI"),
+                "category": "OpenAI",
             }
             for model_meta in OPENAI_MODELS_DETAILED
             if not model_meta.get("not_supported", False)
@@ -698,6 +700,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             {
                 "name": f"Anthropic:{model_meta['name']}",
                 "icon": model_meta.get("icon", "Anthropic"),
+                "category": "Anthropic",
             }
             for model_meta in ANTHROPIC_MODELS_DETAILED
             if not model_meta.get("deprecated", False)
