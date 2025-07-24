@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import threading
+from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
+from lfx.graph.vertex.base import Vertex
 from loguru import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
@@ -155,31 +158,34 @@ def generate_function_for_flow(
         function = generate_function_for_flow(inputs, flow_id)
         result = function(input1, input2)
     """
-    # Prepare function arguments with type hints and default values
-    args = [
-        (
-            f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "
-            f"{INPUT_TYPE_MAP[input_.base_name]['default']}"
-        )
-        for input_ in inputs
+    # -- Key uniquely identifies the function: flow_id, user_id, and shape/type of inputs
+    cache_key = (flow_id, str(user_id), tuple((input_.display_name, input_.base_name) for input_ in inputs))
+
+    with _flow_func_cache_lock:
+        cached_func = _flow_func_cache.get(cache_key)
+    if cached_func:
+        return cached_func
+
+    # Prepare all names in a single pass to avoid duplicate computation
+    # NOTE: This is a minor improvement for very wide "inputs" lists
+    python_names = [input_.display_name.lower().replace(" ", "_") for input_ in inputs]
+    arg_types_defaults = [
+        f"{name}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}"
+        for name, input_ in zip(python_names, inputs, strict=False)
     ]
+    func_args = ", ".join(arg_types_defaults)
 
-    # Maintain original argument names for constructing the tweaks dictionary
-    original_arg_names = [input_.display_name for input_ in inputs]
-
-    # Prepare a Pythonic, valid function argument string
-    func_args = ", ".join(args)
-
-    # Map original argument names to their corresponding Pythonic variable names in the function
-    arg_mappings = ", ".join(
-        f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
+    # This mapping is for tweaks dict: {original_name: python_var_name}
+    tweaks_mapping = ", ".join(
+        f'"{original_name}": {var_name}'
+        for original_name, var_name in zip((input_.display_name for input_ in inputs), python_names, strict=False)
     )
 
+    # Build the function as before
     func_body = f"""
 from typing import Optional
 async def flow_function({func_args}):
-    tweaks = {{ {arg_mappings} }}
+    tweaks = {{ {tweaks_mapping} }}
     from langflow.helpers.flow import run_flow
     from langchain_core.tools import ToolException
     from lfx.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
@@ -190,7 +196,7 @@ async def flow_function({func_args}):
             user_id="{user_id}"
         )
         if not run_outputs:
-                return []
+            return []
         run_output = run_outputs[0]
 
         data = []
@@ -204,9 +210,14 @@ async def flow_function({func_args}):
 """
 
     compiled_func = compile(func_body, "<string>", "exec")
-    local_scope: dict = {}
+    local_scope = {}
     exec(compiled_func, globals(), local_scope)  # noqa: S102
-    return local_scope["flow_function"]
+    flow_func = local_scope["flow_function"]
+
+    # Save in cache for future identical calls (thread-safe)
+    with _flow_func_cache_lock:
+        _flow_func_cache[cache_key] = flow_func
+    return flow_func
 
 
 def build_function_and_schema(
@@ -359,3 +370,8 @@ def json_schema_from_flow(flow: Flow) -> dict:
                     required.append(field_name)
 
     return {"type": "object", "properties": properties, "required": required}
+
+
+_flow_func_cache = {}
+
+_flow_func_cache_lock = threading.Lock()
