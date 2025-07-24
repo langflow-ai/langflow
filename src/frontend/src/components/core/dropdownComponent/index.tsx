@@ -305,7 +305,9 @@ export default function Dropdown({
             disabled ||
             (Object.keys(validOptions).length === 0 &&
               !combobox &&
-              !dialogInputs?.fields?.data?.node?.template)
+              !dialogInputs?.fields?.data?.node?.template &&
+              !hasRefreshButton &&
+              !dialogInputs?.fields)
           }
           variant="primary"
           size="xs"
