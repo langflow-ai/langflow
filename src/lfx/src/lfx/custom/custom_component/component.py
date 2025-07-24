@@ -24,6 +24,12 @@ from lfx.base.tools.constants import (
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
+
+# Lazy import to avoid circular dependency
+# from lfx.graph.state.model import create_state_model
+# Lazy import to avoid circular dependency
+# from lfx.graph.utils import has_chat_output
+from lfx.helpers.custom import format_type
 from lfx.memory import astore_message, aupdate_messages, delete_message
 from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
@@ -32,12 +38,8 @@ from lfx.schema.message import ErrorMessage, Message
 from lfx.schema.properties import Source
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
-
-# Lazy import to avoid circular dependency
-# from lfx.graph.state.model import create_state_model
-# Lazy import to avoid circular dependency
-# from lfx.graph.utils import has_chat_output
-from lfx.utils.util import find_closest_match, format_type, run_until_complete
+from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
 

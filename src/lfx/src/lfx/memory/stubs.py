@@ -11,7 +11,7 @@ from loguru import logger
 
 from lfx.schema.message import Message
 from lfx.services.deps import session_scope
-from lfx.utils.util import run_until_complete
+from lfx.utils.async_helpers import run_until_complete
 
 
 async def astore_message(

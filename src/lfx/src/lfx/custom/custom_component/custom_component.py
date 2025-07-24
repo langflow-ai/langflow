@@ -12,12 +12,13 @@ from pydantic import BaseModel
 
 from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
+from lfx.helpers.flow import list_flows, load_flow, run_flow
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service, get_variable_service, session_scope
 from lfx.services.storage.service import StorageService
 from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
-from lfx.utils.util import list_flows, load_flow, run_flow, run_until_complete
+from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
@@ -558,6 +559,6 @@ class CustomComponent(BaseComponent):
         )
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
-        if self._tracing_service:
+        if self._tracing_service and hasattr(self._tracing_service, "get_langchain_callbacks"):
             return self._tracing_service.get_langchain_callbacks()
         return []

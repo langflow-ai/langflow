@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from lfx.schema.data import Data as BaseData
+from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from langflow.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
