@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import pathlib
-from xml.etree.ElementInclude import include
 
 import httpx
 import pytest
