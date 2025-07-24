@@ -25,9 +25,9 @@
         "id": "xy-edge__SplitText-8KLTD{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-8KLTDœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KBIngestion-j84mv{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-j84mvœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-8KLTD",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-8KLTDœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-8KLTDœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "KBIngestion-j84mv",
-        "targetHandle": "{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-j84mvœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKBIngestion-j84mvœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "xy-edge__URLComponent-o9llb{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-o9llbœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-8KLTD{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-8KLTDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-o9llb",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-o9llbœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-o9llbœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "SplitText-8KLTD",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-8KLTDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-8KLTDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "xy-edge__TextInput-wUiGy{œdataTypeœ:œTextInputœ,œidœ:œTextInput-wUiGyœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-mfY0a{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-mfY0aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-wUiGy",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-wUiGyœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-wUiGyœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "KBRetrieval-mfY0a",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-mfY0aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-mfY0aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "xy-edge__KBRetrieval-mfY0a{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-mfY0aœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-0dDeN{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0dDeNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "KBRetrieval-mfY0a",
-        "sourceHandle": "{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-mfY0aœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-mfY0aœ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-0dDeN",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0dDeNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-0dDeNœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -377,7 +377,7 @@
             "description": "Create or append to a Langflow Knowledge Base from a DataFrame.",
             "display_name": "Create Knowledge",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "knowledge_base",
               "input_df",
@@ -403,11 +403,8 @@
                 "cache": true,
                 "display_name": "Info",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "build_kb_info",
                 "name": "kb_info",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -779,7 +776,7 @@
             "description": "Retrieve data and perform searches against a particular knowledge base.",
             "display_name": "Retrieve Knowledge",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "knowledge_base",
               "kb_root_path",
@@ -793,7 +790,10 @@
             "last_updated": "2025-07-24T19:36:58.319Z",
             "legacy": false,
             "lf_version": "1.5.0.post1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "58e6b21cbc2c",
+              "module": "langflow.components.data.kb_retrieval.KBRetrievalComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -802,11 +802,8 @@
                 "cache": true,
                 "display_name": "Results",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "get_chroma_kb_data",
                 "name": "chroma_kb_data",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1060,6 +1057,7 @@
                 "group_outputs": false,
                 "method": "fetch_content_as_message",
                 "name": "raw_results",
+                "selected": null,
                 "tool_mode": false,
                 "types": [
                   "Message"
