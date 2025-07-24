@@ -16,11 +16,11 @@ This guide walks you through setting up an external database for Langflow by rep
 
 2. Find your PostgreSQL database's connection string in the format `postgresql://user:password@host:port/dbname`.
 
-  The hostname in your connection string depends on how you're running PostgreSQL:
+    The hostname in your connection string depends on how you're running PostgreSQL:
 
-  - If you're running PostgreSQL directly on your machine, use `localhost`.
-  - If you're running PostgreSQL in Docker Compose, use the service name, such as `postgres`.
-  - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
+    - If you're running PostgreSQL directly on your machine, use `localhost`.
+    - If you're running PostgreSQL in Docker Compose, use the service name, such as `postgres`.
+    - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
 
 3. Create a Langflow `.env` file if you don't already have one:
 
