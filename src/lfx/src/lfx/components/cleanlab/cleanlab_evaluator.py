@@ -118,15 +118,13 @@ class CleanlabEvaluator(Component):
             name="response_passthrough",
             method="pass_response",
             types=["Message"],
-            group_outputs=True,
         ),
-        Output(display_name="Trust Score", name="score", method="get_score", types=["number"], group_outputs=True),
+        Output(display_name="Trust Score", name="score", method="get_score", types=["number"]),
         Output(
             display_name="Explanation",
             name="explanation",
             method="get_explanation",
             types=["Message"],
-            group_outputs=True,
         ),
     ]
 
