@@ -1,8 +1,8 @@
 """Modify uniqueness constraint on file names
 
 Revision ID: 1cb603706752
-Revises: d9a6ea21edcd
-Create Date: 2025-07-11 07:02:14.896583
+Revises: 3162e83e485f
+Create Date: 2025-07-24 07:02:14.896583
 """
 
 import os
@@ -14,7 +14,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision: str = '1cb603706752'
-down_revision: Union[str, None] = 'd9a6ea21edcd'
+down_revision: Union[str, None] = '3162e83e485f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -34,11 +34,11 @@ file_table_columns = [
 
 def handle_duplicates_before_upgrade(conn):
     """Handle duplicate file names within the same user before applying unique constraint."""
+    import os
     
-    # Find duplicates within each user
+    # Find duplicates within each user (database-agnostic approach)
     duplicate_check = sa.text("""
-        SELECT user_id, name, COUNT(*) as count, 
-               array_agg(id ORDER BY created_at) as file_ids
+        SELECT user_id, name, COUNT(*) as count
         FROM file
         GROUP BY user_id, name
         HAVING COUNT(*) > 1
@@ -50,16 +50,31 @@ def handle_duplicates_before_upgrade(conn):
         print(f"Found {len(duplicates)} sets of duplicate files. Renaming...")
         
         for row in duplicates:
-            user_id, name, _, file_ids = row
-            file_ids = file_ids[1:]  # Keep first file unchanged, rename others
+            user_id, name, count = row
             
-            for i, file_id in enumerate(file_ids, start=2):
+            # Get all file IDs for this user/name combination, ordered by creation date
+            file_ids_query = sa.text("""
+                SELECT id FROM file 
+                WHERE user_id = :user_id AND name = :name 
+                ORDER BY created_at
+            """)
+            
+            file_ids = conn.execute(file_ids_query, {
+                'user_id': user_id, 
+                'name': name
+            }).fetchall()
+            
+            # Skip the first (oldest) file, rename the rest
+            for i, (file_id,) in enumerate(file_ids[1:], start=2):
                 # Generate new name with suffix
-                base_name, ext = os.path.splitext(name) if '.' in name else (name, '')
-                new_name = f"{base_name}_{i}{ext}"
+                if '.' in name:
+                    base_name, ext = name.rsplit('.', 1)
+                    new_name = f"{base_name}_{i}.{ext}"
+                else:
+                    new_name = f"{name}_{i}"
                 
                 # Ensure the new name doesn't already exist for this user
-                counter = 2
+                counter = i
                 while True:
                     check_query = sa.text("""
                         SELECT COUNT(*) FROM file 
@@ -74,7 +89,11 @@ def handle_duplicates_before_upgrade(conn):
                         break
                     
                     counter += 1
-                    new_name = f"{base_name}_{counter}{ext}"
+                    if '.' in name:
+                        base_name, ext = name.rsplit('.', 1)
+                        new_name = f"{base_name}_{counter}.{ext}"
+                    else:
+                        new_name = f"{name}_{counter}"
                 
                 # Rename the file
                 update_query = sa.text("""
@@ -87,8 +106,6 @@ def handle_duplicates_before_upgrade(conn):
                 })
                 
                 print(f"Renamed duplicate file {file_id}: '{name}' -> '{new_name}'")
-        
-        conn.commit()
 
 
 def upgrade() -> None:
