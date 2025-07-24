@@ -18,4 +18,3 @@ export const ENABLE_MCP_NOTICE = false;
 export const ENABLE_KNOWLEDGE_BASES = true;
 export const ENABLE_MCP_COMPOSER =
   process.env.LANGFLOW_FEATURE_MCP_COMPOSER === "true";
-

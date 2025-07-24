@@ -1,6 +1,6 @@
 import { UseQueryResult } from "@tanstack/react-query";
-import { useQueryFunctionType } from "@/types/api";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
+import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
