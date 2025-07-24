@@ -46,9 +46,8 @@ if _LANGFLOW_AVAILABLE:
             get_messages,
             store_message,
         )
-    except (ImportError, ModuleNotFoundError) as e:
+    except (ImportError, ModuleNotFoundError):
         # Fall back to stubs if langflow import fails
-        logger.info(f"Falling back to lfx memory stubs due to: {e}")
         from lfx.memory.stubs import (
             aadd_messages,
             aadd_messagetables,
