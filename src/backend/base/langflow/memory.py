@@ -5,6 +5,7 @@ from uuid import UUID
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
+from lfx.utils.async_helpers import run_until_complete
 from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import col, select
@@ -13,7 +14,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
-from langflow.utils.async_helpers import run_until_complete
 
 
 def _get_variable_query(

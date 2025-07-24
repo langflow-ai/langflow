@@ -41,7 +41,7 @@ from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
-from lfx.utils.util import run_until_complete
+from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
