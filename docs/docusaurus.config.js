@@ -256,8 +256,10 @@ const config = {
             from: "/components-rag",
           },
           {
-            to: "/configuration-authentication",
+            to: "/api-keys-and-authentication",
             from: [
+              "/configuration-api-keys",
+              "/configuration-authentication",
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
             ],

@@ -59,4 +59,4 @@ Setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` skip
 
 `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` is the default behavior, so users do not need to change existing workflows in 1.5. To update your workflows to require authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=false`.
 
-For more information, see [Authentication](https://docs.langflow.org/configuration-authentication).
+For more information, see [API keys and authentication](https://docs.langflow.org/api-keys-and-authentication).
