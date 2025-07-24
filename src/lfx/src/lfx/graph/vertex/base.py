@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import threading
 import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
@@ -58,14 +57,15 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
-        self._lock: threading.Lock | None = None
+        self._lock: asyncio.Lock | None = None
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
         self.base_name = self.id.split("-")[0]
         self.is_state = False
-        self.is_input = any(input_component_name in self.id for input_component_name in INPUT_COMPONENTS)
-        self.is_output = any(output_component_name in self.id for output_component_name in OUTPUT_COMPONENTS)
+        type_strings = [self.id.split("-")[0], data["data"]["type"]]
+        self.is_input = any(input_component_name in type_strings for input_component_name in INPUT_COMPONENTS)
+        self.is_output = any(output_component_name in type_strings for output_component_name in OUTPUT_COMPONENTS)
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
@@ -112,29 +112,11 @@ class Vertex:
         self._incoming_edges: list[CycleEdge] | None = None
         self._outgoing_edges: list[CycleEdge] | None = None
 
-    @staticmethod
-    def _async_lock_context(lock: threading.Lock):
-        """Context manager to use threading.Lock in async context."""
-
-        class AsyncLockContext:
-            def __init__(self, lock):
-                self.lock = lock
-
-            async def __aenter__(self):
-                await asyncio.to_thread(self.lock.acquire)
-                return self
-
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                self.lock.release()
-                return False
-
-        return AsyncLockContext(lock)
-
     @property
     def lock(self):
-        """Lazy initialization of threading.Lock."""
+        """Lazy initialization of asyncio.Lock."""
         if self._lock is None:
-            self._lock = threading.Lock()
+            self._lock = asyncio.Lock()
         return self._lock
 
     @property
@@ -542,7 +524,7 @@ class Vertex:
         Returns:
             The result of the vertex.
         """
-        async with self._lock:
+        async with self.lock:
             return await self._get_result(requester, target_handle_name)
 
     async def _log_transaction_async(
@@ -747,7 +729,7 @@ class Vertex:
             await ensure_component_loaded(self.vertex_type, component_name, settings_service)
 
         # Continue with the original implementation
-        async with self._lock:
+        async with self.lock:
             if self.state == VertexStates.INACTIVE:
                 # If the vertex is inactive, return None
                 self.build_inactive()
