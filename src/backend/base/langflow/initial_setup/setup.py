@@ -516,7 +516,7 @@ def log_node_changes(node_changes_log) -> None:
 
 async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, dict]]:
     from langflow.services.settings.feature_flags import FEATURE_FLAGS
-    
+
     starter_projects = []
     folder = anyio.Path(__file__).parent / "starter_projects"
     logger.debug("Loading starter projects")
@@ -525,7 +525,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
         if not FEATURE_FLAGS.knowledge_bases and "Knowledge Bases" in file.name:
             logger.debug(f"Skipping {file.name} - knowledge bases feature disabled")
             continue
-            
+
         attempt = 0
         while attempt < retries:
             async with async_open(str(file), "r", encoding="utf-8") as f:
