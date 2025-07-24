@@ -7,7 +7,7 @@ from langchain_chroma import Chroma
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
@@ -63,6 +63,13 @@ class KBRetrievalComponent(Component):
             advanced=True,
             required=False,
         ),
+        BoolInput(
+            name="include_embeddings",
+            display_name="Include Embeddings",
+            info="Whether to include embeddings in the output data.",
+            value=True,
+            advanced=True,
+        )
     ]
 
     outputs = [
@@ -127,14 +134,13 @@ class KBRetrievalComponent(Component):
         provider = metadata.get("embedding_provider")
         model = metadata.get("embedding_model")
         api_key = metadata.get("api_key")
-        dimensions = metadata.get("dimensions")
         chunk_size = metadata.get("chunk_size")
 
         # If user provided a key in the input, it overrides the stored one.
         if self.api_key and self.api_key.get_secret_value():
             api_key = self.api_key.get_secret_value()
 
-        # TODO: Support other embedding providers in the future
+        # Handle various providers
         if provider == "OpenAI":
             from langchain_openai import OpenAIEmbeddings
 
@@ -143,10 +149,29 @@ class KBRetrievalComponent(Component):
                 raise ValueError(msg)
             return OpenAIEmbeddings(
                 model=model,
-                dimensions=dimensions or None,
                 api_key=api_key,
-                chunk_size=chunk_size or 1000,
+                chunk_size=chunk_size,
             )
+        if provider == "HuggingFace":
+            from langchain_huggingface import HuggingFaceEmbeddings
+
+            return HuggingFaceEmbeddings(
+                model=model,
+            )
+        if provider == "Cohere":
+            from langchain_cohere import CohereEmbeddings
+
+            if not api_key:
+                msg = "Cohere API key is required when using Cohere provider"
+                raise ValueError(msg)
+            return CohereEmbeddings(
+                model=model,
+                cohere_api_key=api_key,
+            )
+        if provider == "Custom":
+            # For custom embedding models, we would need additional configuration
+            msg = "Custom embedding models not yet supported"
+            raise NotImplementedError(msg)
         # Add other providers here if they become supported in ingest
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
@@ -189,29 +214,39 @@ class KBRetrievalComponent(Component):
                 k=self.top_k,
             )
 
-        # TODO: Figure out how to get embeddings for the results
-        # doc_ids = [doc.metadata.get("id") for doc, _ in results]
+            # For each result, make it a tuple to match the expected output format
+            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0
 
-        # Access underlying client to get embeddings
-        # collection = chroma._client.get_collection(name=self.knowledge_base)
-        # embeddings_result = collection.get(
-        #     ids=doc_ids,
-        #     include=["embeddings"]
-        # )
+        # If enabled, get embeddings for the results
+        if self.include_embeddings:
+            doc_ids = [doc[0].metadata.get("_id") for doc in results]
 
-        # Create a mapping from document ID to embedding
-        # id_to_embedding = dict(zip(embeddings_result["ids"], embeddings_result["embeddings"], strict=False))
+            # Access underlying client to get embeddings
+            collection = chroma._client.get_collection(name=self.knowledge_base)
+            embeddings_result = collection.get(
+                where={"_id": {"$in": doc_ids}},
+                include=["embeddings", "metadatas"]
+            )
+
+            # Create a mapping from document ID to embedding
+            id_to_embedding = {}
+            for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
+                if metadata and "_id" in metadata:
+                    id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
 
         # Append embeddings to each element
-        data_list = [
-            Data(
-                content=doc[0].page_content,
+        data_list = []
+        for doc in results:
+            kwargs = {
+                "content": doc[0].page_content,
                 **doc[0].metadata,
-                _score=-1 * doc[1],
-                # embeddings=id_to_embedding.get(doc[0].metadata.get("id"))
-            )
-            for doc in results
-        ]
+            }
+            if self.search_query:
+                kwargs["_score"] = -1 * doc[1]
+            if self.include_embeddings:
+                kwargs["_embeddings"] = id_to_embedding.get(doc[0].metadata.get("_id"))
+
+            data_list.append(Data(**kwargs))
 
         # Return the DataFrame containing the data
         return DataFrame(data=data_list)

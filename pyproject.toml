@@ -77,6 +77,7 @@ dependencies = [
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
+    "langchain-huggingface==0.3.1",
     "langchain-anthropic==0.3.14",
     "langchain-astradb~=0.6.0",
     "langchain-openai>=0.2.12",

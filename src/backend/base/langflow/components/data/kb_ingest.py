@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
 from loguru import logger
 from platformdirs import user_cache_dir
 
@@ -172,6 +171,13 @@ class KBIngestionComponent(Component):
             required=False,
         ),
         BoolInput(
+            name="allow_duplicates",
+            display_name="Allow Duplicates",
+            info="Allow duplicate rows in the knowledge base",
+            advanced=True,
+            value=False,
+        ),
+        BoolInput(
             name="silent_errors",
             display_name="Silent Errors",
             info="Continue processing even if some operations fail",
@@ -230,27 +236,47 @@ class KBIngestionComponent(Component):
 
         return config_list
 
+    def _get_embedding_provider(self, embedding_model: str) -> str:
+        """Get embedding provider by matching model name to lists."""
+        if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES:
+            return "OpenAI"
+        if embedding_model in HUGGINGFACE_MODEL_NAMES:
+            return "HuggingFace"
+        if embedding_model in COHERE_MODEL_NAMES:
+            return "Cohere"
+        return "Custom"
+
     def _build_embeddings(self, embedding_model: str, api_key: str):
         """Build embedding model using provider patterns."""
         # Get provider by matching model name to lists
-        provider = (
-            "OpenAI"
-            if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES
-            else "HuggingFace"
-            if embedding_model in HUGGINGFACE_MODEL_NAMES
-            else "Cohere"
-        )
-        chunk_size = self.chunk_size
+        provider = self._get_embedding_provider(embedding_model)
 
-        # TODO: Support all embedding providers
+        # Validate provider and model
         if provider == "OpenAI":
+            from langchain_openai import OpenAIEmbeddings
             if not api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
             return OpenAIEmbeddings(
                 model=embedding_model,
                 api_key=api_key,
-                chunk_size=chunk_size,
+                chunk_size=self.chunk_size,
+            )
+        if provider == "HuggingFace":
+            from langchain_huggingface import HuggingFaceEmbeddings
+
+            return HuggingFaceEmbeddings(
+                model=embedding_model,
+            )
+        if provider == "Cohere":
+            from langchain_cohere import CohereEmbeddings
+
+            if not api_key:
+                msg = "Cohere API key is required when using Cohere provider"
+                raise ValueError(msg)
+            return CohereEmbeddings(
+                model=embedding_model,
+                cohere_api_key=api_key,
             )
         if provider == "Custom":
             # For custom embedding models, we would need additional configuration
@@ -321,13 +347,7 @@ class KBIngestionComponent(Component):
     def _build_embedding_metadata(self, embedding_model, api_key) -> dict[str, Any]:
         """Build embedding model metadata."""
         # Get provider by matching model name to lists
-        embedding_provider = (
-            "OpenAI"
-            if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES
-            else "HuggingFace"
-            if embedding_model in HUGGINGFACE_MODEL_NAMES
-            else "Cohere"
-        )
+        embedding_provider = self._get_embedding_provider(embedding_model)
 
         api_key_to_save = None
         if api_key and hasattr(api_key, "get_secret_value"):
@@ -482,7 +502,25 @@ class KBIngestionComponent(Component):
 
     def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:
         """Convert DataFrame to Data objects for vector store."""
-        data_objects = []
+        data_objects: list[Data] = []
+
+        # Set up vector store directory (following Local DB pattern)
+        if self.kb_root_path:
+            base_dir = Path(self._resolve_path(self.kb_root_path))
+        else:
+            base_dir = Path(user_cache_dir("langflow", "langflow"))
+
+        # If we don't allow duplicates, we need to get the existing hashes
+        chroma = Chroma(
+            persist_directory=str(base_dir / self.knowledge_base),
+            collection_name=self.knowledge_base,
+        )
+
+        # Get all documents and their metadata
+        all_docs = chroma.get()
+
+        # Extract all _id values from metadata
+        id_list = [metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")]
 
         # Get column roles
         content_cols = []
@@ -524,7 +562,10 @@ class KBIngestionComponent(Component):
             page_content_hash = hashlib.sha256(page_content.encode()).hexdigest()
             data_dict["_id"] = page_content_hash
 
-            # TODO: If duplicates are disallowed, and hash exists, prevent adding this row
+            # If duplicates are disallowed, and hash exists, prevent adding this row
+            if not self.allow_duplicates and page_content_hash in id_list:
+                self.log(f"Skipping duplicate row with hash {page_content_hash}")
+                continue
 
             # Create Data object - everything except "text" becomes metadata
             data_obj = Data(data=data_dict)
