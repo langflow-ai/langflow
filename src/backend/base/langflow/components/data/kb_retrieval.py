@@ -69,7 +69,7 @@ class KBRetrievalComponent(Component):
             info="Whether to include embeddings in the output data.",
             value=True,
             advanced=True,
-        )
+        ),
     ]
 
     outputs = [
@@ -223,10 +223,7 @@ class KBRetrievalComponent(Component):
 
             # Access underlying client to get embeddings
             collection = chroma._client.get_collection(name=self.knowledge_base)
-            embeddings_result = collection.get(
-                where={"_id": {"$in": doc_ids}},
-                include=["embeddings", "metadatas"]
-            )
+            embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["embeddings", "metadatas"])
 
             # Create a mapping from document ID to embedding
             id_to_embedding = {}

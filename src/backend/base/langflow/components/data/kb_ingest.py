@@ -254,6 +254,7 @@ class KBIngestionComponent(Component):
         # Validate provider and model
         if provider == "OpenAI":
             from langchain_openai import OpenAIEmbeddings
+
             if not api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
