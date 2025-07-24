@@ -5464,14 +5464,20 @@ name = "lfx"
 version = "0.1.0"
 source = { editable = "src/lfx" }
 dependencies = [
+    { name = "aiofile" },
     { name = "aiofiles" },
+    { name = "docstring-parser" },
     { name = "fastapi" },
+    { name = "httpx" },
+    { name = "json-repair" },
     { name = "langchain-core" },
     { name = "loguru" },
     { name = "pandas" },
     { name = "pillow" },
     { name = "platformdirs" },
     { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "rich" },
     { name = "typer" },
     { name = "typing-extensions" },
     { name = "uvicorn" },
@@ -5486,14 +5492,20 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiofile", specifier = ">=3.8.0" },
     { name = "aiofiles", specifier = ">=24.1.0" },
+    { name = "docstring-parser", specifier = ">=0.16" },
     { name = "fastapi", specifier = ">=0.115.13" },
+    { name = "httpx", specifier = ">=0.24.0" },
+    { name = "json-repair", specifier = ">=0.30.3" },
     { name = "langchain-core", specifier = ">=0.3.66" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "rich", specifier = ">=13.0.0" },
     { name = "typer", specifier = ">=0.16.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
     { name = "uvicorn", specifier = ">=0.34.3" },

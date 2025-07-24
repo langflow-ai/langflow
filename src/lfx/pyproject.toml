@@ -19,7 +19,16 @@ dependencies = [
     "platformdirs>=4.3.8",
     "aiofiles>=24.1.0",
     "typing-extensions>=4.14.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "httpx>=0.24.0",
+    "aiofile>=3.8.0",
+    "json-repair>=0.30.3",
+    "docstring-parser>=0.16",
 ]
+
+[project.scripts]
+lfx = "lfx.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
