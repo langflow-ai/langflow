@@ -13,7 +13,7 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
-import { cn } from "@/utils/utils";
+import { cn, stripReleaseStageFromVersion } from "@/utils/utils";
 import {
   HeaderMenu,
   HeaderMenuItemButton,
@@ -38,7 +38,14 @@ export const AccountMenu = () => {
     mutationLogout();
   };
 
-  const isLatestVersion = version === latestVersion;
+  const isLatestVersion = (() => {
+    if (!version || !latestVersion) return false;
+
+    const currentBaseVersion = stripReleaseStageFromVersion(version);
+    const latestBaseVersion = stripReleaseStageFromVersion(latestVersion);
+
+    return currentBaseVersion === latestBaseVersion;
+  })();
 
   return (
     <HeaderMenu>
