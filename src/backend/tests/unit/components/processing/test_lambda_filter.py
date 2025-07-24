@@ -112,12 +112,12 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
 
         structure = component.get_data_structure(test_data)
 
-        # Assertions
-        assert "structure" in structure, structure
+        # Assertions - each value should have a 'structure' key
         assert structure["string"]["structure"] == "str", structure
         assert structure["number"]["structure"] == "int", structure
         assert structure["list"]["structure"] == "list(int)[size=3]", structure
+        assert isinstance(structure["dict"]["structure"], dict), structure
         assert structure["dict"]["structure"]["key"] == "str", structure
-        assert "structure" in structure["nested"], structure
+        assert isinstance(structure["nested"]["structure"], dict), structure
         assert "a" in structure["nested"]["structure"], structure
-        assert "list" in structure["nested"]["structure"]["a"], structure
+        assert structure["nested"]["structure"]["a"] == 'list(dict)[size=1], sample: {"b": "int"}', structure
