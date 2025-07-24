@@ -5,6 +5,7 @@ Revises: d9a6ea21edcd
 Create Date: 2025-07-11 07:02:14.896583
 """
 
+import os
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
@@ -31,10 +32,72 @@ file_table_columns = [
 ]
 
 
+def handle_duplicates_before_upgrade(conn):
+    """Handle duplicate file names within the same user before applying unique constraint."""
+    
+    # Find duplicates within each user
+    duplicate_check = sa.text("""
+        SELECT user_id, name, COUNT(*) as count, 
+               array_agg(id ORDER BY created_at) as file_ids
+        FROM file
+        GROUP BY user_id, name
+        HAVING COUNT(*) > 1
+    """)
+    
+    duplicates = conn.execute(duplicate_check).fetchall()
+    
+    if duplicates:
+        print(f"Found {len(duplicates)} sets of duplicate files. Renaming...")
+        
+        for row in duplicates:
+            user_id, name, _, file_ids = row
+            file_ids = file_ids[1:]  # Keep first file unchanged, rename others
+            
+            for i, file_id in enumerate(file_ids, start=2):
+                # Generate new name with suffix
+                base_name, ext = os.path.splitext(name) if '.' in name else (name, '')
+                new_name = f"{base_name}_{i}{ext}"
+                
+                # Ensure the new name doesn't already exist for this user
+                counter = 2
+                while True:
+                    check_query = sa.text("""
+                        SELECT COUNT(*) FROM file 
+                        WHERE user_id = :user_id AND name = :name
+                    """)
+                    exists = conn.execute(check_query, {
+                        'user_id': user_id, 
+                        'name': new_name
+                    }).scalar()
+                    
+                    if exists == 0:
+                        break
+                    
+                    counter += 1
+                    new_name = f"{base_name}_{counter}{ext}"
+                
+                # Rename the file
+                update_query = sa.text("""
+                    UPDATE file SET name = :new_name 
+                    WHERE id = :file_id
+                """)
+                conn.execute(update_query, {
+                    'new_name': new_name,
+                    'file_id': file_id
+                })
+                
+                print(f"Renamed duplicate file {file_id}: '{name}' -> '{new_name}'")
+        
+        conn.commit()
+
+
 def upgrade() -> None:
     conn = op.get_bind()
     inspector = inspect(conn)
     is_sqlite = conn.dialect.name == "sqlite"
+
+    # Handle duplicates BEFORE applying the unique constraint
+    handle_duplicates_before_upgrade(conn)
 
     # Detect current unique constraint on 'name'
     constraints = inspector.get_unique_constraints("file")
@@ -42,6 +105,12 @@ def upgrade() -> None:
         (c["name"] for c in constraints if set(c["column_names"]) == {"name"}),
         None,
     )
+
+    # Ensure that the new key name is not already in use
+    if any(c["name"] == "file_name_user_id_key" for c in constraints):
+        raise RuntimeError(
+            "Upgrade aborted: The unique constraint 'file_name_user_id_key' already exists."
+        )
 
     if is_sqlite:
         # SQLite: Recreate table with composite constraint
