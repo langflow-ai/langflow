@@ -124,18 +124,14 @@ def upgrade() -> None:
     )
 
     # Ensure that the new key name is not already in use
-    if any(c["name"] == "file_name_user_id_key" for c in constraints):
-        raise RuntimeError(
-            "Upgrade aborted: The unique constraint 'file_name_user_id_key' already exists."
-        )
+    create_constraint = not any(c["name"] == "file_name_user_id_key" for c in constraints)
 
     if is_sqlite:
-        # SQLite: Recreate table with composite constraint
-        op.create_table(
-            "file_new",
-            *file_table_columns,
-            sa.UniqueConstraint("name", "user_id", name="file_name_user_id_key"),
-        )
+        table_args = list(file_table_columns)
+        if create_constraint:
+            table_args.append(sa.UniqueConstraint("name", "user_id", name="file_name_user_id_key"))
+
+        op.create_table("file_new", *table_args)
 
         # Verify new table was created before proceeding
         if not inspector.has_table("file_new"):
