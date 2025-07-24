@@ -22,7 +22,7 @@ def code_component_with_multiple_outputs():
 code_default = """
 from langflow.custom import CustomComponent
 
-from langflow.field_typing import BaseLanguageModel
+from lfx.field_typing import BaseLanguageModel
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain_core.documents import Document

@@ -192,6 +192,18 @@ class FileMixin(BaseModel):
 class RangeMixin(BaseModel):
     range_spec: RangeSpec | None = None
 
+    @field_validator("range_spec", mode="before")
+    @classmethod
+    def validate_range_spec(cls, v):
+        if v is None:
+            return v
+        if v.__class__.__name__ == "RangeSpec":
+            return v
+        if isinstance(v, dict):
+            return RangeSpec(**v)
+        msg = "range_spec must be a RangeSpec object or a dict"
+        raise ValueError(msg)
+
 
 class DropDownMixin(BaseModel):
     options: list[str] | None = None
