@@ -35,6 +35,7 @@ class KBRetrievalComponent(Component):
             if KNOWLEDGE_BASES_ROOT_PATH.exists()
             else [],
             refresh_button=True,
+            real_time_refresh=True,
         ),
         StrInput(
             name="kb_root_path",
@@ -99,7 +100,10 @@ class KBRetrievalComponent(Component):
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = self._get_knowledge_bases()
-            build_config["knowledge_base"]["value"] = None
+
+            # If the selected knowledge base is not available, reset it
+            if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
+                build_config["knowledge_base"]["value"] = None
 
         return build_config
 
