@@ -1,5 +1,6 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import type { useQueryFunctionType } from "@/types/api";
+import { UseQueryResult } from "@tanstack/react-query";
+import { useQueryFunctionType } from "@/types/api";
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -23,6 +24,9 @@ export const useGetKnowledgeBases: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getKnowledgeBasesFn = async (): Promise<KnowledgeBaseInfo[]> => {
+    if (!ENABLE_KNOWLEDGE_BASES) {
+      return [];
+    }
     const res = await api.get(`${getURL("KNOWLEDGE_BASES")}/`);
     return res.data;
   };
@@ -32,6 +36,7 @@ export const useGetKnowledgeBases: useQueryFunctionType<
     getKnowledgeBasesFn,
     {
       refetchOnWindowFocus: false,
+      enabled: ENABLE_KNOWLEDGE_BASES,
       ...options,
     },
   );

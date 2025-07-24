@@ -12,6 +12,7 @@ from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.deps import get_settings_service
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
 KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
@@ -22,6 +23,13 @@ class KBRetrievalComponent(Component):
     description = "Retrieve data and perform searches against a particular knowledge base."
     icon = "database"
     name = "KBRetrieval"
+    beta = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Hide component if knowledge bases feature is disabled
+        if not FEATURE_FLAGS.knowledge_bases:
+            self.display_name = None
 
     inputs = [
         DropdownInput(
