@@ -73,7 +73,9 @@ test(
     await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).toBeVisible();
     await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
-    await expect(page.getByTestId("langchain_utilitiesCSV Agent")).toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesCSV Agent"),
+    ).toBeVisible();
     await expect(
       page.getByTestId("langchain_utilitiesConversationChain"),
     ).toBeVisible();
