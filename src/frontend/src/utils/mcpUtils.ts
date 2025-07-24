@@ -95,6 +95,9 @@ export function extractMcpServersFromJson(
     args: server.args || [],
     env: server.env && typeof server.env === "object" ? server.env : {},
     url: server.url,
-    headers: server.headers && typeof server.headers === "object" ? server.headers : {},
+    headers:
+      server.headers && typeof server.headers === "object"
+        ? server.headers
+        : {},
   }));
 }
