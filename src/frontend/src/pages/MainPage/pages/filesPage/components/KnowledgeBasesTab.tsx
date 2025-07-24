@@ -21,8 +21,8 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { cn } from "@/utils/utils";
 import { updateIds } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
 import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
 import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
@@ -59,7 +59,7 @@ const KnowledgeBasesTab = ({
     useState<KnowledgeBaseInfo | null>(null);
 
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
-  
+
   // Template creation functionality
   const examples = useFlowsManagerStore((state) => state.examples);
   const addFlow = useAddFlow();
@@ -69,9 +69,9 @@ const KnowledgeBasesTab = ({
 
   const handleCreateKnowledgeBaseTemplate = () => {
     const knowledgeBasesTemplate = examples.find(
-      (example) => example.name === "Knowledge Bases"
+      (example) => example.name === "Knowledge Bases",
     );
-    
+
     if (knowledgeBasesTemplate) {
       updateIds(knowledgeBasesTemplate.data!);
       addFlow({ flow: knowledgeBasesTemplate }).then((id) => {
@@ -176,7 +176,11 @@ const KnowledgeBasesTab = ({
   }
 
   if (knowledgeBases.length === 0) {
-    return <KnowledgeBaseEmptyState onCreateKnowledgeBase={handleCreateKnowledgeBaseTemplate} />;
+    return (
+      <KnowledgeBaseEmptyState
+        onCreateKnowledgeBase={handleCreateKnowledgeBaseTemplate}
+      />
+    );
   }
 
   return (

@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 
 interface KnowledgeBaseEmptyStateProps {
   onCreateKnowledgeBase?: () => void;
