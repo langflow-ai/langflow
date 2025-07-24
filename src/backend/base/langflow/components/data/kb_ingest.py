@@ -32,7 +32,6 @@ from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.deps import get_settings_service
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
@@ -49,13 +48,6 @@ class KBIngestionComponent(Component):
     description = "Create or append to a Langflow Knowledge Base from a DataFrame."
     icon = "database"
     name = "KBIngestion"
-    beta = True
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Hide component if knowledge bases feature is disabled
-        if not FEATURE_FLAGS.knowledge_bases:
-            self.display_name = None
 
     @dataclass
     class NewKnowledgeBaseInput:

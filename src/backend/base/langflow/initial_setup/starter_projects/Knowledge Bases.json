@@ -58,64 +58,6 @@
         "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-o9llbœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "SplitText-8KLTD",
         "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-8KLTDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-wUiGy",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "KBRetrieval-mfY0a",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__TextInput-wUiGy{œdataTypeœ:œTextInputœ,œidœ:œTextInput-wUiGyœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-mfY0a{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-mfY0aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-wUiGy",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-wUiGyœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "KBRetrieval-mfY0a",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-mfY0aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "KBRetrieval",
-            "id": "KBRetrieval-mfY0a",
-            "name": "chroma_kb_data",
-            "output_types": [
-              "DataFrame"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-0dDeN",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__KBRetrieval-mfY0a{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-mfY0aœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-0dDeN{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0dDeNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "KBRetrieval-mfY0a",
-        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-mfY0aœ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ChatOutput-0dDeN",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-0dDeNœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -356,8 +298,8 @@
           "width": 371
         },
         "position": {
-          "x": -215.63964109627526,
-          "y": -365.1224988685513
+          "x": 196.04718488122973,
+          "y": -369.378976359893
         },
         "resizing": false,
         "selected": false,
@@ -371,7 +313,7 @@
             "base_classes": [
               "Data"
             ],
-            "beta": true,
+            "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Create or append to a Langflow Knowledge Base from a DataFrame.",
@@ -392,7 +334,7 @@
             "icon": "database",
             "legacy": false,
             "metadata": {
-              "code_hash": "19d8bb2923f1",
+              "code_hash": "a1f4151a8e92",
               "module": "langflow.components.data.kb_ingest.KBIngestionComponent"
             },
             "minimized": false,
@@ -485,7 +427,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from __future__ import annotations\n\nimport hashlib\nimport json\nimport re\nimport uuid\nfrom dataclasses import asdict, dataclass, field\nfrom datetime import datetime, timezone\nfrom pathlib import Path\nfrom typing import Any\n\nimport pandas as pd\nfrom cryptography.fernet import InvalidToken\nfrom langchain_chroma import Chroma\nfrom loguru import logger\nfrom platformdirs import user_cache_dir\n\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    DataFrameInput,\n    DropdownInput,\n    IntInput,\n    Output,\n    SecretStrInput,\n    StrInput,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.dotdict import dotdict  # noqa: TC001\nfrom langflow.schema.table import EditMode\nfrom langflow.services.auth.utils import decrypt_api_key, encrypt_api_key\nfrom langflow.services.deps import get_settings_service\nfrom langflow.services.settings.feature_flags import FEATURE_FLAGS\n\nHUGGINGFACE_MODEL_NAMES = [\"sentence-transformers/all-MiniLM-L6-v2\", \"sentence-transformers/all-mpnet-base-v2\"]\nCOHERE_MODEL_NAMES = [\"embed-english-v3.0\", \"embed-multilingual-v3.0\"]\n\nKNOWLEDGE_BASES_DIR = \"~/.langflow/knowledge_bases\"\nKNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()\n\n\nclass KBIngestionComponent(Component):\n    \"\"\"Create or append to a Langflow Knowledge Base from a DataFrame.\"\"\"\n\n    # ------ UI metadata ---------------------------------------------------\n    display_name = \"Create Knowledge\"\n    description = \"Create or append to a Langflow Knowledge Base from a DataFrame.\"\n    icon = \"database\"\n    name = \"KBIngestion\"\n    beta = True\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        # Hide component if knowledge bases feature is disabled\n        if not FEATURE_FLAGS.knowledge_bases:\n            self.display_name = None\n\n    @dataclass\n    class NewKnowledgeBaseInput:\n        functionality: str = \"create\"\n        fields: dict[str, dict] = field(\n            default_factory=lambda: {\n                \"data\": {\n                    \"node\": {\n                        \"name\": \"create_knowledge_base\",\n                        \"description\": \"Create a new knowledge base in Langflow.\",\n                        \"display_name\": \"Create new knowledge base\",\n                        \"field_order\": [\"01_new_kb_name\", \"02_embedding_model\", \"03_api_key\"],\n                        \"template\": {\n                            \"01_new_kb_name\": StrInput(\n                                name=\"new_kb_name\",\n                                display_name=\"Knowledge Base Name\",\n                                info=\"Name of the new knowledge base to create.\",\n                                required=True,\n                            ),\n                            \"02_embedding_model\": DropdownInput(\n                                name=\"embedding_model\",\n                                display_name=\"Model Name\",\n                                info=\"Select the embedding model to use for this knowledge base.\",\n                                required=True,\n                                options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,\n                                options_metadata=[{\"icon\": \"OpenAI\"} for _ in OPENAI_EMBEDDING_MODEL_NAMES]\n                                + [{\"icon\": \"HuggingFace\"} for _ in HUGGINGFACE_MODEL_NAMES]\n                                + [{\"icon\": \"Cohere\"} for _ in COHERE_MODEL_NAMES],\n                            ),\n                            \"03_api_key\": SecretStrInput(\n                                name=\"api_key\",\n                                display_name=\"API Key\",\n                                info=\"Provider API key for embedding model\",\n                                required=True,\n                            ),\n                        },\n                    },\n                }\n            }\n        )\n\n    # ------ Inputs --------------------------------------------------------\n    inputs = [\n        DropdownInput(\n            name=\"knowledge_base\",\n            display_name=\"Knowledge Base\",\n            info=\"Select the knowledge base to load files from.\",\n            required=True,\n            options=[\n                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()\n            ]\n            if KNOWLEDGE_BASES_ROOT_PATH.exists()\n            else [],\n            refresh_button=True,\n            dialog_inputs=asdict(NewKnowledgeBaseInput()),\n        ),\n        DataFrameInput(\n            name=\"input_df\",\n            display_name=\"Data\",\n            info=\"Table with all original columns (already chunked / processed).\",\n            required=True,\n        ),\n        TableInput(\n            name=\"column_config\",\n            display_name=\"Column Configuration\",\n            info=\"Configure column behavior for the knowledge base.\",\n            required=True,\n            table_schema=[\n                {\n                    \"name\": \"column_name\",\n                    \"display_name\": \"Column Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Name of the column in the source DataFrame\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"vectorize\",\n                    \"display_name\": \"Vectorize\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Create embeddings for this column\",\n                    \"default\": False,\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"identifier\",\n                    \"display_name\": \"Identifier\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Use this column as unique identifier\",\n                    \"default\": False,\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"column_name\": \"text\",\n                    \"vectorize\": True,\n                    \"identifier\": False,\n                }\n            ],\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"Batch size for processing embeddings\",\n            advanced=True,\n            value=1000,\n        ),\n        StrInput(\n            name=\"kb_root_path\",\n            display_name=\"KB Root Path\",\n            info=\"Root directory for knowledge bases (defaults to ~/.langflow/knowledge_bases)\",\n            advanced=True,\n            value=KNOWLEDGE_BASES_DIR,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Embedding Provider API Key\",\n            info=\"API key for the embedding provider to generate embeddings.\",\n            advanced=True,\n            required=False,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            info=\"Allow duplicate rows in the knowledge base\",\n            advanced=True,\n            value=False,\n        ),\n        BoolInput(\n            name=\"silent_errors\",\n            display_name=\"Silent Errors\",\n            info=\"Continue processing even if some operations fail\",\n            advanced=True,\n            value=False,\n        ),\n    ]\n\n    # ------ Outputs -------------------------------------------------------\n    outputs = [\n        Output(\n            name=\"kb_info\",\n            display_name=\"Info\",\n            method=\"build_kb_info\",\n            info=\"Returns basic metadata of the newly ingested KB.\",\n        ),\n    ]\n\n    # ------ Internal helpers ---------------------------------------------\n    def _get_kb_root(self) -> Path:\n        \"\"\"Get KB root path with File Component pattern.\"\"\"\n        if self.kb_root_path:\n            return Path(self._resolve_path(self.kb_root_path))\n        return Path.home() / \".langflow\" / \"knowledge_bases\"\n\n    def _resolve_path(self, path: str) -> str:\n        \"\"\"Resolves the path to an absolute path.\"\"\"\n        if not path:\n            return path\n        path_object = Path(path)\n\n        if path_object.parts and path_object.parts[0] == \"~\":\n            path_object = path_object.expanduser()\n        elif path_object.is_relative_to(\".\"):\n            path_object = path_object.resolve()\n        return str(path_object)\n\n    def _validate_column_config(self, df_source: pd.DataFrame) -> list[dict[str, Any]]:\n        \"\"\"Validate column configuration using Structured Output patterns.\"\"\"\n        if not self.column_config:\n            msg = \"Column configuration cannot be empty\"\n            raise ValueError(msg)\n\n        # Convert table input to list of dicts (similar to Structured Output)\n        config_list = self.column_config if isinstance(self.column_config, list) else []\n\n        # Validate column names exist in DataFrame\n        df_columns = set(df_source.columns)\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n            if col_name not in df_columns:\n                msg = f\"Column '{col_name}' not found in DataFrame. Available columns: {sorted(df_columns)}\"\n                if not self.silent_errors:\n                    raise ValueError(msg)\n                self.log(f\"Warning: {msg}\")\n\n        return config_list\n\n    def _get_embedding_provider(self, embedding_model: str) -> str:\n        \"\"\"Get embedding provider by matching model name to lists.\"\"\"\n        if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES:\n            return \"OpenAI\"\n        if embedding_model in HUGGINGFACE_MODEL_NAMES:\n            return \"HuggingFace\"\n        if embedding_model in COHERE_MODEL_NAMES:\n            return \"Cohere\"\n        return \"Custom\"\n\n    def _build_embeddings(self, embedding_model: str, api_key: str):\n        \"\"\"Build embedding model using provider patterns.\"\"\"\n        # Get provider by matching model name to lists\n        provider = self._get_embedding_provider(embedding_model)\n\n        # Validate provider and model\n        if provider == \"OpenAI\":\n            from langchain_openai import OpenAIEmbeddings\n\n            if not api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=embedding_model,\n                api_key=api_key,\n                chunk_size=self.chunk_size,\n            )\n        if provider == \"HuggingFace\":\n            from langchain_huggingface import HuggingFaceEmbeddings\n\n            return HuggingFaceEmbeddings(\n                model=embedding_model,\n            )\n        if provider == \"Cohere\":\n            from langchain_cohere import CohereEmbeddings\n\n            if not api_key:\n                msg = \"Cohere API key is required when using Cohere provider\"\n                raise ValueError(msg)\n            return CohereEmbeddings(\n                model=embedding_model,\n                cohere_api_key=api_key,\n            )\n        if provider == \"Custom\":\n            # For custom embedding models, we would need additional configuration\n            msg = \"Custom embedding models not yet supported\"\n            raise NotImplementedError(msg)\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def _build_embedding_metadata(self, embedding_model, api_key) -> dict[str, Any]:\n        \"\"\"Build embedding model metadata.\"\"\"\n        # Get provider by matching model name to lists\n        embedding_provider = self._get_embedding_provider(embedding_model)\n\n        api_key_to_save = None\n        if api_key and hasattr(api_key, \"get_secret_value\"):\n            api_key_to_save = api_key.get_secret_value()\n        elif isinstance(api_key, str):\n            api_key_to_save = api_key\n\n        encrypted_api_key = None\n        if api_key_to_save:\n            settings_service = get_settings_service()\n            try:\n                encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)\n            except (TypeError, ValueError) as e:\n                self.log(f\"Could not encrypt API key: {e}\")\n                logger.error(f\"Could not encrypt API key: {e}\")\n\n        return {\n            \"embedding_provider\": embedding_provider,\n            \"embedding_model\": embedding_model,\n            \"api_key\": encrypted_api_key,\n            \"api_key_used\": bool(api_key),\n            \"chunk_size\": self.chunk_size,\n            \"created_at\": datetime.now(timezone.utc).isoformat(),\n        }\n\n    def _save_embedding_metadata(self, kb_path: Path, embedding_model: str, api_key: str) -> None:\n        \"\"\"Save embedding model metadata.\"\"\"\n        embedding_metadata = self._build_embedding_metadata(embedding_model, api_key)\n        metadata_path = kb_path / \"embedding_metadata.json\"\n        metadata_path.write_text(json.dumps(embedding_metadata, indent=2))\n\n    def _save_kb_files(\n        self,\n        kb_path: Path,\n        df_source: pd.DataFrame,\n        config_list: list[dict[str, Any]],\n    ) -> None:\n        \"\"\"Save KB files using File Component storage patterns.\"\"\"\n        try:\n            # Create directory (following File Component patterns)\n            kb_path.mkdir(parents=True, exist_ok=True)\n\n            # Save updated DataFrame\n            df_path = kb_path / \"source.parquet\"\n            df_source.to_parquet(df_path, index=False)\n\n            # Save column configuration\n            # Only do this if the file doesn't exist already\n            cfg_path = kb_path / \"schema.json\"\n            if not cfg_path.exists():\n                cfg_path.write_text(json.dumps(config_list, indent=2))\n\n        except Exception as e:\n            if not self.silent_errors:\n                raise\n            self.log(f\"Error saving KB files: {e}\")\n\n    def _calculate_text_stats(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> dict[str, int]:\n        \"\"\"Calculate word and character counts for text columns.\"\"\"\n        total_words = 0\n        total_chars = 0\n\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n\n            # Only count text-based columns\n            if col_name in df_source.columns:\n                col_data = df_source[col_name].astype(str).fillna(\"\")\n\n                # Count characters\n                total_chars += col_data.str.len().sum()\n\n                # Count words (split by whitespace)\n                total_words += col_data.str.split().str.len().fillna(0).sum()\n\n        return {\"word_count\": int(total_words), \"char_count\": int(total_chars)}\n\n    def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:\n        \"\"\"Build detailed column metadata.\"\"\"\n        metadata: dict[str, Any] = {\n            \"total_columns\": len(df_source.columns),\n            \"mapped_columns\": len(config_list),\n            \"unmapped_columns\": len(df_source.columns) - len(config_list),\n            \"columns\": [],\n            \"summary\": {\"vectorized_columns\": [], \"identifier_columns\": []},\n        }\n\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n            vectorize = config.get(\"vectorize\") == \"True\" or config.get(\"vectorize\") is True\n            identifier = config.get(\"identifier\") == \"True\" or config.get(\"identifier\") is True\n\n            # Add to columns list\n            metadata[\"columns\"].append(\n                {\n                    \"name\": col_name,\n                    \"vectorize\": vectorize,\n                    \"identifier\": identifier,\n                }\n            )\n\n            # Update summary\n            if vectorize:\n                metadata[\"summary\"][\"vectorized_columns\"].append(col_name)\n            if identifier:\n                metadata[\"summary\"][\"identifier_columns\"].append(col_name)\n\n        return metadata\n\n    def _create_vector_store(\n        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str\n    ) -> None:\n        \"\"\"Create vector store following Local DB component pattern.\"\"\"\n        try:\n            # Set up vector store directory (following Local DB pattern)\n            if self.kb_root_path:\n                base_dir = Path(self._resolve_path(self.kb_root_path))\n            else:\n                base_dir = Path(user_cache_dir(\"langflow\", \"langflow\"))\n\n            vector_store_dir = base_dir / self.knowledge_base\n            vector_store_dir.mkdir(parents=True, exist_ok=True)\n\n            # Create embeddings model\n            embedding_function = self._build_embeddings(embedding_model, api_key)\n\n            # Convert DataFrame to Data objects (following Local DB pattern)\n            data_objects = self._convert_df_to_data_objects(df_source, config_list)\n\n            # Create vector store\n            chroma = Chroma(\n                persist_directory=str(vector_store_dir),\n                embedding_function=embedding_function,\n                collection_name=self.knowledge_base,\n            )\n\n            # Convert Data objects to LangChain Documents\n            documents = []\n            for data_obj in data_objects:\n                doc = data_obj.to_lc_document()\n                documents.append(doc)\n\n            # Add documents to vector store\n            if documents:\n                chroma.add_documents(documents)\n                self.log(f\"Added {len(documents)} documents to vector store '{self.knowledge_base}'\")\n\n        except Exception as e:\n            if not self.silent_errors:\n                raise\n            self.log(f\"Error creating vector store: {e}\")\n\n    def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:\n        \"\"\"Convert DataFrame to Data objects for vector store.\"\"\"\n        data_objects: list[Data] = []\n\n        # Set up vector store directory (following Local DB pattern)\n        if self.kb_root_path:\n            base_dir = Path(self._resolve_path(self.kb_root_path))\n        else:\n            base_dir = Path(user_cache_dir(\"langflow\", \"langflow\"))\n\n        # If we don't allow duplicates, we need to get the existing hashes\n        chroma = Chroma(\n            persist_directory=str(base_dir / self.knowledge_base),\n            collection_name=self.knowledge_base,\n        )\n\n        # Get all documents and their metadata\n        all_docs = chroma.get()\n\n        # Extract all _id values from metadata\n        id_list = [metadata.get(\"_id\") for metadata in all_docs[\"metadatas\"] if metadata.get(\"_id\")]\n\n        # Get column roles\n        content_cols = []\n        identifier_cols = []\n\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n            vectorize = config.get(\"vectorize\") == \"True\" or config.get(\"vectorize\") is True\n            identifier = config.get(\"identifier\") == \"True\" or config.get(\"identifier\") is True\n\n            if vectorize:\n                content_cols.append(col_name)\n            elif identifier:\n                identifier_cols.append(col_name)\n\n        # Convert each row to a Data object\n        for _, row in df_source.iterrows():\n            # Build content text from vectorized columns using list comprehension\n            content_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]\n\n            page_content = \" \".join(content_parts)\n\n            # Build metadata from NON-vectorized columns only (simple key-value pairs)\n            data_dict = {\n                \"text\": page_content,  # Main content for vectorization\n            }\n\n            # Add metadata columns as simple key-value pairs\n            for col in df_source.columns:\n                if col not in content_cols and col in row and pd.notna(row[col]):\n                    # Convert to simple types for Chroma metadata\n                    value = row[col]\n                    if isinstance(value, str | int | float | bool):\n                        data_dict[col] = str(value)\n                    else:\n                        data_dict[col] = str(value)  # Convert complex types to string\n\n            # Hash the page_content for unique ID\n            page_content_hash = hashlib.sha256(page_content.encode()).hexdigest()\n            data_dict[\"_id\"] = page_content_hash\n\n            # If duplicates are disallowed, and hash exists, prevent adding this row\n            if not self.allow_duplicates and page_content_hash in id_list:\n                self.log(f\"Skipping duplicate row with hash {page_content_hash}\")\n                continue\n\n            # Create Data object - everything except \"text\" becomes metadata\n            data_obj = Data(data=data_dict)\n            data_objects.append(data_obj)\n\n        return data_objects\n\n    def is_valid_collection_name(self, name, min_length: int = 3, max_length: int = 63) -> bool:\n        \"\"\"Validates collection name against conditions 1-3.\n\n        1. Contains 3-63 characters\n        2. Starts and ends with alphanumeric character\n        3. Contains only alphanumeric characters, underscores, or hyphens.\n\n        Args:\n            name (str): Collection name to validate\n            min_length (int): Minimum length of the name\n            max_length (int): Maximum length of the name\n\n        Returns:\n            bool: True if valid, False otherwise\n        \"\"\"\n        # Check length (condition 1)\n        if not (min_length <= len(name) <= max_length):\n            return False\n\n        # Check start/end with alphanumeric (condition 2)\n        if not (name[0].isalnum() and name[-1].isalnum()):\n            return False\n\n        # Check allowed characters (condition 3)\n        return re.match(r\"^[a-zA-Z0-9_-]+$\", name) is not None\n\n    # ---------------------------------------------------------------------\n    #                         OUTPUT METHODS\n    # ---------------------------------------------------------------------\n    def build_kb_info(self) -> Data:\n        \"\"\"Main ingestion routine → returns a dict with KB metadata.\"\"\"\n        try:\n            # Get source DataFrame\n            df_source: pd.DataFrame = self.input_df\n\n            # Validate column configuration (using Structured Output patterns)\n            config_list = self._validate_column_config(df_source)\n\n            # Prepare KB folder (using File Component patterns)\n            kb_root = self._get_kb_root()\n            kb_path = kb_root / self.knowledge_base\n\n            # Save source DataFrame\n            df_path = kb_path / \"source.parquet\"\n\n            # Instead of just overwriting this file, i want to read it and append to it if it exists\n            df_source_combined = df_source.copy()\n            if df_path.exists():\n                # Read existing DataFrame\n                existing_df = pd.read_parquet(df_path)\n                # Append new data\n                df_source_combined = pd.concat([existing_df, df_source_combined], ignore_index=True)\n\n            # Read the embedding info from the knowledge base folder\n            metadata_path = kb_path / \"embedding_metadata.json\"\n\n            # If the API key is not provided, try to read it from the metadata file\n            if metadata_path.exists():\n                settings_service = get_settings_service()\n                metadata = json.loads(metadata_path.read_text())\n                embedding_model = metadata.get(\"embedding_model\")\n            try:\n                api_key = decrypt_api_key(metadata[\"api_key\"], settings_service)\n            except (InvalidToken, TypeError, ValueError) as e:\n                logger.error(f\"Could not decrypt API key. Please provide it manually. Error: {e}\")\n\n            # Check if a custom API key was provided, update metadata if so\n            if self.api_key:\n                api_key = self.api_key\n                self._save_embedding_metadata(\n                    kb_path=kb_path,\n                    embedding_model=embedding_model,\n                    api_key=api_key,\n                )\n\n            # Create vector store following Local DB component pattern\n            self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)\n\n            # Save KB files (using File Component storage patterns)\n            self._save_kb_files(kb_path, df_source_combined, config_list)\n\n            # Calculate text statistics\n            text_stats = self._calculate_text_stats(df_source_combined, config_list)\n\n            # Build metadata response\n            meta: dict[str, Any] = {\n                \"kb_id\": str(uuid.uuid4()),\n                \"kb_name\": self.knowledge_base,\n                \"timestamp\": datetime.now(tz=timezone.utc).isoformat(),\n                \"rows\": len(df_source),\n                \"word_count\": text_stats[\"word_count\"],\n                \"char_count\": text_stats[\"char_count\"],\n                \"column_metadata\": self._build_column_metadata(config_list, df_source),\n                \"created_or_updated\": True,\n                \"path\": str(kb_path),\n                \"config_columns\": len(config_list),\n            }\n\n            # Set status message\n            self.status = f\"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks.\"\n\n            return Data(data=meta)\n\n        except Exception as e:\n            if not self.silent_errors:\n                raise\n            self.log(f\"Error in KB ingestion: {e}\")\n            self.status = f\"❌ KB ingestion failed: {e}\"\n            return Data(data={\"error\": str(e), \"kb_name\": self.knowledge_base})\n\n    def _get_knowledge_bases(self) -> list[str]:\n        \"\"\"Retrieve a list of available knowledge bases.\n\n        Returns:\n            A list of knowledge base names.\n        \"\"\"\n        # Return the list of directories in the knowledge base root path\n        kb_root_path = Path(self.kb_root_path).expanduser()\n\n        if not kb_root_path.exists():\n            return []\n\n        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(\".\") and d.is_dir()]\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        \"\"\"Update build configuration based on provider selection.\"\"\"\n        # Create a new knowledge base\n        if field_name == \"knowledge_base\":\n            if isinstance(field_value, dict) and \"01_new_kb_name\" in field_value:\n                # Validate the knowledge base name - Make sure it follows these rules:\n                if not self.is_valid_collection_name(field_value[\"01_new_kb_name\"]):\n                    msg = f\"Invalid knowledge base name: {field_value['01_new_kb_name']}\"\n                    raise ValueError(msg)\n\n                # We need to test the API Key one time against the embedding model\n                embed_model = self._build_embeddings(\n                    embedding_model=field_value[\"02_embedding_model\"], api_key=field_value[\"03_api_key\"]\n                )\n\n                # Try to generate a dummy embedding to validate the API key\n                embed_model.embed_query(\"test\")\n\n                # Create the new knowledge base directory\n                kb_path = Path(KNOWLEDGE_BASES_ROOT_PATH, field_value[\"01_new_kb_name\"]).expanduser()\n                kb_path.mkdir(parents=True, exist_ok=True)\n\n                # Save the embedding metadata\n                build_config[\"knowledge_base\"][\"value\"] = field_value[\"01_new_kb_name\"]\n                self._save_embedding_metadata(\n                    kb_path=kb_path,\n                    embedding_model=field_value[\"02_embedding_model\"],\n                    api_key=field_value[\"03_api_key\"],\n                )\n\n            # Update the knowledge base options dynamically\n            build_config[\"knowledge_base\"][\"options\"] = self._get_knowledge_bases()\n            if build_config[\"knowledge_base\"][\"value\"] not in build_config[\"knowledge_base\"][\"options\"]:\n                build_config[\"knowledge_base\"][\"value\"] = None\n\n        return build_config\n"
+                "value": "from __future__ import annotations\n\nimport hashlib\nimport json\nimport re\nimport uuid\nfrom dataclasses import asdict, dataclass, field\nfrom datetime import datetime, timezone\nfrom pathlib import Path\nfrom typing import Any\n\nimport pandas as pd\nfrom cryptography.fernet import InvalidToken\nfrom langchain_chroma import Chroma\nfrom loguru import logger\nfrom platformdirs import user_cache_dir\n\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    DataFrameInput,\n    DropdownInput,\n    IntInput,\n    Output,\n    SecretStrInput,\n    StrInput,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.dotdict import dotdict  # noqa: TC001\nfrom langflow.schema.table import EditMode\nfrom langflow.services.auth.utils import decrypt_api_key, encrypt_api_key\nfrom langflow.services.deps import get_settings_service\n\nHUGGINGFACE_MODEL_NAMES = [\"sentence-transformers/all-MiniLM-L6-v2\", \"sentence-transformers/all-mpnet-base-v2\"]\nCOHERE_MODEL_NAMES = [\"embed-english-v3.0\", \"embed-multilingual-v3.0\"]\n\nKNOWLEDGE_BASES_DIR = \"~/.langflow/knowledge_bases\"\nKNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()\n\n\nclass KBIngestionComponent(Component):\n    \"\"\"Create or append to a Langflow Knowledge Base from a DataFrame.\"\"\"\n\n    # ------ UI metadata ---------------------------------------------------\n    display_name = \"Create Knowledge\"\n    description = \"Create or append to a Langflow Knowledge Base from a DataFrame.\"\n    icon = \"database\"\n    name = \"KBIngestion\"\n\n    @dataclass\n    class NewKnowledgeBaseInput:\n        functionality: str = \"create\"\n        fields: dict[str, dict] = field(\n            default_factory=lambda: {\n                \"data\": {\n                    \"node\": {\n                        \"name\": \"create_knowledge_base\",\n                        \"description\": \"Create a new knowledge base in Langflow.\",\n                        \"display_name\": \"Create new knowledge base\",\n                        \"field_order\": [\"01_new_kb_name\", \"02_embedding_model\", \"03_api_key\"],\n                        \"template\": {\n                            \"01_new_kb_name\": StrInput(\n                                name=\"new_kb_name\",\n                                display_name=\"Knowledge Base Name\",\n                                info=\"Name of the new knowledge base to create.\",\n                                required=True,\n                            ),\n                            \"02_embedding_model\": DropdownInput(\n                                name=\"embedding_model\",\n                                display_name=\"Model Name\",\n                                info=\"Select the embedding model to use for this knowledge base.\",\n                                required=True,\n                                options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,\n                                options_metadata=[{\"icon\": \"OpenAI\"} for _ in OPENAI_EMBEDDING_MODEL_NAMES]\n                                + [{\"icon\": \"HuggingFace\"} for _ in HUGGINGFACE_MODEL_NAMES]\n                                + [{\"icon\": \"Cohere\"} for _ in COHERE_MODEL_NAMES],\n                            ),\n                            \"03_api_key\": SecretStrInput(\n                                name=\"api_key\",\n                                display_name=\"API Key\",\n                                info=\"Provider API key for embedding model\",\n                                required=True,\n                            ),\n                        },\n                    },\n                }\n            }\n        )\n\n    # ------ Inputs --------------------------------------------------------\n    inputs = [\n        DropdownInput(\n            name=\"knowledge_base\",\n            display_name=\"Knowledge Base\",\n            info=\"Select the knowledge base to load files from.\",\n            required=True,\n            options=[\n                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()\n            ]\n            if KNOWLEDGE_BASES_ROOT_PATH.exists()\n            else [],\n            refresh_button=True,\n            dialog_inputs=asdict(NewKnowledgeBaseInput()),\n        ),\n        DataFrameInput(\n            name=\"input_df\",\n            display_name=\"Data\",\n            info=\"Table with all original columns (already chunked / processed).\",\n            required=True,\n        ),\n        TableInput(\n            name=\"column_config\",\n            display_name=\"Column Configuration\",\n            info=\"Configure column behavior for the knowledge base.\",\n            required=True,\n            table_schema=[\n                {\n                    \"name\": \"column_name\",\n                    \"display_name\": \"Column Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Name of the column in the source DataFrame\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"vectorize\",\n                    \"display_name\": \"Vectorize\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Create embeddings for this column\",\n                    \"default\": False,\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"identifier\",\n                    \"display_name\": \"Identifier\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Use this column as unique identifier\",\n                    \"default\": False,\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"column_name\": \"text\",\n                    \"vectorize\": True,\n                    \"identifier\": False,\n                }\n            ],\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"Batch size for processing embeddings\",\n            advanced=True,\n            value=1000,\n        ),\n        StrInput(\n            name=\"kb_root_path\",\n            display_name=\"KB Root Path\",\n            info=\"Root directory for knowledge bases (defaults to ~/.langflow/knowledge_bases)\",\n            advanced=True,\n            value=KNOWLEDGE_BASES_DIR,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Embedding Provider API Key\",\n            info=\"API key for the embedding provider to generate embeddings.\",\n            advanced=True,\n            required=False,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            info=\"Allow duplicate rows in the knowledge base\",\n            advanced=True,\n            value=False,\n        ),\n        BoolInput(\n            name=\"silent_errors\",\n            display_name=\"Silent Errors\",\n            info=\"Continue processing even if some operations fail\",\n            advanced=True,\n            value=False,\n        ),\n    ]\n\n    # ------ Outputs -------------------------------------------------------\n    outputs = [\n        Output(\n            name=\"kb_info\",\n            display_name=\"Info\",\n            method=\"build_kb_info\",\n            info=\"Returns basic metadata of the newly ingested KB.\",\n        ),\n    ]\n\n    # ------ Internal helpers ---------------------------------------------\n    def _get_kb_root(self) -> Path:\n        \"\"\"Get KB root path with File Component pattern.\"\"\"\n        if self.kb_root_path:\n            return Path(self._resolve_path(self.kb_root_path))\n        return Path.home() / \".langflow\" / \"knowledge_bases\"\n\n    def _resolve_path(self, path: str) -> str:\n        \"\"\"Resolves the path to an absolute path.\"\"\"\n        if not path:\n            return path\n        path_object = Path(path)\n\n        if path_object.parts and path_object.parts[0] == \"~\":\n            path_object = path_object.expanduser()\n        elif path_object.is_relative_to(\".\"):\n            path_object = path_object.resolve()\n        return str(path_object)\n\n    def _validate_column_config(self, df_source: pd.DataFrame) -> list[dict[str, Any]]:\n        \"\"\"Validate column configuration using Structured Output patterns.\"\"\"\n        if not self.column_config:\n            msg = \"Column configuration cannot be empty\"\n            raise ValueError(msg)\n\n        # Convert table input to list of dicts (similar to Structured Output)\n        config_list = self.column_config if isinstance(self.column_config, list) else []\n\n        # Validate column names exist in DataFrame\n        df_columns = set(df_source.columns)\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n            if col_name not in df_columns:\n                msg = f\"Column '{col_name}' not found in DataFrame. Available columns: {sorted(df_columns)}\"\n                if not self.silent_errors:\n                    raise ValueError(msg)\n                self.log(f\"Warning: {msg}\")\n\n        return config_list\n\n    def _get_embedding_provider(self, embedding_model: str) -> str:\n        \"\"\"Get embedding provider by matching model name to lists.\"\"\"\n        if embedding_model in OPENAI_EMBEDDING_MODEL_NAMES:\n            return \"OpenAI\"\n        if embedding_model in HUGGINGFACE_MODEL_NAMES:\n            return \"HuggingFace\"\n        if embedding_model in COHERE_MODEL_NAMES:\n            return \"Cohere\"\n        return \"Custom\"\n\n    def _build_embeddings(self, embedding_model: str, api_key: str):\n        \"\"\"Build embedding model using provider patterns.\"\"\"\n        # Get provider by matching model name to lists\n        provider = self._get_embedding_provider(embedding_model)\n\n        # Validate provider and model\n        if provider == \"OpenAI\":\n            from langchain_openai import OpenAIEmbeddings\n\n            if not api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=embedding_model,\n                api_key=api_key,\n                chunk_size=self.chunk_size,\n            )\n        if provider == \"HuggingFace\":\n            from langchain_huggingface import HuggingFaceEmbeddings\n\n            return HuggingFaceEmbeddings(\n                model=embedding_model,\n            )\n        if provider == \"Cohere\":\n            from langchain_cohere import CohereEmbeddings\n\n            if not api_key:\n                msg = \"Cohere API key is required when using Cohere provider\"\n                raise ValueError(msg)\n            return CohereEmbeddings(\n                model=embedding_model,\n                cohere_api_key=api_key,\n            )\n        if provider == \"Custom\":\n            # For custom embedding models, we would need additional configuration\n            msg = \"Custom embedding models not yet supported\"\n            raise NotImplementedError(msg)\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def _build_embedding_metadata(self, embedding_model, api_key) -> dict[str, Any]:\n        \"\"\"Build embedding model metadata.\"\"\"\n        # Get provider by matching model name to lists\n        embedding_provider = self._get_embedding_provider(embedding_model)\n\n        api_key_to_save = None\n        if api_key and hasattr(api_key, \"get_secret_value\"):\n            api_key_to_save = api_key.get_secret_value()\n        elif isinstance(api_key, str):\n            api_key_to_save = api_key\n\n        encrypted_api_key = None\n        if api_key_to_save:\n            settings_service = get_settings_service()\n            try:\n                encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)\n            except (TypeError, ValueError) as e:\n                self.log(f\"Could not encrypt API key: {e}\")\n                logger.error(f\"Could not encrypt API key: {e}\")\n\n        return {\n            \"embedding_provider\": embedding_provider,\n            \"embedding_model\": embedding_model,\n            \"api_key\": encrypted_api_key,\n            \"api_key_used\": bool(api_key),\n            \"chunk_size\": self.chunk_size,\n            \"created_at\": datetime.now(timezone.utc).isoformat(),\n        }\n\n    def _save_embedding_metadata(self, kb_path: Path, embedding_model: str, api_key: str) -> None:\n        \"\"\"Save embedding model metadata.\"\"\"\n        embedding_metadata = self._build_embedding_metadata(embedding_model, api_key)\n        metadata_path = kb_path / \"embedding_metadata.json\"\n        metadata_path.write_text(json.dumps(embedding_metadata, indent=2))\n\n    def _save_kb_files(\n        self,\n        kb_path: Path,\n        df_source: pd.DataFrame,\n        config_list: list[dict[str, Any]],\n    ) -> None:\n        \"\"\"Save KB files using File Component storage patterns.\"\"\"\n        try:\n            # Create directory (following File Component patterns)\n            kb_path.mkdir(parents=True, exist_ok=True)\n\n            # Save updated DataFrame\n            df_path = kb_path / \"source.parquet\"\n            df_source.to_parquet(df_path, index=False)\n\n            # Save column configuration\n            # Only do this if the file doesn't exist already\n            cfg_path = kb_path / \"schema.json\"\n            if not cfg_path.exists():\n                cfg_path.write_text(json.dumps(config_list, indent=2))\n\n        except Exception as e:\n            if not self.silent_errors:\n                raise\n            self.log(f\"Error saving KB files: {e}\")\n\n    def _calculate_text_stats(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> dict[str, int]:\n        \"\"\"Calculate word and character counts for text columns.\"\"\"\n        total_words = 0\n        total_chars = 0\n\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n\n            # Only count text-based columns\n            if col_name in df_source.columns:\n                col_data = df_source[col_name].astype(str).fillna(\"\")\n\n                # Count characters\n                total_chars += col_data.str.len().sum()\n\n                # Count words (split by whitespace)\n                total_words += col_data.str.split().str.len().fillna(0).sum()\n\n        return {\"word_count\": int(total_words), \"char_count\": int(total_chars)}\n\n    def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:\n        \"\"\"Build detailed column metadata.\"\"\"\n        metadata: dict[str, Any] = {\n            \"total_columns\": len(df_source.columns),\n            \"mapped_columns\": len(config_list),\n            \"unmapped_columns\": len(df_source.columns) - len(config_list),\n            \"columns\": [],\n            \"summary\": {\"vectorized_columns\": [], \"identifier_columns\": []},\n        }\n\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n            vectorize = config.get(\"vectorize\") == \"True\" or config.get(\"vectorize\") is True\n            identifier = config.get(\"identifier\") == \"True\" or config.get(\"identifier\") is True\n\n            # Add to columns list\n            metadata[\"columns\"].append(\n                {\n                    \"name\": col_name,\n                    \"vectorize\": vectorize,\n                    \"identifier\": identifier,\n                }\n            )\n\n            # Update summary\n            if vectorize:\n                metadata[\"summary\"][\"vectorized_columns\"].append(col_name)\n            if identifier:\n                metadata[\"summary\"][\"identifier_columns\"].append(col_name)\n\n        return metadata\n\n    def _create_vector_store(\n        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str\n    ) -> None:\n        \"\"\"Create vector store following Local DB component pattern.\"\"\"\n        try:\n            # Set up vector store directory (following Local DB pattern)\n            if self.kb_root_path:\n                base_dir = Path(self._resolve_path(self.kb_root_path))\n            else:\n                base_dir = Path(user_cache_dir(\"langflow\", \"langflow\"))\n\n            vector_store_dir = base_dir / self.knowledge_base\n            vector_store_dir.mkdir(parents=True, exist_ok=True)\n\n            # Create embeddings model\n            embedding_function = self._build_embeddings(embedding_model, api_key)\n\n            # Convert DataFrame to Data objects (following Local DB pattern)\n            data_objects = self._convert_df_to_data_objects(df_source, config_list)\n\n            # Create vector store\n            chroma = Chroma(\n                persist_directory=str(vector_store_dir),\n                embedding_function=embedding_function,\n                collection_name=self.knowledge_base,\n            )\n\n            # Convert Data objects to LangChain Documents\n            documents = []\n            for data_obj in data_objects:\n                doc = data_obj.to_lc_document()\n                documents.append(doc)\n\n            # Add documents to vector store\n            if documents:\n                chroma.add_documents(documents)\n                self.log(f\"Added {len(documents)} documents to vector store '{self.knowledge_base}'\")\n\n        except Exception as e:\n            if not self.silent_errors:\n                raise\n            self.log(f\"Error creating vector store: {e}\")\n\n    def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:\n        \"\"\"Convert DataFrame to Data objects for vector store.\"\"\"\n        data_objects: list[Data] = []\n\n        # Set up vector store directory (following Local DB pattern)\n        if self.kb_root_path:\n            base_dir = Path(self._resolve_path(self.kb_root_path))\n        else:\n            base_dir = Path(user_cache_dir(\"langflow\", \"langflow\"))\n\n        # If we don't allow duplicates, we need to get the existing hashes\n        chroma = Chroma(\n            persist_directory=str(base_dir / self.knowledge_base),\n            collection_name=self.knowledge_base,\n        )\n\n        # Get all documents and their metadata\n        all_docs = chroma.get()\n\n        # Extract all _id values from metadata\n        id_list = [metadata.get(\"_id\") for metadata in all_docs[\"metadatas\"] if metadata.get(\"_id\")]\n\n        # Get column roles\n        content_cols = []\n        identifier_cols = []\n\n        for config in config_list:\n            col_name = config.get(\"column_name\")\n            vectorize = config.get(\"vectorize\") == \"True\" or config.get(\"vectorize\") is True\n            identifier = config.get(\"identifier\") == \"True\" or config.get(\"identifier\") is True\n\n            if vectorize:\n                content_cols.append(col_name)\n            elif identifier:\n                identifier_cols.append(col_name)\n\n        # Convert each row to a Data object\n        for _, row in df_source.iterrows():\n            # Build content text from vectorized columns using list comprehension\n            content_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]\n\n            page_content = \" \".join(content_parts)\n\n            # Build metadata from NON-vectorized columns only (simple key-value pairs)\n            data_dict = {\n                \"text\": page_content,  # Main content for vectorization\n            }\n\n            # Add metadata columns as simple key-value pairs\n            for col in df_source.columns:\n                if col not in content_cols and col in row and pd.notna(row[col]):\n                    # Convert to simple types for Chroma metadata\n                    value = row[col]\n                    if isinstance(value, str | int | float | bool):\n                        data_dict[col] = str(value)\n                    else:\n                        data_dict[col] = str(value)  # Convert complex types to string\n\n            # Hash the page_content for unique ID\n            page_content_hash = hashlib.sha256(page_content.encode()).hexdigest()\n            data_dict[\"_id\"] = page_content_hash\n\n            # If duplicates are disallowed, and hash exists, prevent adding this row\n            if not self.allow_duplicates and page_content_hash in id_list:\n                self.log(f\"Skipping duplicate row with hash {page_content_hash}\")\n                continue\n\n            # Create Data object - everything except \"text\" becomes metadata\n            data_obj = Data(data=data_dict)\n            data_objects.append(data_obj)\n\n        return data_objects\n\n    def is_valid_collection_name(self, name, min_length: int = 3, max_length: int = 63) -> bool:\n        \"\"\"Validates collection name against conditions 1-3.\n\n        1. Contains 3-63 characters\n        2. Starts and ends with alphanumeric character\n        3. Contains only alphanumeric characters, underscores, or hyphens.\n\n        Args:\n            name (str): Collection name to validate\n            min_length (int): Minimum length of the name\n            max_length (int): Maximum length of the name\n\n        Returns:\n            bool: True if valid, False otherwise\n        \"\"\"\n        # Check length (condition 1)\n        if not (min_length <= len(name) <= max_length):\n            return False\n\n        # Check start/end with alphanumeric (condition 2)\n        if not (name[0].isalnum() and name[-1].isalnum()):\n            return False\n\n        # Check allowed characters (condition 3)\n        return re.match(r\"^[a-zA-Z0-9_-]+$\", name) is not None\n\n    # ---------------------------------------------------------------------\n    #                         OUTPUT METHODS\n    # ---------------------------------------------------------------------\n    def build_kb_info(self) -> Data:\n        \"\"\"Main ingestion routine → returns a dict with KB metadata.\"\"\"\n        try:\n            # Get source DataFrame\n            df_source: pd.DataFrame = self.input_df\n\n            # Validate column configuration (using Structured Output patterns)\n            config_list = self._validate_column_config(df_source)\n\n            # Prepare KB folder (using File Component patterns)\n            kb_root = self._get_kb_root()\n            kb_path = kb_root / self.knowledge_base\n\n            # Save source DataFrame\n            df_path = kb_path / \"source.parquet\"\n\n            # Instead of just overwriting this file, i want to read it and append to it if it exists\n            df_source_combined = df_source.copy()\n            if df_path.exists():\n                # Read existing DataFrame\n                existing_df = pd.read_parquet(df_path)\n                # Append new data\n                df_source_combined = pd.concat([existing_df, df_source_combined], ignore_index=True)\n\n            # Read the embedding info from the knowledge base folder\n            metadata_path = kb_path / \"embedding_metadata.json\"\n\n            # If the API key is not provided, try to read it from the metadata file\n            if metadata_path.exists():\n                settings_service = get_settings_service()\n                metadata = json.loads(metadata_path.read_text())\n                embedding_model = metadata.get(\"embedding_model\")\n            try:\n                api_key = decrypt_api_key(metadata[\"api_key\"], settings_service)\n            except (InvalidToken, TypeError, ValueError) as e:\n                logger.error(f\"Could not decrypt API key. Please provide it manually. Error: {e}\")\n\n            # Check if a custom API key was provided, update metadata if so\n            if self.api_key:\n                api_key = self.api_key\n                self._save_embedding_metadata(\n                    kb_path=kb_path,\n                    embedding_model=embedding_model,\n                    api_key=api_key,\n                )\n\n            # Create vector store following Local DB component pattern\n            self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)\n\n            # Save KB files (using File Component storage patterns)\n            self._save_kb_files(kb_path, df_source_combined, config_list)\n\n            # Calculate text statistics\n            text_stats = self._calculate_text_stats(df_source_combined, config_list)\n\n            # Build metadata response\n            meta: dict[str, Any] = {\n                \"kb_id\": str(uuid.uuid4()),\n                \"kb_name\": self.knowledge_base,\n                \"timestamp\": datetime.now(tz=timezone.utc).isoformat(),\n                \"rows\": len(df_source),\n                \"word_count\": text_stats[\"word_count\"],\n                \"char_count\": text_stats[\"char_count\"],\n                \"column_metadata\": self._build_column_metadata(config_list, df_source),\n                \"created_or_updated\": True,\n                \"path\": str(kb_path),\n                \"config_columns\": len(config_list),\n            }\n\n            # Set status message\n            self.status = f\"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks.\"\n\n            return Data(data=meta)\n\n        except Exception as e:\n            if not self.silent_errors:\n                raise\n            self.log(f\"Error in KB ingestion: {e}\")\n            self.status = f\"❌ KB ingestion failed: {e}\"\n            return Data(data={\"error\": str(e), \"kb_name\": self.knowledge_base})\n\n    def _get_knowledge_bases(self) -> list[str]:\n        \"\"\"Retrieve a list of available knowledge bases.\n\n        Returns:\n            A list of knowledge base names.\n        \"\"\"\n        # Return the list of directories in the knowledge base root path\n        kb_root_path = Path(self.kb_root_path).expanduser()\n\n        if not kb_root_path.exists():\n            return []\n\n        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(\".\") and d.is_dir()]\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        \"\"\"Update build configuration based on provider selection.\"\"\"\n        # Create a new knowledge base\n        if field_name == \"knowledge_base\":\n            if isinstance(field_value, dict) and \"01_new_kb_name\" in field_value:\n                # Validate the knowledge base name - Make sure it follows these rules:\n                if not self.is_valid_collection_name(field_value[\"01_new_kb_name\"]):\n                    msg = f\"Invalid knowledge base name: {field_value['01_new_kb_name']}\"\n                    raise ValueError(msg)\n\n                # We need to test the API Key one time against the embedding model\n                embed_model = self._build_embeddings(\n                    embedding_model=field_value[\"02_embedding_model\"], api_key=field_value[\"03_api_key\"]\n                )\n\n                # Try to generate a dummy embedding to validate the API key\n                embed_model.embed_query(\"test\")\n\n                # Create the new knowledge base directory\n                kb_path = Path(KNOWLEDGE_BASES_ROOT_PATH, field_value[\"01_new_kb_name\"]).expanduser()\n                kb_path.mkdir(parents=True, exist_ok=True)\n\n                # Save the embedding metadata\n                build_config[\"knowledge_base\"][\"value\"] = field_value[\"01_new_kb_name\"]\n                self._save_embedding_metadata(\n                    kb_path=kb_path,\n                    embedding_model=field_value[\"02_embedding_model\"],\n                    api_key=field_value[\"03_api_key\"],\n                )\n\n            # Update the knowledge base options dynamically\n            build_config[\"knowledge_base\"][\"options\"] = self._get_knowledge_bases()\n            if build_config[\"knowledge_base\"][\"value\"] not in build_config[\"knowledge_base\"][\"options\"]:\n                build_config[\"knowledge_base\"][\"value\"] = None\n\n        return build_config\n"
               },
               "column_config": {
                 "_input_type": "TableInput",
@@ -757,10 +699,10 @@
           "width": 320
         },
         "position": {
-          "x": 989.140022446094,
+          "x": 975.188496136904,
           "y": 89.38370242850593
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
@@ -770,7 +712,7 @@
             "base_classes": [
               "DataFrame"
             ],
-            "beta": true,
+            "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Retrieve data and perform searches against a particular knowledge base.",
@@ -791,7 +733,7 @@
             "legacy": false,
             "lf_version": "1.5.0.post1",
             "metadata": {
-              "code_hash": "553e67768d81",
+              "code_hash": "58e6b21cbc2c",
               "module": "langflow.components.data.kb_retrieval.KBRetrievalComponent"
             },
             "minimized": false,
@@ -848,7 +790,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import json\nfrom pathlib import Path\nfrom typing import Any\n\nfrom cryptography.fernet import InvalidToken\nfrom langchain_chroma import Chroma\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.services.auth.utils import decrypt_api_key\nfrom langflow.services.deps import get_settings_service\nfrom langflow.services.settings.feature_flags import FEATURE_FLAGS\n\nKNOWLEDGE_BASES_DIR = \"~/.langflow/knowledge_bases\"\nKNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()\n\n\nclass KBRetrievalComponent(Component):\n    display_name = \"Retrieve Knowledge\"\n    description = \"Retrieve data and perform searches against a particular knowledge base.\"\n    icon = \"database\"\n    name = \"KBRetrieval\"\n    beta = True\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        # Hide component if knowledge bases feature is disabled\n        if not FEATURE_FLAGS.knowledge_bases:\n            self.display_name = None\n\n    inputs = [\n        DropdownInput(\n            name=\"knowledge_base\",\n            display_name=\"Knowledge Base\",\n            info=\"Select the knowledge base to load files from.\",\n            required=True,\n            options=[\n                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()\n            ]\n            if KNOWLEDGE_BASES_ROOT_PATH.exists()\n            else [],\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"kb_root_path\",\n            display_name=\"KB Root Path\",\n            info=\"Root directory for knowledge bases (defaults to ~/.langflow/knowledge_bases)\",\n            advanced=True,\n            value=KNOWLEDGE_BASES_DIR,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Embedding Provider API Key\",\n            info=\"API key for the embedding provider to generate embeddings.\",\n            advanced=True,\n            required=False,\n        ),\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"Optional search query to filter knowledge base data.\",\n        ),\n        IntInput(\n            name=\"top_k\",\n            display_name=\"Top K Results\",\n            info=\"Number of top results to return from the knowledge base.\",\n            value=5,\n            advanced=True,\n            required=False,\n        ),\n        BoolInput(\n            name=\"include_embeddings\",\n            display_name=\"Include Embeddings\",\n            info=\"Whether to include embeddings in the output data.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"chroma_kb_data\",\n            display_name=\"Results\",\n            method=\"get_chroma_kb_data\",\n            info=\"Returns the data from the selected knowledge base.\",\n        ),\n    ]\n\n    def _get_knowledge_bases(self) -> list[str]:\n        \"\"\"Retrieve a list of available knowledge bases.\n\n        Returns:\n            A list of knowledge base names.\n        \"\"\"\n        # Return the list of directories in the knowledge base root path\n        kb_root_path = Path(self.kb_root_path).expanduser()\n\n        if not kb_root_path.exists():\n            return []\n\n        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(\".\") and d.is_dir()]\n\n    def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002\n        if field_name == \"knowledge_base\":\n            # Update the knowledge base options dynamically\n            build_config[\"knowledge_base\"][\"options\"] = self._get_knowledge_bases()\n\n            # If the selected knowledge base is not available, reset it\n            if build_config[\"knowledge_base\"][\"value\"] not in build_config[\"knowledge_base\"][\"options\"]:\n                build_config[\"knowledge_base\"][\"value\"] = None\n\n        return build_config\n\n    def _get_kb_metadata(self, kb_path: Path) -> dict:\n        \"\"\"Load and process knowledge base metadata.\"\"\"\n        metadata: dict[str, Any] = {}\n        metadata_file = kb_path / \"embedding_metadata.json\"\n        if not metadata_file.exists():\n            logger.warning(f\"Embedding metadata file not found at {metadata_file}\")\n            return metadata\n\n        try:\n            with metadata_file.open(\"r\", encoding=\"utf-8\") as f:\n                metadata = json.load(f)\n        except json.JSONDecodeError:\n            logger.error(f\"Error decoding JSON from {metadata_file}\")\n            return {}\n\n        # Decrypt API key if it exists\n        if \"api_key\" in metadata and metadata.get(\"api_key\"):\n            settings_service = get_settings_service()\n            try:\n                decrypted_key = decrypt_api_key(metadata[\"api_key\"], settings_service)\n                metadata[\"api_key\"] = decrypted_key\n            except (InvalidToken, TypeError, ValueError) as e:\n                logger.error(f\"Could not decrypt API key. Please provide it manually. Error: {e}\")\n                metadata[\"api_key\"] = None\n        return metadata\n\n    def _build_embeddings(self, metadata: dict):\n        \"\"\"Build embedding model from metadata.\"\"\"\n        provider = metadata.get(\"embedding_provider\")\n        model = metadata.get(\"embedding_model\")\n        api_key = metadata.get(\"api_key\")\n        chunk_size = metadata.get(\"chunk_size\")\n\n        # If user provided a key in the input, it overrides the stored one.\n        if self.api_key and self.api_key.get_secret_value():\n            api_key = self.api_key.get_secret_value()\n\n        # Handle various providers\n        if provider == \"OpenAI\":\n            from langchain_openai import OpenAIEmbeddings\n\n            if not api_key:\n                msg = \"OpenAI API key is required. Provide it in the component's advanced settings.\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=model,\n                api_key=api_key,\n                chunk_size=chunk_size,\n            )\n        if provider == \"HuggingFace\":\n            from langchain_huggingface import HuggingFaceEmbeddings\n\n            return HuggingFaceEmbeddings(\n                model=model,\n            )\n        if provider == \"Cohere\":\n            from langchain_cohere import CohereEmbeddings\n\n            if not api_key:\n                msg = \"Cohere API key is required when using Cohere provider\"\n                raise ValueError(msg)\n            return CohereEmbeddings(\n                model=model,\n                cohere_api_key=api_key,\n            )\n        if provider == \"Custom\":\n            # For custom embedding models, we would need additional configuration\n            msg = \"Custom embedding models not yet supported\"\n            raise NotImplementedError(msg)\n        # Add other providers here if they become supported in ingest\n        msg = f\"Embedding provider '{provider}' is not supported for retrieval.\"\n        raise NotImplementedError(msg)\n\n    def get_chroma_kb_data(self) -> DataFrame:\n        \"\"\"Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.\n\n        Returns:\n            A DataFrame containing the data rows from the knowledge base.\n        \"\"\"\n        kb_root_path = Path(self.kb_root_path).expanduser()\n        kb_path = kb_root_path / self.knowledge_base\n\n        metadata = self._get_kb_metadata(kb_path)\n        if not metadata:\n            msg = f\"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed.\"\n            raise ValueError(msg)\n\n        # Build the embedder for the knowledge base\n        embedding_function = self._build_embeddings(metadata)\n\n        # Load vector store\n        chroma = Chroma(\n            persist_directory=str(kb_path),\n            embedding_function=embedding_function,\n            collection_name=self.knowledge_base,\n        )\n\n        # If a search query is provided, perform a similarity search\n        if self.search_query:\n            # Use the search query to perform a similarity search\n            logger.info(f\"Performing similarity search with query: {self.search_query}\")\n            results = chroma.similarity_search_with_score(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n        else:\n            results = chroma.similarity_search(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n\n            # For each result, make it a tuple to match the expected output format\n            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0\n\n        # If enabled, get embeddings for the results\n        if self.include_embeddings:\n            doc_ids = [doc[0].metadata.get(\"_id\") for doc in results]\n\n            # Access underlying client to get embeddings\n            collection = chroma._client.get_collection(name=self.knowledge_base)\n            embeddings_result = collection.get(where={\"_id\": {\"$in\": doc_ids}}, include=[\"embeddings\", \"metadatas\"])\n\n            # Create a mapping from document ID to embedding\n            id_to_embedding = {}\n            for i, metadata in enumerate(embeddings_result.get(\"metadatas\", [])):\n                if metadata and \"_id\" in metadata:\n                    id_to_embedding[metadata[\"_id\"]] = embeddings_result[\"embeddings\"][i]\n\n        # Append embeddings to each element\n        data_list = []\n        for doc in results:\n            kwargs = {\n                \"content\": doc[0].page_content,\n                **doc[0].metadata,\n            }\n            if self.search_query:\n                kwargs[\"_score\"] = -1 * doc[1]\n            if self.include_embeddings:\n                kwargs[\"_embeddings\"] = id_to_embedding.get(doc[0].metadata.get(\"_id\"))\n\n            data_list.append(Data(**kwargs))\n\n        # Return the DataFrame containing the data\n        return DataFrame(data=data_list)\n"
+                "value": "import json\nfrom pathlib import Path\nfrom typing import Any\n\nfrom cryptography.fernet import InvalidToken\nfrom langchain_chroma import Chroma\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.services.auth.utils import decrypt_api_key\nfrom langflow.services.deps import get_settings_service\n\nKNOWLEDGE_BASES_DIR = \"~/.langflow/knowledge_bases\"\nKNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()\n\n\nclass KBRetrievalComponent(Component):\n    display_name = \"Retrieve Knowledge\"\n    description = \"Retrieve data and perform searches against a particular knowledge base.\"\n    icon = \"database\"\n    name = \"KBRetrieval\"\n\n    inputs = [\n        DropdownInput(\n            name=\"knowledge_base\",\n            display_name=\"Knowledge Base\",\n            info=\"Select the knowledge base to load files from.\",\n            required=True,\n            options=[\n                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()\n            ]\n            if KNOWLEDGE_BASES_ROOT_PATH.exists()\n            else [],\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"kb_root_path\",\n            display_name=\"KB Root Path\",\n            info=\"Root directory for knowledge bases (defaults to ~/.langflow/knowledge_bases)\",\n            advanced=True,\n            value=KNOWLEDGE_BASES_DIR,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Embedding Provider API Key\",\n            info=\"API key for the embedding provider to generate embeddings.\",\n            advanced=True,\n            required=False,\n        ),\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"Optional search query to filter knowledge base data.\",\n        ),\n        IntInput(\n            name=\"top_k\",\n            display_name=\"Top K Results\",\n            info=\"Number of top results to return from the knowledge base.\",\n            value=5,\n            advanced=True,\n            required=False,\n        ),\n        BoolInput(\n            name=\"include_embeddings\",\n            display_name=\"Include Embeddings\",\n            info=\"Whether to include embeddings in the output data.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"chroma_kb_data\",\n            display_name=\"Results\",\n            method=\"get_chroma_kb_data\",\n            info=\"Returns the data from the selected knowledge base.\",\n        ),\n    ]\n\n    def _get_knowledge_bases(self) -> list[str]:\n        \"\"\"Retrieve a list of available knowledge bases.\n\n        Returns:\n            A list of knowledge base names.\n        \"\"\"\n        # Return the list of directories in the knowledge base root path\n        kb_root_path = Path(self.kb_root_path).expanduser()\n\n        if not kb_root_path.exists():\n            return []\n\n        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(\".\") and d.is_dir()]\n\n    def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002\n        if field_name == \"knowledge_base\":\n            # Update the knowledge base options dynamically\n            build_config[\"knowledge_base\"][\"options\"] = self._get_knowledge_bases()\n\n            # If the selected knowledge base is not available, reset it\n            if build_config[\"knowledge_base\"][\"value\"] not in build_config[\"knowledge_base\"][\"options\"]:\n                build_config[\"knowledge_base\"][\"value\"] = None\n\n        return build_config\n\n    def _get_kb_metadata(self, kb_path: Path) -> dict:\n        \"\"\"Load and process knowledge base metadata.\"\"\"\n        metadata: dict[str, Any] = {}\n        metadata_file = kb_path / \"embedding_metadata.json\"\n        if not metadata_file.exists():\n            logger.warning(f\"Embedding metadata file not found at {metadata_file}\")\n            return metadata\n\n        try:\n            with metadata_file.open(\"r\", encoding=\"utf-8\") as f:\n                metadata = json.load(f)\n        except json.JSONDecodeError:\n            logger.error(f\"Error decoding JSON from {metadata_file}\")\n            return {}\n\n        # Decrypt API key if it exists\n        if \"api_key\" in metadata and metadata.get(\"api_key\"):\n            settings_service = get_settings_service()\n            try:\n                decrypted_key = decrypt_api_key(metadata[\"api_key\"], settings_service)\n                metadata[\"api_key\"] = decrypted_key\n            except (InvalidToken, TypeError, ValueError) as e:\n                logger.error(f\"Could not decrypt API key. Please provide it manually. Error: {e}\")\n                metadata[\"api_key\"] = None\n        return metadata\n\n    def _build_embeddings(self, metadata: dict):\n        \"\"\"Build embedding model from metadata.\"\"\"\n        provider = metadata.get(\"embedding_provider\")\n        model = metadata.get(\"embedding_model\")\n        api_key = metadata.get(\"api_key\")\n        chunk_size = metadata.get(\"chunk_size\")\n\n        # If user provided a key in the input, it overrides the stored one.\n        if self.api_key and self.api_key.get_secret_value():\n            api_key = self.api_key.get_secret_value()\n\n        # Handle various providers\n        if provider == \"OpenAI\":\n            from langchain_openai import OpenAIEmbeddings\n\n            if not api_key:\n                msg = \"OpenAI API key is required. Provide it in the component's advanced settings.\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=model,\n                api_key=api_key,\n                chunk_size=chunk_size,\n            )\n        if provider == \"HuggingFace\":\n            from langchain_huggingface import HuggingFaceEmbeddings\n\n            return HuggingFaceEmbeddings(\n                model=model,\n            )\n        if provider == \"Cohere\":\n            from langchain_cohere import CohereEmbeddings\n\n            if not api_key:\n                msg = \"Cohere API key is required when using Cohere provider\"\n                raise ValueError(msg)\n            return CohereEmbeddings(\n                model=model,\n                cohere_api_key=api_key,\n            )\n        if provider == \"Custom\":\n            # For custom embedding models, we would need additional configuration\n            msg = \"Custom embedding models not yet supported\"\n            raise NotImplementedError(msg)\n        # Add other providers here if they become supported in ingest\n        msg = f\"Embedding provider '{provider}' is not supported for retrieval.\"\n        raise NotImplementedError(msg)\n\n    def get_chroma_kb_data(self) -> DataFrame:\n        \"\"\"Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.\n\n        Returns:\n            A DataFrame containing the data rows from the knowledge base.\n        \"\"\"\n        kb_root_path = Path(self.kb_root_path).expanduser()\n        kb_path = kb_root_path / self.knowledge_base\n\n        metadata = self._get_kb_metadata(kb_path)\n        if not metadata:\n            msg = f\"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed.\"\n            raise ValueError(msg)\n\n        # Build the embedder for the knowledge base\n        embedding_function = self._build_embeddings(metadata)\n\n        # Load vector store\n        chroma = Chroma(\n            persist_directory=str(kb_path),\n            embedding_function=embedding_function,\n            collection_name=self.knowledge_base,\n        )\n\n        # If a search query is provided, perform a similarity search\n        if self.search_query:\n            # Use the search query to perform a similarity search\n            logger.info(f\"Performing similarity search with query: {self.search_query}\")\n            results = chroma.similarity_search_with_score(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n        else:\n            results = chroma.similarity_search(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n\n            # For each result, make it a tuple to match the expected output format\n            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0\n\n        # If enabled, get embeddings for the results\n        if self.include_embeddings:\n            doc_ids = [doc[0].metadata.get(\"_id\") for doc in results]\n\n            # Access underlying client to get embeddings\n            collection = chroma._client.get_collection(name=self.knowledge_base)\n            embeddings_result = collection.get(where={\"_id\": {\"$in\": doc_ids}}, include=[\"embeddings\", \"metadatas\"])\n\n            # Create a mapping from document ID to embedding\n            id_to_embedding = {}\n            for i, metadata in enumerate(embeddings_result.get(\"metadatas\", [])):\n                if metadata and \"_id\" in metadata:\n                    id_to_embedding[metadata[\"_id\"]] = embeddings_result[\"embeddings\"][i]\n\n        # Append embeddings to each element\n        data_list = []\n        for doc in results:\n            kwargs = {\n                \"content\": doc[0].page_content,\n                **doc[0].metadata,\n            }\n            if self.search_query:\n                kwargs[\"_score\"] = -1 * doc[1]\n            if self.include_embeddings:\n                kwargs[\"_embeddings\"] = id_to_embedding.get(doc[0].metadata.get(\"_id\"))\n\n            data_list.append(Data(**kwargs))\n\n        # Return the DataFrame containing the data\n        return DataFrame(data=data_list)\n"
               },
               "include_embeddings": {
                 "_input_type": "BoolInput",
@@ -931,7 +873,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "IBM Acquires DataStax"
               },
               "top_k": {
                 "_input_type": "IntInput",
@@ -989,8 +931,8 @@
           "width": 388
         },
         "position": {
-          "x": -225.94224126537597,
-          "y": 75.97023827444744
+          "x": -202.34426545039037,
+          "y": 85.49988792384751
         },
         "resizing": false,
         "selected": false,
@@ -1360,437 +1302,17 @@
           "width": 320
         },
         "position": {
-          "x": 238.30016557701828,
+          "x": 252.25169188620845,
           "y": 132.82375729958179
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "TextInput-wUiGy",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Get user text inputs.",
-            "display_name": "Text Input",
-            "documentation": "https://docs.langflow.org/components-io#text-input",
-            "edited": false,
-            "field_order": [
-              "input_value"
-            ],
-            "frozen": false,
-            "icon": "type",
-            "legacy": false,
-            "lf_version": "1.5.0.post1",
-            "metadata": {
-              "code_hash": "efdcba3771af",
-              "module": "langflow.components.input_output.text.TextInputComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Output Text",
-                "group_outputs": false,
-                "method": "text_response",
-                "name": "text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get user text inputs.\"\n    documentation: str = \"https://docs.langflow.org/components-io#text-input\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        return Message(\n            text=self.input_value,\n        )\n"
-              },
-              "input_value": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "Text",
-                "dynamic": false,
-                "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "IBM Acquires DataStax"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "TextInput"
-        },
-        "dragging": false,
-        "id": "TextInput-wUiGy",
-        "measured": {
-          "height": 203,
-          "width": 320
-        },
-        "position": {
-          "x": 234.35280633316273,
-          "y": -280.9003423728733
-        },
-        "selected": true,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-0dDeN",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
-            "display_name": "Chat Output",
-            "documentation": "https://docs.langflow.org/components-io#chat-output",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "should_store_message",
-              "sender",
-              "sender_name",
-              "session_id",
-              "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
-              "clean_data"
-            ],
-            "frozen": false,
-            "icon": "MessagesSquare",
-            "legacy": false,
-            "lf_version": "1.5.0.post1",
-            "metadata": {
-              "code_hash": "6f74e04e39d5",
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
-            "minimized": true,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Output Message",
-                "group_outputs": false,
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "background_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Background Color",
-                "dynamic": false,
-                "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "background_color",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "chat_icon": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Icon",
-                "dynamic": false,
-                "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "chat_icon",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "clean_data": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Basic Clean Data",
-                "dynamic": false,
-                "info": "Whether to clean the data",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "clean_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.helpers.data import safe_convert\nfrom langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.template.field.base import Output\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([safe_convert(item, clean_data=self.clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
-              },
-              "data_template": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Data Template",
-                "dynamic": false,
-                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "data_template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{text}"
-              },
-              "input_value": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Inputs",
-                "dynamic": false,
-                "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_value",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Type of sender.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "AI"
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "should_store_message": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Store Messages",
-                "dynamic": false,
-                "info": "Store the message in the history.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "should_store_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "text_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Text Color",
-                "dynamic": false,
-                "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text_color",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": false,
-          "type": "ChatOutput"
-        },
-        "dragging": false,
-        "id": "ChatOutput-0dDeN",
-        "measured": {
-          "height": 48,
-          "width": 192
-        },
-        "position": {
-          "x": 1043.5413322661916,
-          "y": -202.42300688367868
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 359.12074762084467,
-      "y": 368.9026758874582,
-      "zoom": 0.7706427388065723
+      "x": 271.78201664495884,
+      "y": 357.2312989565519,
+      "zoom": 0.8669451145063123
     }
   },
   "description": "Empowering Communication, Enabling Opportunities.",

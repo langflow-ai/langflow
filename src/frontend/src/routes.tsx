@@ -16,7 +16,6 @@ import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
-  ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
@@ -90,12 +89,10 @@ const router = createBrowserRouter(
                         element={<CustomNavigate replace to="files" />}
                       />
                       <Route path="files" element={<FilesPage />} />
-                      {ENABLE_KNOWLEDGE_BASES && (
-                        <Route
-                          path="knowledge-bases"
-                          element={<KnowledgePage />}
-                        />
-                      )}
+                      <Route
+                        path="knowledge-bases"
+                        element={<KnowledgePage />}
+                      />
                     </Route>
                   )}
                   <Route
@@ -157,54 +154,43 @@ const router = createBrowserRouter(
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>
-                <Route
-                  path="admin"
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminPage />
-                    </ProtectedAdminRoute>
-                  }
-                />
-              </Route>
-              <Route path="flow/:id/">
-                <Route path="" element={<CustomDashboardWrapperPage />}>
-                  <Route path="folder/:folderId/" element={<FlowPage />} />
-                  <Route path="" element={<FlowPage />} />
-                </Route>
-                <Route path="view" element={<ViewPage />} />
               </Route>
             </Route>
+            <Route path="flow/:id/">
+              <Route path="" element={<FlowPage />} />
+            </Route>
+            <Route path="view/:id">
+              <Route path="" element={<ViewPage />} />
+            </Route>
           </Route>
-          <Route
-            path="login"
-            element={
-              <ProtectedLoginRoute>
-                <LoginPage />
-              </ProtectedLoginRoute>
-            }
-          />
-          <Route
-            path="signup"
-            element={
-              <ProtectedLoginRoute>
-                <SignUp />
-              </ProtectedLoginRoute>
-            }
-          />
-          <Route
-            path="login/admin"
-            element={
-              <ProtectedLoginRoute>
-                <LoginAdminPage />
-              </ProtectedLoginRoute>
-            }
-          />
         </Route>
       </Route>
-      <Route path="*" element={<CustomNavigate replace to="/" />} />
+      <Route
+        path="login"
+        element={
+          <ProtectedLoginRoute>
+            <LoginPage />
+          </ProtectedLoginRoute>
+        }
+      />
+      <Route path="signup" element={<SignUp />} />
+      <Route path="admin">
+        <Route
+          path=""
+          element={
+            <ProtectedAdminRoute>
+              <AdminPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route path="login" element={<LoginAdminPage />} />
+      </Route>
+      {CustomRoutesStore()}
     </Route>,
   ]),
-  { basename: BASENAME || undefined },
+  {
+    basename: BASENAME,
+  },
 );
 
 export default router;
