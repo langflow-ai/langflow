@@ -12,6 +12,7 @@ from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTempla
 from langchain_core.prompts.prompt import PromptTemplate
 from lfx.schema.image import Image, get_file_paths, is_image_file
 from lfx.schema.message import Message as LfxMessage
+from lfx.schema.properties import Properties as LfxProperties
 from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -23,6 +24,7 @@ from pydantic import ConfigDict, Field, field_serializer, field_validator
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.data import Data
+from langflow.schema.properties import Properties as LangflowProperties
 from langflow.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
@@ -78,22 +80,22 @@ class Message(LfxMessage):
     @classmethod
     def validate_properties(cls, value):
         """Enhanced properties validator that handles both langflow and lfx Properties classes."""
-        from lfx.schema.properties import Properties as LfxProperties
-
-        from langflow.schema.properties import Properties as LangflowProperties
-
+        # Fast path for str
         if isinstance(value, str):
             return LfxProperties.model_validate_json(value)
+        # Fast path for dict
         if isinstance(value, dict):
             return LfxProperties.model_validate(value)
+        # Already correct type
         if isinstance(value, LfxProperties):
             return value
+        # Convert from langflow Properties to lfx Properties
         if isinstance(value, LangflowProperties):
-            # Convert langflow Properties to lfx Properties for compatibility
             return LfxProperties.model_validate(value.model_dump())
-        if hasattr(value, "model_dump"):
-            # Generic case for any pydantic model with the right structure
-            return LfxProperties.model_validate(value.model_dump())
+        # Generic case for any pydantic model with the right structure
+        model_dump = getattr(value, "model_dump", None)
+        if callable(model_dump):
+            return LfxProperties.model_validate(model_dump())
         return value
 
     def model_post_init(self, /, _context: Any) -> None:
