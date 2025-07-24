@@ -89,9 +89,14 @@ def validate_headers(headers: dict[str, str]) -> dict[str, str]:
             # but log a warning for security awareness
             logger.debug(f"Using non-standard header: {normalized_name}")
 
+        # Check for potential header injection attempts BEFORE sanitizing
+        if "\r" in value or "\n" in value:
+            logger.warning(f"Potential header injection detected in '{name}', skipping")
+            continue
+
         # Sanitize header value - remove control characters and newlines
         # RFC 7230: field-value = *( field-content / obs-fold )
-        # We'll remove control characters (0x00-0x1F, 0x7F) except tab (0x09)
+        # We'll remove control characters (0x00-0x1F, 0x7F) except tab (0x09) and space (0x20)
         sanitized_value = re.sub(r"[\x00-\x08\x0A-\x1F\x7F]", "", value)
 
         # Remove leading/trailing whitespace
@@ -99,11 +104,6 @@ def validate_headers(headers: dict[str, str]) -> dict[str, str]:
 
         if not sanitized_value:
             logger.warning(f"Header '{name}' has empty value after sanitization, skipping")
-            continue
-
-        # Check for potential header injection attempts
-        if "\r" in sanitized_value or "\n" in sanitized_value:
-            logger.warning(f"Potential header injection detected in '{name}', skipping")
             continue
 
         sanitized_headers[normalized_name] = sanitized_value
