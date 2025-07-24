@@ -19,7 +19,7 @@ class MockAction:
 class TestGitHubComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture(autouse=True)
     def mock_composio_toolset(self):
-        with patch("langflow.base.composio.composio_base.ComposioToolSet", MockComposioToolSet):
+        with patch("lfx.base.composio.composio_base.ComposioToolSet", MockComposioToolSet):
             yield
 
     @pytest.fixture
