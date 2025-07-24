@@ -1004,7 +1004,7 @@ class MCPSseClient:
             self._component_cache.set("mcp_session_manager", session_manager)
         return session_manager
 
-    async def validate_url(self, url: str | None, headers: dict[str, str] | None = None ) -> tuple[bool, str]:
+    async def validate_url(self, url: str | None, headers: dict[str, str] | None = None) -> tuple[bool, str]:
         """Validate the SSE URL before attempting connection."""
         try:
             parsed = urlparse(url)
