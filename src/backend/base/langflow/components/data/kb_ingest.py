@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
@@ -27,7 +27,6 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from langflow.schema import Message
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
@@ -45,7 +44,7 @@ class KBIngestionComponent(Component):
     """Create or append to a Langflow Knowledge Base from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------
-    display_name = "Ingest Knowledge"
+    display_name = "Create Knowledge"
     description = "Create or append to a Langflow Knowledge Base from a DataFrame."
     icon = "database"
     name = "KBIngestion"
@@ -286,65 +285,6 @@ class KBIngestionComponent(Component):
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
 
-    def _process_embeddings(
-        self,
-        df_source: pd.DataFrame,
-        config_list: list[dict[str, Any]],
-        embedding_model: str,
-        api_key: str,
-    ) -> tuple[np.ndarray, list[str]]:
-        """Process embeddings using Embedding Model Component patterns."""
-        # Find columns marked for vectorization
-        vector_cols = []
-        for config in config_list:
-            col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-
-            # Include in embedding if specifically marked for vectorization
-            if vectorize:
-                vector_cols.append(col_name)
-
-        if not vector_cols:
-            self.status = "⚠️ No columns marked for vectorization - skipping embedding."
-            return np.empty((0, 0)), []
-
-        # Filter valid columns
-        valid_cols = [col for col in vector_cols if col in df_source.columns]
-        if not valid_cols:
-            if not self.silent_errors:
-                msg = f"No valid columns found for embedding. Requested: {vector_cols}"
-                raise ValueError(msg)
-            self.log("Warning: No valid columns for embedding")
-            return np.empty((0, 0)), []
-
-        # Combine text from multiple columns
-        texts: list[str] = [
-            " | ".join([str(row[col]) for col in valid_cols if pd.notna(row[col])])
-            if any(pd.notna(row[col]) for col in valid_cols)
-            else ""
-            for _, row in df_source.iterrows()
-        ]
-
-        # Generate embeddings using the model (following Embedding Model patterns)
-        try:
-            embedder = self._build_embeddings(embedding_model, api_key)
-            if hasattr(embedder, "embed_documents"):
-                embeddings = np.array(embedder.embed_documents(texts))
-            elif hasattr(embedder, "embed"):
-                embeddings = np.array([embedder.embed(t) for t in texts])
-            else:
-                msg = "Embedding Model must expose `.embed_documents(list[str])` or `.embed(str)`."
-                raise AttributeError(msg)
-
-            embed_index = [str(uuid.uuid4()) for _ in texts]
-        except Exception as e:
-            if not self.silent_errors:
-                raise
-            self.log(f"Error generating embeddings: {e}")
-            return np.empty((0, 0)), []
-        else:
-            return embeddings, embed_index
-
     def _build_embedding_metadata(self, embedding_model, api_key) -> dict[str, Any]:
         """Build embedding model metadata."""
         # Get provider by matching model name to lists
@@ -574,6 +514,32 @@ class KBIngestionComponent(Component):
 
         return data_objects
 
+    def is_valid_collection_name(self, name, min_length: int=3, max_length: int=63) -> bool:
+        """Validates collection name against conditions 1-3.
+
+        1. Contains 3-63 characters
+        2. Starts and ends with alphanumeric character
+        3. Contains only alphanumeric characters, underscores, or hyphens.
+
+        Args:
+            name (str): Collection name to validate
+            min_length (int): Minimum length of the name
+            max_length (int): Maximum length of the name
+
+        Returns:
+            bool: True if valid, False otherwise
+        """
+        # Check length (condition 1)
+        if not (min_length <= len(name) <= max_length):
+            return False
+
+        # Check start/end with alphanumeric (condition 2)
+        if not (name[0].isalnum() and name[-1].isalnum()):
+            return False
+
+        # Check allowed characters (condition 3)
+        return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
+
     # ---------------------------------------------------------------------
     #                         OUTPUT METHODS
     # ---------------------------------------------------------------------
@@ -613,14 +579,6 @@ class KBIngestionComponent(Component):
             except (InvalidToken, TypeError, ValueError) as e:
                 logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
 
-            # Process embeddings (using Embedding Model patterns)
-            embeddings, embed_index = self._process_embeddings(
-                df_source,
-                config_list,
-                embedding_model=embedding_model,
-                api_key=api_key,
-            )
-
             # Create vector store following Local DB component pattern
             self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
 
@@ -636,8 +594,6 @@ class KBIngestionComponent(Component):
                 "kb_name": self.knowledge_base,
                 "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                 "rows": len(df_source),
-                "vectorised_rows": len(embeddings) if embeddings.size > 0 else 0,
-                "vector_dim": int(embeddings.shape[1]) if embeddings.size > 0 else 0,
                 "word_count": text_stats["word_count"],
                 "char_count": text_stats["char_count"],
                 "column_metadata": self._build_column_metadata(config_list, df_source),
@@ -647,8 +603,7 @@ class KBIngestionComponent(Component):
             }
 
             # Set status message
-            vector_count = len(embeddings) if embeddings.size > 0 else 0
-            self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} rows, {vector_count} embedded."
+            self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
 
             return Data(data=meta)
 
@@ -658,10 +613,6 @@ class KBIngestionComponent(Component):
             self.log(f"Error in KB ingestion: {e}")
             self.status = f"❌ KB ingestion failed: {e}"
             return Data(data={"error": str(e), "kb_name": self.knowledge_base})
-
-    def status_message(self) -> Message:
-        """Return the human-readable status string."""
-        return Message(text=self.status or "KB ingestion completed.")
 
     def _get_knowledge_bases(self) -> list[str]:
         """Retrieve a list of available knowledge bases.
@@ -682,9 +633,16 @@ class KBIngestionComponent(Component):
         # Create a new knowledge base
         if field_name == "knowledge_base":
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
+                # Validate the knowledge base name - Make sure it follows these rules:
+                if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
+                    msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
+                    raise ValueError(msg)
+
+                # Create the new knowledge base directory
                 kb_path = Path(KNOWLEDGE_BASES_ROOT_PATH, field_value["01_new_kb_name"]).expanduser()
                 kb_path.mkdir(parents=True, exist_ok=True)
 
+                # Save the embedding metadata
                 build_config["knowledge_base"]["value"] = field_value["01_new_kb_name"]
                 self._save_embedding_metadata(
                     kb_path=kb_path,
