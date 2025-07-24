@@ -5,6 +5,7 @@ from langchain_community.utilities import SQLDatabase
 
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.inputs.inputs import HandleInput, MessageTextInput
+from langflow.io import Output
 
 
 class SQLAgentComponent(LCAgentComponent):
@@ -23,6 +24,11 @@ class SQLAgentComponent(LCAgentComponent):
             is_list=True,
             advanced=True,
         ),
+    ]
+
+    outputs = [
+        Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
+        Output(display_name="Response", name="response", method="message_response"),
     ]
 
     def build_agent(self) -> AgentExecutor:
