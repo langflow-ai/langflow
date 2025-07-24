@@ -84,7 +84,7 @@ async def test_graph_functional_async_start():
     assert results[-1] == Finish()
 
 
-def test_graph_functional_start():
+async def test_graph_functional_start():
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(input_value="test", _id="chat_output")
     chat_output.set(sender_name=chat_input.message_response)
@@ -94,7 +94,7 @@ def test_graph_functional_start():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "chat_output"]
-    results = list(graph.start())
+    results = [result async for result in graph.async_start()]
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))

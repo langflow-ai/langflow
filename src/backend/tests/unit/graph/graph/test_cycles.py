@@ -82,7 +82,7 @@ def test_cycle_in_graph():
     ], f"Results: {results_ids}"
 
 
-def test_cycle_in_graph_max_iterations():
+async def test_cycle_in_graph_max_iterations():
     text_input = TextInputComponent(_id="text_input")
     router = ConditionalRouterComponent(_id="router")
     # Connect text_input to router's input
@@ -109,7 +109,7 @@ def test_cycle_in_graph_max_iterations():
     assert "router" not in graph._run_queue
 
     with pytest.raises(ValueError, match="Max iterations reached"):
-        list(graph.start(max_iterations=2, config={"output": {"cache": False}}))
+        [result async for result in graph.async_start(max_iterations=2, config={"output": {"cache": False}})]
 
 
 def test_that_outputs_cache_is_set_to_false_in_cycle():
@@ -287,7 +287,7 @@ def test_updated_graph_with_max_iterations():
     assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}. Snapshots: {snapshots}"
 
 
-def test_conditional_router_max_iterations():
+async def test_conditional_router_max_iterations():
     # Chat input initialization
     text_input = TextInputComponent(_id="text_input")
 
@@ -319,7 +319,7 @@ def test_conditional_router_max_iterations():
     results = []
     snapshots = [graph.get_snapshot()]
     previous_iteration = graph.context.get("router_iteration", 0)
-    for result in graph.start(max_iterations=20, config={"output": {"cache": False}}):
+    async for result in graph.async_start(max_iterations=20, config={"output": {"cache": False}}):
         snapshots.append(graph.get_snapshot())
         results.append(result)
         if hasattr(result, "vertex") and result.vertex.id == "router":

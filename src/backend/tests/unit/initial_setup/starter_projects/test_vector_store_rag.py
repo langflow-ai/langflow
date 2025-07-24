@@ -96,7 +96,7 @@ def rag_graph():
     return Graph(start=chat_input, end=chat_output)
 
 
-def test_vector_store_rag(ingestion_graph, rag_graph):
+async def test_vector_store_rag(ingestion_graph, rag_graph):
     assert ingestion_graph is not None
     ingestion_ids = [
         "file-123",
@@ -115,7 +115,7 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
         "openai-embeddings-124",
     ]
     for ids, graph, len_results in [(ingestion_ids, ingestion_graph, 5), (rag_ids, rag_graph, 8)]:
-        results = list(graph.start())
+        results = [result async for result in graph.async_start()]
 
         assert len(results) == len_results
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]

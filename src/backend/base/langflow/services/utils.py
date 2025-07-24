@@ -251,6 +251,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(store_factory.StoreServiceFactory())
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
     service_manager.register_factory(auth_factory.AuthServiceFactory())
+    service_manager.set_factory_registered()
 
 
 async def initialize_services(*, fix_migration: bool = False) -> None:
