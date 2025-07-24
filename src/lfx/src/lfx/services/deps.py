@@ -32,6 +32,12 @@ def get_service(service_type: ServiceType, default=None):
     """
     from lfx.services.manager import service_manager
 
+    if not service_manager.are_factories_registered():
+        # ! This is a workaround to ensure that the service manager is initialized
+        # ! Not optimal, but it works for now
+
+        service_manager.register_factories(service_manager.get_factories())
+
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001

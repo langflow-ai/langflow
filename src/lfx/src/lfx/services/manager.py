@@ -6,6 +6,8 @@ langflow-specific auto-discovery to break dependencies.
 
 from __future__ import annotations
 
+import importlib
+import inspect
 import threading
 from typing import TYPE_CHECKING
 
@@ -28,6 +30,7 @@ class ServiceManager:
         self.services: dict[str, Service] = {}
         self.factories: dict[str, ServiceFactory] = {}
         self._lock = threading.RLock()
+        self.factory_registered = False
         from lfx.services.settings.factory import SettingsServiceFactory
 
         self.register_factory(SettingsServiceFactory())
@@ -41,6 +44,15 @@ class ServiceManager:
                 self.register_factory(factory)
             except Exception:  # noqa: BLE001
                 logger.exception(f"Error initializing {factory}")
+        self.set_factory_registered()
+
+    def are_factories_registered(self) -> bool:
+        """Check if the factory is registered."""
+        return self.factory_registered
+
+    def set_factory_registered(self) -> None:
+        """Set the factory registered flag."""
+        self.factory_registered = True
 
     def register_factory(
         self,
@@ -106,6 +118,34 @@ class ServiceManager:
                 logger.exception(exc)
         self.services = {}
         self.factories = {}
+
+    @classmethod
+    def get_factories(cls) -> list[ServiceFactory]:
+        """Auto-discover and return all service factories."""
+        from lfx.services.factory import ServiceFactory
+        from lfx.services.schema import ServiceType
+
+        service_names = [ServiceType(service_type).value.replace("_service", "") for service_type in ServiceType]
+        base_module = "lfx.services"
+        factories = []
+
+        for name in service_names:
+            try:
+                module_name = f"{base_module}.{name}.factory"
+                module = importlib.import_module(module_name)
+
+                # Find all classes in the module that are subclasses of ServiceFactory
+                for _, obj in inspect.getmembers(module, inspect.isclass):
+                    if issubclass(obj, ServiceFactory) and obj is not ServiceFactory:
+                        factories.append(obj())
+                        break
+
+            except Exception as exc:  # noqa: BLE001
+                logger.opt(exception=exc).debug(
+                    f"Could not initialize services. Please check your settings. Error in {name}."
+                )
+
+        return factories
 
 
 # Global service manager instance
