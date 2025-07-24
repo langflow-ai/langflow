@@ -1,26 +1,27 @@
 import importlib
 import inspect
-from typing import TYPE_CHECKING, get_type_hints
+from typing import get_type_hints
 
 from cachetools import LRUCache, cached
 from loguru import logger
 
+from langflow.services.base import Service
 from langflow.services.schema import ServiceType
-
-if TYPE_CHECKING:
-    from langflow.services.base import Service
 
 
 class ServiceFactory:
     def __init__(
         self,
-        service_class,
+        service_class: type[Service] | None = None,
     ) -> None:
+        if service_class is None:
+            msg = "service_class is required"
+            raise ValueError(msg)
         self.service_class = service_class
         self.dependencies = infer_service_types(self, import_all_services_into_a_dict())
 
     def create(self, *args, **kwargs) -> "Service":
-        raise self.service_class(*args, **kwargs)
+        return self.service_class(*args, **kwargs)
 
 
 def hash_factory(factory: ServiceFactory) -> str:
