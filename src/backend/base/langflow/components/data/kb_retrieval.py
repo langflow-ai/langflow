@@ -18,8 +18,8 @@ KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
 
 
 class KBRetrievalComponent(Component):
-    display_name = "Load Knowledge"
-    description = "Load and perform searches against a particular knowledge base."
+    display_name = "Retrieve Knowledge"
+    description = "Retrieve data and perform searches against a particular knowledge base."
     icon = "database"
     name = "KBRetrieval"
 
