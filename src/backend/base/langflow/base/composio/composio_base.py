@@ -1,5 +1,4 @@
 import re
-from abc import abstractmethod
 from typing import Any
 
 from composio import Composio
@@ -26,6 +25,8 @@ from langflow.schema.message import Message
 
 class ComposioBaseComponent(Component):
     """Base class for Composio components with common functionality."""
+
+    default_tools_limit: int = 5
 
     _base_inputs = [
         MessageTextInput(
@@ -720,7 +721,6 @@ class ComposioBaseComponent(Component):
             self._populate_actions_data()
 
         if field_name == "tool_mode":
-            logger.error(f"Tool mode changed: field_value={field_value}, field_name={field_name}")
             if field_value is True:
                 build_config["action_button"]["show"] = False  # Hide action field when tool mode is enabled
                 for field in self._all_fields:
@@ -904,10 +904,11 @@ class ComposioBaseComponent(Component):
 
         return build_config
 
-    def configure_tools(self, composio: Composio) -> list[Tool]:
-        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=999)
-        # tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()])
-        # logger.info(f"Tools: {tools}")
+    def configure_tools(self, composio: Composio, limit: int | None = None) -> list[Tool]:
+        if limit is None:
+            limit = 999
+
+        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=limit)
         configured_tools = []
         for tool in tools:
             # Set the sanitized name
@@ -928,18 +929,22 @@ class ComposioBaseComponent(Component):
 
     @property
     def enabled_tools(self):
-        """Return tag names for *all* actions of this app so they are exposed to the agent.
+        """Return tag names for actions of this app that should be exposed to the agent.
 
-        The tool objects created in ``configure_tools`` use the raw Composio action key
-        (e.g. ``GMAIL_SEND_EMAIL``) as their ``name`` and as the single element of
-        ``tool.tags``.  Returning those keys here makes every action available for
-        autonomous agents without requiring the user to pick them in the UI first.
+        If default tools are set via set_default_tools(), returns those.
+        Otherwise, returns only the first few tools (limited by default_tools_limit)
+        to prevent overwhelming the agent. Subclasses can override this behavior.
+
         """
-        # Ensure actions are populated (in case property accessed early)
         if not self._actions_data:
             self._populate_actions_data()
 
-        return list(self._actions_data.keys())
+        if hasattr(self, "_default_tools") and self._default_tools:
+            return list(self._default_tools)
+
+        all_tools = list(self._actions_data.keys())
+        limit = getattr(self, "default_tools_limit", 5)
+        return all_tools[:limit]
 
     def execute_action(self):
         """Execute the selected Composio tool."""
@@ -1038,6 +1043,5 @@ class ComposioBaseComponent(Component):
 
         return raw_data
 
-    @abstractmethod
     def set_default_tools(self):
         """Set the default tools."""
