@@ -230,10 +230,6 @@ To generate a `LANGFLOW_SECRET_KEY`, follow these steps:
         ```
       </TabItem>
       <TabItem value="windows" label="Windows">
-        ```bash
-        # Copy to clipboard
-        python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | cli
-        # Or just print
         python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
         ```
         </TabItem>
