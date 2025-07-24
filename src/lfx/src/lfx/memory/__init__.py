@@ -13,10 +13,7 @@ def _has_langflow_memory():
     """Check if langflow.memory with database support is available."""
     try:
         # Check if langflow.memory and MessageTable are available
-        return (
-            importlib.util.find_spec("langflow.memory") is not None
-            and importlib.util.find_spec("langflow.services.database.models.message.model") is not None
-        )
+        return importlib.util.find_spec("langflow") is not None
     except (ImportError, ModuleNotFoundError):
         pass
     except Exception as e:  # noqa: BLE001
