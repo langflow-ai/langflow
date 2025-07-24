@@ -1,5 +1,3 @@
-from sqlalchemy.engine import make_url
-
 from lfx.serialization import constants
 
 
@@ -46,6 +44,8 @@ def is_valid_database_url(url: str) -> bool:
         bool: True if URL is valid, False otherwise
     """
     try:
+        from sqlalchemy.engine import make_url
+
         parsed_url = make_url(url)
         parsed_url.get_dialect()
         parsed_url.get_driver_name()
