@@ -1,7 +1,7 @@
 from typing_extensions import override
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.settings.service import SettingsService
+from lfx.services.factory import ServiceFactory
+from lfx.services.settings.service import SettingsService
 
 
 class SettingsServiceFactory(ServiceFactory):
@@ -13,7 +13,8 @@ class SettingsServiceFactory(ServiceFactory):
         return cls._instance
 
     def __init__(self) -> None:
-        super().__init__(SettingsService)
+        super().__init__()
+        self.service_class = SettingsService
 
     @override
     def create(self):

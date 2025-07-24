@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from langflow.services.base import Service
-from langflow.services.settings.auth import AuthSettings
-from langflow.services.settings.base import Settings
+from lfx.services.base import Service
+from lfx.services.settings.auth import AuthSettings
+from lfx.services.settings.base import Settings
 
 
 class SettingsService(Service):

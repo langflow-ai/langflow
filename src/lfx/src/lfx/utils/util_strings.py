@@ -1,5 +1,6 @@
-from lfx.serialization import constants
 from sqlalchemy.engine import make_url
+
+from lfx.serialization import constants
 
 
 def truncate_long_strings(data, max_length=None):
