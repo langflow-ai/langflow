@@ -1417,7 +1417,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Call the searchapi.io API with result limiting",
+            "description": "Calls the SearchApi API with result limiting. Supports Google, Bing and DuckDuckGo.",
             "display_name": "Search API",
             "documentation": "https://www.searchapi.io/docs/google",
             "edited": false,

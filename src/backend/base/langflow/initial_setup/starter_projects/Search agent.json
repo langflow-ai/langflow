@@ -90,7 +90,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
+            "description": "Given a search prompt, it will return search results using ScrapeGraph's search functionality.",
             "display_name": "ScrapeGraphSearchApi",
             "documentation": "https://docs.scrapegraphai.com/introduction",
             "edited": false,

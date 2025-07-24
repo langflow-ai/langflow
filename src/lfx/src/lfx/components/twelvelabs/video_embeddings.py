@@ -79,8 +79,8 @@ class TwelveLabsVideoEmbeddings(Embeddings):
 
 
 class TwelveLabsVideoEmbeddingsComponent(LCEmbeddingsModel):
-    display_name = "Twelve Labs Video Embeddings"
-    description = "Generate embeddings from videos using Twelve Labs video embedding models."
+    display_name = "TwelveLabs Video Embeddings"
+    description = "Generate embeddings from videos using TwelveLabs video embedding models."
     name = "TwelveLabsVideoEmbeddings"
     icon = "TwelveLabs"
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"

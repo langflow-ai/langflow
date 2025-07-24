@@ -23,7 +23,7 @@ class TestYfinanceComponent:
 
     def test_initialization(self, component_class):
         component = component_class()
-        assert component.display_name == "Yahoo Finance"
+        assert component.display_name == "Yahoo! Finance"
         assert component.icon == "trending-up"
         assert "yfinance" in component.description
 

@@ -17,8 +17,8 @@ from lfx.inputs.inputs import (
 
 
 class AIMLModelComponent(LCModelComponent):
-    display_name = "AIML"
-    description = "Generates text using AIML LLMs."
+    display_name = "AI/ML API"
+    description = "Generates text using AI/ML API LLMs."
     icon = "AIML"
     name = "AIMLModel"
     documentation = "https://docs.aimlapi.com/api-reference"
@@ -42,15 +42,15 @@ class AIMLModelComponent(LCModelComponent):
         ),
         StrInput(
             name="aiml_api_base",
-            display_name="AIML API Base",
+            display_name="AI/ML API Base",
             advanced=True,
-            info="The base URL of the OpenAI API. Defaults to https://api.aimlapi.com . "
+            info="The base URL of the API. Defaults to https://api.aimlapi.com . "
             "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
             name="api_key",
-            display_name="AIML API Key",
-            info="The AIML API Key to use for the OpenAI model.",
+            display_name="AI/ML API Key",
+            info="The AI/ML API Key to use for the OpenAI model.",
             advanced=False,
             value="AIML_API_KEY",
             required=True,

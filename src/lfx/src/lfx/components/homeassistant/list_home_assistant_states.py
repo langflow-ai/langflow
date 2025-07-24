@@ -12,7 +12,7 @@ from lfx.schema.data import Data
 
 
 class ListHomeAssistantStates(LCToolComponent):
-    display_name: str = "List HomeAssistant States"
+    display_name: str = "List Home Assistant States"
     description: str = (
         "Retrieve states from Home Assistant. "
         "The agent only needs to specify 'filter_domain' (optional). "

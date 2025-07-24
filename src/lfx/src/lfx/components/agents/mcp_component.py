@@ -454,7 +454,7 @@ class MCPToolsComponent(ComponentWithCache):
                 kwargs = {}
                 for arg in tool_args:
                     value = getattr(self, arg.name, None)
-                    if value:
+                    if value is not None:
                         if isinstance(value, Message):
                             kwargs[arg.name] = value.text
                         else:

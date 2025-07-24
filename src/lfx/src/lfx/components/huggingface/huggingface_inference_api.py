@@ -13,8 +13,8 @@ from lfx.io import MessageTextInput, Output, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
-    display_name = "HuggingFace Embeddings Inference"
-    description = "Generate embeddings using HuggingFace Text Embeddings Inference (TEI)"
+    display_name = "Hugging Face Embeddings Inference"
+    description = "Generate embeddings using Hugging Face Text Embeddings Inference (TEI)"
     documentation = "https://huggingface.co/docs/text-embeddings-inference/index"
     icon = "HuggingFace"
     name = "HuggingFaceInferenceAPIEmbeddings"
@@ -66,7 +66,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             raise ValueError(msg) from e
 
         if response.status_code != requests.codes.ok:
-            msg = f"HuggingFace health check failed: {response.status_code}"
+            msg = f"Hugging Face health check failed: {response.status_code}"
             raise ValueError(msg)
         # returning True to solve linting error
         return True
@@ -102,5 +102,5 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
         try:
             return self.create_huggingface_embeddings(api_key, api_url, self.model_name)
         except Exception as e:
-            msg = "Could not connect to HuggingFace Inference API."
+            msg = "Could not connect to Hugging Face Inference API."
             raise ValueError(msg) from e

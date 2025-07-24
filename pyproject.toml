@@ -37,7 +37,7 @@ dependencies = [
     "certifi==2024.8.30",
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8; python_version >= "3.13"',
-    "redis==5.2.1",
+    "redis>=5.2.1",
     "metaphor-python==0.1.23",
     'pywin32==307; sys_platform == "win32"',
     "langfuse==2.53.9",

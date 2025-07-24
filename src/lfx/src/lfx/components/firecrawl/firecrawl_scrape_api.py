@@ -10,8 +10,8 @@ from lfx.schema.data import Data
 
 
 class FirecrawlScrapeApi(Component):
-    display_name: str = "FirecrawlScrapeApi"
-    description: str = "Firecrawl Scrape API."
+    display_name: str = "Firecrawl Scrape API"
+    description: str = "Scrapes a URL and returns the results."
     name = "FirecrawlScrapeApi"
 
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/scrape"

@@ -369,7 +369,6 @@ async def install_mcp_config(
         os_type = platform.system()
         command = "uvx"
         mcp_tool = "mcp-composer" if FEATURE_FLAGS.mcp_composer else "mcp-proxy"
-        args = [mcp_tool, sse_url]
 
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
         is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
@@ -400,21 +399,52 @@ async def install_mcp_config(
                 except OSError as e:
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
+        # Configure args based on the MCP tool
+        oauth_env = None
+        if FEATURE_FLAGS.mcp_composer:
+            args = [mcp_tool, "--sse-url", sse_url]
+
+            # Check for auth settings and add auth parameters
+            if project.auth_settings:
+                from langflow.api.v1.schemas import AuthSettings
+
+                auth_settings = AuthSettings(**project.auth_settings)
+                args.extend(["--auth_type", auth_settings.auth_type])
+
+                oauth_env = {
+                    "OAUTH_HOST": auth_settings.oauth_host,
+                    "OAUTH_PORT": auth_settings.oauth_port,
+                    "OAUTH_SERVER_URL": auth_settings.oauth_server_url,
+                    "OAUTH_CALLBACK_PATH": auth_settings.oauth_callback_path,
+                    "OAUTH_CLIENT_ID": auth_settings.oauth_client_id,
+                    "OAUTH_CLIENT_SECRET": auth_settings.oauth_client_secret,
+                    "OAUTH_AUTH_URL": auth_settings.oauth_auth_url,
+                    "OAUTH_TOKEN_URL": auth_settings.oauth_token_url,
+                    "OAUTH_MCP_SCOPE": auth_settings.oauth_mcp_scope,
+                    "OAUTH_PROVIDER_SCOPE": auth_settings.oauth_provider_scope,
+                }
+        else:
+            args = [mcp_tool, sse_url]
+
         if os_type == "Windows":
             command = "cmd"
-            args = ["/c", "uvx", mcp_tool, sse_url]
+            args = ["/c", "uvx", *args]
             logger.debug("Windows detected, using cmd command")
 
         name = project.name
 
         # Create the MCP configuration
+        server_config = {
+            "command": command,
+            "args": args,
+        }
+
+        # Add environment variables if mcp-composer feature flag is enabled and auth settings exist
+        if FEATURE_FLAGS.mcp_composer and oauth_env is not None:
+            server_config["env"] = oauth_env  # type: ignore[assignment]
+
         mcp_config = {
-            "mcpServers": {
-                f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": {
-                    "command": command,
-                    "args": args,
-                }
-            }
+            "mcpServers": {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": server_config}
         }
 
         server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"

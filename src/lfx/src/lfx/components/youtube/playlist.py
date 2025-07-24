@@ -8,7 +8,7 @@ from lfx.template.field.base import Output
 
 
 class YouTubePlaylistComponent(Component):
-    display_name = "Youtube Playlist"
+    display_name = "YouTube Playlist"
     description = "Extracts all video URLs from a YouTube playlist."
     icon = "YouTube"  # Replace with a suitable icon
 

@@ -10,7 +10,7 @@ from lfx.schema.dataframe import DataFrame
 
 class WolframAlphaAPIComponent(LCToolComponent):
     display_name = "WolframAlpha API"
-    description = """Enables queries to Wolfram Alpha for computational data, facts, and calculations across various \
+    description = """Enables queries to WolframAlpha for computational data, facts, and calculations across various \
 topics, delivering structured responses."""
     name = "WolframAlphaAPI"
 
@@ -45,7 +45,7 @@ topics, delivering structured responses."""
         return data
 
     def fetch_content_dataframe(self) -> DataFrame:
-        """Convert the Wolfram Alpha results to a DataFrame.
+        """Convert the WolframAlpha results to a DataFrame.
 
         Returns:
             DataFrame: A DataFrame containing the query results.

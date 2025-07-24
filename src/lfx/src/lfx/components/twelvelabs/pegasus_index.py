@@ -13,7 +13,7 @@ from lfx.schema import Data
 
 
 class TwelveLabsError(Exception):
-    """Base exception for Twelve Labs errors."""
+    """Base exception for TwelveLabs errors."""
 
 
 class IndexCreationError(TwelveLabsError):
@@ -29,10 +29,10 @@ class TaskTimeoutError(TwelveLabsError):
 
 
 class PegasusIndexVideo(Component):
-    """Indexes videos using Twelve Labs Pegasus API and adds the video ID to metadata."""
+    """Indexes videos using TwelveLabs Pegasus API and adds the video ID to metadata."""
 
-    display_name = "Twelve Labs Pegasus Index Video"
-    description = "Index videos using Twelve Labs and add the video_id to metadata."
+    display_name = "TwelveLabs Pegasus Index Video"
+    description = "Index videos using TwelveLabs and add the video_id to metadata."
     icon = "TwelveLabs"
     name = "TwelveLabsPegasusIndexVideo"
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"
@@ -46,7 +46,7 @@ class PegasusIndexVideo(Component):
             required=True,
         ),
         SecretStrInput(
-            name="api_key", display_name="Twelve Labs API Key", info="Enter your Twelve Labs API Key.", required=True
+            name="api_key", display_name="TwelveLabs API Key", info="Enter your TwelveLabs API Key.", required=True
         ),
         DropdownInput(
             name="model_name",
@@ -215,7 +215,7 @@ class PegasusIndexVideo(Component):
             return []
 
         if not self.api_key:
-            error_msg = "Twelve Labs API Key is required"
+            error_msg = "TwelveLabs API Key is required"
             raise IndexCreationError(error_msg)
 
         if not (hasattr(self, "index_name") and self.index_name) and not (hasattr(self, "index_id") and self.index_id):
@@ -230,7 +230,7 @@ class PegasusIndexVideo(Component):
             index_id, index_name = self._get_or_create_index(client)
             self.status = f"Using index: {index_name} (ID: {index_id})"
         except IndexCreationError as e:
-            self.status = f"Failed to get/create Twelve Labs index: {e!s}"
+            self.status = f"Failed to get/create TwelveLabs index: {e!s}"
             raise
 
         # First, validate all videos and create a list of valid ones

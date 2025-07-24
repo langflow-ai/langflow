@@ -14,7 +14,7 @@ from lfx.template.field.base import Output
 
 
 class CSVAgentComponent(LCAgentComponent):
-    display_name = "CSVAgent"
+    display_name = "CSV Agent"
     description = "Construct a CSV agent from a CSV and tools."
     documentation = "https://python.langchain.com/docs/modules/agents/toolkits/csv"
     name = "CSVAgent"

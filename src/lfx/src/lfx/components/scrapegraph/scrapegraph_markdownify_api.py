@@ -8,14 +8,12 @@ from lfx.schema.data import Data
 
 
 class ScrapeGraphMarkdownifyApi(Component):
-    display_name: str = "ScrapeGraphMarkdownifyApi"
-    description: str = """ScrapeGraph Markdownify API.
-    Given a URL, it will return the markdownified content of the website.
-    More info at https://docs.scrapegraphai.com/services/markdownify"""
+    display_name: str = "ScrapeGraph Markdownify API"
+    description: str = "Given a URL, it will return the markdownified content of the website."
     name = "ScrapeGraphMarkdownifyApi"
 
     output_types: list[str] = ["Document"]
-    documentation: str = "https://docs.scrapegraphai.com/introduction"
+    documentation: str = "https://docs.scrapegraphai.com/services/markdownify"
 
     inputs = [
         SecretStrInput(
