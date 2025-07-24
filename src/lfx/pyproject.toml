@@ -25,6 +25,12 @@ dependencies = [
     "aiofile>=3.8.0",
     "json-repair>=0.30.3",
     "docstring-parser>=0.16",
+    "networkx>=3.4.2",
+    "nanoid>=2.0.0",
+    "cachetools>=5.5.2",
+    "emoji>=2.14.1",
+    "chardet>=5.2.0",
+    "defusedxml>=0.7.1",
 ]
 
 [project.scripts]
