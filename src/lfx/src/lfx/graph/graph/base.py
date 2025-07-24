@@ -118,7 +118,7 @@ class Graph:
         self.parent_child_map: dict[str, list[str]] = defaultdict(list)
         self._run_queue: deque[str] = deque()
         self._first_layer: list[str] = []
-        self._lock = asyncio.Lock()
+        self._lock: asyncio.Lock | None = None
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
@@ -142,6 +142,13 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
+
+    @property
+    def lock(self):
+        """Lazy initialization of asyncio.Lock to avoid event loop binding issues."""
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     @property
     def context(self) -> dotdict:
@@ -381,6 +388,12 @@ class Graph:
                 for key, value in config["output"].items():
                     setattr(output, key, value)
 
+    def _reset_all_output_values(self) -> None:
+        for vertex in self.vertices:
+            if vertex.custom_component is None:
+                continue
+            vertex.custom_component._reset_all_output_values()
+
     def start(
         self,
         inputs: list[dict] | None = None,
@@ -399,6 +412,8 @@ class Graph:
         Returns:
             Generator yielding results from graph execution
         """
+        self.prepare()
+        self._reset_all_output_values()
         if self.is_cyclic and max_iterations is None:
             msg = "You must specify a max_iterations if the graph is cyclic"
             raise ValueError(msg)
@@ -1778,7 +1793,7 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def generator_build(self) -> Generator[Vertex]:
+    def generator_build(self) -> Generator[Vertex, None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
         logger.debug("There are %s vertices in the graph", len(sorted_vertices))

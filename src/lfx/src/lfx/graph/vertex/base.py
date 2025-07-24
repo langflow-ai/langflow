@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import threading
 import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
@@ -57,7 +58,7 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
-        self._lock = asyncio.Lock()
+        self._lock: threading.Lock | None = None
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
@@ -110,6 +111,31 @@ class Vertex:
         ]
         self._incoming_edges: list[CycleEdge] | None = None
         self._outgoing_edges: list[CycleEdge] | None = None
+
+    @staticmethod
+    def _async_lock_context(lock: threading.Lock):
+        """Context manager to use threading.Lock in async context."""
+
+        class AsyncLockContext:
+            def __init__(self, lock):
+                self.lock = lock
+
+            async def __aenter__(self):
+                await asyncio.to_thread(self.lock.acquire)
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                self.lock.release()
+                return False
+
+        return AsyncLockContext(lock)
+
+    @property
+    def lock(self):
+        """Lazy initialization of threading.Lock."""
+        if self._lock is None:
+            self._lock = threading.Lock()
+        return self._lock
 
     @property
     def is_loop(self) -> bool:
