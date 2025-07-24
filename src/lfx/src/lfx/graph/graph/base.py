@@ -1368,7 +1368,7 @@ class Graph:
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
-            self._lock, vertex=vertex_build_result.vertex, cache=False
+            self.lock, vertex=vertex_build_result.vertex, cache=False
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
@@ -1674,7 +1674,7 @@ class Graph:
             params = result.message
             tb = result.formatted_traceback
         else:
-            from lfx.utils.util import format_exception_message
+            from lfx.utils.exceptions import format_exception_message
 
             tb = traceback.format_exc()
             logger.exception("Error building Component")
