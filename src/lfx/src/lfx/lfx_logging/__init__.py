@@ -1,5 +1,5 @@
 """Logging module for lfx package."""
 
-from lfx.logging.logger import configure
+from lfx.lfx_logging.logger import configure
 
 __all__ = ["configure"]
