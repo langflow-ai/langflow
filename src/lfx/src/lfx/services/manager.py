@@ -28,6 +28,9 @@ class ServiceManager:
         self.services: dict[str, Service] = {}
         self.factories: dict[str, ServiceFactory] = {}
         self._lock = threading.RLock()
+        from lfx.services.settings.factory import SettingsServiceFactory
+
+        self.register_factory(SettingsServiceFactory())
 
     def register_factories(self, factories: list[ServiceFactory] | None = None) -> None:
         """Register all available service factories."""
