@@ -117,7 +117,7 @@ import { WindsurfIcon } from "./Windsurf";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
-  "AI/ML": AIMLIcon,
+  AIML: AIMLIcon,
   AgentQL: AgentQLIcon,
   Airbyte: AirbyteIcon,
   Anthropic: AnthropicIcon,
