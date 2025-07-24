@@ -25,11 +25,12 @@ from lfx.custom.directory_reader.utils import (
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import MissingDefault
 from lfx.field_typing.range_spec import RangeSpec
+from lfx.helpers.custom import format_type
 from lfx.schema.dotdict import dotdict
 from lfx.template.field.base import Input
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from lfx.type_extraction import extract_inner_type
-from lfx.utils.util import format_type, get_base_classes
+from lfx.utils.util import get_base_classes
 
 
 def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:

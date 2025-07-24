@@ -8,8 +8,8 @@ from loguru import logger
 
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+from lfx.lfx_logging.logger import configure
 from lfx.load.utils import replace_tweaks_with_env
-from lfx.logging.logger import configure
 from lfx.processing.process import process_tweaks, run_graph
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.util import update_settings
