@@ -9,6 +9,7 @@ from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from lfx.template.utils import apply_json_filter
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
@@ -252,9 +253,9 @@ class Data(BaseModel):
         Returns:
             Data: The filtered Data.
         """
-        from lfx.template.utils import apply_json_filter
-
-        return apply_json_filter(self.data, filter_str)
+        # Use module-level import and local variable for data as a micro-optimization
+        data = self.data
+        return apply_json_filter(data, filter_str)
 
     def to_message(self) -> Message:
         from langflow.schema.message import Message  # Local import to avoid circular import
