@@ -514,7 +514,7 @@ class KBIngestionComponent(Component):
 
         return data_objects
 
-    def is_valid_collection_name(self, name, min_length: int=3, max_length: int=63) -> bool:
+    def is_valid_collection_name(self, name, min_length: int = 3, max_length: int = 63) -> bool:
         """Validates collection name against conditions 1-3.
 
         1. Contains 3-63 characters
