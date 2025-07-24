@@ -690,6 +690,7 @@ wheels = [
 [[package]]
 name = "blockbuster"
 version = "1.5.25"
+version = "1.5.25"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "forbiddenfruit", marker = "implementation_name == 'cpython'" },
@@ -1268,6 +1269,7 @@ wheels = [
 [[package]]
 name = "codeflash"
 version = "0.15.5"
+version = "0.15.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1533,6 +1535,7 @@ toml = [
 [[package]]
 name = "crosshair-tool"
 version = "0.0.94"
+version = "0.0.94"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "importlib-metadata" },
@@ -1660,6 +1663,7 @@ wheels = [
 
 [[package]]
 name = "debugpy"
+version = "1.8.15"
 version = "1.8.15"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8c/8b/3a9a28ddb750a76eaec445c7f4d3147ea2c579a97dbd9e25d39001b92b21/debugpy-1.8.15.tar.gz", hash = "sha256:58d7a20b7773ab5ee6bdfb2e6cf622fdf1e40c9d5aef2857d85391526719ac00", size = 1643279 }
@@ -1789,6 +1793,7 @@ wheels = [
 
 [[package]]
 name = "distlib"
+version = "0.4.0"
 version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/8e/709914eb2b5749865801041647dc7f4e6d00b549cfe88b65ca192995f07c/distlib-0.4.0.tar.gz", hash = "sha256:feec40075be03a04501a973d81f633735b4b69f98b05450592310c0f401a4e0d", size = 614605 }
@@ -2365,6 +2370,7 @@ wheels = [
 
 [[package]]
 name = "faker"
+version = "37.4.2"
 version = "37.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -3891,13 +3897,14 @@ wheels = [
 
 [[package]]
 name = "ipykernel"
-version = "6.29.5"
+version = "6.30.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "appnope", marker = "platform_system == 'Darwin'" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "ipython", version = "9.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "ipython", version = "9.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "jupyter-client" },
     { name = "jupyter-core" },
@@ -3949,6 +3956,7 @@ wheels = [
 
 [[package]]
 name = "ipython"
+version = "9.4.0"
 version = "9.4.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
@@ -5129,6 +5137,7 @@ requires-dist = [
     { name = "qdrant-client", specifier = "==1.9.2" },
     { name = "qianfan", specifier = "==0.3.5" },
     { name = "redis", specifier = ">=5.2.1" },
+    { name = "redis", specifier = ">=5.2.1" },
     { name = "ruff", specifier = ">=0.9.7" },
     { name = "scipy", specifier = ">=1.14.1" },
     { name = "scrapegraph-py", specifier = ">=1.12.0" },
@@ -5666,7 +5675,7 @@ wheels = [
 
 [[package]]
 name = "line-profiler"
-version = "4.2.0"
+version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/55/3f/f0659eb67f76022b5f7722cdc71a6059536e11f20c9dcc5a96a2f923923d/line_profiler-4.2.0.tar.gz", hash = "sha256:09e10f25f876514380b3faee6de93fb0c228abba85820ba1a591ddb3eb451a96", size = 199037 }
 wheels = [
@@ -5785,6 +5794,7 @@ wheels = [
 [[package]]
 name = "locust"
 version = "2.37.14"
+version = "2.37.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "configargparse" },
@@ -5811,6 +5821,7 @@ wheels = [
 
 [[package]]
 name = "locust-cloud"
+version = "1.26.3"
 version = "1.26.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -6569,6 +6580,7 @@ wheels = [
 
 [[package]]
 name = "mypy"
+version = "1.17.0"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -10959,6 +10971,7 @@ wheels = [
 [[package]]
 name = "types-aiofiles"
 version = "24.1.0.20250708"
+version = "24.1.0.20250708"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4a/d6/5c44761bc11cb5c7505013a39f397a9016bfb3a5c932032b2db16c38b87b/types_aiofiles-24.1.0.20250708.tar.gz", hash = "sha256:c8207ed7385491ce5ba94da02658164ebd66b69a44e892288c9f20cbbf5284ff", size = 14322 }
 wheels = [
@@ -11006,6 +11019,7 @@ wheels = [
 
 [[package]]
 name = "types-markdown"
+version = "3.8.0.20250708"
 version = "3.8.0.20250708"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/95/01/0bab46f013e8ff6f2c54f9cb35252e4f6ccf1b7b863ba53f56e5e1ae1429/types_markdown-3.8.0.20250708.tar.gz", hash = "sha256:28690251fe90757f5a99cd671c79502bc2de07aef2d35fe54117c3b1c799804a", size = 19337 }
@@ -11076,7 +11090,7 @@ wheels = [
 
 [[package]]
 name = "types-pywin32"
-version = "310.0.0.20250516"
+version = "311.0.0.20250723"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6c/bc/c7be2934a37cc8c645c945ca88450b541e482c4df3ac51e5556377d34811/types_pywin32-310.0.0.20250516.tar.gz", hash = "sha256:91e5bfc033f65c9efb443722eff8101e31d690dd9a540fa77525590d3da9cc9d", size = 328459 }
 wheels = [
@@ -11137,6 +11151,7 @@ wheels = [
 
 [[package]]
 name = "typeshed-client"
+version = "2.8.2"
 version = "2.8.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -11442,7 +11457,7 @@ wheels = [
 
 [[package]]
 name = "virtualenv"
-version = "20.31.2"
+version = "20.32.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distlib" },
@@ -12040,7 +12055,7 @@ wheels = [
 
 [[package]]
 name = "zope-event"
-version = "5.1"
+version = "5.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "setuptools" },
