@@ -1,5 +1,6 @@
 import pytest
-from langflow.utils import util_strings
+
+from lfx.utils import util_strings
 
 
 @pytest.mark.parametrize(
