@@ -6,14 +6,14 @@ Langflow's default database is [SQLite](https://www.sqlite.org/docs.html), but y
 
 This guide walks you through setting up an external database for Langflow by replacing the default SQLite connection string `sqlite:///./langflow.db` with PostgreSQL, both in local and containerized environments.
 
-In this configuration, all structured application data from Langflow including flows, message history, and logs, is instead managed by PostgreSQL.
+In this configuration, all structured application data from Langflow, including flows, message history, and logs, is instead managed by PostgreSQL.
 PostgreSQL is better suited for production environments due to its robust support for concurrent users, advanced data integrity features, and scalability.
 Langflow can more efficiently handle multiple users and larger workloads by using PostgreSQL as the database.
 
 ## Prerequisites
 
 - [Install and start Langflow](/get-started-installation)
-- A [PostgreSQL](https://www.pgadmin.org/download/) database
+- Create a [PostgreSQL](https://www.pgadmin.org/download/) database
 
 ## Connect Langflow to a local PostgreSQL database
 
@@ -28,7 +28,7 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
     - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
     - If you're running a cloud-hosted PostgreSQL, your provider will share your connection string, which includes a username and password.
 
-3. Create a Langflow `.env` file.
+3. Create a Langflow `.env` file:
 
     ```
     touch .env
@@ -36,13 +36,13 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
 
     You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
-4. In your `.env` file, set `LANGFLOW_DATABASE_URL` to your PostgreSQL connection string.
+4. In your `.env` file, set `LANGFLOW_DATABASE_URL` to your PostgreSQL connection string:
 
     ```text
     LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
     ```
 
-5. Save your changes, and then start Langflow with your `.env` file.
+5. Save your changes, and then start Langflow with your `.env` file:
 
     ```bash
     uv run langflow run --env-file .env
@@ -54,9 +54,10 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
 
 ## Deploy Langflow and PostgreSQL containers with docker-compose.yml
 
-Use the [`docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file in the Langflow repository to launch Langflow and PostgreSQL containers in the same Docker network, ensuring proper connectivity between services.
+Launching Langflow and PostgreSQL containers in the same Docker network ensures proper connectivity between services.
+For an example, see the [`docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file in the Langflow repository.
 
-This configuration also sets up persistent volumes for both Langflow and PostgreSQL data.
+The configuration in the example `docker-compose.yml` also sets up persistent volumes for both Langflow and PostgreSQL data.
 Persistent volumes map directories inside of containers to storage on the host machine, so c data survives container restarts.
 
 Docker Compose creates an isolated network for all services defined in `docker-compose.yml`. This ensures that the services can communicate with each other using their service names as hostnames, such as `postgres` in the database URL.
@@ -68,7 +69,7 @@ To start the Langflow and PostgreSQL services, navigate to the `langflow/docker_
 
 To configure multiple Langflow instances that share the same PostgreSQL database, modify your `docker-compose.yml` file to include multiple Langflow services.
 
-This example populates the values in `docker-compose.yml` with values from your `.env` file.
+This example populates the values in `docker-compose.yml` with values from your Langflow `.env` file.
 This approach means you only have to manage deployment variables in one file, instead of copying values across multiple files.
 
 1. Update your `.env` file with values for your PostgreSQL database:
@@ -84,7 +85,8 @@ This approach means you only have to manage deployment variables in one file, in
     LANGFLOW_PORT_2=7861
     LANGFLOW_HOST=0.0.0.0
     ```
-2. Reference these variables in your `docker-compose.yml`:
+2. Reference these variables in your `docker-compose.yml`.
+For example:
 
     ```yaml
     services:
