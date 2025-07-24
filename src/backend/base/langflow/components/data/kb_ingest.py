@@ -569,8 +569,9 @@ class KBIngestionComponent(Component):
 
             # Read the embedding info from the knowledge base folder
             metadata_path = kb_path / "embedding_metadata.json"
-            api_key = self.api_key or ""
-            if not api_key and metadata_path.exists():
+
+            # If the API key is not provided, try to read it from the metadata file
+            if metadata_path.exists():
                 settings_service = get_settings_service()
                 metadata = json.loads(metadata_path.read_text())
                 embedding_model = metadata.get("embedding_model")
@@ -578,6 +579,15 @@ class KBIngestionComponent(Component):
                 api_key = decrypt_api_key(metadata["api_key"], settings_service)
             except (InvalidToken, TypeError, ValueError) as e:
                 logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+
+            # Check if a custom API key was provided, update metadata if so
+            if self.api_key:
+                api_key = self.api_key
+                self._save_embedding_metadata(
+                    kb_path=kb_path,
+                    embedding_model=embedding_model,
+                    api_key=api_key,
+                )
 
             # Create vector store following Local DB component pattern
             self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
@@ -640,13 +650,12 @@ class KBIngestionComponent(Component):
 
                 # We need to test the API Key one time against the embedding model
                 embed_model = self._build_embeddings(
-                    embedding_model=field_value["02_embedding_model"],
-                    api_key=field_value["03_api_key"]
+                    embedding_model=field_value["02_embedding_model"], api_key=field_value["03_api_key"]
                 )
 
                 # Try to generate a dummy embedding to validate the API key
                 embed_model.embed_query("test")
- 
+
                 # Create the new knowledge base directory
                 kb_path = Path(KNOWLEDGE_BASES_ROOT_PATH, field_value["01_new_kb_name"]).expanduser()
                 kb_path.mkdir(parents=True, exist_ok=True)
