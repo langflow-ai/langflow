@@ -638,6 +638,15 @@ class KBIngestionComponent(Component):
                     msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
                     raise ValueError(msg)
 
+                # We need to test the API Key one time against the embedding model
+                embed_model = self._build_embeddings(
+                    embedding_model=field_value["02_embedding_model"],
+                    api_key=field_value["03_api_key"]
+                )
+
+                # Try to generate a dummy embedding to validate the API key
+                embed_model.embed_query("test")
+ 
                 # Create the new knowledge base directory
                 kb_path = Path(KNOWLEDGE_BASES_ROOT_PATH, field_value["01_new_kb_name"]).expanduser()
                 kb_path.mkdir(parents=True, exist_ok=True)
