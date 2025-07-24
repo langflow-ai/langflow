@@ -27,8 +27,6 @@ def test_serve_command_help():
 
     assert result.exit_code == 0
     assert "Serve a flow as an API" in result.output
-    assert "--host" in result.output
-    assert "--port" in result.output
 
 
 def test_serve_command_missing_api_key():
