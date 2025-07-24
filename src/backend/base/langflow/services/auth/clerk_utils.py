@@ -5,8 +5,10 @@ from uuid import UUID
 
 import httpx
 from fastapi import HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from jose import JWTError, jwk, jwt
 from sqlmodel.ext.asyncio.session import AsyncSession
+from starlette.status import HTTP_401_UNAUTHORIZED
 
 from langflow.logging.logger import logger
 from langflow.services.database.models.user import User, UserCreate
@@ -19,7 +21,7 @@ auth_header_ctx: ContextVar[dict | None] = ContextVar("auth_header_ctx", default
 _jwks_cache: dict[str, dict[str, Any]] = {}
 
 # APIs that require Clerk token decoding in middleware
-PROTECTED_PATHS = ["/api/v1/users/"]
+PROTECTED_PATHS = ["/api/v1/users/","/api/v1/login"]
 
 
 async def _get_jwks(issuer: str) -> dict[str, Any]:
@@ -146,6 +148,14 @@ async def clerk_token_middleware(request: Request, call_next):
     ctx_token: Token | None = None
     if settings.auth_settings.CLERK_AUTH_ENABLED and request.url.path in PROTECTED_PATHS:
         auth_header = request.headers.get("Authorization")
+
+        if not auth_header or not auth_header.startswith("Bearer "):
+            logger.warning("Missing or malformed Authorization header for Clerk protected route.")
+            return JSONResponse(
+                status_code=HTTP_401_UNAUTHORIZED,
+                content={"detail": "Authorization header with valid Bearer token required"},
+            )
+
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header[len("Bearer ") :]
             try:
@@ -153,6 +163,10 @@ async def clerk_token_middleware(request: Request, call_next):
                 ctx_token = auth_header_ctx.set(payload)
             except Exception as exc:  # noqa: BLE001
                 logger.warning(f"Failed to verify Clerk token: {exc}")
+                return JSONResponse(
+                    status_code=HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Invalid Clerk token"}
+                )
 
     try:
         return await call_next(request)

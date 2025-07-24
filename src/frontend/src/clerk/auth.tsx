@@ -61,6 +61,7 @@ export async function backendLogin(username: string,token:string) {
     {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${token}`,
       },
     },
   );
