@@ -6,9 +6,10 @@ Langflow's default database is [SQLite](https://www.sqlite.org/docs.html), but y
 
 This guide walks you through setting up an external database for Langflow by replacing the default SQLite connection string `sqlite:///./langflow.db` with PostgreSQL.
 
-## Prerequisite
+## Prerequisites
 
-* A [PostgreSQL](https://www.pgadmin.org/download/) database
+- [Install and start Langflow](/get-started-installation)
+- A [PostgreSQL](https://www.pgadmin.org/download/) database
 
 ## Connect Langflow to PostgreSQL
 
@@ -21,6 +22,7 @@ This guide walks you through setting up an external database for Langflow by rep
     - If you're running PostgreSQL directly on your machine, use `localhost`.
     - If you're running PostgreSQL in Docker Compose, use the service name, such as `postgres`.
     - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
+    - If you're running a cloud-hosted PostgreSQL, your provider will share your connection string, which includes a username and password.
 
 3. Create a Langflow `.env` file if you don't already have one:
 
@@ -30,7 +32,7 @@ This guide walks you through setting up an external database for Langflow by rep
 
     You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
-4. In your `.env` file, set `LANGFLOW_DATABASE_URL` to your your PostgreSQL connection string:
+4. In your `.env` file, set `LANGFLOW_DATABASE_URL` to your PostgreSQL connection string:
 
     ```text
     LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
@@ -46,132 +48,105 @@ This guide walks you through setting up an external database for Langflow by rep
 
 7. Inspect your PostgreSQL deployment's tables and activity to verify that new tables and traffic were created after you ran a flow.
 
-## Example Langflow and PostgreSQL docker-compose.yml
+## Deploy Langflow and PostgreSQL containers with docker-compose.yml
+
+Use the [`docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file in the Langflow repository to launch Langflow and PostgreSQL containers in the same Docker network, ensuring proper connectivity between services.
+
+This configuration also sets up persistent volumes for both Langflow and PostgreSQL data.
 
 Docker Compose creates an isolated network for all services defined in `docker-compose.yml`. This ensures that the services can communicate with each other using their service names as hostnames, such as `postgres` in the database URL.
 In contrast, if you run PostgreSQL separately with `docker run`, it launches in a different network than the Langflow container, and this prevents Langflow from connecting to PostgreSQL using the service name.
 
-You can use the [`docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file in the Langflow repository to launches Langflow and PostgreSQL containers in the same Docker network, ensuring proper connectivity between services.
-This configuration also sets up persistent volumes for both Langflow and PostgreSQL data.
+To start the Langflow and PostgreSQL services, navigate to the `langflow/docker_example` directory, and then run `docker-compose up`.
 
-To start the services, navigate to the `/docker_example` directory, and then run `docker-compose up`:
-
-```yaml
-services:
-  langflow:
-    image: langflowai/langflow:latest    # or another version tag on https://hub.docker.com/r/langflowai/langflow
-    pull_policy: always                   # set to 'always' when using 'latest' image
-    ports:
-      - "7860:7860"
-    depends_on:
-      - postgres
-    environment:
-      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
-      # This variable defines where the logs, file storage, monitor data, and secret keys are stored.
-      - LANGFLOW_CONFIG_DIR=app/langflow
-    volumes:
-      - langflow-data:/app/langflow
-
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: langflow
-      POSTGRES_PASSWORD: langflow
-      POSTGRES_DB: langflow
-    ports:
-      - "5432:5432"
-    volumes:
-      - langflow-postgres:/var/lib/postgresql/data
-
-volumes:
-  langflow-postgres:    # Persistent volume for PostgreSQL data
-  langflow-data:        # Persistent volume for Langflow data
-```
-
-## Deploy multiple Langflow instances with a shared database
+## Deploy multiple Langflow instances with a shared PostgreSQL database
 
 To configure multiple Langflow instances that share the same PostgreSQL database, modify your `docker-compose.yml` file to include multiple Langflow services.
 
-Use environment variables for more centralized configuration management:
+This example populates the values in `docker-compose.yml` with values from your `.env` file.
+This approach means you only have to manage deployment variables in one file, instead of copying values across multiple files.
 
 1. Update your `.env` file with values for your PostgreSQL database:
-```text
-POSTGRES_USER=langflow
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=langflow
-POSTGRES_HOST=postgres
-POSTGRES_PORT=5432
-LANGFLOW_CONFIG_DIR=app/langflow
-LANGFLOW_PORT_1=7860
-LANGFLOW_PORT_2=7861
-LANGFLOW_HOST=0.0.0.0
-```
+
+    ```text
+    POSTGRES_USER=langflow
+    POSTGRES_PASSWORD=your_secure_password
+    POSTGRES_DB=langflow
+    POSTGRES_HOST=postgres
+    POSTGRES_PORT=5432
+    LANGFLOW_CONFIG_DIR=app/langflow
+    LANGFLOW_PORT_1=7860
+    LANGFLOW_PORT_2=7861
+    LANGFLOW_HOST=0.0.0.0
+    ```
 2. Reference these variables in your `docker-compose.yml`:
-```yaml
-services:
-  postgres:
-    image: postgres:16
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    volumes:
-      - langflow-postgres:/var/lib/postgresql/data
 
-  langflow-1:
-    image: langflowai/langflow:latest
-    pull_policy: always
-    ports:
-      - "${LANGFLOW_PORT_1}:7860"
-    depends_on:
-      - postgres
-    environment:
-      - LANGFLOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-      - LANGFLOW_CONFIG_DIR=${LANGFLOW_CONFIG_DIR}
-      - LANGFLOW_HOST=${LANGFLOW_HOST}
-      - PORT=7860
-    volumes:
-      - langflow-data-1:/app/langflow
+    ```yaml
+    services:
+      postgres:
+        image: postgres:16
+        environment:
+          - POSTGRES_USER=${POSTGRES_USER}
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          - POSTGRES_DB=${POSTGRES_DB}
+        ports:
+          - "${POSTGRES_PORT}:5432"
+        volumes:
+          - langflow-postgres:/var/lib/postgresql/data
 
-  langflow-2:
-    image: langflowai/langflow:latest
-    pull_policy: always
-    ports:
-      - "${LANGFLOW_PORT_2}:7860"
-    depends_on:
-      - postgres
-    environment:
-      - LANGFLOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-      - LANGFLOW_CONFIG_DIR=${LANGFLOW_CONFIG_DIR}
-      - LANGFLOW_HOST=${LANGFLOW_HOST}
-      - PORT=7860
-    volumes:
-      - langflow-data-2:/app/langflow
+      langflow-1:
+        image: langflowai/langflow:latest
+        pull_policy: always
+        ports:
+          - "${LANGFLOW_PORT_1}:7860"
+        depends_on:
+          - postgres
+        environment:
+          - LANGFLOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+          - LANGFLOW_CONFIG_DIR=${LANGFLOW_CONFIG_DIR}
+          - LANGFLOW_HOST=${LANGFLOW_HOST}
+          - PORT=7860
+        volumes:
+          - langflow-data-1:/app/langflow
 
-volumes:
-  langflow-postgres:
-  langflow-data-1:
-  langflow-data-2:
-```
+      langflow-2:
+        image: langflowai/langflow:latest
+        pull_policy: always
+        ports:
+          - "${LANGFLOW_PORT_2}:7860"
+        depends_on:
+          - postgres
+        environment:
+          - LANGFLOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+          - LANGFLOW_CONFIG_DIR=${LANGFLOW_CONFIG_DIR}
+          - LANGFLOW_HOST=${LANGFLOW_HOST}
+          - PORT=7860
+        volumes:
+          - langflow-data-2:/app/langflow
+
+    volumes:
+      langflow-postgres:
+      langflow-data-1:
+      langflow-data-2:
+    ```
 
 3. Deploy the file with `docker-compose up`.
 You can access the first Langflow instance at `http://localhost:7860`, and the second Langflow instance at `http://localhost:7861`.
 
 4. To confirm both instances are using the same database, run the `docker exec` command to start `psql` in your PostgreSQL container.
 Your container name may vary.
-```bash
-docker exec -it docker-test-postgres-1 psql -U langflow -d langflow
-```
+
+    ```bash
+    docker exec -it docker-test-postgres-1 psql -U langflow -d langflow
+    ```
 
 5. Query the database for active connections:
-```sql
-langflow=# SELECT * FROM pg_stat_activity WHERE datname = 'langflow';
-```
+
+    ```sql
+    langflow=# SELECT * FROM pg_stat_activity WHERE datname = 'langflow';
+    ```
 
 6. Examine the query results for multiple connections with different `client_addr` values, for example `172.21.0.3` and `172.21.0.4`.
-
 Since each Langflow instance runs in its own container on the Docker network, using different incoming IP addresses confirms that both instances are actively connected to the PostgreSQL database.
 
 7. To quit psql, type `quit`.
