@@ -23,12 +23,12 @@ const KnowledgeBaseEmptyState = ({
           className="!px-3 md:!px-4 md:!pl-3.5"
         >
           <ForwardedIconComponent
-            name="BookOpen"
+            name="Plus"
             aria-hidden="true"
             className="h-4 w-4"
           />
           <span className="whitespace-nowrap font-semibold">
-            Try Knowledge Base Template
+            Create Knowledge
           </span>
         </Button>
       </div>
