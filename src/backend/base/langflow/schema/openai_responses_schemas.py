@@ -14,6 +14,9 @@ class OpenAIResponsesRequest(BaseModel):
     previous_response_id: str | None = Field(
         default=None, description="ID of previous response to continue conversation"
     )
+    include: list[str] | None = Field(
+        default=None, description="Additional response data to include, e.g., ['tool_call.results']"
+    )
 
 
 class OpenAIResponsesResponse(BaseModel):

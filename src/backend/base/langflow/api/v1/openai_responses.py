@@ -137,7 +137,7 @@ async def run_flow_for_openai_responses(
 
                                                     # Only emit tool calls with explicit tool names and
                                                     # meaningful arguments
-                                                    if tool_name and tool_input and len(tool_input) > 0:
+                                                    if tool_name and tool_input is not None and tool_output is not None:
                                                         # Create unique identifier for this tool call
                                                         tool_signature = (
                                                             f"{tool_name}:{hash(str(sorted(tool_input.items())))}"
@@ -169,17 +169,16 @@ async def run_flow_for_openai_responses(
 
                                                         # Send function call arguments as delta events (like OpenAI)
                                                         arguments_str = json.dumps(tool_input)
-                                                        for char in arguments_str:
-                                                            arg_delta_event = {
-                                                                "type": "response.function_call_arguments.delta",
-                                                                "delta": char,
-                                                                "item_id": tool_id,
-                                                                "output_index": 0,
-                                                            }
-                                                            yield (
-                                                                f"event: response.function_call_arguments.delta\n"
-                                                                f"data: {json.dumps(arg_delta_event)}\n\n"
-                                                            )
+                                                        arg_delta_event = {
+                                                            "type": "response.function_call_arguments.delta",
+                                                            "delta": arguments_str,
+                                                            "item_id": tool_id,
+                                                            "output_index": 0,
+                                                        }
+                                                        yield (
+                                                            f"event: response.function_call_arguments.delta\n"
+                                                            f"data: {json.dumps(arg_delta_event)}\n\n"
+                                                        )
 
                                                         # Send function call arguments done event
                                                         arg_done_event = {
@@ -195,17 +194,40 @@ async def run_flow_for_openai_responses(
 
                                                         # If there's output, send completion event
                                                         if tool_output is not None:
-                                                            tool_done_event = {
-                                                                "type": "response.output_item.done",
-                                                                "item": {
-                                                                    "id": tool_id,
-                                                                    "type": "function_call",  # Match OpenAI format
-                                                                    "status": "completed",
-                                                                    "arguments": arguments_str,  # Include final args
-                                                                    "call_id": call_id,
-                                                                    "name": tool_name,
-                                                                },
-                                                            }
+                                                            # Check if include parameter requests tool_call.results
+                                                            include_results = (
+                                                                request.include 
+                                                                and "tool_call.results" in request.include
+                                                            )
+                                                            
+                                                            if include_results:
+                                                                # Format with detailed results - preserve original structure
+                                                                tool_done_event = {
+                                                                    "type": "response.output_item.done",
+                                                                    "item": {
+                                                                        "id": f"{tool_name}_{tool_id}",
+                                                                        "inputs": tool_input,  # Raw inputs as-is
+                                                                        "status": "completed",
+                                                                        "type": f"{tool_name}_call",
+                                                                        "results": tool_output  # Raw output as-is
+                                                                    },
+                                                                    "output_index": 0,
+                                                                    "sequence_number": tool_call_counter + 5
+                                                                }
+                                                            else:
+                                                                # Regular function call format
+                                                                tool_done_event = {
+                                                                    "type": "response.output_item.done",
+                                                                    "item": {
+                                                                        "id": tool_id,
+                                                                        "type": "function_call",  # Match OpenAI format
+                                                                        "status": "completed",
+                                                                        "arguments": arguments_str,  # Include final args
+                                                                        "call_id": call_id,
+                                                                        "name": tool_name,
+                                                                    },
+                                                                }
+                                                            
                                                             yield (
                                                                 f"event: response.output_item.done\n"
                                                                 f"data: {json.dumps(tool_done_event)}\n\n"

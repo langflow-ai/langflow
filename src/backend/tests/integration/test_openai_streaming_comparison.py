@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import pathlib
+from xml.etree.ElementInclude import include
 
 import httpx
 import pytest
@@ -156,7 +157,7 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
 
     flow, headers = await load_and_prepare_flow(client, created_api_key)
 
-    our_payload = {"model": flow["id"], "input": input_msg, "stream": True}
+    our_payload = {"model": flow["id"], "input": input_msg, "stream": True, "include": ["tool_call.results"]}
 
     our_response = await client.post("/api/v1/responses", json=our_payload, headers=headers)
     assert our_response.status_code == 200
