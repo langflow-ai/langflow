@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+
 interface KnowledgeBaseEmptyStateProps {
   onCreateKnowledgeBase?: () => void;
 }
@@ -12,6 +15,22 @@ const KnowledgeBaseEmptyState = ({
         <p className="text-lg text-secondary-foreground">
           Create your first knowledge base to get started.
         </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={onCreateKnowledgeBase}
+          disabled={!onCreateKnowledgeBase}
+          className="!px-3 md:!px-4 md:!pl-3.5"
+        >
+          <ForwardedIconComponent
+            name="BookOpen"
+            aria-hidden="true"
+            className="h-4 w-4"
+          />
+          <span className="whitespace-nowrap font-semibold">
+            Try Knowledge Base Template
+          </span>
+        </Button>
       </div>
     </div>
   );
