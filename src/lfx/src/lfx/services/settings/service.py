@@ -30,3 +30,6 @@ class SettingsService(Service):
     def set(self, key, value):
         setattr(self.settings, key, value)
         return self.settings
+
+    def teardown(self):
+        pass
