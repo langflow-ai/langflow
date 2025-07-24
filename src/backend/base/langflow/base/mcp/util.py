@@ -32,9 +32,12 @@ HTTP_BAD_REQUEST = 400
 HTTP_INTERNAL_SERVER_ERROR = 500
 
 # MCP Session Manager constants
-MAX_SESSIONS_PER_SERVER = 5  # Maximum number of sessions per server to prevent resource exhaustion
-SESSION_IDLE_TIMEOUT = 300  # 5 minutes idle timeout for sessions
-SESSION_CLEANUP_INTERVAL = 60  # Cleanup interval in seconds
+settings = get_settings_service().settings
+MAX_SESSIONS_PER_SERVER = (
+    settings.mcp_max_sessions_per_server
+)  # Maximum number of sessions per server to prevent resource exhaustion
+SESSION_IDLE_TIMEOUT = settings.mcp_session_idle_timeout  # 5 minutes idle timeout for sessions
+SESSION_CLEANUP_INTERVAL = settings.mcp_session_cleanup_interval  # Cleanup interval in seconds
 
 
 def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
@@ -399,6 +402,10 @@ class MCPSessionManager:
         # Structure: server_key -> {"sessions": {session_id: session_info}, "last_cleanup": timestamp}
         self.sessions_by_server = {}
         self._background_tasks = set()  # Keep references to background tasks
+        # Backwards-compatibility maps: which context_id uses which (server_key, session_id)
+        self._context_to_session: dict[str, tuple[str, str]] = {}
+        # Reference count for each active (server_key, session_id)
+        self._session_refcount: dict[tuple[str, str], int] = {}
         self._cleanup_task = None
         self._start_cleanup_task()
 
@@ -417,7 +424,8 @@ class MCPSessionManager:
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
+                # Handle common recoverable errors without stopping the cleanup loop
                 logger.warning(f"Error in periodic cleanup: {e}")
 
     async def _cleanup_idle_sessions(self):
@@ -455,28 +463,58 @@ class MCPSessionManager:
                 env_str = str(sorted((connection_params.env or {}).items()))
                 key_input = f"{command_str}|{env_str}"
                 return f"stdio_{hash(key_input)}"
-        elif transport_type == "sse":
-            if isinstance(connection_params, dict) and "url" in connection_params:
-                # Include URL and headers for uniqueness
-                url = connection_params["url"]
-                headers = str(sorted((connection_params.get("headers", {})).items()))
-                key_input = f"{url}|{headers}"
-                return f"sse_{hash(key_input)}"
+        elif transport_type == "sse" and (isinstance(connection_params, dict) and "url" in connection_params):
+            # Include URL and headers for uniqueness
+            url = connection_params["url"]
+            headers = str(sorted((connection_params.get("headers", {})).items()))
+            key_input = f"{url}|{headers}"
+            return f"sse_{hash(key_input)}"
 
         # Fallback to a generic key
+        # TODO: add option for streamable HTTP in future.
         return f"{transport_type}_{hash(str(connection_params))}"
 
     async def _validate_session_connectivity(self, session) -> bool:
         """Validate that the session is actually usable by testing a simple operation."""
         try:
+            # Try to list tools as a connectivity test (this is a lightweight operation)
+            # Use a shorter timeout for the connectivity test to fail fast
             response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
-            if response is None:
-                return False
-            tools = getattr(response, "tools", None)
-            return tools is not None
-        except Exception as e:
-            logger.debug(f"Session connectivity test failed: {e}")
+        except (asyncio.TimeoutError, ConnectionError, OSError, ValueError) as e:
+            logger.debug(f"Session connectivity test failed (standard error): {e}")
             return False
+        except Exception as e:
+            # Handle MCP-specific errors that might not be in the standard list
+            error_str = str(e)
+            if (
+                "ClosedResourceError" in str(type(e))
+                or "Connection closed" in error_str
+                or "Connection lost" in error_str
+                or "Transport closed" in error_str
+                or "Stream closed" in error_str
+            ):
+                logger.debug(f"Session connectivity test failed (MCP connection error): {e}")
+                return False
+            # Re-raise unexpected errors
+            logger.warning(f"Unexpected error in connectivity test: {e}")
+            raise
+        else:
+            # Validate that we got a meaningful response
+            if response is None:
+                logger.debug("Session connectivity test failed: received None response")
+                return False
+            try:
+                # Check if we can access the tools list (even if empty)
+                tools = getattr(response, "tools", None)
+                if tools is None:
+                    logger.debug("Session connectivity test failed: no tools attribute in response")
+                    return False
+            except (AttributeError, TypeError) as e:
+                logger.debug(f"Session connectivity test failed while validating response: {e}")
+                return False
+            else:
+                logger.debug(f"Session connectivity test passed: found {len(tools)} tools")
+                return True
 
     async def get_session(self, context_id: str, connection_params, transport_type: str):
         """Get or create a session with improved reuse strategy.
@@ -507,6 +545,11 @@ class MCPSessionManager:
                 # Quick health check
                 if await self._validate_session_connectivity(session):
                     logger.debug(f"Reusing existing session {session_id} for server {server_key}")
+                    # record mapping & bump ref-count for backwards compatibility
+                    self._context_to_session[context_id] = (server_key, session_id)
+                    self._session_refcount[(server_key, session_id)] = (
+                        self._session_refcount.get((server_key, session_id), 0) + 1
+                    )
                     return session
                 logger.info(f"Session {session_id} for server {server_key} failed health check, cleaning up")
                 await self._cleanup_session_by_id(server_key, session_id)
@@ -533,7 +576,8 @@ class MCPSessionManager:
         elif transport_type == "sse":
             session, task = await self._create_sse_session(session_id, connection_params)
         else:
-            raise ValueError(f"Unknown transport type: {transport_type}")
+            msg = f"Unknown transport type: {transport_type}"
+            raise ValueError(msg)
 
         # Store session info
         sessions[session_id] = {
@@ -542,6 +586,10 @@ class MCPSessionManager:
             "type": transport_type,
             "last_used": asyncio.get_event_loop().time(),
         }
+
+        # register mapping & initial ref-count for the new session
+        self._context_to_session[context_id] = (server_key, session_id)
+        self._session_refcount[(server_key, session_id)] = 1
 
         return session
 
@@ -572,7 +620,7 @@ class MCPSessionManager:
                             await event.wait()
                         except asyncio.CancelledError:
                             logger.info(f"Session {session_id} is shutting down")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 if not session_future.done():
                     session_future.set_exception(e)
 
@@ -631,7 +679,7 @@ class MCPSessionManager:
                             await event.wait()
                         except asyncio.CancelledError:
                             logger.info(f"Session {session_id} is shutting down")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 if not session_future.done():
                     session_future.set_exception(e)
 
@@ -685,7 +733,7 @@ class MCPSessionManager:
                         await task
                     except asyncio.CancelledError:
                         logger.info(f"Cancelled task for session {session_id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Error cleaning up session {session_id}: {e}")
         finally:
             # Remove from sessions dict
@@ -715,6 +763,10 @@ class MCPSessionManager:
         # Clear the sessions_by_server structure completely
         self.sessions_by_server.clear()
 
+        # Clear compatibility maps
+        self._context_to_session.clear()
+        self._session_refcount.clear()
+
         # Clear all background tasks
         for task in list(self._background_tasks):
             if not task.done():
@@ -723,27 +775,29 @@ class MCPSessionManager:
                     await task
 
     async def _cleanup_session(self, context_id: str):
-        """Compatibility method for the old session cleanup interface.
+        """Backward-compat cleanup by context_id.
 
-        This method provides backward compatibility for client code that calls
-        _cleanup_session(context_id) instead of the new _cleanup_session_by_id(server_key, session_id).
-
-        Since the new session manager doesn't maintain a context_id -> session mapping,
-        we clean up all sessions that might be associated with this context.
+        Decrements the ref-count for the session used by *context_id* and only
+        tears the session down when the last context that references it goes
+        away.
         """
-        # In the old system, context_id was used as the session key
-        # In the new system, we need to find sessions that might be using this context
+        mapping = self._context_to_session.get(context_id)
+        if not mapping:
+            logger.debug(f"No session mapping found for context_id {context_id}")
+            return
 
-        # The safest approach is to clean up all sessions since we can't reliably
-        # map context_id to the specific session in the new structure
-        logger.debug(f"Cleaning up sessions for context_id: {context_id}")
+        server_key, session_id = mapping
+        ref_key = (server_key, session_id)
+        remaining = self._session_refcount.get(ref_key, 1) - 1
 
-        # For backward compatibility, we'll clean up all sessions
-        # This is safe because:
-        # 1. Sessions are designed to be recreated on demand
-        # 2. The old behavior was to clean up on disconnect anyway
-        # 3. Multiple contexts can share the same session in the new system
-        await self.cleanup_all()
+        if remaining <= 0:
+            await self._cleanup_session_by_id(server_key, session_id)
+            self._session_refcount.pop(ref_key, None)
+        else:
+            self._session_refcount[ref_key] = remaining
+
+        # Remove the mapping for this context
+        self._context_to_session.pop(context_id, None)
 
 
 class MCPStdioClient:
@@ -938,11 +992,15 @@ class MCPStdioClient:
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
-        # Clean up session using session manager
+        # Attempt best-effort remote session termination first
+        await self._terminate_remote_session()
+
+        # Clean up local session using the session manager
         if self._session_context:
             session_manager = self._get_session_manager()
             await session_manager._cleanup_session(self._session_context)
 
+        # Reset local state
         self.session = None
         self._connection_params = None
         self._connected = False
@@ -1097,19 +1155,34 @@ class MCPSseClient:
 
         # Use cached session manager to get/create persistent session
         session_manager = self._get_session_manager()
-        return await session_manager.get_session(self._session_context, self._connection_params, "sse")
+        # Cache session so we can access server-assigned session_id later for DELETE
+        self.session = await session_manager.get_session(self._session_context, self._connection_params, "sse")
+        return self.session
 
-    async def disconnect(self):
-        """Properly close the connection and clean up resources."""
-        # Clean up session using session manager
-        if self._session_context:
-            session_manager = self._get_session_manager()
-            await session_manager._cleanup_session(self._session_context)
+    async def _terminate_remote_session(self) -> None:
+        """Attempt to explicitly terminate the remote MCP session via HTTP DELETE (best-effort)."""
+        # Only relevant for SSE transport
+        if not self._connection_params or "url" not in self._connection_params:
+            return
 
-        self.session = None
-        self._connection_params = None
-        self._connected = False
-        self._session_context = None
+        url: str = self._connection_params["url"]
+
+        # Retrieve session id from the underlying SDK if exposed
+        session_id = None
+        if getattr(self, "session", None) is not None:
+            # Common attributes in MCP python SDK: `session_id` or `id`
+            session_id = getattr(self.session, "session_id", None) or getattr(self.session, "id", None)
+
+        headers: dict[str, str] = dict(self._connection_params.get("headers", {}))
+        if session_id:
+            headers["Mcp-Session-Id"] = str(session_id)
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.delete(url, headers=headers)
+        except Exception as e:  # noqa: BLE001
+            # DELETE is advisory—log and continue
+            logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
     async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Run a tool with the given arguments using context-specific session.
