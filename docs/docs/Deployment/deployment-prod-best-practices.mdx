@@ -6,7 +6,18 @@ slug: /deployment-prod-best-practices
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-While Langflow offers flexible deployment options, deploying on a Kubernetes cluster is highly recommended for production environments.
+Langflow can be deployed in two distinct environments.
+
+* [Langflow IDE](/deployment-kubernetes-dev) - A development environment for creating and testing flows.
+* [Langflow runtime](/deployment-kubernetes-prod) - A production environment for hosting and serving flows.
+
+The **Langflow IDE** includes the frontend for visual development of your flow. The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE image. The Langflow IDE can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-dev).
+
+The **Langflow runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the processes necessary to serve your flow, with PostgreSQL as the database for improved scalability. Use the Langflow **runtime** to deploy your flows if you don't require the frontend for visual development. The Langflow runtime can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-prod).
+
+:::tip
+You can start Langflow in headless mode with the [LANGFLOW_BACKEND_ONLY](/environment-variables#LANGFLOW_BACKEND_ONLY) environment variable.
+:::
 
 Deploying on Kubernetes offers the following advantages:
 
@@ -51,5 +62,3 @@ This separation is designed to enhance security, optimize resource allocation, a
 * **Resource allocation**
   * **Optimized resource usage and cost efficiency**: By separating the two environments, you can allocate resources more effectively. Each flow can be deployed independently, providing fine-grained resource control.
   * **Scalability**: The runtime environment can be scaled independently based on application load and performance requirements, without affecting the development environment.
-
-
