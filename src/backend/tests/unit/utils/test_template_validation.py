@@ -185,6 +185,20 @@ class TestValidateFlowCanBuild:
         # The user_id is passed as a keyword argument
         assert call_args[1]["user_id"] == "test_user"
 
+    @patch("langflow.utils.template_validation.Graph")
+    def test_validate_stream_exception(self, mock_graph_class):
+        """Test that validate_stream exceptions are caught."""
+        mock_graph = Mock()
+        mock_graph.vertices = [Mock(id="vertex1")]
+        mock_graph.validate_stream.side_effect = ValueError("Stream validation failed")
+        mock_graph_class.from_payload.return_value = mock_graph
+
+        template_data = {"nodes": [], "edges": []}
+        errors = validate_flow_can_build(template_data, "test.json")
+
+        assert len(errors) == 1
+        assert "Failed to build flow graph: Stream validation failed" in errors[0]
+
 
 class TestValidateFlowCode:
     """Test cases for validate_flow_code function."""
@@ -308,6 +322,30 @@ class TestValidateFlowCode:
             errors = validate_flow_code(template_data, "test.json")
             assert len(errors) == 1
             assert "Code validation failed: Unexpected error" in errors[0]
+
+    def test_code_validation_other_exceptions(self):
+        """Test validation handles different exception types."""
+        template_data = {
+            "nodes": [{"data": {"node": {"template": {"code_field": {"type": "code", "value": "def test(): pass"}}}}}]
+        }
+
+        # Test TypeError
+        with patch("langflow.utils.template_validation.validate_code", side_effect=TypeError("Type error")):
+            errors = validate_flow_code(template_data, "test.json")
+            assert len(errors) == 1
+            assert "Code validation failed: Type error" in errors[0]
+
+        # Test KeyError
+        with patch("langflow.utils.template_validation.validate_code", side_effect=KeyError("key")):
+            errors = validate_flow_code(template_data, "test.json")
+            assert len(errors) == 1
+            assert "Code validation failed: 'key'" in errors[0]
+
+        # Test AttributeError
+        with patch("langflow.utils.template_validation.validate_code", side_effect=AttributeError("Attribute error")):
+            errors = validate_flow_code(template_data, "test.json")
+            assert len(errors) == 1
+            assert "Code validation failed: Attribute error" in errors[0]
 
 
 class TestValidateFlowExecution:
@@ -602,3 +640,79 @@ class TestValidateEventStream:
         errors = []
         await _validate_event_stream(mock_response, "job123", "test.json", errors)
         assert errors == []
+
+    @pytest.mark.asyncio
+    async def test_vertices_sorted_without_end_vertex_events(self):
+        """Test validation with vertices_sorted but no end_vertex events."""
+        mock_response = Mock()
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1", "v2"]}}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
+
+        errors = []
+        await _validate_event_stream(mock_response, "job123", "test.json", errors)
+        assert errors == []
+
+    @pytest.mark.asyncio
+    async def test_vertex_count_tracking(self):
+        """Test that vertex_count is properly tracked."""
+        mock_response = Mock()
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1", "v2", "v3"]}}',
+                    '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
+                    '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
+                    '{"event": "end_vertex", "job_id": "job123", "data": {"build_data": {"result": "success"}}}',
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
+
+        errors = []
+        await _validate_event_stream(mock_response, "job123", "test.json", errors)
+        assert errors == []
+
+    @pytest.mark.asyncio
+    async def test_empty_lines_in_stream(self):
+        """Test that empty lines in event stream are properly handled."""
+        mock_response = Mock()
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    "",  # Empty line
+                    '{"event": "vertices_sorted", "job_id": "job123", "data": {"ids": ["v1"]}}',
+                    "",  # Another empty line
+                    '{"event": "end", "job_id": "job123"}',
+                    "",  # Empty line at end
+                ]
+            )
+        )
+
+        errors = []
+        await _validate_event_stream(mock_response, "job123", "test.json", errors)
+        assert errors == []
+
+    @pytest.mark.asyncio
+    async def test_event_stream_validation_exception(self):
+        """Test that event stream validation handles exceptions properly."""
+        mock_response = Mock()
+        mock_response.aiter_lines = Mock(
+            return_value=AsyncIteratorMock(
+                [
+                    '{"event": "end", "job_id": "job123"}',
+                ]
+            )
+        )
+
+        # Mock the json.loads to raise a different exception type
+        errors = []
+        with patch("langflow.utils.template_validation.json.loads", side_effect=TypeError("Type error")):
+            await _validate_event_stream(mock_response, "job123", "test.json", errors)
+            assert len(errors) == 1
+            assert "Event stream validation failed: Type error" in errors[0]
