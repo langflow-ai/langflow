@@ -4,16 +4,20 @@ slug: /configuration-custom-database
 ---
 Langflow's default database is [SQLite](https://www.sqlite.org/docs.html), but you can configure Langflow to use PostgreSQL instead.
 
-This guide walks you through setting up an external database for Langflow by replacing the default SQLite connection string `sqlite:///./langflow.db` with PostgreSQL.
+This guide walks you through setting up an external database for Langflow by replacing the default SQLite connection string `sqlite:///./langflow.db` with PostgreSQL, both in local and containerized environments.
+
+In this configuration, all structured application data from Langflow including flows, message history, and logs, is instead managed by PostgreSQL.
+PostgreSQL is better suited for production environments due to its robust support for concurrent users, advanced data integrity features, and scalability.
+Langflow can more efficiently handle multiple users and larger workloads by using PostgreSQL as the database.
 
 ## Prerequisites
 
 - [Install and start Langflow](/get-started-installation)
 - A [PostgreSQL](https://www.pgadmin.org/download/) database
 
-## Connect Langflow to PostgreSQL
+## Connect Langflow to a local PostgreSQL database
 
-1. If Langflow is running, quit Langflow.
+1. If Langflow is running, stop Langflow with <kbd>Ctrl+C</kbd>.
 
 2. Find your PostgreSQL database's connection string in the format `postgresql://user:password@host:port/dbname`.
 
@@ -24,7 +28,7 @@ This guide walks you through setting up an external database for Langflow by rep
     - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
     - If you're running a cloud-hosted PostgreSQL, your provider will share your connection string, which includes a username and password.
 
-3. Create a Langflow `.env` file if you don't already have one:
+3. Create a Langflow `.env` file.
 
     ```
     touch .env
@@ -32,13 +36,13 @@ This guide walks you through setting up an external database for Langflow by rep
 
     You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
-4. In your `.env` file, set `LANGFLOW_DATABASE_URL` to your PostgreSQL connection string:
+4. In your `.env` file, set `LANGFLOW_DATABASE_URL` to your PostgreSQL connection string.
 
     ```text
     LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
     ```
 
-5. Save your changes, and then start Langflow with your `.env` file:
+5. Save your changes, and then start Langflow with your `.env` file.
 
     ```bash
     uv run langflow run --env-file .env
@@ -46,13 +50,14 @@ This guide walks you through setting up an external database for Langflow by rep
 
 6. In Langflow, run any flow to create traffic.
 
-7. Inspect your PostgreSQL deployment's tables and activity to verify that new tables and traffic were created after you ran a flow.
+7. Inspect your PostgreSQL database's tables and activity to verify that new tables and traffic were created after you ran a flow.
 
 ## Deploy Langflow and PostgreSQL containers with docker-compose.yml
 
 Use the [`docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file in the Langflow repository to launch Langflow and PostgreSQL containers in the same Docker network, ensuring proper connectivity between services.
 
 This configuration also sets up persistent volumes for both Langflow and PostgreSQL data.
+Persistent volumes map directories inside of containers to storage on the host machine, so c data survives container restarts.
 
 Docker Compose creates an isolated network for all services defined in `docker-compose.yml`. This ensures that the services can communicate with each other using their service names as hostnames, such as `postgres` in the database URL.
 In contrast, if you run PostgreSQL separately with `docker run`, it launches in a different network than the Langflow container, and this prevents Langflow from connecting to PostgreSQL using the service name.
