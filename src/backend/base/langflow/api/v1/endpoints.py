@@ -20,6 +20,7 @@ from lfx.custom.utils import (
 )
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+from lfx.services.settings.service import SettingsService
 from loguru import logger
 from sqlmodel import select
 
@@ -55,7 +56,6 @@ from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
-    from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
 

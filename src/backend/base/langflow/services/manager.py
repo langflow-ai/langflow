@@ -8,22 +8,22 @@ from __future__ import annotations
 # Import the enhanced manager that extends lfx
 from langflow.services.enhanced_manager import NoFactoryRegisteredError, ServiceManager
 
-# Create the service manager instance
-service_manager = ServiceManager()
-
 # Re-export the classes and exceptions for backward compatibility
-__all__ = ["NoFactoryRegisteredError", "ServiceManager", "service_manager"]
+__all__ = ["NoFactoryRegisteredError", "ServiceManager"]
 
 
 def initialize_settings_service() -> None:
     """Initialize the settings manager."""
-    from langflow.services.settings import factory as settings_factory
+    from lfx.services.manager import service_manager
+    from lfx.services.settings import factory as settings_factory
 
     service_manager.register_factory(settings_factory.SettingsServiceFactory())
 
 
 def initialize_session_service() -> None:
     """Initialize the session manager."""
+    from lfx.services.manager import service_manager
+
     from langflow.services.cache import factory as cache_factory
     from langflow.services.session import factory as session_service_factory
 

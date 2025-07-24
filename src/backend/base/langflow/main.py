@@ -41,6 +41,7 @@ from langflow.services.deps import (
     get_settings_service,
     get_telemetry_service,
 )
+from langflow.services.manager import initialize_settings_service
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -111,6 +112,7 @@ async def load_bundles_with_error_handling():
 
 
 def get_lifespan(*, fix_migration=False, version=None):
+    initialize_settings_service()
     telemetry_service = get_telemetry_service()
 
     @asynccontextmanager

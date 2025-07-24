@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from lfx.graph.vertex.base import Vertex
+from lfx.processing.utils import validate_and_repair_json
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service

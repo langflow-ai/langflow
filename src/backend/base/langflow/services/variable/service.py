@@ -18,9 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.settings.service import SettingsService
 
 
 class DatabaseVariableService(VariableService, Service):

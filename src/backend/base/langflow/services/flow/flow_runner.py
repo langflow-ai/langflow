@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from aiofile import async_open
 from lfx.graph import Graph
 from lfx.graph.vertex.param_handler import ParameterHandler
+from lfx.utils.util import update_settings
 from loguru import logger
 from sqlmodel import delete, select, text
 
@@ -20,7 +21,6 @@ from langflow.services.cache.service import AsyncBaseCacheService
 from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, get_storage_service, session_scope
-from langflow.utils.util import update_settings
 
 
 class LangflowRunnerExperimental:

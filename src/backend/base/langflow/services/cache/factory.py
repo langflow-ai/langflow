@@ -10,7 +10,7 @@ from langflow.services.cache.service import AsyncInMemoryCache, CacheService, Re
 from langflow.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 
 class CacheServiceFactory(ServiceFactory):

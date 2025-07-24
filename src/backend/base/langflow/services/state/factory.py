@@ -1,7 +1,7 @@
+from lfx.services.settings.service import SettingsService
 from typing_extensions import override
 
 from langflow.services.factory import ServiceFactory
-from langflow.services.settings.service import SettingsService
 from langflow.services.state.service import InMemoryStateService
 
 

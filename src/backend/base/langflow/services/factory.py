@@ -40,7 +40,9 @@ def hash_infer_service_types_args(factory: ServiceFactory, available_services=No
 @cached(cache=LRUCache(maxsize=10), key=hash_infer_service_types_args)
 def infer_service_types(factory: ServiceFactory, available_services=None) -> list["ServiceType"]:
     create_method = factory.create
+
     type_hints = get_type_hints(create_method, globalns=available_services)
+
     service_types = []
     for param_name, param_type in type_hints.items():
         # Skip the return type if it's included in type hints
@@ -85,4 +87,8 @@ def import_all_services_into_a_dict():
             logger.exception(exc)
             msg = "Could not initialize services. Please check your settings."
             raise RuntimeError(msg) from exc
+    # Import settings service from lfx
+    from lfx.services.settings.service import SettingsService
+
+    services["SettingsService"] = SettingsService
     return services

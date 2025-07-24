@@ -21,9 +21,8 @@ from langflow.services.telemetry.schema import (
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
+    from lfx.services.settings.service import SettingsService
     from pydantic import BaseModel
-
-    from langflow.services.settings.service import SettingsService
 
 
 class TelemetryService(Service):

@@ -13,12 +13,7 @@ from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template, get_all_types_dict
 
 if TYPE_CHECKING:
-    from typing import Protocol
-
-    class SettingsService(Protocol):
-        @property
-        def settings(self): ...
-
+    from lfx.services.settings.service import SettingsService
 
 MIN_MODULE_PARTS = 2
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module

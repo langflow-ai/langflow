@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import UUID
 
+from lfx.utils.constants import MESSAGE_SENDER_USER
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import ErrorContent
 from langflow.schema.properties import Properties
 from langflow.schema.validators import timestamp_to_str_validator
-from langflow.utils.constants import MESSAGE_SENDER_USER
 
 
 class PlaygroundEvent(BaseModel):

@@ -16,6 +16,12 @@ from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTempla
 from langchain_core.prompts.prompt import PromptTemplate
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.schema.image import Image, get_file_paths, is_image_file
+from lfx.utils.constants import (
+    MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_USER,
+)
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
@@ -24,12 +30,6 @@ from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.properties import Properties, Source
 from langflow.schema.validators import timestamp_to_str, timestamp_to_str_validator
-from langflow.utils.constants import (
-    MESSAGE_SENDER_AI,
-    MESSAGE_SENDER_NAME_AI,
-    MESSAGE_SENDER_NAME_USER,
-    MESSAGE_SENDER_USER,
-)
 from langflow.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:

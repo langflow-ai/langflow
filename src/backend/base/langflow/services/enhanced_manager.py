@@ -42,8 +42,8 @@ class ServiceManager(BaseServiceManager):
         with self.keyed_lock.lock(service_name):
             return super().get(service_name, default)
 
-    @staticmethod
-    def get_factories():
+    @classmethod
+    def get_factories(cls) -> list[ServiceFactory]:
         """Auto-discover and return all service factories."""
         from langflow.services.factory import ServiceFactory
         from langflow.services.schema import ServiceType
@@ -54,6 +54,7 @@ class ServiceManager(BaseServiceManager):
 
         for name in service_names:
             try:
+                base_module = "lfx.services" if name == "settings" else "langflow.services"
                 module_name = f"{base_module}.{name}.factory"
                 module = importlib.import_module(module_name)
 
