@@ -5,7 +5,6 @@ import type {
 } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useRef, useState } from "react";
-import { useParams } from "react-router-dom";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
@@ -14,14 +13,8 @@ import {
   type KnowledgeBaseInfo,
   useGetKnowledgeBases,
 } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
-import useAddFlow from "@/hooks/flows/use-add-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
-import { updateIds } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
 import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
@@ -60,31 +53,9 @@ const KnowledgeBasesTab = ({
 
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
 
-  // Template creation functionality
-  const examples = useFlowsManagerStore((state) => state.examples);
-  const addFlow = useAddFlow();
-  const navigate = useCustomNavigate();
-  const { folderId } = useParams();
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const handleCreateKnowledgeBaseTemplate = () => {
-    const knowledgeBasesTemplate = examples.find(
-      (example) => example.name === "Knowledge Bases",
-    );
-
-    if (knowledgeBasesTemplate) {
-      updateIds(knowledgeBasesTemplate.data!);
-      addFlow({ flow: knowledgeBasesTemplate }).then((id) => {
-        const folderIdUrl = folderId ?? myCollectionId;
-        navigate(`/flow/${id}/folder/${folderIdUrl}`);
-      });
-      track("New Flow Created", { template: "Knowledge Bases Template" });
-    } else {
-      setErrorData({
-        title: "Template not found",
-        list: ["Knowledge Bases template could not be found"],
-      });
-    }
+    console.log("fix this");
   };
 
   const deleteKnowledgeBaseMutation = useDeleteKnowledgeBase(
