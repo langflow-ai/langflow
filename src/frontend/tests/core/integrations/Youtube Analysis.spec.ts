@@ -6,7 +6,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
-  "Youtube Analysis",
+  "YouTube Analysis",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
@@ -27,7 +27,7 @@ withEventDeliveryModes(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Youtube Analysis" }).click();
+    await page.getByRole("heading", { name: "YouTube Analysis" }).click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
