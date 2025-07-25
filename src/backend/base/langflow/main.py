@@ -208,6 +208,13 @@ def get_lifespan(*, fix_migration=False, version=None):
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
+
+                # Log exception to telemetry
+                try:
+                    await telemetry_service.log_exception(exc, "lifespan")
+                except Exception:  # noqa: BLE001
+                    # Don't let telemetry logging interfere with exception handling
+                    pass
             raise
         finally:
             # Clean shutdown with progress indicator
@@ -261,6 +268,13 @@ def get_lifespan(*, fix_migration=False, version=None):
                 logger.debug("Teardown cancelled during shutdown.")
             except Exception as e:  # noqa: BLE001
                 logger.exception(f"Unhandled error during cleanup: {e}")
+
+                # Log exception to telemetry
+                try:
+                    await telemetry_service.log_exception(e, "lifespan")
+                except Exception:  # noqa: BLE001
+                    # Don't let telemetry logging interfere with exception handling
+                    pass
 
             try:
                 await asyncio.shield(asyncio.sleep(0.1))  # let logger flush async logs
@@ -380,6 +394,15 @@ def create_app():
                 content={"message": str(exc.detail)},
             )
         logger.error(f"unhandled error: {exc}", exc_info=exc)
+
+        # Log exception to telemetry
+        try:
+            telemetry_service = get_telemetry_service()
+            await telemetry_service.log_exception(exc, "handler")
+        except Exception:  # noqa: BLE001
+            # Don't let telemetry logging interfere with exception handling
+            pass
+
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"message": str(exc)},

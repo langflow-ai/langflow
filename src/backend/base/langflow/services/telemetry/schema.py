@@ -36,3 +36,10 @@ class ComponentPayload(BaseModel):
     component_seconds: int = Field(serialization_alias="componentSeconds")
     component_success: bool = Field(serialization_alias="componentSuccess")
     component_error_message: str | None = Field(serialization_alias="componentErrorMessage")
+
+
+class ExceptionPayload(BaseModel):
+    exception_type: str = Field(serialization_alias="exceptionType")
+    exception_message: str = Field(serialization_alias="exceptionMessage")
+    exception_context: str = Field(serialization_alias="exceptionContext")  # "lifespan" or "handler"
+    stack_trace_hash: str | None = Field(None, serialization_alias="stackTraceHash")  # Hash for grouping

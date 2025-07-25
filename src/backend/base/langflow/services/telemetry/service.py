@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import platform
+import traceback
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -13,6 +15,7 @@ from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
     ComponentPayload,
+    ExceptionPayload,
     PlaygroundPayload,
     RunPayload,
     ShutdownPayload,
@@ -65,6 +68,7 @@ class TelemetryService(Service):
         url = f"{self.base_url}"
         if path:
             url = f"{url}/{path}"
+
         try:
             payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
             response = await self.client.get(url, params=payload_dict)
@@ -118,6 +122,26 @@ class TelemetryService(Service):
 
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
+
+    async def log_exception(self, exc: Exception, context: str) -> None:
+        """Log unhandled exceptions to telemetry.
+
+        Args:
+            exc: The exception that occurred
+            context: Context where exception occurred ("lifespan" or "handler")
+        """
+        # Get the stack trace and hash it for grouping similar exceptions
+        stack_trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
+        stack_trace_str = "".join(stack_trace)
+        stack_trace_hash = hashlib.md5(stack_trace_str.encode()).hexdigest()[:16]
+
+        payload = ExceptionPayload(
+            exception_type=exc.__class__.__name__,
+            exception_message=str(exc)[:500],  # Truncate long messages
+            exception_context=context,
+            stack_trace_hash=stack_trace_hash,
+        )
+        await self._queue_event((self.send_telemetry_data, payload, "exception"))
 
     def start(self) -> None:
         if self.running or self.do_not_track:
