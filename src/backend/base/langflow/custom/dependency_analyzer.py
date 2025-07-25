@@ -25,7 +25,7 @@ class DependencyInfo:
 
 def _top_level(pkg: str) -> str:
     """Extract top-level package name."""
-    return pkg.split(".", 1)[0]
+    return pkg.partition(".")[0]
 
 
 def _is_relative(module: str | None) -> bool:
