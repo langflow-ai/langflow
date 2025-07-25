@@ -18,18 +18,9 @@ except AttributeError:
 class DependencyInfo:
     """Information about a dependency imported in Python code."""
 
-    name: str  # top-level package (e.g. "pydantic")
-    full_module: str  # as written in the import (e.g. "pydantic.v1")
-    import_type: str  # "import" | "from"
-    imported_symbols: tuple[str, ...]  # for "from x import a, b"
-    alias: str | None
-    version: str | None
-    dist_name: str | None
-    location: str | None
-    is_stdlib: bool
-    is_local: bool
-    is_optional: bool  # Always False now
-    lineno: int
+    name: str  # package name (e.g. "numpy", "requests")
+    version: str | None  # package version if available
+    is_local: bool  # True for relative imports (from .module import ...)
 
 
 def _top_level(pkg: str) -> str:
@@ -53,74 +44,45 @@ class _ImportVisitor(ast.NodeVisitor):
             full = alias.name
             dep = DependencyInfo(
                 name=_top_level(full),
-                full_module=full,
-                import_type="import",
-                imported_symbols=(),
-                alias=alias.asname,
                 version=None,
-                dist_name=None,
-                location=None,
-                is_stdlib=False,  # fill later
-                is_local=False,  # fill later
-                is_optional=False,  # All imports are required now
-                lineno=node.lineno,
+                is_local=False,  # Regular imports are not local
             )
             self.results.append(dep)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):  # noqa: N802
-        # node.module can be None for relative imports like "from . import x"
-        full_module = node.module if node.module else "." * (node.level or 0)
-        for alias in node.names:
+        # Reconstruct full module name with proper relative import handling
+        if node.level > 0:
+            # Relative import: from .module import x or from ..parent import x
+            dots = "." * node.level
+            full_module = dots + (node.module or "")
+        else:
+            # Absolute import: from module import x
+            full_module = node.module or ""
+        for _alias in node.names:
             dep = DependencyInfo(
                 name=_top_level(full_module.lstrip(".")) if full_module else "",
-                full_module=full_module,
-                import_type="from",
-                imported_symbols=(alias.name,),
-                alias=alias.asname,
                 version=None,
-                dist_name=None,
-                location=None,
-                is_stdlib=False,  # fill later
-                is_local=False,  # fill later
-                is_optional=False,  # All imports are required now
-                lineno=node.lineno,
+                is_local=_is_relative(full_module),  # Check if it's a relative import
             )
             self.results.append(dep)
 
 
 def _classify_dependency(dep: DependencyInfo) -> DependencyInfo:
-    """Classify dependency as stdlib, local, or external and resolve version if possible."""
-    # Check if it's a relative import or looks local
-    is_local = _is_relative(dep.full_module)
-
-    # Check if it's a stdlib module
-    is_stdlib = dep.name in STDLIB_MODULES
-
+    """Resolve version information for external dependencies."""
     # Try to resolve version for external packages
-    version = dist_name = location = None
-    if not is_local and not is_stdlib and dep.name:
+    version = None
+    if not dep.is_local and dep.name:
         try:
             dist = md.distribution(dep.name)
             version = dist.version
-            dist_name = dist.metadata["Name"]
-            location = str(dist.locate_file(""))
         except (md.PackageNotFoundError, ImportError, AttributeError):
             # If we can't find the package, it might be local or not installed
             pass
 
     return DependencyInfo(
         name=dep.name,
-        full_module=dep.full_module,
-        import_type=dep.import_type,
-        imported_symbols=dep.imported_symbols,
-        alias=dep.alias,
         version=version,
-        dist_name=dist_name,
-        location=location,
-        is_stdlib=is_stdlib,
-        is_local=is_local,
-        is_optional=False,  # All imports are required now
-        lineno=dep.lineno,
+        is_local=dep.is_local,
     )
 
 
@@ -141,17 +103,20 @@ def analyze_dependencies(source: str, *, resolve_versions: bool = True) -> list[
     visitor = _ImportVisitor()
     visitor.visit(tree)
 
-    # Process and deduplicate dependencies
-    unique: dict[tuple[str, str], DependencyInfo] = {}
+    # Process and deduplicate dependencies by package name only
+    unique_packages: dict[str, DependencyInfo] = {}
     for raw_dep in visitor.results:
         processed_dep = _classify_dependency(raw_dep) if resolve_versions else raw_dep
 
-        # Deduplicate by (name, full_module)
-        key = (processed_dep.name, processed_dep.full_module)
-        if key not in unique:
-            unique[key] = processed_dep
+        # Skip stdlib imports and local imports - we only care about external dependencies
+        if processed_dep.name in STDLIB_MODULES or processed_dep.is_local:
+            continue
 
-    return [asdict(d) for d in unique.values()]
+        # Deduplicate by package name only (not full_module)
+        if processed_dep.name not in unique_packages:
+            unique_packages[processed_dep.name] = processed_dep
+
+    return [asdict(d) for d in unique_packages.values()]
 
 
 def analyze_component_dependencies(component_code: str) -> dict:
@@ -166,26 +131,13 @@ def analyze_component_dependencies(component_code: str) -> dict:
     try:
         deps = analyze_dependencies(component_code, resolve_versions=True)
 
-        # Categorize dependencies
-        stdlib_deps = [d for d in deps if d["is_stdlib"]]
-        external_deps = [d for d in deps if not d["is_stdlib"] and not d["is_local"]]
-        local_deps = [d for d in deps if d["is_local"]]
-
         return {
             "total_dependencies": len(deps),
-            "stdlib_count": len(stdlib_deps),
-            "external_count": len(external_deps),
-            "local_count": len(local_deps),
-            "external_packages": [{"name": d["name"], "version": d["version"]} for d in external_deps if d["name"]],
-            "dependencies": deps,
+            "dependencies": [{"name": d["name"], "version": d["version"]} for d in deps if d["name"]],
         }
     except (SyntaxError, TypeError, ValueError, ImportError):
         # If analysis fails, return minimal info
         return {
             "total_dependencies": 0,
-            "stdlib_count": 0,
-            "external_count": 0,
-            "local_count": 0,
-            "external_packages": [],
             "dependencies": [],
         }

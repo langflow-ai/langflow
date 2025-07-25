@@ -177,16 +177,18 @@ from requests import get
 
         deps = analyze_dependencies(code, resolve_versions=False)
 
-        # Should find all imports
-        assert len(deps) >= 5
+        # Should find external dependencies only (stdlib imports filtered out)
+        assert len(deps) == 2
 
-        # Check specific dependencies
+        # Check external dependencies
         dep_names = [d["name"] for d in deps]
-        assert "os" in dep_names
-        assert "sys" in dep_names
-        assert "typing" in dep_names
         assert "numpy" in dep_names
         assert "requests" in dep_names
+
+        # Stdlib imports should be filtered out
+        assert "os" not in dep_names
+        assert "sys" not in dep_names
+        assert "typing" not in dep_names
 
     def test_analyze_dependencies_optional_detection(self):
         """Test that all dependencies are treated as required (no optional detection)."""
@@ -208,12 +210,14 @@ except ImportError:
 
         deps = analyze_dependencies(code, resolve_versions=False)
 
-        # Should find all dependencies (all are non-optional now)
-        assert len(deps) >= 3  # os, optional_package, another_optional
+        # Should find external dependencies only (stdlib imports filtered out)
+        assert len(deps) == 2  # optional_package, another_optional
         dep_names = [d["name"] for d in deps]
-        assert "os" in dep_names
         assert "optional_package" in dep_names
         assert "another_optional" in dep_names
+
+        # Stdlib imports should be filtered out
+        assert "os" not in dep_names
 
     def test_analyze_component_dependencies(self):
         """Test component-specific dependency analysis."""
@@ -235,18 +239,17 @@ class TestComponent(CustomComponent):
 
         # Check structure
         assert "total_dependencies" in result
-        assert "stdlib_count" in result
-        assert "external_count" in result
-        assert "local_count" in result
-        assert "external_packages" in result
         assert "dependencies" in result
 
-        # Should have some dependencies
+        # Should have some dependencies (only external dependencies)
         assert result["total_dependencies"] > 0
-        assert result["stdlib_count"] > 0
 
-        # Should have external packages list
-        assert isinstance(result["external_packages"], list)
+        # Should have dependencies list
+        assert isinstance(result["dependencies"], list)
+
+        # Verify no duplicate packages in dependencies
+        package_names = [pkg["name"] for pkg in result["dependencies"]]
+        assert len(package_names) == len(set(package_names)), "No duplicate packages should exist"
 
     def test_analyze_component_dependencies_error_handling(self):
         """Test error handling in component dependency analysis."""
@@ -259,10 +262,6 @@ class TestComponent(CustomComponent):
 
         # Should return minimal info on error
         assert result["total_dependencies"] == 0
-        assert result["stdlib_count"] == 0
-        assert result["external_count"] == 0
-        assert result["local_count"] == 0
-        assert result["external_packages"] == []
         assert result["dependencies"] == []
 
     def test_dependency_info_dataclass(self):
@@ -271,24 +270,13 @@ class TestComponent(CustomComponent):
 
         dep = DependencyInfo(
             name="numpy",
-            full_module="numpy",
-            import_type="import",
-            imported_symbols=(),
-            alias="np",
             version="1.21.0",
-            dist_name="numpy",
-            location="/path/to/numpy",
-            is_stdlib=False,
             is_local=False,
-            is_optional=False,
-            lineno=1,
         )
 
         assert dep.name == "numpy"
-        assert dep.alias == "np"
         assert dep.version == "1.21.0"
-        assert not dep.is_stdlib
-        assert not dep.is_optional
+        assert not dep.is_local
 
     def test_no_optional_dependency_classification(self):
         """Test that the simplified analyzer doesn't classify any dependencies as optional."""
@@ -315,16 +303,18 @@ except (ImportError, ModuleNotFoundError):
 """
         deps = analyze_dependencies(code, resolve_versions=False)
 
-        # All dependencies should be marked as non-optional
-        for dep in deps:
-            assert not dep["is_optional"], f"Dependency {dep['name']} should not be optional"
-
-        # Should find all the imports
+        # Should find external dependencies only (stdlib filtered out)
         dep_names = [d["name"] for d in deps]
-        assert "os" in dep_names
         assert "package_a" in dep_names
         assert "package_b" in dep_names
         assert "package_c" in dep_names
+
+        # Stdlib imports should be filtered out
+        assert "os" not in dep_names
+
+        # All found dependencies should be external (not local)
+        for dep in deps:
+            assert not dep["is_local"], f"Dependency {dep['name']} should not be local"
 
 
 class TestMetadataWithDependencies:
@@ -361,16 +351,10 @@ class TestComponent:
 
         # Verify dependency analysis results
         dep_info = mock_frontend.metadata["dependencies"]
-        assert dep_info["total_dependencies"] >= 3  # At least os, sys, typing
-        assert dep_info["stdlib_count"] >= 3  # os, sys, typing are stdlib
+        # Only external dependencies are tracked now (stdlib filtered out)
+        assert dep_info["total_dependencies"] == 0  # No external deps in this test code
         assert "dependencies" in dep_info
         assert isinstance(dep_info["dependencies"], list)
-
-        # Check that specific dependencies are found
-        dep_names = [d["name"] for d in dep_info["dependencies"]]
-        assert "os" in dep_names
-        assert "sys" in dep_names
-        assert "typing" in dep_names
 
     def test_build_component_metadata_handles_analysis_error(self):
         """Test that build_component_metadata handles dependency analysis errors gracefully."""
@@ -392,8 +376,6 @@ class TestComponent:
         assert "dependencies" in mock_frontend.metadata
         dep_info = mock_frontend.metadata["dependencies"]
         assert dep_info["total_dependencies"] == 0
-        assert dep_info["stdlib_count"] == 0
-        assert dep_info["external_count"] == 0
         assert dep_info["dependencies"] == []
 
     def test_build_component_metadata_with_external_dependencies(self):
@@ -421,13 +403,12 @@ class TestComponent(CustomComponent):
 
         # Verify dependency analysis results
         dep_info = mock_frontend.metadata["dependencies"]
-        assert dep_info["total_dependencies"] >= 2  # At least os and langflow
-        assert dep_info["stdlib_count"] >= 1  # os is stdlib
+        assert dep_info["total_dependencies"] == 1  # Only langflow (os is stdlib, filtered out)
 
-        # Check for external packages
-        dep_names = [d["name"] for d in dep_info["dependencies"]]
-        assert "os" in dep_names
-        # langflow should be detected as external (since it's the project itself)
+        # Check for dependencies
+        package_names = [pkg["name"] for pkg in dep_info["dependencies"]]
+        assert "langflow" in package_names  # langflow should be detected as external
+        assert "os" not in package_names  # os is stdlib, should be filtered out
 
     def test_build_component_metadata_with_optional_dependencies(self):
         """Test dependency analysis with optional dependencies."""
@@ -458,12 +439,12 @@ class TestComponent:
 
         # Verify dependency analysis results
         dep_info = mock_frontend.metadata["dependencies"]
-        assert dep_info["total_dependencies"] >= 2  # At least os and some_optional_package
+        assert dep_info["total_dependencies"] == 1  # Only some_optional_package (os is stdlib, filtered out)
 
         # Verify the dependencies are found
-        dep_names = [d["name"] for d in dep_info["dependencies"]]
-        assert "os" in dep_names
-        assert "some_optional_package" in dep_names
+        package_names = [pkg["name"] for pkg in dep_info["dependencies"]]
+        assert "some_optional_package" in package_names
+        assert "os" not in package_names  # os is stdlib, should be filtered out
 
     def test_build_component_metadata_with_real_component(self):
         """Test dependency analysis with a real component."""
@@ -512,14 +493,14 @@ class LMStudioModelComponent(LCModelComponent):
         dep_info = mock_frontend.metadata["dependencies"]
         assert dep_info["total_dependencies"] > 0
 
-        # Check that specific dependencies are found
-        dep_names = [d["name"] for d in dep_info["dependencies"]]
-        assert "typing" in dep_names  # stdlib
-        assert "urllib" in dep_names  # stdlib
-        assert "httpx" in dep_names or any("httpx" in name for name in dep_names)  # external
-        assert "langchain_openai" in dep_names or any("langchain" in name for name in dep_names)  # external
-        assert "langflow" in dep_names or any("langflow" in name for name in dep_names)  # local/project
+        # Check that external dependencies are found (stdlib filtered out)
+        package_names = [pkg["name"] for pkg in dep_info["dependencies"]]
 
-        # Should have both stdlib and external dependencies
-        assert dep_info["stdlib_count"] > 0
-        assert dep_info["external_count"] > 0 or dep_info["local_count"] > 0  # Should have non-stdlib deps
+        # External packages should be found
+        assert "httpx" in package_names  # external
+        assert "langchain_openai" in package_names  # external
+        assert "langflow" in package_names  # project dependency
+
+        # Stdlib imports should be filtered out
+        assert "typing" not in package_names
+        assert "urllib" not in package_names

@@ -509,10 +509,6 @@ def build_component_metadata(
         # Set minimal dependency info on failure
         frontend_node.metadata["dependencies"] = {
             "total_dependencies": 0,
-            "stdlib_count": 0,
-            "external_count": 0,
-            "local_count": 0,
-            "external_packages": [],
             "dependencies": [],
         }
 
