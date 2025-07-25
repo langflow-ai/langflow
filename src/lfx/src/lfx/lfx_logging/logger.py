@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -9,23 +8,18 @@ from threading import Lock, Semaphore
 from typing import TypedDict
 
 import orjson
-from loguru import _defaults, logger
-from loguru._error_interceptor import ErrorInterceptor
-from loguru._file_sink import FileSink
-from loguru._simple_sinks import AsyncSink
+from loguru import logger
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 from typing_extensions import NotRequired, override
+
+from lfx.settings import DEV
 
 VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 # Human-readable
 DEFAULT_LOG_FORMAT = (
     "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
 )
-
-# Use LANGFLOW environment variables to maintain compatibility
-LOGGER_NAMESPACE = "langflow"
-CACHE_DIR_NAME = "langflow"
 
 
 class SizedLogBuffer:
@@ -36,7 +30,7 @@ class SizedLogBuffer:
         """A buffer for storing log messages for the log retrieval API.
 
         The buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
-        because the logger is initialized before any settings are loaded.
+        because the logger is initialized before the settings_service are loaded.
         """
         self.buffer: deque = deque()
 
@@ -144,12 +138,7 @@ def serialize_log(record):
 
 def patching(record) -> None:
     record["extra"]["serialized"] = serialize_log(record)
-    # Default to development mode behavior unless specified otherwise
-    # Check lfx DEV setting which already handles env var fallback
-    from lfx.settings import DEV
-
-    dev_mode = DEV
-    if not dev_mode:
+    if DEV is False:
         record.pop("exception", None)
 
 
@@ -159,24 +148,6 @@ class LogConfig(TypedDict):
     disable: NotRequired[bool]
     log_env: NotRequired[str]
     log_format: NotRequired[str]
-
-
-class AsyncFileSink(AsyncSink):
-    def __init__(self, file):
-        self._sink = FileSink(
-            path=file,
-            rotation="10 MB",  # Log rotation based on file size
-            delay=True,
-        )
-        super().__init__(self.write_async, None, ErrorInterceptor(_defaults.LOGURU_CATCH, -1))
-
-    async def complete(self):
-        await asyncio.to_thread(self._sink.stop)
-        for task in self._tasks:
-            await self._complete_task(task)
-
-    async def write_async(self, message):
-        await asyncio.to_thread(self._sink.write, message)
 
 
 def is_valid_log_format(format_string) -> bool:
@@ -211,11 +182,10 @@ def configure(
     log_env: str | None = None,
     log_format: str | None = None,
     async_file: bool = False,
+    log_rotation: str | None = None,
 ) -> None:
-    """Configure the logger using LANGFLOW environment variables."""
     if disable and log_level is None and log_file is None:
-        logger.disable(LOGGER_NAMESPACE)
-
+        logger.disable("langflow")
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
     if log_level is None:
@@ -230,7 +200,6 @@ def configure(
 
     logger.remove()  # Remove default handlers
     logger.patch(patching)
-
     if log_env.lower() == "container" or log_env.lower() == "container_json":
         logger.add(sys.stdout, format="{message}", serialize=True)
     elif log_env.lower() == "container_csv":
@@ -241,7 +210,6 @@ def configure(
 
         if log_format is None or not is_valid_log_format(log_format):
             log_format = DEFAULT_LOG_FORMAT
-
         # pretty print to rich stdout development-friendly but poor performance, It's better for debugger.
         # suggest directly print to stdout in production
         log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
@@ -259,16 +227,24 @@ def configure(
             logger.add(sys.stdout, level=log_level.upper(), format=log_format, backtrace=True, diagnose=True)
 
         if not log_file:
-            cache_dir = Path(user_cache_dir(CACHE_DIR_NAME))
+            cache_dir = Path(user_cache_dir("langflow"))
             logger.debug(f"Cache directory: {cache_dir}")
-            log_file = cache_dir / f"{CACHE_DIR_NAME}.log"
+            log_file = cache_dir / "langflow.log"
             logger.debug(f"Log file: {log_file}")
+
+        if os.getenv("LANGFLOW_LOG_ROTATION") and log_rotation is None:
+            log_rotation = os.getenv("LANGFLOW_LOG_ROTATION")
+        elif log_rotation is None:
+            log_rotation = "1 day"
+
         try:
             logger.add(
-                sink=AsyncFileSink(log_file) if async_file else log_file,
+                sink=log_file,
                 level=log_level.upper(),
                 format=log_format,
                 serialize=True,
+                enqueue=async_file,
+                rotation=log_rotation,
             )
         except Exception:  # noqa: BLE001
             logger.exception("Error setting up log file")
