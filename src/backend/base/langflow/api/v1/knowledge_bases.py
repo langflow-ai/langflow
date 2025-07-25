@@ -249,10 +249,12 @@ def get_kb_metadata(kb_path: Path) -> dict:
         results = collection.get(include=["documents", "metadatas"])
 
         # Convert to pandas DataFrame
-        source_chunks = pd.DataFrame({
-            "document": results["documents"],
-            "metadata": results["metadatas"],
-        })
+        source_chunks = pd.DataFrame(
+            {
+                "document": results["documents"],
+                "metadata": results["metadatas"],
+            }
+        )
 
         # Process the source data for metadata
         try:

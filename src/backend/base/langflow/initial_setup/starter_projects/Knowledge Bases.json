@@ -25,9 +25,9 @@
         "id": "reactflow__edge-SplitText-I1oOn{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-I1oOnœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KBIngestion-trU1I{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-trU1Iœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-I1oOn",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-I1oOnœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-I1oOnœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "KBIngestion-trU1I",
-        "targetHandle": "{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-trU1Iœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKBIngestion-trU1Iœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-URLComponent-VPgQg{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-VPgQgœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-I1oOn{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-I1oOnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-VPgQg",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-VPgQgœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-VPgQgœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "SplitText-I1oOn",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-I1oOnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-I1oOnœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-TextInput-dWFB5{œdataTypeœ:œTextInputœ,œidœ:œTextInput-dWFB5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-MgKDE{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-MgKDEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-dWFB5",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-dWFB5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-dWFB5œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "KBRetrieval-MgKDE",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-MgKDEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-MgKDEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-KBRetrieval-MgKDE{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-MgKDEœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-AJxIq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-AJxIqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "KBRetrieval-MgKDE",
-        "sourceHandle": "{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-MgKDEœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-MgKDEœ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-AJxIq",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-AJxIqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-AJxIqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -393,7 +393,10 @@
             "last_updated": "2025-07-25T15:00:38.990Z",
             "legacy": false,
             "lf_version": "1.5.0.post1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "37d689d275c6",
+              "module": "langflow.components.data.kb_ingest.KBIngestionComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -404,8 +407,6 @@
                 "group_outputs": false,
                 "method": "build_kb_info",
                 "name": "kb_info",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -793,7 +794,10 @@
             "last_updated": "2025-07-25T15:00:36.888Z",
             "legacy": false,
             "lf_version": "1.5.0.post1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "a96322d6ffde",
+              "module": "langflow.components.data.kb_retrieval.KBRetrievalComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -804,8 +808,6 @@
                 "group_outputs": false,
                 "method": "get_chroma_kb_data",
                 "name": "chroma_kb_data",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
