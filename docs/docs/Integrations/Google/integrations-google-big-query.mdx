@@ -53,10 +53,7 @@ With your component credentials configured, query your BigQuery datasets and tab
 
 2. Open the **Playground**, and then submit a valid SQL query.
 
-    This example queries a table of Oscar winners stored within a BigQuery dataset called `the_oscar_award`.
-
-    <Tabs>
-    <TabItem value="sql query" label="SQL query" default>
+    This example queries a table of Oscar winners stored within a BigQuery dataset called `the_oscar_award`:
 
     ```sql
     SELECT film, category, year_film
@@ -65,8 +62,8 @@ With your component credentials configured, query your BigQuery datasets and tab
     LIMIT 10
     ```
 
-    </TabItem>
-    <TabItem value="result" label="Result">
+    <details>
+    <summary>Result</summary>
 
     ```text
     film	category	year_film
@@ -82,7 +79,6 @@ With your component credentials configured, query your BigQuery datasets and tab
     Sunrise	UNIQUE AND ARTISTIC PICTURE	1927
     ```
 
-    </TabItem>
-    </Tabs>
+    </details>
 
     A successful chat confirms the component can access the BigQuery table.
