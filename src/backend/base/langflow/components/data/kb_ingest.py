@@ -323,17 +323,12 @@ class KBIngestionComponent(Component):
     def _save_kb_files(
         self,
         kb_path: Path,
-        df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
     ) -> None:
         """Save KB files using File Component storage patterns."""
         try:
             # Create directory (following File Component patterns)
             kb_path.mkdir(parents=True, exist_ok=True)
-
-            # Save updated DataFrame
-            df_path = kb_path / "source.parquet"
-            df_source.to_parquet(df_path, index=False)
 
             # Save column configuration
             # Only do this if the file doesn't exist already
@@ -345,26 +340,6 @@ class KBIngestionComponent(Component):
             if not self.silent_errors:
                 raise
             self.log(f"Error saving KB files: {e}")
-
-    def _calculate_text_stats(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> dict[str, int]:
-        """Calculate word and character counts for text columns."""
-        total_words = 0
-        total_chars = 0
-
-        for config in config_list:
-            col_name = config.get("column_name")
-
-            # Only count text-based columns
-            if col_name in df_source.columns:
-                col_data = df_source[col_name].astype(str).fillna("")
-
-                # Count characters
-                total_chars += col_data.str.len().sum()
-
-                # Count words (split by whitespace)
-                total_words += col_data.str.split().str.len().fillna(0).sum()
-
-        return {"word_count": int(total_words), "char_count": int(total_chars)}
 
     def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:
         """Build detailed column metadata."""
@@ -551,21 +526,11 @@ class KBIngestionComponent(Component):
 
             # Validate column configuration (using Structured Output patterns)
             config_list = self._validate_column_config(df_source)
+            column_metadata = self._build_column_metadata(config_list, df_source)
 
             # Prepare KB folder (using File Component patterns)
             kb_root = self._get_kb_root()
             kb_path = kb_root / self.knowledge_base
-
-            # Save source DataFrame
-            df_path = kb_path / "source.parquet"
-
-            # Instead of just overwriting this file, i want to read it and append to it if it exists
-            df_source_combined = df_source.copy()
-            if df_path.exists():
-                # Read existing DataFrame
-                existing_df = pd.read_parquet(df_path)
-                # Append new data
-                df_source_combined = pd.concat([existing_df, df_source_combined], ignore_index=True)
 
             # Read the embedding info from the knowledge base folder
             metadata_path = kb_path / "embedding_metadata.json"
@@ -593,23 +558,17 @@ class KBIngestionComponent(Component):
             self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
 
             # Save KB files (using File Component storage patterns)
-            self._save_kb_files(kb_path, df_source_combined, config_list)
-
-            # Calculate text statistics
-            text_stats = self._calculate_text_stats(df_source_combined, config_list)
+            self._save_kb_files(kb_path, config_list)
 
             # Build metadata response
             meta: dict[str, Any] = {
                 "kb_id": str(uuid.uuid4()),
                 "kb_name": self.knowledge_base,
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                 "rows": len(df_source),
-                "word_count": text_stats["word_count"],
-                "char_count": text_stats["char_count"],
-                "column_metadata": self._build_column_metadata(config_list, df_source),
-                "created_or_updated": True,
+                "column_metadata": column_metadata,
                 "path": str(kb_path),
                 "config_columns": len(config_list),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             }
 
             # Set status message

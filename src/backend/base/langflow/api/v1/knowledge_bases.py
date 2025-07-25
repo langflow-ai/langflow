@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
+from langchain_chroma import Chroma
 from loguru import logger
 from pydantic import BaseModel
 
@@ -235,26 +236,41 @@ def get_kb_metadata(kb_path: Path) -> dict:
             except (ValueError, TypeError, OSError) as _:
                 logger.exception("Error reading schema file '%s'", schema_file)
 
-        # Process source.parquet for text metrics
-        source_file = kb_path / "source.parquet"
-        if source_file.exists():
-            try:
-                source_chunks = pd.DataFrame(pd.read_parquet(source_file))
-                metadata["chunks"] = len(source_chunks)
+        # Create vector store
+        chroma = Chroma(
+            persist_directory=str(kb_path),
+            collection_name=kb_path.name,
+        )
 
-                # Get text columns and calculate metrics
-                text_columns = get_text_columns(source_chunks, schema_data)
-                if text_columns:
-                    words, characters = calculate_text_metrics(source_chunks, text_columns)
-                    metadata["words"] = words
-                    metadata["characters"] = characters
+        # Access the raw collection
+        collection = chroma._collection
 
-                    # Calculate average chunk size
-                    if int(metadata["chunks"]) > 0:
-                        metadata["avg_chunk_size"] = round(int(characters) / int(metadata["chunks"]), 1)
+        # Fetch all documents and metadata
+        results = collection.get(include=["documents", "metadatas"])
 
-            except (OSError, ValueError, TypeError) as _:
-                logger.exception("Error processing source.parquet file '%s'", source_file)
+        # Convert to pandas DataFrame
+        source_chunks = pd.DataFrame({
+            "document": results["documents"],
+            "metadata": results["metadatas"],
+        })
+
+        # Process the source data for metadata
+        try:
+            metadata["chunks"] = len(source_chunks)
+
+            # Get text columns and calculate metrics
+            text_columns = get_text_columns(source_chunks, schema_data)
+            if text_columns:
+                words, characters = calculate_text_metrics(source_chunks, text_columns)
+                metadata["words"] = words
+                metadata["characters"] = characters
+
+                # Calculate average chunk size
+                if int(metadata["chunks"]) > 0:
+                    metadata["avg_chunk_size"] = round(int(characters) / int(metadata["chunks"]), 1)
+
+        except (OSError, ValueError, TypeError) as _:
+            logger.exception("Error processing Chroma DB '%s'", kb_path.name)
 
     except (OSError, ValueError, TypeError) as _:
         logger.exception("Error processing knowledge base directory '%s'", kb_path)

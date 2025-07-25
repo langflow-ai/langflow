@@ -181,7 +181,7 @@ class KBRetrievalComponent(Component):
         raise NotImplementedError(msg)
 
     def get_chroma_kb_data(self) -> DataFrame:
-        """Retrieve data from the selected knowledge base by reading the .parquet file in the knowledge base folder.
+        """Retrieve data from the selected knowledge base by reading the Chroma collection.
 
         Returns:
             A DataFrame containing the data rows from the knowledge base.
