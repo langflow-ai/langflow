@@ -54,7 +54,8 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("stdio-name-input").fill("test server");
+    const serverName = `test server ${Date.now()}`;
+    await page.getByTestId("stdio-name-input").fill(serverName);
 
     await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
 
