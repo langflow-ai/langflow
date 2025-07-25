@@ -54,6 +54,9 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
       };
       get().addNotificationToHistory(notification);
       get().addNotificationToTempList(notification);
+    } else {
+      // Allow clearing errors when title is empty
+      set({ errorData: { title: "", list: [] } });
     }
   },
   setNoticeData: (newState: { title: string; link?: string }) => {

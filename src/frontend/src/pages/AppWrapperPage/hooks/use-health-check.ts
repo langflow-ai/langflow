@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useGetHealthQuery } from "@/controllers/API/queries/health";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { usePackageManagerStore } from "@/stores/packageManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 
 export function useHealthCheck() {
@@ -15,13 +16,20 @@ export function useHealthCheck() {
     (state) => state.healthCheckTimeout,
   );
 
+  const isInstallingPackage = usePackageManagerStore(
+    (state) => state.isInstallingPackage,
+  );
+
   const isMutating = useIsMutating();
   const isFetching = useIsFetching({
-    predicate: (query) => query.queryKey[0] !== "useGetHealthQuery",
+    predicate: (query) =>
+      query.queryKey[0] !== "useGetHealthQuery" &&
+      query.queryKey[0] !== "installation-status",
   });
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
-  const disabled = isMutating || isFetching || isBuilding;
+  const disabled =
+    isMutating || isFetching || isBuilding || isInstallingPackage;
 
   const {
     isFetching: fetchingHealth,
