@@ -29,10 +29,11 @@ class TestExceptionTelemetryIntegration:
         try:
 
             def nested_function():
-                raise ValueError("Integration test exception")
+                msg = "Integration test exception"
+                raise ValueError(msg)
 
             nested_function()
-        except Exception as exc:
+        except ValueError as exc:
             real_exc = exc
 
         # Mock _queue_event to directly call send_telemetry_data

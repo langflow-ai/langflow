@@ -3,7 +3,7 @@ import json
 import os
 import re
 import warnings
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -111,10 +111,9 @@ async def load_bundles_with_error_handling():
 
 
 def get_lifespan(*, fix_migration=False, version=None):
-    telemetry_service = get_telemetry_service()
-
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        telemetry_service = get_telemetry_service()
         configure(async_file=True)
 
         # Startup message
@@ -210,11 +209,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                 logger.exception(exc)
 
                 # Log exception to telemetry
-                try:
+                with suppress(Exception):
+                    telemetry_service = get_telemetry_service()
                     await telemetry_service.log_exception(exc, "lifespan")
-                except Exception:  # noqa: BLE001
-                    # Don't let telemetry logging interfere with exception handling
-                    pass
             raise
         finally:
             # Clean shutdown with progress indicator
@@ -270,11 +267,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                 logger.exception(f"Unhandled error during cleanup: {e}")
 
                 # Log exception to telemetry
-                try:
+                with suppress(Exception):
+                    telemetry_service = get_telemetry_service()
                     await telemetry_service.log_exception(e, "lifespan")
-                except Exception:  # noqa: BLE001
-                    # Don't let telemetry logging interfere with exception handling
-                    pass
 
             try:
                 await asyncio.shield(asyncio.sleep(0.1))  # let logger flush async logs
@@ -396,12 +391,9 @@ def create_app():
         logger.error(f"unhandled error: {exc}", exc_info=exc)
 
         # Log exception to telemetry
-        try:
+        with suppress(Exception):
             telemetry_service = get_telemetry_service()
             await telemetry_service.log_exception(exc, "handler")
-        except Exception:  # noqa: BLE001
-            # Don't let telemetry logging interfere with exception handling
-            pass
 
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,

@@ -142,8 +142,9 @@ class TestExceptionTelemetry:
 
         def create_test_exception():
             try:
-                raise ValueError("Consistent test message")
-            except Exception as e:
+                msg = "Consistent test message"
+                raise ValueError(msg)
+            except ValueError as e:
                 return e
 
         exc1 = create_test_exception()
@@ -153,7 +154,7 @@ class TestExceptionTelemetry:
         def get_hash(exc):
             stack_trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
             stack_trace_str = "".join(stack_trace)
-            return hashlib.md5(stack_trace_str.encode()).hexdigest()[:16]
+            return hashlib.sha256(stack_trace_str.encode()).hexdigest()[:16]
 
         hash1 = get_hash(exc1)
         hash2 = get_hash(exc2)
