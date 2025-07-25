@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
@@ -25,6 +26,7 @@ from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 
 from .endpoints import consume_and_yield, run_flow_generator, simple_run_flow
+from ...schema.content_types import ToolContent
 
 router = APIRouter(tags=["OpenAI Responses API"])
 
@@ -208,7 +210,8 @@ async def run_flow_for_openai_responses(
                                                                         "id": f"{tool_name}_{tool_id}",
                                                                         "inputs": tool_input,  # Raw inputs as-is
                                                                         "status": "completed",
-                                                                        "type": f"{tool_name}_call",
+                                                                        "type": f"tool_call",
+                                                                        "tool_name": f"{tool_name}",
                                                                         "results": tool_output  # Raw output as-is
                                                                     },
                                                                     "output_index": 0,
@@ -302,8 +305,10 @@ async def run_flow_for_openai_responses(
         api_key_user=api_key_user,
     )
 
-    # Extract output text from result following MCP pattern
+    # Extract output text and tool calls from result
     output_text = ""
+    tool_calls = []
+    
     if result.outputs:
         for run_output in result.outputs:
             if run_output and run_output.outputs:
@@ -324,12 +329,53 @@ async def run_flow_for_openai_responses(
                                 if isinstance(value, str):
                                     output_text = value
                                     break
+
+                        if hasattr(component_output, "results") and component_output.results:
+                            for blocks in component_output.results.get("message", {}).content_blocks:
+                                for content in blocks.contents:
+                                    if isinstance(content, ToolContent):
+                                        tool_calls.append({
+                                            "name": content.name,
+                                            "input": content.tool_input,
+                                            "output": content.output
+                                        })
                     if output_text:
                         break
             if output_text:
                 break
 
-    # Create output in the correct format
+    # Build output array
+    output_items = []
+    
+    # Add tool calls if includes parameter requests them
+    include_results = request.include and "tool_call.results" in request.include
+    
+    tool_call_id_counter = 1
+    for tool_call in tool_calls:
+        if include_results:
+            # Format as detailed tool call with results (like file_search_call in sample)
+            tool_call_item = {
+                "id": f"{tool_call['name']}_{tool_call_id_counter}",
+                "queries": list(tool_call["input"].values()) if isinstance(tool_call["input"], dict) else [str(tool_call["input"])],
+                "status": "completed",
+                "tool_name": f"{tool_call['name']}",
+                "type": "tool_call",
+                "results": tool_call["output"] if tool_call["output"] is not None else [],
+            }
+        else:
+            # Format as basic function call
+            tool_call_item = {
+                "id": f"fc_{tool_call_id_counter}",
+                "type": "function_call",
+                "status": "completed",
+                "name": tool_call["name"],
+                "arguments": json.dumps(tool_call["input"]) if tool_call["input"] is not None else "{}",
+            }
+        
+        output_items.append(tool_call_item)
+        tool_call_id_counter += 1
+
+    # Add the message output
     output_message = {
         "type": "message",
         "id": f"msg_{response_id}",
@@ -337,12 +383,13 @@ async def run_flow_for_openai_responses(
         "role": "assistant",
         "content": [{"type": "output_text", "text": output_text, "annotations": []}],
     }
+    output_items.append(output_message)
 
     return OpenAIResponsesResponse(
         id=response_id,
         created_at=created_timestamp,
         model=request.model,
-        output=[output_message],
+        output=output_items,
         previous_response_id=request.previous_response_id,
     )
 
