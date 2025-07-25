@@ -1,0 +1,163 @@
+---
+title: Test flows in the Playground
+slug: /concepts-playground
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
+Langflow's **Playground** is a dynamic interface you can use to test your LLM-based flows in real-time.
+
+You can test how a flow responds to different inputs, review and modify memories, and monitor flow output and logic.
+For example, you can make sure agentic flows use the appropriate tools to respond to different inputs.
+
+The **Playground** allows you to quickly iterate over your flow's logic and behavior, making it easier to prototype and refine your applications.
+
+## Run a flow in the Playground
+
+To run a flow in the **Playground**, open the flow, and then click <Icon name="Play" aria-hidden="true"/> **Playground**.
+Then, if your flow has a [**Chat Input** component](/components-io), enter a prompt or [use voice mode](/concepts-voice-mode) to trigger the flow and start a chat session.
+
+:::tip
+If there is no message input field in the **Playground**, make sure your flow has a **Chat Input** component that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
+
+Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground**'s chat interface
+
+For flows that require another type of input, such as a webhook event, file upload, or text input, you can [use the Langflow API to trigger the flow](/api-flows-run), and then open the **Playground** to review the LLM activity for the flow run, if applicable.
+:::
+
+![Playground window](/img/playground.png)
+
+<details>
+<summary>Playground mechanics</summary>
+
+When you run a flow in the **Playground**, Langflow calls the `/build/$FLOW_ID/flow` endpoint in [chat.py](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/chat.py#L143). This call retrieves the flow data, builds a graph, and executes the graph. As each component (or node) is executed, the `build_vertex` function calls `build_and_run`, which may call the individual components' `def_build` method, if it exists. If a component doesn't have a `def_build` function, the build still returns a component.
+
+The `build` function allows components to execute logic at runtime. For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the `LCTextSplitterComponent` class. When text needs to be processed, the parent class's `build` method is called, which creates a `RecursiveCharacterTextSplitter` object and uses it to split the text according to the defined parameters. The split text is then passed on to the next component. This all occurs when the component is built.
+
+</details>
+
+### Review Agent logic
+
+If your flow has an **Agent** component, the **Playground** prints the tools used by the agent and the output from each tool.
+This helps you monitor the agent's tool use and understand the logic behind the agent's responses.
+For example, the following agent used a connected `fetch_content` tool to perform a web search:
+
+![Playground window with agent response](/img/playground-with-agent.png)
+
+### View chat history {#view-chat-history}
+
+In the **Playground**, you can view message logs for each of your flow's chat sessions, including timestamps, content, and senders.
+
+In the **Playground** sidebar, find the chat session you want to review, click <Icon name="Ellipsis" aria-hidden="true"/> **Options**, and then select **Message Logs**.
+
+![Playground logs](/img/messages-logs.png)
+
+Message logs break apart the [`Message` data](/data-types#message) for each chat message.
+Click any cell in the message logs to view the full contents of that cell.
+
+### Modify memories in the Playground
+
+To help debug and test your flows, you can edit or delete individual messages in [message logs](#view-chat-history).
+For example, you might want to delete messages that you sent while testing a component that is no longer part of your flow.
+
+You can also delete entire chat sessions from the sidebar: click <Icon name="Ellipsis" aria-hidden="true"/> **Options**, and then select **Delete**.
+
+Modifying memories influences the behavior of the chatbot responses if you continue the chat session or if you preserve memories over multiple chat sessions.
+
+**Editing message logs edits Langflow's internal `messages` table, which is the default chat memory storage.**
+For more information about managing sessions and chat memory in Langflow, see [Use custom session IDs](#session-ids) and [Memory management options](/memory).
+
+## Set custom session IDs {#session-ids}
+
+Chat sessions are identified by session ID (`session_id`).
+
+The default session ID is the flow ID, which means that all chat messages for a flow are stored under the same session ID as one enormous chat session.
+
+If you need to preserve chat context over multiple flow runs or differentiate chat sessions when debugging flows, you can set a custom `session_id`.
+
+Custom session IDs are helpful for multiple reasons:
+
+* Separate chat sessions in situations where one flow has multiple chat sessions, such as a chatbot that can have multiple simultaneous user interactions.
+* Preserve memory when continuing a chat session across multiple flow runs or when passing context from one flow to another.
+* Differentiate activity from multiple users within the same flow.
+* Identify your own chat sessions when debugging and testing flows.
+
+You can set custom session IDs in the visual editor and programmatically.
+
+<Tabs>
+  <TabItem value="visual" label="Visual editor" default>
+
+In your [input and output components](/components-io), use the **Session ID** field:
+
+1. Click the component where you want to set a custom session ID.
+2. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**.
+3. Enable **Session ID**.
+4. Click **Close**.
+5. Enter a custom session ID.
+If the field is empty, the flow uses the default session ID.
+6. Open the **Playground** to start a chat under your custom session ID.
+
+Make sure to change the **Session ID** when you want to start a new chat session or continue an earlier chat session with a different session ID.
+
+  </TabItem>
+  <TabItem value="api" label="Langflow API">
+
+When you trigger a flow with the Langflow API, include the `session_id` parameter in the request payload.
+For example:
+
+```bash
+curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
+-H "Content-Type: application/json" \
+-H "x-api-key: $LANGFLOW_API_KEY" \
+-d '{
+    "session_id": "CUSTOM_SESSION_ID",
+    "input_value": "message",
+    "input_type": "chat",
+    "output_type": "chat"
+}'
+```
+
+This command starts a new chat sessions with the specified `session_id` or it retrieves an existing session with that ID, if one exists.
+
+  </TabItem>
+</Tabs>
+
+:::tip
+In a production environment, consider using a variable for the session ID rather than a hardcoded value.
+
+For example, if you want to preserve context for authenticated users, user ID could be a useful variable for the session ID.
+Alternatively, if you want every chat to be unique, you might want to automatically generate a UUID for each session ID.
+:::
+
+For more information, see [Use session ID to manage communication between components](/session-id).
+
+## Share a flow's Playground
+
+:::important
+The **Shareable Playground** is for testing purposes only.
+The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [Trigger flows with the Langflow API](/concepts-publish).
+
+The **Shareable Playground** isn't available in Langflow Desktop.
+:::
+
+The **Shareable Playground** option exposes the **Playground** for a single flow at the `/public_flow/$FLOW_ID` endpoint.
+
+After you [deploy a public Langflow server](/deployment-overview), you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
+The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
+
+To share a flow's **Playground** with another user, do the following:
+
+1. In Langflow, open the flow you want share.
+2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
+3. Click **Shareable Playground** again to open the **Playground** window.
+This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
+4. Send the URL to another user to give them access to the flow's **Playground**.
+
+## See also
+
+- [Upload images](/concepts-file-management#upload-images)
+- [Use voice mode](/concepts-voice-mode)
+- [Trigger flows with the Langflow API](/concepts-publish)
+- [Session ID](/session-id)

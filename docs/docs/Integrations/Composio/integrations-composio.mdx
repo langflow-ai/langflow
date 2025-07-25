@@ -1,0 +1,112 @@
+---
+title: Composio
+slug: /integrations-composio
+---
+
+Composio components in Langflow provide [Composio](https://app.composio.dev/) tools to your **Agent** components.
+
+Instead of juggling multiple integrations and components in your flow, connect Composio components to an **Agent** component to use all of Composio's supported APIs and actions as tools for your agent.
+
+The following components are available in the **Composio** bundle:
+
+* **Composio Tools**
+* **GitHub**
+* **Gmail**
+* **Google Calendar**
+* **Outlook**
+* **Slack**
+
+For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
+
+## Authentication for Composio components
+
+Composio components require authentication to Composio with a Composio API key.
+
+Depending on the components you use, you may also need additional access, such as an OpenAI API key, Gmail account, or GitHub account.
+
+## Use Composio components in a flow
+
+1. In the Langflow **Workspace**, add an **Agent** component.
+
+2. In the **Workspace**, add the **Composio Tools** component.
+
+3. Connect the **Agent** component's **Tools** port to the **Composio Tools** component's **Tools** port.
+
+4. In the **Composio API Key** field, enter your Composio API key.
+
+5. In the **Tool Name** field, select the tool you want your agent to have access to.
+
+    For this example, select the **Gmail** tool to allow your agent to control an email account with the Composio tool.
+
+6. In the **Actions** field, select the action you want the **Agent** to take with the **Gmail** tool.
+
+    The **Gmail** tool supports multiple actions, and it also supports multiple actions within the same tool.
+    For this example, select **GMAIL_CREATE_EMAIL_DRAFT**.
+    For more information, see the [Composio documentation](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions).
+
+7. Add **Chat Input** and **Chat Output** components to your flow, and then connect them to the **Agent** component's **Input** and **Response**, respectively.
+
+    ![Simple agent flow with a Composio Tools component](/img/composio/composio-create-flow.png)
+
+8. In the **Agent** component, enter your OpenAI API key or configure the **Agent** component to use a different LLM.
+
+9. To test the connection to Composio, click **Playground**, and then ask the LLM about the tools available to it.
+The agent should provide a list of connected tools, including the **Gmail** tool and the built-in tools in the **Agent** component.
+
+    ```text
+    User:
+    What tools are available to you?
+
+    AI:
+    I have access to the following tools:
+
+    1. **GMAIL_CREATE_EMAIL_DRAFT**: This tool allows me to create a draft email using Gmail's API. I can specify the recipient's email address, subject, body content, and whether the body content is HTML.
+
+    2. **CurrentDate-get_current_date**: This tool retrieves the current date and time in a specified timezone.
+    ```
+
+10. To test the specific tool, tell the agent to perform an action like writing a draft email:
+
+    ```text
+    Create a draft email with the subject line "Greetings from Composio"
+    recipient: "your.email@address.com"
+    Body content: "Hello from composio!"
+    ```
+
+    The **Playground** shows the logic the agent choose to use specific tools.
+    This example response is abbreviated.
+
+    ```text
+    The draft email with the subject "Greetings from Composio" and body "Hello from composio!" has been successfully created.
+    ```
+
+    ```json
+    {
+      "recipient_email": "your.email@address.com",
+      "subject": "Greetings from Composio",
+      "body": "Hello from composio!",
+      "is_html": false
+    }
+
+    {
+      "data": {
+        "response_data": {
+          "id": "r-237981011463568567",
+          "message": {
+            "id": "195dd80528171132",
+            "threadId": "195dd80528171132",
+            "labelIds": [
+              "DRAFT"
+            ]
+          }
+        }
+      },
+      "error": null,
+      "successfull": true,
+      "successful": true
+    }
+    ```
+
+11. For further confirmation, you can go to your Gmail account and find the message in your drafts folder.
+
+12. To add more Composio actions, add more Composio components to your flow, and then connect them to the **Agent** component's **Tools** port.

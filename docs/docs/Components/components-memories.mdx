@@ -1,0 +1,55 @@
+---
+title: Memories
+slug: /components-memories
+---
+
+In Langflow version 1.5, the **Memory** category was removed.
+
+All components that were in this category were replaced by other components or moved to other categories in the **Components** menu.
+
+:::important
+Some components that were in the **Memory** category are legacy components.
+You can use these components in your flows, but they are no longer maintained and may be removed in a future release.
+
+It is recommended that you replace all legacy components with the replacement components described on this page.
+:::
+
+## Message History
+
+The [**Message History** component](/components-helpers#message-history) was moved to the **Helpers** category.
+This component combines the functionality of the legacy **Chat History** and **Message Store** components.
+
+## Message Store
+
+The **Message Store** component is a legacy component.
+The functionality provided by this component is available in the **Message History** component.
+Replace this component with the [**Message History** component](/components-helpers#message-history).
+
+## Provider-specific chat memory components
+
+Provider-specific components were moved to the **Bundles** category:
+
+- [**Mem0 Chat Memory** component](/bundles-mem0)
+- [**Redis Chat Memory** component](/bundles-redis)
+- [**Cassandra Chat Memory** component](/bundles-datastax#cassandra-chat-memory)
+- [**Astra DB Chat Memory** component](/bundles-datastax#astra-db-chat-memory)
+
+<details>
+<summary>Zep Chat Memory</summary>
+
+The **Zep Chat Memory** component is a legacy component.
+Replace this component with the [**Message History** component](/components-helpers#message-history).
+
+This component creates a `ZepChatMessageHistory` instance, enabling storage and retrieval of chat messages using Zep, a memory server for LLMs.
+
+It accepts the following parameters:
+
+| Name          | Type          | Description                                               |
+|---------------|---------------|-----------------------------------------------------------|
+| url           | MessageText   | Input parameter. The URL of the Zep instance. Required. |
+| api_key       | SecretString  | Input parameter. The API Key for authentication with the Zep instance. |
+| api_base_path | Dropdown      | Input parameter. The API version to use. Options include api/v1 or api/v2. |
+| session_id    | MessageText   | Input parameter. The unique identifier for the chat session. Optional. |
+| message_history | BaseChatMessageHistory  | Output parameter. An instance of ZepChatMessageHistory for the session. |
+
+</details>

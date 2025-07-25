@@ -1,81 +1,27 @@
 import { MCPServerType } from "@/types/mcp";
 
-/**
- * Extracts the first MCP server from a JSON string or object.
- * Supports:
- * 1. { mcpServers: { ... } }
- * 2. { ... } (object with server keys)
- * 3. a single server object
- * Returns: { name, server } or throws an error.
- */
-export function extractFirstMcpServerFromJson(json: string | object): {
-  name: string;
-  server: Omit<MCPServerType, "name">;
-} {
-  let parsed: any = json;
-  if (typeof json === "string") {
-    try {
-      parsed = JSON.parse(json);
-    } catch (e) {
-      throw new Error("Invalid JSON format.");
-    }
-  }
-
-  let serverEntries: [string, Omit<MCPServerType, "name">][] = [];
-
-  // Case 1: { mcpServers: { ... } }
-  if (
-    parsed &&
-    typeof parsed === "object" &&
-    parsed.mcpServers &&
-    typeof parsed.mcpServers === "object"
-  ) {
-    serverEntries = Object.entries(parsed.mcpServers) as [
-      string,
-      Omit<MCPServerType, "name">,
-    ][];
-  }
-  // Case 2: { ... } (object with server keys)
-  else if (
-    parsed &&
-    typeof parsed === "object" &&
-    Object.values(parsed).some(
-      (v) =>
-        v &&
-        typeof v === "object" &&
-        "command" in v &&
-        Array.isArray((v as any).args),
-    )
-  ) {
-    serverEntries = Object.entries(parsed).filter(
-      ([, v]) =>
-        v &&
-        typeof v === "object" &&
-        "command" in v &&
-        Array.isArray((v as any).args),
-    ) as [string, Omit<MCPServerType, "name">][];
-  }
-  // Case 3: single server object
-  else if (
-    parsed &&
-    typeof parsed === "object" &&
-    "command" in parsed &&
-    Array.isArray((parsed as any).args)
-  ) {
-    serverEntries = [["server", parsed]];
-  }
-
-  if (serverEntries.length === 0) {
-    throw new Error("No valid MCP server found in the input.");
-  }
-  const [name, server] = serverEntries[0];
-  if (!server.command || !Array.isArray(server.args)) {
-    throw new Error(
-      "Each MCP server must have a 'command' and an 'args' array.",
-    );
-  }
-  return { name, server };
+export enum AuthMethodId {
+  NONE = "none",
+  API_KEY = "apikey",
+  BASIC = "basic",
+  BEARER = "bearer",
+  IAM = "iam",
+  OAUTH = "oauth",
 }
+
+export const AUTH_METHODS = {
+  [AuthMethodId.NONE]: { id: AuthMethodId.NONE, label: "None" },
+  [AuthMethodId.API_KEY]: { id: AuthMethodId.API_KEY, label: "API Key" },
+  [AuthMethodId.BASIC]: {
+    id: AuthMethodId.BASIC,
+    label: "Basic",
+  },
+  [AuthMethodId.BEARER]: { id: AuthMethodId.BEARER, label: "Bearer Token" },
+  [AuthMethodId.IAM]: { id: AuthMethodId.IAM, label: "IAM" },
+  [AuthMethodId.OAUTH]: { id: AuthMethodId.OAUTH, label: "OAuth" },
+} as const;
+
+export const AUTH_METHODS_ARRAY = Object.values(AUTH_METHODS);
 
 /**
  * Extracts all MCP servers from a JSON string or object.
@@ -92,10 +38,10 @@ export function extractMcpServersFromJson(
   if (typeof json === "string") {
     try {
       parsed = JSON.parse(json);
-    } catch (e) {
+    } catch (_e) {
       try {
         parsed = JSON.parse(`{${json}}`);
-      } catch (e) {
+      } catch (_e) {
         throw new Error("Invalid JSON format.");
       }
     }
@@ -117,27 +63,18 @@ export function extractMcpServersFromJson(
     parsed &&
     typeof parsed === "object" &&
     Object.values(parsed).some(
-      (v) =>
-        v &&
-        typeof v === "object" &&
-        "command" in v &&
-        Array.isArray((v as any).args),
+      (v) => v && typeof v === "object" && ("command" in v || "url" in v),
     )
   ) {
     serverEntries = Object.entries(parsed).filter(
-      ([, v]) =>
-        v &&
-        typeof v === "object" &&
-        "command" in v &&
-        Array.isArray((v as any).args),
+      ([, v]) => v && typeof v === "object" && ("command" in v || "url" in v),
     );
   }
   // Case 3: single server object
   else if (
     parsed &&
     typeof parsed === "object" &&
-    "command" in parsed &&
-    Array.isArray((parsed as any).args)
+    ("command" in parsed || "url" in parsed)
   ) {
     serverEntries = [["server", parsed]];
   }
@@ -147,7 +84,7 @@ export function extractMcpServersFromJson(
   }
   // Validate and map all servers
   const validServers = serverEntries.filter(
-    ([, server]) => server.command && Array.isArray(server.args),
+    ([, server]) => server.command || server.url,
   );
   if (validServers.length === 0) {
     throw new Error("No valid MCP server found in the input.");
@@ -155,7 +92,7 @@ export function extractMcpServersFromJson(
   return validServers.map(([name, server]) => ({
     name: name.slice(0, 30),
     command: server.command,
-    args: server.args,
+    args: server.args || [],
     env: server.env && typeof server.env === "object" ? server.env : {},
     url: server.url,
   }));
