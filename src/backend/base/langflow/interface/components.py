@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.custom.utils import abuild_custom_components, create_component_template, get_all_types_dict
+from langflow.custom.utils import abuild_custom_components, create_component_template
 from langflow.services.settings.base import BASE_COMPONENTS_PATH
 
 if TYPE_CHECKING:
@@ -165,12 +165,12 @@ async def _determine_loading_strategy(settings_service: SettingsService) -> dict
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
         logger.debug("Using partial component loading")
-        return await aget_component_metadata(settings_service.settings.components_path)
-    if settings_service.settings.components_path:
+        component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
+    elif settings_service.settings.components_path:
         # Traditional full loading - filter out base components path to only load custom components
         custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
         if custom_paths:
-            return await get_all_types_dict(custom_paths)
+            component_cache.all_types_dict = await aget_all_types_dict(custom_paths)
     # No custom components to load
     return {}
 
