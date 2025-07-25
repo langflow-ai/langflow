@@ -57,9 +57,6 @@ jobs:
         env:
           LANGFLOW_SUPERUSER: admin
           LANGFLOW_SUPERUSER_PASSWORD: 123456
-          DO_NOT_TRACK: true
-          LANGFLOW_USE_NOOP_DATABASE: true
-          LANGFLOW_LOG_LEVEL: warning
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
