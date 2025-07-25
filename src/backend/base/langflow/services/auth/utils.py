@@ -19,7 +19,7 @@ from starlette.websockets import WebSocket
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service
+from langflow.services.deps import get_session, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
@@ -48,7 +48,7 @@ async def api_key_security(
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
-    async with get_db_service().with_session() as db:
+    async with session_scope() as db:
         if settings_service.auth_settings.AUTO_LOGIN:
             # Get the first user
             if not settings_service.auth_settings.SUPERUSER:
@@ -93,7 +93,7 @@ async def ws_api_key_security(
     api_key: str | None,
 ) -> UserRead:
     settings = get_settings_service()
-    async with get_db_service().with_session() as db:
+    async with session_scope() as db:
         if settings.auth_settings.AUTO_LOGIN:
             if not settings.auth_settings.SUPERUSER:
                 # internal server misconfiguration

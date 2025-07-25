@@ -141,7 +141,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         AsyncSession: An async session object.
 
     """
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         yield session
 
 

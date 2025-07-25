@@ -17,7 +17,7 @@ from langflow.services.database.models.vertex_builds.model import VertexBuildTab
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 
-from .deps import get_db_service, get_service, get_settings_service
+from .deps import get_db_service, get_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from lfx.services.settings.manager import SettingsService
@@ -123,7 +123,7 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
 
 async def teardown_services() -> None:
     """Teardown all the services."""
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         await teardown_superuser(get_settings_service(), session)
 
     from lfx.services.manager import service_manager
@@ -269,7 +269,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()
     await db_service.initialize_alembic_log_file()
-    async with db_service.with_session() as session:
+    async with session_scope() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
         await setup_superuser(settings_service, session)
     try:
