@@ -49,9 +49,9 @@ class YahooFinanceSchema(BaseModel):
 
 
 class YfinanceToolComponent(LCToolComponent):
-    display_name = "Yahoo Finance [DEPRECATED]"
+    display_name = "Yahoo! Finance [DEPRECATED]"
     description = """Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \
-to access financial data and market information from Yahoo Finance."""
+to access financial data and market information from Yahoo! Finance."""
     icon = "trending-up"
     name = "YahooFinanceTool"
     legacy = True
@@ -87,7 +87,7 @@ to access financial data and market information from Yahoo Finance."""
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
             name="yahoo_finance",
-            description="Access financial data and market information from Yahoo Finance.",
+            description="Access financial data and market information from Yahoo! Finance.",
             func=self._yahoo_finance_tool,
             args_schema=YahooFinanceSchema,
         )
