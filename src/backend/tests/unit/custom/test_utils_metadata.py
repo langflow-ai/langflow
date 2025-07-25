@@ -140,3 +140,386 @@ class TestMetadataInTemplateBuilders:
         assert isinstance(result, str)
         assert len(result) == 12
         assert all(c in "0123456789abcdef" for c in result)
+
+
+class TestDependencyAnalyzer:
+    """Test dependency analysis functionality."""
+
+    def test_top_level_basic(self):
+        """Test extracting top level package name."""
+        from langflow.custom.dependency_analyzer import _top_level
+
+        assert _top_level("numpy") == "numpy"
+        assert _top_level("numpy.array") == "numpy"
+        assert _top_level("requests.adapters.HTTPAdapter") == "requests"
+
+    def test_is_relative(self):
+        """Test relative import detection."""
+        from langflow.custom.dependency_analyzer import _is_relative
+
+        assert _is_relative(".module") is True
+        assert _is_relative("..parent") is True
+        assert _is_relative("...grandparent") is True
+        assert _is_relative("module") is False
+        assert _is_relative(None) is False
+
+    def test_analyze_dependencies_basic(self):
+        """Test basic dependency analysis."""
+        from langflow.custom.dependency_analyzer import analyze_dependencies
+
+        code = """
+import os
+import sys
+from typing import List
+import numpy as np
+from requests import get
+"""
+
+        deps = analyze_dependencies(code, resolve_versions=False)
+
+        # Should find all imports
+        assert len(deps) >= 5
+
+        # Check specific dependencies
+        dep_names = [d["name"] for d in deps]
+        assert "os" in dep_names
+        assert "sys" in dep_names
+        assert "typing" in dep_names
+        assert "numpy" in dep_names
+        assert "requests" in dep_names
+
+    def test_analyze_dependencies_optional_detection(self):
+        """Test that all dependencies are treated as required (no optional detection)."""
+        from langflow.custom.dependency_analyzer import analyze_dependencies
+
+        code = """
+import os
+try:
+    import optional_package
+    HAS_OPTIONAL = True
+except ImportError:
+    HAS_OPTIONAL = False
+
+try:
+    from another_optional import something
+except ImportError:
+    pass  # This is now treated as a regular dependency
+"""
+
+        deps = analyze_dependencies(code, resolve_versions=False)
+
+        # Should find all dependencies (all are non-optional now)
+        assert len(deps) >= 3  # os, optional_package, another_optional
+        dep_names = [d["name"] for d in deps]
+        assert "os" in dep_names
+        assert "optional_package" in dep_names
+        assert "another_optional" in dep_names
+
+    def test_analyze_component_dependencies(self):
+        """Test component-specific dependency analysis."""
+        from langflow.custom.dependency_analyzer import analyze_component_dependencies
+
+        component_code = """
+import os
+import sys
+from typing import Dict, List
+from langflow.custom import CustomComponent
+import numpy as np
+
+class TestComponent(CustomComponent):
+    def build(self):
+        return {"test": "value"}
+"""
+
+        result = analyze_component_dependencies(component_code)
+
+        # Check structure
+        assert "total_dependencies" in result
+        assert "stdlib_count" in result
+        assert "external_count" in result
+        assert "local_count" in result
+        assert "external_packages" in result
+        assert "dependencies" in result
+
+        # Should have some dependencies
+        assert result["total_dependencies"] > 0
+        assert result["stdlib_count"] > 0
+
+        # Should have external packages list
+        assert isinstance(result["external_packages"], list)
+
+    def test_analyze_component_dependencies_error_handling(self):
+        """Test error handling in component dependency analysis."""
+        from langflow.custom.dependency_analyzer import analyze_component_dependencies
+
+        # Test with invalid Python code
+        invalid_code = "import os\nthis is not valid python syntax!!!"
+
+        result = analyze_component_dependencies(invalid_code)
+
+        # Should return minimal info on error
+        assert result["total_dependencies"] == 0
+        assert result["stdlib_count"] == 0
+        assert result["external_count"] == 0
+        assert result["local_count"] == 0
+        assert result["external_packages"] == []
+        assert result["dependencies"] == []
+
+    def test_dependency_info_dataclass(self):
+        """Test DependencyInfo dataclass creation."""
+        from langflow.custom.dependency_analyzer import DependencyInfo
+
+        dep = DependencyInfo(
+            name="numpy",
+            full_module="numpy",
+            import_type="import",
+            imported_symbols=(),
+            alias="np",
+            version="1.21.0",
+            dist_name="numpy",
+            location="/path/to/numpy",
+            is_stdlib=False,
+            is_local=False,
+            is_optional=False,
+            lineno=1,
+        )
+
+        assert dep.name == "numpy"
+        assert dep.alias == "np"
+        assert dep.version == "1.21.0"
+        assert not dep.is_stdlib
+        assert not dep.is_optional
+
+    def test_no_optional_dependency_classification(self):
+        """Test that the simplified analyzer doesn't classify any dependencies as optional."""
+        from langflow.custom.dependency_analyzer import analyze_dependencies
+
+        # Code with various import patterns that previously might have been considered optional
+        code = """
+import os
+try:
+    import package_a
+    HAS_A = True
+except ImportError:
+    HAS_A = False
+
+try:
+    import package_b
+except ImportError:
+    pass
+
+try:
+    from package_c import something
+except (ImportError, ModuleNotFoundError):
+    something = None
+"""
+        deps = analyze_dependencies(code, resolve_versions=False)
+
+        # All dependencies should be marked as non-optional
+        for dep in deps:
+            assert not dep["is_optional"], f"Dependency {dep['name']} should not be optional"
+
+        # Should find all the imports
+        dep_names = [d["name"] for d in deps]
+        assert "os" in dep_names
+        assert "package_a" in dep_names
+        assert "package_b" in dep_names
+        assert "package_c" in dep_names
+
+
+class TestMetadataWithDependencies:
+    """Test metadata functionality including dependencies."""
+
+    def test_build_component_metadata_includes_dependencies(self):
+        """Test that build_component_metadata includes dependency analysis."""
+        from langflow.custom.custom_component.component import Component
+        from langflow.custom.utils import build_component_metadata
+
+        # Setup mock frontend node
+        mock_frontend = Mock()
+        mock_frontend.metadata = {}
+
+        # Create test component with real code
+        test_component = Mock(spec=Component)
+        test_component._code = """
+import os
+import sys
+from typing import List
+
+class TestComponent:
+    def build(self):
+        return {"test": "value"}
+"""
+
+        # Call the function
+        build_component_metadata(mock_frontend, test_component, "test.module", "TestComponent")
+
+        # Verify metadata was added
+        assert "module" in mock_frontend.metadata
+        assert "code_hash" in mock_frontend.metadata
+        assert "dependencies" in mock_frontend.metadata
+
+        # Verify dependency analysis results
+        dep_info = mock_frontend.metadata["dependencies"]
+        assert dep_info["total_dependencies"] >= 3  # At least os, sys, typing
+        assert dep_info["stdlib_count"] >= 3  # os, sys, typing are stdlib
+        assert "dependencies" in dep_info
+        assert isinstance(dep_info["dependencies"], list)
+
+        # Check that specific dependencies are found
+        dep_names = [d["name"] for d in dep_info["dependencies"]]
+        assert "os" in dep_names
+        assert "sys" in dep_names
+        assert "typing" in dep_names
+
+    def test_build_component_metadata_handles_analysis_error(self):
+        """Test that build_component_metadata handles dependency analysis errors gracefully."""
+        from langflow.custom.custom_component.component import Component
+        from langflow.custom.utils import build_component_metadata
+
+        # Setup mock frontend node
+        mock_frontend = Mock()
+        mock_frontend.metadata = {}
+
+        # Create test component with invalid Python code
+        test_component = Mock(spec=Component)
+        test_component._code = "import os\nthis is not valid python syntax!!!"
+
+        # Call the function - should not raise exception
+        build_component_metadata(mock_frontend, test_component, "test.module", "TestComponent")
+
+        # Should not raise exception and should set minimal dependency info
+        assert "dependencies" in mock_frontend.metadata
+        dep_info = mock_frontend.metadata["dependencies"]
+        assert dep_info["total_dependencies"] == 0
+        assert dep_info["stdlib_count"] == 0
+        assert dep_info["external_count"] == 0
+        assert dep_info["dependencies"] == []
+
+    def test_build_component_metadata_with_external_dependencies(self):
+        """Test dependency analysis with external packages."""
+        from langflow.custom.custom_component.component import Component
+        from langflow.custom.utils import build_component_metadata
+
+        # Setup mock frontend node
+        mock_frontend = Mock()
+        mock_frontend.metadata = {}
+
+        # Create test component with external dependencies
+        test_component = Mock(spec=Component)
+        test_component._code = """
+import os
+from langflow.custom import CustomComponent
+
+class TestComponent(CustomComponent):
+    def build(self):
+        return {"test": "value"}
+"""
+
+        # Call the function
+        build_component_metadata(mock_frontend, test_component, "test.module", "TestComponent")
+
+        # Verify dependency analysis results
+        dep_info = mock_frontend.metadata["dependencies"]
+        assert dep_info["total_dependencies"] >= 2  # At least os and langflow
+        assert dep_info["stdlib_count"] >= 1  # os is stdlib
+
+        # Check for external packages
+        dep_names = [d["name"] for d in dep_info["dependencies"]]
+        assert "os" in dep_names
+        # langflow should be detected as external (since it's the project itself)
+
+    def test_build_component_metadata_with_optional_dependencies(self):
+        """Test dependency analysis with optional dependencies."""
+        from langflow.custom.custom_component.component import Component
+        from langflow.custom.utils import build_component_metadata
+
+        # Setup mock frontend node
+        mock_frontend = Mock()
+        mock_frontend.metadata = {}
+
+        # Create test component with optional dependencies
+        test_component = Mock(spec=Component)
+        test_component._code = """
+import os
+try:
+    import some_optional_package
+    HAS_OPTIONAL = True
+except ImportError:
+    HAS_OPTIONAL = False
+
+class TestComponent:
+    def build(self):
+        return {"test": "value"}
+"""
+
+        # Call the function
+        build_component_metadata(mock_frontend, test_component, "test.module", "TestComponent")
+
+        # Verify dependency analysis results
+        dep_info = mock_frontend.metadata["dependencies"]
+        assert dep_info["total_dependencies"] >= 2  # At least os and some_optional_package
+
+        # Verify the dependencies are found
+        dep_names = [d["name"] for d in dep_info["dependencies"]]
+        assert "os" in dep_names
+        assert "some_optional_package" in dep_names
+
+    def test_build_component_metadata_with_real_component(self):
+        """Test dependency analysis with a real component."""
+        from langflow.custom.custom_component.component import Component
+        from langflow.custom.utils import build_component_metadata
+
+        # Setup mock frontend node
+        mock_frontend = Mock()
+        mock_frontend.metadata = {}
+
+        # Use real component code based on LMStudio component
+        real_component_code = """from typing import Any
+from urllib.parse import urljoin
+
+import httpx
+from langchain_openai import ChatOpenAI
+
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import LanguageModel
+
+class LMStudioModelComponent(LCModelComponent):
+    display_name = "LM Studio"
+    description = "Generate text using LM Studio Local LLMs."
+    icon = "LMStudio"
+    name = "LMStudioModel"
+
+    def build(self):
+        return {"test": "value"}
+"""
+
+        # Create test component
+        test_component = Mock(spec=Component)
+        test_component._code = real_component_code
+
+        # Call the function
+        build_component_metadata(
+            mock_frontend, test_component, "langflow.components.lmstudio", "LMStudioModelComponent"
+        )
+
+        # Verify metadata was added
+        assert "module" in mock_frontend.metadata
+        assert "code_hash" in mock_frontend.metadata
+        assert "dependencies" in mock_frontend.metadata
+
+        # Verify dependency analysis results
+        dep_info = mock_frontend.metadata["dependencies"]
+        assert dep_info["total_dependencies"] > 0
+
+        # Check that specific dependencies are found
+        dep_names = [d["name"] for d in dep_info["dependencies"]]
+        assert "typing" in dep_names  # stdlib
+        assert "urllib" in dep_names  # stdlib
+        assert "httpx" in dep_names or any("httpx" in name for name in dep_names)  # external
+        assert "langchain_openai" in dep_names or any("langchain" in name for name in dep_names)  # external
+        assert "langflow" in dep_names or any("langflow" in name for name in dep_names)  # local/project
+
+        # Should have both stdlib and external dependencies
+        assert dep_info["stdlib_count"] > 0
+        assert dep_info["external_count"] > 0 or dep_info["local_count"] > 0  # Should have non-stdlib deps

@@ -1,4 +1,6 @@
 # mypy: ignore-errors
+from __future__ import annotations
+
 import ast
 import asyncio
 import contextlib
@@ -7,15 +9,14 @@ import inspect
 import re
 import traceback
 from pathlib import Path
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
 from langflow.custom.custom_component.component import Component
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.dependency_analyzer import analyze_component_dependencies
 from langflow.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
@@ -31,6 +32,11 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 from langflow.type_extraction.type_extraction import extract_inner_type
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from langflow.custom.custom_component.custom_component import CustomComponent
 
 
 def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:
@@ -477,6 +483,15 @@ def build_custom_component_template_from_inputs(
     # ! This should be removed when we have a better way to handle this
     frontend_node.set_base_classes_from_outputs()
     reorder_fields(frontend_node, cc_instance._get_field_order())
+    frontend_node = build_component_metadata(frontend_node, cc_instance, module_name, ctype_name)
+
+    return frontend_node.to_dict(keep_name=False), cc_instance
+
+
+def build_component_metadata(
+    frontend_node: CustomComponentFrontendNode, custom_component: CustomComponent, module_name: str, ctype_name: str
+):
+    """Build the metadata for a custom component."""
     if module_name:
         frontend_node.metadata["module"] = module_name
 
@@ -485,7 +500,23 @@ def build_custom_component_template_from_inputs(
         if code_hash:
             frontend_node.metadata["code_hash"] = code_hash
 
-    return frontend_node.to_dict(keep_name=False), cc_instance
+    # Analyze component dependencies
+    try:
+        dependency_info = analyze_component_dependencies(custom_component._code)
+        frontend_node.metadata["dependencies"] = dependency_info
+    except (SyntaxError, TypeError, ValueError, ImportError) as exc:
+        logger.warning(f"Failed to analyze dependencies for component {ctype_name}: {exc}")
+        # Set minimal dependency info on failure
+        frontend_node.metadata["dependencies"] = {
+            "total_dependencies": 0,
+            "stdlib_count": 0,
+            "external_count": 0,
+            "local_count": 0,
+            "external_packages": [],
+            "dependencies": [],
+        }
+
+    return frontend_node
 
 
 def build_custom_component_template(
@@ -545,12 +576,9 @@ def build_custom_component_template(
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
         if module_name:
-            frontend_node.metadata["module"] = module_name
-
-            # Generate code hash for cache invalidation and debugging
-            code_hash = _generate_code_hash(custom_component._code, module_name, custom_component.__class__.__name__)
-            if code_hash:
-                frontend_node.metadata["code_hash"] = code_hash
+            frontend_node = build_component_metadata(
+                frontend_node, custom_component, module_name, custom_component.__class__.__name__
+            )
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
