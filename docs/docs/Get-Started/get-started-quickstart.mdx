@@ -101,7 +101,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
     The default Langflow server address is `http://localhost:7860`.
 
     <Tabs groupId="Language">
-      <TabItem value="Python" label="Python" default>
+    <TabItem value="Python" label="Python" default>
 
     ```python
     import requests
@@ -135,8 +135,8 @@ Langflow provides code snippets to help you get started with the Langflow API.
         print(f"Error parsing response: {e}")
     ```
 
-      </TabItem>
-      <TabItem value="JavaScript" label="JavaScript">
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
 
     ```js
     const payload = {
@@ -161,8 +161,8 @@ Langflow provides code snippets to help you get started with the Langflow API.
         .catch(err => console.error(err));
     ```
 
-      </TabItem>
-      <TabItem value="curl" label="curl">
+    </TabItem>
+    <TabItem value="curl" label="curl">
 
     ```bash
     curl --request POST \
@@ -178,7 +178,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
     # A 200 response confirms the call succeeded.
     ```
 
-      </TabItem>
+    </TabItem>
     </Tabs>
 
 2. Copy the snippet, paste it in a script file, and then run the script to send the request.
@@ -367,7 +367,7 @@ The following example builds on the API pane's example code to create a question
 This script runs a question-and-answer chat in your terminal and stores the Agent's previous answer so you can compare them.
 
     <Tabs groupId="Languages">
-      <TabItem value="Python" label="Python" default>
+    <TabItem value="Python" label="Python" default>
 
     ```python
     import requests
@@ -431,8 +431,8 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
         previous_answer = result
     ```
 
-      </TabItem>
-      <TabItem value="JavaScript" label="JavaScript">
+    </TabItem>
+    <TabItem value="JavaScript" label="JavaScript">
 
     ```js
     const readline = require('readline');
@@ -511,7 +511,7 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
     startChat();
     ```
 
-      </TabItem>
+    </TabItem>
     </Tabs>
 
 2. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `exit`.

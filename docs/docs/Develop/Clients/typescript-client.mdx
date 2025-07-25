@@ -44,22 +44,21 @@ pnpm add @datastax/langflow-client
 
 1. Import the client into your code.
 
-```tsx
-import { LangflowClient } from "@datastax/langflow-client";
-```
+    ```tsx
+    import { LangflowClient } from "@datastax/langflow-client";
+    ```
 
-2. Initialize a client object to interact with your server.
-The `LangflowClient` object allows you to interact with the Langflow API.
+2. Initialize a `LangflowClient` object to interact with your server:
 
-Replace `BASE_URL` and `API_KEY` with values from your deployment.
-The default Langflow base URL is `http://localhost:7860`.
-To create an API key, see [API keys](/configuration-api-keys).
+    ```tsx
+    const baseUrl = "BASE_URL";
+    const apiKey = "API_KEY";
+    const client = new LangflowClient({ baseUrl, apiKey });
+    ```
 
-```tsx
-const baseUrl = "BASE_URL";
-const apiKey = "API_KEY";
-const client = new LangflowClient({ baseUrl, apiKey });
-```
+    Replace `BASE_URL` and `API_KEY` with values from your deployment.
+    The default Langflow base URL is `http://localhost:7860`.
+    To create an API key, see [API keys](/configuration-api-keys).
 
 ## Langflow TypeScript client quickstart
 
