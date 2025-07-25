@@ -49,7 +49,6 @@ jobs:
             src/backend/tests/unit/components/agents/test_agent_component.py \
             src/backend/tests/unit/services/tracing/test_tracing_service.py \
             src/backend/tests/unit/custom/component/test_component_instance_attributes.py \
-            src/backend/tests/unit/test_initial_setup.py \
             src/backend/tests/unit/schema/test_schema_message.py \
             -m 'not api_key_required' \
             --tb=short \
