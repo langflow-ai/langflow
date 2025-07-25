@@ -53,7 +53,6 @@ const KnowledgeBasesTab = ({
 
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
 
-
   const handleCreateKnowledgeBaseTemplate = () => {
     console.log("fix this");
   };
