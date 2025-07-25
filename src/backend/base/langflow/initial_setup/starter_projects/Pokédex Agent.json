@@ -113,6 +113,15 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "192913db3453",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 1
+              },
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -430,6 +439,23 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "6f74e04e39d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.115.13"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 3
+              },
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -832,6 +858,27 @@
             "legacy": false,
             "metadata": {
               "code_hash": "a648ad26f226",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "aiofiles",
+                    "version": "24.1.0"
+                  },
+                  {
+                    "name": "httpx",
+                    "version": "0.27.2"
+                  },
+                  {
+                    "name": "validators",
+                    "version": "0.34.0"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "module": "langflow.components.data.api_request.APIRequestComponent"
             },
             "minimized": false,

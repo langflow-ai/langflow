@@ -321,6 +321,15 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "192913db3453",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 1
+              },
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -795,6 +804,19 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "dbf2e9d2319d",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langchain_text_splitters",
+                    "version": "0.3.8"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 2
+              },
               "module": "langflow.components.processing.split_text.SplitTextComponent"
             },
             "output_types": [],
@@ -1084,6 +1106,23 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "6f74e04e39d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.115.13"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 3
+              },
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -1401,6 +1440,19 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "2691dee277c9",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 2
+              },
               "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -1937,6 +1989,19 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "2691dee277c9",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 2
+              },
               "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -2710,6 +2775,27 @@
             "legacy": false,
             "metadata": {
               "code_hash": "38a337e89ff4",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "astrapy",
+                    "version": "2.0.1"
+                  },
+                  {
+                    "name": "langchain_astradb",
+                    "version": "0.6.0"
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.66"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
@@ -3486,6 +3572,27 @@
             "legacy": false,
             "metadata": {
               "code_hash": "38a337e89ff4",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "astrapy",
+                    "version": "2.0.1"
+                  },
+                  {
+                    "name": "langchain_astradb",
+                    "version": "0.6.0"
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.66"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
