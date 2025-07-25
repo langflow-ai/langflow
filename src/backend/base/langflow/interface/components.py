@@ -133,11 +133,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
 
         try:
             comp_instance = obj()
-            # modname is the full module name without the name of the obj
-            full_module_name = f"{modname}.{name}"
-            comp_template, _ = create_component_template(
-                component_extractor=comp_instance, module_name=full_module_name
-            )
+            comp_template, _ = create_component_template(component_extractor=comp_instance)
             component_name = obj.name if hasattr(obj, "name") and obj.name else name
             module_components[component_name] = comp_template
         except Exception as e:  # noqa: BLE001
@@ -151,28 +147,6 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
         )
     logger.debug(f"Processed module {modname}")
     return (top_level, module_components)
-
-
-async def _determine_loading_strategy(settings_service: SettingsService) -> dict:
-    """Determines and executes the appropriate component loading strategy.
-
-    Args:
-        settings_service: Service providing access to application settings
-
-    Returns:
-        Dictionary containing loaded component types and templates
-    """
-    if settings_service.settings.lazy_load_components:
-        # Partial loading mode - just load component metadata
-        logger.debug("Using partial component loading")
-        component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
-    elif settings_service.settings.components_path:
-        # Traditional full loading - filter out base components path to only load custom components
-        custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
-        if custom_paths:
-            component_cache.all_types_dict = await aget_all_types_dict(custom_paths)
-    # No custom components to load
-    return {}
 
 
 async def get_and_cache_all_types_dict(
@@ -189,17 +163,27 @@ async def get_and_cache_all_types_dict(
         logger.debug("Building components cache")
 
         langflow_components = await import_langflow_components()
-        custom_components_dict = await _determine_loading_strategy(settings_service)
+        component_cache.all_types_dict = {}
+        if settings_service.settings.lazy_load_components:
+            # Partial loading mode - just load component metadata
+            logger.debug("Using partial component loading")
+            component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
+        elif settings_service.settings.components_path:
+            # Traditional full loading - filter out base components path to only load custom components
+            custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
+            if custom_paths:
+                component_cache.all_types_dict = await aget_all_types_dict(custom_paths)
 
         # Log custom component loading stats
-        component_count = sum(len(comps) for comps in custom_components_dict.values())
+        components_dict = component_cache.all_types_dict or {}
+        component_count = sum(len(comps) for comps in components_dict.get("components", {}).values())
         if component_count > 0 and settings_service.settings.components_path:
             logger.debug(f"Built {component_count} custom components from {settings_service.settings.components_path}")
 
         # merge the dicts
         component_cache.all_types_dict = {
             **langflow_components["components"],
-            **custom_components_dict,
+            **components_dict,
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         logger.debug(f"Loaded {component_count} components")
