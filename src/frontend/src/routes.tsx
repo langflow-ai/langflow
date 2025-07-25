@@ -168,7 +168,7 @@ const router = createBrowserRouter(
             path="signup"
             element={
               <ProtectedLoginRoute>
-                <SignUp/>
+                <SignUp />
               </ProtectedLoginRoute>
             }
           />
