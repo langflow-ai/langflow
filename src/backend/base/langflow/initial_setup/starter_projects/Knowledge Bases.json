@@ -25,9 +25,9 @@
         "id": "reactflow__edge-SplitText-vUKyi{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-vUKyiœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KBIngestion-j8E6h{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-j8E6hœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-vUKyi",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-vUKyiœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-vUKyiœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "KBIngestion-j8E6h",
-        "targetHandle": "{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-j8E6hœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKBIngestion-j8E6hœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-URLComponent-c2mhO{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-c2mhOœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-vUKyi{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-vUKyiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-c2mhO",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-c2mhOœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-c2mhOœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "SplitText-vUKyi",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-vUKyiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-vUKyiœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-TextInput-NSfvA{œdataTypeœ:œTextInputœ,œidœ:œTextInput-NSfvAœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-IPUG5{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-IPUG5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-NSfvA",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-NSfvAœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-NSfvAœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "KBRetrieval-IPUG5",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-IPUG5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-IPUG5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-KBRetrieval-IPUG5{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-IPUG5œ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-FCqOP{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-FCqOPœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "KBRetrieval-IPUG5",
-        "sourceHandle": "{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-IPUG5œ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-IPUG5œ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-FCqOP",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-FCqOPœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-FCqOPœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -407,8 +407,6 @@
                 "group_outputs": false,
                 "method": "build_kb_info",
                 "name": "kb_info",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -810,8 +808,6 @@
                 "group_outputs": false,
                 "method": "get_chroma_kb_data",
                 "name": "chroma_kb_data",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
