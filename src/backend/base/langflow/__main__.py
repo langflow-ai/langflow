@@ -10,13 +10,13 @@ import warnings
 from contextlib import suppress
 from ipaddress import ip_address
 from pathlib import Path
-from jose import JWTError
 
 import click
 import httpx
 import typer
 from dotenv import load_dotenv
 from httpx import HTTPError
+from jose import JWTError
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
@@ -30,10 +30,10 @@ from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
+from langflow.services.auth.utils import check_key, get_current_user_by_jwt
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.utils import initialize_services
-from langflow.services.auth.utils import get_current_user_by_jwt, check_key
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
@@ -632,10 +632,16 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
 @app.command()
 def superuser(
-    username: str = typer.Option(None, help="Username for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."),
-    password: str = typer.Option(None, help="Password for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."),
+    username: str = typer.Option(
+        None, help="Username for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+    ),
+    password: str = typer.Option(
+        None, help="Password for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+    ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-    auth_token: str = typer.Option(None, help="Authentication token of existing superuser.", envvar="LANGFLOW_SUPERUSER_TOKEN"),
+    auth_token: str = typer.Option(
+        None, help="Authentication token of existing superuser.", envvar="LANGFLOW_SUPERUSER_TOKEN"
+    ),
 ) -> None:
     """Create a superuser. When AUTO_LOGIN is enabled, uses default credentials. In production mode, requires authentication."""
     configure(log_level=log_level)
@@ -644,13 +650,13 @@ def superuser(
 
     async def _create_superuser():
         await initialize_services()
-        
+
         # Check if superuser creation via CLI is enabled
         if not settings_service.auth_settings.ENABLE_SUPERUSER_CLI:
             typer.echo("Error: Superuser creation via CLI is disabled.")
             typer.echo("Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature.")
             raise typer.Exit(1)
-            
+
         nonlocal username, password
         if settings_service.auth_settings.AUTO_LOGIN:
             # Force default credentials for AUTO_LOGIN mode
@@ -662,15 +668,16 @@ def superuser(
                 username = typer.prompt("Username")
             if not password:
                 password = typer.prompt("Password", hide_input=True)
-        
+
         from langflow.services.database.models.user.crud import get_all_superusers
+
         existing_superusers = []
         async with session_scope() as session:
             # Note that the default superuser is created by the initialize_services() function,
             # but leaving this check here in case we change that behavior
             existing_superusers = await get_all_superusers(session)
         is_first_setup = len(existing_superusers) == 0
-        
+
         # If AUTO_LOGIN is true, only allow default superuser creation
         if settings_service.auth_settings.AUTO_LOGIN:
             if not is_first_setup:
@@ -680,41 +687,42 @@ def superuser(
                 typer.echo("1. Set LANGFLOW_AUTO_LOGIN=false")
                 typer.echo("2. Run this command again with --auth-token")
                 raise typer.Exit(1)
-            
+
             typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
             typer.echo(f"Note: Default credentials are {DEFAULT_SUPERUSER}/{DEFAULT_SUPERUSER_PASSWORD}")
+        # AUTO_LOGIN is false - production mode
+        elif is_first_setup:
+            typer.echo("No superusers found. Creating first superuser...")
         else:
-            # AUTO_LOGIN is false - production mode
-            if is_first_setup:
-                typer.echo("No superusers found. Creating first superuser...")
-            else:
-                # Authentication is required in production mode
-                if not auth_token:
-                    typer.echo("Error: Creating a superuser requires authentication.")
-                    typer.echo("Please provide --auth-token with a valid superuser API key or JWT token.")
-                    typer.echo("To get a token, use: langflow api_key (if you have access)")
-                    raise typer.Exit(1)
-                
-                # Validate the auth token
-                try:
-                    async with session_scope() as session:
-                        # Try JWT first
-                        user = None
-                        try:
-                            user = await get_current_user_by_jwt(auth_token, session)
-                        except JWTError:
-                            # Try API key
-                            api_key_result = await check_key(session, auth_token)
-                            if api_key_result and hasattr(api_key_result, 'is_superuser'):
-                                user = api_key_result
-                        
-                        if not user or not user.is_superuser:
-                            typer.echo("Error: Invalid token or insufficient privileges. Only superusers can create other superusers.")
-                            raise typer.Exit(1)
-                except Exception as e:
-                    typer.echo(f"Error: Authentication failed - {str(e)}")
-                    raise typer.Exit(1)
-        
+            # Authentication is required in production mode
+            if not auth_token:
+                typer.echo("Error: Creating a superuser requires authentication.")
+                typer.echo("Please provide --auth-token with a valid superuser API key or JWT token.")
+                typer.echo("To get a token, use: langflow api_key (if you have access)")
+                raise typer.Exit(1)
+
+            # Validate the auth token
+            try:
+                async with session_scope() as session:
+                    # Try JWT first
+                    user = None
+                    try:
+                        user = await get_current_user_by_jwt(auth_token, session)
+                    except JWTError:
+                        # Try API key
+                        api_key_result = await check_key(session, auth_token)
+                        if api_key_result and hasattr(api_key_result, "is_superuser"):
+                            user = api_key_result
+
+                    if not user or not user.is_superuser:
+                        typer.echo(
+                            "Error: Invalid token or insufficient privileges. Only superusers can create other superusers."
+                        )
+                        raise typer.Exit(1)
+            except Exception as e:
+                typer.echo(f"Error: Authentication failed - {e!s}")
+                raise typer.Exit(1)
+
         # Auth complete, create the superuser
         async with session_scope() as session:
             from langflow.services.auth.utils import create_super_user
@@ -735,11 +743,11 @@ def superuser(
                 else:
                     msg = "Could not create default folder."
                     raise RuntimeError(msg)
-                
+
                 # Log the superuser creation for audit purposes
                 logger.warning(
                     f"SECURITY AUDIT: New superuser '{username}' created via CLI command"
-                    + (f" by authenticated user" if auth_token else " (first-time setup)")
+                    + (" by authenticated user" if auth_token else " (first-time setup)")
                 )
                 typer.echo("Superuser created successfully.")
 

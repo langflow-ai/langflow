@@ -39,7 +39,7 @@ class AuthSettings(BaseSettings):
     skip_auth_auto_login: bool = True
     """If True, the application will skip authentication when AUTO_LOGIN is enabled.
     This will be removed in v1.6"""
-    
+
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,
         description="Allow creation of superusers via CLI. Set to False in production for security.",
