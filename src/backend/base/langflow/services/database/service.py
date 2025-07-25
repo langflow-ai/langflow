@@ -40,6 +40,7 @@ class DatabaseService(Service):
     name = "database_service"
 
     def __init__(self, settings_service: SettingsService):
+        self.engine: AsyncEngine | None = None
         self._logged_pragma = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
@@ -57,6 +58,7 @@ class DatabaseService(Service):
         # register the event listener for sqlite as part of this class.
         # Using decorator will make the method not able to use self
         event.listen(Engine, "connect", self.on_connection)
+
         if self.settings_service.settings.database_connection_retry:
             self.engine = self._create_engine_with_retry()
         else:
@@ -68,6 +70,23 @@ class DatabaseService(Service):
             self.alembic_log_path = Path(alembic_log_file)
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+
+        self._database_available = False
+
+    # Check if there's a message table in the database
+    async def _is_database_available(self) -> bool:
+        async with self.with_session() as session, session.bind.connect() as conn:
+            # Use run_sync to inspect the connection
+            def check_tables(conn):
+                inspector = inspect(conn)
+                return "message" in inspector.get_table_names()
+
+            self._database_available = await conn.run_sync(check_tables)
+        return self._database_available
+
+    @property
+    def database_available(self) -> bool:
+        return self._database_available
 
     async def initialize_alembic_log_file(self):
         # Ensure the directory and file for the alembic log file exists
@@ -373,6 +392,7 @@ class DatabaseService(Service):
                 logger.debug("Alembic not initialized")
                 should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+        self._database_available = await self._is_database_available()
 
     @staticmethod
     def try_downgrade_upgrade_until_success(alembic_cfg, retries=5) -> None:
@@ -480,4 +500,6 @@ class DatabaseService(Service):
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             logger.exception("Error tearing down database")
-        await self.engine.dispose()
+        if self.engine is not None:
+            await self.engine.dispose()
+            self.engine = None

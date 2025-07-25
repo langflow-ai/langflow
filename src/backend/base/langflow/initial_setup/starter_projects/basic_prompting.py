@@ -19,7 +19,7 @@ Answer:
         user_input=chat_input.message_response,
     )
 
-    openai_component = OpenAIModelComponent()
+    openai_component = OpenAIModelComponent(model_name="gpt-4.1-nano")
     openai_component.set(input_value=prompt_component.build_prompt)
 
     chat_output = ChatOutput()

@@ -25,7 +25,11 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.cli.commands import serve_command
 from langflow.cli.progress import create_langflow_progress
+from langflow.cli.script_loader import (
+    extract_text_from_result,
+)
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
@@ -299,12 +303,12 @@ def run(
                 settings_service.auth_settings.set(arg, values[arg])
             logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
-        # Get final values from settings
-        host = settings_service.settings.host
-        port = settings_service.settings.port
+        # Get final values from settings and ensure proper types
+        host = settings_service.settings.host or "127.0.0.1"
+        port = int(settings_service.settings.port or 7860)
         workers = settings_service.settings.workers
         worker_timeout = settings_service.settings.worker_timeout
-        log_level = settings_service.settings.log_level
+        log_level = settings_service.settings.log_level or "info"
         frontend_path = settings_service.settings.frontend_path
         backend_only = settings_service.settings.backend_only
         ssl_cert_file_path = (
@@ -779,6 +783,82 @@ def api_key(
     # Create a banner to display the API key and tell the user it won't be shown again
     if unmasked_api_key:
         api_key_banner(unmasked_api_key)
+
+
+@app.command(
+    help=(
+        "Execute a Langflow graph script or JSON flow and return the result. "
+        "Designed for containers and serverless environments."
+    )
+)
+def execute(
+    script_path: Path = typer.Argument(  # noqa: B008
+        ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
+    ),
+    input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
+    output_format: str = typer.Option("json", "--format", "-f", help="Output format: json, text, message, or result"),
+) -> None:
+    """Execute a Langflow graph script or JSON flow and return the result.
+
+    Designed for containers and serverless environments.
+    """
+    import json
+
+    from langflow.cli.common import (
+        create_verbose_printer,
+        execute_graph_with_capture,
+        extract_result_data,
+        load_graph_from_path,
+        prepare_graph,
+        validate_script_path,
+    )
+
+    verbose_print = create_verbose_printer(verbose=verbose)
+
+    # Validate input file and get extension
+    file_extension, resolved_path = validate_script_path(script_path, verbose_print)
+
+    # Load the graph
+    graph = load_graph_from_path(resolved_path, file_extension, verbose_print, verbose=verbose)
+
+    # Prepare the graph
+    prepare_graph(graph, verbose_print)
+
+    # Execute graph and capture output
+    results, captured_logs = execute_graph_with_capture(graph, input_value)
+
+    # Format output based on the requested format
+    if output_format == "json":
+        result_data = extract_result_data(results, captured_logs)
+
+        # In quiet mode (default), use compact JSON without indentation
+        indent = 2 if verbose else None
+        typer.echo(json.dumps(result_data, indent=indent))
+
+    elif output_format in {"text", "message"}:
+        result_data = extract_result_data(results, captured_logs)
+        # Access the result field, fall back to text field for backwards compatibility
+        output_text = result_data.get("result", result_data.get("text", ""))
+        typer.echo(str(output_text))
+
+    elif output_format == "result":
+        typer.echo(extract_text_from_result(results))
+
+    else:
+        # Default to structured JSON output
+        result_data = extract_result_data(results, captured_logs)
+
+        # In quiet mode (default), use compact JSON without indentation
+        indent = 2 if verbose else None
+        typer.echo(json.dumps(result_data, indent=indent))
+
+
+# Register the serve command
+app.command(
+    name="serve",
+    help="Serve Langflow flows as a web API or MCP server. Supports single files, folders, and GitHub repos.",
+)(serve_command)
 
 
 def show_version(*, value: bool):

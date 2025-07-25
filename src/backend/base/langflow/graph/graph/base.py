@@ -117,7 +117,7 @@ class Graph:
         self.parent_child_map: dict[str, list[str]] = defaultdict(list)
         self._run_queue: deque[str] = deque()
         self._first_layer: list[str] = []
-        self._lock = asyncio.Lock()
+        self._lock = None  # Lazy initialization
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: bool | None = None
         self._cycles: list[tuple[str, str]] | None = None
@@ -141,6 +141,13 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
+
+    @property
+    def lock(self):
+        """Lazy initialization of asyncio.Lock to avoid event loop binding issues."""
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     @property
     def context(self) -> dotdict:
@@ -332,7 +339,7 @@ class Graph:
 
     async def async_start(
         self,
-        inputs: list[dict] | None = None,
+        inputs: InputValueRequest | list[dict] | None = None,
         max_iterations: int | None = None,
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
@@ -344,16 +351,12 @@ class Graph:
         # each step call and raise StopIteration when the graph is done
         if config is not None:
             self.__apply_config(config)
-        for _input in inputs or []:
-            for key, value in _input.items():
-                vertex = self.get_vertex(key)
-                vertex.set_input_value(key, value)
         # I want to keep a counter of how many tyimes result.vertex.id
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager)
+            result = await self.astep(inputs=inputs, event_manager=event_manager)
             yield result
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
@@ -380,6 +383,12 @@ class Graph:
                 for key, value in config["output"].items():
                     setattr(output, key, value)
 
+    def _reset_all_output_values(self) -> None:
+        for vertex in self.vertices:
+            if vertex.custom_component is None:
+                continue
+            vertex.custom_component._reset_all_output_values()
+
     def start(
         self,
         inputs: list[dict] | None = None,
@@ -398,6 +407,8 @@ class Graph:
         Returns:
             Generator yielding results from graph execution
         """
+        self.prepare()
+        self._reset_all_output_values()
         if self.is_cyclic and max_iterations is None:
             msg = "You must specify a max_iterations if the graph is cyclic"
             raise ValueError(msg)
@@ -1038,6 +1049,8 @@ class Graph:
         else:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
+        # Recreate the lock after unpickling
+        self._lock = None  # Lazy initialization
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         self.tracing_service = get_tracing_service()
         self.set_run_id(self._run_id)
@@ -1315,7 +1328,7 @@ class Graph:
 
     async def astep(
         self,
-        inputs: InputValueRequest | None = None,
+        inputs: InputValueRequest | list[dict] | None = None,
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
@@ -1331,7 +1344,7 @@ class Graph:
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
-            inputs_dict=inputs.model_dump() if inputs else {},
+            inputs_dict=inputs.model_dump() if inputs and hasattr(inputs, "model_dump") else None,
             files=files,
             get_cache=chat_service.get_cache,
             set_cache=chat_service.set_cache,
@@ -1339,7 +1352,7 @@ class Graph:
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
-            self._lock, vertex=vertex_build_result.vertex, cache=False
+            self.lock, vertex=vertex_build_result.vertex, cache=False
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
@@ -1906,7 +1919,7 @@ class Graph:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
-        if node_name in InterfaceComponentTypes:
+        if node_name in InterfaceComponentTypes or node_type in InterfaceComponentTypes:
             return InterfaceVertex
         if node_name in {"SharedState", "Notify", "Listen"}:
             return StateVertex
