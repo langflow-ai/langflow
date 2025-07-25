@@ -14,8 +14,9 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
+from lfx.graph import Graph
+
 if TYPE_CHECKING:
-    from lfx.graph import Graph
     from lfx.schema.message import Message
 
 
@@ -47,10 +48,8 @@ def _load_module_from_script(script_path: Path) -> Any:
     return module
 
 
-def _validate_graph_instance(graph_obj: Any) -> "Graph":
+def _validate_graph_instance(graph_obj: Any) -> Graph:
     """Extract information from a graph object."""
-    from lfx.graph import Graph
-
     if not isinstance(graph_obj, Graph):
         msg = f"Graph object is not a LFX Graph instance: {type(graph_obj)}"
         raise TypeError(msg)
@@ -72,7 +71,7 @@ def _validate_graph_instance(graph_obj: Any) -> "Graph":
     return graph_obj
 
 
-def load_graph_from_script(script_path: Path) -> "Graph":
+def load_graph_from_script(script_path: Path) -> Graph:
     """Load and execute a Python script to extract the 'graph' variable.
 
     Args:
@@ -94,7 +93,15 @@ def load_graph_from_script(script_path: Path) -> "Graph":
         graph_obj = module.graph
         return _validate_graph_instance(graph_obj)
 
-    except (ImportError, AttributeError, ModuleNotFoundError, SyntaxError, TypeError, ValueError) as e:
+    except (
+        ImportError,
+        AttributeError,
+        ModuleNotFoundError,
+        SyntaxError,
+        TypeError,
+        ValueError,
+        FileNotFoundError,
+    ) as e:
         error_msg = f"Error executing script '{script_path}': {e}"
         raise RuntimeError(error_msg) from e
 
