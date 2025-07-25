@@ -25,8 +25,8 @@ from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 
-from .endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 from ...schema.content_types import ToolContent
+from .endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 
 router = APIRouter(tags=["OpenAI Responses API"])
 
@@ -210,9 +210,9 @@ async def run_flow_for_openai_responses(
                                                                         "id": f"{tool_name}_{tool_id}",
                                                                         "inputs": tool_input,  # Raw inputs as-is
                                                                         "status": "completed",
-                                                                        "type": f"tool_call",
+                                                                        "type": "tool_call",
                                                                         "tool_name": f"{tool_name}",
-                                                                        "results": tool_output  # Raw output as-is
+                                                                        "results": tool_output,  # Raw output as-is
                                                                     },
                                                                     "output_index": 0,
                                                                     "sequence_number": tool_call_counter + 5,
@@ -308,7 +308,7 @@ async def run_flow_for_openai_responses(
     # Extract output text and tool calls from result
     output_text = ""
     tool_calls = []
-    
+
     if result.outputs:
         for run_output in result.outputs:
             if run_output and run_output.outputs:
@@ -334,11 +334,13 @@ async def run_flow_for_openai_responses(
                             for blocks in component_output.results.get("message", {}).content_blocks:
                                 for content in blocks.contents:
                                     if isinstance(content, ToolContent):
-                                        tool_calls.append({
-                                            "name": content.name,
-                                            "input": content.tool_input,
-                                            "output": content.output
-                                        })
+                                        tool_calls.append(
+                                            {
+                                                "name": content.name,
+                                                "input": content.tool_input,
+                                                "output": content.output,
+                                            }
+                                        )
                     if output_text:
                         break
             if output_text:
@@ -346,17 +348,19 @@ async def run_flow_for_openai_responses(
 
     # Build output array
     output_items = []
-    
+
     # Add tool calls if includes parameter requests them
     include_results = request.include and "tool_call.results" in request.include
-    
+
     tool_call_id_counter = 1
     for tool_call in tool_calls:
         if include_results:
             # Format as detailed tool call with results (like file_search_call in sample)
             tool_call_item = {
                 "id": f"{tool_call['name']}_{tool_call_id_counter}",
-                "queries": list(tool_call["input"].values()) if isinstance(tool_call["input"], dict) else [str(tool_call["input"])],
+                "queries": list(tool_call["input"].values())
+                if isinstance(tool_call["input"], dict)
+                else [str(tool_call["input"])],
                 "status": "completed",
                 "tool_name": f"{tool_call['name']}",
                 "type": "tool_call",
@@ -371,7 +375,7 @@ async def run_flow_for_openai_responses(
                 "name": tool_call["name"],
                 "arguments": json.dumps(tool_call["input"]) if tool_call["input"] is not None else "{}",
             }
-        
+
         output_items.append(tool_call_item)
         tool_call_id_counter += 1
 
