@@ -3,6 +3,7 @@ name: Smoke Tests
 on:
   pull_request:
     types: [opened, labeled, synchronize, reopened]
+  workflow_dispatch:
 
 jobs:
   smoke-tests:
