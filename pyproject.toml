@@ -216,6 +216,11 @@ clickhouse-connect = [
     "clickhouse-connect==0.7.19"
 ]
 
+
+nemoguardrails = [
+    "nemoguardrails==0.14.1",
+]
+
 nv-ingest = [
     "nv-ingest-api==2025.4.22.dev20250422",
     "nv-ingest-client==2025.4.22.dev20250422",
@@ -229,7 +234,11 @@ postgresql = [
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
-    "python-pptx>=1.0.2"
+    "python-pptx>=1.0.2",
+    # pin fastembed to latest version compatible with nemoguardrails 0.14.1
+    "fastembed==0.6.0",
+    "numpy>=1.26.0,<2.0.0",
+    "huggingface-hub>=0.23.2,<0.26.5"
 ]
 
 [project.scripts]
