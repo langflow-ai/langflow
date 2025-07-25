@@ -138,6 +138,12 @@ unit_tests: ## run unit tests
 unit_tests_looponfail:
 	@make unit_tests args="-f"
 
+lfx_tests: ## run lfx package unit tests
+	@echo 'Running LFX Package Tests...'
+	@cd src/lfx && \
+	uv sync && \
+	uv run pytest tests/unit -v $(args)
+
 integration_tests:
 	uv run pytest src/backend/tests/integration \
 		--instafail -ra \

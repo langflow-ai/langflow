@@ -2,8 +2,10 @@ import copy
 import json
 
 import pytest
-from langflow.graph import Graph
-from langflow.graph.graph.utils import (
+from langflow.initial_setup.setup import load_starter_projects
+
+from lfx.graph import Graph
+from lfx.graph.graph.utils import (
     find_last_node,
     process_flow,
     set_new_target_handle,
@@ -12,8 +14,7 @@ from langflow.graph.graph.utils import (
     update_target_handle,
     update_template,
 )
-from langflow.graph.vertex.base import Vertex
-from langflow.initial_setup.setup import load_starter_projects
+from lfx.graph.vertex.base import Vertex
 
 # Test cases for the graph module
 

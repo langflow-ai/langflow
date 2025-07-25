@@ -54,7 +54,8 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("stdio-name-input").fill("test server");
+    const serverName = `test server ${Date.now()}`;
+    await page.getByTestId("stdio-name-input").fill(serverName);
 
     await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
 
@@ -115,12 +116,12 @@ test(
       timeout: 3000,
     });
 
-    await expect(page.getByText("test_server")).toBeVisible({
-      timeout: 3000,
+    await page.waitForSelector(`text=${serverName}`, {
+      timeout: 10000,
     });
 
     await page
-      .getByTestId(`mcp-server-menu-button-test_server`)
+      .getByTestId(`mcp-server-menu-button-${serverName}`)
       .click({ timeout: 3000 });
 
     await page
@@ -152,7 +153,7 @@ test(
     await page.getByTestId("add-mcp-server-button").click();
 
     await page
-      .getByTestId(`mcp-server-menu-button-test_server`)
+      .getByTestId(`mcp-server-menu-button-${serverName}`)
       .click({ timeout: 3000 });
 
     await page
@@ -177,7 +178,7 @@ test(
 
     await page.waitForTimeout(3000);
 
-    await expect(page.getByText("test_server")).not.toBeVisible({
+    await expect(page.getByText(serverName)).not.toBeVisible({
       timeout: 3000,
     });
 
@@ -199,7 +200,7 @@ test(
     });
 
     await page.getByTestId("mcp-server-dropdown").click({ timeout: 10000 });
-    await expect(page.getByText("test_server")).toHaveCount(2, {
+    await expect(page.getByText(serverName)).toHaveCount(2, {
       timeout: 10000,
     });
   },

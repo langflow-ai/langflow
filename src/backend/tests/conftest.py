@@ -17,8 +17,6 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.input_output import ChatInput
-from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
@@ -38,6 +36,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+from lfx.components.input_output import ChatInput
+from lfx.graph import Graph
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
@@ -374,7 +374,7 @@ def deactivate_tracing(monkeypatch):
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
     # Optionally patch the Settings object if needed
-    # from langflow.services.settings.base import Settings
+    # from lfx.services.settings.base import Settings
     # monkeypatch.setattr(Settings, "use_noop_database", True)
     yield
     monkeypatch.undo()
@@ -404,7 +404,7 @@ async def client_fixture(
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
             # Clear the services cache
-            from langflow.services.manager import service_manager
+            from lfx.services.manager import service_manager
 
             service_manager.factories.clear()
             service_manager.services.clear()  # Clear the services cache

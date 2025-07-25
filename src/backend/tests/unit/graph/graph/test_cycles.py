@@ -1,16 +1,17 @@
 import os
 
 import pytest
-from langflow.components.input_output import ChatInput, ChatOutput, TextOutputComponent
-from langflow.components.input_output.text import TextInputComponent
-from langflow.components.logic.conditional_router import ConditionalRouterComponent
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.processing import PromptComponent
-from langflow.custom.custom_component.component import Component
-from langflow.graph.graph.base import Graph
-from langflow.graph.graph.utils import find_cycle_vertices
-from langflow.io import MessageTextInput, Output
-from langflow.schema.message import Message
+
+from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
+from lfx.components.input_output.text import TextInputComponent
+from lfx.components.logic.conditional_router import ConditionalRouterComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import PromptComponent
+from lfx.custom.custom_component.component import Component
+from lfx.graph.graph.base import Graph
+from lfx.graph.graph.utils import find_cycle_vertices
+from lfx.io import MessageTextInput, Output
+from lfx.schema.message import Message
 
 
 class Concatenate(Component):
@@ -81,7 +82,7 @@ def test_cycle_in_graph():
     ], f"Results: {results_ids}"
 
 
-def test_cycle_in_graph_max_iterations():
+async def test_cycle_in_graph_max_iterations():
     text_input = TextInputComponent(_id="text_input")
     router = ConditionalRouterComponent(_id="router")
     # Connect text_input to router's input
@@ -108,7 +109,7 @@ def test_cycle_in_graph_max_iterations():
     assert "router" not in graph._run_queue
 
     with pytest.raises(ValueError, match="Max iterations reached"):
-        list(graph.start(max_iterations=2, config={"output": {"cache": False}}))
+        [result async for result in graph.async_start(max_iterations=2, config={"output": {"cache": False}})]
 
 
 def test_that_outputs_cache_is_set_to_false_in_cycle():
@@ -286,7 +287,7 @@ def test_updated_graph_with_max_iterations():
     assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}. Snapshots: {snapshots}"
 
 
-def test_conditional_router_max_iterations():
+async def test_conditional_router_max_iterations():
     # Chat input initialization
     text_input = TextInputComponent(_id="text_input")
 
@@ -318,7 +319,7 @@ def test_conditional_router_max_iterations():
     results = []
     snapshots = [graph.get_snapshot()]
     previous_iteration = graph.context.get("router_iteration", 0)
-    for result in graph.start(max_iterations=20, config={"output": {"cache": False}}):
+    async for result in graph.async_start(max_iterations=20, config={"output": {"cache": False}}):
         snapshots.append(graph.get_snapshot())
         results.append(result)
         if hasattr(result, "vertex") and result.vertex.id == "router":

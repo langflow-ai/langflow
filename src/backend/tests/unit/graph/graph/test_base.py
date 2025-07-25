@@ -2,11 +2,12 @@ import logging
 from collections import deque
 
 import pytest
-from langflow.components.input_output import ChatInput, ChatOutput, TextOutputComponent
-from langflow.components.langchain_utilities import ToolCallingAgentComponent
-from langflow.components.tools import YfinanceToolComponent
-from langflow.graph import Graph
-from langflow.graph.graph.constants import Finish
+
+from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
+from lfx.components.langchain_utilities import ToolCallingAgentComponent
+from lfx.components.tools import YfinanceToolComponent
+from lfx.graph import Graph
+from lfx.graph.graph.constants import Finish
 
 
 async def test_graph_not_prepared():
@@ -83,7 +84,7 @@ async def test_graph_functional_async_start():
     assert results[-1] == Finish()
 
 
-def test_graph_functional_start():
+async def test_graph_functional_start():
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(input_value="test", _id="chat_output")
     chat_output.set(sender_name=chat_input.message_response)
@@ -93,7 +94,7 @@ def test_graph_functional_start():
     # and check that the graph is running
     # correctly
     ids = ["chat_input", "chat_output"]
-    results = list(graph.start())
+    results = [result async for result in graph.async_start()]
 
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))

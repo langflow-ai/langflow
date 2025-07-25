@@ -1,10 +1,11 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.components.xai.xai import XAIModelComponent
-from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template
-from langflow.inputs.inputs import (
+
+from lfx.components.xai.xai import XAIModelComponent
+from lfx.custom.custom_component.component import Component
+from lfx.custom.utils import build_custom_component_template
+from lfx.inputs.inputs import (
     BoolInput,
     DictInput,
     DropdownInput,
@@ -13,7 +14,6 @@ from langflow.inputs.inputs import (
     SecretStrInput,
     SliderInput,
 )
-
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -101,7 +101,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         component.base_url = "https://api.x.ai/v1"
         component.seed = 1
 
-        mock_chat_openai = mocker.patch("langflow.components.xai.xai.ChatOpenAI", return_value=MagicMock())
+        mock_chat_openai = mocker.patch("lfx.components.xai.xai.ChatOpenAI", return_value=MagicMock())
         model = component.build_model()
         mock_chat_openai.assert_called_once_with(
             max_tokens=100,
@@ -156,7 +156,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         component.seed = 1
 
         mocker.patch(
-            "langflow.components.xai.xai.ChatOpenAI",
+            "lfx.components.xai.xai.ChatOpenAI",
             side_effect=BadRequestError(
                 message="Invalid API key",
                 response=MagicMock(),
@@ -181,7 +181,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         mock_instance = MagicMock()
         mock_bound_instance = MagicMock()
         mock_instance.bind.return_value = mock_bound_instance
-        mocker.patch("langflow.components.xai.xai.ChatOpenAI", return_value=mock_instance)
+        mocker.patch("lfx.components.xai.xai.ChatOpenAI", return_value=mock_instance)
 
         model = component.build_model()
         mock_instance.bind.assert_called_once_with(response_format={"type": "json_object"})
