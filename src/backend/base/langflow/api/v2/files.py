@@ -277,7 +277,7 @@ async def delete_files_batch(
 
         # Delete all files from the storage service
         for file in files:
-            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path.split("/")[-1])
             await session.delete(file)
 
         # Delete all files from the database
@@ -475,7 +475,7 @@ async def delete_file(
             raise HTTPException(status_code=404, detail="File not found")
 
         # Delete the file from the storage service
-        await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_to_delete.path)
+        await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_to_delete.path.split("/")[-1])
 
         # Delete from the database
         await session.delete(file_to_delete)
@@ -507,7 +507,7 @@ async def delete_all_files(
 
         # Delete all files from the storage service
         for file in files:
-            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path.split("/")[-1])
             await session.delete(file)
 
         # Delete all files from the database
