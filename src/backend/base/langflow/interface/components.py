@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.custom.utils import abuild_custom_components, create_component_template, get_all_types_dict
+from langflow.custom.utils import abuild_custom_components, create_component_template
 from langflow.services.settings.base import BASE_COMPONENTS_PATH
 
 if TYPE_CHECKING:
