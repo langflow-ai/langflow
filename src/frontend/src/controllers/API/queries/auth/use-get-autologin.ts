@@ -54,7 +54,7 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
         setAutoLogin(false);
         const status = error.response?.status;
          if (status === 400 && IS_CLERK_AUTH) {
-          console.log("[AutoLogin] Clerk login - skipping logout on 400");
+          console.debug("[AutoLogin] Clerk login - skipping logout on 400");
         } else if (!isLoginPage) {
           await handleAutoLoginError();
         }

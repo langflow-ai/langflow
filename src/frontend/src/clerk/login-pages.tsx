@@ -1,5 +1,5 @@
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { SignIn, SignUp, useAuth, useUser , useClerk, SignedOut} from "@clerk/clerk-react";
+import { SignIn, SignUp as ClerkSignUp, useAuth, useUser , useClerk, SignedOut} from "@clerk/clerk-react";
 import { lazy, useEffect, useState } from "react";
 import { ensureLangflowUser, useLogout } from "./auth";
 import { IS_CLERK_AUTH } from "@/clerk/auth";
@@ -7,11 +7,13 @@ import { IS_CLERK_AUTH } from "@/clerk/auth";
 export function ClerkLoginPage() {
   return (
     <SignedOut>
-      <SignIn
-        path="/login"
-        routing="path"
-        afterSignInUrl="/"
-      />
+      <div style={centeredStyle}>
+        <SignIn
+          path="/login"
+          routing="path"
+          afterSignInUrl="/"
+        />
+      </div>
     </SignedOut>
   );
 }
@@ -28,20 +30,20 @@ export function ClerkSignUpPage() {
   useEffect(() => {
     async function handleSignup() {
       if (isSignedIn && user && !processed) {
-        console.log("[ClerkSignUpPage] User is signed in, processing sign up...");
+        console.debug("[ClerkSignUpPage] User is signed in, processing sign up...");
         setProcessed(true);
         const token = await getToken();
         if (token) {
           const username =
             user.username || user.primaryEmailAddress?.emailAddress || user.id;
-          console.log(`[ClerkSignUpPage] Creating Langflow user for: ${username}`);
+          console.debug(`[ClerkSignUpPage] Creating Langflow user for: ${username}`);
           await ensureLangflowUser(token, username);
         } else {
-          console.log("[ClerkSignUpPage] No token received from Clerk.");
+          console.warn("[ClerkSignUpPage] No token received from Clerk.");
         }
-        console.log("[ClerkSignUpPage] Signing out user after sign up.");
+        console.debug("[ClerkSignUpPage] Signing out user after sign up.");
         await logout();
-        console.log("[ClerkSignUpPage] Redirecting to /login after sign up.");
+        console.debug("[ClerkSignUpPage] Redirecting to /login after sign up.");
         navigate("/login");
       }
     }
@@ -50,11 +52,13 @@ export function ClerkSignUpPage() {
 
   return (
     <SignedOut>
-      <SignUp
-        path="/sign-up"
-        routing="path"
-        afterSignUpUrl="/login"
-      />
+      <div style={centeredStyle}>
+        <ClerkSignUp
+          path="/sign-up"
+          routing="path"
+          afterSignUpUrl="/login"
+        />
+      </div>
     </SignedOut>
   );
 }
@@ -65,6 +69,12 @@ import OriginalSignUp from "../pages/SignUpPage";
 const OriginalLoginAdminPage = lazy(() => import("../pages/AdminPage/LoginPage"));
 
 export const LoginPage = IS_CLERK_AUTH ? ClerkLoginPage : OriginalLoginPage;
-export const SignUpPage = IS_CLERK_AUTH ? ClerkSignUpPage : OriginalSignUp;
+export const SignUp = IS_CLERK_AUTH ? ClerkSignUpPage : OriginalSignUp;
 export const LoginAdminPage = IS_CLERK_AUTH ? ClerkLoginPage : OriginalLoginAdminPage;
 
+const centeredStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  minHeight: "100vh",
+};

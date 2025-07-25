@@ -3,7 +3,6 @@ import { AuthContext } from "@/contexts/authContext";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useLogout as useLogoutMutation } from "@/controllers/API/queries/auth";
-import useAuthStore from "@/stores/authStore";
 import { ClerkProvider, useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { Users } from "@/types/api";
 import { LANGFLOW_ACCESS_TOKEN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
@@ -33,13 +32,13 @@ export async function ensureLangflowUser(token: string, username: string): Promi
       headers: { Authorization: `Bearer ${token}` },
     });
     const user = whoAmIRes.data;
-    console.log(`[ensureLangflowUser] user exists: ${username}`);
+    console.debug(`[ensureLangflowUser] user exists: ${username}`);
     return { justCreated: false, user };
   } catch (err: any) {
     const status = err?.response?.status;
     console.warn(`[ensureLangflowUser] whoami failed (${status})`);
     if (status === HttpStatusCode.UNAUTHORIZED) {
-      console.log("[ensureLangflowUser] trying to create user...");
+      console.debug("[ensureLangflowUser] trying to create user...");
       const createRes = await api.post(
         `${getURL("USERS")}/`,
         { username, password: CLERK_DUMMY_PASSWORD },
@@ -109,7 +108,7 @@ export function ClerkAuthAdapter() {
         const { refresh_token } = await backendLogin(username, token);
         login(token, "login", refresh_token);
         justLoggedIn.current = true;
-        console.log("[ClerkAuthAdapter] login complete");
+        console.debug("[ClerkAuthAdapter] login complete");
       } catch (err) {
         if (!justLoggedIn.current) {
           console.error("[ClerkAuthAdapter] syncToken error:", err);
@@ -126,7 +125,7 @@ export function ClerkAuthAdapter() {
 const prevTokenRef = useRef<string | null>(null);
 useEffect(() => {
     const unsubscribe = clerk.addListener(async ({ session }) => {
-      console.log("[ClerkAuthAdapter] Token update event received");
+      console.debug("[ClerkAuthAdapter] Token update event received");
       const token = await session?.getToken();
       if (!token) return;
       const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
@@ -135,7 +134,7 @@ useEffect(() => {
         prevTokenRef.current = token;
         return;
       }
-      console.log("[ClerkAuthAdapter] Is Token Same:", token === current);
+      console.debug("[ClerkAuthAdapter] Is Token Same:", token === current);
       if (token !== prevTokenRef.current) {
         prevTokenRef.current = token;
         const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
