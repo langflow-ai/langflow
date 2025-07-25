@@ -53,10 +53,6 @@ const KnowledgeBasesTab = ({
 
   const { data: knowledgeBases, isLoading, error } = useGetKnowledgeBases();
 
-  const handleCreateKnowledgeBaseTemplate = () => {
-    console.log("fix this");
-  };
-
   const deleteKnowledgeBaseMutation = useDeleteKnowledgeBase(
     {
       kb_name: knowledgeBaseToDelete?.id || "",
@@ -146,11 +142,7 @@ const KnowledgeBasesTab = ({
   }
 
   if (knowledgeBases.length === 0) {
-    return (
-      <KnowledgeBaseEmptyState
-        onCreateKnowledgeBase={handleCreateKnowledgeBaseTemplate}
-      />
-    );
+    return <KnowledgeBaseEmptyState />;
   }
 
   return (
