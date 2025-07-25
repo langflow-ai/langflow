@@ -198,10 +198,10 @@ async def run_flow_for_openai_responses(
                                                         if tool_output is not None:
                                                             # Check if include parameter requests tool_call.results
                                                             include_results = (
-                                                                request.include 
+                                                                request.include
                                                                 and "tool_call.results" in request.include
                                                             )
-                                                            
+
                                                             if include_results:
                                                                 # Format with detailed results - preserve original structure
                                                                 tool_done_event = {
@@ -215,7 +215,7 @@ async def run_flow_for_openai_responses(
                                                                         "results": tool_output  # Raw output as-is
                                                                     },
                                                                     "output_index": 0,
-                                                                    "sequence_number": tool_call_counter + 5
+                                                                    "sequence_number": tool_call_counter + 5,
                                                                 }
                                                             else:
                                                                 # Regular function call format
@@ -230,7 +230,7 @@ async def run_flow_for_openai_responses(
                                                                         "name": tool_name,
                                                                     },
                                                                 }
-                                                            
+
                                                             yield (
                                                                 f"event: response.output_item.done\n"
                                                                 f"data: {json.dumps(tool_done_event)}\n\n"
