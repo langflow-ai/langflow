@@ -40,6 +40,12 @@ For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`.
     * `LANGFLOW_LOG_ENV=container_csv`: Outputs CSV-formatted plain text to stdout.
     * `LANGFLOW_LOG_ENV=default` or unset: Outputs prettified output with [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html).
 
+* `LANGFLOW_LOG_ROTATION` controls when the log file is rotated, either based on time or file size. By default, logs are rotated every 1 day.
+
+    * Time-based rotation: "1 day", "12 hours", "1 week"
+    * Size-based rotation: "10 MB", "1 GB"
+    * Disable rotation: "None" (log files will grow without limit)
+
 A complete example `.env` file is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
 
 ## Flow and component logs

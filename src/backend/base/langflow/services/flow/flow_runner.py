@@ -46,12 +46,19 @@ class LangflowRunnerExperimental:
         should_initialize_db: bool = True,
         log_level: str | None = None,
         log_file: str | None = None,
+        log_rotation: str | None = None,
         disable_logs: bool = False,
         async_log_file: bool = True,
     ):
         self.should_initialize_db = should_initialize_db
         log_file_path = Path(log_file) if log_file else None
-        configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, async_file=async_log_file)
+        configure(
+            log_level=log_level,
+            log_file=log_file_path,
+            log_rotation=log_rotation,
+            disable=disable_logs,
+            async_file=async_log_file,
+        )
 
     async def run(
         self,
