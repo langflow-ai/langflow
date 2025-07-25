@@ -154,43 +154,54 @@ const router = createBrowserRouter(
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>
+                <Route
+                  path="admin"
+                  element={
+                    <ProtectedAdminRoute>
+                      <AdminPage />
+                    </ProtectedAdminRoute>
+                  }
+                />
+              </Route>
+              <Route path="flow/:id/">
+                <Route path="" element={<CustomDashboardWrapperPage />}>
+                  <Route path="folder/:folderId/" element={<FlowPage />} />
+                  <Route path="" element={<FlowPage />} />
+                </Route>
+                <Route path="view" element={<ViewPage />} />
               </Route>
             </Route>
-            <Route path="flow/:id/">
-              <Route path="" element={<FlowPage />} />
-            </Route>
-            <Route path="view/:id">
-              <Route path="" element={<ViewPage />} />
-            </Route>
           </Route>
+          <Route
+            path="login"
+            element={
+              <ProtectedLoginRoute>
+                <LoginPage />
+              </ProtectedLoginRoute>
+            }
+          />
+          <Route
+            path="signup"
+            element={
+              <ProtectedLoginRoute>
+                <SignUp />
+              </ProtectedLoginRoute>
+            }
+          />
+          <Route
+            path="login/admin"
+            element={
+              <ProtectedLoginRoute>
+                <LoginAdminPage />
+              </ProtectedLoginRoute>
+            }
+          />
         </Route>
       </Route>
-      <Route
-        path="login"
-        element={
-          <ProtectedLoginRoute>
-            <LoginPage />
-          </ProtectedLoginRoute>
-        }
-      />
-      <Route path="signup" element={<SignUp />} />
-      <Route path="admin">
-        <Route
-          path=""
-          element={
-            <ProtectedAdminRoute>
-              <AdminPage />
-            </ProtectedAdminRoute>
-          }
-        />
-        <Route path="login" element={<LoginAdminPage />} />
-      </Route>
-      {CustomRoutesStore()}
+      <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
   ]),
-  {
-    basename: BASENAME,
-  },
+  { basename: BASENAME || undefined },
 );
 
 export default router;
