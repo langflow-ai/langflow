@@ -13,10 +13,11 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
+from lfx.services.schema import ServiceType
+
 if TYPE_CHECKING:
     from lfx.services.base import Service
     from lfx.services.factory import ServiceFactory
-    from lfx.services.schema import ServiceType
 
 
 class NoFactoryRegisteredError(Exception):
@@ -74,8 +75,16 @@ class ServiceManager:
         logger.debug(f"Create service {service_name}")
         self._validate_service_creation(service_name, default)
 
+        if service_name == ServiceType.SETTINGS_SERVICE:
+            from lfx.services.settings.factory import SettingsServiceFactory
+
+            factory = SettingsServiceFactory()
+            if factory not in self.factories:
+                self.register_factory(factory)
+        else:
+            factory = self.factories.get(service_name)
+
         # Create dependencies first
-        factory = self.factories.get(service_name)
         if factory is None and default is not None:
             self.register_factory(default)
             factory = default
@@ -95,6 +104,8 @@ class ServiceManager:
 
     def _validate_service_creation(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
         """Validate whether the service can be created."""
+        if service_name == ServiceType.SETTINGS_SERVICE:
+            return
         if service_name not in self.factories and default is None:
             msg = f"No factory registered for the service class '{service_name.name}'"
             raise NoFactoryRegisteredError(msg)
