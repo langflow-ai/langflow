@@ -98,7 +98,10 @@
     "serve": "vite preview",
     "format": "npx @biomejs/biome check --write",
     "check-format": "npx @biomejs/biome check",
-    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
+    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite",
+    "start:webpack": "webpack serve --config webpack.config.js --env development",
+    "build:webpack": "webpack --config webpack.config.js --mode production",
+    "serve:webpack": "serve -l 3030 dist"
   },
   "browserslist": {
     "production": [
@@ -114,9 +117,15 @@
   },
   "proxy": "http://localhost:7860",
   "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@playwright/test": "^1.52.0",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.1",
+    "@svgr/webpack": "^8.1.0",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
     "@tailwindcss/typography": "^0.5.13",
@@ -132,15 +141,27 @@
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react-swc": "^3.7.0",
     "autoprefixer": "^10.4.19",
+    "babel-loader": "^10.0.0",
+    "copy-webpack-plugin": "^13.0.0",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.3",
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
     "postcss": "^8.4.38",
+    "process": "^0.11.10",
+    "react-refresh": "^0.17.0",
+    "sass": "^1.89.2",
+    "sass-loader": "^16.0.5",
+    "style-loader": "^4.0.0",
     "tailwindcss": "^3.4.4",
     "tailwindcss-dotted-background": "^1.1.0",
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "webpack": "^5.100.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   }
 }
