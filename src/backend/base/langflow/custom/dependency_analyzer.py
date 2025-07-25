@@ -143,6 +143,6 @@ def analyze_component_dependencies(component_code: str) -> dict:
 def _get_distribution_version(name: str):
     try:
         dist = md.distribution(name)
-        return dist.version
     except (md.PackageNotFoundError, ImportError, AttributeError):
         return None
+    return dist.version
