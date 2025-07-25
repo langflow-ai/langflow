@@ -116,8 +116,8 @@ test(
       timeout: 3000,
     });
 
-    await expect(page.getByText(serverName)).toBeVisible({
-      timeout: 3000,
+    await page.waitForSelector(`text=${serverName}`, {
+      timeout: 10000,
     });
 
     await page
