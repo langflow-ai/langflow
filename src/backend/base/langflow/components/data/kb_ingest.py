@@ -41,11 +41,11 @@ KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
 
 
 class KBIngestionComponent(Component):
-    """Create or append to a Langflow Knowledge Base from a DataFrame."""
+    """Create or append to Langflow Knowledge from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------
     display_name = "Create Knowledge"
-    description = "Create or append to a Langflow Knowledge Base from a DataFrame."
+    description = "Create or append to Langflow Knowledge from a DataFrame."
     icon = "database"
     name = "KBIngestion"
 
@@ -57,14 +57,14 @@ class KBIngestionComponent(Component):
                 "data": {
                     "node": {
                         "name": "create_knowledge_base",
-                        "description": "Create a new knowledge base in Langflow.",
-                        "display_name": "Create new knowledge base",
+                        "description": "Create new knowledge in Langflow.",
+                        "display_name": "Create new knowledge",
                         "field_order": ["01_new_kb_name", "02_embedding_model", "03_api_key"],
                         "template": {
                             "01_new_kb_name": StrInput(
                                 name="new_kb_name",
-                                display_name="Knowledge Base Name",
-                                info="Name of the new knowledge base to create.",
+                                display_name="Knowledge Name",
+                                info="Name of the new knowledge to create.",
                                 required=True,
                             ),
                             "02_embedding_model": DropdownInput(
@@ -93,8 +93,8 @@ class KBIngestionComponent(Component):
     inputs = [
         DropdownInput(
             name="knowledge_base",
-            display_name="Knowledge Base",
-            info="Select the knowledge base to load files from.",
+            display_name="Knowledge",
+            info="Select the knowledge to load data from.",
             required=True,
             options=[
                 str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()

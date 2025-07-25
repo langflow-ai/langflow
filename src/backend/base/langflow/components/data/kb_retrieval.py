@@ -19,15 +19,15 @@ KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
 
 class KBRetrievalComponent(Component):
     display_name = "Retrieve Knowledge"
-    description = "Retrieve data and perform searches against a particular knowledge base."
+    description = "Retrieve data and perform searches of knowledge."
     icon = "database"
     name = "KBRetrieval"
 
     inputs = [
         DropdownInput(
             name="knowledge_base",
-            display_name="Knowledge Base",
-            info="Select the knowledge base to load files from.",
+            display_name="Knowledge",
+            info="Select the knowledge to load data from.",
             required=True,
             options=[
                 str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
