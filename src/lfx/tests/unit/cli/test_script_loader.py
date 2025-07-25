@@ -112,26 +112,16 @@ class TestGraphValidation:
 
     def test_validate_graph_instance_valid(self):
         """Test validation of valid graph instance."""
-        # Mock a valid graph
-        mock_graph = MagicMock()
-        mock_graph.__class__.__name__ = "Graph"
-        mock_graph.__class__.__module__ = "lfx.graph"
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
 
-        # Mock vertices with ChatInput and ChatOutput
-        chat_input = MagicMock()
-        chat_input.custom_component.display_name = "Chat Input"
+        # Create a real graph with ChatInput and ChatOutput
+        chat_input = ChatInput()
+        chat_output = ChatOutput().set(input_value=chat_input.message_response)
+        graph = Graph(chat_input, chat_output)
 
-        chat_output = MagicMock()
-        chat_output.custom_component.display_name = "Chat Output"
-
-        mock_graph.vertices = [chat_input, chat_output]
-
-        with patch("lfx.cli.script_loader.Graph") as mock_graph_class:
-            mock_graph_class.__name__ = "Graph"
-            # Make isinstance work
-            mock_graph_class.__class__ = type
-            result = _validate_graph_instance(mock_graph)
-            assert result == mock_graph
+        result = _validate_graph_instance(graph)
+        assert result == graph
 
     def test_validate_graph_instance_wrong_type(self):
         """Test validation with wrong type."""
@@ -142,35 +132,27 @@ class TestGraphValidation:
 
     def test_validate_graph_instance_missing_chat_input(self):
         """Test validation with missing ChatInput."""
-        mock_graph = MagicMock()
-        mock_graph.__class__.__name__ = "Graph"
+        from lfx.components.input_output import ChatOutput
+        from lfx.graph import Graph
 
-        # Only ChatOutput, no ChatInput
-        chat_output = MagicMock()
-        chat_output.custom_component.display_name = "Chat Output"
-        mock_graph.vertices = [chat_output]
+        # Create a graph with only ChatOutput, no ChatInput
+        chat_output = ChatOutput()
+        graph = Graph(chat_output)
 
-        with (
-            patch("lfx.cli.script_loader.Graph"),
-            pytest.raises(ValueError, match="Graph does not contain any ChatInput component"),
-        ):
-            _validate_graph_instance(mock_graph)
+        with pytest.raises(ValueError, match="Graph does not contain any ChatInput component"):
+            _validate_graph_instance(graph)
 
     def test_validate_graph_instance_missing_chat_output(self):
         """Test validation with missing ChatOutput."""
-        mock_graph = MagicMock()
-        mock_graph.__class__.__name__ = "Graph"
+        from lfx.components.input_output import ChatInput
+        from lfx.graph import Graph
 
-        # Only ChatInput, no ChatOutput
-        chat_input = MagicMock()
-        chat_input.custom_component.display_name = "Chat Input"
-        mock_graph.vertices = [chat_input]
+        # Create a graph with only ChatInput, no ChatOutput
+        chat_input = ChatInput()
+        graph = Graph(start=chat_input, end=chat_input)
 
-        with (
-            patch("lfx.cli.script_loader.Graph"),
-            pytest.raises(ValueError, match="Graph does not contain any ChatOutput component"),
-        ):
-            _validate_graph_instance(mock_graph)
+        with pytest.raises(ValueError, match="Graph does not contain any ChatOutput component"):
+            _validate_graph_instance(graph)
 
 
 class TestLoadGraphFromScript:

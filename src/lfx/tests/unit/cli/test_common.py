@@ -99,7 +99,7 @@ class TestHostUtilities:
     @pytest.mark.parametrize(
         ("input_host", "expected"),
         [
-            ("0.0.0.0", "localhost"),  # noqa: S104
+            ("0.0.0.0", "localhost"),
             ("", "localhost"),
             ("127.0.0.1", "127.0.0.1"),
             ("localhost", "localhost"),
