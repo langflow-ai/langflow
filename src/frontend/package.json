@@ -113,7 +113,7 @@
       "last 1 safari version"
     ]
   },
-      "proxy": "http://localhost:7860",
+  "proxy": "http://localhost:7860",
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
