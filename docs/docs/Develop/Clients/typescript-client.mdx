@@ -63,58 +63,61 @@ const client = new LangflowClient({ baseUrl, apiKey });
 
 ## Langflow TypeScript client quickstart
 
-1. With your Langflow client initialized, submit a message to your Langflow server and receive a response.
-This example uses the minimum values for sending a message and running your flow on a Langflow server, with no API keys.
-Replace `baseUrl` and `flowId` with values from your deployment.
-The `input` string is the message you're sending to your flow.
+1. With your Langflow client initialized, test the connection by calling your Langflow server.
 
-```tsx
-import { LangflowClient } from "@datastax/langflow-client";
+    The following example runs a flow (`runFlow`) by sending the flow ID and a chat input string:
 
-const baseUrl = "http://localhost:7860";
-const client = new LangflowClient({ baseUrl });
+    ```tsx
+    import { LangflowClient } from "@datastax/langflow-client";
 
-async function runFlow() {
-    const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
-    const flow = client.flow(flowId);
-    const input = "Is anyone there?";
+    const baseUrl = "http://localhost:7860";
+    const client = new LangflowClient({ baseUrl });
 
-    const response = await flow.run(input);
-    console.log(response);
-}
+    async function runFlow() {
+        const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
+        const flow = client.flow(flowId);
+        const input = "Is anyone there?";
 
-runFlow().catch(console.error);
-```
+        const response = await flow.run(input);
+        console.log(response);
+    }
 
-<details open>
-<summary>Response</summary>
+    runFlow().catch(console.error);
+    ```
 
-```
-FlowResponse {
-  sessionId: 'aa5a238b-02c0-4f03-bc5c-cc3a83335cdf',
-  outputs: [ { inputs: [Object], outputs: [Array] } ]
-}
-```
+    Replace the following:
 
-</details>
+    * `baseUrl`: The URL of your Langflow server
+    * `flowId`: The ID of the flow you want to run
+    * `input`: The chat input message you want to send to trigger the flow
 
-This confirms your client is connecting to Langflow.
-* The `sessionID` value is a unique identifier for the client-server session. For more information, see [Session ID](/session-id).
-* The `outputs` array contains the results of your flow execution.
 
-2. To get the full response objects from your server, change the `console.log` code to stringify the returned JSON object:
+2. Review the result to confirm that the client connected to your Langflow server.
 
-```tsx
-console.log(JSON.stringify(response, null, 2));
-```
+    The following example shows the response from a well-formed `runFlow` request that reached the Langflow server and successfully started the flow:
 
-The exact structure of the returned `inputs` and `outputs` depends on how your flow is configured in Langflow.
+    ```
+    FlowResponse {
+      sessionId: 'aa5a238b-02c0-4f03-bc5c-cc3a83335cdf',
+      outputs: [ { inputs: [Object], outputs: [Array] } ]
+    }
+    ```
 
-3. To get the first chat message returned from the chat output component, change `console.log` to use the `chatOutputText` convenience function.
+    In this case, the response includes a [`sessionID`](/session-id) that is a unique identifier for the client-server session and an `outputs` array that contains information about the flow run.
 
-```tsx
-console.log(response.chatOutputText());
-```
+3. If you want to get full response objects from the server, change `console.log` to stringify the returned JSON object:
+
+    ```tsx
+    console.log(JSON.stringify(response, null, 2));
+    ```
+
+    The exact structure of the returned `inputs` and `outputs` objects depends on the components and configuration of your flow.
+
+4. If you want the response to include only the chat message from the **Chat Output** component, change `console.log` to use the `chatOutputText` convenience function:
+
+    ```tsx
+    console.log(response.chatOutputText());
+    ```
 
 ## Use advanced TypeScript client features
 
@@ -123,132 +126,147 @@ The TypeScript client can do more than just connect to your server and run a flo
 This example builds on the quickstart with additional features for interacting with Langflow.
 
 1. Pass tweaks to your code as an object with the request.
-Tweaks change values within components for all calls to your flow.
-This example tweaks the Open-AI model component to enforce using the `gpt-4o-mini` model.
-```tsx
-const tweaks = { model_name: "gpt-4o-mini" };
-```
-2. Pass a [session ID](/session-id) with the request to maintain the same conversation with the LLM from this application.
-```tsx
-const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
-```
-3. Instead of calling `run` on the Flow object, call `stream` with the same arguments.
-The response is a [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of objects.
-For more information on streaming Langflow responses, see the [/run endpoint](/api-flows-run#run-flow).
-```tsx
-const response = await client.flow(flowId).stream(input);
 
-for await (const event of response) {
-  console.log(event);
-}
-```
-4. Run the completed TypeScript application to call your server with `tweaks` and `session_id`, and stream the response back.
-Replace `baseUrl` and `flowId` with values from your deployment.
+    Tweaks change values within components for all calls to your flow.
 
-```tsx
-import { LangflowClient } from "@datastax/langflow-client";
+    This example tweaks the Open-AI model component to enforce using the `gpt-4o-mini` model:
 
-const baseUrl = "http://localhost:7860";
-const client = new LangflowClient({ baseUrl });
-
-async function runFlow() {
-    const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
-    const input = "Is anyone there?";
+    ```tsx
     const tweaks = { model_name: "gpt-4o-mini" };
-    const session_id = "test-session";
+    ```
 
-    const response = await client.flow(flowId).stream(input, {
-        session_id,
-        tweaks,
-      });
+2. Pass a [session ID](/session-id) with the request to separate the conversation from other flow runs, and to be able to continue this conversation by calling the same session ID in the future:
+
+    ```tsx
+    const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
+    ```
+
+3. Instead of calling `run` on the Flow object, call `stream` with the same arguments:
+
+    ```tsx
+    const response = await client.flow(flowId).stream(input);
 
     for await (const event of response) {
-        console.log(event);
+      console.log(event);
+    }
+    ```
+
+    The response is a [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of objects.
+    For more information on streaming Langflow responses, see the [`/run` endpoint](/api-flows-run#run-flow).
+
+4. Run the modified TypeScript application to run the flow with `tweaks` and `session_id`, and then stream the response back.
+
+Replace `baseUrl` and `flowId` with values from your deployment.
+
+    ```tsx
+    import { LangflowClient } from "@datastax/langflow-client";
+
+    const baseUrl = "http://localhost:7860";
+    const client = new LangflowClient({ baseUrl });
+
+    async function runFlow() {
+        const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
+        const input = "Is anyone there?";
+        const tweaks = { model_name: "gpt-4o-mini" };
+        const session_id = "test-session";
+
+        const response = await client.flow(flowId).stream(input, {
+            session_id,
+            tweaks,
+          });
+
+        for await (const event of response) {
+            console.log(event);
+        }
+
+    }
+    runFlow().catch(console.error);
+    ```
+
+    Replace `baseUrl` and `flowId` with your server URL and flow ID, as you did in the previous run.
+
+    <details>
+    <summary>Result</summary>
+
+    With streaming enabled, the response includes the flow metatadata and timestamped events for flow activity.
+    For example:
+
+    ```text
+    {
+      event: 'add_message',
+      data: {
+        timestamp: '2025-05-23 15:52:48 UTC',
+        sender: 'User',
+        sender_name: 'User',
+        session_id: 'test-session',
+        text: 'Is anyone there?',
+        files: [],
+        error: false,
+        edit: false,
+        properties: {
+          text_color: '',
+          background_color: '',
+          edited: false,
+          source: [Object],
+          icon: '',
+          allow_markdown: false,
+          positive_feedback: null,
+          state: 'complete',
+          targets: []
+        },
+        category: 'message',
+        content_blocks: [],
+        id: '7f096715-3f2d-4d84-88d6-5e2f76bf3fbe',
+        flow_id: 'aa5a238b-02c0-4f03-bc5c-cc3a83335cdf',
+        duration: null
+      }
+    }
+    {
+      event: 'token',
+      data: {
+        chunk: 'Absolutely',
+        id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
+        timestamp: '2025-05-23 15:52:48 UTC'
+      }
+    }
+    {
+      event: 'token',
+      data: {
+        chunk: ',',
+        id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
+        timestamp: '2025-05-23 15:52:48 UTC'
+      }
+    }
+    {
+      event: 'token',
+      data: {
+        chunk: " I'm",
+        id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
+        timestamp: '2025-05-23 15:52:48 UTC'
+      }
+    }
+    {
+      event: 'token',
+      data: {
+        chunk: ' here',
+        id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
+        timestamp: '2025-05-23 15:52:48 UTC'
+      }
     }
 
-}
-runFlow().catch(console.error);
-```
+    // this response is abbreviated
 
-<details>
-<summary>Response</summary>
+    {
+      event: 'end',
+      data: { result: { session_id: 'test-session', outputs: [Array] } }
+    }
+    ```
 
-```text
-{
-  event: 'add_message',
-  data: {
-    timestamp: '2025-05-23 15:52:48 UTC',
-    sender: 'User',
-    sender_name: 'User',
-    session_id: 'test-session',
-    text: 'Is anyone there?',
-    files: [],
-    error: false,
-    edit: false,
-    properties: {
-      text_color: '',
-      background_color: '',
-      edited: false,
-      source: [Object],
-      icon: '',
-      allow_markdown: false,
-      positive_feedback: null,
-      state: 'complete',
-      targets: []
-    },
-    category: 'message',
-    content_blocks: [],
-    id: '7f096715-3f2d-4d84-88d6-5e2f76bf3fbe',
-    flow_id: 'aa5a238b-02c0-4f03-bc5c-cc3a83335cdf',
-    duration: null
-  }
-}
-{
-  event: 'token',
-  data: {
-    chunk: 'Absolutely',
-    id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
-    timestamp: '2025-05-23 15:52:48 UTC'
-  }
-}
-{
-  event: 'token',
-  data: {
-    chunk: ',',
-    id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
-    timestamp: '2025-05-23 15:52:48 UTC'
-  }
-}
-{
-  event: 'token',
-  data: {
-    chunk: " I'm",
-    id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
-    timestamp: '2025-05-23 15:52:48 UTC'
-  }
-}
-{
-  event: 'token',
-  data: {
-    chunk: ' here',
-    id: 'c5a99314-6b23-488b-84e2-038aa3e87fb5',
-    timestamp: '2025-05-23 15:52:48 UTC'
-  }
-}
-
-// this response is abbreviated
-
-{
-  event: 'end',
-  data: { result: { session_id: 'test-session', outputs: [Array] } }
-}
-```
-
-</details>
+    </details>
 
 ## Retrieve Langflow logs with the TypeScript client
 
-To retrieve Langflow logs, you must enable log retrieval on your Langflow server by including the following values in your server's `.env` file:
+To retrieve [Langflow logs](/logging), you must enable log retrieval on your Langflow server by including the following values in your server's `.env` file:
 
 ```text
 LANGFLOW_ENABLE_LOG_RETRIEVAL=true
@@ -256,10 +274,7 @@ LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
 LANGFLOW_LOG_LEVEL=DEBUG
 ```
 
-For more information, see [Logs endpoints](/api-logs).
-
-This complete example starts streaming logs in the background, and then runs a flow so you can see how a flow executes.
-Replace `baseUrl` and `flowId` with values from your deployment.
+The following example script starts streaming logs in the background, and then runs a flow so you can monitor the flow run:
 
 ```tsx
 import { LangflowClient } from "@datastax/langflow-client";
@@ -290,12 +305,16 @@ async function main() {
 main().catch(console.error);
 ```
 
+Replace `baseUrl` and `flowId` with your server URL and flow ID, as you did in the previous run.
+
 Logs begin streaming indefinitely, and the flow runs once.
 
-The logs below are abbreviated, but you can monitor how the flow instantiates its components, configures its model, and processes the outputs.
+The following example result is truncated for readability, but you can follow the messages to see how the flow instantiates its components, configures its model, and processes the outputs.
+
+The `FlowResponse` object, at the end of the stream, is returned to the client with the flow result in the `outputs` array.
 
 <details>
-<summary>Response</summary>
+<summary>Result</summary>
 
 ```text
 Starting log stream...
@@ -359,4 +378,4 @@ Log: Log {
 
 </details>
 
-The `FlowResponse` object is returned to the client, with the `outputs` array including your flow result.
+For more information, see [Logs endpoints](/api-logs).

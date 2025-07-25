@@ -12,39 +12,40 @@ Get started with Langflow by loading a template flow, running it, and then servi
 ## Prerequisites
 
 - [Install and start Langflow](/get-started-installation)
-- [Create an OpenAI API key](https://platform.openai.com/api-keys)
-- [Create a Langflow API key](/configuration-api-keys)
+- Create an [OpenAI API key](https://platform.openai.com/api-keys)
+- Create a [Langflow API key](/configuration-api-keys)
 
-<details>
-<summary>Create a Langflow API key</summary>
+    <details>
+    <summary>Create a Langflow API key</summary>
 
-A Langflow API key is a user-specific token you can use with Langflow.
+    A Langflow API key is a user-specific token you can use with Langflow.
 
-To create a Langflow API key, do the following:
+    To create a Langflow API key, do the following:
 
-1. In Langflow, click your user icon, and then select **Settings**.
-2. Click **Langflow API Keys**, and then click <Icon name="Plus" aria-hidden="true"/> **Add New**.
-3. Name your key, and then click **Create API Key**.
-4. Copy the API key and store it securely.
-5. To use your Langflow API key in a request, set a `LANGFLOW_API_KEY` environment variable in your terminal, and then include an `x-api-key` header or query parameter with your request.
-For example:
+    1. In Langflow, click your user icon, and then select **Settings**.
+    2. Click **Langflow API Keys**, and then click <Icon name="Plus" aria-hidden="true"/> **Add New**.
+    3. Name your key, and then click **Create API Key**.
+    4. Copy the API key and store it securely.
+    5. To use your Langflow API key in a request, set a `LANGFLOW_API_KEY` environment variable in your terminal, and then include an `x-api-key` header or query parameter with your request.
+    For example:
 
-    ```bash
-    # Set variable
-    export LANGFLOW_API_KEY="sk..."
+        ```bash
+        # Set variable
+        export LANGFLOW_API_KEY="sk..."
 
-    # Send request
-    curl --request POST \
-     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
-     --header 'Content-Type: application/json' \
-     --header 'x-api-key: LANGFLOW_API_KEY' \
-     --data '{
-       "output_type": "chat",
-       "input_type": "chat",
-       "input_value": "Hello"
-     }'
-    ```
-</details>
+        # Send request
+        curl --request POST \
+        --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
+        --header 'Content-Type: application/json' \
+        --header 'x-api-key: LANGFLOW_API_KEY' \
+        --data '{
+          "output_type": "chat",
+          "input_type": "chat",
+          "input_value": "Hello"
+        }'
+        ```
+
+    </details>
 
 ## Run the Simple Agent template flow
 
@@ -161,7 +162,6 @@ Langflow provides code snippets to help you get started with the Langflow API.
     ```
 
       </TabItem>
-
       <TabItem value="curl" label="curl">
 
     ```bash
@@ -179,7 +179,6 @@ Langflow provides code snippets to help you get started with the Langflow API.
     ```
 
       </TabItem>
-
     </Tabs>
 
 2. Copy the snippet, paste it in a script file, and then run the script to send the request.
@@ -188,8 +187,8 @@ If you are using the curl snippet, you can run the command directly in your term
 If the request is successful, the response includes many details about the flow run, including the session ID, inputs, outputs, components, durations, and more.
 The following is an example of a response from running the **Simple Agent** template flow:
 
-<details closed>
-<summary>Response</summary>
+<details>
+<summary>Result</summary>
 
 ```json
 {

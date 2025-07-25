@@ -83,52 +83,78 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 2. Create a virtual environment with [uv](https://docs.astral.sh/uv/pip/environments).
 
-<details>
-<summary>Need help with virtual environments?</summary>
+    <details>
+    <summary>Need help with virtual environments?</summary>
 
-Virtual environments ensure Langflow is installed in an isolated, fresh environment.
-To create a new virtual environment, do the following.
+    Virtual environments ensure Langflow is installed in an isolated, fresh environment.
+    To create a new virtual environment, do the following.
 
-<Tabs groupId="os">
-  <TabItem value="macOS/Linux" label="macOS/Linux" default>
-    1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
-Replace `VENV_NAME` with your preferred name for your virtual environment.
-```
-uv venv VENV_NAME
-```
-2. Start the virtual environment.
-```
-source VENV_NAME/bin/activate
-```
-Your shell's prompt changes to display that you're currently working in a virtual environment.
-```
-(VENV_NAME) ➜  langflow git:(main) ✗
-```
-3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
-   When activated, the virtual environment temporarily modifies your PATH variable to prioritize packages installed within the virtual environment, so always deactivate it when you're done to avoid conflicts with other projects.
-To delete the virtual environment, type `rm -rf VENV_NAME`.
-  </TabItem>
-  <TabItem value="Windows" label="Windows">
-1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
-Replace `VENV_NAME` with your preferred name for your virtual environment.
-```
-uv venv VENV_NAME
-```
-2. Start the virtual environment.
-```shell
-VENV_NAME\Scripts\activate
-```
-Your shell's prompt changes to display that you're currently working in a virtual environment.
-```
-(VENV_NAME) PS C:/users/username/langflow-dir>
-```
-3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
-   When activated, the virtual environment temporarily modifies your PATH variable to prioritize packages installed within the virtual environment, so always deactivate it when you're done to avoid conflicts with other projects.
-To delete the virtual environment, type `Remove-Item VENV_NAME`.
-  </TabItem>
-  </Tabs>
+        <Tabs groupId="os">
+          <TabItem value="macOS/Linux" label="macOS/Linux" default>
 
-</details>
+        1. Navigate to where you want your virtual environment to be created, and then create it with `uv`:
+
+            ```shell
+            uv venv VENV_NAME
+            ```
+
+            Replace `VENV_NAME` with a name for your virtual environment.
+
+        2. Start the virtual environment:
+
+            ```shell
+            source VENV_NAME/bin/activate
+            ```
+
+            Your shell's prompt changes to display that you're currently working in a virtual environment:
+
+            ```text
+            (VENV_NAME) ➜  langflow git:(main) ✗
+            ```
+
+        3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
+
+            When activated, the virtual environment temporarily modifies your `PATH` variable to prioritize packages installed within the virtual environment.
+            To avoid conflicts with other projects, it's a good idea to deactivate your virtual environment when you're done working in it.
+
+            To delete the virtual environment, type `rm -rf VENV_NAME`.
+            This completely removes the virtual environment directory and its contents.
+
+          </TabItem>
+          <TabItem value="Windows" label="Windows">
+
+        1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
+
+            ```shell
+            uv venv VENV_NAME
+            ```
+
+            Replace `VENV_NAME` with a name for your virtual environment.
+
+        2. Start the virtual environment:
+
+            ```shell
+            VENV_NAME\Scripts\activate
+            ```
+
+            Your shell's prompt changes to display that you're currently working in a virtual environment:
+
+            ```text
+            (VENV_NAME) PS C:/users/username/langflow-dir>
+            ```
+
+        3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
+
+            When activated, the virtual environment temporarily modifies your `PATH` variable to prioritize packages installed within the virtual environment.
+            To avoid conflicts with other projects, it's a good idea to deactivate your virtual environment when you're done working in it.
+
+            To delete the virtual environment, type `Remove-Item VENV_NAME`.
+            This completely removes the virtual environment directory and its contents.
+
+          </TabItem>
+        </Tabs>
+
+    </details>
 
 3. In your virtual environment, install Langflow:
 
