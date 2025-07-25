@@ -6,6 +6,8 @@ import inspect
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -116,15 +118,6 @@ def get_session():
 
     Returns a session from the database service if available, otherwise NoopSession.
     """
-    db_service = get_db_service()
-    if db_service is None:
-        from lfx.services.session import NoopSession
-
-        return NoopSession()
-
-    try:
-        return db_service.get_session()
-    except Exception:  # noqa: BLE001
-        from lfx.services.session import NoopSession
-
-        return NoopSession()
+    msg = "get_session is deprecated, use session_scope instead"
+    logger.warning(msg)
+    raise NotImplementedError(msg)
