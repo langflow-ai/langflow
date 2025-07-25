@@ -6,7 +6,7 @@ on:
 
 jobs:
   smoke-tests:
-    if: contains(github.event.label.name, 'smoke-test')
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
     name: "Smoke Tests (No API Keys)"
     runs-on: ubuntu-latest
     timeout-minutes: 8
