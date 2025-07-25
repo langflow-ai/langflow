@@ -6,6 +6,7 @@ import ast
 import importlib.metadata as md
 import sys
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 
 try:
     STDLIB_MODULES: set[str] = set(sys.stdlib_module_names)  # 3.10+
@@ -69,15 +70,9 @@ class _ImportVisitor(ast.NodeVisitor):
 
 def _classify_dependency(dep: DependencyInfo) -> DependencyInfo:
     """Resolve version information for external dependencies."""
-    # Try to resolve version for external packages
     version = None
     if not dep.is_local and dep.name:
-        try:
-            dist = md.distribution(dep.name)
-            version = dist.version
-        except (md.PackageNotFoundError, ImportError, AttributeError):
-            # If we can't find the package, it might be local or not installed
-            pass
+        version = _get_distribution_version(dep.name)
 
     return DependencyInfo(
         name=dep.name,
@@ -141,3 +136,13 @@ def analyze_component_dependencies(component_code: str) -> dict:
             "total_dependencies": 0,
             "dependencies": [],
         }
+
+
+# Helper function to cache version lookups for installed distributions
+@lru_cache(maxsize=128)
+def _get_distribution_version(name: str):
+    try:
+        dist = md.distribution(name)
+        return dist.version
+    except (md.PackageNotFoundError, ImportError, AttributeError):
+        return None
