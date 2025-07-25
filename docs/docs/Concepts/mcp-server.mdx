@@ -101,19 +101,21 @@ The following procedure describes how to connect [Cursor](https://www.cursor.com
 However, you can connect any [MCP-compatible client](https://modelcontextprotocol.io/clients) following similar steps.
 
 <Tabs>
-  <TabItem value="Auto install" label="Auto install" default>
+<TabItem value="Auto install" label="Auto install" default>
+
+:::important
+Auto installation only works if your HTTP client and Langflow server are on the same local machine.
+In this is not the case, configure the client with the code in the **JSON** tab.
+:::
 
 1. Install [Cursor](https://docs.cursor.com/get-started/installation).
 2. In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the **MCP Server** tab.
 3. To auto install your current Langflow project as an MCP server, click <Icon name="Plus" aria-hidden="True"/> **Add**.
-    The installation adds the server's configuration file to Cursor's `mcp.json` configuration file.
 
-    :::important
-    Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-    In this is not the case, configure the client with the code in the **JSON** tab.
-    :::
-  </TabItem>
-  <TabItem value="JSON" label="JSON">
+The installation adds the server's configuration file to Cursor's `mcp.json` configuration file.
+
+</TabItem>
+<TabItem value="JSON" label="JSON">
 
 1. Install [Cursor](https://docs.cursor.com/get-started/installation).
 2. In Cursor, go to **Cursor Settings > MCP**, and then click **Add New Global MCP Server**.
@@ -149,7 +151,7 @@ For example:
 5. Save and close the `mcp.json` file in Cursor.
 The newly added MCP server will appear in the **MCP Servers** section.
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
 Cursor is now connected to your project's MCP server and your flows are registered as tools.
@@ -250,47 +252,49 @@ The default address is `http://localhost:6274`.
 If Claude for Desktop is not using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file.
 
 1. To find your UVX path, run `which uvx`.
-To find your NPX path, run `which npx`.
+
+    To find your NPX path, run `which npx`.
 
 2. Copy the path, and then replace `PATH_TO_UVX` or `PATH_TO_NPX` in your `claude_desktop_config.json` file.
 
-<Tabs>
-  <TabItem value="uvx" label="uvx" default>
+    <Tabs>
+    <TabItem value="uvx" label="uvx" default>
 
-```json
-{
-  "mcpServers": {
-    "PROJECT_NAME": {
-      "command": "PATH_TO_UVX",
-      "args": [
-        "mcp-proxy",
-        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
-      ]
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_UVX",
+          "args": [
+            "mcp-proxy",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
     }
-  }
-}
-```
-  </TabItem>
+    ```
 
-  <TabItem value="npx" label="npx">
+    </TabItem>
+    <TabItem value="npx" label="npx">
 
-```json
-{
-  "mcpServers": {
-    "PROJECT_NAME": {
-      "command": "PATH_TO_NPX",
-      "args": [
-        "-y",
-        "supergateway",
-        "--sse",
-        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
-      ]
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_NPX",
+          "args": [
+            "-y",
+            "supergateway",
+            "--sse",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
     }
-  }
-}
-```
-  </TabItem>
-</Tabs>
+    ```
+
+    </TabItem>
+    </Tabs>
 
 ## See also
 

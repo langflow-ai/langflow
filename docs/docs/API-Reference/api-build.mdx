@@ -25,7 +25,7 @@ This endpoint builds and executes a flow, returning a job ID that can be used to
 1. Send a POST request to the `/build/$FLOW_ID/flow` endpoint.
 
 <Tabs>
-  <TabItem value="curl" label="curl" default>
+<TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -40,8 +40,8 @@ curl -X POST \
   }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+</TabItem>
+<TabItem value="result" label="Result">
 
 ```json
 {
@@ -49,13 +49,13 @@ curl -X POST \
 }
 ```
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
 2. After receiving a job ID from the build endpoint, use the `/build/$JOB_ID/events` endpoint to stream the execution results:
 
 <Tabs>
-   <TabItem value="curl" label="curl" default>
+<TabItem value="curl" label="curl" default>
 
 ```text
 curl -X GET \
@@ -64,8 +64,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-   </TabItem>
-   <TabItem value="result" label="Result">
+</TabItem>
+<TabItem value="result" label="Result">
 
 ```json
 {"event": "vertices_sorted", "data": {"ids": ["ChatInput-XtBLx"], "to_run": ["Prompt-x74Ze", "ChatOutput-ylMzN", "ChatInput-XtBLx", "OpenAIModel-d1wOZ"]}}
@@ -77,7 +77,7 @@ curl -X GET \
 {"event": "end", "data": {}}
 ```
 
-   </TabItem>
+</TabItem>
 </Tabs>
 
 The `/build/$FLOW_ID/events` endpoint accepts an optional `stream` query parameter that defaults to `true`.
@@ -130,7 +130,7 @@ The `/build` endpoint also accepts inputs for `data` directly, instead of using 
 This is useful for running flows without having to pass custom values through the UI.
 
 <Tabs>
-  <TabItem value="curl" label="curl" default>
+<TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -150,14 +150,14 @@ curl -X POST \
   }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+</TabItem>
+<TabItem value="result" label="Result">
 
 ```json
 { "job_id": "0bcc7f23-40b4-4bfa-9b8a-a44181fd1175" }
 ```
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## See also

@@ -33,7 +33,7 @@ The `/logs` endpoint requires log retrieval to be enabled in your Langflow insta
 Stream logs in real-time using Server Sent Events (SSE).
 
 <Tabs>
-  <TabItem value="curl" label="curl" default>
+<TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -42,8 +42,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+</TabItem>
+<TabItem value="result" label="Result">
 
 ```text
 keepalive
@@ -65,7 +65,7 @@ keepalive
 keepalive
 ```
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Retrieve logs with optional parameters
@@ -80,7 +80,7 @@ The default values for all three parameters is `0`.
 With default values, the endpoint returns the last 10 lines of logs.
 
 <Tabs>
-  <TabItem value="curl" label="curl" default>
+<TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -89,8 +89,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+</TabItem>
+<TabItem value="result" label="Result">
 
 ```text
 {
@@ -107,5 +107,5 @@ curl -X GET \
 }
 ```
 
-  </TabItem>
+</TabItem>
 </Tabs>

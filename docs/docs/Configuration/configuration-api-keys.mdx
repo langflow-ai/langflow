@@ -33,15 +33,15 @@ You can generate a Langflow API key with the UI or the CLI.
 The UI-generated key is appropriate for most cases. The CLI-generated key is needed when your Langflow server is running in `--backend-only` mode.
 
 <Tabs>
-  <TabItem value="Langflow UI" label="Langflow UI" default>
+<TabItem value="Langflow UI" label="Langflow UI" default>
 
 1. In the Langflow UI header, click your profile icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click **Add New**.
 3. Name your key, and then click **Create API Key**.
 4. Copy the API key and store it securely.
 
-  </TabItem>
-  <TabItem value="Langflow CLI" label="Langflow CLI">
+</TabItem>
+<TabItem value="Langflow CLI" label="Langflow CLI">
 
 If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI, because the frontend is not running.
 
@@ -93,7 +93,8 @@ To create an API key for a user from the CLI, do the following:
     ```shell
     uv run langflow api-key
     ```
-  </TabItem>
+
+</TabItem>
 </Tabs>
 
 ## Authenticate requests with the Langflow API key
@@ -103,7 +104,7 @@ Include your API key in API requests to authenticate requests to Langflow.
 API keys allow access only to the flows and components of the specific user who created the key.
 
 <Tabs>
-  <TabItem value="HTTP header" label="HTTP header" default>
+<TabItem value="HTTP header" label="HTTP header" default>
 
 To use the API key when making API requests, include the API key in the HTTP header:
 
@@ -115,8 +116,8 @@ curl -X POST \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
 
-  </TabItem>
-  <TabItem value="Query parameter" label="Query parameter">
+</TabItem>
+<TabItem value="Query parameter" label="Query parameter">
 
 To pass the API key as a query parameter:
 
@@ -126,7 +127,8 @@ curl -X POST \
   -H 'Content-Type: application/json' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
-  </TabItem>
+
+</TabItem>
 </Tabs>
 
 ## Generate a Langflow secret key
