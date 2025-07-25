@@ -25,7 +25,7 @@ from lfx.io import DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_session, get_settings_service, get_storage_service
+from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 
 
 class MCPToolsComponent(ComponentWithCache):
@@ -154,7 +154,7 @@ class MCPToolsComponent(ComponentWithCache):
             return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
-            async for db in get_session():
+            async with session_scope() as db:
                 user_id, _ = await create_user_longterm_token(db)
                 current_user = await get_user_by_id(db, user_id)
 
