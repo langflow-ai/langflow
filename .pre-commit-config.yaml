@@ -33,3 +33,10 @@ repos:
         language: system
         types: [text]
         files: "\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"
+      - id: validate-starter-projects
+        name: Validate Starter Project Templates
+        entry: uv run python src/backend/tests/unit/template/test_starter_projects.py
+        language: system
+        files: ^src/backend/base/langflow/initial_setup/starter_projects/.*\.json$
+        pass_filenames: false
+        args: [--security-check]

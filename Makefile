@@ -130,7 +130,9 @@ unit_tests: ## run unit tests
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
 	uv run pytest src/backend/tests/unit \
-	--ignore=src/backend/tests/integration $$EXTRA_ARGS \
+	--ignore=src/backend/tests/integration \
+	--ignore=src/backend/tests/unit/template \
+	$$EXTRA_ARGS \
 	--instafail -ra -m 'not api_key_required' \
 	--durations-path src/backend/tests/.test_durations \
 	--splitting-algorithm least_duration $(args)
@@ -160,6 +162,14 @@ tests: ## run unit, integration, coverage tests
 	make integration_tests
 	@echo 'Running Coverage Tests...'
 	make coverage
+
+######################
+# TEMPLATE TESTING
+######################
+
+template_tests: ## run all starter project template tests
+	@echo 'Running Starter Project Template Tests...'
+	@uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v
 
 ######################
 # CODE QUALITY
