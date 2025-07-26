@@ -71,7 +71,7 @@ test(
       {
         timeout: 10000,
         state: "visible",
-      }
+      },
     );
 
     await page.getByTestId("dropdown_str_tool").click();
@@ -148,7 +148,7 @@ test(
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      "uvx mcp-server-fetch"
+      "uvx mcp-server-fetch",
     );
 
     await page.getByTestId("add-mcp-server-button").click();
@@ -166,7 +166,7 @@ test(
       '[data-testid="btn_delete_delete_confirmation_modal"]',
       {
         timeout: 3000,
-      }
+      },
     );
 
     await page
@@ -204,7 +204,7 @@ test(
     await expect(page.getByText(testName)).toHaveCount(2, {
       timeout: 10000,
     });
-  }
+  },
 );
 
 test(
@@ -333,25 +333,25 @@ test(
 
     // Verify all fields persisted correctly
     expect(await page.getByTestId("stdio-name-input").inputValue()).toBe(
-      testName
+      testName,
     );
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
-      testCommand
+      testCommand,
     );
     expect(await page.getByTestId("stdio-args_0").inputValue()).toBe(testArg1);
     expect(await page.getByTestId("stdio-args_1").inputValue()).toBe(testArg2);
     expect(await page.getByTestId("stdio-args_2").inputValue()).toBe(testArg3);
     expect(await page.getByTestId("stdio-env-key-0").last().inputValue()).toBe(
-      testEnvKey1
+      testEnvKey1,
     );
     expect(
-      await page.getByTestId("stdio-env-value-0").last().inputValue()
+      await page.getByTestId("stdio-env-value-0").last().inputValue(),
     ).toBe(testEnvValue1);
     expect(await page.getByTestId("stdio-env-key-1").last().inputValue()).toBe(
-      testEnvKey2
+      testEnvKey2,
     );
     expect(
-      await page.getByTestId("stdio-env-value-1").last().inputValue()
+      await page.getByTestId("stdio-env-value-1").last().inputValue(),
     ).toBe(testEnvValue2);
 
     // Clean up - cancel the edit modal
@@ -371,13 +371,13 @@ test(
       '[data-testid="btn_delete_delete_confirmation_modal"]',
       {
         timeout: 3000,
-      }
+      },
     );
 
     await page
       .getByTestId("btn_delete_delete_confirmation_modal")
       .click({ timeout: 3000 });
-  }
+  },
 );
 
 test(
@@ -505,32 +505,32 @@ test(
 
     // Verify all fields persisted correctly
     expect(await page.getByTestId("sse-name-input").inputValue()).toBe(
-      testName
+      testName,
     );
     expect(await page.getByTestId("sse-url-input").inputValue()).toBe(testUrl);
     expect(await page.getByTestId("sse-headers-key-0").inputValue()).toBe(
-      testHeaderKey1
+      testHeaderKey1,
     );
     expect(await page.getByTestId("sse-headers-value-0").inputValue()).toBe(
-      testHeaderValue1
+      testHeaderValue1,
     );
     expect(await page.getByTestId("sse-headers-key-1").inputValue()).toBe(
-      testHeaderKey2
+      testHeaderKey2,
     );
     expect(await page.getByTestId("sse-headers-value-1").inputValue()).toBe(
-      testHeaderValue2
+      testHeaderValue2,
     );
     expect(await page.getByTestId("sse-env-key-0").inputValue()).toBe(
-      testEnvKey1
+      testEnvKey1,
     );
     expect(await page.getByTestId("sse-env-value-0").inputValue()).toBe(
-      testEnvValue1
+      testEnvValue1,
     );
     expect(await page.getByTestId("sse-env-key-1").inputValue()).toBe(
-      testEnvKey2
+      testEnvKey2,
     );
     expect(await page.getByTestId("sse-env-value-1").inputValue()).toBe(
-      testEnvValue2
+      testEnvValue2,
     );
 
     // Clean up - cancel the edit modal
@@ -550,11 +550,11 @@ test(
       '[data-testid="btn_delete_delete_confirmation_modal"]',
       {
         timeout: 3000,
-      }
+      },
     );
 
     await page
       .getByTestId("btn_delete_delete_confirmation_modal")
       .click({ timeout: 3000 });
-  }
+  },
 );
