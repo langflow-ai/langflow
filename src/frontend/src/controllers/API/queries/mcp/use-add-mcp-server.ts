@@ -34,6 +34,9 @@ export const useAddMCPServer: useMutationFunctionType<
       if (body.env && Object.keys(body.env).length > 0) {
         payload.env = body.env;
       }
+      if (body.headers && Object.keys(body.headers).length > 0) {
+        payload.headers = body.headers;
+      }
 
       const res = await api.post(
         `${getURL("MCP_SERVERS", undefined, true)}/${body.name}`,
