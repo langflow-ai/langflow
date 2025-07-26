@@ -1,5 +1,8 @@
 import asyncio
 import os
+import platform
+import shutil
+import sys
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
@@ -26,48 +29,57 @@ _installation_in_progress = False
 _last_installation_result: dict | None = None
 
 
+def _find_project_root() -> Path:
+    """Find project root by looking for pyproject.toml or setup.py."""
+    current_path = Path(__file__).resolve()
+
+    # Start from current file and go up the directory tree
+    for parent in [current_path, *list(current_path.parents)]:
+        # Look for common project root indicators
+        if any((parent / marker).exists() for marker in ["pyproject.toml", "setup.py", "requirements.txt", ".git"]):
+            logger.info(f"Found project root at: {parent}")
+            return parent
+
+    # Fallback to current working directory
+    logger.warning("Could not find project root, using current working directory")
+    return Path.cwd()
+
+
+def _find_uv_executable() -> str:
+    """Find UV executable with Windows compatibility."""
+    # Use existing shutil.which - it handles .exe on Windows automatically
+    uv_path = shutil.which("uv")
+    if uv_path:
+        logger.info(f"Found UV executable at: {uv_path}")
+        return uv_path
+
+    # Windows fallback - try explicit .exe
+    if platform.system() == "Windows":
+        uv_exe = shutil.which("uv.exe")
+        if uv_exe:
+            logger.info(f"Found UV executable at: {uv_exe}")
+            return uv_exe
+
+    msg = "UV package manager not found in PATH"
+    raise RuntimeError(msg)
+
+
 async def _restart_application() -> None:
-    """Restart the application after a short delay."""
+    """Restart the application with cross-platform compatibility."""
     try:
-        # Wait 2 seconds to allow HTTP response to be sent
+        # Wait to allow HTTP response to be sent
         await asyncio.sleep(2)
         logger.info("Initiating application restart...")
 
-        # Strategy 1: Try to trigger uvicorn reload by touching a Python file
-        try:
-            from pathlib import Path
+        # Strategy 1: Try to trigger uvicorn reload by touching Python files
+        reload_triggered = await _trigger_uvicorn_reload()
+        if reload_triggered:
+            return
 
-            # Touch the main.py file to trigger uvicorn reload
-            main_file = Path(__file__).parent.parent.parent / "main.py"
-            if main_file.exists():
-                logger.info("Triggering uvicorn reload by touching main.py...")
-                # Update the modification time to trigger reload
-                main_file.touch()
-                return
-        except (OSError, PermissionError, FileNotFoundError) as e:
-            logger.warning(f"Failed to trigger uvicorn reload: {e}")
-
-        # Strategy 1.5: Try touching __init__.py in the langflow package
-        try:
-            from pathlib import Path
-
-            init_file = Path(__file__).parent.parent.parent / "__init__.py"
-            if init_file.exists():
-                logger.info("Triggering uvicorn reload by touching __init__.py...")
-                init_file.touch()
-                return
-        except (OSError, PermissionError, FileNotFoundError) as e:
-            logger.warning(f"Failed to trigger uvicorn reload via __init__.py: {e}")
-
-        # Strategy 2: Send SIGHUP to current process to trigger graceful restart
-        try:
-            import signal
-
-            logger.info("Sending SIGHUP signal for graceful restart...")
-            os.kill(os.getpid(), signal.SIGHUP)
-            await asyncio.sleep(1)  # Give it a moment
-        except (OSError, ProcessLookupError) as e:
-            logger.warning(f"Failed to send SIGHUP: {e}")
+        # Strategy 2: Platform-specific restart signals
+        restart_triggered = await _send_restart_signal()
+        if restart_triggered:
+            return
 
         # Strategy 3: Force exit as last resort
         logger.info("Force exiting application to trigger restart...")
@@ -79,8 +91,89 @@ async def _restart_application() -> None:
         os._exit(1)
 
 
+async def _trigger_uvicorn_reload() -> bool:
+    """Try to trigger uvicorn reload by touching Python files."""
+    project_root = _find_project_root()
+
+    # List of files to try touching (in order of preference)
+    reload_files = [
+        project_root / "main.py",
+        project_root / "langflow" / "main.py",
+        project_root / "langflow" / "__init__.py",
+        project_root / "__init__.py",
+    ]
+
+    for file_path in reload_files:
+        try:
+            if file_path.exists():
+                logger.info(f"Triggering uvicorn reload by touching {file_path}")
+                file_path.touch()
+                return True
+        except (OSError, PermissionError) as e:
+            logger.warning(f"Failed to touch {file_path}: {e}")
+            continue
+
+    logger.warning("Could not trigger uvicorn reload - no suitable files found")
+    return False
+
+
+async def _send_restart_signal() -> bool:
+    """Send platform-appropriate restart signal."""
+    try:
+        import signal
+
+        current_pid = os.getpid()
+        system = platform.system()
+
+        if system == "Windows":
+            # Windows: Use SIGTERM (CTRL+C equivalent)
+            logger.info("Sending SIGTERM signal for Windows restart...")
+            try:
+                os.kill(current_pid, signal.SIGTERM)
+                await asyncio.sleep(1)
+            except (OSError, ProcessLookupError) as e:
+                logger.warning(f"Failed to send SIGTERM on Windows: {e}")
+            else:
+                return True
+
+        elif system in ["Linux", "Darwin"]:  # Darwin is macOS
+            # Unix-like systems: Try SIGHUP first, then SIGTERM
+            for sig_name, sig_value in [("SIGHUP", signal.SIGHUP), ("SIGTERM", signal.SIGTERM)]:
+                try:
+                    logger.info(f"Sending {sig_name} signal for {system} restart...")
+                    os.kill(current_pid, sig_value)
+                    await asyncio.sleep(1)
+                except (OSError, ProcessLookupError) as e:
+                    logger.warning(f"Failed to send {sig_name} on {system}: {e}")
+                    continue
+                else:
+                    return True
+        else:
+            logger.warning(f"Unknown platform: {system}")
+
+    except ImportError:
+        logger.warning("Signal module not available")
+
+    return False
+
+
+def _validate_package_name(package_name: str) -> bool:
+    """Validate package name with enhanced Windows security checks."""
+    if not package_name or not package_name.strip():
+        return False
+
+    # Your existing validation logic with Windows additions
+    forbidden_chars = [";", "&", "|", "`", "$", "(", ")", "<", ">"]
+
+    # Add Windows-specific forbidden characters (same as your original)
+    if platform.system() == "Windows":
+        forbidden_chars.extend(["%", "^", '"', "'"])
+
+    return not any(char in package_name for char in forbidden_chars)
+
+
 async def install_package_background(package_name: str) -> None:
-    """Background task to install package using uv."""
+    """Background task to install package using uv with cross-platform support."""
     global _installation_in_progress, _last_installation_result  # noqa: PLW0603
 
     try:
@@ -89,20 +182,40 @@ async def install_package_background(package_name: str) -> None:
 
         logger.info(f"Starting installation of package: {package_name}")
 
-        # Use uv to install the package in the current environment
-        # Get the project root directory (6 levels up from this file)
-        project_root = Path(__file__).parent.parent.parent.parent.parent.parent
+        # Find UV executable
+        uv_cmd = _find_uv_executable()
+
+        # Find project root
+        project_root = _find_project_root()
+
+        # Create subprocess with Windows environment handling
+        cmd_args = [uv_cmd, "add", package_name]
+
+        # Prepare environment (only modify for Windows if needed)
+        env = os.environ.copy()
+        if platform.system() == "Windows":
+            # Ensure Python Scripts directory is in PATH for Windows
+            python_scripts = Path(sys.executable).parent / "Scripts"
+            if python_scripts.exists():
+                env["PATH"] = f"{python_scripts}{os.pathsep}{env.get('PATH', '')}"
+
+        logger.info(f"Executing command: {' '.join(cmd_args)} in {project_root}")
 
         process = await asyncio.create_subprocess_exec(
-            "uv",
-            "add",
-            package_name,
+            *cmd_args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=str(project_root),
+            env=env,
         )
 
         stdout, stderr = await process.communicate()
+
+        # Handle encoding properly for Windows
+        if platform.system() == "Windows":
+            stderr_text = stderr.decode("cp1252", errors="replace") if stderr else ""
+        else:
+            stderr_text = stderr.decode() if stderr else ""
 
         if process.returncode == 0:
             logger.info(f"Successfully installed package: {package_name}")
@@ -111,17 +224,8 @@ async def install_package_background(package_name: str) -> None:
                 "package_name": package_name,
                 "message": f"Package '{package_name}' installed successfully",
             }
-
-            # Restart the application after successful installation
-            logger.info("Restarting application after package installation...")
-            # Use asyncio to schedule the restart after a short delay
-            # This allows the HTTP response to be sent before the restart
-            restart_task = asyncio.create_task(_restart_application())
-            # Store reference to prevent garbage collection
-            restart_task.add_done_callback(lambda _: None)
-
         else:
-            error_message = stderr.decode() if stderr else "Unknown error"
+            error_message = stderr_text or "Unknown error"
             logger.error(f"Failed to install package {package_name}: {error_message}")
             _last_installation_result = {
                 "status": "error",
@@ -129,15 +233,12 @@ async def install_package_background(package_name: str) -> None:
                 "message": f"Failed to install package '{package_name}': {error_message}",
             }
 
-            # Restart the application even after failed installation to reset state
-            logger.info("Restarting application after failed package installation to reset state...")
-            # Use asyncio to schedule the restart after a short delay
-            # This allows the HTTP response to be sent before the restart
-            restart_task = asyncio.create_task(_restart_application())
-            # Store reference to prevent garbage collection
-            restart_task.add_done_callback(lambda _: None)
+        # Schedule restart (keep your existing logic)
+        logger.info("Restarting application after package installation...")
+        restart_task = asyncio.create_task(_restart_application())
+        restart_task.add_done_callback(lambda _: None)
 
-    except Exception as e:  # noqa: BLE001
+    except (OSError, RuntimeError) as e:
         logger.exception(f"Error installing package {package_name}")
         _last_installation_result = {
             "status": "error",
@@ -145,12 +246,9 @@ async def install_package_background(package_name: str) -> None:
             "message": f"Error installing package '{package_name}': {e!s}",
         }
 
-        # Restart the application even after exception to reset state
+        # Schedule restart even after exception (keep your existing logic)
         logger.info("Restarting application after package installation exception to reset state...")
-        # Use asyncio to schedule the restart after a short delay
-        # This allows the HTTP response to be sent before the restart
         restart_task = asyncio.create_task(_restart_application())
-        # Store reference to prevent garbage collection
         restart_task.add_done_callback(lambda _: None)
     finally:
         _installation_in_progress = False
@@ -163,18 +261,16 @@ async def install_package(
     background_tasks: BackgroundTasks,
     current_user: CurrentActiveUser,  # noqa: ARG001
 ):
-    """Install a Python package using uv."""
+    """Install a Python package using uv with cross-platform support."""
     global _installation_in_progress  # noqa: PLW0602
 
     if _installation_in_progress:
         raise HTTPException(status_code=409, detail="Package installation already in progress")
 
     package_name = package_request.package_name.strip()
-    if not package_name:
-        raise HTTPException(status_code=400, detail="Package name cannot be empty")
 
-    # Basic validation for package name (prevent command injection)
-    if any(char in package_name for char in [";", "&", "|", "`", "$", "(", ")", "<", ">"]):
+    # Validate package name (keep your existing validation + Windows enhancement)
+    if not _validate_package_name(package_name):
         raise HTTPException(status_code=400, detail="Invalid package name")
 
     # Start background installation
@@ -198,7 +294,7 @@ async def get_installation_status(current_user: CurrentActiveUser):  # noqa: ARG
 
 @router.delete("/install/status")
 async def clear_installation_status(current_user: CurrentActiveUser):  # noqa: ARG001
-    """Clear the installation status (useful for clearing error states)."""
+    """Clear the installation status."""
     global _installation_in_progress, _last_installation_result  # noqa: PLW0603
 
     _installation_in_progress = False
