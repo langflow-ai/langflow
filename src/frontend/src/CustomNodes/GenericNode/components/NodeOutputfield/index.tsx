@@ -13,7 +13,6 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import type { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -27,26 +26,16 @@ import {
   scapedJSONStringfy,
   scapeJSONParse,
 } from "../../../../utils/reactflowUtils";
-import {
-  cn,
-  logFirstMessage,
-  logHasMessage,
-  logTypeIsError,
-  logTypeIsUnknown,
-} from "../../../../utils/utils";
+import { cn } from "../../../../utils/utils";
 import HandleRenderComponent from "../handleRenderComponent";
+import {
+  detectLooping,
+  determineOutputStatus,
+  isOutputEmpty,
+  isOutputShortcutOpenable,
+} from "../NodeOutputParameter/nodeOutputUtils";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
-
-const _EyeIcon = memo(
-  ({ hidden, className }: { hidden: boolean; className: string }) => (
-    <IconComponent
-      className={className}
-      strokeWidth={ICON_STROKE_WIDTH}
-      name={hidden ? "EyeOff" : "Eye"}
-    />
-  ),
-);
 
 const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
@@ -122,8 +111,6 @@ function NodeOutputField({
   lastOutput,
   colorName,
   isToolMode = false,
-  showHiddenOutputs,
-  hidden,
   handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
@@ -158,108 +145,39 @@ function NodeOutputField({
   }, [flowPool, flowPoolId]);
 
   const { displayOutputPreview, unknownOutput, errorOutput } = useMemo(
-    () => ({
-      displayOutputPreview:
-        !!flowPool[flowPoolId] &&
-        logHasMessage(flowPoolNode?.data, internalOutputName),
-      unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
-      errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
-    }),
-    [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
+    () => determineOutputStatus(flowPool, flowPoolId, internalOutputName || ""),
+    [flowPool, flowPoolId, internalOutputName],
   );
 
   const emptyOutput = useMemo(() => {
-    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
-      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
-    );
-  }, [flowPoolNode?.data?.outputs]);
-
-  const disabledOutput = useMemo(
-    () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
-    [edges, id],
-  );
+    return isOutputEmpty(flowPoolNode?.data);
+  }, [flowPoolNode?.data]);
 
   const looping = useMemo(() => {
-    return edges.some((edge) => {
-      const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!,
-      );
-      return (
-        targetHandleObject.output_types &&
-        edge.sourceHandle === scapedJSONStringfy(id)
-      );
-    });
+    return detectLooping(edges, scapedJSONStringfy(id));
   }, [edges, id]);
-
-  const handleUpdateOutputHide = useCallback(
-    (value?: boolean) => {
-      setNode(data.id, (oldNode) => {
-        if (oldNode.type !== "genericNode") return oldNode;
-        const newNode = cloneDeep(oldNode);
-        newNode.data = {
-          ...newNode.data,
-          node: {
-            ...newNode.data.node,
-            outputs: newNode.data.node.outputs?.map((output, i) => {
-              if (i === index) {
-                output.hidden = value ?? !output.hidden;
-              }
-              return output;
-            }),
-          },
-        };
-        return newNode;
-      });
-      updateNodeInternals(data.id);
-    },
-    [data.id, index, setNode, updateNodeInternals],
-  );
-
-  useEffect(() => {
-    const outputHasGroupOutputsFalse =
-      data.node?.outputs?.[index]?.group_outputs === false;
-
-    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
-      handleUpdateOutputHide(false);
-    }
-  }, [
-    disabledOutput,
-    handleUpdateOutputHide,
-    hidden,
-    data.node?.outputs,
-    index,
-  ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
   const outputShortcutOpenable = useMemo(() => {
-    if (!displayOutputPreview || !selected) return;
-
-    const sortedEdges = edges
-      .filter((edge) => edge.source === data.id)
-      .toSorted((a, b) => {
-        const indexA =
-          data?.node?.outputs?.findIndex(
-            (output) => output.name === a.data?.sourceHandle?.name,
-          ) ?? 0;
-        const indexB =
-          data?.node?.outputs?.findIndex(
-            (output) => output.name === b.data?.sourceHandle?.name,
-          ) ?? 0;
-        return indexA - indexB;
-      });
-
-    const isFirstOutput =
-      sortedEdges[0]?.sourceHandle === scapedJSONStringfy(id);
-    const hasNoEdges = !edges.some((edge) => edge.source === data.id);
-    const isValidFirstMessage =
-      hasNoEdges && logFirstMessage(flowPoolNode?.data, internalOutputName);
-
-    if (isFirstOutput || isValidFirstMessage) {
-      return true;
-    }
-    return false;
-  }, [displayOutputPreview, edges, data.id, data?.node?.outputs, selected]);
+    return isOutputShortcutOpenable({
+      displayOutputPreview,
+      selected,
+      edges,
+      nodeData: data,
+      id: scapedJSONStringfy(id),
+      flowPoolNode,
+      internalOutputName: internalOutputName || "",
+    });
+  }, [
+    displayOutputPreview,
+    selected,
+    edges,
+    data,
+    id,
+    flowPoolNode,
+    internalOutputName,
+  ]);
 
   const handleOpenOutputModal = () => {
     if (outputShortcutOpenable) {
@@ -283,7 +201,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          testIdComplement={`${data?.type?.toLowerCase()}-${
+            showNode ? "shownode" : "noshownode"
+          }`}
           colorName={colorName}
         />
       );
@@ -313,7 +233,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+        testIdComplement={`${data?.type?.toLowerCase()}-${
+          showNode ? "shownode" : "noshownode"
+        }`}
         colorName={colorName}
       />
     ),
@@ -334,7 +256,6 @@ function NodeOutputField({
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
 
-  if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
 
   return (

@@ -51,7 +51,6 @@ class RunFlowBaseComponent(Component):
             name="flow_outputs_data",
             display_name="Flow Data Output",
             method="data_output",
-            hidden=True,
             group_outputs=True,
             tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
         ),
@@ -59,7 +58,6 @@ class RunFlowBaseComponent(Component):
             name="flow_outputs_dataframe",
             display_name="Flow Dataframe Output",
             method="dataframe_output",
-            hidden=True,
             group_outputs=True,
             tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
         ),

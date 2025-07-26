@@ -188,9 +188,6 @@ class Output(BaseModel):
     name: str = Field(description="The name of the field.")
     """The name of the field."""
 
-    hidden: bool | None = Field(default=None)
-    """Dictates if the field is hidden."""
-
     display_name: str | None = Field(default=None)
     """The display name of the field."""
 
@@ -208,7 +205,7 @@ class Output(BaseModel):
     allows_loop: bool = Field(default=False)
     """Specifies if the output allows looping."""
 
-    group_outputs: bool = Field(default=False)
+    group_outputs: bool = Field(default=True)
     """Specifies if all outputs should be grouped and shown without dropdowns."""
 
     options: OutputOptions | None = Field(default=None)
