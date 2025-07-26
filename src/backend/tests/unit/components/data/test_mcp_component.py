@@ -62,8 +62,7 @@ class TestMCPStdioClient:
     @pytest.fixture
     def mock_session_manager(self):
         """Create a mock session manager."""
-        manager = AsyncMock(spec=MCPSessionManager)
-        return manager
+        return AsyncMock(spec=MCPSessionManager)
 
     async def test_connect_to_server_with_command(self, stdio_client):
         """Test connecting to server via Stdio with command."""
