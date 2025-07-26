@@ -87,7 +87,7 @@ Custom session IDs are helpful for multiple reasons:
 You can set custom session IDs in the visual editor and programmatically.
 
 <Tabs>
-  <TabItem value="visual" label="Visual editor" default>
+<TabItem value="visual" label="Visual editor" default>
 
 In your [input and output components](/components-io), use the **Session ID** field:
 
@@ -101,8 +101,8 @@ If the field is empty, the flow uses the default session ID.
 
 Make sure to change the **Session ID** when you want to start a new chat session or continue an earlier chat session with a different session ID.
 
-  </TabItem>
-  <TabItem value="api" label="Langflow API">
+</TabItem>
+<TabItem value="api" label="Langflow API">
 
 When you trigger a flow with the Langflow API, include the `session_id` parameter in the request payload.
 For example:
@@ -121,7 +121,7 @@ curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
 
 This command starts a new chat sessions with the specified `session_id` or it retrieves an existing session with that ID, if one exists.
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
 :::tip

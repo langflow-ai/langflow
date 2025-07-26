@@ -30,12 +30,8 @@ Use the `/files` endpoints to move files between your local machine and Langflow
 
 ### Upload file (v1)
 
-Upload a file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
+Upload a file to the `v1/files/upload/$FLOW_ID` endpoint:
 Replace **FILE_NAME** with the uploaded file name.
-
-<Tabs>
-
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -46,8 +42,11 @@ curl -X POST \
   -F "file=@FILE_NAME.txt"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+Replace `FILE_NAME.txt` with the name and extension of the file you want to upload.
+Not all file types are supported.
+
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -56,8 +55,7 @@ curl -X POST \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ### Upload image files (v1)
 
@@ -116,9 +114,6 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
 
 List all files associated with a specific flow.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
@@ -126,8 +121,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -135,15 +130,11 @@ curl -X GET \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ### Download file (v1)
 
 Download a specific file from a flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -153,22 +144,18 @@ curl -X GET \
   --output downloaded_file.txt
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 File contents downloaded to downloaded_file.txt
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ### Delete file (v1)
 
 Delete a specific file from a flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
@@ -177,8 +164,8 @@ curl -X DELETE \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -186,8 +173,7 @@ curl -X DELETE \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Files/V2 endpoints
 
@@ -202,42 +188,47 @@ Upload a file to your user account. The file can be used across multiple flows.
 
 The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf`.
 
-To retrieve your current `user_id`, call the `/whoami` endpoint.
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/users/whoami" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+1. To retrieve your current `user_id`, call the `/whoami` endpoint:
 
-Result:
-```
-{"id":"07e5b864-e367-4f52-b647-a48035ae7e5e","username":"langflow","profile_image":null,"store_api_key":null,"is_active":true,"is_superuser":true,"create_at":"2025-05-08T17:59:07.855965","updated_at":"2025-05-28T19:00:42.556460","last_login_at":"2025-05-28T19:00:42.554338","optins":{"github_starred":false,"dialog_dismissed":true,"discord_clicked":false,"mcp_dialog_dismissed":true}}
-```
+    ```bash
+    curl -X GET \
+      "$LANGFLOW_URL/api/v1/users/whoami" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
 
-In the POST request to `v2/files`, replace **@FILE_NAME.EXTENSION** with the uploaded file name and its extension.
+    <details>
+    <summary>Result</summary>
+
+    ```
+    {"id":"07e5b864-e367-4f52-b647-a48035ae7e5e","username":"langflow","profile_image":null,"store_api_key":null,"is_active":true,"is_superuser":true,"create_at":"2025-05-08T17:59:07.855965","updated_at":"2025-05-28T19:00:42.556460","last_login_at":"2025-05-28T19:00:42.554338","optins":{"github_starred":false,"dialog_dismissed":true,"discord_clicked":false,"mcp_dialog_dismissed":true}}
+    ```
+
+    </details>
+
+2. In the POST request to `v2/files`, replace **@FILE_NAME.EXTENSION** with the uploaded file name and its extension.
 You must include the ampersand (`@`) in the request to instruct curl to upload the contents of the file, not the string `FILE_NAME.EXTENSION`.
 
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v2/files" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -F "file=@FILE_NAME.EXTENSION"
-```
+    ```bash
+    curl -X POST \
+      "$LANGFLOW_URL/api/v2/files" \
+      -H "accept: application/json" \
+      -H "Content-Type: multipart/form-data" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -F "file=@FILE_NAME.EXTENSION"
+    ```
 
-The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
+    The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
 
-```json
-{
-  "id":"d44dc2e1-9ae9-4cf6-9114-8d34a6126c94",
-  "name":"engine_manual",
-  "path":"07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf",
-  "size":851160,
-  "provider":null
-}
-```
+    ```json
+    {
+      "id":"d44dc2e1-9ae9-4cf6-9114-8d34a6126c94",
+      "name":"engine_manual",
+      "path":"07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf",
+      "size":851160,
+      "provider":null
+    }
+    ```
 
 ### Send files to your flows (v2)
 
@@ -253,65 +244,67 @@ The default file limit is 100 MB. To configure this value, change the `LANGFLOW_
 For more information, see [Supported environment variables](/environment-variables#supported-variables).
 
 1. To send a file to your flow with the API, POST the file to the `/api/v2/files` endpoint.
-   Replace **FILE_NAME** with the uploaded file name.
-   This is the same step described in [Upload file (v2)](#upload-file-v2), but since you need the filename to upload to your flow, it is included here.
 
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v2/files" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -F "file=@FILE_NAME.EXTENSION"
-```
+    Replace **FILE_NAME.EXTENSION** with the name and extension of the file you want to upload.
+    This is the same step described in [Upload file (v2)](#upload-file-v2), but since you need the filename to upload to your flow, it is included here.
 
-The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
+    ```bash
+    curl -X POST \
+      "$LANGFLOW_URL/api/v2/files" \
+      -H "accept: application/json" \
+      -H "Content-Type: multipart/form-data" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -F "file=@FILE_NAME.EXTENSION"
+    ```
 
-```json
-{
-  "id":"d44dc2e1-9ae9-4cf6-9114-8d34a6126c94",
-  "name":"engine_manual",
-  "path":"07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf",
-  "size":851160,
-  "provider": null
-}
-```
+    The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
+
+    ```json
+    {
+      "id":"d44dc2e1-9ae9-4cf6-9114-8d34a6126c94",
+      "name":"engine_manual",
+      "path":"07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf",
+      "size":851160,
+      "provider": null
+    }
+    ```
 
 2. To use this file in your flow, add a [File](/components-data#file) component to load a file into the flow.
 3. To load the file into your flow, send it to the **File** component.
-To retrieve the **File** component's full name with the UUID attached, call the [Read flow](/api-flows#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
-In this example, the file uploaded to `/v2/files` is included with the `/v1/run` POST request.
 
-```text
-curl --request POST \
-  --url "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
-  --header "Content-Type: application/json" \
-  --header "x-api-key: $LANGFLOW_API_KEY" \
-  --data '{
-  "input_value": "what do you see?",
-  "output_type": "chat",
-  "input_type": "text",
-  "tweaks": {
-    "File-1olS3": {
-      "path": [
-        "07e5b864-e367-4f52-b647-a48035ae7e5e/3a290013-fe1e-4d3d-a454-cacae81288f3.pdf"
-      ]
-    }
-  }
-}'
-```
+    To retrieve the **File** component's full name with the UUID attached, call the [Read flow](/api-flows#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
+    In this example, the file uploaded to `/v2/files` is included with the `/v1/run` POST request.
 
-Result:
-```text
-"text":"This document provides important safety information and instructions for selecting, installing, and operating Briggs & Stratton engines. It includes warnings and guidelines to prevent injury, fire, or damage, such as choosing the correct engine model, proper installation procedures, safe fuel handling, and correct engine operation. The document emphasizes following all safety precautions and using authorized parts to ensure safe and effective engine use."
-```
+    ```text
+    curl --request POST \
+      --url "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
+      --header "Content-Type: application/json" \
+      --header "x-api-key: $LANGFLOW_API_KEY" \
+      --data '{
+      "input_value": "what do you see?",
+      "output_type": "chat",
+      "input_type": "text",
+      "tweaks": {
+        "File-1olS3": {
+          "path": [
+            "07e5b864-e367-4f52-b647-a48035ae7e5e/3a290013-fe1e-4d3d-a454-cacae81288f3.pdf"
+          ]
+        }
+      }
+    }'
+    ```
+
+    <details>
+    <summary>Result</summary>
+
+    ```text
+    "text":"This document provides important safety information and instructions for selecting, installing, and operating Briggs & Stratton engines. It includes warnings and guidelines to prevent injury, fire, or damage, such as choosing the correct engine model, proper installation procedures, safe fuel handling, and correct engine operation. The document emphasizes following all safety precautions and using authorized parts to ensure safe and effective engine use."
+    ```
+    </details>
 
 ### List files (v2)
 
 List all files associated with your user account.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -320,8 +313,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 [
@@ -335,19 +328,13 @@ curl -X GET \
 ]
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ### Download file (v2)
 
 Download a specific file by its ID and file extension.
 
-:::tip
 You must specify the file type you expect in the `--output` value.
-:::
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -357,22 +344,18 @@ curl -X GET \
   --output downloaded_file.txt
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 File contents downloaded to downloaded_file.txt
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ### Edit file name (v2)
 
 Change a file name.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X PUT \
@@ -381,8 +364,8 @@ curl -X PUT \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -394,14 +377,11 @@ curl -X PUT \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
+
 ### Delete file (v2)
 
 Delete a specific file by its ID.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
@@ -410,8 +390,8 @@ curl -X DELETE \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -419,15 +399,11 @@ curl -X DELETE \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ### Delete all files (v2)
 
 Delete all files associated with your user account.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
@@ -436,8 +412,8 @@ curl -X DELETE \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -445,8 +421,7 @@ curl -X DELETE \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Create upload file (Deprecated)
 
