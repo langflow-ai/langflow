@@ -50,7 +50,7 @@ test("search flows", { tag: ["@release"] }, async ({ page }) => {
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.getByText("New Flow").isVisible();
-  await page.getByText("New Flow", { exact: true }).click();
+  await page.getByTestId("new-project-btn").click();
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
 
@@ -59,7 +59,7 @@ test("search flows", { tag: ["@release"] }, async ({ page }) => {
   });
 
   await page.getByTestId("icon-ChevronLeft").first().click();
-  await page.getByText("New Flow", { exact: true }).click();
+  await page.getByTestId("new-project-btn").click();
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Document Q&A" }).click();
 

@@ -184,7 +184,11 @@ test(
     });
 
     await awaitBootstrapTest(page, { skipModal: true });
-    await page.getByText("Untitled document").first().click();
+    const newFlowDiv = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlowDiv.click();
 
     await page.waitForTimeout(1000);
 
