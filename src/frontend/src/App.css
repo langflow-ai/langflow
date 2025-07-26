@@ -217,3 +217,9 @@ code {
 .cm-gutters {
   display: none !important;
 }
+
+.user-select-none {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
