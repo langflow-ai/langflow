@@ -1015,7 +1015,9 @@ class MCPSseClient:
                 try:
                     # For SSE endpoints, try a GET request with short timeout
                     # Many SSE servers don't support HEAD requests and return 404
-                    response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream", **headers})
+                    response = await client.get(
+                        url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
+                    )
 
                     # For SSE, we expect the server to either:
                     # 1. Start streaming (200)
@@ -1054,7 +1056,9 @@ class MCPSseClient:
         try:
             async with httpx.AsyncClient(follow_redirects=False) as client:
                 # Use GET with SSE headers instead of HEAD since many SSE servers don't support HEAD
-                response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream", **headers})
+                response = await client.get(
+                    url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
+                )
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
                 # Don't treat 404 as an error here - let the main connection handle it
