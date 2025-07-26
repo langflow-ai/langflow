@@ -18,6 +18,7 @@ from langflow.initial_setup.setup import (
     update_projects_components_with_latest_component_versions,
 )
 from langflow.interface.components import aget_all_types_dict
+from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
@@ -237,6 +238,14 @@ async def test_load_bundles_from_urls():
         "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9"
     ]
     settings_service.auth_settings.AUTO_LOGIN = True
+
+    # Create a superuser in the test database since load_bundles_from_urls requires one
+    async with session_scope() as session:
+        await create_super_user(
+            username=settings_service.auth_settings.SUPERUSER,
+            password=settings_service.auth_settings.SUPERUSER_PASSWORD,
+            db=session,
+        )
 
     temp_dirs, components_paths = await load_bundles_from_urls()
 
