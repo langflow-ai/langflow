@@ -16,7 +16,7 @@ The main focus of this tutorial is to show you how to provide files as input to 
 ## Prerequisites
 
 - [A running Langflow instance](/get-started-installation)
-- [A Langflow API key](/configuration-api-keys)
+- [A Langflow API key](/api-keys-and-authentication)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
@@ -78,7 +78,7 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
     * `FILE_COMPONENT_ID`: The UUID of the File component in your flow, such as `File-KZP68`. To find the component ID, open your flow in Langflow, click the File component, and then click **Controls**.
     * `CHAT_INPUT`: The message you want to send to the Chat Input of your flow, such as `Evaluate this resume for a job opening in my Marketing department.`
     * `FILE_NAME` and `FILE_PATH`: The name and path to the local file that you want to send to your flow.
-    * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/configuration-api-keys).
+    * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/api-keys-and-authentication).
 
 2. Copy the following script into a Python file, and then replace the placeholders with the information you gathered in the previous step:
 

@@ -63,7 +63,7 @@ In Langflow versions 1.5 and later, most API endpoints require a Langflow API ke
 The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
 
 To authenticate a Langflow API request, provide a Langflow API key in either an `x-api-key` header or query parameter.
-For more information, see [API keys](/configuration-api-keys).
+For more information, see [API keys](/api-keys-and-authentication).
 
 As with any API, follow industry best practices for storing and referencing sensitive credentials.
 For example, you can [set environment variables](#set-environment-variables) for your API keys, and then reference those environment variables in your API requests.
@@ -117,7 +117,7 @@ curl --request POST \
 }'
 ```
 
-Commonly used values in Langflow API requests include your [Langflow server URL](#base-url), [Langflow API keys](/configuration-api-keys), flow IDs, and [project IDs](/api-projects#read-projects).
+Commonly used values in Langflow API requests include your [Langflow server URL](#base-url), [Langflow API keys](/api-keys-and-authentication), flow IDs, and [project IDs](/api-projects#read-projects).
 
 You can retrieve flow IDs from the [**API access** pane](/concepts-publish#api-access), in a flow's URL, and with [`GET /flows`](/api-flows#read-flows).
 

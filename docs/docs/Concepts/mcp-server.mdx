@@ -142,7 +142,7 @@ For example:
     If you have [deployed a public Langflow server](/deployment-public-server), the address is automatically included.
 
     :::important
-    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
+    If your Langflow server [requires authentication](/api-keys-and-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
     For more information, see [MCP server authentication and environment variables](#authentication).
     :::
 
@@ -158,7 +158,7 @@ For more information, see the [Cursor's MCP documentation](https://docs.cursor.c
 
 ### MCP server authentication and environment variables {#authentication}
 
-If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/configuration-api-keys) in your MCP client configuration.
+If your Langflow server [requires authentication](/api-keys-and-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/api-keys-and-authentication) in your MCP client configuration.
 When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
 
 ```json
