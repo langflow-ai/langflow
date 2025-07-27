@@ -352,21 +352,17 @@ class Graph:
         # each step call and raise StopIteration when the graph is done
         if config is not None:
             self.__apply_config(config)
-        for _input in inputs or []:
-            for key, value in _input.items():
-                vertex = self.get_vertex(key)
-                vertex.set_input_value(key, value)
         # I want to keep a counter of how many tyimes result.vertex.id
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager)
+            result = await self.astep(event_manager=event_manager, inputs=inputs)
             yield result
-            if hasattr(result, "vertex"):
-                yielded_counts[result.vertex.id] += 1
             if isinstance(result, Finish):
                 return
+            if hasattr(result, "vertex"):
+                yielded_counts[result.vertex.id] += 1
 
         msg = "Max iterations reached"
         raise ValueError(msg)
@@ -1949,7 +1945,7 @@ class Graph:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
-        if node_name in InterfaceComponentTypes:
+        if node_name in InterfaceComponentTypes or node_type in InterfaceComponentTypes:
             return InterfaceVertex
         if node_name in {"SharedState", "Notify", "Listen"}:
             return StateVertex
