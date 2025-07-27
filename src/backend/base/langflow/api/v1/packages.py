@@ -248,7 +248,7 @@ async def install_package_background(package_name: str) -> None:
                 "we can conclude that all versions of",
                 "cannot be used",
                 "requirements are unsatisfiable",
-                "Ã—",  # This is the × character in Windows encoding
+                "Ã—",  # This is the x character in Windows encoding
                 "error:",
                 "failed",
                 "Error:",
