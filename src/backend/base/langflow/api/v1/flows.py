@@ -83,7 +83,15 @@ async def _new_flow(
                 )
             ).all()
             if flows:
-                extract_number = re.compile(r"\((\d+)\)$")
+                # Use regex to extract numbers only from flows that follow the copy naming pattern:
+                # "{original_name} ({number})"
+                # This avoids extracting numbers from the original flow name if it naturally contains parentheses
+                #
+                # Examples:
+                # - For flow "My Flow": matches "My Flow (1)", "My Flow (2)" → extracts 1, 2
+                # - For flow "Analytics (Q1)": matches "Analytics (Q1) (1)" → extracts 1
+                #   but does NOT match "Analytics (Q1)" → avoids extracting the original "1"
+                extract_number = re.compile(rf"^{re.escape(flow.name)} \((\d+)\)$")
                 numbers = []
                 for _flow in flows:
                     result = extract_number.search(_flow.name)
@@ -91,6 +99,8 @@ async def _new_flow(
                         numbers.append(int(result.groups(1)[0]))
                 if numbers:
                     flow.name = f"{flow.name} ({max(numbers) + 1})"
+                else:
+                    flow.name = f"{flow.name} (1)"
             else:
                 flow.name = f"{flow.name} (1)"
         # Now check if the endpoint is unique
