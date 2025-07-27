@@ -5,7 +5,6 @@ import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
