@@ -171,6 +171,7 @@ def _validate_package_name(package_name: str) -> bool:
 
     return not any(char in package_name for char in forbidden_chars)
 
+
 async def install_package_background(package_name: str) -> None:
     """Background task to install package using uv with cross-platform support."""
     global _installation_in_progress, _last_installation_result  # noqa: PLW0603
@@ -213,7 +214,7 @@ async def install_package_background(package_name: str) -> None:
         # Handle encoding properly for Windows - FIXED
         stdout_text = ""
         stderr_text = ""
-        
+
         if platform.system() == "Windows":
             # Try multiple encodings for Windows
             for encoding in ["utf-8", "cp1252", "latin1"]:
@@ -233,12 +234,12 @@ async def install_package_background(package_name: str) -> None:
 
         # Enhanced error detection for Windows - FIXED
         installation_failed = False
-        
+
         # Check return code first
         if process.returncode != 0:
             installation_failed = True
             logger.error(f"UV command failed with return code: {process.returncode}")
-        
+
         # Additional Windows-specific error detection
         if platform.system() == "Windows":
             # Check for specific error patterns in stderr and stdout
@@ -253,7 +254,7 @@ async def install_package_background(package_name: str) -> None:
                 "Error:",
                 "ERROR:",
             ]
-            
+
             combined_output = f"{stdout_text} {stderr_text}".lower()
             for pattern in error_patterns:
                 if pattern.lower() in combined_output:
@@ -271,16 +272,17 @@ async def install_package_background(package_name: str) -> None:
         else:
             # Combine stdout and stderr for complete error message
             error_message = stderr_text or stdout_text or "Unknown error"
-            
+
             # Clean up the error message for Windows
             if platform.system() == "Windows":
                 # Remove problematic unicode characters and clean up the message
                 import re
+
                 # Remove box drawing and other problematic characters
-                error_message = re.sub(r'[^\x00-\x7F]+', ' ', error_message)
+                error_message = re.sub(r"[^\x00-\x7F]+", " ", error_message)
                 # Clean up multiple spaces
-                error_message = re.sub(r'\s+', ' ', error_message).strip()
-            
+                error_message = re.sub(r"\s+", " ", error_message).strip()
+
             logger.error(f"Failed to install package {package_name}: {error_message}")
             _last_installation_result = {
                 "status": "error",
