@@ -32,11 +32,16 @@ _last_installation_result: dict | None = None
 def _find_project_root() -> Path:
     """Find project root by looking for pyproject.toml or setup.py."""
     current_path = Path(__file__).resolve()
+    markers = {"pyproject.toml", "setup.py", "requirements.txt", ".git"}
 
     # Start from current file and go up the directory tree
-    for parent in [current_path, *list(current_path.parents)]:
-        # Look for common project root indicators
-        if any((parent / marker).exists() for marker in ["pyproject.toml", "setup.py", "requirements.txt", ".git"]):
+    for parent in (current_path, *current_path.parents):
+        try:
+            dir_entries = set(os.listdir(parent))
+        except Exception:
+            continue  # skip directories we can't read
+
+        if markers & dir_entries:
             logger.info(f"Found project root at: {parent}")
             return parent
 
@@ -211,58 +216,13 @@ async def install_package_background(package_name: str) -> None:
 
         stdout, stderr = await process.communicate()
 
-        # Handle encoding properly for Windows - FIXED
-        stdout_text = ""
-        stderr_text = ""
-
+        # Handle encoding properly for Windows
         if platform.system() == "Windows":
-            # Try multiple encodings for Windows
-            for encoding in ["utf-8", "cp1252", "latin1"]:
-                try:
-                    stdout_text = stdout.decode(encoding) if stdout else ""
-                    stderr_text = stderr.decode(encoding) if stderr else ""
-                    break
-                except UnicodeDecodeError:
-                    continue
-            else:
-                # Fallback with error replacement
-                stdout_text = stdout.decode("utf-8", errors="replace") if stdout else ""
-                stderr_text = stderr.decode("utf-8", errors="replace") if stderr else ""
+            stderr_text = stderr.decode("cp1252", errors="replace") if stderr else ""
         else:
-            stdout_text = stdout.decode("utf-8") if stdout else ""
-            stderr_text = stderr.decode("utf-8") if stderr else ""
+            stderr_text = stderr.decode() if stderr else ""
 
-        # Enhanced error detection for Windows - FIXED
-        installation_failed = False
-
-        # Check return code first
-        if process.returncode != 0:
-            installation_failed = True
-            logger.error(f"UV command failed with return code: {process.returncode}")
-
-        # Additional Windows-specific error detection
-        if platform.system() == "Windows":
-            # Check for specific error patterns in stderr and stdout
-            error_patterns = [
-                "No solution found when resolving dependencies",
-                "we can conclude that all versions of",
-                "cannot be used",
-                "requirements are unsatisfiable",
-                "Ã—",  # This is the x character in Windows encoding
-                "error:",
-                "failed",
-                "Error:",
-                "ERROR:",
-            ]
-
-            combined_output = f"{stdout_text} {stderr_text}".lower()
-            for pattern in error_patterns:
-                if pattern.lower() in combined_output:
-                    installation_failed = True
-                    logger.error(f"Detected error pattern '{pattern}' in output")
-                    break
-
-        if not installation_failed:
+        if process.returncode == 0:
             logger.info(f"Successfully installed package: {package_name}")
             _last_installation_result = {
                 "status": "success",
@@ -270,19 +230,7 @@ async def install_package_background(package_name: str) -> None:
                 "message": f"Package '{package_name}' installed successfully",
             }
         else:
-            # Combine stdout and stderr for complete error message
-            error_message = stderr_text or stdout_text or "Unknown error"
-
-            # Clean up the error message for Windows
-            if platform.system() == "Windows":
-                # Remove problematic unicode characters and clean up the message
-                import re
-
-                # Remove box drawing and other problematic characters
-                error_message = re.sub(r"[^\x00-\x7F]+", " ", error_message)
-                # Clean up multiple spaces
-                error_message = re.sub(r"\s+", " ", error_message).strip()
-
+            error_message = stderr_text or "Unknown error"
             logger.error(f"Failed to install package {package_name}: {error_message}")
             _last_installation_result = {
                 "status": "error",
