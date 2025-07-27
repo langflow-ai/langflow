@@ -14,8 +14,8 @@ from langflow.services.deps import get_settings_service
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
+    from lfx.schema.schema import InputValueRequest
 
-    from langflow.api.v1.schemas import InputValueRequest
     from langflow.services.event_manager import EventManager
 
 

@@ -18,6 +18,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
+from lfx.schema.schema import InputValueRequest
 from lfx.services.cache.utils import CacheMiss
 from loguru import logger
 
@@ -42,7 +43,6 @@ from langflow.api.utils import (
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
-    InputValueRequest,
     ResultDataResponse,
     StreamData,
     VertexBuildResponse,

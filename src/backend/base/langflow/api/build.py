@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
+from lfx.schema.schema import InputValueRequest
 from loguru import logger
 from sqlmodel import select
 
@@ -24,7 +25,6 @@ from langflow.api.utils import (
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
-    InputValueRequest,
     ResultDataResponse,
     VertexBuildResponse,
 )

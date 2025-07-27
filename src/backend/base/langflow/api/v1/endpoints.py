@@ -20,6 +20,7 @@ from lfx.custom.utils import (
 )
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from loguru import logger
 from sqlmodel import select
@@ -29,7 +30,6 @@ from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
-    InputValueRequest,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,

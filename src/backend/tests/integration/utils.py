@@ -6,13 +6,13 @@ from typing import Any
 import pytest
 import requests
 from astrapy.admin import parse_api_endpoint
-from langflow.api.v1.schemas import InputValueRequest
 
 from lfx.custom import Component
 from lfx.custom.eval import eval_custom_component_code
 from lfx.field_typing import Embeddings
 from lfx.graph import Graph
 from lfx.processing.process import run_graph_internal
+from lfx.schema.schema import InputValueRequest
 
 
 def check_env_vars(*env_vars):

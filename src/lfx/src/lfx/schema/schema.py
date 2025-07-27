@@ -2,7 +2,7 @@ from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
@@ -128,10 +128,36 @@ def build_output_logs(vertex, result) -> dict:
     return outputs
 
 
-class InputValueRequest(TypedDict, total=False):
-    """Type definition for input value requests."""
+class InputValueRequest(BaseModel):
+    components: list[str] | None = []
+    input_value: str | None = None
+    session: str | None = None
+    type: InputType | None = Field(
+        "any",
+        description="Defines on which components the input value should be applied. "
+        "'any' applies to all input components.",
+    )
 
-    components: list[str] | None
-    input_value: str | None
-    session: str | None
-    type: InputType | None
+    # add an example
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "components": ["components_id", "Component Name"],
+                    "input_value": "input_value",
+                    "session": "session_id",
+                },
+                {"components": ["Component Name"], "input_value": "input_value"},
+                {"input_value": "input_value"},
+                {
+                    "components": ["Component Name"],
+                    "input_value": "input_value",
+                    "session": "session_id",
+                },
+                {"input_value": "input_value", "session": "session_id"},
+                {"type": "chat", "input_value": "input_value"},
+                {"type": "json", "input_value": '{"key": "value"}'},
+            ]
+        },
+        extra="forbid",
+    )

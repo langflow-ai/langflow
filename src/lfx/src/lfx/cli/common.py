@@ -161,7 +161,7 @@ async def execute_graph_with_capture(
 
     try:
         # Execute the graph
-        from lfx.api.v1.schemas import InputValueRequest
+        from lfx.schema.schema import InputValueRequest
 
         inputs = [InputValueRequest(components=[], input_value=input_value)]
 

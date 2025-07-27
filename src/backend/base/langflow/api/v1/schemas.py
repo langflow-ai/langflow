@@ -335,41 +335,6 @@ class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
 
 
-class InputValueRequest(BaseModel):
-    components: list[str] | None = []
-    input_value: str | None = None
-    session: str | None = None
-    type: InputType | None = Field(
-        "any",
-        description="Defines on which components the input value should be applied. "
-        "'any' applies to all input components.",
-    )
-
-    # add an example
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "components": ["components_id", "Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"components": ["Component Name"], "input_value": "input_value"},
-                {"input_value": "input_value"},
-                {
-                    "components": ["Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"input_value": "input_value", "session": "session_id"},
-                {"type": "chat", "input_value": "input_value"},
-                {"type": "json", "input_value": '{"key": "value"}'},
-            ]
-        },
-        extra="forbid",
-    )
-
-
 class SimplifiedAPIRequest(BaseModel):
     input_value: str | None = Field(default=None, description="The input value")
     input_type: InputType | None = Field(default="chat", description="The input type")
