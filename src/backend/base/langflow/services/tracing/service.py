@@ -5,6 +5,7 @@ import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -274,11 +275,20 @@ class TracingService(Service):
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
-        inputs = inputs.copy()
-        for key in inputs:
-            if "api_key" in key:
-                inputs[key] = "*****"  # avoid logging api_keys for security reasons
-        return inputs
+        inputs = deepcopy(inputs)
+        sensitive_keywords = {"api_key", "password", "server_url"}
+
+        def _mask(obj: Any):
+            if isinstance(obj, dict):
+                return {
+                    k: "*****" if any(word in k.lower() for word in sensitive_keywords) else _mask(v)
+                    for k, v in obj.items()
+                }
+            if isinstance(obj, list):
+                return [_mask(i) for i in obj]
+            return obj
+
+        return _mask(inputs)
 
     def _start_component_traces(
         self,
@@ -344,6 +354,7 @@ class TracingService(Service):
         if component._vertex:
             trace_id = component._vertex.id
         trace_type = component.trace_type
+        inputs = self._cleanup_inputs(inputs)
         component_trace_context = ComponentTraceContext(
             trace_id, trace_name, trace_type, component._vertex, inputs, metadata
         )
