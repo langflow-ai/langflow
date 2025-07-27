@@ -2,7 +2,6 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.services.database.session import NoopSession
 
 from lfx.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from lfx.components.input_output import ChatInput, ChatOutput
@@ -11,6 +10,7 @@ from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
 from lfx.schema import dotdict
 from lfx.schema.message import Message
+from lfx.services.session import NoopSession
 from lfx.template import Output
 
 crewai_available = False
