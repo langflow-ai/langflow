@@ -275,7 +275,7 @@ class TracingService(Service):
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
-        inputs = deepcopy(inputs)
+        inputs = inputs.copy()
         sensitive_keywords = {"api_key", "password", "server_url"}
 
         def _mask(obj: Any):
