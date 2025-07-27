@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from lfx.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
@@ -31,6 +30,8 @@ def test_set_invalid_output():
 
 @pytest.mark.xfail(reason="CrewAI is not outdated")
 def test_set_component():
+    from lfx.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
+
     crewai_agent = CrewAIAgentComponent()
     task = SequentialTaskComponent()
     task.set(agent=crewai_agent)

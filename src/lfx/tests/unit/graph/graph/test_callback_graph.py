@@ -1,12 +1,12 @@
 import asyncio
 
 import pytest
-from langflow.custom import Component
-from langflow.events.event_manager import EventManager
-from langflow.inputs import IntInput
 
 from lfx.components.input_output import ChatOutput
+from lfx.custom.custom_component.component import Component
+from lfx.events.event_manager import EventManager
 from lfx.graph import Graph
+from lfx.inputs.inputs import IntInput
 from lfx.schema.message import Message
 from lfx.template import Output
 

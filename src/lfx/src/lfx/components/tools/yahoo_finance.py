@@ -2,7 +2,6 @@ import ast
 import pprint
 from enum import Enum
 
-import yfinance as yf
 from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
 from loguru import logger
@@ -98,6 +97,12 @@ to access financial data and market information from Yahoo! Finance."""
         method: YahooFinanceMethod,
         num_news: int | None = 5,
     ) -> list[Data]:
+        try:
+            import yfinance as yf
+        except ImportError as e:
+            msg = ""
+            raise ImportError(msg) from e
+
         ticker = yf.Ticker(symbol)
 
         try:

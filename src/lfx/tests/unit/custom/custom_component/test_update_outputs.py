@@ -5,6 +5,7 @@ from lfx.custom.custom_component.component import Component
 
 
 class TestComponentOutputs:
+    @pytest.mark.asyncio
     async def test_run_and_validate_update_outputs_tool_mode(self):
         """Test run_and_validate_update_outputs with tool_mode field."""
 
@@ -61,6 +62,7 @@ class TestComponentOutputs:
         assert "types" in updated_node["outputs"][0]
         assert "selected" in updated_node["outputs"][0]
 
+    @pytest.mark.asyncio
     async def test_run_and_validate_update_outputs_invalid_output(self):
         """Test run_and_validate_update_outputs with invalid output structure."""
 
@@ -79,6 +81,7 @@ class TestComponentOutputs:
                 frontend_node=frontend_node, field_name="some_field", field_value="some_value"
             )
 
+    @pytest.mark.asyncio
     async def test_run_and_validate_update_outputs_custom_update(self):
         """Test run_and_validate_update_outputs with custom update logic."""
 
@@ -123,6 +126,7 @@ class TestComponentOutputs:
         assert "types" in updated_node["outputs"][0]
         assert "selected" in updated_node["outputs"][0]
 
+    @pytest.mark.asyncio
     async def test_run_and_validate_update_outputs_with_existing_tool_output(self):
         """Test run_and_validate_update_outputs when tool output already exists."""
 
@@ -165,6 +169,7 @@ class TestComponentOutputs:
         assert "types" in updated_node["outputs"][0]
         assert "selected" in updated_node["outputs"][0]
 
+    @pytest.mark.asyncio
     async def test_run_and_validate_update_outputs_with_multiple_outputs(self):
         """Test run_and_validate_update_outputs with multiple outputs."""
 
@@ -218,6 +223,7 @@ class TestComponentOutputs:
             assert set(output["types"]) == {"Text"}
             assert output["selected"] == "Text"
 
+    @pytest.mark.asyncio
     async def test_run_and_validate_update_outputs_output_validation(self):
         """Test output validation in run_and_validate_update_outputs."""
 

@@ -129,8 +129,12 @@ def test_graph_functional_start_end():
     assert results[-1] == Finish()
 
 
+# TODO: Move to Langflow tests
 @pytest.mark.skip(reason="Temporarily disabled")
 def test_graph_set_with_valid_component():
+    from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+    from lfx.components.tools.yahoo_finance import YfinanceToolComponent
+
     tool = YfinanceToolComponent()
     tool_calling_agent = ToolCallingAgentComponent()
     tool_calling_agent.set(tools=[tool])

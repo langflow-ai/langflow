@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from langflow.schema.dotdict import dotdict
+from lfx.schema.dotdict import dotdict
 
 DEFAULT_FIELDS = ["code", "_type"]
 

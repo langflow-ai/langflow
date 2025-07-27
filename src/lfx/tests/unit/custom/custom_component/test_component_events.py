@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-from langflow.events.event_manager import EventManager
 
 from lfx.custom.custom_component.component import Component
+from lfx.events.event_manager import EventManager
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.message import Message
