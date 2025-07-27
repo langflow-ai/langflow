@@ -109,6 +109,7 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.9.2",
     "pytest>=8.4.1",
     "pytest-asyncio>=0.26.0",
     "ruff>=0.9.10",
