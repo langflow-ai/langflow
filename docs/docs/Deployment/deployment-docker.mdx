@@ -135,23 +135,23 @@ Your custom image now contains your flow and can be deployed anywhere Docker run
 
 ## Customize the Langflow Docker image with your own code
 
-You can customize the Langflow Docker image by adding your own code or modifying existing components.
+While the previous section showed how to package a flow with a Docker image, this section shows how to customize the Langflow application itself. This is useful when you need to add custom Python packages or dependencies, modify Langflow's configuration or settings, include custom components or tools, or add your own code to extend Langflow's functionality.
 
-This example Dockerfile demonstrates how to customize Langflow by replacing the `astradb_graph.py` component, but the pattern can be adapted for any other components or custom code.
+This example demonstrates how to customize the message history component, but the same approach can be used for any code modifications.
 
 ```dockerfile
 FROM langflowai/langflow:latest
 # Set working directory
 WORKDIR /app
-# Copy your modified astradb_graph.py file
-COPY src/backend/base/langflow/components/vectorstores/astradb_graph.py /tmp/astradb_graph.py
+# Copy your modified memory component
+COPY src/backend/base/langflow/components/helpers/memory.py /tmp/memory.py
 # Find the site-packages directory where langflow is installed
 RUN python -c "import site; print(site.getsitepackages()[0])" > /tmp/site_packages.txt
 # Replace the file in the site-packages location
 RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
     echo "Site packages at: $SITE_PACKAGES" && \
-    mkdir -p "$SITE_PACKAGES/langflow/components/vectorstores" && \
-    cp /tmp/astradb_graph.py "$SITE_PACKAGES/langflow/components/vectorstores/"
+    mkdir -p "$SITE_PACKAGES/langflow/components/helpers" && \
+    cp /tmp/memory.py "$SITE_PACKAGES/langflow/components/helpers/"
 # Clear Python cache in the site-packages directory only
 RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
     find "$SITE_PACKAGES" -name "*.pyc" -delete && \
@@ -165,24 +165,24 @@ CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
 To use this custom Dockerfile, do the following:
 
 1. Create a directory for your custom Langflow setup:
-```bash
-mkdir langflow-custom && cd langflow-custom
-```
+    ```bash
+    mkdir langflow-custom && cd langflow-custom
+    ```
 
 2. Create the necessary directory structure for your custom code.
-In this example, Langflow expects `astradb_graph.py` to exist in the `/vectorstores` directory, so you create a directory in that location.
-```bash
-mkdir -p src/backend/base/langflow/components/vectorstores
-```
+In this example, Langflow expects `memory.py` to exist in the `/helpers` directory, so you create a directory in that location.
+    ```bash
+    mkdir -p src/backend/base/langflow/components/helpers
+    ```
 
-3. Place your modified `astradb_graph.py` file in the `/vectorstores` directory.
+3. Place your modified `memory.py` file in the `/helpers` directory.
 
 4. Create a new file named `Dockerfile` in your `langflow-custom` directory, and then copy the Dockerfile contents shown above into it.
 
 5. Build and run the image:
-```bash
-docker build -t myuser/langflow-custom:1.0.0 .
-docker run -p 7860:7860 myuser/langflow-custom:1.0.0
-```
+    ```bash
+    docker build -t myuser/langflow-custom:1.0.0 .
+    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    ```
 
 This approach can be adapted for any other components or custom code you want to add to Langflow by modifying the file paths and component names.
