@@ -60,7 +60,7 @@ class DoclingInlineComponent(BaseFileComponent):
             info="OCR engine to use. None will disable OCR.",
             options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
             real_time_refresh=False,
-            value="",
+             value="None",
         ),
         # TODO: expose more Docling options
     ]
