@@ -65,7 +65,7 @@ The **Retriever Flow** (top of the screen) embeds the user's queries into vector
 	Complete the **Name**, **Cloud provider**, and **Region** fields, and then click **Create**. **Database creation takes a few minutes**.
 	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
 	:::info
-	If you select a collection embedded with Nvidia through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the Nvidia `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
+	If your collection use the Astra vectorize NVIDIA integration, the **Embedding Model** port is removed, because the collection already generates embeddings with the integrated NVIDIA model. The component fetches the data from the collection, and uses the same model to generate embeddings for queries.
 	:::
 
 3. If you don't have a collection, create a new one within the component.
