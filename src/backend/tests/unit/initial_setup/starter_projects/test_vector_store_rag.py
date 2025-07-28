@@ -53,7 +53,7 @@ def rag_graph():
     # RAG Graph
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-124")
     chat_input = ChatInput(_id="chatinput-123")
-    chat_input.get_output("message").value = "What is the meaning of life?"
+    chat_input.get_output("message").value = Message(text="What is the meaning of life?")
     rag_vector_store = AstraDBVectorStoreComponent(_id="rag-vector-store-123")
     rag_vector_store.set(
         search_query=chat_input.message_response,
@@ -115,8 +115,7 @@ async def test_vector_store_rag(ingestion_graph, rag_graph):
         "openai-embeddings-124",
     ]
     for ids, graph, len_results in [(ingestion_ids, ingestion_graph, 5), (rag_ids, rag_graph, 8)]:
-        results = [result async for result in graph.async_start()]
-
+        results = [result async for result in graph.async_start(reset_output_values=False)]
         assert len(results) == len_results
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]
         assert all(vid in ids for vid in vids), f"Diff: {set(vids) - set(ids)}"
