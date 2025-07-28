@@ -285,27 +285,29 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         except Exception as exc:
             raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
 
-    # When auto login is disabled, require API key authentication
-    api_key = request.headers.get("x-api-key")
-    if not api_key:
-        raise HTTPException(status_code=403, detail="API key required when auto login is disabled")
+    # When auto login is disabled, use existing api_key_security for authentication
+    api_key_header_val = request.headers.get("x-api-key")
+    api_key_query_val = request.query_params.get("x-api-key")
 
-    # Validate the API key and get the authenticated user
-    async with session_scope() as db:
-        authenticated_user = await check_key(db, api_key)
+    try:
+        # Reuse existing api_key_security function
+        authenticated_user = await api_key_security(api_key_query_val, api_key_header_val)
         if not authenticated_user:
             raise HTTPException(status_code=403, detail="Invalid API key")
+    except HTTPException:
+        # Re-raise with webhook-specific message
+        raise HTTPException(status_code=403, detail="API key required when auto login is disabled")
 
-        # Get flow owner to check if authenticated user owns this flow
-        try:
-            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-        except Exception as exc:
-            raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
+    # Get flow owner to check if authenticated user owns this flow
+    try:
+        flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
 
-        if flow_owner.id != authenticated_user.id:
-            raise HTTPException(status_code=403, detail="You don't have permission to run this flow")
+    if flow_owner.id != authenticated_user.id:
+        raise HTTPException(status_code=403, detail="You don't have permission to run this flow")
 
-        return UserRead.model_validate(authenticated_user, from_attributes=True)
+    return authenticated_user
 
 
 def verify_password(plain_password, hashed_password):
