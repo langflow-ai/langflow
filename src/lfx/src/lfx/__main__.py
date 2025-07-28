@@ -3,15 +3,17 @@
 import typer
 
 from lfx.cli.commands import serve_command
+from lfx.cli.execute import execute
 
 app = typer.Typer(
     name="lfx",
-    help="lfx CLI - Serve Langflow projects",
+    help="lfx - Langflow Executor",
     add_completion=False,
 )
 
-# Add the serve command
+# Add commands
 app.command(name="serve", help="Serve a flow as an API")(serve_command)
+app.command(name="execute", help="Execute a flow directly")(execute)
 
 
 def main():
