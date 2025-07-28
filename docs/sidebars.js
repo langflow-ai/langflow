@@ -87,6 +87,11 @@ module.exports = {
           id: "Concepts/concepts-flows-import",
           label: "Import and export flows"
         },
+        {
+          type: "doc",
+          id: "Concepts/knowledge",
+          label: "Create and retrieve knowledge"
+        },
       ],
     },
     {
