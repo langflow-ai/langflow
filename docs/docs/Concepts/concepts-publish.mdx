@@ -1,5 +1,5 @@
 ---
-title: Run flows
+title: Trigger flows with the Langflow API
 slug: /concepts-publish
 ---
 
@@ -14,8 +14,7 @@ Langflow provides several ways to run flows from external applications:
 * [Add an embedded chat widget to a website](#embedded-chat-widget)
 * [Serve flows through a Langflow MCP server](#serve-flows-through-a-langflow-mcp-server)
 
-Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have [deployed a Langflow server](/deployment-overview) or packaged Langflow as a dependency of an application.
-For package dependencies, see [Develop an application with Langflow](/develop-application) and [Package a flow as a Docker image](/deployment-docker#package-your-flow-as-a-docker-image).
+Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have [deployed a Langflow server](/deployment-overview) or [packaged Langflow as a dependency of an application](/develop-application).
 
 ## Use the Langflow API to run flows {#api-access}
 
@@ -170,7 +169,7 @@ For more information, see the [langflow-embedded-chat README](https://github.com
 The following examples show how to use embedded chat widget in React, Angular, and plain HTML.
 
 <Tabs>
-  <TabItem value="react" label="React" default>
+<TabItem value="react" label="React" default>
 
 To use the chat widget in your React application, create a component that loads the widget script and renders the chat interface:
 
@@ -259,8 +258,8 @@ Modify the following reference for your React component's name and the desired `
    <ChatWidget className="my-chat-widget" />
    ```
 
-  </TabItem>
-  <TabItem value="angular" label="Angular">
+</TabItem>
+<TabItem value="angular" label="Angular">
 
 To use the chat widget in your Angular application, create a component that loads the widget script and renders the chat interface.
 
@@ -331,8 +330,8 @@ You must add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration to enable t
     }
     ```
 
-  </TabItem>
-  <TabItem value="html" label="HTML">
+</TabItem>
+<TabItem value="html" label="HTML">
 
 ```html
 <html lang="en">
@@ -349,7 +348,7 @@ You must add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration to enable t
 </html>
 ```
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ### Configure the langflow-chat web component {#configure-the-langflow-chat-web-component}
@@ -531,8 +530,6 @@ For more information, see [Use Langflow as an MCP server](/mcp-server) and [Use 
 
 ## See also
 
-* [Develop an application with Langflow](/develop-application)
-* [Langflow deployment overview](/deployment-overview)
 * [Import and export flows](/concepts-flows-import)
 * [Files endpoints](/api-files)
 * [Use the Playground](/concepts-playground)

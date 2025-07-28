@@ -1,0 +1,57 @@
+---
+title: Azure
+slug: /bundles-azure
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Azure** bundle.
+
+## Azure OpenAI
+
+This component generates text using [Azure OpenAI LLMs](https://learn.microsoft.com/en-us/azure/ai-services/openai/).
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+Specifically, the **Language Model** output is an instance of [`AzureChatOpenAI`](https://python.langchain.com/docs/integrations/chat/azure_chat_openai/) configured according to the component's parameters.
+
+Use the **Language Model** output when you want to use an Azure OpenAI model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### Azure OpenAI parameters
+
+Many **Azure OpenAI** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| Model Name | String | Input parameter. Specifies the name of the Azure OpenAI model to be used for text generation. |
+| Azure Endpoint | String | Input parameter. Your Azure endpoint, including the resource. |
+| Deployment Name | String | Input parameter. Specifies the name of the deployment. |
+| API Version | String | Input parameter. Specifies the version of the Azure OpenAI API to be used. |
+| API Key | SecretString | Input parameter. Your Azure OpenAI API key. |
+| Temperature | Float | Input parameter. Specifies the sampling temperature. Defaults to `0.7`. |
+| Max Tokens | Integer | Input parameter. Specifies the maximum number of tokens to generate. Defaults to `1000`. |
+| Input Value | String | Input parameter. Specifies the input text for text generation. |
+| Stream | Boolean | Input parameter. Specifies whether to stream the response from the model. Defaults to `False`. |
+
+## Azure OpenAI Embeddings
+
+The **Azure OpenAI Embeddings** component generates embeddings using Azure OpenAI models.
+
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+
+### Azure OpenAI Embeddings parameters
+
+Some **Azure OpenAI Embeddings** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| Model | String | Input parameter. The name of the model to use. Default: `text-embedding-3-small`. |
+| Azure Endpoint | String | Input parameter. Your Azure endpoint, including the resource, such as `https://example-resource.azure.openai.com/`. |
+| Deployment Name | String | Input parameter. The name of the deployment. |
+| API Version | String | Input parameter. The API version to use, with options including various dates. |
+| API Key | String | Input parameter. The API key required to access the Azure OpenAI service. |

@@ -1,0 +1,48 @@
+---
+title: Cohere
+slug: /bundles-cohere
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Cohere** bundle.
+
+For more information about Cohere features and functionality used by Cohere components, see the [Cohere documentation](https://cohere.ai/).
+
+### Cohere text generation
+
+This component generates text using Cohere's language models.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Cohere model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### Cohere text generation parameters
+
+Many **Cohere** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| Cohere API Key | SecretString | Input parameter. Your Cohere API key. |
+| Max Tokens | Integer | Input parameter. Specifies the maximum number of tokens to generate. Defaults to `256`. |
+| Temperature | Float | Input parameter. Specifies the sampling temperature. Defaults to `0.75`. |
+| Input Value | String | Input parameter. Specifies the input text for text generation. |
+
+### Cohere Embeddings
+
+The **Cohere Embeddings** component is used to load embedding models from Cohere.
+
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+
+### Cohere Embeddings parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| cohere_api_key | String | Input parameter. The API key required to authenticate with the Cohere service. |
+| model | String | Input parameter. The language model used for embedding text documents and performing queries. Default: `embed-english-v2.0`. |
+| truncate | Boolean | Input parameter. Whether to truncate the input text to fit within the model's constraints. Default: `False`. |
