@@ -9,8 +9,8 @@ import json
 import uuid
 from typing import Any
 
-from langflow.graph.graph.base import Graph
-from langflow.utils.validate import validate_code
+from lfx.custom.validate import validate_code
+from lfx.graph.graph.base import Graph
 
 
 def validate_template_structure(template_data: dict[str, Any], filename: str) -> list[str]:
