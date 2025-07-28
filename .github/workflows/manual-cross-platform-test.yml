@@ -1,15 +1,14 @@
-name: Cross-Platform Installation Test
+name: Manual Cross-Platform Test
 
 on:
   workflow_dispatch:
     inputs:
-      base-artifact-name:
-        description: "Name of the base package artifact (leave empty to use latest from main branch)"
-        required: false
-        type: string
-        default: ""
-      main-artifact-name:
-        description: "Name of the main package artifact (leave empty to use latest from main branch)"
+      test-from-pypi:
+        description: "Test from PyPI instead of building from source"
+        type: boolean
+        default: false
+      langflow-version:
+        description: "Langflow version to test from PyPI (leave empty for latest)"
         required: false
         type: string
         default: ""
@@ -18,75 +17,12 @@ on:
         required: false
         type: number
         default: 120
-      run-id:
-        description: "GitHub run ID to download artifacts from (leave empty for latest successful run)"
-        required: false
-        type: string
-        default: ""
-  workflow_call:
-    inputs:
-      base-artifact-name:
-        description: "Name of the base package artifact"
-        required: true
-        type: string
-      main-artifact-name:
-        description: "Name of the main package artifact" 
-        required: true
-        type: string
-      test-timeout:
-        description: "Timeout for langflow server startup test"
-        required: false
-        type: number
-        default: 120
 
 jobs:
-  build-if-needed:
-    name: Build Packages (if no artifacts provided)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && (inputs.base-artifact-name == '' || inputs.main-artifact-name == '')
-    outputs:
-      base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
-      main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-      - name: Install the project
-        run: uv sync
-      - name: Install frontend dependencies
-        run: make install_frontendci
-      - name: Build frontend
-        run: make build_frontend
-      - name: Build base package
-        run: make build_langflow_base args="--wheel"
-      - name: Build main package  
-        run: make build_langflow args="--wheel"
-      - name: Upload base artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: adhoc-dist-base
-          path: src/backend/base/dist
-      - name: Upload main artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: adhoc-dist-main
-          path: dist
-      - name: Set artifact names
-        id: set-names
-        run: |
-          echo "base-artifact-name=adhoc-dist-base" >> $GITHUB_OUTPUT
-          echo "main-artifact-name=adhoc-dist-main" >> $GITHUB_OUTPUT
-
-  test-installation:
-    name: Test Install - ${{ matrix.os }} ${{ matrix.arch }}
+  test-pypi-installation:
+    if: inputs.test-from-pypi == true
+    name: Test PyPI Install - ${{ matrix.os }} ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    needs: [build-if-needed]
-    if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -100,12 +36,6 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.13"
-          # Linux ARM64 (using ubuntu-latest with qemu)
-          - os: linux
-            arch: arm64
-            runner: ubuntu-latest
-            python-version: "3.10"
-            use-qemu: true
           # macOS AMD64
           - os: macos
             arch: amd64
@@ -135,12 +65,6 @@ jobs:
             python-version: "3.13"
 
     steps:
-      - name: Set up QEMU (for ARM64 on Linux)
-        if: matrix.use-qemu
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -152,67 +76,29 @@ jobs:
         with:
           enable-cache: false
 
-      - name: Set artifact names
-        id: artifact-names
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_NAME="${{ inputs.base-artifact-name }}"
-            MAIN_NAME="${{ inputs.main-artifact-name }}"
-            if [ -z "$BASE_NAME" ]; then
-              BASE_NAME="${{ needs.build-if-needed.outputs.base-artifact-name }}"
-            fi
-            if [ -z "$MAIN_NAME" ]; then
-              MAIN_NAME="${{ needs.build-if-needed.outputs.main-artifact-name }}"  
-            fi
-          else
-            BASE_NAME="${{ inputs.base-artifact-name }}"
-            MAIN_NAME="${{ inputs.main-artifact-name }}"
-          fi
-          echo "base-name=$BASE_NAME" >> $GITHUB_OUTPUT
-          echo "main-name=$MAIN_NAME" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Download base package artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ steps.artifact-names.outputs.base-name }}
-          path: ./base-dist
-          run-id: ${{ inputs.run-id || github.run_id }}
-
-      - name: Download main package artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ steps.artifact-names.outputs.main-name }}
-          path: ./main-dist
-          run-id: ${{ inputs.run-id || github.run_id }}
-
       - name: Create fresh virtual environment
         run: |
           uv venv test-env
         shell: bash
 
-      - name: Install base package (Windows)
+      - name: Install langflow from PyPI (Windows)
         if: matrix.os == 'windows'
         run: |
-          ./test-env/Scripts/python -m pip install ./base-dist/*.whl
-        shell: cmd
-
-      - name: Install main package (Windows)
-        if: matrix.os == 'windows'
-        run: |
-          ./test-env/Scripts/python -m pip install ./main-dist/*.whl
-        shell: cmd
-
-      - name: Install base package (Unix)
-        if: matrix.os != 'windows'
-        run: |
-          ./test-env/bin/python -m pip install ./base-dist/*.whl
+          if [ -n "${{ inputs.langflow-version }}" ]; then
+            ./test-env/Scripts/python -m pip install langflow==${{ inputs.langflow-version }}
+          else  
+            ./test-env/Scripts/python -m pip install langflow
+          fi
         shell: bash
 
-      - name: Install main package (Unix)
+      - name: Install langflow from PyPI (Unix)
         if: matrix.os != 'windows'
         run: |
-          ./test-env/bin/python -m pip install ./main-dist/*.whl
+          if [ -n "${{ inputs.langflow-version }}" ]; then
+            ./test-env/bin/python -m pip install langflow==${{ inputs.langflow-version }}
+          else
+            ./test-env/bin/python -m pip install langflow
+          fi
         shell: bash
 
       - name: Test CLI help command (Windows)
@@ -311,17 +197,28 @@ jobs:
           "
         shell: bash
 
+  test-source-build:
+    if: inputs.test-from-pypi == false
+    name: Test Source Build and Install
+    uses: ./.github/workflows/cross-platform-test.yml
+    with:
+      base-artifact-name: ""
+      main-artifact-name: ""
+      test-timeout: ${{ inputs.test-timeout }}
+
   test-summary:
-    name: Cross-Platform Test Summary
-    needs: test-installation
+    name: Test Summary
+    needs: [test-pypi-installation, test-source-build]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.test-installation.result }}" != "success" ]; then
-            echo "❌ Cross-platform tests failed - PyPI upload blocked"
+          if [ "${{ needs.test-pypi-installation.result }}" = "failure" ] || [ "${{ needs.test-source-build.result }}" = "failure" ]; then
+            echo "❌ Cross-platform tests failed"
             exit 1
+          elif [ "${{ needs.test-pypi-installation.result }}" = "success" ] || [ "${{ needs.test-source-build.result }}" = "success" ]; then
+            echo "✅ Cross-platform tests passed"
           else
-            echo "✅ All cross-platform tests passed - PyPI upload can proceed"
+            echo "ℹ️ No tests were run"
           fi
