@@ -307,6 +307,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
 
         return UserRead.model_validate(authenticated_user, from_attributes=True)
 
+
 def verify_password(plain_password, hashed_password):
     settings_service = get_settings_service()
     return settings_service.auth_settings.pwd_context.verify(plain_password, hashed_password)
