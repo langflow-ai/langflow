@@ -10,12 +10,13 @@ import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.interface.components import (
+
+from lfx.interface.components import (
     component_cache,
     get_and_cache_all_types_dict,
 )
-from langflow.services.settings.base import BASE_COMPONENTS_PATH
-from langflow.services.settings.service import SettingsService
+from lfx.services.settings.base import BASE_COMPONENTS_PATH
+from lfx.services.settings.service import SettingsService
 
 
 class TestComponentLoadingFix:
