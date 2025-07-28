@@ -1,5 +1,6 @@
 import asyncio
 import platform
+import re
 import shutil
 import sys
 import threading
@@ -146,27 +147,14 @@ def _is_valid_windows_package_name(package_name: str) -> bool:
 
 def _validate_package_specification(package_spec: str) -> bool:
     """Validate package specification with version support (e.g., 'pandas==2.3.1', 'requests>=2.25.0')."""
-    import re
-
     if not package_spec or not package_spec.strip():
         return False
 
-    # Pattern to match: package_name[version_operators]
-    # Allows: letters, numbers, hyphens, underscores, dots for package names
-    # Allows: ==, >=, <=, >, <, !=, ~=, === and version numbers
-    pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(([><=!~]+|===)[0-9]+(\.[0-9]+)*([a-zA-Z0-9._-]*)?)?$"
-
-    if not re.match(pattern, package_spec):
+    if not _PACKAGE_SPEC_PATTERN.match(package_spec):
         return False
 
-    # Security checks: forbidden command injection characters
-    forbidden_chars = [";", "&", "|", "`", "$", "(", ")"]
-
-    # Add Windows-specific forbidden characters
-    if platform.system() == "Windows":
-        forbidden_chars.extend(["%", "^", '"', "'"])
-
-    return not any(char in package_spec for char in forbidden_chars)
+    # Use set intersection for fast forbidden character check
+    return not _FORBIDDEN_CHARS.intersection(package_spec)
 
 
 def _validate_package_name(package_name: str) -> bool:
@@ -423,6 +411,8 @@ async def get_installation_status(
     # Get latest installation status for user
     from sqlalchemy import desc
 
+    _FORBIDDEN_CHARS.update({"%", "^", '"', "'"})
+
     result = await session.exec(
         select(PackageInstallation)
         .where(PackageInstallation.user_id == current_user.id)
@@ -481,3 +471,10 @@ async def clear_installation_status(
     await session.commit()
 
     return {"message": "Installation status cleared"}
+
+
+_PACKAGE_SPEC_PATTERN = re.compile(
+    r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(([><=!~]+|===)[0-9]+(\.[0-9]+)*([a-zA-Z0-9._-]*)?)?$"
+)
+
+_FORBIDDEN_CHARS = {";", "&", "|", "`", "$", "(", ")"}
