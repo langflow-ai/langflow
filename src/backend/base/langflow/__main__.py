@@ -644,8 +644,8 @@ def superuser(
     ),
 ) -> None:
     """Create a superuser.
-    
-    When AUTO_LOGIN is enabled, uses default credentials. 
+
+    When AUTO_LOGIN is enabled, uses default credentials.
     In production mode, requires authentication.
     """
     configure(log_level=log_level)
