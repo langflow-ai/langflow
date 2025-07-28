@@ -14,9 +14,6 @@ If you want to use the Langflow API to run a flow, see [Flow trigger endpoints](
 
 Creates a new flow.
 
-<Tabs>
-   <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/" \
@@ -40,8 +37,8 @@ curl -X POST \
 }'
 ```
 
-   </TabItem>
-   <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -63,8 +60,7 @@ curl -X POST \
 }
 ```
 
-   </TabItem>
-</Tabs>
+</details>
 
 ## Create flows
 
@@ -122,9 +118,6 @@ curl -X POST \
 
 Retrieves a specific flow by its ID.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
@@ -132,9 +125,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -151,8 +143,7 @@ curl -X GET \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Read flows
 
@@ -193,9 +184,6 @@ Updates an existing flow by its ID.
 
 This example changes the value for `endpoint_name` from a random UUID to `my_new_endpoint_name`.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X PATCH \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
@@ -212,8 +200,8 @@ curl -X PATCH \
 }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -235,15 +223,11 @@ curl -X PATCH \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Delete flow
 
 Deletes a specific flow by its ID.
-
-<Tabs>
-    <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
@@ -252,9 +236,8 @@ curl -X DELETE \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-</TabItem>
-
-<TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -262,17 +245,13 @@ curl -X DELETE \
 }
 ```
 
-   </TabItem>
-</Tabs>
+</details>
 
 ## Export flows
 
 Exports specified flows to a ZIP file.
 
 This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents) for each flow ID listed in the request body.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -287,8 +266,8 @@ curl -X POST \
   --output langflow-flows.zip
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
@@ -296,8 +275,7 @@ curl -X POST \
 100 76437    0 76353  100    84  4516k   5088 --:--:-- --:--:-- --:--:-- 4665k
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Import flows
 
@@ -306,10 +284,7 @@ Imports flows by uploading a [Langflow-compatible JSON file](/concepts-flows-imp
 To specify a target project for the flow, include the query parameter `project_id`.
 The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available projects.
 
-This example uploads a local file named `agent-with-astra-db-tool.json` to a project specified by a `PROJECT_ID` variable.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+This example uploads a local file named `agent-with-astra-db-tool.json` to a project specified by a `PROJECT_ID` variable:
 
 ```bash
 curl -X POST \
@@ -320,8 +295,8 @@ curl -X POST \
   -F "file=@agent-with-astra-db-tool.json;type=application/json"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 [
@@ -337,5 +312,4 @@ curl -X POST \
 ]
 ```
 
-  </TabItem>
-</Tabs>
+</details>
