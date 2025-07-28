@@ -229,20 +229,77 @@ async def install_package_background(installation_id: UUID) -> None:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            _, process_stderr = await process.communicate()
+            stdout, stderr = await process.communicate()
 
-            # Handle encoding properly for Windows
+            # Handle encoding properly for Windows - FIXED
+            stdout_text = ""
+            stderr_text = ""
+
             if platform.system() == "Windows":
-                stderr_text = process_stderr.decode("cp1252", errors="replace") if process_stderr else ""
+                # Try multiple encodings for Windows
+                for encoding in ["utf-8", "cp1252", "latin1"]:
+                    try:
+                        stdout_text = stdout.decode(encoding) if stdout else ""
+                        stderr_text = stderr.decode(encoding) if stderr else ""
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                else:
+                    # Fallback with error replacement
+                    stdout_text = stdout.decode("utf-8", errors="replace") if stdout else ""
+                    stderr_text = stderr.decode("utf-8", errors="replace") if stderr else ""
             else:
-                stderr_text = process_stderr.decode() if process_stderr else ""
+                stdout_text = stdout.decode("utf-8") if stdout else ""
+                stderr_text = stderr.decode("utf-8") if stderr else ""
 
-            if process.returncode == 0:
+            # Enhanced error detection for Windows - FIXED
+            installation_failed = False
+
+            # Check return code first
+            if process.returncode != 0:
+                installation_failed = True
+                logger.error(f"UV command failed with return code: {process.returncode}")
+
+            # Additional Windows-specific error detection
+            if platform.system() == "Windows":
+                # Check for specific error patterns in stderr and stdout
+                error_patterns = [
+                    "No solution found when resolving dependencies",
+                    "we can conclude that all versions of",
+                    "cannot be used",
+                    "requirements are unsatisfiable",
+                    "Ã—",  # This is the x character in Windows encoding
+                    "error:",
+                    "failed",
+                    "Error:",
+                    "ERROR:",
+                ]
+
+                combined_output = f"{stdout_text} {stderr_text}".lower()
+                for pattern in error_patterns:
+                    if pattern.lower() in combined_output:
+                        installation_failed = True
+                        logger.error(f"Detected error pattern '{pattern}' in output")
+                        break
+
+            if not installation_failed:
                 logger.info(f"Successfully installed package: {package_name}")
                 installation.status = InstallationStatus.COMPLETED
                 installation.message = f"Package '{package_name}' installed successfully"
             else:
-                error_message = stderr_text or "Unknown error"
+                # Combine stdout and stderr for complete error message
+                error_message = stderr_text or stdout_text or "Unknown error"
+
+                # Clean up the error message for Windows
+                if platform.system() == "Windows":
+                    # Remove problematic unicode characters and clean up the message
+                    import re
+
+                    # Remove box drawing and other problematic characters
+                    error_message = re.sub(r"[^\x00-\x7F]+", " ", error_message)
+                    # Clean up multiple spaces
+                    error_message = re.sub(r"\s+", " ", error_message).strip()
+
                 logger.error(f"Failed to install package {package_name}: {error_message}")
                 installation.status = InstallationStatus.FAILED
                 installation.message = f"Failed to install package '{package_name}': {error_message}"
@@ -253,7 +310,7 @@ async def install_package_background(installation_id: UUID) -> None:
             await session.commit()
 
             # Only restart if installation was successful
-            if process.returncode == 0:
+            if not installation_failed:
                 # Give frontend time to poll the completion status before restart
                 await asyncio.sleep(1)
 
