@@ -345,9 +345,9 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
     ):
-        if not self._prepared:
-            msg = "Graph not prepared. Call prepare() first."
-            raise ValueError(msg)
+        self.prepare()
+        self._reset_all_output_values()
+
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
         if config is not None:
@@ -408,8 +408,6 @@ class Graph:
         Returns:
             Generator yielding results from graph execution
         """
-        self.prepare()
-        self._reset_all_output_values()
         if self.is_cyclic and max_iterations is None:
             msg = "You must specify a max_iterations if the graph is cyclic"
             raise ValueError(msg)
@@ -1339,6 +1337,9 @@ class Graph:
             self._end_all_traces_async()
             return Finish()
         vertex_id = self.get_next_in_queue()
+        if not vertex_id:
+            msg = "No vertex to run"
+            raise ValueError(msg)
         chat_service = get_chat_service()
 
         # Provide fallback cache functions if chat service is unavailable
@@ -1350,13 +1351,13 @@ class Graph:
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
                 return None
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
-            inputs_dict=inputs.model_dump() if inputs else {},
+            inputs_dict=inputs.model_dump() if inputs and hasattr(inputs, "model_dump") else {},
             files=files,
             get_cache=get_cache_func,
             set_cache=set_cache_func,
