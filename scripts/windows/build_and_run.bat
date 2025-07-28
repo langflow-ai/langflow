@@ -1,25 +1,13 @@
 @echo off
 echo Starting Langflow build and run process...
 
-REM Load environment variables from .env file if it exists
+REM Check if .env file exists and set env file parameter
+set "ENV_FILE_PARAM="
 if exist "..\..\..env" (
-    echo Loading environment variables from .env file...
-    for /f "usebackq tokens=1,2 delims==" %%A in ("..\..\..env") do (
-        REM Skip empty lines and comments
-        echo %%A | findstr /r "^[^#]" >nul
-        if not errorlevel 1 (
-            REM Remove quotes if present and set environment variable
-            set "temp_value=%%B"
-            setlocal enabledelayedexpansion
-            set "temp_value=!temp_value:"=!"
-            set "temp_value=!temp_value:'=!"
-            endlocal & set "%%A=!temp_value!"
-            echo Set %%A
-        )
-    )
-    echo Environment variables loaded successfully!
+    echo Found .env file, will pass to langflow run
+    set "ENV_FILE_PARAM=--env-file "..\..\..env""
 ) else (
-    echo .env file not found, skipping environment variable loading
+    echo .env file not found, langflow will use default configuration
 )
 
 echo.
@@ -93,7 +81,11 @@ echo Step 4: Running Langflow...
 echo.
 echo Attention: Wait until uvicorn is running before opening the browser
 echo.
-uv run langflow run
+if defined ENV_FILE_PARAM (
+    uv run langflow run %ENV_FILE_PARAM%
+) else (
+    uv run langflow run
+)
 if errorlevel 1 (
     echo Error: Failed to run langflow
     pause
