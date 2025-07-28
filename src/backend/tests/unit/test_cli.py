@@ -138,7 +138,6 @@ class TestSuperuserCommand:
             assert "AUTO_LOGIN enabled. Creating default superuser 'langflow'..." in result.stdout
             assert "Default credentials are langflow/langflow" in result.stdout
 
-
     def test_failed_auth_token_validation(self, runner):
         """Test failed superuser creation with invalid auth token."""
         with (
@@ -151,7 +150,12 @@ class TestSuperuserCommand:
             mock_settings2.return_value.auth_settings = mock_auth_settings
 
             # Tyy to create a superuser with invalid token - should fail
-            result = runner.invoke(app, ["superuser", "--auth-token", "invalid-token", "--username", "newuser", "--password", "newpass"])
+            result = runner.invoke(
+                app, ["superuser", "--auth-token", "invalid-token", "--username", "newuser", "--password", "newpass"]
+            )
 
             assert result.exit_code == 1
-            assert "Error: Invalid token or insufficient privileges. Only superusers can create other superusers." in result.stdout
+            assert (
+                "Error: Invalid token or insufficient privileges. Only superusers can create other superusers."
+                in result.stdout
+            )
