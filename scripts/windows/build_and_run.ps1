@@ -2,6 +2,19 @@
 
 Write-Host "Starting Langflow build and run process..." -ForegroundColor Green
 
+# Check if .env file exists and set env file parameter
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$projectRoot = Resolve-Path (Join-Path $scriptDir "..\..")
+$envPath = Join-Path $projectRoot ".env"
+$useEnvFile = $false
+if (Test-Path $envPath) {
+    Write-Host "Found .env file at: $envPath" -ForegroundColor Cyan
+    $useEnvFile = $true
+} else {
+    Write-Host ".env file not found at: $envPath" -ForegroundColor Yellow
+    Write-Host "Langflow will use default configuration" -ForegroundColor Yellow
+}
+
 # Step 1: Install frontend dependencies
 Write-Host "`nStep 1: Installing frontend dependencies..." -ForegroundColor Yellow
 try {
@@ -35,7 +48,7 @@ try {
 Write-Host "`nStep 3: Copying build files to backend..." -ForegroundColor Yellow
 try {
     Set-Location "..\.."
-    
+
     # Determine build directory
     $buildDir = if (Test-Path "src\frontend\build") {
         "src\frontend\build"
@@ -44,25 +57,25 @@ try {
     } else {
         throw "Neither build nor dist directory found in src\frontend"
     }
-    
+
     $targetDir = "src\backend\base\langflow\frontend"
     Write-Host "Copying from $buildDir to $targetDir"
-    
+
     # Create target directory if it doesn't exist
     if (-not (Test-Path $targetDir)) {
         New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
     }
-    
+
     # Remove existing files in target directory (FORCES CLEAN REPLACEMENT)
     Write-Host "Removing existing files from target directory..." -ForegroundColor Cyan
     if (Test-Path "$targetDir\*") {
         Remove-Item "$targetDir\*" -Recurse -Force
     }
-    
+
     # Copy all files from build directory
     Copy-Item "$buildDir\*" -Destination $targetDir -Recurse -Force
     Write-Host "Build files copied successfully!" -ForegroundColor Green
-    
+
 } catch {
     Write-Host "Error copying files: $_" -ForegroundColor Red
     Read-Host "Press Enter to exit"
@@ -73,7 +86,11 @@ try {
 Write-Host "`nStep 4: Running Langflow..." -ForegroundColor Yellow
 Write-Host "`nAttention: Wait until uvicorn is running before opening the browser" -ForegroundColor Red
 try {
-    uv run langflow run
+    if ($useEnvFile) {
+        & uv run langflow run --env-file $envPath
+    } else {
+        & uv run langflow run
+    }
 } catch {
     Write-Host "Error running langflow: $_" -ForegroundColor Red
     Read-Host "Press Enter to exit"
@@ -81,4 +98,4 @@ try {
 }
 
 Write-Host "`nLangflow build and run process completed!" -ForegroundColor Green
-Read-Host "Press Enter to exit" 
+Read-Host "Press Enter to exit"
