@@ -109,7 +109,7 @@ def convert_kwargs(params):
 
 
 async def update_params_with_load_from_db_fields(
-    custom_component: CustomComponent,
+    custom_component: Component,
     params,
     load_from_db_fields,
     *,
