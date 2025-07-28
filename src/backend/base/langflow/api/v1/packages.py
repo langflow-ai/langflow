@@ -1,5 +1,6 @@
 import asyncio
 import platform
+import re
 import shutil
 import sys
 import threading
@@ -146,27 +147,17 @@ def _is_valid_windows_package_name(package_name: str) -> bool:
 
 def _validate_package_specification(package_spec: str) -> bool:
     """Validate package specification with version support (e.g., 'pandas==2.3.1', 'requests>=2.25.0')."""
-    import re
-
-    if not package_spec or not package_spec.strip():
+    if not package_spec or package_spec.isspace():
         return False
 
-    # Pattern to match: package_name[version_operators]
-    # Allows: letters, numbers, hyphens, underscores, dots for package names
-    # Allows: ==, >=, <=, >, <, !=, ~=, === and version numbers
-    pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(([><=!~]+|===)[0-9]+(\.[0-9]+)*([a-zA-Z0-9._-]*)?)?$"
-
-    if not re.match(pattern, package_spec):
+    # Use pre-compiled regex
+    if not _PATTERN.match(package_spec):
         return False
 
-    # Security checks: forbidden command injection characters
-    forbidden_chars = [";", "&", "|", "`", "$", "(", ")"]
+    if _FORBIDDEN_CHARS.intersection(package_spec):
+        return False
 
-    # Add Windows-specific forbidden characters
-    if platform.system() == "Windows":
-        forbidden_chars.extend(["%", "^", '"', "'"])
-
-    return not any(char in package_spec for char in forbidden_chars)
+    return True
 
 
 def _validate_package_name(package_name: str) -> bool:
@@ -481,3 +472,14 @@ async def clear_installation_status(
     await session.commit()
 
     return {"message": "Installation status cleared"}
+
+
+_PATTERN = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(([><=!~]+|===)[0-9]+(\.[0-9]+)*([a-zA-Z0-9._-]*)?)?$")
+
+_FORBIDDEN_CHARS_NON_WIN = {";", "&", "|", "`", "$", "(", ")"}
+
+_FORBIDDEN_CHARS_WIN = _FORBIDDEN_CHARS_NON_WIN | {"%", "^", '"', "'"}
+
+_IS_WINDOWS = platform.system() == "Windows"
+
+_FORBIDDEN_CHARS = _FORBIDDEN_CHARS_WIN if _IS_WINDOWS else _FORBIDDEN_CHARS_NON_WIN
