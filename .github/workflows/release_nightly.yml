@@ -19,6 +19,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_lfx:
+        description: "Build and release LFX package"
+        required: false
+        type: boolean
+        default: false
       nightly_tag_main:
         description: "Tag for the nightly main build"
         required: true
@@ -26,6 +31,10 @@ on:
       nightly_tag_base:
         description: "Tag for the nightly base build"
         required: true
+        type: string
+      nightly_tag_lfx:
+        description: "Tag for the nightly LFX build"
+        required: false
         type: string
   workflow_call:
     inputs:
@@ -44,6 +53,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_lfx:
+        description: "Build and release LFX package"
+        required: false
+        type: boolean
+        default: false
       nightly_tag_main:
         description: "Tag for the nightly main build"
         required: true
@@ -51,6 +65,10 @@ on:
       nightly_tag_base:
         description: "Tag for the nightly base build"
         required: true
+        type: string
+      nightly_tag_lfx:
+        description: "Tag for the nightly LFX build"
+        required: false
         type: string
 
 env:
@@ -213,6 +231,75 @@ jobs:
         with:
           name: dist-main
           path: dist
+
+  release-nightly-lfx:
+    name: Release LFX Nightly
+    if: always() && ${{ inputs.build_lfx == true }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+      - name: Install LFX dependencies
+        run: uv sync --dev --package lfx
+
+      - name: Verify Nightly Name and Version
+        id: verify
+        run: |
+          cd src/lfx
+          name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
+          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
+          if [ "$name" != "lfx-nightly" ]; then
+            echo "Name $name does not match lfx-nightly. Exiting the workflow."
+            exit 1
+          fi
+          if [ "$version" != "${{ inputs.nightly_tag_lfx }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_lfx }}. Exiting the workflow."
+            exit 1
+          fi
+          # Strip the leading `v` from the version
+          version=$(echo $version | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Build LFX for distribution
+        run: |
+          cd src/lfx
+          rm -rf dist/
+          uv build --wheel
+
+      - name: Test LFX CLI
+        run: |
+          cd src/lfx
+          uv pip install dist/*.whl --force-reinstall
+          uv run lfx --help
+          echo "LFX CLI test completed successfully"
+
+      - name: Publish LFX to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd src/lfx
+          uv publish
+
+      - name: Upload LFX Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-lfx
+          path: src/lfx/dist
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
