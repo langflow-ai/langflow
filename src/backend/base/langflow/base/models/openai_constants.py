@@ -59,10 +59,30 @@ OPENAI_MODELS_DETAILED = [
     create_model_metadata(
         provider="OpenAI", name="gpt-4o-mini-realtime-preview", icon="OpenAI", not_supported=True, preview=True
     ),
+    create_model_metadata(
+        provider="OpenAI",
+        name="text-embedding-3-small",
+        icon="OpenAI",
+        model_type="embeddings",
+    ),
+    create_model_metadata(
+        provider="OpenAI",
+        name="text-embedding-3-large",
+        icon="OpenAI",
+        model_type="embeddings",
+    ),
+    create_model_metadata(
+        provider="OpenAI",
+        name="text-embedding-ada-002",
+        icon="OpenAI",
+        model_type="embeddings",
+    ),
 ]
+OPENAI_LANGUAGE_MODELS = [metadata for metadata in OPENAI_MODELS_DETAILED if metadata.get("model_type", "llm") == "llm"]
+
 OPENAI_CHAT_MODEL_NAMES = [
     metadata["name"]
-    for metadata in OPENAI_MODELS_DETAILED
+    for metadata in OPENAI_LANGUAGE_MODELS
     if not metadata.get("not_supported", False)
     and not metadata.get("reasoning", False)
     and not metadata.get("search", False)
@@ -70,22 +90,20 @@ OPENAI_CHAT_MODEL_NAMES = [
 
 OPENAI_REASONING_MODEL_NAMES = [
     metadata["name"]
-    for metadata in OPENAI_MODELS_DETAILED
+    for metadata in OPENAI_LANGUAGE_MODELS
     if metadata.get("reasoning", False) and not metadata.get("not_supported", False)
 ]
 
 OPENAI_SEARCH_MODEL_NAMES = [
     metadata["name"]
-    for metadata in OPENAI_MODELS_DETAILED
+    for metadata in OPENAI_LANGUAGE_MODELS
     if metadata.get("search", False) and not metadata.get("not_supported", False)
 ]
 
-NOT_SUPPORTED_MODELS = [metadata["name"] for metadata in OPENAI_MODELS_DETAILED if metadata.get("not_supported", False)]
+NOT_SUPPORTED_MODELS = [metadata["name"] for metadata in OPENAI_LANGUAGE_MODELS if metadata.get("not_supported", False)]
 
 OPENAI_EMBEDDING_MODEL_NAMES = [
-    "text-embedding-3-small",
-    "text-embedding-3-large",
-    "text-embedding-ada-002",
+    metadata["name"] for metadata in OPENAI_MODELS_DETAILED if metadata.get("model_type", "llm") == "embeddings"
 ]
 
 # Backwards compatibility
