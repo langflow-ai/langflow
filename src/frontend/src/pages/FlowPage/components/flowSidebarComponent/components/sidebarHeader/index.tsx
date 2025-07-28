@@ -39,7 +39,9 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
           <SidebarTrigger className="text-muted-foreground">
             <ForwardedIconComponent name="PanelLeftClose" />
           </SidebarTrigger>
-          <h3 className="flex-1 text-sm font-semibold">Components</h3>
+          <h3 className="flex-1 cursor-default text-sm font-semibold">
+            Components
+          </h3>
           <DisclosureTrigger>
             <div>
               <ShadTooltip content="Component settings" styleClasses="z-50">
