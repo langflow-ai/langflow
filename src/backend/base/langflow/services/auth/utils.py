@@ -291,7 +291,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         raise HTTPException(status_code=403, detail="API key required when auto login is disabled")
 
     # Validate the API key and get the authenticated user
-    async with get_db_service().with_session() as db:
+    async with session_scope() as db:
         authenticated_user = await check_key(db, api_key)
         if not authenticated_user:
             raise HTTPException(status_code=403, detail="Invalid API key")
