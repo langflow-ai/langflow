@@ -6,10 +6,10 @@ Write-Host "Starting Langflow build and run process..." -ForegroundColor Green
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $projectRoot = Resolve-Path (Join-Path $scriptDir "..\..")
 $envPath = Join-Path $projectRoot ".env"
-$envFileParam = ""
+$useEnvFile = $false
 if (Test-Path $envPath) {
     Write-Host "Found .env file at: $envPath" -ForegroundColor Cyan
-    $envFileParam = "--env-file `"$envPath`""
+    $useEnvFile = $true
 } else {
     Write-Host ".env file not found at: $envPath" -ForegroundColor Yellow
     Write-Host "Langflow will use default configuration" -ForegroundColor Yellow
@@ -86,10 +86,10 @@ try {
 Write-Host "`nStep 4: Running Langflow..." -ForegroundColor Yellow
 Write-Host "`nAttention: Wait until uvicorn is running before opening the browser" -ForegroundColor Red
 try {
-    if ($envFileParam) {
-        Invoke-Expression "uv run langflow run $envFileParam"
+    if ($useEnvFile) {
+        & uv run langflow run --env-file $envPath
     } else {
-        uv run langflow run
+        & uv run langflow run
     }
 } catch {
     Write-Host "Error running langflow: $_" -ForegroundColor Red
