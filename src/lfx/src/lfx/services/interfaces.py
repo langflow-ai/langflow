@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    import asyncio
 
 
 class DatabaseServiceProtocol(Protocol):
@@ -79,6 +82,16 @@ class CacheServiceProtocol(Protocol):
 
 class ChatServiceProtocol(Protocol):
     """Protocol for chat service."""
+
+    @abstractmethod
+    async def get_cache(self, key: str, lock: asyncio.Lock | None = None) -> Any:
+        """Get cached value."""
+        ...
+
+    @abstractmethod
+    async def set_cache(self, key: str, data: Any, lock: asyncio.Lock | None = None) -> bool:
+        """Set cached value."""
+        ...
 
 
 class TracingServiceProtocol(Protocol):
