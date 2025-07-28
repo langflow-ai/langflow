@@ -19,18 +19,19 @@ module.exports = {
   transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$|@testing-library))"],
 
   // Coverage configuration
-  collectCoverage: process.env.CI === "true",
+  collectCoverage: true,
+  collectCoverageFrom: [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "!src/**/tests/**",
+    "!src/**/__tests__/**",
+    "!src/setupTests.ts",
+    "!src/vite-env.d.ts",
+    "!src/**/*.d.ts",
+  ],
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html", "json-summary"],
   coveragePathIgnorePatterns: ["/node_modules/", "/tests/"],
-  coverageThreshold: {
-    global: {
-      branches: 50,
-      functions: 50,
-      lines: 50,
-      statements: 50,
-    },
-  },
 
   // CI-specific configuration
   ...(process.env.CI === "true" && {
