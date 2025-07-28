@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.d8de26d3.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.679f183a.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -50,85 +50,108 @@
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Deploy</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Containerized deployments</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Deploy Langflow on a remote server</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Deploy Langflow on a remote server</h1></header><style>[data-ch-theme="github-dark"] {  --ch-t-colorScheme: dark;--ch-t-foreground: #c9d1d9;--ch-t-background: #0d1117;--ch-t-lighter-inlineBackground: #0d1117e6;--ch-t-editor-background: #0d1117;--ch-t-editor-foreground: #c9d1d9;--ch-t-editor-lineHighlightBackground: #6e76811a;--ch-t-editor-rangeHighlightBackground: #ffffff0b;--ch-t-editor-infoForeground: #3794FF;--ch-t-editor-selectionBackground: #264F78;--ch-t-focusBorder: #1f6feb;--ch-t-tab-activeBackground: #0d1117;--ch-t-tab-activeForeground: #c9d1d9;--ch-t-tab-inactiveBackground: #010409;--ch-t-tab-inactiveForeground: #8b949e;--ch-t-tab-border: #30363d;--ch-t-tab-activeBorder: #0d1117;--ch-t-editorGroup-border: #30363d;--ch-t-editorGroupHeader-tabsBackground: #010409;--ch-t-editorLineNumber-foreground: #6e7681;--ch-t-input-background: #0d1117;--ch-t-input-foreground: #c9d1d9;--ch-t-input-border: #30363d;--ch-t-icon-foreground: #8b949e;--ch-t-sideBar-background: #010409;--ch-t-sideBar-foreground: #c9d1d9;--ch-t-sideBar-border: #30363d;--ch-t-list-activeSelectionBackground: #6e768166;--ch-t-list-activeSelectionForeground: #c9d1d9;--ch-t-list-hoverBackground: #6e76811a;--ch-t-list-hoverForeground: #c9d1d9; }</style>
 <p>Learn how to deploy Langflow on your own remote server with secure web access.
 This guide walks you through setting up Langflow on a remote server using <a href="https://docs.docker.com/" target="_blank" rel="noopener noreferrer">Docker</a> and configuring secure web access with <a href="https://caddyserver.com/docs/" target="_blank" rel="noopener noreferrer">Caddy</a>.</p>
-<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>The <a href="https://github.com/datastax/host-langflow" target="_blank" rel="noopener noreferrer">host-langflow</a> repository offers pre-built copies of this <code>docker-compose.yml</code> and <code>Caddyfile</code>, if you prefer to fork the repository to your server.</p></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
-<li>A server with a dual-core CPU and at least 2 GB of RAM. This example uses <a href="https://www.hetzner.com/" target="_blank" rel="noopener noreferrer">Hetzner cloud</a> for hosting. Your deployment may vary.</li>
+<li>A server with a dual-core CPU and at least 2 GB of RAM.
+This example uses <a href="https://www.hetzner.com/" target="_blank" rel="noopener noreferrer">Hetzner cloud</a> for hosting. Your deployment may vary.</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="connect-to-your-remote-server-with-ssh">Connect to your remote server with SSH<a href="#connect-to-your-remote-server-with-ssh" class="hash-link" aria-label="Direct link to Connect to your remote server with SSH" title="Direct link to Connect to your remote server with SSH">​</a></h2>
 <ol>
-<li>Create an SSH key.
-Replace <code>DANA@EXAMPLE.COM</code> with your email address.</li>
-</ol>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ssh-keygen -t ed25519 -C &quot;DANA@EXAMPLE.COM&quot;</span></div></div><br></code></div></div>
-<ol start="2">
-<li>In your terminal, follow the instructions to create your public key.
+<li>
+<p>Create an SSH key.
 This key allows you to connect to your server remotely.
-To copy the key from your terminal, enter the following command:</li>
-</ol>
+Replace <code>DANA@EXAMPLE.COM</code> with the email address you want to associate with the SSH key.</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ssh-keygen -t ed25519 -C &quot;DANA@EXAMPLE.COM&quot;</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>In your terminal, follow the instructions to create your SSH key pair.
+This creates both a private and public key.
+To copy the public key from your terminal, enter the following command:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cat ~/Downloads/host-lf.pub | pbcopy</span></div></div><br></code></div></div>
-<ol start="3">
-<li>In your remote server, add the SSH key you copied in the previous step.
-For example, in the Hetzner cloud server, click <strong>Server</strong> &gt; <strong>SSH keys</strong>, and then click <strong>Add SSH key</strong>.</li>
-<li>Paste your SSH key into the <strong>SSH key</strong> field, and click <strong>Enter</strong>.
-You can now use the SSH key stored on your local machine to connect to your remote server.</li>
-<li>To connect to your server with SSH, enter the following command.
-Replace <code>PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME</code> with the path to your private SSH key.
-Replace <code>SERVER_IP_ADDRESS</code> with your server&#x27;s IP address.</li>
-</ol>
+</li>
+<li>
+<p>In your remote server, add the SSH key you copied in the previous step.
+For example, if you are using a Hetzner cloud server, click <strong>Server</strong>, and then select <strong>SSH keys</strong> to add an SSH key.</p>
+</li>
+<li>
+<p>To connect to your server with SSH, enter the following command.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ssh -i PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME root@SERVER_IP_ADDRESS</span></div></div><br></code></div></div>
-<ol start="6">
-<li>When prompted for a key fingerprint, type <code>yes</code>.
-You are connected to your server.</li>
-</ol>
+<p>Replace the following:</p>
+<ul>
+<li><code>PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME</code>: The path to your private SSH key file that matches the public key you added to your server</li>
+<li><code>SERVER_IP_ADDRESS</code>: Your server&#x27;s IP address</li>
+</ul>
+</li>
+<li>
+<p>When prompted for a key fingerprint, type <code>yes</code>.
+The terminal output indicates if the connection succeeds or fails.
+The following response was returned after connecting to a Hetzner cloud server:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span> System information as of Mon May 19 04:34:44 PM UTC 2025</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  System load:  0.0               Processes:             129</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  Usage of /:   1.5% of 74.79GB   Users logged in:       0</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  Memory usage: 5%                IPv4 address for eth0: 5.161.250.132</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  Swap usage:   0%                IPv6 address for eth0: 2a01:4ff:f0:4de7::1</span></div></div><br></code></div></div>
+</li>
+</ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="deploy-langflow-on-your-server">Deploy Langflow on your server<a href="#deploy-langflow-on-your-server" class="hash-link" aria-label="Direct link to Deploy Langflow on your server" title="Direct link to Deploy Langflow on your server">​</a></h2>
-<p>Now that you&#x27;re connected to your server, install Docker, create a <code>docker-compose.yml</code> file, and serve it publicly with Caddy as a reverse proxy.</p>
+<p>Now that your local machine is connected to your remote server with SSH, you can install Docker, create a <code>docker-compose.yml</code> file, and serve it publicly with a reverse proxy, such as Caddy.</p>
 <ol>
-<li>Install Docker on your server.
-Since this example server is an Ubuntu server, you can install snap packages.</li>
-</ol>
+<li>
+<p>Install Docker on your server.
+Since this example server is an Ubuntu server, it can install snap packages.
+If you are not using Ubuntu or prefer a different installation method, see the <a href="https://docs.docker.com/get-started/get-docker/" target="_blank" rel="noopener noreferrer">official Docker installation guide</a> for instructions for your operating system.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>snap install docker</span></div></div><br></code></div></div>
-<ol start="2">
-<li>Create a file called <code>docker-compose.yml</code>.</li>
-</ol>
+</li>
+<li>
+<p>Create a file called <code>docker-compose.yml</code>, and then open it in a text editor:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>touch docker-compose.yml &amp;&amp; nano docker-compose.yml</span></div></div><br></code></div></div>
-<p>This file defines the Langflow service from the <code>langflow:latest</code> image, and a Caddy service to expose Langflow through a reverse proxy.</p>
+<p>The following example defines the Langflow service from the <code>langflow:latest</code> image and a Caddy service to expose Langflow through a reverse proxy.</p>
 <div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>The <a href="https://github.com/datastax/host-langflow" target="_blank" rel="noopener noreferrer">host-langflow</a> repository offers pre-built copies of this <code>docker-compose.yml</code> and <code>Caddyfile</code>, if you prefer to fork the repository to your server.</p></div></div>
-<ol start="3">
-<li>Add the following values to <code>docker-compose.yml</code>, and then save the file.</li>
-</ol>
+</li>
+<li>
+<p>Add the following values to <code>docker-compose.yml</code>, and then save the file.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>version: &quot;3.8&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>services:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>  langflow:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>    image: langflowai/langflow:latest</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>    ports:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - &quot;7860:7860&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>    environment:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - LANGFLOW_HOST=0.0.0.0</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - LANGFLOW_PORT=7860</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>  caddy:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>    image: caddy:latest</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>    ports:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - &quot;80:80&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - &quot;443:443&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>    volumes:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - ./Caddyfile:/etc/caddy/Caddyfile</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - caddy_data:/data</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - caddy_config:/config</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>    depends_on:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>      - langflow</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>volumes:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>  caddy_data:</span></div></div><div><span class="ch-code-line-number">_<!-- -->26</span><div style="display:inline-block;margin-left:16px"><span>  caddy_config:</span></div></div><br></code></div></div>
-<ol start="4">
-<li>Create a file called <code>Caddyfile</code>.</li>
-</ol>
+</li>
+<li>
+<p>Create a file called <code>Caddyfile</code>.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>touch Caddyfile &amp;&amp; nano Caddyfile</span></div></div><br></code></div></div>
-<ol start="5">
-<li>Add the following values to <code>Caddyfile</code>, and then save the file.
-The Caddyfile configures Caddy to listen on port <code>80</code>, and forward all incoming requests to the Langflow service at port <code>7860</code>.</li>
-</ol>
+</li>
+<li>
+<p>Add the following values to <code>Caddyfile</code>, and then save the file.
+The Caddyfile configures Caddy to listen on port 80, and forward all incoming requests to port 80 to the Langflow service at port 7860.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>:80 {</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    reverse_proxy langflow:7860</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
-<ol start="6">
-<li>To deploy your server, enter <code>docker-compose up</code>.
-When the <code>Welcome to Langflow</code> message appears, Langflow is running and accessible internally at <a href="http://0.0.0.0:7860" target="_blank" rel="noopener noreferrer">http://0.0.0.0:7860</a> inside the Docker network.</li>
-<li>To open Langflow, navigate to your server&#x27;s public IP address, such as <code>http://5.161.250.132</code>.
-Your address must use <code>http</code>, because you haven&#x27;t enabled HTTPS.</li>
-<li>To enable HTTPS, modify your domain&#x27;s A record to point to your server&#x27;s IP address.
-For example:</li>
-</ol>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Type: A</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Name: langflow</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Value: 5.161.250.132  (your server&#x27;s IP address)</span></div></div><br></code></div></div>
-<ol start="9">
-<li>Stop your server.</li>
-<li>Modify your Caddyfile to include port <code>443</code> for HTTPS.</li>
-</ol>
+</li>
+<li>
+<p>To deploy your server, run <code>docker-compose up</code>.
+When the <code>Welcome to Langflow</code> message appears, Langflow is running and accessible internally at <code>http://0.0.0.0:7860</code> inside the Docker network.</p>
+</li>
+<li>
+<p>To access your Langflow server over the public internet, navigate to your server&#x27;s public IP address, such as <code>http://5.161.250.132</code>.
+This address uses HTTP because HTTPS isn&#x27;t enabled yet.</p>
+</li>
+<li>
+<p>Recommended: Enable HTTPS:</p>
+<ol>
+<li>
+<p>Modify your domain&#x27;s A record to point to your server&#x27;s IP address. For example:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Type: A</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Name: langflow</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Value: 5.161.250.132  # Set to your server&#x27;s IP address</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>Stop your server.</p>
+</li>
+<li>
+<p>Modify your Caddyfile to include port <code>443</code> so Caddy can forward both HTTP (port 80) and HTTPS (port 443) requests to the Langflow service:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>:80, :443 {</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    reverse_proxy langflow:7860</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
-<ol start="11">
-<li>Start your server.
-Caddy recognizes the incoming traffic and routes it to your server.</li>
+</li>
+<li>
+<p>Start your server.</p>
+<p>When users visit your domain, Caddy recognizes the incoming traffic and automatically routes it to your server with a secure, encrypted connection.</p>
+</li>
 </ol>
+</li>
+<li>
 <p>To exit your SSH session, type <code>exit</code>.</p>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="step-by-step-video-guide">Step-by-step video guide<a href="#step-by-step-video-guide" class="hash-link" aria-label="Direct link to Step-by-step video guide" title="Direct link to Step-by-step video guide">​</a></h2>
-<p>For a step-by-step guide to deploying Langflow, including deployments to <a href="https://fly.io/" target="_blank" rel="noopener noreferrer">fly.io</a> and <a href="https://www.flightcontrol.dev/" target="_blank" rel="noopener noreferrer">Flightcontrol.dev</a>, see <a href="https://www.youtube.com/watch?v=q4qt5hSnte4" target="_blank" rel="noopener noreferrer">How to Host Langflow Anywhere</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/deployment-docker"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Langflow Docker images</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/deployment-prod-best-practices"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Langflow architecture and best practices</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#connect-to-your-remote-server-with-ssh" class="table-of-contents__link toc-highlight">Connect to your remote server with SSH</a></li><li><a href="#deploy-langflow-on-your-server" class="table-of-contents__link toc-highlight">Deploy Langflow on your server</a></li><li><a href="#step-by-step-video-guide" class="table-of-contents__link toc-highlight">Step-by-step video guide</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</li>
+</ol>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
+<p>To package your local flows into a custom Docker image, see <a href="/develop-application">Containerize a Langflow application</a>.</p>
+<p>For a step-by-step guide to deploying Langflow, including deployments to <a href="https://fly.io/" target="_blank" rel="noopener noreferrer">fly.io</a> and <a href="https://www.flightcontrol.dev/" target="_blank" rel="noopener noreferrer">Flightcontrol.dev</a>, see <a href="https://www.youtube.com/watch?v=q4qt5hSnte4" target="_blank" rel="noopener noreferrer">How to Host Langflow Anywhere</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/deployment-docker"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Langflow Docker images</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/deployment-prod-best-practices"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Langflow architecture and best practices</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#connect-to-your-remote-server-with-ssh" class="table-of-contents__link toc-highlight">Connect to your remote server with SSH</a></li><li><a href="#deploy-langflow-on-your-server" class="table-of-contents__link toc-highlight">Deploy Langflow on your server</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/img/lf-docs-light.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--light_NVdE" width="160" height="40"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--dark_xIcU" width="160" height="40"></div></div></div></footer><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>
