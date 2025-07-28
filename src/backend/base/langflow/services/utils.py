@@ -80,7 +80,8 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         password = settings_service.auth_settings.SUPERUSER_PASSWORD
 
     if not username or not password:
-        raise ValueError("Username and password must be set")
+        msg = "Username and password must be set"
+        raise ValueError(msg)
 
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
 

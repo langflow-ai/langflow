@@ -68,7 +68,7 @@ class TestSuperuserCommand:
     """Deterministic tests for the superuser CLI command."""
 
     def test_first_superuser_no_auth_required(self, runner):
-        """Test first superuser creation requires no authentication"""
+        """Test first superuser creation requires no authentication."""
         # Mock to simulate no existing superusers (first-time setup)
         with (
             patch("langflow.services.database.models.user.crud.get_all_superusers") as mock_get_users,
@@ -88,7 +88,7 @@ class TestSuperuserCommand:
             assert "Superuser created successfully." in result.stdout
 
     def test_additional_superuser_requires_auth_production(self, runner):
-        """Test additional superuser creation requires authentication in production"""
+        """Test additional superuser creation requires authentication in production."""
         # Mock to simulate existing superuser(s)
         with (
             patch("langflow.services.database.models.user.crud.get_all_superusers") as mock_get_users,
@@ -109,7 +109,7 @@ class TestSuperuserCommand:
             assert "Please provide --auth-token" in result.stdout
 
     def test_additional_superuser_blocked_in_auto_login_mode(self, runner):
-        """Test additional superuser creation blocked when AUTO_LOGIN=true"""
+        """Test additional superuser creation blocked when AUTO_LOGIN=true."""
         # Mock to simulate existing default superuser
         with (
             patch("langflow.services.database.models.user.crud.get_all_superusers") as mock_get_users,
@@ -132,7 +132,7 @@ class TestSuperuserCommand:
             assert "AUTO_LOGIN mode is for development with only the default superuser." in result.stdout
 
     def test_cli_disabled_blocks_creation(self, runner):
-        """Test ENABLE_SUPERUSER_CLI=false blocks superuser creation"""
+        """Test ENABLE_SUPERUSER_CLI=false blocks superuser creation."""
         with (
             patch("langflow.services.deps.get_settings_service") as mock_settings,
             patch("langflow.__main__.get_settings_service") as mock_settings2,
@@ -148,7 +148,7 @@ class TestSuperuserCommand:
             assert "Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature." in result.stdout
 
     def test_auto_login_forces_default_credentials(self, runner):
-        """Test AUTO_LOGIN=true forces default credentials"""
+        """Test AUTO_LOGIN=true forces default credentials."""
         with (
             patch("langflow.services.database.models.user.crud.get_all_superusers") as mock_get_users,
             patch("langflow.services.deps.get_settings_service") as mock_settings,
@@ -168,7 +168,7 @@ class TestSuperuserCommand:
             assert "Default credentials are langflow/langflow" in result.stdout
 
     def test_successful_auth_token_validation(self, runner):
-        """Test successful superuser creation with valid auth token"""
+        """Test successful superuser creation with valid auth token."""
         with (
             patch("langflow.services.database.models.user.crud.get_all_superusers") as mock_get_users,
             patch("langflow.services.deps.get_settings_service") as mock_settings,
@@ -191,7 +191,7 @@ class TestSuperuserCommand:
             assert "Superuser created successfully." in result.stdout
 
     def test_failed_auth_token_validation(self, runner):
-        """Test failed superuser creation with invalid auth token"""
+        """Test failed superuser creation with invalid auth token."""
         with (
             patch("langflow.services.database.models.user.crud.get_all_superusers") as mock_get_users,
             patch("langflow.services.deps.get_settings_service") as mock_settings,

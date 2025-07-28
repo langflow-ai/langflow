@@ -643,9 +643,12 @@ def superuser(
         None, help="Authentication token of existing superuser.", envvar="LANGFLOW_SUPERUSER_TOKEN"
     ),
 ) -> None:
-    """Create a superuser. When AUTO_LOGIN is enabled, uses default credentials. In production mode, requires authentication."""
+    """Create a superuser.
+    
+    When AUTO_LOGIN is enabled, uses default credentials. 
+    In production mode, requires authentication.
+    """
     configure(log_level=log_level)
-    db_service = get_db_service()
     settings_service = get_settings_service()
 
     async def _create_superuser():
@@ -716,12 +719,13 @@ def superuser(
 
                     if not user or not user.is_superuser:
                         typer.echo(
-                            "Error: Invalid token or insufficient privileges. Only superusers can create other superusers."
+                            "Error: Invalid token or insufficient privileges. "
+                            "Only superusers can create other superusers."
                         )
                         raise typer.Exit(1)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 typer.echo(f"Error: Authentication failed - {e!s}")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from None
 
         # Auth complete, create the superuser
         async with session_scope() as session:
