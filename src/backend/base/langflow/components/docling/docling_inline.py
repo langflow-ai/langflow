@@ -60,7 +60,7 @@ class DoclingInlineComponent(BaseFileComponent):
             info="OCR engine to use. None will disable OCR.",
             options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
             real_time_refresh=False,
-             value="None",
+            value="None",
         ),
         # TODO: expose more Docling options
     ]
@@ -81,7 +81,10 @@ class DoclingInlineComponent(BaseFileComponent):
             from docling.models.factories import get_ocr_factory
             from docling.pipeline.vlm_pipeline import VlmPipeline
         except ImportError as e:
-            msg = "Docling is not installed. Please install it with `uv pip install 'langflow[docling]'`."
+            msg = (
+                "Docling is an optional dependency. Install with `uv pip install 'langflow[docling]'` or refer to the "
+                "documentation on how to install optional dependencies."
+            )
             raise ImportError(msg) from e
 
         # Configure the standard PDF pipeline
