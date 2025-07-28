@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.a75dcdf3.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.632f7e8e.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -77,44 +77,58 @@ As an open-source project in a rapidly developing field, Langflow welcomes contr
 <li><code>GIT_USERNAME</code>: Your Git username</li>
 </ul>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-langflow-from-source">Run Langflow from source<a href="#run-langflow-from-source" class="hash-link" aria-label="Direct link to Run Langflow from source" title="Direct link to Run Langflow from source">​</a></h3>
-<p>If you&#x27;re not developing, but want to run Langflow from source after cloning the repo, run the following commands.</p>
-<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">macOS/Linux</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Windows</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
-<li>To run Langflow from source, run the following command:</li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>make run_cli</span></div></div><br></code></div></div><p>This command does the following:</p><ul>
+<p>You can run Langflow from source after cloning the repository, even if you&#x27;re not contributing to the codebase.</p>
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Run from source on macOS/Linux</summary><div><div class="collapsibleContent_i85q"><p>In your terminal, navigate to the root of the Langflow directory, and then run <code>make run_cli</code>.</p><p>This command does the following:</p><ul>
 <li>Installs frontend and backend dependencies</li>
 <li>Builds the frontend static files</li>
 <li>Starts the application with default settings</li>
-</ul><p>The Langflow frontend is available at <code>http://localhost:7860/</code>.</p></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>To run Langflow from source on Windows, you can use the Langflow project&#x27;s included scripts, or run the commands in the terminal.</p><ol>
+</ul><p>The Langflow frontend is served at <code>http://localhost:7860</code>.</p></div></div></details>
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Run from source with Windows CMD</summary><div><div class="collapsibleContent_i85q"><p>To run Langflow from source on Windows, you can use the Langflow project&#x27;s included scripts, or run the commands in the terminal.</p><p>Do one of the following:</p><ul>
 <li>
-<p>To run Langflow with the included scripts, navigate to the <code>scripts/windows</code> directory.
-Two scripts are available to install and start Langflow.</p>
+<p>To install and run Langflow with the included Windows Batch file, navigate to the <code>scripts/windows</code> directory, and then run the <code>build_and_run.bat</code> file.</p>
 </li>
 <li>
-<p>Run Langflow with one of the scripts.</p>
+<p>To run Langflow from the Windows Command Line:</p>
+<ol>
+<li>
+<p>Build the Langflow frontend:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd src/frontend &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; npm run start</span></div></div><br></code></div></div>
 </li>
-</ol><div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Windows CMD</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Powershell</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><p>To install and start Langflow with a Windows Batch file, double-click <code>build_and_run.bat</code>.</p></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>To install and start Langflow with the Powershell script, run:</p><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>.\build_and_run.ps1</span></div></div><br></code></div></div></div></div></div><p><strong>Alternatively</strong>, to run Langflow from source with the Windows Command Line or Powershell, do the following.</p><div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Windows CMD</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Powershell</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
-<li>Run the following commands to build the Langflow frontend.</li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd src/frontend &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; npm run start</span></div></div><br></code></div></div><ol start="2">
 <li>
 <p>Copy the contents of the built <code>src/frontend/build</code> directory to <code>src/backend/base/langflow/frontend</code>.</p>
 </li>
 <li>
-<p>To start Langflow, run the following command.</p>
+<p>Start Langflow:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run</span></div></div><br></code></div></div>
 </li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run</span></div></div><br></code></div></div><p>The frontend is served at <a href="http://localhost:7860" target="_blank" rel="noopener noreferrer">http://localhost:7860</a>.</p></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><ol>
-<li>Run the following commands to build the Langflow frontend.</li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd src/frontend</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm install</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm run build</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm run start</span></div></div><br></code></div></div><ol start="2">
+</ol>
+</li>
+</ul><p>The Langflow frontend is served at <code>http://localhost:7860</code>.</p></div></div></details>
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Run from source with Powershell</summary><div><div class="collapsibleContent_i85q"><p>To run Langflow from source on Windows, you can use the Langflow project&#x27;s included scripts, or run the commands in the terminal.</p><p>Do one of the following:</p><ul>
+<li>
+<p>To install and run Langflow with the included scripts, navigate to the <code>scripts/windows</code> directory, and then run the <code>build_and_run.ps1</code> file.</p>
+</li>
+<li>
+<p>To run Langflow from a Powershell terminal:</p>
+<ol>
+<li>
+<p>Run the following commands separately to build the Langflow frontend:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd src/frontend</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm install</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm run build</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm run start</span></div></div><br></code></div></div>
+</li>
 <li>
 <p>Copy the contents of the built <code>src/frontend/build</code> directory to <code>src/backend/base/langflow/frontend</code>.</p>
 </li>
 <li>
-<p>To start Langflow, run the following command.</p>
+<p>Start Langflow:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run</span></div></div><br></code></div></div>
 </li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run</span></div></div><br></code></div></div><p>The frontend is served at <a href="http://localhost:7860" target="_blank" rel="noopener noreferrer">http://localhost:7860</a>.</p></div></div></div></div></div></div>
+</ol>
+</li>
+</ul><p>The Langflow frontend is served at <code>http://localhost:7860</code>.</p></div></div></details>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="set-up-your-langflow-development-environment">Set up your Langflow development environment<a href="#set-up-your-langflow-development-environment" class="hash-link" aria-label="Direct link to Set up your Langflow development environment" title="Direct link to Set up your Langflow development environment">​</a></h3>
-<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">macOS/Linux</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Windows</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
+<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Linux or macOS</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Windows</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
 <li>
-<p>To set up the Langflow development environment, run the following command:</p>
+<p>Set up the Langflow development environment:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>make init</span></div></div><br></code></div></div>
 <p>This command sets up the development environment by doing the following:</p>
 <ul>
@@ -125,26 +139,28 @@ Two scripts are available to install and start Langflow.</p>
 </li>
 <li>
 <p>Run the backend and frontend in separate terminals for development:</p>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span># Run backend in development mode (includes hot reload)</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>make backend</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span># In another terminal, run frontend in development mode (includes hot reload)</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>make frontend</span></div></div><br></code></div></div>
-<p>The frontend is served at <code>http://localhost:7860</code>.</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span># Run backend in development mode (includes hot reload)</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>make backend</span></div></div><br></code></div></div>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span># In another terminal, run frontend in development mode (includes hot reload)</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>make frontend</span></div></div><br></code></div></div>
 <p>The <code>make backend</code> and <code>make frontend</code> commands automatically install dependencies, so you don&#x27;t need to run install commands separately.</p>
+<p>The frontend is served at <code>http://localhost:7860</code>.</p>
 </li>
 <li>
-<p>Optional: Install pre-commit hooks to help keep your changes clean and well-formatted. <code>make init</code> installs pre-commit hooks automatically.</p>
+<p>Optional: Install pre-commit hooks to help keep your changes clean and well-formatted.</p>
+<p>With pre-commit hooks installed, you must use <code>uv run git commit</code> instead of <code>git commit</code> directly.</p>
+<p><code>make init</code> installs pre-commit hooks automatically, or you can run the following command to install them manually:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv sync</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run pre-commit install</span></div></div><br></code></div></div>
-<div class="theme-admonition theme-admonition-note admonition_xJq3 alert alert--secondary"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M6.3 5.69a.942.942 0 0 1-.28-.7c0-.28.09-.52.28-.7.19-.18.42-.28.7-.28.28 0 .52.09.7.28.18.19.28.42.28.7 0 .28-.09.52-.28.7a1 1 0 0 1-.7.3c-.28 0-.52-.11-.7-.3zM8 7.99c-.02-.25-.11-.48-.31-.69-.2-.19-.42-.3-.69-.31H6c-.27.02-.48.13-.69.31-.2.2-.3.44-.31.69h1v3c.02.27.11.5.31.69.2.2.42.31.69.31h1c.27 0 .48-.11.69-.31.2-.19.3-.42.31-.69H8V7.98v.01zM7 2.3c-3.14 0-5.7 2.54-5.7 5.68 0 3.14 2.56 5.7 5.7 5.7s5.7-2.55 5.7-5.7c0-3.15-2.56-5.69-5.7-5.69v.01zM7 .98c3.86 0 7 3.14 7 7s-3.14 7-7 7-7-3.12-7-7 3.14-7 7-7z"></path></svg></span>note</div><div class="admonitionContent_BuS1"><p>With pre-commit hooks installed, you need to use <code>uv run git commit</code> instead of <code>git commit</code> directly.</p></div></div>
 </li>
 <li>
-<p>To test your changes, run <code>make lint</code>, <code>make format</code>, and <code>make unit_tests</code> before pushing to the repository.
-To run all tests, including unit tests, integration tests, and coverage, run <code>make tests</code>.</p>
+<p>To test your changes before pushing commits, run <code>make lint</code>, <code>make format</code>, and <code>make unit_tests</code>.
+To run all tests, including coverage, unit, and integration, tests, run <code>make tests</code>.</p>
 </li>
-</ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>Since Windows does not include <code>make</code>, building and running Langflow from source uses <code>npm</code> and <code>uv</code>.</p><p>To set up the Langflow development environment, run the frontend and backend in separate terminals.</p><ol>
+</ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>Since Windows does not include <code>make</code>, building and running Langflow from source uses <code>npm</code> and <code>uv</code>.</p><p>To set up the Langflow development environment, run the frontend and backend in separate terminals:</p><ol>
 <li>
-<p>To run the frontend, run the following commands.</p>
+<p>To run the frontend, run the following commands:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd src/frontend</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm install</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>npm run start</span></div></div><br></code></div></div>
 </li>
 <li>
-<p>To run the backend, run the following command.</p>
+<p>In a separate terminal, run the following command to run the backend:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run --backend-only</span></div></div><br></code></div></div>
 </li>
 </ol><p>The frontend is served at <code>http://localhost:7860</code>.</p></div></div></div>
@@ -160,39 +176,43 @@ To run all tests, including unit tests, integration tests, and coverage, run <co
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="contribute-documentation">Contribute documentation<a href="#contribute-documentation" class="hash-link" aria-label="Direct link to Contribute documentation" title="Direct link to Contribute documentation">​</a></h2>
 <p>The documentation is built using <a href="https://docusaurus.io/" target="_blank" rel="noopener noreferrer">Docusaurus</a> and written in <a href="https://docusaurus.io/docs/markdown-features" target="_blank" rel="noopener noreferrer">Markdown</a>.
-Contributions should follow the <a href="https://developers.google.com/style" target="_blank" rel="noopener noreferrer">Google Developer Documentation Style Guide</a>.</p>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites-1">Prerequisites<a href="#prerequisites-1" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h3>
-<ul>
-<li><a href="https://nodejs.org/en/download/package-manager" target="_blank" rel="noopener noreferrer">Node.js</a></li>
-<li><a href="https://yarnpkg.com/" target="_blank" rel="noopener noreferrer">Yarn</a></li>
-</ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="clone-the-langflow-repository-1">Clone the Langflow repository<a href="#clone-the-langflow-repository-1" class="hash-link" aria-label="Direct link to Clone the Langflow repository" title="Direct link to Clone the Langflow repository">​</a></h3>
+For style guidance, see the <a href="https://developers.google.com/style" target="_blank" rel="noopener noreferrer">Google Developer Documentation Style Guide</a>.</p>
 <ol>
+<li>
+<p>Install <a href="https://nodejs.org/en/download/package-manager" target="_blank" rel="noopener noreferrer">Node.js</a> and <a href="https://yarnpkg.com/" target="_blank" rel="noopener noreferrer">Yarn</a></p>
+</li>
 <li>
 <p>Fork the <a href="https://github.com/langflow-ai/langflow" target="_blank" rel="noopener noreferrer">Langflow GitHub repository</a>.</p>
 </li>
 <li>
 <p>Add the new remote to your local repository on your local machine:</p>
-</li>
-</ol>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>git remote add FORK_NAME https://github.com/GIT_USERNAME/langflow.git</span></div></div><br></code></div></div>
 <p>Replace the following:</p>
 <ul>
 <li><code>FORK_NAME</code>: A name for your fork of the repository</li>
 <li><code>GIT_USERNAME</code>: Your Git username</li>
 </ul>
-<ol start="3">
-<li>From your Langflow fork&#x27;s root, change directory to the <code>langflow/docs</code> folder with the following command:</li>
-</ol>
+</li>
+<li>
+<p>From the root of your local Langflow fork, change to the <code>/docs</code> directory:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd docs</span></div></div><br></code></div></div>
-<ol start="4">
-<li>To install dependencies and start a local Docusaurus static site with hot reloading, run:</li>
-</ol>
+</li>
+<li>
+<p>Install dependencies and start a local Docusaurus static site with hot reload:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>yarn install</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>yarn start</span></div></div><br></code></div></div>
-<p>The documentation is available at <code>localhost:3000</code>.
-The Markdown content files are located in the <code>langflow/docs/docs</code> folder.</p>
-<ol start="5">
-<li>Optional: Run <code>yarn build</code> to build the site locally and ensure there are no broken links.</li>
+<p>The documentation is served at <code>localhost:3000</code>.</p>
+</li>
+<li>
+<p>To edit and create content, work with the <code>.mdx</code> files in the <code>langflow/docs/docs</code> directory.</p>
+<p>Create new files in <code>.mdx</code> format.</p>
+<p>Navigation is defined in <code>langflow/docs/sidebars.js</code>.</p>
+<p>Most pages use a <code>slug</code> for shorthand cross-referencing, rather than supplying the full or relative directory path.
+For example, if a page has a <code>slug</code> of <code>/cool-page</code>, you can link to it with <code>[Cool page](/cool-page)</code> from any other <code>/docs</code> page.</p>
+</li>
+<li>
+<p>Recommended: After making some changes, run <code>yarn build</code> to build the site locally with more robust logging.
+This can help you find broken links before creating a PR.</p>
+</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="open-a-pull-request">Open a pull request<a href="#open-a-pull-request" class="hash-link" aria-label="Direct link to Open a pull request" title="Direct link to Open a pull request">​</a></h2>
 <p>To submit a pull request, do the following:</p>
@@ -209,7 +229,7 @@ The Markdown content files are located in the <code>langflow/docs/docs</code> fo
 <ol start="3">
 <li>A Langflow maintainer will review your pull request and may request changes, so ensure you pay attention to your PRs. Thanks for your contribution!</li>
 </ol>
-<p>For more information, see the <a href="https://devguide.python.org/getting-started/pull-request-lifecycle/index.html#making-good-commits" target="_blank" rel="noopener noreferrer">Python Developer&#x27;s Guide</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/contributing-community"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Join the Langflow community</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/contributing-components"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Contribute components</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#install-langflow-from-source" class="table-of-contents__link toc-highlight">Install Langflow from source</a><ul><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#clone-the-langflow-repository" class="table-of-contents__link toc-highlight">Clone the Langflow repository</a></li><li><a href="#run-langflow-from-source" class="table-of-contents__link toc-highlight">Run Langflow from source</a></li><li><a href="#set-up-your-langflow-development-environment" class="table-of-contents__link toc-highlight">Set up your Langflow development environment</a></li><li><a href="#debug" class="table-of-contents__link toc-highlight">Debug</a></li><li><a href="#additional-contribution-guides" class="table-of-contents__link toc-highlight">Additional contribution guides</a></li></ul></li><li><a href="#contribute-documentation" class="table-of-contents__link toc-highlight">Contribute documentation</a><ul><li><a href="#prerequisites-1" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#clone-the-langflow-repository-1" class="table-of-contents__link toc-highlight">Clone the Langflow repository</a></li></ul></li><li><a href="#open-a-pull-request" class="table-of-contents__link toc-highlight">Open a pull request</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+<p>For more information, see the <a href="https://devguide.python.org/getting-started/pull-request-lifecycle/index.html#making-good-commits" target="_blank" rel="noopener noreferrer">Python Developer&#x27;s Guide</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/contributing-community"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Join the Langflow community</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/contributing-components"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Contribute components</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#install-langflow-from-source" class="table-of-contents__link toc-highlight">Install Langflow from source</a><ul><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#clone-the-langflow-repository" class="table-of-contents__link toc-highlight">Clone the Langflow repository</a></li><li><a href="#run-langflow-from-source" class="table-of-contents__link toc-highlight">Run Langflow from source</a></li><li><a href="#set-up-your-langflow-development-environment" class="table-of-contents__link toc-highlight">Set up your Langflow development environment</a></li><li><a href="#debug" class="table-of-contents__link toc-highlight">Debug</a></li><li><a href="#additional-contribution-guides" class="table-of-contents__link toc-highlight">Additional contribution guides</a></li></ul></li><li><a href="#contribute-documentation" class="table-of-contents__link toc-highlight">Contribute documentation</a></li><li><a href="#open-a-pull-request" class="table-of-contents__link toc-highlight">Open a pull request</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/img/lf-docs-light.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--light_NVdE" width="160" height="40"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--dark_xIcU" width="160" height="40"></div></div></div></footer><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

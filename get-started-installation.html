@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.a75dcdf3.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.632f7e8e.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -126,37 +126,55 @@ For more information, see <a href="/deployment-docker">Deploy Langflow on Docker
 <li><a href="https://docs.astral.sh/uv/getting-started/installation/" target="_blank" rel="noopener noreferrer">uv</a></li>
 <li>Sufficient infrastructure:<!-- -->
 <ul>
-<li>Minimum: Dual-core CPU and 2 GB RAM</li>
-<li>Recommended: Multi-core CPU and at least 4 GB RAM</li>
+<li>Minimum: Dual-core CPU and 2 GB RAM</li>
+<li>Recommended: Multi-core CPU and at least 4 GB RAM</li>
 </ul>
 </li>
 </ul>
 </li>
 <li>
 <p>Create a virtual environment with <a href="https://docs.astral.sh/uv/pip/environments" target="_blank" rel="noopener noreferrer">uv</a>.</p>
-</li>
-</ol>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Need help with virtual environments?</summary><div><div class="collapsibleContent_i85q"><p>Virtual environments ensure Langflow is installed in an isolated, fresh environment.
-To create a new virtual environment, do the following.</p><div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">macOS/Linux</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Windows</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
-<li>Navigate to where you want your virtual environment to be created, and create it with <code>uv</code>.
-Replace <code>VENV_NAME</code> with your preferred name for your virtual environment.</li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv venv VENV_NAME</span></div></div><br></code></div></div><ol start="2">
-<li>Start the virtual environment.</li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>source VENV_NAME/bin/activate</span></div></div><br></code></div></div><p>Your shell&#x27;s prompt changes to display that you&#x27;re currently working in a virtual environment.</p><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>(VENV_NAME) ➜  langflow git:(main) ✗</span></div></div><br></code></div></div><ol start="3">
-<li>To deactivate the virtual environment and return to your regular shell, type <code>deactivate</code>.
-When activated, the virtual environment temporarily modifies your PATH variable to prioritize packages installed within the virtual environment, so always deactivate it when you&#x27;re done to avoid conflicts with other projects.
-To delete the virtual environment, type <code>rm -rf VENV_NAME</code>.</li>
+To create a new virtual environment, do the following.</p><div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Linux or macOS</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Windows</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
+<li>
+<p>Navigate to where you want your virtual environment to be created, and then create it with <code>uv</code>:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv venv VENV_NAME</span></div></div><br></code></div></div>
+<p>Replace <code>VENV_NAME</code> with a name for your virtual environment.</p>
+</li>
+<li>
+<p>Start the virtual environment:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>source VENV_NAME/bin/activate</span></div></div><br></code></div></div>
+<p>Your shell&#x27;s prompt changes to display that you&#x27;re currently working in a virtual environment:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>(VENV_NAME) ➜  langflow git:(main) ✗</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>To deactivate the virtual environment and return to your regular shell, type <code>deactivate</code>.</p>
+<p>When activated, the virtual environment temporarily modifies your <code>PATH</code> variable to prioritize packages installed within the virtual environment.
+To avoid conflicts with other projects, it&#x27;s a good idea to deactivate your virtual environment when you&#x27;re done working in it.</p>
+<p>To delete the virtual environment, type <code>rm -rf VENV_NAME</code>.
+This completely removes the virtual environment directory and its contents.</p>
+</li>
 </ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><ol>
-<li>Navigate to where you want your virtual environment to be created, and create it with <code>uv</code>.
-Replace <code>VENV_NAME</code> with your preferred name for your virtual environment.</li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv venv VENV_NAME</span></div></div><br></code></div></div><ol start="2">
-<li>Start the virtual environment.</li>
-</ol><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>VENV_NAME\Scripts\activate</span></div></div><br></code></div></div><p>Your shell&#x27;s prompt changes to display that you&#x27;re currently working in a virtual environment.</p><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>(VENV_NAME) PS C:/users/username/langflow-dir&gt;</span></div></div><br></code></div></div><ol start="3">
-<li>To deactivate the virtual environment and return to your regular shell, type <code>deactivate</code>.
-When activated, the virtual environment temporarily modifies your PATH variable to prioritize packages installed within the virtual environment, so always deactivate it when you&#x27;re done to avoid conflicts with other projects.
-To delete the virtual environment, type <code>Remove-Item VENV_NAME</code>.</li>
+<li>
+<p>Navigate to where you want your virtual environment to be created, and create it with <code>uv</code>.</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv venv VENV_NAME</span></div></div><br></code></div></div>
+<p>Replace <code>VENV_NAME</code> with a name for your virtual environment.</p>
+</li>
+<li>
+<p>Start the virtual environment:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>VENV_NAME\Scripts\activate</span></div></div><br></code></div></div>
+<p>Your shell&#x27;s prompt changes to display that you&#x27;re currently working in a virtual environment:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>(VENV_NAME) PS C:/users/username/langflow-dir&gt;</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>To deactivate the virtual environment and return to your regular shell, type <code>deactivate</code>.</p>
+<p>When activated, the virtual environment temporarily modifies your <code>PATH</code> variable to prioritize packages installed within the virtual environment.
+To avoid conflicts with other projects, it&#x27;s a good idea to deactivate your virtual environment when you&#x27;re done working in it.</p>
+<p>To delete the virtual environment, type <code>Remove-Item VENV_NAME</code>.
+This completely removes the virtual environment directory and its contents.</p>
+</li>
 </ol></div></div></div></div></div></details>
-<ol start="3">
+</li>
 <li>
 <p>In your virtual environment, install Langflow:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv pip install langflow</span></div></div><br></code></div></div>
