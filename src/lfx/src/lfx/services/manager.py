@@ -6,6 +6,7 @@ langflow-specific auto-discovery to break dependencies.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
 import threading
@@ -124,9 +125,11 @@ class ServiceManager:
                 continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                await service.teardown()
+                teardown_result = service.teardown()
+                if asyncio.iscoroutine(teardown_result):
+                    await teardown_result
             except Exception as exc:  # noqa: BLE001
-                logger.exception(exc)
+                logger.opt(exception=exc).debug(f"Error in teardown of {service.name}")
         self.services = {}
         self.factories = {}
 

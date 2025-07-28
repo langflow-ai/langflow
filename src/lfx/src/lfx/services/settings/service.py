@@ -31,5 +31,5 @@ class SettingsService(Service):
         setattr(self.settings, key, value)
         return self.settings
 
-    def teardown(self):
+    async def teardown(self):
         pass
