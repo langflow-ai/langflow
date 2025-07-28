@@ -9,6 +9,7 @@ import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { PackageManagerGuard } from "./components/authorization/packageManagerGuard";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -129,7 +130,11 @@ const router = createBrowserRouter(
                   <Route path="mcp-servers" element={<MCPServersPage />} />
                   <Route
                     path="package-manager"
-                    element={<PackageManagerPage />}
+                    element={
+                      <PackageManagerGuard>
+                        <PackageManagerPage />
+                      </PackageManagerGuard>
+                    }
                   />
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route

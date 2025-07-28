@@ -21,6 +21,7 @@ export interface ConfigResponse {
   webhook_polling_interval: number;
   serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
+  package_manager: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -44,6 +45,9 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+  const setPackageManagerEnabled = useUtilityStore(
+    (state) => state.setPackageManagerEnabled,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -66,6 +70,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setPackageManagerEnabled(data.package_manager ?? false);
     }
     return data;
   };

@@ -407,6 +407,7 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+    package_manager: bool
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "ConfigResponse":
@@ -431,6 +432,7 @@ class ConfigResponse(BaseModel):
             public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
+            package_manager=settings.package_manager,
         )
 
 

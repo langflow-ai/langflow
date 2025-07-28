@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,6 +35,8 @@ export default function PackageManagerPage() {
   const [backendWentDown, setBackendWentDown] = useState(false);
   const [installationWasSuccessful, setInstallationWasSuccessful] =
     useState(false);
+  const [restartStartTime, setRestartStartTime] = useState<number | null>(null);
+  const [lastHandledError, setLastHandledError] = useState<string | null>(null);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -44,6 +47,7 @@ export default function PackageManagerPage() {
     (state) => state.setHealthCheckTimeout,
   );
 
+  const queryClient = useQueryClient();
   const installPackageMutation = useInstallPackage();
   const installationStatus = useGetInstallationStatus(showProgressDialog);
   const healthCheck = useGetHealthQuery({ enableInterval: showProgressDialog });
@@ -66,12 +70,23 @@ export default function PackageManagerPage() {
     setIsInstallingPackage(true);
     setBackendWentDown(false); // Reset the restart tracking
     setInstallationWasSuccessful(false); // Reset success tracking
+    setRestartStartTime(null); // Reset restart timer
+    setLastHandledError(null); // Reset error tracking
     // Clear any existing health check timeout states
     setHealthCheckTimeout(null);
 
     try {
       // Clear any previous installation status before starting new installation
       await clearInstallationStatusMutation.mutateAsync();
+
+      // Force invalidate and refetch the installation status query
+      await queryClient.invalidateQueries({
+        queryKey: ["installation-status"],
+      });
+      await queryClient.refetchQueries({ queryKey: ["installation-status"] });
+
+      // Small delay to ensure status is cleared
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       await installPackageMutation.mutateAsync(packageName.trim());
     } catch (error: any) {
@@ -89,6 +104,7 @@ export default function PackageManagerPage() {
       setIsInstallingPackage(false);
       setBackendWentDown(false);
       setInstallationWasSuccessful(false);
+      setRestartStartTime(null);
     }
   };
 
@@ -101,12 +117,16 @@ export default function PackageManagerPage() {
 
   // Get installation status from backend (this persists during the installation but resets on restart)
   const installationResult = installationStatus.data?.last_result;
-  const currentlySuccessful = installationResult?.status === "success";
-  const hasInstallationError = installationResult?.status === "error";
+  const currentlySuccessful = installationResult?.status === "completed";
+  const hasInstallationError = installationResult?.status === "failed";
 
   // Track when installation becomes successful (using useEffect to prevent infinite renders)
   useEffect(() => {
     if (currentlySuccessful && !installationWasSuccessful) {
+      console.log(
+        "Setting installationWasSuccessful = true, package:",
+        packageName,
+      );
       setInstallationWasSuccessful(true);
     }
   }, [currentlySuccessful, installationWasSuccessful]);
@@ -166,6 +186,7 @@ export default function PackageManagerPage() {
     ) {
       console.log("Setting backendWentDown = true");
       setBackendWentDown(true);
+      setRestartStartTime(Date.now());
     }
   }, [
     showProgressDialog,
@@ -177,13 +198,20 @@ export default function PackageManagerPage() {
   // Close progress dialog after backend restart (using useEffect to prevent infinite renders)
   useEffect(() => {
     const hasCompletedRestart = backendWentDown && isBackendOnline;
+    const hasTimedOut =
+      restartStartTime && Date.now() - restartStartTime > 30000; // 30 seconds timeout
 
-    if (showProgressDialog && hasCompletedRestart) {
-      console.log("Closing dialog after restart completion");
+    if (showProgressDialog && (hasCompletedRestart || hasTimedOut)) {
+      console.log(
+        hasTimedOut
+          ? "Closing dialog due to timeout"
+          : "Closing dialog after restart completion",
+      );
       setShowProgressDialog(false);
       setIsInstallingPackage(false);
       setBackendWentDown(false);
       setInstallationWasSuccessful(false);
+      setRestartStartTime(null);
 
       // Check if there was an error stored before restart
       const storedError = localStorage.getItem("packageInstallationError");
@@ -192,8 +220,14 @@ export default function PackageManagerPage() {
         const errorData = JSON.parse(storedError);
         setErrorData(errorData);
         localStorage.removeItem("packageInstallationError");
-      } else if (installationWasSuccessful) {
-        // Show success
+      } else if (hasTimedOut) {
+        // Show timeout message
+        setSuccessData({
+          title: `Package '${packageName}' installation completed. Please refresh the page if the backend is not responding.`,
+        });
+      } else {
+        // Show success - if we completed a restart cycle without errors, it was successful
+        console.log("Showing success notification for package:", packageName);
         setSuccessData({
           title: `Package '${packageName}' installed successfully! The application has been restarted with the new package.`,
         });
@@ -204,6 +238,7 @@ export default function PackageManagerPage() {
     showProgressDialog,
     backendWentDown,
     isBackendOnline,
+    restartStartTime,
     installationWasSuccessful,
     packageName,
     setErrorData,
@@ -211,6 +246,7 @@ export default function PackageManagerPage() {
     setIsInstallingPackage,
     healthCheck.data,
     installationStatus.data,
+    installationResult,
   ]);
 
   // Show error if installation API call failed (using useEffect to prevent infinite renders)
@@ -220,6 +256,7 @@ export default function PackageManagerPage() {
       setIsInstallingPackage(false);
       setBackendWentDown(false);
       setInstallationWasSuccessful(false);
+      setRestartStartTime(null);
       const error = installPackageMutation.error as any;
       const errorMessage =
         error?.response?.data?.detail || error?.message || "Unknown error";
@@ -239,6 +276,70 @@ export default function PackageManagerPage() {
     installPackageMutation.error,
     setErrorData,
     setIsInstallingPackage,
+  ]);
+
+  // Handle installation failure that doesn't trigger restart (e.g., dependency conflicts)
+  useEffect(() => {
+    const errorKey = installationResult
+      ? `${installationResult.package_name}-${installationResult.status}-${installationResult.message}`
+      : null;
+
+    if (
+      showProgressDialog &&
+      installPackageMutation.isSuccess &&
+      hasInstallationError &&
+      !backendWentDown &&
+      installationResult &&
+      errorKey &&
+      errorKey !== lastHandledError
+    ) {
+      console.log("Installation failed without restart, showing error");
+      setShowProgressDialog(false);
+      setIsInstallingPackage(false);
+      setBackendWentDown(false);
+      setInstallationWasSuccessful(false);
+      setRestartStartTime(null);
+      setLastHandledError(errorKey);
+
+      // Clear the installation status cache to prevent stale data
+      queryClient.removeQueries({ queryKey: ["installation-status"] });
+
+      // Extract and clean the error message
+      const rawError = installationResult.message || "Unknown error";
+      let cleanError = rawError;
+
+      // For dependency resolution errors, extract key information
+      if (rawError.includes("No solution found when resolving dependencies")) {
+        const pkgName = installationResult.package_name || "package";
+        if (rawError.includes("requires-python")) {
+          cleanError = `Package '${pkgName}' requires a different Python version than what's currently available. Please check the package documentation for compatibility requirements.`;
+        } else {
+          cleanError = `Package '${pkgName}' has dependency conflicts that prevent installation. This may be due to version incompatibilities with existing packages.`;
+        }
+      }
+      // For other uv errors, try to extract the first meaningful line
+      else if (rawError.includes("×")) {
+        const lines = rawError.split("\n");
+        const errorLine = lines.find((line) => line.includes("×")) || lines[0];
+        cleanError = errorLine.replace(/^\s*×\s*/, "").trim();
+      }
+
+      setErrorData({
+        title: "Installation Failed",
+        list: [cleanError],
+      });
+      setPackageName("");
+    }
+  }, [
+    showProgressDialog,
+    installPackageMutation.isSuccess,
+    hasInstallationError,
+    backendWentDown,
+    installationResult,
+    lastHandledError,
+    setErrorData,
+    setIsInstallingPackage,
+    packageName,
   ]);
 
   return (
@@ -266,7 +367,7 @@ export default function PackageManagerPage() {
         <CardContent className="space-y-4">
           <div className="flex gap-3">
             <Input
-              placeholder="Package name (e.g., pandas, requests, numpy)"
+              placeholder="Package name with optional version (e.g., pandas==2.3.1, requests>=2.25.0)"
               value={packageName}
               onChange={(e) => setPackageName(e.target.value)}
               onKeyDown={(e) => {
@@ -294,6 +395,12 @@ export default function PackageManagerPage() {
               )}
             </Button>
           </div>
+
+          <p className="text-sm text-muted-foreground">
+            Supported version operators: <code>==</code> (exact),{" "}
+            <code>&gt;=</code> (minimum), <code>&lt;=</code> (maximum),{" "}
+            <code>&gt;</code>, <code>&lt;</code>, <code>!=</code> (not equal)
+          </p>
 
           <Alert>
             <ForwardedIconComponent name="AlertTriangle" className="h-4 w-4" />

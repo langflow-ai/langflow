@@ -1,21 +1,30 @@
 import asyncio
-import os
 import platform
 import shutil
 import sys
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from loguru import logger
 from pydantic import BaseModel
+from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser
+from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.services.database.models.package_installation.model import (
+    InstallationStatus,
+    PackageInstallation,
+    PackageInstallationCreate,
+)
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/packages", tags=["Packages"])
 
 
 class PackageInstallRequest(BaseModel):
-    package_name: str
+    package_name: str  # Supports version specifications like 'pandas==2.3.1' or 'requests>=2.25.0'
 
 
 class PackageInstallResponse(BaseModel):
@@ -24,9 +33,7 @@ class PackageInstallResponse(BaseModel):
     status: str
 
 
-# Global flag to track installation status
-_installation_in_progress = False
-_last_installation_result: dict | None = None
+# No more global variables - we use database for multi-worker compatibility
 
 
 def _find_project_root() -> Path:
@@ -64,194 +71,234 @@ def _find_uv_executable() -> str:
     raise RuntimeError(msg)
 
 
-async def _restart_application() -> None:
-    """Restart the application with cross-platform compatibility."""
+def _restart_in_thread() -> None:
+    """Restart the application in a separate thread to avoid blocking HTTP connections."""
+    import time
+
+    # Give frontend time to poll the completion status
+    time.sleep(3)
+
+    # Check if we're in development mode (uvicorn with --reload)
+    is_development = any("--reload" in arg for arg in sys.argv) or "watchfiles" in sys.modules
+
     try:
-        # Wait to allow HTTP response to be sent
-        await asyncio.sleep(2)
         logger.info("Initiating application restart...")
 
-        # Strategy 1: Try to trigger uvicorn reload by touching Python files
-        reload_triggered = await _trigger_uvicorn_reload()
-        if reload_triggered:
-            return
+        if is_development:
+            # Development mode: uvicorn --reload should handle restarts automatically
+            # when .venv files change during package installation
+            logger.info("Development environment detected.")
+            logger.info("Package installation completed. Uvicorn auto-reload should handle restart.")
 
-        # Strategy 2: Platform-specific restart signals
-        restart_triggered = await _send_restart_signal()
-        if restart_triggered:
-            return
+            # Only touch files as a fallback if needed
+            # Wait a bit to see if uvicorn already started reloading
+            time.sleep(2)
 
-        # Strategy 3: Force exit as last resort
-        logger.info("Force exiting application to trigger restart...")
-        os._exit(0)
-
-    except (OSError, RuntimeError) as e:
-        logger.error(f"Failed to restart application: {e}")
-        # Emergency fallback
-        os._exit(1)
-
-
-async def _trigger_uvicorn_reload() -> bool:
-    """Try to trigger uvicorn reload by touching Python files."""
-    project_root = _find_project_root()
-
-    # List of files to try touching (in order of preference)
-    reload_files = [
-        project_root / "main.py",
-        project_root / "langflow" / "main.py",
-        project_root / "langflow" / "__init__.py",
-        project_root / "__init__.py",
-    ]
-
-    for file_path in reload_files:
-        try:
-            if file_path.exists():
-                logger.info(f"Triggering uvicorn reload by touching {file_path}")
-                file_path.touch()
-                return True
-        except (OSError, PermissionError) as e:
-            logger.warning(f"Failed to touch {file_path}: {e}")
-            continue
-
-    logger.warning("Could not trigger uvicorn reload - no suitable files found")
-    return False
-
-
-async def _send_restart_signal() -> bool:
-    """Send platform-appropriate restart signal."""
-    try:
-        import signal
-
-        current_pid = os.getpid()
-        system = platform.system()
-
-        if system == "Windows":
-            # Windows: Use SIGTERM (CTRL+C equivalent)
-            logger.info("Sending SIGTERM signal for Windows restart...")
             try:
-                os.kill(current_pid, signal.SIGTERM)
-                await asyncio.sleep(1)
-            except (OSError, ProcessLookupError) as e:
-                logger.warning(f"Failed to send SIGTERM on Windows: {e}")
-            else:
-                return True
+                project_root = _find_project_root()
+                reload_files = [
+                    project_root / "langflow" / "main.py",
+                    project_root / "langflow" / "__init__.py",
+                ]
 
-        elif system in ["Linux", "Darwin"]:  # Darwin is macOS
-            # Unix-like systems: Try SIGHUP first, then SIGTERM
-            for sig_name, sig_value in [("SIGHUP", signal.SIGHUP), ("SIGTERM", signal.SIGTERM)]:
-                try:
-                    logger.info(f"Sending {sig_name} signal for {system} restart...")
-                    os.kill(current_pid, sig_value)
-                    await asyncio.sleep(1)
-                except (OSError, ProcessLookupError) as e:
-                    logger.warning(f"Failed to send {sig_name} on {system}: {e}")
-                    continue
-                else:
-                    return True
+                # Only touch files if we're still running (no reload happened)
+                for file_path in reload_files:
+                    try:
+                        if file_path.exists():
+                            logger.info(f"Fallback: Triggering uvicorn reload by touching {file_path}")
+                            file_path.touch()
+                            return
+                    except (OSError, PermissionError) as e:
+                        logger.warning(f"Failed to touch {file_path}: {e}")
+                        continue
+
+            except (OSError, RuntimeError, AttributeError, ImportError) as e:
+                logger.info(f"Could not trigger fallback restart: {e}")
+                logger.info("Package installation completed. Manual restart may be needed.")
+                return
         else:
-            logger.warning(f"Unknown platform: {system}")
+            # Production/server mode: just log and let process manager handle it
+            logger.info("Production environment detected. Package installed successfully.")
+            logger.info("Please restart the application manually or let your process manager handle it.")
+            return
 
-    except ImportError:
-        logger.warning("Signal module not available")
+        # If we get here, restart failed
+        logger.warning("Could not restart application automatically. Package installation completed successfully.")
+        logger.info("Manual restart recommended to use the new package.")
 
-    return False
+    except (OSError, RuntimeError, AttributeError, ImportError, PermissionError) as e:
+        logger.error(f"Restart attempt failed: {e}")
+        logger.info("Package installation completed successfully. Manual restart may be required.")
 
 
-def _validate_package_name(package_name: str) -> bool:
-    """Validate package name with enhanced Windows security checks."""
-    if not package_name or not package_name.strip():
-        return False
+async def _restart_application_with_delay() -> None:
+    """Restart the application with delay for frontend polling."""
+    # Start restart in a separate thread to completely detach from HTTP request
+    thread = threading.Thread(target=_restart_in_thread, daemon=True)
+    thread.start()
 
-    # Your existing validation logic with Windows additions
-    forbidden_chars = [";", "&", "|", "`", "$", "(", ")", "<", ">"]
 
-    # Add Windows-specific forbidden characters (same as your original)
-    if platform.system() == "Windows":
-        forbidden_chars.extend(["%", "^", '"', "'"])
-
+def _is_valid_windows_package_name(package_name: str) -> bool:
+    """Validate package name for Windows forbidden characters."""
+    forbidden_chars = ["<", ">", ":", '"', "|", "?", "*"]
     return not any(char in package_name for char in forbidden_chars)
 
 
-async def install_package_background(package_name: str) -> None:
+def _validate_package_specification(package_spec: str) -> bool:
+    """Validate package specification with version support (e.g., 'pandas==2.3.1', 'requests>=2.25.0')."""
+    import re
+
+    if not package_spec or not package_spec.strip():
+        return False
+
+    # Pattern to match: package_name[version_operators]
+    # Allows: letters, numbers, hyphens, underscores, dots for package names
+    # Allows: ==, >=, <=, >, <, !=, ~=, === and version numbers
+    pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(([><=!~]+|===)[0-9]+(\.[0-9]+)*([a-zA-Z0-9._-]*)?)?$"
+
+    if not re.match(pattern, package_spec):
+        return False
+
+    # Security checks: forbidden command injection characters
+    forbidden_chars = [";", "&", "|", "`", "$", "(", ")"]
+
+    # Add Windows-specific forbidden characters
+    if platform.system() == "Windows":
+        forbidden_chars.extend(["%", "^", '"', "'"])
+
+    return not any(char in package_spec for char in forbidden_chars)
+
+
+def _validate_package_name(package_name: str) -> bool:
+    """Legacy validation function - redirects to new specification validator."""
+    return _validate_package_specification(package_name)
+
+
+async def install_package_background(installation_id: UUID) -> None:
     """Background task to install package using uv with cross-platform support."""
-    global _installation_in_progress, _last_installation_result  # noqa: PLW0603
+    from langflow.services.deps import session_scope
 
-    try:
-        _installation_in_progress = True
-        _last_installation_result = None
+    async with session_scope() as session:
+        try:
+            # Get installation record
+            installation = await session.get(PackageInstallation, installation_id)
+            if not installation:
+                logger.error(f"Installation record not found: {installation_id}")
+                return
 
-        logger.info(f"Starting installation of package: {package_name}")
+            # Update status to in progress
+            installation.status = InstallationStatus.IN_PROGRESS
+            installation.updated_at = datetime.now(timezone.utc)
+            session.add(installation)
+            await session.commit()
 
-        # Find UV executable
-        uv_cmd = _find_uv_executable()
+            package_name = installation.package_name
 
-        # Find project root
-        project_root = _find_project_root()
+            # Find UV executable and project root
+            uv_executable = _find_uv_executable()
+            project_root = _find_project_root()
 
-        # Create subprocess with Windows environment handling
-        cmd_args = [uv_cmd, "add", package_name]
+            logger.info(f"Starting installation of package: {package_name}")
+            logger.info(f"Found UV executable at: {uv_executable}")
+            logger.info(f"Found project root at: {project_root}")
 
-        # Prepare environment (only modify for Windows if needed)
-        env = os.environ.copy()
-        if platform.system() == "Windows":
-            # Ensure Python Scripts directory is in PATH for Windows
-            python_scripts = Path(sys.executable).parent / "Scripts"
-            if python_scripts.exists():
-                env["PATH"] = f"{python_scripts}{os.pathsep}{env.get('PATH', '')}"
+            # Enhanced validation for package name with Windows-specific forbidden characters
+            if platform.system() == "Windows" and not _is_valid_windows_package_name(package_name):
+                forbidden_chars = ["<", ">", ":", '"', "|", "?", "*"]
+                error_message = (
+                    f"Invalid package name '{package_name}' for Windows. "
+                    f"Contains forbidden characters: {forbidden_chars}"
+                )
+                logger.error(error_message)
+                installation.status = InstallationStatus.FAILED
+                installation.message = error_message
+                installation.updated_at = datetime.now(timezone.utc)
+                session.add(installation)
+                await session.commit()
+                return
 
-        logger.info(f"Executing command: {' '.join(cmd_args)} in {project_root}")
+            # Install the package using UV
+            command = [str(uv_executable), "add", package_name]
 
-        process = await asyncio.create_subprocess_exec(
-            *cmd_args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=str(project_root),
-            env=env,
-        )
+            logger.info(f"Executing command: {' '.join(command)} in {project_root}")
 
-        stdout, stderr = await process.communicate()
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                cwd=project_root,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
 
-        # Handle encoding properly for Windows
-        if platform.system() == "Windows":
-            stderr_text = stderr.decode("cp1252", errors="replace") if stderr else ""
-        else:
-            stderr_text = stderr.decode() if stderr else ""
+            _, process_stderr = await process.communicate()
 
-        if process.returncode == 0:
-            logger.info(f"Successfully installed package: {package_name}")
-            _last_installation_result = {
-                "status": "success",
-                "package_name": package_name,
-                "message": f"Package '{package_name}' installed successfully",
-            }
-        else:
-            error_message = stderr_text or "Unknown error"
-            logger.error(f"Failed to install package {package_name}: {error_message}")
-            _last_installation_result = {
-                "status": "error",
-                "package_name": package_name,
-                "message": f"Failed to install package '{package_name}': {error_message}",
-            }
+            # Handle encoding properly for Windows
+            if platform.system() == "Windows":
+                stderr_text = process_stderr.decode("cp1252", errors="replace") if process_stderr else ""
+            else:
+                stderr_text = process_stderr.decode() if process_stderr else ""
 
-        # Schedule restart (keep your existing logic)
-        logger.info("Restarting application after package installation...")
-        restart_task = asyncio.create_task(_restart_application())
-        restart_task.add_done_callback(lambda _: None)
+            if process.returncode == 0:
+                logger.info(f"Successfully installed package: {package_name}")
+                installation.status = InstallationStatus.COMPLETED
+                installation.message = f"Package '{package_name}' installed successfully"
+            else:
+                error_message = stderr_text or "Unknown error"
+                logger.error(f"Failed to install package {package_name}: {error_message}")
+                installation.status = InstallationStatus.FAILED
+                installation.message = f"Failed to install package '{package_name}': {error_message}"
 
-    except (OSError, RuntimeError) as e:
-        logger.exception(f"Error installing package {package_name}")
-        _last_installation_result = {
-            "status": "error",
-            "package_name": package_name,
-            "message": f"Error installing package '{package_name}': {e!s}",
-        }
+            # Update installation record
+            installation.updated_at = datetime.now(timezone.utc)
+            session.add(installation)
+            await session.commit()
 
-        # Schedule restart even after exception (keep your existing logic)
-        logger.info("Restarting application after package installation exception to reset state...")
-        restart_task = asyncio.create_task(_restart_application())
-        restart_task.add_done_callback(lambda _: None)
-    finally:
-        _installation_in_progress = False
+            # Only restart if installation was successful
+            if process.returncode == 0:
+                # Give frontend time to poll the completion status before restart
+                await asyncio.sleep(1)
+
+                # Check if uvicorn auto-reload is likely to handle restart automatically
+                # This happens when .venv files change during package installation
+                is_development = any("--reload" in arg for arg in sys.argv) or "watchfiles" in sys.modules
+
+                if is_development:
+                    logger.info("Development mode detected. Package installation completed successfully.")
+                    logger.info("Uvicorn should automatically restart due to .venv file changes.")
+                    # Don't schedule additional restart to avoid conflicts
+                else:
+                    # Schedule restart with delay only in production mode
+                    logger.info("Restarting application after successful package installation...")
+                    restart_task = asyncio.create_task(_restart_application_with_delay())
+                    restart_task.add_done_callback(lambda _: None)
+            else:
+                logger.info("Package installation failed. Skipping application restart.")
+
+        except (OSError, RuntimeError) as e:
+            logger.exception("Error installing package")
+            # Update installation record with error
+            installation = await session.get(PackageInstallation, installation_id)
+            if installation:
+                installation.status = InstallationStatus.FAILED
+                installation.message = f"Error installing package: {e!s}"
+                installation.updated_at = datetime.now(timezone.utc)
+                session.add(installation)
+                await session.commit()
+
+            # Give frontend time to poll the failure status before restart
+            await asyncio.sleep(1)
+
+            # Check if uvicorn auto-reload is likely to handle restart automatically
+            is_development = any("--reload" in arg for arg in sys.argv) or "watchfiles" in sys.modules
+
+            if is_development:
+                logger.info("Development mode detected. Package installation failed.")
+                logger.info("Uvicorn should automatically restart due to any .venv file changes.")
+                # Don't schedule additional restart to avoid conflicts
+            else:
+                # Schedule restart even after exception in production mode
+                logger.info("Restarting application after package installation exception to reset state...")
+                restart_task = asyncio.create_task(_restart_application_with_delay())
+                restart_task.add_done_callback(lambda _: None)
 
 
 @router.post("/install", response_model=PackageInstallResponse, status_code=202)
@@ -259,22 +306,48 @@ async def install_package(
     *,
     package_request: PackageInstallRequest,
     background_tasks: BackgroundTasks,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    session: DbSession,
+    current_user: CurrentActiveUser,
 ):
-    """Install a Python package using uv with cross-platform support."""
-    global _installation_in_progress  # noqa: PLW0602
+    """Install a Python package using uv with cross-platform support.
 
-    if _installation_in_progress:
-        raise HTTPException(status_code=409, detail="Package installation already in progress")
+    Supports version specifications:
+    - pandas (latest version)
+    - pandas==2.3.1 (exact version)
+    - requests>=2.25.0 (minimum version)
+    - numpy<=1.24.0 (maximum version)
+    - scipy!=1.10.0 (exclude specific version)
+    """
+    if not get_settings_service().settings.package_manager:
+        raise HTTPException(status_code=403, detail="Package manager is disabled")
 
     package_name = package_request.package_name.strip()
 
-    # Validate package name (keep your existing validation + Windows enhancement)
+    # Validate package name
     if not _validate_package_name(package_name):
         raise HTTPException(status_code=400, detail="Invalid package name")
 
+    # Check if there's already an installation in progress for this user
+    result = await session.exec(
+        select(PackageInstallation)
+        .where(PackageInstallation.user_id == current_user.id)
+        .where(PackageInstallation.status == InstallationStatus.IN_PROGRESS)
+    )
+    if result.first():
+        raise HTTPException(status_code=409, detail="Package installation already in progress")
+
+    # Create installation record
+    installation_data = PackageInstallationCreate(
+        package_name=package_name,
+        user_id=current_user.id,
+    )
+    installation = PackageInstallation.model_validate(installation_data.model_dump())
+    session.add(installation)
+    await session.commit()
+    await session.refresh(installation)
+
     # Start background installation
-    background_tasks.add_task(install_package_background, package_name)
+    background_tasks.add_task(install_package_background, installation.id)
 
     return PackageInstallResponse(
         message=f"Package installation started for '{package_name}'", package_name=package_name, status="started"
@@ -282,22 +355,72 @@ async def install_package(
 
 
 @router.get("/install/status")
-async def get_installation_status(current_user: CurrentActiveUser):  # noqa: ARG001
+async def get_installation_status(
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
     """Get the current installation status."""
-    global _installation_in_progress, _last_installation_result  # noqa: PLW0602
+    if not get_settings_service().settings.package_manager:
+        raise HTTPException(status_code=403, detail="Package manager is disabled")
+
+    # Get latest installation status for user
+    from sqlalchemy import desc
+
+    result = await session.exec(
+        select(PackageInstallation)
+        .where(PackageInstallation.user_id == current_user.id)
+        .order_by(desc(PackageInstallation.created_at))
+    )
+    latest_installation = result.first()
+
+    installation_in_progress = (
+        latest_installation.status == InstallationStatus.IN_PROGRESS if latest_installation else False
+    )
+
+    last_result = None
+    if latest_installation and latest_installation.status in [InstallationStatus.COMPLETED, InstallationStatus.FAILED]:
+        last_result = {
+            "id": str(latest_installation.id),
+            "package_name": latest_installation.package_name,
+            "status": latest_installation.status.value,
+            "message": latest_installation.message,
+            "created_at": latest_installation.created_at.isoformat() if latest_installation.created_at else None,
+            "updated_at": latest_installation.updated_at.isoformat() if latest_installation.updated_at else None,
+            "user_id": str(latest_installation.user_id),
+        }
 
     return {
-        "installation_in_progress": _installation_in_progress,
-        "last_result": _last_installation_result,
+        "installation_in_progress": installation_in_progress,
+        "last_result": last_result,
     }
 
 
 @router.delete("/install/status")
-async def clear_installation_status(current_user: CurrentActiveUser):  # noqa: ARG001
+async def clear_installation_status(
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
     """Clear the installation status."""
-    global _installation_in_progress, _last_installation_result  # noqa: PLW0603
+    if not get_settings_service().settings.package_manager:
+        raise HTTPException(status_code=403, detail="Package manager is disabled")
 
-    _installation_in_progress = False
-    _last_installation_result = None
+    # Delete completed/failed installations for this user
+    completed_installations = await session.exec(
+        select(PackageInstallation)
+        .where(PackageInstallation.user_id == current_user.id)
+        .where(PackageInstallation.status == InstallationStatus.COMPLETED)
+    )
+    failed_installations = await session.exec(
+        select(PackageInstallation)
+        .where(PackageInstallation.user_id == current_user.id)
+        .where(PackageInstallation.status == InstallationStatus.FAILED)
+    )
+
+    installations_to_delete = list(completed_installations.all()) + list(failed_installations.all())
+
+    for installation in installations_to_delete:
+        await session.delete(installation)
+
+    await session.commit()
 
     return {"message": "Installation status cleared"}
