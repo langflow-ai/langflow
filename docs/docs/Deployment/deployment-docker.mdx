@@ -55,7 +55,7 @@ You can customize the Docker Compose configuration to fit your specific deployme
 
 For example, to configure the container's database credentials using a `.env` file, do the following:
 
-1. Create a `.env` file with your database credentials:
+1. Create a `.env` file with your database credentials in the same directory as `docker-compose.yml`:
 
     ```bash
     # Database credentials
@@ -63,73 +63,75 @@ For example, to configure the container's database credentials using a `.env` fi
     POSTGRES_PASSWORD=mypassword
     POSTGRES_DB=langflow
 
-    # Langflow database connection
+    # Langflow configuration
     LANGFLOW_DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/langflow
+    LANGFLOW_CONFIG_DIR=/app/langflow
     ```
 
-2. Modify the `docker-compose.yml` file to reference the `.env` file for both the `langlow` and `postgres` services:
+2. Modify the `docker-compose.yml` file to reference the `.env` file for both the `langflow` and `postgres` services:
 
     ```yaml
     services:
       langflow:
-        env_file:
-          - .env
+        environment:
+          - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL}
+          - LANGFLOW_CONFIG_DIR=${LANGFLOW_CONFIG_DIR}
       postgres:
-        env_file:
-          - .env
+        environment:
+          - POSTGRES_USER=${POSTGRES_USER}
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          - POSTGRES_DB=${POSTGRES_DB}
     ```
 
 For a complete list of available environment variables, see the [Langflow environment variables](/environment-variables) documentation.
 
 ## Package your flow as a Docker image {#package-your-flow-as-a-docker-image}
 
-You can include your Langflow flow with the application image.
-When you build the image, your saved flow `.JSON` flow is included.
-This enables you to serve a flow from a container, push the image to Docker Hub, and deploy on Kubernetes.
+This section shows you how to create a Dockerfile that builds a Docker image containing your Langflow flow. This approach is useful when you want to distribute a specific flow as a standalone container or deploy it to environments like Kubernetes.
 
-An example flow is available in the [Langflow Helm Charts](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/flows) repository, or you can provide your own `JSON` file.
+Unlike the previous sections that use pre-built images, this method builds a custom image with your flow embedded inside it.
 
-1. Create a project directory:
+1. Create a project directory, and change directory into it.
 
-```bash
-mkdir langflow-custom && cd langflow-custom
-```
+    ```bash
+    mkdir langflow-custom && cd langflow-custom
+    ```
 
-2. Download the example flow or include your flow's `.JSON` file in the `langflow-custom` directory.
+2. Add your flow's JSON file to the directory. You can download an example, or use your own:
 
-```bash
-wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json
-```
+    ```bash
+    # Download an example flow
+    wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json
 
-3. Create a Dockerfile:
+    # Or copy your own flow file
+    cp /path/to/your/flow.json .
+    ```
 
-```dockerfile
-FROM langflowai/langflow-backend:latest
-RUN mkdir /app/flows
-COPY ./*.json /app/flows/
-ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
-```
+3. Create a Dockerfile to build your custom image:
 
-The `COPY ./*.json` command copies all JSON files in your current directory to the `/flows` folder.
+    ```dockerfile
+    FROM langflowai/langflow:latest
+    RUN mkdir /app/flows
+    COPY ./*.json /app/flows/
+    ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
+    ```
 
-The `ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows` command sets the environment variable within the Docker container. By pointing it to `/app/flows`, you ensure that the application can find and utilize the JSON flow files that have been copied into that directory during the image build process.
+This Dockerfile uses the official Langflow image as the base, creates a directory for your flows, copies your JSON flow files into the directory, and sets the environment variable to tell Langflow where to find the flows.
 
-4. Build and run the image locally.
+4. Build and test your custom image:
 
-```bash
-docker build -t myuser/langflow-hello-world:1.0.0 .
-docker run -p 7860:7860 myuser/langflow-hello-world:1.0.0
-```
+    ```bash
+    docker build -t myuser/langflow-custom:1.0.0 .
+    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    ```
 
-5. Build and push the image to Docker Hub.
-   Replace `myuser` with your Docker Hub username.
+5. Push your image to Docker Hub (optional):
 
-```bash
-docker build -t myuser/langflow-hello-world:1.0.0 .
-docker push myuser/langflow-hello-world:1.0.0
-```
+    ```bash
+    docker push myuser/langflow-custom:1.0.0
+    ```
 
-To deploy the image with Helm, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
+Your custom image now contains your flow and can be deployed anywhere Docker runs. For Kubernetes deployment, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
 
 ## Customize the Langflow Docker image with your own code
 
