@@ -2,6 +2,7 @@
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
+DOCKER=podman
 GREEN=\033[0;32m
 RED=\033[0;31m
 NC=\033[0m # No Color
@@ -30,53 +31,54 @@ dev: ## install development dependencies
 	@uv sync --dev
 
 # Code quality
-format: ## format the code
+format: dev ## format the code
 	@echo "$(GREEN)Formatting LFX code...$(NC)"
 	@uv run ruff check . --fix
 	@uv run ruff format .
 
-lint: ## run linters
+lint: dev ## run linters
 	@echo "$(GREEN)Running LFX linters...$(NC)"
 	@uv run ruff check .
 
 # Testing
-test: ## run tests
+test: dev ## run tests
 	@echo "$(GREEN)Running LFX tests...$(NC)"
-	@uv run pytest tests/unit -v $(args)
+	@uv run --package lfx pytest tests/unit -v $(args)
 
-test_verbose: ## run tests with verbose output
+test_verbose: dev ## run tests with verbose output
 	@make test args="-v -s"
 
-coverage: ## run tests with coverage
+coverage: dev ## run tests with coverage
 	@echo "$(GREEN)Running LFX tests with coverage...$(NC)"
+
 	@uv run coverage run -m pytest tests/unit
 	@uv run coverage report
 	@uv run coverage html
 
 # Building and publishing
-build: ## build the project
+build: dev ## build the project
 	@echo "$(GREEN)Building LFX...$(NC)"
 	@rm -rf dist/
 	@uv build $(args)
 	@echo "$(GREEN)LFX build completed. Artifacts in dist/$(NC)"
 
-build_wheel: ## build wheel only
+build_wheel: dev ## build wheel only
 	@make build args="--wheel"
 
-build_sdist: ## build source distribution only
+build_sdist: dev ## build source distribution only
 	@make build args="--sdist"
 
 # Publishing
-publish: ## publish to PyPI
+publish: dev ## publish to PyPI
 	@echo "$(GREEN)Publishing LFX to PyPI...$(NC)"
 	@uv publish
 
-publish_test: ## publish to test PyPI
+publish_test: dev ## publish to test PyPI
 	@echo "$(GREEN)Publishing LFX to test PyPI...$(NC)"
 	@uv publish --repository testpypi
 
 # Installation testing
-install_from_build: build ## build and install locally
+install_from_build: dev build ## build and install locally
 	@echo "$(GREEN)Installing LFX from build...$(NC)"
 	@uv pip install dist/*.whl --force-reinstall
 
@@ -105,24 +107,24 @@ release_check: format lint test build test_cli ## run all checks before release
 # Docker operations
 docker_build: ## build production Docker image
 	@echo "$(GREEN)Building LFX production Docker image...$(NC)"
-	@cd ../.. && docker build -f src/lfx/docker/Dockerfile -t lfx:latest .
+	@cd ../.. && $(DOCKER) build -f src/lfx/docker/Dockerfile -t lfx:latest .
 
 docker_build_dev: ## build development Docker image
 	@echo "$(GREEN)Building LFX development Docker image...$(NC)"
-	@cd ../.. && docker build -f src/lfx/docker/Dockerfile.dev -t lfx:dev .
+	@cd ../.. && $(DOCKER) build -f src/lfx/docker/Dockerfile.dev -t lfx:dev .
 
 docker_run: docker_build ## run LFX in production Docker container
 	@echo "$(GREEN)Running LFX in Docker container...$(NC)"
-	@docker run --rm -it lfx:latest
+	@$(DOCKER) run --rm -it lfx:latest
 
 docker_dev: docker_build_dev ## run LFX development environment
 	@echo "$(GREEN)Starting LFX development environment...$(NC)"
-	@docker run --rm -it lfx:dev
+	@$(DOCKER) run --rm -it lfx:dev
 
 docker_test: docker_build_dev ## run tests in Docker
 	@echo "$(GREEN)Running LFX tests in Docker...$(NC)"
-	@docker run --rm lfx:dev uv run pytest tests/unit -v
+	@$(DOCKER) run --rm lfx:dev uv run pytest tests/unit -v
 
 docker_clean: ## clean Docker images and containers
 	@echo "$(GREEN)Cleaning LFX Docker images...$(NC)"
-	@docker rmi lfx:latest lfx:dev 2>/dev/null || true
+	@$(DOCKER) rmi lfx:latest lfx:dev 2>/dev/null || true
