@@ -23,7 +23,7 @@ from lfx.cli.common import (
     is_port_in_use,
     load_graph_from_path,
 )
-from lfx.cli.serve_app import FlowMeta, create_serve_app
+from lfx.cli.serve_app import FlowMeta, create_multi_serve_app
 
 # Initialize console
 console = Console()
@@ -241,7 +241,7 @@ def serve_command(
         verbose_print(f"✓ Prepared single flow '{title}' from {source_display} (id={flow_id})")
 
         # Create FastAPI app
-        serve_app = create_serve_app(
+        serve_app = create_multi_serve_app(
             root_dir=resolved_path.parent,
             graphs=graphs,
             metas=metas,
