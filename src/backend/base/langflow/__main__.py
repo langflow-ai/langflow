@@ -188,6 +188,7 @@ def run(
         show_default=False,
     ),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
+    log_rotation: str | None = typer.Option(None, help="Log rotation(Time/Size).", show_default=False),
     cache: str | None = typer.Option(  # noqa: ARG001
         None,
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -263,7 +264,7 @@ def run(
     else:
         os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
 
-    configure(log_level=log_level, log_file=log_file)
+    configure(log_level=log_level, log_file=log_file, log_rotation=log_rotation)
 
     # Create progress indicator (show verbose timing if log level is DEBUG)
     verbose = log_level == "debug"

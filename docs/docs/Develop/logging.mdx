@@ -7,30 +7,46 @@ import Icon from "@site/src/components/icon";
 
 This page provides information about Langflow logs, including logs for individual flows and the Langflow application itself.
 
-## Log options
-
 Langflow uses the `loguru` library for logging.
 
-The default `log_level` is `ERROR`. Other options are `DEBUG`, `INFO`, `WARNING`, and `CRITICAL`.
+The default logfile is named `langflow.log`.
+Langflow also produces logfiles for flows.
 
-The default logfile is called `langflow.log`, and its location depends on your operating system.
+## Log storage
+
+The default logfile storage location depends on your operating system:
 
 - **macOS Desktop**:`/Users/<username>/.langflow/cache`
 - **Windows Desktop**:`C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
-- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
-- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/cache`
+- **OSS macOS/Windows/Linux/WSL (`uv pip install`)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
+- **OSS macOS/Windows/Linux/WSL (`git clone`)**: `<path_to_clone>/src/backend/base/langflow/cache`
 
-The `LANGFLOW_LOG_ENV` controls log output and formatting. The `container` option outputs serialized JSON to stdout. The `container_csv` option outputs CSV-formatted plain text to stdout. The `default` (or not set) logging option outputs prettified output with [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html).
+To customize log storage, see [Configure log options](#configure-log-options).
 
-To modify Langflow's logging configuration, add them to your `.env` file and start Langflow.
+## Configure log options
 
-```text
-LANGFLOW_LOG_LEVEL=ERROR
-LANGFLOW_LOG_FILE=path/to/logfile.log
-LANGFLOW_LOG_ENV=container
-```
+Use [Langflow environment variables](/environment-variables) to configure logging options in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`.
 
-To start Langflow with the values from your .env file, start Langflow with `uv run langflow run --env-file .env`
+The following environment variables are available to configure logging:
+
+* `LANGFLOW_LOG_LEVEL`: Sets the log level as one of `DEBUG`, `ERROR` (default), `INFO`, `WARNING`, and `CRITICAL`. For example, `LANGFLOW_LOG_LEVEL=DEBUG`.
+
+* `LANGFLOW_LOG_FILE`: Sets the log file storage location if you want to use a non-default location.
+For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`.
+
+* `LANGFLOW_LOG_ENV`: Controls log output and formatting.
+
+    * `LANGFLOW_LOG_ENV=container`: Outputs serialized JSON to stdout.
+    * `LANGFLOW_LOG_ENV=container_csv`: Outputs CSV-formatted plain text to stdout.
+    * `LANGFLOW_LOG_ENV=default` or unset: Outputs prettified output with [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html).
+
+* `LANGFLOW_LOG_ROTATION` controls when the log file is rotated, either based on time or file size. By default, logs are rotated every 1 day.
+
+    * Time-based rotation: "1 day", "12 hours", "1 week"
+    * Size-based rotation: "10 MB", "1 GB"
+    * Disable rotation: "None" (log files will grow without limit)
+
+A complete example `.env` file is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
 
 ## Flow and component logs
 
@@ -64,10 +80,13 @@ For example, the following `Message` data could be the output from a **Chat Inpu
 In the case of Input/Output components, the original input might not be structured as a `Message` object.
 For example, a **Language Model** component might pass a raw text response to a **Chat Output** component that is then transformed into a `Message` object.
 
+You can find `.log` files for flows at your Langflow installation's log storage location.
+For filepaths, see [Log storage](#log-storage).
+
 ### View chat logs
 
 In the **Playground**, you can inspect the chat history for each chat session.
-For more information, see [Use the Playground](/concepts-playground).
+For more information, see [View chat history](/concepts-playground#view-chat-history).
 
 ### View output from a single component
 
