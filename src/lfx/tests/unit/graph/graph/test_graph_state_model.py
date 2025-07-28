@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
 
-@pytest.mark.xfail("These components trigger aiohttp import. Should refactor LLMRouter")
+@pytest.mark.xfail(reason="These components trigger aiohttp import. Should refactor LLMRouter")
 def test_graph_state_model():
     from lfx.components.openai.openai_chat_model import OpenAIModelComponent
     from lfx.components.processing import PromptComponent

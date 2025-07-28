@@ -139,6 +139,11 @@ async def test_send_message_without_database(monkeypatch):  # noqa: ARG001
 @pytest.mark.usefixtures("use_noop_session")
 @pytest.mark.asyncio
 async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
+    try:
+        import langchain  # noqa: F401
+    except ImportError:
+        pytest.skip("Langchain is not installed")
+
     from lfx.components.agents.agent import AgentComponent
 
     event_manager = MagicMock()

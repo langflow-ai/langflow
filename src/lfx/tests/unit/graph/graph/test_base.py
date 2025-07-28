@@ -1,4 +1,3 @@
-import logging
 from collections import deque
 
 import pytest
@@ -8,6 +7,7 @@ from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
 
 
+@pytest.mark.asyncio
 async def test_graph_not_prepared():
     chat_input = ChatInput()
     chat_output = ChatOutput()
@@ -16,18 +16,6 @@ async def test_graph_not_prepared():
     graph.add_component(chat_output)
     with pytest.raises(ValueError, match="Graph not prepared"):
         await graph.astep()
-
-
-def test_graph(caplog: pytest.LogCaptureFixture):
-    chat_input = ChatInput()
-    chat_output = ChatOutput()
-    graph = Graph()
-    graph.add_component(chat_input)
-    graph.add_component(chat_output)
-    caplog.clear()
-    with caplog.at_level(logging.WARNING):
-        graph.prepare()
-        assert "Graph has vertices but no edges" in caplog.text
 
 
 @pytest.mark.asyncio

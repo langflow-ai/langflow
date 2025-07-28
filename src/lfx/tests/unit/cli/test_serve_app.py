@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from lfx.cli.serve_app import (
     FlowMeta,
-    create_serve_app,
+    create_multi_serve_app,
     verify_api_key,
 )
 
@@ -68,7 +68,23 @@ class TestCreateServeApp:
         """Create a mock graph."""
         graph = MagicMock()
         graph.flow_id = "test-flow-id"
-        graph.nodes = []
+
+        # Mock nodes as a dictionary for graph analysis
+        mock_node = MagicMock()
+        mock_node.data = {
+            "type": "TestComponent",
+            "display_name": "Test Component",
+            "description": "A test component",
+            "template": {},
+        }
+        graph.nodes = {"node1": mock_node}
+
+        # Mock edges as a list
+        mock_edge = MagicMock()
+        mock_edge.source = "node1"
+        mock_edge.target = "node2"
+        graph.edges = [mock_edge]
+
         graph.vertices = []
         graph.prepare = Mock()
         return graph
@@ -83,30 +99,29 @@ class TestCreateServeApp:
             description="A test flow",
         )
 
-    def test_create_serve_app_single_flow(self, mock_graph, mock_meta):
+    def test_create_multi_serve_app_single_flow(self, mock_graph, mock_meta):
         """Test creating app with single flow."""
         graphs = {"test-flow-id": mock_graph}
         metas = {"test-flow-id": mock_meta}
         verbose_print = Mock()
 
-        app = create_serve_app(
+        app = create_multi_serve_app(
             root_dir=Path("/test"),
             graphs=graphs,
             metas=metas,
             verbose_print=verbose_print,
         )
 
-        assert app.title == "LFX Flow Server - Test Flow"
-        assert "Use POST /run to execute the flow" in app.description
+        assert app.title == "LFX Multi-Flow Server (1)"
+        assert "Use `/flows` to list available IDs" in app.description
 
         # Check routes
         routes = [route.path for route in app.routes]
         assert "/health" in routes
-        assert "/run" in routes
-        # Should not have /flows or /flows/{id}/info for single flow
-        assert "/flows" not in routes
+        assert "/flows" in routes  # Multi-flow always has this
+        assert "/flows/test-flow-id/run" in routes  # Flow-specific endpoint
 
-    def test_create_serve_app_multiple_flows(self, mock_graph, mock_meta):
+    def test_create_multi_serve_app_multiple_flows(self, mock_graph, mock_meta):
         """Test creating app with multiple flows."""
         graph2 = MagicMock()
         graph2.flow_id = "flow-2"
@@ -121,15 +136,15 @@ class TestCreateServeApp:
         metas = {"test-flow-id": mock_meta, "flow-2": meta2}
         verbose_print = Mock()
 
-        app = create_serve_app(
+        app = create_multi_serve_app(
             root_dir=Path("/test"),
             graphs=graphs,
             metas=metas,
             verbose_print=verbose_print,
         )
 
-        assert "LFX Flow Server" in app.title
-        assert "Use /flows to list available flows" in app.description
+        assert app.title == "LFX Multi-Flow Server (2)"
+        assert "Use `/flows` to list available IDs" in app.description
 
         # Check routes
         routes = [route.path for route in app.routes]
@@ -140,14 +155,14 @@ class TestCreateServeApp:
         assert "/flows/flow-2/run" in routes
         assert "/flows/flow-2/info" in routes
 
-    def test_create_serve_app_mismatched_keys(self, mock_graph, mock_meta):
+    def test_create_multi_serve_app_mismatched_keys(self, mock_graph, mock_meta):
         """Test error when graphs and metas have different keys."""
         graphs = {"test-flow-id": mock_graph}
         metas = {"different-id": mock_meta}
         verbose_print = Mock()
 
         with pytest.raises(ValueError, match="graphs and metas must contain the same keys"):
-            create_serve_app(
+            create_multi_serve_app(
                 root_dir=Path("/test"),
                 graphs=graphs,
                 metas=metas,
@@ -163,14 +178,33 @@ class TestServeAppEndpoints:
         """Create a mock graph with async run capability."""
         graph = AsyncMock()
         graph.flow_id = "test-flow-id"
-        graph.nodes = []
+
+        # Mock nodes as a dictionary for graph analysis
+        mock_node = MagicMock()
+        mock_node.data = {
+            "type": "TestComponent",
+            "display_name": "Test Component",
+            "description": "A test component",
+            "template": {},
+        }
+        graph.nodes = {"node1": mock_node}
+
+        # Mock edges as a list
+        mock_edge = MagicMock()
+        mock_edge.source = "node1"
+        mock_edge.target = "node2"
+        graph.edges = [mock_edge]
+
         graph.vertices = []
         graph.prepare = Mock()
 
         # Mock successful execution
-        mock_output = MagicMock()
-        mock_output.outputs = [MagicMock(results={"text": "Hello from flow"})]
-        graph.arun.return_value = [mock_output]
+        mock_result = MagicMock(results={"text": "Hello from flow"})
+
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield mock_result
+
+        graph.async_start = mock_async_start
 
         return graph
 
@@ -188,7 +222,7 @@ class TestServeAppEndpoints:
         metas = {"test-flow-id": meta}
         verbose_print = Mock()
 
-        app = create_serve_app(
+        app = create_multi_serve_app(
             root_dir=Path("/test"),
             graphs=graphs,
             metas=metas,
@@ -204,7 +238,27 @@ class TestServeAppEndpoints:
         """Create test client with multiple flows."""
         graph2 = AsyncMock()
         graph2.flow_id = "flow-2"
-        graph2.arun.return_value = [MagicMock(outputs=[])]
+
+        # Mock nodes as a dictionary for graph analysis
+        mock_node2 = MagicMock()
+        mock_node2.data = {
+            "type": "TestComponent2",
+            "display_name": "Test Component 2",
+            "description": "A second test component",
+            "template": {},
+        }
+        graph2.nodes = {"node2": mock_node2}
+
+        # Mock edges as a list
+        mock_edge2 = MagicMock()
+        mock_edge2.source = "node2"
+        mock_edge2.target = "node3"
+        graph2.edges = [mock_edge2]
+
+        async def mock_async_start2(inputs):  # noqa: ARG001
+            yield MagicMock(outputs=[])
+
+        graph2.async_start = mock_async_start2
 
         meta1 = FlowMeta(
             id="test-flow-id",
@@ -223,7 +277,7 @@ class TestServeAppEndpoints:
         metas = {"test-flow-id": meta1, "flow-2": meta2}
         verbose_print = Mock()
 
-        app = create_serve_app(
+        app = create_multi_serve_app(
             root_dir=Path("/test"),
             graphs=graphs,
             metas=metas,
@@ -246,8 +300,17 @@ class TestServeAppEndpoints:
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
 
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run", json=request_data, headers=headers)
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),
+            patch("lfx.cli.common.extract_structured_result") as mock_extract,
+        ):
+            mock_extract.return_value = {
+                "result": "Hello from flow",
+                "success": True,
+                "type": "message",
+                "component": "TestComponent",
+            }
+            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -260,7 +323,7 @@ class TestServeAppEndpoints:
         request_data = {"input_value": "Test input"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run", json=request_data)
+            response = app_client.post("/flows/test-flow-id/run", json=request_data)
 
         assert response.status_code == 401
         assert response.json()["detail"] == "API key required"
@@ -271,7 +334,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "wrong-key"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run", json=request_data, headers=headers)
+            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid API key"
@@ -280,46 +343,66 @@ class TestServeAppEndpoints:
         """Test flow execution with query parameter authentication."""
         request_data = {"input_value": "Test input"}
 
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run?x-api-key=test-api-key", json=request_data)
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),
+            patch("lfx.cli.common.extract_structured_result") as mock_extract,
+        ):
+            mock_extract.return_value = {
+                "result": "Hello from flow",
+                "success": True,
+                "type": "message",
+                "component": "TestComponent",
+            }
+            response = app_client.post("/flows/test-flow-id/run?x-api-key=test-api-key", json=request_data)
 
         assert response.status_code == 200
         assert response.json()["success"] is True
 
     def test_run_endpoint_execution_error(self, app_client, mock_graph):
         """Test flow execution with error."""
+
         # Make graph raise an error
-        mock_graph.arun.side_effect = RuntimeError("Flow execution failed")
+        async def mock_async_start_error(inputs):  # noqa: ARG001
+            msg = "Flow execution failed"
+            raise RuntimeError(msg)
+            yield  # Makes it an async generator
+
+        mock_graph.async_start = mock_async_start_error
 
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run", json=request_data, headers=headers)
+            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 200  # Returns 200 with error in response body
         data = response.json()
         assert data["success"] is False
-        # execute_graph_with_capture catches the error and returns "No output generated"
-        assert data["result"] == "No output generated"
+        # serve_app error handling returns "Flow execution failed: {error}"
+        assert data["result"] == "Flow execution failed: Flow execution failed"
         assert data["type"] == "error"
         # The error message should be in the logs
         assert "ERROR: Flow execution failed" in data["logs"]
 
     def test_run_endpoint_no_results(self, app_client, mock_graph):
         """Test flow execution with no results."""
+
         # Make graph return empty results
-        mock_graph.arun.return_value = []
+        async def mock_async_start_empty(inputs):  # noqa: ARG001
+            return
+            yield  # Makes it an async generator
+
+        mock_graph.async_start = mock_async_start_empty
 
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run", json=request_data, headers=headers)
+            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 200
         data = response.json()
-        assert data["result"] == "No output generated"
+        assert data["result"] == "No response generated"
         assert data["success"] is False
         assert data["type"] == "error"
 
@@ -351,7 +434,16 @@ class TestServeAppEndpoints:
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
 
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),
+            patch("lfx.cli.common.extract_structured_result") as mock_extract,
+        ):
+            mock_extract.return_value = {
+                "result": "Hello from flow",
+                "success": True,
+                "type": "message",
+                "component": "TestComponent",
+            }
             response = multi_flow_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 200
@@ -364,7 +456,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run", json={}, headers=headers)
+            response = app_client.post("/flows/test-flow-id/run", json={}, headers=headers)
 
         assert response.status_code == 422  # Validation error
 
@@ -378,16 +470,31 @@ class TestServeAppEndpoints:
         mock_out.message = mock_message
         del mock_out.results  # No results attribute
 
-        mock_output = MagicMock()
-        mock_output.outputs = [mock_out]
+        # Create mock result with message
+        mock_result = MagicMock()
+        mock_result.message = mock_message
+        # Ensure results attribute doesn't exist
+        delattr(mock_result, "results")
 
-        mock_graph.arun.return_value = [mock_output]
+        async def mock_async_start_message(inputs):  # noqa: ARG001
+            yield mock_result
+
+        mock_graph.async_start = mock_async_start_message
 
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
 
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
-            response = app_client.post("/run", json=request_data, headers=headers)
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),
+            patch("lfx.cli.common.extract_structured_result") as mock_extract,
+        ):
+            mock_extract.return_value = {
+                "result": "Message output",
+                "success": True,
+                "type": "message",
+                "component": "TestComponent",
+            }
+            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 200
         data = response.json()

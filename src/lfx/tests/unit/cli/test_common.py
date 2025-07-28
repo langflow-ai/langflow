@@ -5,7 +5,7 @@ import socket
 import sys
 import uuid
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import typer
@@ -177,11 +177,11 @@ class TestLoadGraph:
             verbose_print = Mock()
             path = Path("/test/flow.json")
 
-            result = load_graph_from_path(path, verbose_print, verbose=True)
+            result = load_graph_from_path(path, ".json", verbose_print, verbose=True)
 
             assert result == mock_graph
-            verbose_print.assert_any_call(f"Loading flow from: {path}")
-            verbose_print.assert_any_call("✓ Successfully loaded flow with 3 nodes")
+            verbose_print.assert_any_call(f"Analyzing JSON flow: {path}")
+            verbose_print.assert_any_call("Loading JSON flow...")
 
     def test_load_graph_from_path_failure(self):
         """Test graph loading failure."""
@@ -190,10 +190,10 @@ class TestLoadGraph:
             path = Path("/test/flow.json")
 
             with pytest.raises(typer.Exit) as exc_info:
-                load_graph_from_path(path, verbose_print)
+                load_graph_from_path(path, ".json", verbose_print)
 
             assert exc_info.value.exit_code == 1
-            verbose_print.assert_any_call(f"✗ Failed to load flow from {path}: Load error")
+            verbose_print.assert_any_call("✗ Failed to load graph: Load error")
 
 
 class TestGraphExecution:
@@ -202,56 +202,55 @@ class TestGraphExecution:
     @pytest.mark.asyncio
     async def test_execute_graph_with_capture_success(self):
         """Test successful graph execution with output capture."""
-        # Mock graph and outputs
-        mock_output = MagicMock()
-        mock_output.outputs = [MagicMock(results={"text": "Test result"})]
+        # Mock graph and async iterator
+        mock_result = MagicMock(results={"text": "Test result"})
 
-        mock_graph = AsyncMock()
-        mock_graph.arun.return_value = [mock_output]
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield mock_result
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
 
         results, logs = await execute_graph_with_capture(mock_graph, "test input")
 
-        assert results == [{"text": "Test result"}]
+        assert len(results) == 1
+        assert results[0].results == {"text": "Test result"}
         assert logs == ""
-
-        # Verify graph was called correctly
-        mock_graph.arun.assert_called_once()
-        call_args = mock_graph.arun.call_args
-        assert call_args.kwargs["stream"] is False
-        assert len(call_args.kwargs["inputs"]) == 1
-        assert call_args.kwargs["inputs"][0].input_value == "test input"
 
     @pytest.mark.asyncio
     async def test_execute_graph_with_capture_with_message(self):
         """Test graph execution with message output."""
-        # Mock output with message
-        mock_message = MagicMock()
-        mock_message.text = "Message text"
+        # Mock result with message
+        mock_result = MagicMock()
+        mock_result.message.text = "Message text"
+        # Ensure results attribute doesn't exist
+        delattr(mock_result, "results")
 
-        mock_out = MagicMock()
-        mock_out.message = mock_message
-        del mock_out.results  # No results attribute
+        async def mock_async_start(inputs):  # noqa: ARG001
+            yield mock_result
 
-        mock_output = MagicMock()
-        mock_output.outputs = [mock_out]
-
-        mock_graph = AsyncMock()
-        mock_graph.arun.return_value = [mock_output]
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
 
         results, logs = await execute_graph_with_capture(mock_graph, "test input")
 
-        assert results == [{"text": "Message text"}]
+        assert len(results) == 1
+        assert results[0].message.text == "Message text"
 
     @pytest.mark.asyncio
     async def test_execute_graph_with_capture_error(self):
         """Test graph execution with error."""
-        mock_graph = AsyncMock()
-        mock_graph.arun.side_effect = RuntimeError("Execution failed")
 
-        results, logs = await execute_graph_with_capture(mock_graph, "test input")
+        async def mock_async_start_error(inputs):  # noqa: ARG001
+            msg = "Execution failed"
+            raise RuntimeError(msg)
+            yield  # This line never executes but makes it an async generator
 
-        assert results == []
-        assert "ERROR: Execution failed" in logs
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start_error
+
+        with pytest.raises(RuntimeError, match="Execution failed"):
+            await execute_graph_with_capture(mock_graph, "test input")
 
 
 class TestResultExtraction:
@@ -262,48 +261,91 @@ class TestResultExtraction:
         result = extract_result_data([], "some logs")
 
         assert result == {
-            "result": "No output generated",
+            "text": "No response generated",
             "success": False,
             "type": "error",
-            "component": "",
+            "logs": "some logs",
         }
 
     def test_extract_result_data_dict_result(self):
-        """Test extraction with dictionary result."""
-        results = [{"text": "Hello world", "component": "ChatOutput"}]
+        """Test extraction with proper vertex structure."""
+        # Create mock result with proper vertex structure
+        mock_message = MagicMock()
+        mock_message.text = "Hello world"
+
+        mock_vertex = MagicMock()
+        mock_vertex.custom_component.display_name = "Chat Output"
+        mock_vertex.id = "chat_output_id"
+
+        mock_result = MagicMock()
+        mock_result.vertex = mock_vertex
+        mock_result.result_dict.results = {"message": mock_message}
+
+        results = [mock_result]
 
         result = extract_result_data(results, "logs")
 
         assert result == {
             "result": "Hello world",
-            "text": "Hello world",
-            "success": True,
             "type": "message",
-            "component": "ChatOutput",
+            "component": "Chat Output",
+            "component_id": "chat_output_id",
+            "success": True,
+            "logs": "logs",
         }
 
     def test_extract_result_data_non_dict_result(self):
-        """Test extraction with non-dictionary result."""
-        results = ["Simple string result"]
+        """Test extraction with non-Chat Output component."""
+        # Create mock result with different component type
+        mock_vertex = MagicMock()
+        mock_vertex.custom_component.display_name = "Text Output"  # Not "Chat Output"
+        mock_vertex.id = "text_output_id"
+
+        mock_result = MagicMock()
+        mock_result.vertex = mock_vertex
+
+        results = [mock_result]
 
         result = extract_result_data(results, "logs")
 
+        # Should fall back to default since it's not Chat Output
         assert result == {
-            "result": "Simple string result",
-            "text": "Simple string result",
-            "success": True,
-            "type": "message",
-            "component": "",
+            "text": "No response generated",
+            "success": False,
+            "type": "error",
+            "logs": "logs",
         }
 
     def test_extract_result_data_multiple_results(self):
-        """Test extraction uses last result when multiple results."""
-        results = [
-            {"text": "First result"},
-            {"text": "Last result", "component": "FinalOutput"},
-        ]
+        """Test extraction finds Chat Output in multiple results."""
+        # First result - not Chat Output
+        mock_vertex1 = MagicMock()
+        mock_vertex1.custom_component.display_name = "Text Input"
+        mock_result1 = MagicMock()
+        mock_result1.vertex = mock_vertex1
+
+        # Second result - Chat Output
+        mock_message = MagicMock()
+        mock_message.text = "Final result"
+
+        mock_vertex2 = MagicMock()
+        mock_vertex2.custom_component.display_name = "Chat Output"
+        mock_vertex2.id = "final_output_id"
+
+        mock_result2 = MagicMock()
+        mock_result2.vertex = mock_vertex2
+        mock_result2.result_dict.results = {"message": mock_message}
+
+        results = [mock_result1, mock_result2]
 
         result = extract_result_data(results, "logs")
 
-        assert result["result"] == "Last result"
-        assert result["component"] == "FinalOutput"
+        # Should find and use the Chat Output result
+        assert result == {
+            "result": "Final result",
+            "type": "message",
+            "component": "Chat Output",
+            "component_id": "final_output_id",
+            "success": True,
+            "logs": "logs",
+        }
