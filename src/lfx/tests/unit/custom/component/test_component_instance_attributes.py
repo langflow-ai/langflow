@@ -57,6 +57,7 @@ def test_multiple_attributes_independence(chat_input_instances):
     assert chat1.text_color != chat2.text_color
 
 
+@pytest.mark.asyncio
 async def test_message_output_independence(chat_input_instances):
     """Test that message outputs are independent between instances."""
     chat1, chat2 = chat_input_instances
@@ -84,6 +85,7 @@ async def test_message_output_independence(chat_input_instances):
     assert message1.sender_name != message2.sender_name
 
 
+@pytest.mark.asyncio
 async def test_status_independence(chat_input_instances):
     """Test that status attribute is independent between instances."""
     chat1, chat2 = chat_input_instances

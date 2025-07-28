@@ -78,6 +78,7 @@ def _assert_all_outputs_have_different_required_inputs(outputs: list[Output]):
 #     assert _assert_all_outputs_have_different_required_inputs(agent.outputs)
 
 
+@pytest.mark.asyncio
 async def test_update_component_build_config_sync():
     class TestComponent(CustomComponent):
         def update_build_config(
@@ -95,6 +96,7 @@ async def test_update_component_build_config_sync():
     assert build_config["foo"] == "bar"
 
 
+@pytest.mark.asyncio
 async def test_update_component_build_config_async():
     class TestComponent(CustomComponent):
         async def update_build_config(

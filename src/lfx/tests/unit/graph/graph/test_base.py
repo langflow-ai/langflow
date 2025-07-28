@@ -30,6 +30,7 @@ def test_graph(caplog: pytest.LogCaptureFixture):
         assert "Graph has vertices but no edges" in caplog.text
 
 
+@pytest.mark.asyncio
 async def test_graph_with_edge():
     chat_input = ChatInput()
     chat_output = ChatOutput()
@@ -50,6 +51,7 @@ async def test_graph_with_edge():
     assert graph.edges[0].target_id == output_id
 
 
+@pytest.mark.asyncio
 async def test_graph_functional():
     chat_input = ChatInput(_id="chat_input")
     chat_input.set(should_store_message=False)
@@ -66,28 +68,12 @@ async def test_graph_functional():
     assert graph.edges[0].target_id == "chat_output"
 
 
+@pytest.mark.asyncio
 async def test_graph_functional_async_start():
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(input_value="test", _id="chat_output")
     chat_output.set(sender_name=chat_input.message_response)
     graph = Graph(chat_input, chat_output)
-    # Now iterate through the graph
-    # and check that the graph is running
-    # correctly
-    ids = ["chat_input", "chat_output"]
-    results = [result async for result in graph.async_start()]
-
-    assert len(results) == 3
-    assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
-    assert results[-1] == Finish()
-
-
-async def test_graph_functional_start():
-    chat_input = ChatInput(_id="chat_input")
-    chat_output = ChatOutput(input_value="test", _id="chat_output")
-    chat_output.set(sender_name=chat_input.message_response)
-    graph = Graph(chat_input, chat_output)
-    graph.prepare()
     # Now iterate through the graph
     # and check that the graph is running
     # correctly

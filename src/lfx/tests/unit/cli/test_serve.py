@@ -16,7 +16,7 @@ from lfx.cli.common import (
     get_free_port,
     is_port_in_use,
 )
-from lfx.cli.serve_app import FlowMeta, create_serve_app
+from lfx.cli.serve_app import FlowMeta, create_multi_serve_app
 
 
 def test_is_port_in_use():
@@ -98,10 +98,10 @@ def test_flow_meta():
     )
 
 
-def test_create_serve_app_single_flow(mock_graph, test_flow_meta):
+def test_create_multi_serve_app_single_flow(mock_graph, test_flow_meta):
     """Test creating app for single flow."""
     with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):
-        app = create_serve_app(
+        app = create_multi_serve_app(
             root_dir=Path("/tmp"),
             graphs={"test-flow-id": mock_graph},
             metas={"test-flow-id": test_flow_meta},
@@ -116,19 +116,19 @@ def test_create_serve_app_single_flow(mock_graph, test_flow_meta):
         assert response.json() == {"status": "healthy", "flow_count": 1}
 
         # Test run endpoint without auth
-        response = client.post("/run", json={"input_value": "test"})
+        response = client.post("/flows/test-flow-id/run", json={"input_value": "test"})
         assert response.status_code == 401
 
         # Test run endpoint with auth
         response = client.post(
-            "/run",
+            "/flows/test-flow-id/run",
             json={"input_value": "test"},
             headers={"x-api-key": "test-key"},
         )
         assert response.status_code == 200
 
 
-def test_create_serve_app_multiple_flows(mock_graph, test_flow_meta):
+def test_create_multi_serve_app_multiple_flows(mock_graph, test_flow_meta):
     """Test creating app for multiple flows."""
     meta2 = FlowMeta(
         id="flow-2",
@@ -138,7 +138,7 @@ def test_create_serve_app_multiple_flows(mock_graph, test_flow_meta):
     )
 
     with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):
-        app = create_serve_app(
+        app = create_multi_serve_app(
             root_dir=Path("/tmp"),
             graphs={"test-flow-id": mock_graph, "flow-2": mock_graph},
             metas={"test-flow-id": test_flow_meta, "flow-2": meta2},
@@ -199,7 +199,21 @@ def test_serve_command_json_file():
             # Create a mock graph
             mock_graph = MagicMock()
             mock_graph.prepare = MagicMock()
-            mock_graph.nodes = {}
+            # Mock nodes as a dictionary for graph analysis
+            mock_node = MagicMock()
+            mock_node.data = {
+                "type": "TestComponent",
+                "display_name": "Test Component",
+                "description": "A test component",
+                "template": {},
+            }
+            mock_graph.nodes = {"node1": mock_node}
+
+            # Mock edges as a list
+            mock_edge = MagicMock()
+            mock_edge.source = "node1"
+            mock_edge.target = "node2"
+            mock_graph.edges = [mock_edge]
             mock_load.return_value = mock_graph
 
             # Create CLI app
