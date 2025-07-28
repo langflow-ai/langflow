@@ -63,19 +63,22 @@ class LangflowRunnerExperimental:
         output_type: str = "all",
         cache: str | None = None,
         stream: bool = False,
-        user_id: str | None = None,
+        user_id: UUID | str | None = None,
         generate_user: bool = False,  # If True, generates a new user for the flow
         cleanup: bool = True,  # If True, clears flow state after execution
         tweaks_values: dict | None = None,
     ):
         try:
             logger.info(f"Start Handling {session_id=}")
+            if isinstance(user_id, str):
+                user_id = UUID(user_id)
+            user_id: UUID | None
             await self.init_db_if_needed()
             # Update settings with cache and components path
             await update_settings(cache=cache)
             if generate_user:
                 user = await self.generate_user()
-                user_id = str(user.id)
+                user_id = user.id
             flow_dict = await self.prepare_flow_and_add_to_db(
                 flow=flow,
                 user_id=user_id,
@@ -103,7 +106,7 @@ class LangflowRunnerExperimental:
         flow_dict: dict,
         input_type: str = "chat",
         output_type: str = "all",
-        user_id: str | None = None,
+        user_id: UUID | None = None,
         stream: bool = False,
     ):
         graph = await self.create_graph_from_flow(session_id, flow_dict, user_id=user_id)
@@ -118,7 +121,7 @@ class LangflowRunnerExperimental:
         self,
         *,
         flow: Path | str | dict,
-        user_id: str | None = None,
+        user_id: UUID | None = None,
         custom_flow_id: str | None = None,
         session_id: str | None = None,
         tweaks_values: dict | None = None,
@@ -164,18 +167,21 @@ class LangflowRunnerExperimental:
 
     async def generate_user(self) -> User:
         async with session_scope() as session:
-            user_id = str(uuid4())
-            user = User(id=user_id, username=user_id, password=get_password_hash(str(uuid4())), is_active=True)
+            user_id = uuid4()
+            user = User(id=user_id, username=str(user_id), password=get_password_hash(str(uuid4())), is_active=True)
             session.add(user)
             await session.commit()
             await session.refresh(user)
             return user
 
     @staticmethod
-    async def add_flow_to_db(flow_dict: dict, user_id: str | None):
+    async def add_flow_to_db(flow_dict: dict, user_id: UUID | None):
         async with session_scope() as session:
             flow_db = Flow(
-                name=flow_dict.get("name"), id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}), user_id=user_id
+                name=flow_dict.get("name"),
+                id=UUID(flow_dict["id"]),
+                data=flow_dict.get("data", {}),
+                user_id=user_id,
             )
             session.add(flow_db)
             await session.commit()
@@ -201,13 +207,16 @@ class LangflowRunnerExperimental:
         )
 
     @staticmethod
-    async def create_graph_from_flow(session_id: str, flow_dict: dict, user_id: str | None = None):
+    async def create_graph_from_flow(session_id: str, flow_dict: dict, user_id: UUID | None = None):
         graph = Graph.from_payload(
-            payload=flow_dict, flow_id=flow_dict["id"], flow_name=flow_dict.get("name"), user_id=user_id
+            payload=flow_dict,
+            flow_id=flow_dict["id"],
+            flow_name=flow_dict.get("name"),
+            user_id=str(user_id),
         )
         graph.session_id = session_id
         graph.set_run_id(session_id)
-        graph.user_id = user_id
+        graph.user_id = str(user_id)
         await graph.initialize_run()
         return graph
 
@@ -224,7 +233,7 @@ class LangflowRunnerExperimental:
             await cascade_delete_flow(session, uuid_obj)
 
     @staticmethod
-    async def clear_user_state(user_id: str):
+    async def clear_user_state(user_id: UUID):
         async with session_scope() as session:
             flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
             flow_ids: list[UUID] = [fid for fid in flows.all() if fid is not None]
