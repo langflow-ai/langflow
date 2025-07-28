@@ -195,9 +195,12 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 docling = [
     "docling>=2.36.1",
+[tool.poetry.extras]
+docling = [
     "tesserocr>=2.8.0",
-    "rapidocr_onnxruntime>=1.4.4",
-    "ocrmac>=1.0.0",
+    "rapidocr-onnxruntime>=1.4.4",
+    "ocrmac>=1.0.0; sys_platform == 'darwin'",
+]
 ]
 
 audio = [
