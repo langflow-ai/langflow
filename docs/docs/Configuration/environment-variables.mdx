@@ -25,28 +25,30 @@ If you choose to use both sources together, be aware that environment variables 
 Run the following commands to set environment variables for your current terminal session:
 
 <Tabs>
-
 <TabItem value="linux-macos" label="Linux or macOS" default>
+
 ```bash
 export VARIABLE_NAME='VALUE'
 ```
-</TabItem>
 
-<TabItem value="windows" label="Windows" default>
+</TabItem>
+<TabItem value="windows" label="Windows">
+
 ```
 set VARIABLE_NAME='VALUE'
 ```
-</TabItem>
 
-<TabItem value="docker" label="Docker" default>
+</TabItem>
+<TabItem value="docker" label="Docker">
+
 ```bash
 docker run -it --rm \
     -p 7860:7860 \
     -e VARIABLE_NAME='VALUE' \
     langflowai/langflow:latest
 ```
-</TabItem>
 
+</TabItem>
 </Tabs>
 
 When you start Langflow, it looks for environment variables that you've set in your terminal.
@@ -107,7 +109,7 @@ If it detects a supported environment variable, then it automatically adopts the
     ```
 
     </TabItem>
-    <TabItem value="docker" label="Docker" default>
+    <TabItem value="docker" label="Docker">
 
     ```bash
     docker run -it --rm \
@@ -192,7 +194,7 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_BUNDLE_URLS"/><span class="env-prefix">LANGFLOW_</span>BUNDLE_URLS | List[String] | `[]` | A list of URLs from which to load component bundles and flows. Supports GitHub URLs. If <span class="env-prefix">LANGFLOW_</span>AUTO_LOGIN is enabled, flows from these bundles are loaded into the database. |
 | <Link id="LANGFLOW_CACHE_TYPE"/><span class="env-prefix">LANGFLOW_</span>CACHE_TYPE | String | `async` | Set the cache type for Langflow. Possible values: `async`, `redis`, `memory`, `disk`.<br/>If you set the type to `redis`, then you must also set the following environment variables: <span class="env-prefix">LANGFLOW_REDIS_HOST</span>, <span class="env-prefix">LANGFLOW_REDIS_PORT</span>, <span class="env-prefix">LANGFLOW_REDIS_DB</span>, and <span class="env-prefix">LANGFLOW_REDIS_CACHE_EXPIRE</span>. |
 | <Link id="LANGFLOW_COMPONENTS_PATH"/><span class="env-prefix">LANGFLOW_</span>COMPONENTS_PATH | String | `langflow/components` | Path to the directory containing custom components.<br/>See [`--components-path` option](./configuration-cli.mdx#run-components-path). |
-| <Link id="LANGFLOW_CONFIG_DIR"/><span class="env-prefix">LANGFLOW_</span>CONFIG_DIR | String | See description | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. Defaults: **Linux/WSL**: `~/.cache/langflow/`<br/>**macOS**: `/Users/<username>/Library/Caches/langflow/`<br/>**Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`|
+| <Link id="LANGFLOW_CONFIG_DIR"/><span class="env-prefix">LANGFLOW_</span>CONFIG_DIR | String | See description | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. Defaults:<br/>**macOS Desktop cache**: `/Users/<username>/.langflow/cache`<br/>**Windows Desktop cache**: `C:\Users\<username>\AppData\Roaming\com.Langflow\cache`<br/>**OSS macOS/Windows/Linux/WSL (uv pip install) cache**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`<br/>**OSS macOS/Windows/Linux/WSL (git clone) cache**: `<path_to_clone>/src/backend/base/langflow/cache` |
 | <Link id="LANGFLOW_DATABASE_URL"/><span class="env-prefix">LANGFLOW_</span>DATABASE_URL | String | Not set | Set the database URL for Langflow. If not provided, Langflow uses a SQLite database. |
 | <Link id="LANGFLOW_USE_NOOP_DATABASE"/><span class="env-prefix">LANGFLOW_</span>USE_NOOP_DATABASE | Boolean | `false` | Use a no-op database, which avoids database connections and operations. Useful for running flows without a database. |
 | <Link id="LANGFLOW_DATABASE_CONNECTION_RETRY"/><span class="env-prefix">LANGFLOW_</span>DATABASE_CONNECTION_RETRY | Boolean | `false` | If True, Langflow tries to connect to the database again if it fails. |
@@ -240,7 +242,7 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_WORKERS"/><span class="env-prefix">LANGFLOW_</span>WORKERS | Integer | `1` | Number of worker processes.<br/>See [`--workers` option](./configuration-cli.mdx#run-workers). |
 | <Link id="LANGFLOW_SSL_CERT_FILE"/><span class="env-prefix">LANGFLOW_</span>SSL_CERT_FILE | String | Not set | Path to the SSL certificate file on the local system. |
 | <Link id="LANGFLOW_SSL_KEY_FILE"/><span class="env-prefix">LANGFLOW_</span>SSL_KEY_FILE | String | Not set | Path to the SSL key file on the local system. |
-| <Link id="SKIP_AUTH_AUTO_LOGIN"/>SKIP_AUTH_AUTO_LOGIN | Boolean | `false` | If set to `true`, disables automatic login and enforces authentication, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
+| <Link id="LANGFLOW_SKIP_AUTH_AUTO_LOGIN"/><span class="env-prefix">LANGFLOW_</span>SKIP_AUTH_AUTO_LOGIN | Boolean | `true` | If set to `true`, and `LANGFLOW_AUTO_LOGIN` is set to `true`, skips authentication and allows automatic login as the superuser. If set to `false`, and `LANGFLOW_AUTO_LOGIN` is set to `true`, disables automatic login and enforces authentication. If `LANGFLOW_AUTO_LOGIN` is `false`, has no effect. |
 </div>
 
 
@@ -249,7 +251,7 @@ The following table lists the environment variables supported by Langflow.
 The following examples show how to configure Langflow using environment variables in different scenarios.
 
 <Tabs>
-<TabItem value="env" label=".env File" default>
+<TabItem value="env" label=".env file" default>
 
 The `.env` file is a text file that contains key-value pairs of environment variables.
 
@@ -406,8 +408,8 @@ For macOS, this means any GUI-based app launched from Finder, Spotlight, Launchp
 
 To set environment variables for Langflow Desktop, you need to use specific commands or files, depending on your OS.
 
-<Tabs groupId="">
-  <TabItem value="macOS" label="macOS" default>
+<Tabs>
+<TabItem value="macos" label="macOS" default>
 
 Langflow Desktop for macOS cannot automatically use variables set in your terminal, such as those in`.zshrc` or `.bash_profile`, when launched from the macOS GUI.
 
@@ -415,43 +417,45 @@ To make environment variables available to GUI apps on macOS, you need to use `l
 
 1. Create the `LaunchAgents` directory if it doesn't exist:
 
-```bash
-mkdir -p ~/Library/LaunchAgents
-```
+    ```bash
+    mkdir -p ~/Library/LaunchAgents
+    ```
 
 2. In the `LaunchAgents` directory, create a `.plist` file called `dev.langflow.env`.
 
 3. Add the following content to `dev.langflow.env.plist`, and then add, change, or remove Langflow environment variables as needed for your configuration.
-This example sets the `LANGFLOW_CONFIG_DIR` environment variable for all GUI apps launched from the macOS GUI.
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>Label</key>
-    <string>dev.langflow.env</string>
-    <key>ProgramArguments</key>
-    <array>
-      <string>launchctl</string>
-      <string>setenv</string>
-      <string>LANGFLOW_CONFIG_DIR</string>
-      <string>/Users/your_user/custom/config</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-  </dict>
-</plist>
-```
+    This example sets the `LANGFLOW_CONFIG_DIR` environment variable for all GUI apps launched from the macOS GUI.
+
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>dev.langflow.env</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>launchctl</string>
+          <string>setenv</string>
+          <string>LANGFLOW_CONFIG_DIR</string>
+          <string>/Users/your_user/custom/config</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+      </dict>
+    </plist>
+    ```
 
 4. Load the file with `launchctl`:
-```bash
-launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
-```
 
-  </TabItem>
-  <TabItem value="System Properties" label="System Properties">
+    ```bash
+    launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
+    ```
+
+</TabItem>
+<TabItem value="windows1" label="Window System Properties">
 
 Langflow Desktop for Windows cannot automatically use variables set in your terminal, such as those defined with `set` in `cmd` or `$env:VAR=...` in PowerShell, when launched from the Windows GUI.
 
@@ -462,16 +466,18 @@ To set environment variables using the System Properties interface, do the follo
 1. Press <kbd>Win + R</kbd>, enter `SystemPropertiesAdvanced`, and then press <kbd>Enter</kbd>.
 2. Click **Environment Variables**.
 3. Under **User variables**, click **New**.
-:::tip
-To apply the setting to all users, select **System variables**.
-:::
+
+    :::tip
+    To apply the setting to all users, select **System variables**.
+    :::
+
 4. Enter the name of the Langflow variable you want to set, such as `LANGFLOW_CONFIG_DIR`, and the desired value, such as `C:\Users\your_user\.langflow_config`.
 5. Click **OK** to save the variable.
 6. Repeat until you have set all necessary Langflow environment variables.
 7. Launch or restart Langflow Desktop to apply the environment variables.
 
-  </TabItem>
-    <TabItem value="Powershell" label="Powershell">
+</TabItem>
+<TabItem value="windows2" label="Powershell">
 
 To define environment variables for Windows using PowerShell, do the following:
 
@@ -489,5 +495,6 @@ To define environment variables for Windows using PowerShell, do the following:
 
 2. Repeat until you have set all necessary Langflow environment variables.
 3. Launch or restart Langflow Desktop to apply the environment variables.
-  </TabItem>
+
+</TabItem>
 </Tabs>

@@ -47,17 +47,17 @@ When connected to an **Agent** component as tools, the agent has the option to u
     The **Playground** prints the agent's chain of thought as it selects tools to use and interacts with functionality provided by those tools.
     For example, the agent can use the **Directory** component's `as_dataframe` tool to retrieve a [DataFrame](/data-types#dataframe), and the **Web search** component's `perform_search` tool to find links to related items.
 
-## Add a prompt component to the flow
+## Add a Prompt Template component to the flow
 
 In this example, the application sends a customer's email address to the Langflow agent. The agent compares the customer's previous orders within the Directory component, searches the web for used versions of those items, and returns three results.
 
-1. To include the email address as a value in your flow, add a [Prompt](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
-2. In the Prompt component's **Template** field, enter `Recommend 3 used items for {email}, based on previous orders.`
-Adding the `{email}` value in curly braces creates a new input in the **Prompt** component, and the component connected to the `{email}` port is supplying the value for that variable.
+1. To include the email address as a value in your flow, add a [**Prompt Template**](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
+2. In the **Prompt Template** component's **Template** field, enter `Recommend 3 used items for {email}, based on previous orders.`
+Adding the `{email}` value in curly braces creates a new input in the **Prompt Template** component, and the component connected to the `{email}` port is supplying the value for that variable.
 This creates a point for the user's email to enter the flow from your request.
 If you aren't using the `customer_orders.csv` example file, modify the input to search for a value in your dataset.
 
-    At this point your flow has six components. The Chat Input is connected to the Prompt component's `email` input port. Then, the Prompt component's output port is connected to the Agent component's input port. The Directory and Web search components are connected to the Agent's Tools port. Finally, the Agent component's output port is connected to the Chat Output component, which returns the final response to the application.
+    At this point your flow has six components. The **Chat Input** is connected to the **Prompt Template** component's **email** port. Then, the **Prompt Template** output is connected to the **Agent** component's **System Message** port. The **Directory** and **Web Search** components are connected to the **Agent** component's **Tools** port. Finally, the **Agent** component's output is connected to the **Chat Output** component, which returns the final response to the application.
 
     ![An agent component connected to web search and directory components](/img/tutorial-agent-with-directory.png)
 
@@ -75,75 +75,77 @@ With your flow operational, connect it to a JavaScript application to use the ag
 If you're using the `customer_orders.csv` example file, you can run this example as-is with the example email address in the code sample.
 If not, modify the `const email = "isabella.rodriguez@example.com"` to search for a value in your dataset.
 
-        ```js
-        import { LangflowClient } from "@datastax/langflow-client";
+    ```js
+    import { LangflowClient } from "@datastax/langflow-client";
 
-        const LANGFLOW_SERVER_ADDRESS = 'LANGFLOW_SERVER_ADDRESS';
-        const FLOW_ID = 'FLOW_ID';
-        const LANGFLOW_API_KEY = 'LANGFLOW_API_KEY';
-        const email = "isabella.rodriguez@example.com";
+    const LANGFLOW_SERVER_ADDRESS = 'LANGFLOW_SERVER_ADDRESS';
+    const FLOW_ID = 'FLOW_ID';
+    const LANGFLOW_API_KEY = 'LANGFLOW_API_KEY';
+    const email = "isabella.rodriguez@example.com";
 
-        async function runAgentFlow(): Promise<void> {
-            try {
-                // Initialize the Langflow client
-                const client = new LangflowClient({
-                    baseUrl: LANGFLOW_SERVER_ADDRESS,
-                    apiKey: LANGFLOW_API_KEY
-                });
+    async function runAgentFlow(): Promise<void> {
+        try {
+            // Initialize the Langflow client
+            const client = new LangflowClient({
+                baseUrl: LANGFLOW_SERVER_ADDRESS,
+                apiKey: LANGFLOW_API_KEY
+            });
 
-                console.log(`Connecting to Langflow server at: ${LANGFLOW_SERVER_ADDRESS} `);
-                console.log(`Flow ID: ${FLOW_ID}`);
-                console.log(`Email: ${email}`);
+            console.log(`Connecting to Langflow server at: ${LANGFLOW_SERVER_ADDRESS} `);
+            console.log(`Flow ID: ${FLOW_ID}`);
+            console.log(`Email: ${email}`);
 
-                // Get the flow instance
-                const flow = client.flow(FLOW_ID);
+            // Get the flow instance
+            const flow = client.flow(FLOW_ID);
 
-                // Run the flow with the email as input
-                console.log('\nSending request to agent...');
-                const response = await flow.run(email, {
-                    session_id: email // Use email as session ID for context
-                });
+            // Run the flow with the email as input
+            console.log('\nSending request to agent...');
+            const response = await flow.run(email, {
+                session_id: email // Use email as session ID for context
+            });
 
-                console.log('\n=== Response from Langflow ===');
-                console.log('Session ID:', response.sessionId);
+            console.log('\n=== Response from Langflow ===');
+            console.log('Session ID:', response.sessionId);
 
-                // Extract URLs from the chat message
-                const chatMessage = response.chatOutputText();
-                console.log('\n=== URLs from Chat Message ===');
-                const messageUrls = chatMessage.match(/https?:\/\/[^\s"')\]]+/g) || [];
-                const cleanMessageUrls = [...new Set(messageUrls)].map(url => url.trim());
-                console.log('URLs from message:');
-                cleanMessageUrls.slice(0, 3).forEach(url => console.log(url));
+            // Extract URLs from the chat message
+            const chatMessage = response.chatOutputText();
+            console.log('\n=== URLs from Chat Message ===');
+            const messageUrls = chatMessage.match(/https?:\/\/[^\s"')\]]+/g) || [];
+            const cleanMessageUrls = [...new Set(messageUrls)].map(url => url.trim());
+            console.log('URLs from message:');
+            cleanMessageUrls.slice(0, 3).forEach(url => console.log(url));
 
-            } catch (error) {
-                console.error('Error running flow:', error);
+        } catch (error) {
+            console.error('Error running flow:', error);
 
-                // Provide error messages
-                if (error instanceof Error) {
-                    if (error.message.includes('fetch')) {
-                        console.error('\nMake sure your Langflow server is running and accessible at:', LANGFLOW_SERVER_ADDRESS);
-                    }
-                    if (error.message.includes('401') || error.message.includes('403')) {
-                        console.error('\nCheck your API key configuration');
-                    }
-                    if (error.message.includes('404')) {
-                        console.error('\nCheck your Flow ID - make sure it exists and is correct');
-                    }
+            // Provide error messages
+            if (error instanceof Error) {
+                if (error.message.includes('fetch')) {
+                    console.error('\nMake sure your Langflow server is running and accessible at:', LANGFLOW_SERVER_ADDRESS);
+                }
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    console.error('\nCheck your API key configuration');
+                }
+                if (error.message.includes('404')) {
+                    console.error('\nCheck your Flow ID - make sure it exists and is correct');
                 }
             }
         }
+    }
 
-        // Run the function
-        console.log('Starting Langflow Agent...\n');
-        runAgentFlow().catch(console.error);
-        ```
+    // Run the function
+    console.log('Starting Langflow Agent...\n');
+    runAgentFlow().catch(console.error);
+    ```
 
 3.  Save and run the script to send the request and test the flow.
-    Your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
-    <details closed>
-    <summary>Response</summary>
 
-    The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
+    Your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
+
+    <details>
+    <summary>Result</summary>
+
+    The following is an example response from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
 
     ```
     Starting Langflow Agent...
@@ -166,7 +168,7 @@ If not, modify the `const email = "isabella.rodriguez@example.com"` to search fo
     </details>
 
 4.  To quickly check traffic to your flow, open the **Playground**.
-    New sessions appear named after the user's email address.
+    New sessions are named after the user's email address.
     Keeping sessions distinct helps the agent maintain context. For more on session IDs, see [Session ID](/session-id).
 
 ## Next steps

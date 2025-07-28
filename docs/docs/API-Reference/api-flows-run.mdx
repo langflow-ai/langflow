@@ -41,7 +41,7 @@ curl -X POST \
 The response from `/v1/run/$FLOW_ID` includes metadata, inputs, and outputs for the run.
 
 <details>
-  <summary>Result</summary>
+<summary>Result</summary>
 
 The following example illustrates a response from a Basic Prompting flow:
 
@@ -102,7 +102,7 @@ curl -X POST \
 LLM chat responses are streamed back as `token` events, culminating in a final `end` event that closes the connection.
 
 <details>
-  <summary>Result</summary>
+<summary>Result</summary>
 
 The following example is truncated to illustrate a series of `token` events as well as the final `end` event that closes the LLM's token streaming response:
 
@@ -127,6 +127,7 @@ The following example is truncated to illustrate a series of `token` events as w
 
 {"event": "end", "data": {"result": {"session_id": "chat-123", "message": "Sure! Have you ever heard of the phenomenon known as \"bioluminescence\"?..."}}}
 ```
+
 </details>
 
 ### Run endpoint headers
@@ -138,8 +139,6 @@ The following example is truncated to illustrate a series of `token` events as w
 | x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
 
 ### Run endpoint parameters
-
-<!-- TODO: Can there be other parameters depending on the components in the flow? -->
 
 | Parameter | Type | Info |
 |-----------|------|------|
@@ -192,12 +191,14 @@ curl -X POST \
 
 <details>
 <summary>Result</summary>
+
 ```json
 {
   "message": "Task started in the background",
   "status": "in progress"
 }
 ```
+
 </details>
 
 For more information, see [Webhook component](/components-data#webhook) and [Trigger flows with webhooks](/webhook).

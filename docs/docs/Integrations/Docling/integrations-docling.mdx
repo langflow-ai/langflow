@@ -1,5 +1,5 @@
 ---
-title: Integrate Docling with Langflow
+title: Docling
 slug: /integrations-docling
 ---
 
@@ -7,16 +7,24 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a suite of components for parsing documents.
+Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing documents.
 
 ## Install Docling dependency
 
-* Install the Docling extra in Langflow OSS with `uv pip install langflow[docling]` or `uv pip install docling`.
+:::important
+You must install the Docling dependency to use the Docling components in Langflow.
+:::
 
-    To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
-    For more information, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+Install the Docling extra in Langflow OSS with `uv pip install 'langflow[docling]'`.
+
+To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
+For more information, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
 ## Use Docling components in a flow
+
+:::tip
+To learn more about content extraction with Docling, see the video tutorial [Docling + Langflow: Document Processing for AI Workflows](https://www.youtube.com/watch?v=5DuS6uRI5OM).
+:::
 
 This example demonstrates how to use Docling components to split a PDF in a flow:
 
@@ -41,12 +49,11 @@ The following sections describe the purpose and configuration options for each c
 
 ### Docling
 
-This component uses Docling to process input documents running the Docling models locally.
+The **Docling** component ingest documents, and then uses Docling to process them by running the Docling models locally.
 
-<details>
-<summary>Parameters</summary>
+It outputs `files`, which is the processed files with `DoclingDocument` data.
 
-**Inputs**
+#### Docling parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -54,22 +61,13 @@ This component uses Docling to process input documents running the Docling model
 | pipeline | String | Docling pipeline to use (standard, vlm). |
 | ocr_engine | String | OCR engine to use (easyocr, tesserocr, rapidocr, ocrmac). |
 
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| files | File | The processed files with DoclingDocument data. |
-
-</details>
-
 ### Docling Serve
 
-This component uses Docling to process input documents connecting to your instance of Docling Serve.
+The **Docling Serve** component ingests documents, and then uses Docling to process them by connecting to your instance of Docling Serve.
 
-<details>
-<summary>Parameters</summary>
+It outputs `files`, which is the processed files with `DoclingDocument` data.
 
-**Inputs**
+#### Docling Serve parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -80,22 +78,13 @@ This component uses Docling to process input documents connecting to your instan
 | api_headers | Dict | Optional dictionary of additional headers required for connecting to Docling Serve. |
 | docling_serve_opts | Dict | Optional dictionary of additional options for Docling Serve. |
 
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| files | File | The processed files with DoclingDocument data. |
-
-</details>
-
 ### Chunk DoclingDocument
 
-This component uses the DoclingDocument chunkers to split a document into chunks.
+The **Chunk DoclingDocument** component uses the `DoclingDocument` chunkers to split a document into chunks.
 
-<details>
-<summary>Parameters</summary>
+It outputs the chunked documents as a [`DataFrame`](/data-types#dataframe).
 
-**Inputs**
+#### Chunk DoclingDocument parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -107,22 +96,13 @@ This component uses the DoclingDocument chunkers to split a document into chunks
 | max_tokens | Integer | Maximum number of tokens for the HybridChunker. |
 | doc_key | String | The key to use for the DoclingDocument column. |
 
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| dataframe | DataFrame | The chunked documents as a DataFrame. |
-
-</details>
-
 ### Export DoclingDocument
 
-This component exports DoclingDocument to Markdown, HTML, and other formats.
+The **Export DoclingDocument** component exports `DoclingDocument` to Markdown, HTML, and other formats.
 
-<details>
-<summary>Parameters</summary>
+It can output the exported data as either [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe).
 
-**Inputs**
+#### Export DoclingDocument parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -132,16 +112,3 @@ This component exports DoclingDocument to Markdown, HTML, and other formats.
 | md_image_placeholder | String | Specify the image placeholder for markdown exports. |
 | md_page_break_placeholder | String | Add this placeholder between pages in the markdown output. |
 | doc_key | String | The key to use for the DoclingDocument column. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| data | Data | The exported data. |
-| dataframe | DataFrame | The exported data as a DataFrame. |
-
-</details>
-
-## Docling video tutorial
-
-To learn more about content extraction with Docling, see the video tutorial [Docling + Langflow: Document Processing for AI Workflows](https://www.youtube.com/watch?v=5DuS6uRI5OM).

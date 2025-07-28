@@ -13,7 +13,7 @@ test.describe(
         await awaitBootstrapTest(page, {
           skipModal: true,
         });
-        await page.getByText("New Flow", { exact: true }).click();
+        await page.getByTestId("new-project-btn").click();
       },
     );
 
@@ -24,24 +24,24 @@ test.describe(
         await awaitBootstrapTest(page, {
           skipModal: true,
         });
-        await page.getByText("New Flow", { exact: true }).click();
+        await page.getByTestId("new-project-btn").click();
         await page.waitForSelector('[data-testid="modal-title"]', {
           timeout: 5000,
         });
 
         await page.goto("/login");
-        await page.getByText("New Flow", { exact: true }).click();
+        await page.getByTestId("new-project-btn").click();
         await page.waitForSelector('[data-testid="modal-title"]', {
           timeout: 5000,
         });
         await page.goto("/admin");
-        await page.getByText("New Flow", { exact: true }).click();
+        await page.getByTestId("new-project-btn").click();
         await page.waitForSelector('[data-testid="modal-title"]', {
           timeout: 5000,
         });
 
         await page.goto("/admin/login");
-        await page.getByText("New Flow", { exact: true }).click();
+        await page.getByTestId("new-project-btn").click();
         await page.waitForSelector('[data-testid="modal-title"]', {
           timeout: 5000,
         });
