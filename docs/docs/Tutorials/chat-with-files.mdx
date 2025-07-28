@@ -146,10 +146,13 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
 
 3. Save and run the script to send the requests and test the flow.
 
-    <details>
-    <summary>Response</summary>
+    The initial output contains the JSON response object from the file upload endpoint, including the internal path where Langflow stores the file.
+    Then, the LLM retrieves the file and evaluates its content, in this case the suitability of the resume for a job position.
 
-    The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
+    <details>
+    <summary>Result</summary>
+
+    The following is an example response from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
 
     ```
     {"id":"793ba3d8-5e7a-4499-8b89-d9a7b6325fee","name":"fake-resume (1)","path":"02791d46-812f-4988-ab1c-7c430214f8d5/fake-resume.txt","size":1779,"provider":null}
@@ -178,10 +181,6 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
     ```
 
     </details>
-
-    The initial output contains the JSON response object from the file upload endpoint, including the internal path where Langflow stores the file.
-
-    The LLM then retrieves this file and evaluates its content, in this case the suitability of the resume for a job position.
 
 ## Next steps
 
