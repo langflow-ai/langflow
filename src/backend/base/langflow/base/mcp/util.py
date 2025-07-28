@@ -38,6 +38,85 @@ MAX_SESSIONS_PER_SERVER = (
 )  # Maximum number of sessions per server to prevent resource exhaustion
 SESSION_IDLE_TIMEOUT = settings.mcp_session_idle_timeout  # 5 minutes idle timeout for sessions
 SESSION_CLEANUP_INTERVAL = settings.mcp_session_cleanup_interval  # Cleanup interval in seconds
+# RFC 7230 compliant header name pattern: token = 1*tchar
+# tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
+#         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+HEADER_NAME_PATTERN = re.compile(r"^[!#$%&\'*+\-.0-9A-Z^_`a-z|~]+$")
+
+# Common allowed headers for MCP connections
+ALLOWED_HEADERS = {
+    "authorization",
+    "accept",
+    "accept-encoding",
+    "accept-language",
+    "cache-control",
+    "content-type",
+    "user-agent",
+    "x-api-key",
+    "x-auth-token",
+    "x-custom-header",
+    "x-langflow-session",
+    "x-mcp-client",
+    "x-requested-with",
+}
+
+
+def validate_headers(headers: dict[str, str]) -> dict[str, str]:
+    """Validate and sanitize HTTP headers according to RFC 7230.
+
+    Args:
+        headers: Dictionary of header name-value pairs
+
+    Returns:
+        Dictionary of validated and sanitized headers
+
+    Raises:
+        ValueError: If headers contain invalid names or values
+    """
+    if not headers:
+        return {}
+
+    sanitized_headers = {}
+
+    for name, value in headers.items():
+        if not isinstance(name, str) or not isinstance(value, str):
+            logger.warning(f"Skipping non-string header: {name}={value}")
+            continue
+
+        # Validate header name according to RFC 7230
+        if not HEADER_NAME_PATTERN.match(name):
+            logger.warning(f"Invalid header name '{name}', skipping")
+            continue
+
+        # Normalize header name to lowercase (HTTP headers are case-insensitive)
+        normalized_name = name.lower()
+
+        # Optional: Check against whitelist of allowed headers
+        if normalized_name not in ALLOWED_HEADERS:
+            # For MCP, we'll be permissive and allow non-standard headers
+            # but log a warning for security awareness
+            logger.debug(f"Using non-standard header: {normalized_name}")
+
+        # Check for potential header injection attempts BEFORE sanitizing
+        if "\r" in value or "\n" in value:
+            logger.warning(f"Potential header injection detected in '{name}', skipping")
+            continue
+
+        # Sanitize header value - remove control characters and newlines
+        # RFC 7230: field-value = *( field-content / obs-fold )
+        # We'll remove control characters (0x00-0x1F, 0x7F) except tab (0x09) and space (0x20)
+        sanitized_value = re.sub(r"[\x00-\x08\x0A-\x1F\x7F]", "", value)
+
+        # Remove leading/trailing whitespace
+        sanitized_value = sanitized_value.strip()
+
+        if not sanitized_value:
+            logger.warning(f"Header '{name}' has empty value after sanitization, skipping")
+            continue
+
+        sanitized_headers[normalized_name] = sanitized_value
+
+    return sanitized_headers
 
 
 def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
@@ -343,12 +422,12 @@ def _process_headers(headers: Any) -> dict:
     Args:
         headers: The headers to process, can be dict, str, or list
     Returns:
-        Processed dictionary
+        Processed and validated dictionary
     """
     if headers is None:
         return {}
     if isinstance(headers, dict):
-        return headers
+        return validate_headers(headers)
     if isinstance(headers, list):
         processed_headers = {}
         try:
@@ -360,7 +439,7 @@ def _process_headers(headers: Any) -> dict:
                 processed_headers[key] = value
         except (KeyError, TypeError, ValueError):
             return {}  # Return empty dictionary instead of None
-        return processed_headers
+        return validate_headers(processed_headers)
     return {}
 
 
@@ -1037,7 +1116,7 @@ class MCPSseClient:
             self._component_cache.set("mcp_session_manager", session_manager)
         return session_manager
 
-    async def validate_url(self, url: str | None) -> tuple[bool, str]:
+    async def validate_url(self, url: str | None, headers: dict[str, str] | None = None) -> tuple[bool, str]:
         """Validate the SSE URL before attempting connection."""
         try:
             parsed = urlparse(url)
@@ -1048,7 +1127,9 @@ class MCPSseClient:
                 try:
                     # For SSE endpoints, try a GET request with short timeout
                     # Many SSE servers don't support HEAD requests and return 404
-                    response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream"})
+                    response = await client.get(
+                        url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
+                    )
 
                     # For SSE, we expect the server to either:
                     # 1. Start streaming (200)
@@ -1080,14 +1161,16 @@ class MCPSseClient:
         except (httpx.HTTPError, ValueError, OSError) as e:
             return False, f"URL validation error: {e!s}"
 
-    async def pre_check_redirect(self, url: str | None) -> str | None:
+    async def pre_check_redirect(self, url: str | None, headers: dict[str, str] | None = None) -> str | None:
         """Check for redirects and return the final URL."""
         if url is None:
             return url
         try:
             async with httpx.AsyncClient(follow_redirects=False) as client:
                 # Use GET with SSE headers instead of HEAD since many SSE servers don't support HEAD
-                response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream"})
+                response = await client.get(
+                    url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
+                )
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
                 # Don't treat 404 as an error here - let the main connection handle it
@@ -1103,22 +1186,23 @@ class MCPSseClient:
         sse_read_timeout_seconds: int = 30,
     ) -> list[StructuredTool]:
         """Connect to MCP server using SSE transport (SDK style)."""
-        if headers is None:
-            headers = {}
+        # Validate and sanitize headers early
+        validated_headers = _process_headers(headers)
+
         if url is None:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
-        is_valid, error_msg = await self.validate_url(url)
+        is_valid, error_msg = await self.validate_url(url, validated_headers)
         if not is_valid:
             msg = f"Invalid SSE URL ({url}): {error_msg}"
             raise ValueError(msg)
 
-        url = await self.pre_check_redirect(url)
+        url = await self.pre_check_redirect(url, validated_headers)
 
         # Store connection parameters for later use in run_tool
         self._connection_params = {
             "url": url,
-            "headers": headers,
+            "headers": validated_headers,
             "timeout_seconds": timeout_seconds,
             "sse_read_timeout_seconds": sse_read_timeout_seconds,
         }
