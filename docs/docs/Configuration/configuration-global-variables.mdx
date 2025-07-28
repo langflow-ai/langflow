@@ -77,7 +77,6 @@ Langflow's [default global variables](#default-environment-variables) are alread
 You can extend this list by setting `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` with your additional variables.
 
 <Tabs>
-
 <TabItem value="local" label="Local" default>
 
 If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable in a `.env` file.
@@ -107,11 +106,9 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
    VARIABLE1="VALUE1" VARIABLE2="VALUE2" python -m langflow run --env-file .env
    ```
 
-   :::note
    In this example, the environment variables (`VARIABLE1="VALUE1"` and `VARIABLE2="VALUE2"`) are prefixed to the startup command.
    This is a rudimentary method for exposing environment variables to Python on the command line, and is meant for illustrative purposes.
    Make sure to expose your environment variables to Langflow in a manner that best suits your own environment.
-   :::
 
 5. Confirm that Langflow successfully sourced the global variables from the environment:
 
@@ -120,7 +117,6 @@ If you installed Langflow locally, you must define the `LANGFLOW_VARIABLES_TO_GE
    2. Click **Global Variables**, and then make sure that your environment variables appear in the **Global Variables** list.
 
 </TabItem>
-
 <TabItem value="docker" label="Docker">
 
 If you're using Docker, you can pass `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` directly from the command line or from a `.env` file.
@@ -148,7 +144,6 @@ docker run -it --rm \
 ```
 
 </TabItem>
-
 </Tabs>
 
 :::info
@@ -159,7 +154,6 @@ When adding global variables from the environment, the following limitations app
 
 - Global variables that you add from the environment always have the **Credential** type.
 :::
-
 
 If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file:
 
@@ -204,6 +198,5 @@ Langflow automatically detects and converts some environment variables into glob
 - `VECTARA_API_KEY`
 - `VECTARA_CORPUS_ID`
 - `VECTARA_CUSTOMER_ID`
-
 
 For information about other environment variables and their usage, see [Environment Variables](/environment-variables).
