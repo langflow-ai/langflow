@@ -104,33 +104,61 @@ export default function NodeStatus({
 
   // Start polling when connection is initiated
   const startPolling = () => {
-    customOpenNewTab(connectionLink);
     stopPolling();
-
     setIsPolling(true);
 
-    pollingInterval.current = setInterval(() => {
-      mutateTemplate(
-        { validate: data.node?.template?.auth?.value || "" },
-        data.id,
-        data.node,
-        (newNode) => {
-          setNode(nodeId, (old) => ({
-            ...old,
-            data: { ...old.data, node: newNode },
-          }));
-        },
-        postTemplateValue,
-        setErrorData,
-        nodeAuth?.name ?? "auth_link",
-        () => {},
-        data.node.tool_mode,
-      );
-    }, POLLING_INTERVAL);
+    mutateTemplate(
+      { validate: "" },
+      data.id,
+      data.node,
+      (newNode) => {
+        setNode(nodeId, (old) => ({
+          ...old,
+          data: { ...old.data, node: newNode },
+        }));
 
-    pollingTimeout.current = setTimeout(() => {
-      stopPolling();
-    }, POLLING_TIMEOUT);
+        const updatedAuth = Object.values(newNode?.template ?? {}).find(
+          (value: any) => value?.type === "auth",
+        ) as any;
+        const oauthUrl = updatedAuth?.value;
+
+        if (
+          oauthUrl &&
+          typeof oauthUrl === "string" &&
+          oauthUrl.startsWith("http")
+        ) {
+          customOpenNewTab(oauthUrl);
+        }
+      },
+      postTemplateValue,
+      setErrorData,
+      nodeAuth?.name ?? "auth_link",
+      () => {
+        pollingInterval.current = setInterval(() => {
+          mutateTemplate(
+            { validate: data.node?.template?.auth?.value || "" },
+            data.id,
+            data.node,
+            (newNode) => {
+              setNode(nodeId, (old) => ({
+                ...old,
+                data: { ...old.data, node: newNode },
+              }));
+            },
+            postTemplateValue,
+            setErrorData,
+            nodeAuth?.name ?? "auth_link",
+            () => {},
+            data.node.tool_mode,
+          );
+        }, POLLING_INTERVAL);
+
+        pollingTimeout.current = setTimeout(() => {
+          stopPolling();
+        }, POLLING_TIMEOUT);
+      },
+      data.node.tool_mode,
+    );
   };
 
   useEffect(() => {

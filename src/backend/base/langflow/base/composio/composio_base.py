@@ -47,6 +47,7 @@ class ComposioBaseComponent(Component):
             name="auth_link",
             value="",
             auth_tooltip="Please insert a valid Composio API Key.",
+            show=False,
         ),
         SortableListInput(
             name="action_button",
@@ -173,7 +174,8 @@ class ComposioBaseComponent(Component):
         if self._actions_data:
             return
 
-        if not getattr(self, "api_key", None):
+        api_key = getattr(self, "api_key", None)
+        if not api_key:
             logger.warning("API key is missing. Cannot populate actions data.")
             return
 
@@ -310,7 +312,6 @@ class ComposioBaseComponent(Component):
                                 # Check direct file_uploadable attribute
                                 if field_schema.get("file_uploadable") is True:
                                     file_upload_fields.add(clean_field_name)
-                                    logger.debug(f"Found file upload field: {clean_field_name} in {action_key}")
 
                                 # Check anyOf structures (like OUTLOOK_OUTLOOK_SEND_EMAIL)
                                 if "anyOf" in field_schema:
@@ -328,7 +329,6 @@ class ComposioBaseComponent(Component):
                             # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
                             if clean_field == "user_id":
                                 clean_field = f"{self.app_name}_user_id"
-                                logger.debug(f"Renamed user_id to {clean_field} to avoid conflict with entity_id")
 
                             action_fields.append(clean_field)
 
@@ -651,8 +651,59 @@ class ComposioBaseComponent(Component):
             # When tool_mode is enabled, hide action field
             build_config["action_button"]["show"] = not self._is_tool_mode_enabled()
 
+    def _initiate_connection(self, app_name: str) -> str:
+        """Initiate OAuth connection and return redirect URL."""
+        try:
+            composio = self._build_wrapper()
+
+            auth_configs = composio.auth_configs.list(toolkit_slug=app_name)
+            if len(auth_configs.items) == 0:
+                auth_config = composio.auth_configs.create(
+                    toolkit=app_name, options={"type": "use_composio_managed_auth"}
+                )
+                auth_config_id = auth_config.id
+            else:
+                auth_config_id = auth_configs.items[0].id
+
+            connection_request = composio.connected_accounts.initiate(
+                user_id=self.entity_id, auth_config_id=auth_config_id
+            )
+
+            redirect_url = getattr(connection_request, "redirect_url", None)
+            if not redirect_url or not redirect_url.startswith(("http://", "https://")):
+                msg = "Invalid redirect URL received from Composio"
+                raise ValueError(msg)
+
+            logger.info(f"OAuth connection initiated for {app_name}: {redirect_url}")
+            return redirect_url  # noqa: TRY300
+
+        except Exception as e:
+            logger.error(f"Error initiating connection for {app_name}: {e}")
+            msg = f"Failed to initiate OAuth connection: {e}"
+            raise ValueError(msg) from e
+
+    def _disconnect_connection(self, app_name: str) -> None:
+        """Disconnect Composio connection."""
+        try:
+            composio = self._build_wrapper()
+            connections = composio.connected_accounts.list(user_ids=[self.entity_id], toolkit_slugs=[app_name])
+
+            if connections and hasattr(connections, "items") and connections.items:
+                for connection in connections.items:
+                    connection_id = getattr(connection, "id", None)
+                    if connection_id:
+                        composio.connected_accounts.delete(nanoid=connection_id)
+                        logger.info(f"Disconnected connection {connection_id} from {app_name}")
+
+            logger.info(f"✅ All connections disconnected for {app_name}")
+
+        except Exception as e:
+            logger.error(f"Error disconnecting from {app_name}: {e}")
+            msg = f"Failed to disconnect from {app_name}: {e}"
+            raise ValueError(msg) from e
+
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
-        """Simplified build config updates."""
+        """Update build config for auth and action selection."""
         # BULLETPROOF tool_mode checking - check all possible places where tool_mode could be stored
         instance_tool_mode = getattr(self, "tool_mode", False) if hasattr(self, "tool_mode") else False
 
@@ -684,17 +735,11 @@ class ComposioBaseComponent(Component):
             build_config["action_button"]["show"] = False
 
             # CRITICAL: Hide ALL action parameter fields when tool mode is enabled
-            logger.debug(f"Available fields in _all_fields: {list(self._all_fields)}")
-            logger.debug(f"Available fields in build_config: {list(build_config.keys())}")
-
-            hidden_fields = []
             for field in self._all_fields:
                 if field in build_config:
                     build_config[field]["show"] = False
-                    hidden_fields.append(field)
 
             # Also hide any other action-related fields that might be in build_config
-            action_related_fields = []
             for field_name_in_config in build_config:  # noqa: PLC0206
                 # Skip base fields like api_key, tool_mode, action, etc.
                 if (
@@ -703,10 +748,6 @@ class ComposioBaseComponent(Component):
                     and "show" in build_config[field_name_in_config]
                 ):
                     build_config[field_name_in_config]["show"] = False
-                    action_related_fields.append(field_name_in_config)
-
-            logger.debug(f"Hidden fields from _all_fields: {hidden_fields}")
-            logger.debug(f"Hidden action-related fields from build_config: {action_related_fields}")
 
             # ENSURE tool_mode state is preserved in build_config for future calls
             if "tool_mode" not in build_config:
@@ -768,120 +809,99 @@ class ComposioBaseComponent(Component):
             toolset = self._build_wrapper()
             toolkit_slug = self.app_name.lower()
 
-            # Handle disconnection first (if user clicked disconnect)
-            if field_name == "auth_link" and field_value == "disconnect":
-                try:
-                    connections = toolset.connected_accounts.list(
-                        user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]
-                    )
-                    # Validate response structure before accessing items
-                    if connections and hasattr(connections, "items") and connections.items:
-                        if isinstance(connections.items, list) and len(connections.items) > 0:
-                            # Find the first ACTIVE connection to disconnect
-                            active_connection = None
-                            for connection in connections.items:
-                                if getattr(connection, "status", None) == "ACTIVE":
-                                    active_connection = connection
-                                    break
-
-                            if active_connection:
-                                connection_id = getattr(active_connection, "id", None)
-                                if connection_id:
-                                    toolset.connected_accounts.delete(nanoid=connection_id)
-                                    logger.info(f"Disconnected ACTIVE connection from {toolkit_slug}")
-                                else:
-                                    logger.warning(f"ACTIVE connection found but no ID available for {toolkit_slug}")
-                            else:
-                                logger.warning(
-                                    f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect"  # noqa: E501
-                                )
-                        else:
-                            logger.warning(f"No connections to disconnect for {toolkit_slug}")
-                    else:
-                        logger.warning(f"Invalid connection response structure for {toolkit_slug}")
-
-                    # After disconnection, fall through to check connection status
-                except ValueError as e:
-                    logger.error(f"Error disconnecting: {e}")
-                    build_config["auth_link"]["value"] = "error"
-                    build_config["auth_link"]["auth_tooltip"] = f"Disconnect failed: {e!s}"
-                    return build_config
-
-            # Check current connection status and set appropriate auth_link value
             try:
                 connection_list = toolset.connected_accounts.list(
                     user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]
                 )
 
-                # Validate response structure and check for valid connections
                 has_active_connections = False
-                if connection_list and hasattr(connection_list, "items") and connection_list.items:
-                    # Check if items is a list and has valid connections
-                    if isinstance(connection_list.items, list) and len(connection_list.items) > 0:
-                        # Check if any connection has status 'ACTIVE'
-                        active_connections = []
-                        for connection in connection_list.items:
-                            connection_status = getattr(connection, "status", None)
-                            if connection_status == "ACTIVE":
-                                active_connections.append(connection)
+                if (
+                    connection_list
+                    and hasattr(connection_list, "items")
+                    and isinstance(connection_list.items, list)
+                    and len(connection_list.items) > 0
+                ):
+                    active_connections = []
+                    all_statuses = []
+                    for connection in connection_list.items:
+                        connection_status = getattr(connection, "status", None)
+                        all_statuses.append(connection_status)
+                        if connection_status == "ACTIVE":
+                            active_connections.append(connection)
 
-                        if active_connections:
-                            has_active_connections = True
-                            logger.debug(
-                                f"Found {len(active_connections)} ACTIVE connection(s) out of {len(connection_list.items)} total for {toolkit_slug}"  # noqa: E501
-                            )
-                        else:
-                            logger.debug(
-                                f"Found {len(connection_list.items)} connection(s) for {toolkit_slug}, but none are ACTIVE"  # noqa: E501
-                            )
+                    if active_connections:
+                        has_active_connections = True
                     else:
-                        logger.debug(f"No valid connections found for {toolkit_slug}: items is not a valid list")
-                else:
-                    logger.debug(f"No connections found for {toolkit_slug}: invalid response structure")
+                        initiated_count = sum(1 for status in all_statuses if status == "INITIATED")
+                        if initiated_count > 0:
+                            logger.info(f"Found {initiated_count} INITIATED connection(s) for {toolkit_slug}")
 
                 if has_active_connections:
-                    # User has active connection
-                    build_config["auth_link"]["value"] = "validated"
-                    build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                    build_config["action_button"]["helper_text"] = ""
-                    build_config["action_button"]["helper_text_metadata"] = {}
+                    if field_name == "auth_link" and field_value == "disconnect":
+                        try:
+                            self._disconnect_connection(toolkit_slug)
+                        except (ValueError, ConnectionError) as e:
+                            logger.error(f"Error disconnecting: {e}")
+                            build_config["auth_link"]["value"] = "error"
+                            build_config["auth_link"]["auth_tooltip"] = f"Disconnect failed: {e!s}"
+                            return build_config
+                        else:
+                            build_config["auth_link"]["value"] = "connect"
+                            build_config["auth_link"]["auth_tooltip"] = "Connect"
+                            build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
+                            build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
+                            return build_config
+                    else:
+                        # Show validated connection
+                        build_config["auth_link"]["value"] = "validated"
+                        build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                        build_config["action_button"]["helper_text"] = ""
+                        build_config["action_button"]["helper_text_metadata"] = {}
                 else:
-                    # No active connection - create OAuth connection and set redirect URL immediately
-                    try:
-                        logger.info(f"No active connection found. Creating OAuth connection for {toolkit_slug}...")
-                        connection = toolset.toolkits.authorize(user_id=self.entity_id, toolkit=toolkit_slug)
+                    # No active connection - check for existing INITIATED connections first
+                    existing_redirect_url = None
+                    if connection_list and hasattr(connection_list, "items") and connection_list.items:
+                        for connection in connection_list.items:
+                            if getattr(connection, "status", None) == "INITIATED":
+                                # Extract redirect URL from existing INITIATED connection
+                                state = getattr(connection, "state", None)
+                                if state and hasattr(state, "val"):
+                                    redirect_url = getattr(state.val, "redirect_url", None)
+                                    if redirect_url:
+                                        existing_redirect_url = redirect_url
+                                        break
 
-                        # Get the redirect URL
-                        redirect_url = getattr(connection, "redirect_url", None)
-                        if not redirect_url:
-                            # Try accessing it as a property or method
-                            if hasattr(connection, "redirect_url"):
-                                redirect_url = connection.redirect_url
-                            else:
-                                error_message = "No redirect URL received from Composio"
-                                raise ValueError(error_message)
+                    if field_name == "auth_link" and isinstance(field_value, dict):
+                        # Auth request - use existing INITIATED connection or create new one
+                        if existing_redirect_url:
+                            # Reuse existing INITIATED connection
+                            build_config["auth_link"]["value"] = existing_redirect_url
+                            logger.info(f"Reusing existing OAuth URL for {toolkit_slug}: {existing_redirect_url}")
+                        else:
+                            # Create new OAuth connection only if none exists
+                            try:
+                                redirect_url = self._initiate_connection(toolkit_slug)
+                                build_config["auth_link"]["value"] = redirect_url
+                                logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
+                            except (ValueError, ConnectionError) as e:
+                                logger.error(f"Error creating OAuth connection: {e}")
+                                build_config["auth_link"]["value"] = "connect"
+                                build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
 
-                        # Validate the URL format
-                        if not redirect_url.startswith(("http://", "https://")):
-                            message = f"Invalid redirect URL format: {redirect_url}"
-                            raise ValueError(message)
-
-                        # Log the URL for debugging and manual use if needed
-                        logger.info(f"🔗 Composio OAuth URL for {toolkit_slug}: {redirect_url}")
-
-                        # Set the redirect URL directly - like the old implementation
-                        build_config["auth_link"]["value"] = redirect_url
                         build_config["auth_link"]["auth_tooltip"] = "Connect"
                         build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
                         build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
-                    except ValueError as e:
-                        logger.error(f"Error creating OAuth connection: {e}")
-                        build_config["auth_link"]["value"] = "connect"
-                        build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
+                    else:
+                        # Status check - show existing URL or connect button
+                        if existing_redirect_url:
+                            build_config["auth_link"]["value"] = existing_redirect_url
+                        else:
+                            build_config["auth_link"]["value"] = "connect"
+                        build_config["auth_link"]["auth_tooltip"] = "Connect"
                         build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
                         build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
 
-            except ValueError as e:
+            except (ValueError, ConnectionError) as e:
                 logger.error(f"Error checking connection status for {toolkit_slug}: {e}")
                 # Default to disconnected state on error
                 build_config["auth_link"]["value"] = "connect"
@@ -889,7 +909,7 @@ class ComposioBaseComponent(Component):
                 build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
                 build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
 
-        except ValueError as e:
+        except (ValueError, ConnectionError) as e:
             build_config["auth_link"]["value"] = ""
             build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
             build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
@@ -900,7 +920,6 @@ class ComposioBaseComponent(Component):
         # This overrides any other logic that might have set it to visible
         if self._is_tool_mode_enabled():
             build_config["action_button"]["show"] = False
-            logger.debug("Final check: Hiding action field because tool_mode is enabled")
 
         return build_config
 
@@ -994,8 +1013,6 @@ class ComposioBaseComponent(Component):
                     if value == schema_default:
                         continue
 
-                    logger.debug(f"Field: {field}, Value: {value}, Schema Default: {schema_default}")
-
                 # Convert comma-separated to list for array parameters (heuristic)
                 prop_schema = schema_properties.get(field, {})
                 if prop_schema.get("type") == "array" and isinstance(value, str):
@@ -1008,7 +1025,6 @@ class ComposioBaseComponent(Component):
                 final_field_name = field
                 if field.endswith("_user_id") and field.startswith(self.app_name):
                     final_field_name = "user_id"
-                    logger.debug(f"Mapping {field} back to user_id for API execution")
 
                 arguments[final_field_name] = value
 
