@@ -7,9 +7,11 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
+from lfx.services.settings.service import SettingsService
 from loguru import logger
 
 from langflow.services.base import Service
+from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -120,6 +122,8 @@ class TracingService(Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         self.deactivated = self.settings_service.settings.deactivate_tracing
+        # Only log the missing context warning once to avoid slow repeated logging
+        self._has_logged_context_missing = False
 
     async def _trace_worker(self, trace_context: TraceContext) -> None:
         while trace_context.running or not trace_context.traces_queue.empty():
@@ -413,8 +417,10 @@ class TracingService(Service):
     def get_tracer(self, tracer_name: str) -> BaseTracer | None:
         trace_context = trace_context_var.get()
         if trace_context is None:
-            msg = "called get_tracer but no trace context found"
-            logger.warning(msg)
+            # Log warning only on the first occurrence to minimize logging overhead
+            if not self._has_logged_context_missing:
+                logger.warning("called get_tracer but no trace context found")
+                self._has_logged_context_missing = True
             return None
         return trace_context.tracers.get(tracer_name)
 
