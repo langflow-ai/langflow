@@ -22,10 +22,18 @@ With Docker installed and running on your system, run the following command:
 
 Then, access Langflow at `http://localhost:7860/`.
 
-## Clone the repo and build the Langflow Docker container
+## Clone the repo and run the Langflow Docker container
 
-Use Docker Compose to build Langflow with a persistent PostgreSQL database service.
-PostgreSQL is
+The quickstart container runs a pre-built Docker image with default settings.
+Cloning the repository and using Docker Compose gives you more control over your configuration, allowing you to customize environment variables, use a persistent PostgreSQL database instead of the default SQLite, and include custom dependencies.
+
+Use Docker Compose to build Langflow with a persistent PostgreSQL database service. The default deployment includes:
+
+- **Langflow service**: Runs the latest Langflow image with PostgreSQL as the database.
+- **PostgreSQL service**: Provides persistent data storage for flows, users, and settings.
+- **Persistent volumes**: Ensures your data survives container restarts.
+
+The complete Docker Compose configuration is available in the `docker_example/docker-compose.yml` file.
 
 1. Clone the Langflow repository:
 
@@ -41,58 +49,37 @@ PostgreSQL is
 
 4. Access Langflow at `http://localhost:7860/`.
 
-### Configure Docker services
+### Customize your deployment
 
-The Docker Compose configuration spins up two services: `langflow` and `postgres`.
+You can customize the Docker Compose configuration to fit your specific deployment.
 
-To configure values for these services at container startup, define relevant [Langflow environment variables](/environment-variables) in a `.env` file.
-Then, include the `--env-file` flag in your `docker run` command:
+For example, to configure the container's database credentials using a `.env` file, do the following:
 
-```
-docker run -it --rm \
-    -p 7860:7860 \
-    --env-file .env \
-    langflowai/langflow:latest
-```
+1. Create a `.env` file with your database credentials:
 
-If your `.env` file isn't in the same directory, provide the path to your `.env` file.
+    ```bash
+    # Database credentials
+    POSTGRES_USER=myuser
+    POSTGRES_PASSWORD=mypassword
+    POSTGRES_DB=langflow
 
-### Langflow service
+    # Langflow database connection
+    LANGFLOW_DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/langflow
+    ```
 
-The `langflow`service serves both the backend API and frontend UI of the Langflow web application.
+2. Modify the `docker-compose.yml` file to reference the `.env` file for both the `langlow` and `postgres` services:
 
-The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port `7860`. It depends on the `postgres` service.
+    ```yaml
+    services:
+      langflow:
+        env_file:
+          - .env
+      postgres:
+        env_file:
+          - .env
+    ```
 
-Environment variables:
-
-- `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
-- `LANGFLOW_CONFIG_DIR`: The directory where Langflow stores logs, file storage, monitor data, and secret keys.
-
-Volumes:
-
-- `langflow-data`: This volume is mapped to `/app/langflow` in the container.
-
-### PostgreSQL service
-
-The `postgres` service is a database that stores Langflow's persistent data including flows, users, and settings.
-
-The service runs on port 5432 and includes a dedicated volume for data storage.
-
-The `postgres` service uses the `postgres:16` Docker image.
-
-Environment variables:
-
-- `POSTGRES_USER`: The username for the PostgreSQL database.
-- `POSTGRES_PASSWORD`: The password for the PostgreSQL database.
-- `POSTGRES_DB`: The name of the PostgreSQL database.
-
-Volumes:
-
-- `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
-
-### Deploy a specific Langflow version with Docker Compose
-
-If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
+For a complete list of available environment variables, see the [Langflow environment variables](/environment-variables) documentation.
 
 ## Package your flow as a Docker image {#package-your-flow-as-a-docker-image}
 
@@ -123,7 +110,7 @@ COPY ./*.json /app/flows/
 ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
 ```
 
-The `COPY ./*json` command copies all JSON files in your current directory to the `/flows` folder.
+The `COPY ./*.json` command copies all JSON files in your current directory to the `/flows` folder.
 
 The `ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows` command sets the environment variable within the Docker container. By pointing it to `/app/flows`, you ensure that the application can find and utilize the JSON flow files that have been copied into that directory during the image build process.
 
