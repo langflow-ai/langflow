@@ -1,0 +1,203 @@
+---
+title: DataStax
+slug: /bundles-datastax
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **DataStax** bundle.
+
+## Astra DB Chat Memory
+
+The **Astra DB Chat Memory** component retrieves and stores chat messages using an Astra DB database.
+
+Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
+Specifically, the component creates an instance of `AstraDBChatMessageHistory`, which is a LangChain chat message history class that uses Astra DB for storage.
+
+:::important
+The **Astra DB Chat Memory** component isn't recommended for most memory storage because memories tend to be long JSON objects or strings, often exceeding the maximum size of a document or object supported by Astra DB.
+
+However, Langflow's **Agent** and **Language Model** components include built-in chat memory that is enabled by default.
+Your flows don't need an external database to store chat memory.
+:::
+
+For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
+
+### Astra DB Chat Memory parameters
+
+Some component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name             | Type          | Description                                                           |
+|------------------|---------------|-----------------------------------------------------------------------|
+| collection_name  | String        | Input parameter. The name of the Astra DB collection for storing messages. Required. |
+| token            | SecretString  | Input parameter. The authentication token for Astra DB access. Required. |
+| api_endpoint     | SecretString  | Input parameter. The API endpoint URL for the Astra DB service. Required. |
+| namespace        | String        | Input parameter. The optional namespace within Astra DB for the collection. |
+| session_id       | MessageText   | Input parameter. The unique identifier for the chat session. Uses the current session ID if not provided. |
+
+## Astra DB CQL
+
+The **Astra DB CQL** component allows agents to query data from CQL tables in Astra DB.
+
+The output is a list of [`Data`](/data-types#data) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter.
+
+### Astra DB CQL parameters
+
+Some component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tool Name | String | Input parameter. The name used to reference the tool in the agent's prompt. |
+| Tool Description | String | Input parameter. A brief description of the tool to guide the model in using it. |
+| Keyspace | String | Input parameter. The name of the keyspace. |
+| Table Name | String | Input parameter. The name of the Astra DB CQL table to query. |
+| Token | SecretString | Input parameter. The authentication token for Astra DB. |
+| API Endpoint | String | Input parameter. The Astra DB API endpoint. |
+| Projection Fields | String | Input parameter. The attributes to return, separated by commas. Default: "*". |
+| Partition Keys | Dict | Input parameter. Required parameters that the model must fill to query the tool. |
+| Clustering Keys | Dict | Input parameter. Optional parameters the model can fill to refine the query. Required parameters should be marked with an exclamation mark, for example, `!customer_id`. |
+| Static Filters | Dict | Input parameter. Attribute-value pairs used to filter query results. |
+| Limit | String | Input parameter. The number of records to return. |
+
+## Astra DB Tool
+
+The **Astra DB Tool** component enables searching data in Astra DB collections, including hybrid search, vector search, and regular filter-based search.
+Specialized searches require that the collection is pre-configured with the required parameters.
+
+Outputs a list of [`Data`](/data-types#data) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter and the upper limit of the Astra DB Data API, depending on the type of search.
+
+You can use the component to execute queries directly as isolated steps in a flow, or you can connect it as a [tool for an agent](/agents-tools) to allow the agent to query data from Astra DB collections as needed to respond to user queries.
+For more information, see [Use Langflow agents](/agents).
+
+![Astra DB Tool component connected as a tool to an Agent component](/img/component-astra-db-json-tool.png)
+
+### Astra DB Tool parameters
+
+The following parameters are for the **Astra DB Tool** component overall.
+
+The values for **Collection Name**, **Astra DB Application Token**, and **Astra DB API Endpoint** are found in your Astra DB deployment. For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
+
+| Name              | Type   | Description   |
+|-------------------|--------|--------|
+| Tool Name         | String | Input parameter. The name used to reference the tool in the agent's prompt.  |
+| Tool Description  | String | Input parameter. A brief description of the tool. This helps the model decide when to use it. |
+| Keyspace Name     | String | Input parameter. The name of the keyspace in Astra DB. Default: `default_keyspace` |
+| Collection Name   | String | Input parameter. The name of the Astra DB collection to query.    |
+| Token             | SecretString | Input parameter. The authentication token for accessing Astra DB.  |
+| API Endpoint      | String | Input parameter. The Astra DB API endpoint.  |
+| Projection Fields | String | Input parameter. Comma-separated list of attributes to return from matching documents. The default is the default projection, `*`, which returns all attributes except reserved fields like `$vector`.  |
+| Tool Parameters  | Dict   | Input parameter. [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters) that become tools for an agent. These Filters _may_ be used in a search, if the agent selects them. See [Define tool-specific parameters](#define-tool-specific-parameters). |
+| Static Filters    | Dict   | Input parameter. Attribute-value pairs used to filter query results. Equivalent to [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters). **Static Filters** are included with _every_ query. Use **Static Filters** without semantic search to perform a regular filter search. |
+| Number of Results  | Int | Input parameter. The maximum number of documents to return.   |
+| Semantic Search | Boolean | Input parameter. Whether to run a similarity search by generating a vector embedding from the chat input and following the **Semantic Search Instruction**. Default: `False`. If `True`, you must attach an [**Embedding Model** component](/components-embedding-models) or have vectorize pre-enabled on your collection. |
+| Use Astra DB Vectorize | Boolean | Input parameter. Whether to use the Astra DB vectorize feature for embedding generation when running a semantic search. Default: `False`. If `True`, you must have vectorize pre-enabled on your collection. |
+| Embedding Model | Embedding | Input parameter. A port to attach an **Embedding Model** component to generate a vector from input text for semantic search. This can be used when **Semantic Search** is `True` with or without vectorize. Be sure to use a model that aligns with the dimensions of the embeddings already present in the collection. |
+| Semantic Search Instruction | String | Input parameter. The query to use for similarity search. Default: `"Find documents similar to the query."`. This instruction is used to guide the model in performing semantic search. |
+
+### Define tool-specific parameters
+
+:::tip
+**Tool Parameters** are small functions that you create within the **Astra DB Tool** component.
+They give the LLM pre-defined ways to interact with the data in your collection.
+
+Without these filters, the LLM has no concept of the data in your collection or which attributes are important.
+
+At runtime, the LLM can decide which filters are relevant to the current query.
+
+Filters in **Tool Parameters** aren't always applied.
+If you want to enforce filters for _every_ query, use the **Static Filters** parameter.
+You can use both **Tool Parameters** and **Static Filters** to set some required filters and some optional filters.
+:::
+
+In the **Astra DB Tool** component's **Tool Parameters** field, you can create filters to query documents in your collection.
+
+When used in **Tool Mode** with an agent, these filters tell the agent which document attributes are most important, which are required in searches, and which operators to use on certain attributes.
+The filters become available as parameters that the LLM can use when calling the tool, with a better understanding of each parameter provided by the **Description** field.
+
+In the **Tool Parameters** pane, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**, and then edit each cell in the row.
+For example, the following filter allows an LLM to filter by unique `customer_id` values:
+
+    * Name: `customer_id`
+    * Attribute Name: Leave empty if the attribute matches the field name in the database.
+    * Description: `"The unique identifier of the customer to filter by"`.
+    * Is Metadata: `False` unless the value stored in the metadata field.
+    * Is Mandatory: `True` to require this filter.
+    * Is Timestamp: For this example, select `False` because the value is an ID, not a timestamp.
+    * Operator: `$eq` to look for an exact match.
+
+The following fields are available for each row in the **Tool Parameters** pane:
+
+| Parameter | Description |
+|-----------|-------------|
+| Name | The name of the parameter that is exposed to the LLM. It can be the same as the underlying field name or a more descriptive label. The LLM uses this name, along with the description, to infer what value to provide during execution. |
+| Attribute Name | When the parameter name shown to the LLM differs from the actual field or property in the database, use this setting to map the user-facing name to the correct attribute. For example, to apply a range filter to the timestamp field, define two separate parameters, such as `start_date` and `end_date`, that both reference the same timestamp attribute. |
+| Description | Provides instructions to the LLM on how the parameter should be used. Clear and specific guidance helps the LLM provide valid input. For example, if a field such as `specialty` is stored in lowercase, the description should indicate that the input must be lowercase. |
+| Is Metadata | When loading data using LangChain or Langflow, additional attributes may be stored under a metadata object. If the target attribute is stored this way, enable this option. It adjusts the query by generating a filter in the format: `{"metadata.<attribute_name>": "<value>"}` |
+| Is Timestamp | For date or time-based filters, enable this option to automatically convert values to the timestamp format that the Astrapy client expects. This ensures compatibility with the underlying API without requiring manual formatting. |
+| Operator | Defines the filtering logic applied to the attribute. You can use any valid [Data API filter operator](https://docs.datastax.com/en/astra-db-serverless/api-reference/filter-operator-collections.html). For example, to filter a time range on the timestamp attribute, use two parameters: one with the `$gt` operator for "greater than", and another with the `$lt` operator for "less than". |
+
+## Cassandra Chat Memory
+
+The **Cassandra Chat Memory** component retrieves and stores chat messages using an Apache Cassandra-based database, including Astra DB and Hyper-Converged Database (HCD).
+
+Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
+Specifically, the component creates an instance of `CassandraChatMessageHistory`, which is a LangChain chat message history class that uses a Cassandra database for storage.
+
+For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
+
+### Cassandra Chat Memory parameters
+
+Some component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name           | Type          | Description   |
+|----------------|---------------|-----------------------------|
+| database_ref   | MessageText   | Input parameter. The contact points for the Cassandra database or Astra DB database ID. Required. |
+| username       | MessageText   | Input parameter. The username for Cassandra. Leave empty for Astra DB. |
+| token          | SecretString  | Input parameter. The password for Cassandra or the token for Astra DB. Required. |
+| keyspace       | MessageText   | Input parameter. The keyspace in Cassandra or namespace in Astra DB. Required. |
+| table_name     | MessageText   | Input parameter. The name of the table or collection for storing messages. Required. |
+| session_id     | MessageText   | Input parameter. The unique identifier for the chat session. Optional. |
+| cluster_kwargs | Dictionary    | Input parameter. Additional keyword arguments for the Cassandra cluster configuration. Optional. |
+
+## DataStax assistant components
+
+The following DataStax components are used to create and manage Assistants API functions in a flow:
+
+* **Astra Assistant Agent**
+* **Create Assistant**
+* **Create Assistant Thread**
+* **Get Assistant Name**
+* **List Assistants**
+* **Run Assistant**
+
+## DataStax environment variable components
+
+The following DataStax components are used to load and retrieve environment variables in a flow:
+
+* **Dotenv**
+* **Get Environment Variable**
+
+## Legacy DataStax components
+
+The following components are considered legacy or deprecated.
+These components are no longer being developed and can be removed in future releases.
+
+Replace them with the suggested alternatives as soon as possible.
+
+<details>
+<summary>Astra DB Vectorize</summary>
+
+This component was deprecated in Langflow version 1.1.2.
+Replace it with the [**Astra DB** vector store component](/components-vector-stores#astra-db) as soon as possible.
+
+The **Astra DB Vectorize** component was used to generate embeddings with Astra DB's vectorize feature in conjunction with an **Astra DB** vector store component.
+
+The vectorize functionality is now built into the **Astra DB** vector store component.
+You no longer need a separate component for vectorize embedding generation.
+
+</details>

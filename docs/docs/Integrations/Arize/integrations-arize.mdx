@@ -1,5 +1,5 @@
 ---
-title: Integrate Arize with Langflow
+title: Arize
 slug: /integrations-arize
 ---
 
@@ -8,8 +8,15 @@ import TabItem from '@theme/TabItem';
 
 Arize is a tool built on [OpenTelemetry](https://opentelemetry.io/) and [OpenInference](https://docs.arize.com/phoenix/reference/open-inference) for monitoring and optimizing LLM applications.
 
-To add tracing to your Langflow application, add Arize environment variables to your Langflow application.
+To enable Arize tracing, set the required Arize environment variables in your Langflow deployment.
 Arize begins monitoring and collecting telemetry data from your LLM applications automatically.
+
+:::tip
+Instructions for integrating Langflow and Arize are also available in the Arize documentation:
+
+* [Langflow tracing with Arize Platform](https://arize.com/docs/ax/integrations/frameworks-and-platforms/langflow/langflow-tracing)
+* [Langflow tracing with Arize Phoenix](https://arize.com/docs/phoenix/integrations/langflow/langflow-tracing)
+:::
 
 ## Prerequisites
 
@@ -19,69 +26,83 @@ Arize begins monitoring and collecting telemetry data from your LLM applications
 ## Connect Arize to Langflow
 
 <Tabs>
-  <TabItem value="Arize Platform" label="Arize Platform" default>
+<TabItem value="platform" label="Arize Platform" default>
 
-1. To retrieve your **Arize Space ID** and **Arize API Key**, navigate to the [Arize dashboard](https://app.arize.com/).
-2. Click **Settings**, and then click **Space Settings and Keys**.
-3. Copy the **SpaceID** and **API Key (Ingestion Service Account Key)** values.
-4. Create a `.env` file in the root of your Langflow application.
-5. Add the `ARIZE_SPACE_ID` and `ARIZE_API_KEY` environment variables to your Langflow application.
-You do not need to specify the **Arize Project** name if you're using the standard Arize platform.
-Replace the following:
+1. In your [Arize dashboard](https://app.arize.com/), copy your **Space ID** and [**API Key (Ingestion Service Account Key)**](https://arize.com/docs/ax/security-and-settings/api-keys).
 
-* YOUR_ARIZE_SPACE_ID: the **SpaceID** value copied from Arize
-* YOUR_ARIZE_API_KEY: the **API Key** value copied from Arize
+2. In the root of your Langflow application, edit your existing Langflow `.env` file or create a new one.
 
-```bash
-ARIZE_SPACE_ID=YOUR_ARIZE_SPACE_ID
-ARIZE_API_KEY=YOUR_ARIZE_API_KEY
-```
-6. Save the `.env` file.
-7. Start your Langflow application with the values from the `.env` file.
-```bash
-uv run langflow run --env-file .env
-```
-  </TabItem>
-  <TabItem value="Arize Phoenix" label="Arize Phoenix">
+3. Add `ARIZE_SPACE_ID` and `ARIZE_API_KEY` environment variables:
 
-1. To retrieve your **Arize Phoenix API key**, navigate to the [Arize dashboard](https://app.phoenix.arize.com/).
-2. Click **API Key**.
-3. Copy the **API Key** value.
-4. Create a `.env` file in the root of your Langflow application.
-5. Add the `PHOENIX_API_KEY` environment variable to your application instead.
-Replace `YOUR_PHOENIX_API_KEY` with the Arize Phoenix API key that you copied from the Arize Phoenix platform.
+    ```bash
+    ARIZE_SPACE_ID=SPACE_ID
+    ARIZE_API_KEY=API_KEY
+    ```
 
-```bash
-PHOENIX_API_KEY=YOUR_PHOENIX_API_KEY
-```
+    Replace `SPACE_ID` and `API_KEY` with the values you copied from the Arize platform.
 
-6. Save the `.env` file.
-7. Start your Langflow application with the values from the `.env` file.
-```bash
-uv run langflow run --env-file .env
-```
-  </TabItem>
+    You do not need to specify the Arize project name if you're using the standard Arize platform.
+
+4. Start your Langflow application with your `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+</TabItem>
+<TabItem value="phoenix" label="Arize Phoenix">
+
+1. In your [Arize Phoenix dashboard](https://app.phoenix.arize.com/), copy your **API Key**.
+
+2. In the root of your Langflow application, edit your existing Langflow `.env` file or create a new one.
+
+3. Add a `PHOENIX_API_KEY` environment variable:
+
+    ```bash
+    PHOENIX_API_KEY=API_KEY
+    ```
+
+    Replace `API_KEY` with the Arize Phoenix API key that you copied from the Arize Phoenix platform.
+
+4. Start your Langflow application with your `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+</TabItem>
 </Tabs>
-
-For more information, see the [Arize documentation](https://docs.arize.com/phoenix/tracing/integrations-tracing/langflow#go-to-arize-phoenix).
 
 ## Run a flow and view metrics in Arize
 
-1. In Langflow, select the [Simple agent](/simple-agent) starter project.
-2. In the **Agent** component's **OpenAI API Key** field, paste your **OpenAI API key**.
-3. Click **Playground**.
-Ask your Agent some questions to generate traffic.
-4. Navigate to the [Arize dashboard](https://app.arize.com/), and then open your project.
-You may have to wait a few minutes for Arize to process the data.
-5. The **LLM Tracing** tab shows metrics for your flow.
-Each Langflow execution generates two traces in Arize.
-The `AgentExecutor` trace is the Arize trace of Langchain's `AgentExecutor`. The UUID trace is the trace of the Langflow components.
-6. To view traces, click the **Traces** tab.
-A **trace** is the complete journey of a request, made of multiple **spans**.
-7. To view **Spans**, select the **Spans** tab.
-A **span** is a single operation within a trace. For example, a **span** could be a single API call to OpenAI or a single function call to a custom tool.
-For more on traces, spans, and other metrics in Arize, see the [Arize documentation](https://docs.arize.com/arize/llm-tracing/tracing).
-8. All metrics in the **LLM Tracing** tab can be added to **Datasets**.
-To add a span to a **Dataset**, click the **Add to Dataset** button.
-9. To view a **Dataset**, click the **Datasets** tab, and then select your **Dataset**.
-For more on **Datasets**, see the [Arize documentation](https://docs.arize.com/arize/llm-datasets-and-experiments/datasets-and-experiments).
+1. In Langflow, run a flow that has an **Agent** or **Language Model** component.
+You must chat with the flow or trigger the LLM to produce traffic for Arize to trace.
+
+    For example, you can create a flow from the [**Simple Agent** template](/simple-agent), add your OpenAI API key to the **Agent** component, and then click **Playground** to chat with the flow and generate traffic.
+
+2. In Arize, open your project dashboard, and then wait for Arize to process the data.
+This can take a few minutes.
+
+3. To view metrics for your flows, go to the **LLM Tracing** tab.
+
+    Each Langflow execution generates two traces in Arize:
+
+    * The `AgentExecutor` trace is the Arize trace of LangChain's `AgentExecutor`.
+    * The `UUID` trace is the trace of the Langflow components.
+
+4. To view traces, go to the **Traces** tab.
+
+    A _trace_ is the complete journey of a request, made of multiple _spans_.
+
+5. To view spans, go to the **Spans** tab.
+
+    A _span_ is a single operation within a trace.
+    For example, a _span_ could be a single API call to OpenAI or a single function call to a custom tool.
+
+    For information about tracing metrics in Arize, see the [Arize LLM tracing documentation](https://docs.arize.com/arize/llm-tracing/tracing).
+
+6. To add a span to a [dataset](https://docs.arize.com/arize/llm-datasets-and-experiments/datasets-and-experiments), click **Add to Dataset**.
+
+    All metrics on the **LLM Tracing** tab can be added to datasets.
+
+7. To view a dataset, click the **Datasets** tab, and then select your dataset.
