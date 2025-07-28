@@ -140,8 +140,8 @@ async def _restart_application_with_delay() -> None:
 
 def _is_valid_windows_package_name(package_name: str) -> bool:
     """Validate package name for Windows forbidden characters."""
-    forbidden_chars = ["<", ">", ":", '"', "|", "?", "*"]
-    return not any(char in package_name for char in forbidden_chars)
+    # Use set disjoint test for maximum efficiency
+    return FORBIDDEN_CHARS.isdisjoint(package_name)
 
 
 def _validate_package_specification(package_spec: str) -> bool:
@@ -481,3 +481,6 @@ async def clear_installation_status(
     await session.commit()
 
     return {"message": "Installation status cleared"}
+
+
+FORBIDDEN_CHARS = {"<", ">", ":", '"', "|", "?", "*"}
