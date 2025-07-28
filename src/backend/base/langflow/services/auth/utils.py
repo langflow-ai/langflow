@@ -280,7 +280,11 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
 
     if settings_service.auth_settings.AUTO_LOGIN:
         # When auto login is enabled, run webhook as the flow owner without requiring API key
-        return await get_user_by_flow_id_or_endpoint_name(flow_id)
+        try:
+            return await get_user_by_flow_id_or_endpoint_name(flow_id)
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
+
     # When auto login is disabled, require API key authentication
     api_key = request.headers.get("x-api-key")
     if not api_key:
@@ -293,12 +297,15 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
             raise HTTPException(status_code=403, detail="Invalid API key")
 
         # Get flow owner to check if authenticated user owns this flow
-        flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+        try:
+            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
+
         if flow_owner.id != authenticated_user.id:
             raise HTTPException(status_code=403, detail="You don't have permission to run this flow")
 
         return UserRead.model_validate(authenticated_user, from_attributes=True)
-
 
 def verify_password(plain_password, hashed_password):
     settings_service = get_settings_service()
