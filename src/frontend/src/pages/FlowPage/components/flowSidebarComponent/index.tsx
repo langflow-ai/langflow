@@ -291,7 +291,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     <Sidebar
       collapsible="offcanvas"
       data-testid="shad-sidebar"
-      className="noflow"
+      className="noflow select-none"
     >
       <SidebarHeaderComponent
         showConfig={showConfig}

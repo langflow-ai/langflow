@@ -8,13 +8,11 @@ from langflow.schema.data import Data
 
 
 class ScrapeGraphSearchApi(Component):
-    display_name: str = "ScrapeGraphSearchApi"
-    description: str = """ScrapeGraph Search API.
-    Given a search prompt, it will return search results using ScrapeGraph's search functionality.
-    More info at https://docs.scrapegraphai.com/services/searchscraper"""
+    display_name: str = "ScrapeGraph Search API"
+    description: str = "Given a search prompt, it will return search results using ScrapeGraph's search functionality."
     name = "ScrapeGraphSearchApi"
 
-    documentation: str = "https://docs.scrapegraphai.com/introduction"
+    documentation: str = "https://docs.scrapegraphai.com/services/searchscraper"
     icon = "ScrapeGraph"
 
     inputs = [
