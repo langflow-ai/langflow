@@ -2,6 +2,31 @@
 
 Write-Host "Starting Langflow build and run process..." -ForegroundColor Green
 
+# Function to load .env file if it exists
+function Load-EnvFile {
+    $envPath = "..\..\..\.env"
+    if (Test-Path $envPath) {
+        Write-Host "Loading environment variables from .env file..." -ForegroundColor Cyan
+        Get-Content $envPath | ForEach-Object {
+            if ($_ -match "^\s*([^#][^=]*?)\s*=\s*(.*?)\s*$") {
+                $name = $matches[1]
+                $value = $matches[2]
+                # Remove quotes if present
+                $value = $value -replace '^"(.*)"$', '$1'
+                $value = $value -replace "^'(.*)'$", '$1'
+                [Environment]::SetEnvironmentVariable($name, $value, "Process")
+                Write-Host "Set $name" -ForegroundColor DarkGray
+            }
+        }
+        Write-Host "Environment variables loaded successfully!" -ForegroundColor Green
+    } else {
+        Write-Host ".env file not found, skipping environment variable loading" -ForegroundColor Yellow
+    }
+}
+
+# Load environment variables from .env file
+Load-EnvFile
+
 # Step 1: Install frontend dependencies
 Write-Host "`nStep 1: Installing frontend dependencies..." -ForegroundColor Yellow
 try {

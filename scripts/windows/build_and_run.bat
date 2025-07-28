@@ -1,6 +1,27 @@
 @echo off
 echo Starting Langflow build and run process...
 
+REM Load environment variables from .env file if it exists
+if exist "..\..\..\.env" (
+    echo Loading environment variables from .env file...
+    for /f "usebackq tokens=1,2 delims==" %%A in ("..\..\..\.env") do (
+        REM Skip empty lines and comments
+        echo %%A | findstr /r "^[^#]" >nul
+        if not errorlevel 1 (
+            REM Remove quotes if present and set environment variable
+            set "temp_value=%%B"
+            setlocal enabledelayedexpansion
+            set "temp_value=!temp_value:"=!"
+            set "temp_value=!temp_value:'=!"
+            endlocal & set "%%A=!temp_value!"
+            echo Set %%A
+        )
+    )
+    echo Environment variables loaded successfully!
+) else (
+    echo .env file not found, skipping environment variable loading
+)
+
 echo.
 echo Step 1: Installing frontend dependencies...
 cd ..\..\src\frontend
