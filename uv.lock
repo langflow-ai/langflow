@@ -5495,6 +5495,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "blockbuster" },
     { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -5534,6 +5535,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "blockbuster", specifier = ">=1.5.25" },
     { name = "coverage", specifier = ">=7.9.2" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
