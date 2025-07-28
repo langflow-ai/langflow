@@ -73,18 +73,20 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
           </div>
         </BaseModal.Header>
         <BaseModal.Content overflowHidden className="flex flex-col p-0">
-          <div className="flex h-full">
-            <SidebarProvider width="20rem" defaultOpen={false}>
-              <ToolsTable
-                rows={rows}
-                isAction={isAction}
-                placeholder={placeholder}
-                data={data}
-                setData={setData}
-                open={open}
-                handleOnNewValue={handleOnNewValue}
-              />
-            </SidebarProvider>
+          <div className="flex flex-col w-full h-full">
+            <div className="flex h-full">
+              <SidebarProvider width="20rem" defaultOpen={false}>
+                <ToolsTable
+                  rows={rows}
+                  isAction={isAction}
+                  placeholder={placeholder}
+                  data={data}
+                  setData={setData}
+                  open={open}
+                  handleOnNewValue={handleOnNewValue}
+                />
+              </SidebarProvider>
+            </div>
           </div>
         </BaseModal.Content>
       </BaseModal>

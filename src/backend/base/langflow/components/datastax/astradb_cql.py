@@ -277,7 +277,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
             name (str, optional): The name of the tool.
 
         Returns:
-            Tool: The built AstraDB tool.
+            Tool: The built Astra DB tool.
         """
         schema_dict = self.create_args_schema()
         return StructuredTool.from_function(

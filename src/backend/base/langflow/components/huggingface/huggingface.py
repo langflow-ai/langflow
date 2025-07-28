@@ -16,7 +16,7 @@ DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
-    display_name: str = "HuggingFace"
+    display_name: str = "Hugging Face"
     description: str = "Generate text using Hugging Face Inference APIs."
     icon = "HuggingFace"
     name = "HuggingFaceModel"
@@ -26,7 +26,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         DropdownInput(
             name="model_id",
             display_name="Model ID",
-            info="Select a model from HuggingFace Hub",
+            info="Select a model from Hugging Face Hub",
             options=[
                 DEFAULT_MODEL,
                 "mistralai/Mixtral-8x7B-Instruct-v0.1",
@@ -44,7 +44,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         StrInput(
             name="custom_model",
             display_name="Custom Model ID",
-            info="Enter a custom model ID from HuggingFace Hub",
+            info="Enter a custom model ID from Hugging Face Hub",
             value="",
             show=False,
             required=True,
@@ -191,7 +191,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
                 repetition_penalty=repetition_penalty,
             )
         except Exception as e:
-            msg = "Could not connect to HuggingFace Endpoints API."
+            msg = "Could not connect to Hugging Face Endpoints API."
             raise ValueError(msg) from e
 
         return llm

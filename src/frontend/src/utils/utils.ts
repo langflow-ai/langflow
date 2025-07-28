@@ -992,3 +992,13 @@ export function prepareSessionIdForAPI(session_id: string): string {
   const formatted = sessionIdFormatted(session_id);
   return encodeSessionId(formatted);
 }
+
+export const stripReleaseStageFromVersion = (version: string): string => {
+  const releaseStageKeywords = ["a", "b", "rc", "dev", "post"];
+  for (const keyword of releaseStageKeywords) {
+    if (version.includes(keyword)) {
+      return version.split(keyword)[0].slice(0, -1);
+    }
+  }
+  return version;
+};

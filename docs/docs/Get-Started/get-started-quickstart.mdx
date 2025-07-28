@@ -52,14 +52,13 @@ For example:
 
 ![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
 
-The Simple Agent flow consists of an [Agent component](/agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-tools#calculator-tool), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
+The Simple Agent flow consists of an [Agent component](/agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-helpers#calculator), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 
-2. In the **Agent** component's settings, in the **OpenAI API Key** field, enter your OpenAI API key.
-This guide uses an OpenAI model for demonstration purposes. If you want to use a different provider, change the **Model Provider** field, and then provide credentials for your selected provider.
+2. In the **Agent** component's settings, in the **OpenAI API Key** field, enter your OpenAI API key directly or click the <Icon name="Globe" aria-hidden="true"/> **Globe** to create a [global variable](/configuration-global-variables).
 
-    Optionally, you can click <Icon name="Globe" aria-hidden="true"/> **Globe** to store the key in a Langflow [global variable](/configuration-global-variables).
+    This guide uses an OpenAI model for demonstration purposes. If you want to use a different provider, change the **Model Provider** and **Model Name** fields, and then provide credentials for your selected provider.
 
 3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
@@ -368,7 +367,6 @@ The following example builds on the API pane's example code to create a question
 1. Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
 This script runs a question-and-answer chat in your terminal and stores the Agent's previous answer so you can compare them.
 
-
     <Tabs groupId="Languages">
       <TabItem value="Python" label="Python" default>
 
@@ -553,8 +551,8 @@ payload = {
 
 ## Next steps
 
+* [Trigger flows with the Langflow API](/concepts-publish)
 * [Use Langflow as a Model Context Protocol (MCP) server](/mcp-server)
-* [Application development with Langflow](/develop-application)
-* [Deploy a Langflow server](/deployment-overview)
+* [Containerize a Langflow application](/develop-application)
 * [File management](/concepts-file-management)
 * [Credential management](/configuration-api-keys)

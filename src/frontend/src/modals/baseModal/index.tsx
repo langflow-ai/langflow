@@ -105,14 +105,16 @@ const Footer: React.FC<{
   };
   close?: boolean;
   centered?: boolean;
-}> = ({ children, submit, close, centered }) => {
+  className?: string;
+}> = ({ children, submit, close, centered, className }) => {
   return (
     <div
-      className={
+      className={cn(
         centered
           ? "flex flex-shrink-0 justify-center"
-          : "flex flex-shrink-0 flex-row-reverse"
-      }
+          : "flex flex-shrink-0 flex-row-reverse",
+        className,
+      )}
     >
       {submit ? (
         <div className="flex w-full items-center justify-between">
@@ -185,7 +187,8 @@ interface BaseModalProps {
     | "sm-thin"
     | "smaller-h-full"
     | "medium-log"
-    | "x-large";
+    | "x-large"
+    | "auth";
   className?: string;
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;

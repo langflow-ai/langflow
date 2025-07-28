@@ -25,6 +25,10 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
+:::important MCP flow requirements
+A flow must contain a [**Chat Output**](/components-io#chat-output) component to be used as a tool by MCP clients.
+:::
+
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as tools that MCP clients can use to generate responses.
 
 By default, all flows in a project are exposed as tools on the project's MCP server.

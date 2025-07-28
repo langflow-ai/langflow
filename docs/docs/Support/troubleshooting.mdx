@@ -14,7 +14,7 @@ As Langflow development continues, components are often recategorized or depreca
 
 If a component appears to be missing from the expected location on the **Components** menu, try the following:
 
-* Search for the component or check other component categories, including [Bundles](/components-bundle-components).
+* Search for the component or check other component categories, including [**Bundles**](/components-bundle-components).
 * [Expose legacy components](/concepts-components#component-menus), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
 * Make sure the component isn't already present in your flow if it is a single-use component.
@@ -23,7 +23,11 @@ If you still cannot locate the component, see [Langflow GitHub Issues and Discus
 
 ## No input in the Playground
 
-If there is no text box for input in the Playground, make sure your flow has a [Input component](/components-io) that is connected to the **Input** port of another component.
+If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/components-io#chat-io) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
+
+Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground**'s chat interface.
+
+For more information, see [Test flows in the **Playground**](/concepts-playground).
 
 ## Missing key, no key found, or invalid API key
 
@@ -152,39 +156,6 @@ The cache folder location depends on your OS:
 - **Linux**: `home/<username>/.cache/langflow/`
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
-
-<!--
-### Unexpected data loss after Langflow Desktop upgrade {#data-loss}
-
-If you upgrade Langflow Desktop and find that your projects, flows, and settings have been replaced by a fresh installation, follow these steps to attempt to recover the data from the prior version:
-
-:::important
-Any projects, flows, and settings you created after the upgrade will be overwritten when you recover the data from your previous installation.
-:::
-
-<Tabs>
-   <TabItem value="Linux and macOS" label="Linux and macOS" default>
-
-1. Navigate to `~/.langflow/.langflow-venv/lib/python3.12/site-packages/langflow`.
-
-2. Copy `langflow.db`, paste it in `~/.langflow/data`, and then rename it to `database.db`.
-This overwrites the existing `database.db` with your previous version's internal Langflow database.
-
-3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
-
-  </TabItem>
-  <TabItem value="Windows" label="Windows">
-
-1. Navigate to `C:\Users\USERNAME\.langflow\.langflow-venv\Lib\site-packages\langflow`.
-
-2. Copy `langflow.db`, paste it in `C:\Users\<name>\AppData\Roaming\com.Langflow\data`, and then rename it to `database.db`.
-This overwrites the existing `database.db` with your previous version's internal Langflow database.
-
-3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
-
-  </TabItem>
-</Tabs>
--->
 
 ## Langflow uninstall issues
 

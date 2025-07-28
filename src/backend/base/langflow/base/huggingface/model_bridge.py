@@ -3,19 +3,19 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolCall
 from langchain_core.tools import BaseTool
 
-# Import HuggingFace Model base
+# Import Hugging Face Model base
 from smolagents import Model, Tool
 from smolagents.models import ChatMessage, ChatMessageToolCall, ChatMessageToolCallDefinition
 
 
 def _lc_tool_call_to_hf_tool_call(tool_call: ToolCall) -> ChatMessageToolCall:
-    """Convert a LangChain ToolCall to a HuggingFace ChatMessageToolCall.
+    """Convert a LangChain ToolCall to a Hugging Face ChatMessageToolCall.
 
     Args:
         tool_call (ToolCall): LangChain tool call to convert
 
     Returns:
-        ChatMessageToolCall: Equivalent HuggingFace tool call
+        ChatMessageToolCall: Equivalent Hugging Face tool call
     """
     return ChatMessageToolCall(
         function=ChatMessageToolCallDefinition(name=tool_call.name, arguments=tool_call.args),
@@ -24,24 +24,24 @@ def _lc_tool_call_to_hf_tool_call(tool_call: ToolCall) -> ChatMessageToolCall:
 
 
 def _hf_tool_to_lc_tool(tool) -> BaseTool:
-    """Convert a HuggingFace Tool to a LangChain BaseTool.
+    """Convert a Hugging Face Tool to a LangChain BaseTool.
 
     Args:
-        tool (Tool): HuggingFace tool to convert
+        tool (Tool): Hugging Face tool to convert
 
     Returns:
         BaseTool: Equivalent LangChain tool
     """
     if not hasattr(tool, "langchain_tool"):
-        msg = "HuggingFace Tool does not have a langchain_tool attribute"
+        msg = "Hugging Face Tool does not have a langchain_tool attribute"
         raise ValueError(msg)
     return tool.langchain_tool
 
 
 class LangChainHFModel(Model):
-    """A class bridging HuggingFace's `Model` interface with a LangChain `BaseChatModel`.
+    """A class bridging Hugging Face's `Model` interface with a LangChain `BaseChatModel`.
 
-    This adapter allows using any LangChain chat model with the HuggingFace interface.
+    This adapter allows using any LangChain chat model with the Hugging Face interface.
     It handles conversion of message formats and tool calls between the two frameworks.
 
     Usage:
@@ -68,7 +68,7 @@ class LangChainHFModel(Model):
         tools_to_call_from: list[Tool] | None = None,
         **kwargs,
     ) -> ChatMessage:
-        """Process messages through the LangChain model and return HuggingFace format.
+        """Process messages through the LangChain model and return Hugging Face format.
 
         Args:
             messages: List of message dictionaries with 'role' and 'content' keys
@@ -78,7 +78,7 @@ class LangChainHFModel(Model):
             **kwargs: Additional arguments passed to the LangChain model
 
         Returns:
-            ChatMessage: Response in HuggingFace format
+            ChatMessage: Response in Hugging Face format
         """
         if grammar:
             msg = "Grammar is not yet supported."

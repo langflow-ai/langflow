@@ -1,0 +1,145 @@
+---
+title: Google components
+slug: /bundles-google
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Google** bundle.
+
+## BigQuery
+
+See [**BigQuery** component](/integrations-google-big-query).
+
+## Google Generative AI
+
+This component generates text using [Google Generative AI models](https://cloud.google.com/vertex-ai/docs/).
+
+### Google Generative AI parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Google API Key | SecretString | Input parameter. Your Google API key to use for the Google Generative AI. |
+| Model | String | Input parameter. The name of the model to use, such as `"gemini-pro"`. |
+| Max Output Tokens | Integer | Input parameter. The maximum number of tokens to generate. |
+| Temperature | Float | Input parameter. Run inference with this temperature. |
+| Top K | Integer | Input parameter. Consider the set of top K most probable tokens. |
+| Top P | Float | Input parameter. The maximum cumulative probability of tokens to consider when sampling. |
+| N | Integer | Input parameter. Number of chat completions to generate for each prompt. |
+| model | LanguageModel | Output parameter. An instance of ChatGoogleGenerativeAI configured with the specified parameters. |
+
+## Google Generative AI Embeddings
+
+The **Google Generative AI Embeddings** component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
+
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+
+### Google Generative AI Embeddings parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| api_key | API Key | Input parameter. The secret API key for accessing Google's generative AI service. Required. |
+| model_name | Model Name | Input parameter. The name of the embedding model to use. Default: "models/text-embedding-004". |
+| embeddings | Embeddings | Output parameter. The built GoogleGenerativeAIEmbeddings object. |
+
+## Google Search API
+
+This component allows you to call the Google Search API.
+
+### Google Search API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| google_api_key | SecretString | Input parameter. A Google API key for authentication. |
+| google_cse_id | SecretString | Input parameter. A Google Custom Search Engine ID. |
+| input_value | String | Input parameter. The search query input. |
+| k | Integer | Input parameter. The number of search results to return. |
+| results | List[Data] | Output parameter. A list of search results. |
+| tool | Tool | Output parameter. A Google Search tool for use in LangChain. |
+
+## Serper Google Search API
+
+This component allows you to call the Serper.dev Google Search API.
+
+### Google Serper API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| serper_api_key | SecretString | Input parameter. An API key for Serper.dev authentication. |
+| input_value | String | Input parameter. The search query input. |
+| k | Integer | Input parameter. The number of search results to return. |
+| results | List[Data] | Output parameter. A list of search results. |
+| tool | Tool | Output parameter. A Serper Google Search tool for use in LangChain. |
+
+## Google Vertex AI
+
+For information about Vertex AI components, see the [**Vertex AI** bundle](/bundles-vertexai).
+
+## Legacy Google components
+
+The following Google components are considered legacy components.
+You can still use them in your flows, but they are no longer supported and can be removed in future releases.
+
+As an alternative to these components, you can use [Composio components](/integrations-composio) to connect your flows to Google services.
+
+<details>
+<summary>Google OAuth Token</summary>
+
+The **Google OAuth Token** component was deprecated in Langflow 1.4.0.
+
+To connect your flows to Google OAuth services, use [Composio components](/integrations-composio).
+
+</details>
+
+<details>
+<summary>Gmail Loader</summary>
+
+This component loads emails from Gmail using provided credentials and filters.
+
+| Input       | Type             | Description                                                                          |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
+| json_string | SecretStrInput   | Input parameter. A JSON string containing OAuth 2.0 access token information for service account access. For information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account). |
+| label_ids   | MessageTextInput | Input parameter. A comma-separated list of label IDs to filter emails.                                |
+| max_results | MessageTextInput | Input parameter. The maximum number of emails to load.                                                |
+| data   | Data | Output parameter.The loaded email data. |
+
+</details>
+
+<details>
+<summary>Google Calendar Loader</summary>
+
+This component accepts the following parameters:
+
+| Input       | Type             | Description                                                                          |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
+| json_string | SecretStrInput   | Input parameter. A JSON string containing OAuth 2.0 access token information for service account access. For information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account). |
+| document_id | MessageTextInput | Input parameter. A single Google Drive document ID.                                                   |
+| docs   | Data | Output parameter. The loaded document data. |
+
+</details>
+
+<details>
+<summary>Google Drive Search</summary>
+
+This component searches Google Drive files using provided credentials and query parameters.
+
+| Input          | Type             | Description                                                                          |
+| -------------- | ---------------- | ------------------------------------------------------------------------------------ |
+| token_string   | SecretStrInput   | Input parameter. A JSON string containing OAuth 2.0 access token information for service account access. For information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).  |
+| query_item     | DropdownInput    | Input parameter. The field to query.                                                                  |
+| valid_operator | DropdownInput    | Input parameter. The operator to use in the query.                                                    |
+| search_term    | MessageTextInput | Input parameter. The value to search for in the specified query item.                                 |
+| query_string   | MessageTextInput | Input parameter. The query string used for searching.                      |
+| doc_urls   | List[str] | Output parameter. The URLs of the found documents.                |
+| doc_ids    | List[str] | Output parameter. The IDs of the found documents.                 |
+| doc_titles | List[str] | Output parameter. The titles of the found documents.              |
+| Data       | Data      | Output parameter. The document titles and URLs in a structured format. |
+
+</details>
+
+## See also
+
+- [Composio bundle](/integrations-composio)
+- [Vertex AI bundle](/bundles-vertexai)

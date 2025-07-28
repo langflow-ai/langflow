@@ -146,6 +146,66 @@ outputs = [
 ]
 ```
 
+#### Output Grouping Behavior with `group_outputs`
+
+By default, components in Langflow that define multiple outputs will display them as a dropdown in the UI. This behavior is controlled by the `group_outputs` parameter.
+
+- `group_outputs=False` (default):  
+  When a component has more than one output and `group_outputs` is not specified (or set to `False`), the outputs are grouped into a dropdown. The user can choose only one output at a time from the UI.
+
+- `group_outputs=True`:  
+  All outputs will be shown simultaneously in the UI. This is useful when the component is expected to return multiple values that should be used in parallel downstream.
+
+#### Example: 
+
+1. `group_outputs=False` (default behavior)
+
+```python
+outputs = [
+    Output(
+        name="structured_output",
+        display_name="Structured Output",
+        method="build_structured_output",
+    ),
+    Output(
+        name="dataframe_output",
+        display_name="DataFrame Output",
+        method="build_structured_dataframe",
+    ),
+]
+```
+
+In this example, both outputs will be available via a dropdown selection in the UI.
+
+Note: Since `group_outputs=False` is the default behavior, it does not need to be explicitly set in the component.
+
+2. `group_outputs=True`
+
+```python
+outputs = [
+    Output(
+        name="true_result",
+        display_name="True",
+        method="true_response",
+        group_outputs=True,
+    ),
+    Output(
+        name="false_result",
+        display_name="False",
+        method="false_response",
+        group_outputs=True,
+    ),
+]
+```
+
+Here, both outputs will appear independently and be selectable directly in the UI.
+
+#### When to Use
+
+- Use `group_outputs=False` when the component is expected to return only one of the outputs depending on the flow logic.
+
+- Use `group_outputs=True` when the component should expose multiple outputs simultaneously, such as structured data and a table that are meant to be used in parallel.
+
 ### Common internal patterns
 
 #### `_pre_run_setup()`
@@ -184,17 +244,17 @@ If you're creating custom components in a different location using the [LANGFLOW
 ```
 
 Components must be placed inside **category folders**, not directly in the base directory.
-The category folder name determines where the component appears in the UI menu.
+The category folder name determines where the component appears in the Langflow **Components** menu.
 
-For example, to add a component to the **Helpers** menu, place it in a `helpers` subfolder:
+For example, to add a component to the **Helpers** category, place it in a `helpers` subfolder:
 
 ```
 /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
-    └── helpers/                 # Displayed within the "Helpers" menu
+    └── helpers/                 # Displayed within the "Helpers" category
         └── custom_component.py  # Your component
 ```
 
-You can have **multiple category folders** to organize components into different menus:
+You can have multiple category folders to organize components into different categories:
 ```
 /app/custom_components/
     ├── helpers/

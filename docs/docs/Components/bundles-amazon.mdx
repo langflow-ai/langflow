@@ -1,0 +1,55 @@
+---
+title: Amazon
+slug: /bundles-amazon
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Amazon** bundle.
+
+## Amazon Bedrock
+
+This component generates text using [Amazon Bedrock LLMs](https://docs.aws.amazon.com/bedrock).
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+Specifically, the **Language Model** output is an instance of [`ChatBedrock`](https://python.langchain.com/docs/integrations/chat/bedrock/) configured according to the component's parameters.
+
+Use the **Language Model** output when you want to use an Amazon Bedrock model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### Amazon Bedrock parameters
+
+Many **Amazon Bedrock** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_id | String | Input parameter. The ID of the Amazon Bedrock model to use. Options include various models. |
+| aws_access_key | SecretString | Input parameter. AWS Access Key for authentication. |
+| aws_secret_key | SecretString | Input parameter. AWS Secret Key for authentication. |
+| aws_session_token | SecretString | Input parameter. The session key for your AWS account. |
+| credentials_profile_name | String | Input parameter. Name of the AWS credentials profile to use. |
+| region_name | String | Input parameter. AWS region name. Default: `us-east-1`. |
+| model_kwargs | Dictionary | Input parameter. Additional keyword arguments for the model. |
+| endpoint_url | String | Input parameter. Custom endpoint URL for the Bedrock service. |
+
+## Amazon Bedrock Embeddings
+
+The **Amazon Bedrock Embeddings** component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
+
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+
+### Amazon Bedrock Embeddings parameters
+
+Some **Amazon Bedrock Embeddings** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| credentials_profile_name | String | Input parameter. The name of the AWS credentials profile in `~/.aws/credentials` or `~/.aws/config`, which has access keys or role information. |
+| model_id | String | Input parameter. The ID of the model to call, such as `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API. |
+| endpoint_url | String | Input parameter. The URL to set a specific service endpoint other than the default AWS endpoint. |
+| region_name | String | Input parameter. The AWS region to use, such as `us-west-2`. Falls back to the `AWS_DEFAULT_REGION` environment variable or region specified in `~/.aws/config` if not provided. |

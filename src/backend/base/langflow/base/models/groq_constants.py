@@ -97,7 +97,7 @@ GROQ_MODELS_DETAILED = [
     create_model_metadata(  # OpenAI
         provider="Groq", name="whisper-large-v3-turbo", icon="Groq", not_supported=True
     ),
-    create_model_metadata(  # HuggingFace
+    create_model_metadata(  # Hugging Face
         provider="Groq", name="distil-whisper-large-v3-en", icon="Groq", not_supported=True
     ),
 ]

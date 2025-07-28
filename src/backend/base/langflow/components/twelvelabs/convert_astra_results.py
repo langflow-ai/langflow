@@ -7,10 +7,10 @@ from langflow.schema.message import Message
 
 
 class ConvertAstraToTwelveLabs(Component):
-    """Convert AstraDB search results to TwelveLabs Pegasus inputs."""
+    """Convert Astra DB search results to TwelveLabs Pegasus inputs."""
 
-    display_name = "Convert AstraDB to Pegasus Input"
-    description = "Converts AstraDB search results to inputs compatible with TwelveLabs Pegasus."
+    display_name = "Convert Astra DB to Pegasus Input"
+    description = "Converts Astra DB search results to inputs compatible with TwelveLabs Pegasus."
     icon = "TwelveLabs"
     name = "ConvertAstraToTwelveLabs"
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"
@@ -18,9 +18,9 @@ class ConvertAstraToTwelveLabs(Component):
     inputs = [
         HandleInput(
             name="astra_results",
-            display_name="AstraDB Results",
+            display_name="Astra DB Results",
             input_types=["Data"],
-            info="Search results from AstraDB component",
+            info="Search results from Astra DB component",
             required=True,
             is_list=True,
         )
@@ -47,7 +47,7 @@ class ConvertAstraToTwelveLabs(Component):
         self._index_id = None
 
     def build(self, **kwargs: Any) -> None:  # noqa: ARG002 - Required for parent class compatibility
-        """Process the AstraDB results and extract TwelveLabs index information."""
+        """Process the Astra DB results and extract TwelveLabs index information."""
         if not self.astra_results:
             return
 

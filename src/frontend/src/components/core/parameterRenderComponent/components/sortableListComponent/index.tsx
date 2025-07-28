@@ -197,6 +197,7 @@ const SortableListComponent = ({
         options={options}
         limit={limit}
         {...baseInputProps}
+        headerSearchPlaceholder=""
       />
     </div>
   );

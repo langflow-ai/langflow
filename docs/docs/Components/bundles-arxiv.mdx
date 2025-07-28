@@ -1,0 +1,28 @@
+---
+title: arXiv
+slug: /bundles-arxiv
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **arXiv** bundle.
+
+## arXiv search
+
+This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
+
+It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
+
+### arXiv search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| search_query | String | Input parameter. The search query for arXiv papers. For example, `quantum computing`. |
+| search_type | String | Input parameter. The field to search in. |
+| max_results | Integer | Input parameter. The maximum number of results to return. |
+
+## See also
+
+* [**Web Search** component](/components-data#web-search)

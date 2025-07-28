@@ -10,8 +10,8 @@ from langflow.schema.dataframe import DataFrame
 
 
 class SearchComponent(Component):
-    display_name: str = "Search API"
-    description: str = "Call the searchapi.io API with result limiting"
+    display_name: str = "SearchApi"
+    description: str = "Calls the SearchApi API with result limiting. Supports Google, Bing and DuckDuckGo."
     documentation: str = "https://www.searchapi.io/docs/google"
     icon = "SearchAPI"
 

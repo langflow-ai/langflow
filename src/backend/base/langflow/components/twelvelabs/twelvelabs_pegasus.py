@@ -35,8 +35,8 @@ class VideoValidationError(Exception):
 
 
 class TwelveLabsPegasus(Component):
-    display_name = "Twelve Labs Pegasus"
-    description = "Chat with videos using Twelve Labs Pegasus API."
+    display_name = "TwelveLabs Pegasus"
+    description = "Chat with videos using TwelveLabs Pegasus API."
     icon = "TwelveLabs"
     name = "TwelveLabsPegasus"
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"
@@ -44,7 +44,7 @@ class TwelveLabsPegasus(Component):
     inputs = [
         DataInput(name="videodata", display_name="Video Data", info="Video Data", is_list=True),
         SecretStrInput(
-            name="api_key", display_name="Twelve Labs API Key", info="Enter your Twelve Labs API Key.", required=True
+            name="api_key", display_name="TwelveLabs API Key", info="Enter your TwelveLabs API Key.", required=True
         ),
         MessageInput(
             name="video_id",
@@ -306,7 +306,7 @@ class TwelveLabsPegasus(Component):
     def process_video(self) -> Message:
         """Process video using Pegasus and generate response if message is provided.
 
-        Handles video indexing and question answering using the Twelve Labs API.
+        Handles video indexing and question answering using the TwelveLabs API.
         """
         # Check and initialize inputs
         if hasattr(self, "index_id") and self.index_id:
