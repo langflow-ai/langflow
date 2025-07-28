@@ -444,8 +444,10 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any], monkeypatch
     ) -> None:
         """Test the fallback behavior when filter_complex_metadata import fails."""
-        # Mock the import to fail by patching the builtins.__import__ function
-        original_import = __builtins__["__import__"]
+        # Mock the import to fail by patching builtins.__import__ function
+        import builtins
+
+        original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
             if name == "langchain_community.vectorstores.utils":
@@ -453,7 +455,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
                 raise ImportError(error_msg)
             return original_import(name, *args, **kwargs)
 
-        monkeypatch.setattr(__builtins__, "__import__", mock_import)
+        monkeypatch.setattr(builtins, "__import__", mock_import)
 
         # Create simple test data (no complex metadata to avoid actual ChromaDB errors)
         test_data = [Data(data={"text": "Simple document", "simple_field": "simple_value"})]
@@ -506,7 +508,8 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         # These simple types should be preserved
         assert data_obj.data["empty_string"] == ""
-        assert data_obj.data["none_value"] is None
+        # Note: ChromaDB filters out None values from metadata, so none_value won't be present
+        assert "none_value" not in data_obj.data
         assert data_obj.data["zero_value"] == 0
         assert data_obj.data["false_value"] is False
 
