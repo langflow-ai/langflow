@@ -1,0 +1,43 @@
+---
+title: Wikipedia
+slug: /bundles-wikipedia
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Wikipedia** bundle.
+
+:::tip
+Wikipedia components are useful [tools for agents](/agents-tools) that need reliable sources for information retrieval, such as tutoring chatbots or generic research assistants.
+
+Rather than broad internet searches or recall from internal model data, these components provide specific data returned from Wikipedia API requests.
+:::
+
+## Wikidata API
+
+This component performs a similarity search using the [Wikidata API](https://www.wikidata.org/wiki/Wikidata:REST_API).
+
+It accepts a string text query, and it outputs a [`DataFrame`](/data-types#dataframe) containing the search results.
+
+## Wikipedia API
+
+This component searches and retrieves information from Wikipedia with the [WikiMedia API](https://www.mediawiki.org/wiki/API:Main_page) search endpoints, and then outputs the response as a [`DataFrame`](/data-types#dataframe).
+
+### Wikipedia API parameters
+
+Some **Wikipedia API** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| input_value | String | Input parameter. The search query input. |
+| lang | String | Input parameter. The language code for Wikipedia. Default: `en`. |
+| k | Integer | Input parameter. The number of results to return. |
+| load_all_available_meta | Boolean | Input parameter. Whether to load all available metadata. |
+| doc_content_chars_max | Integer | Input parameter. The maximum number of characters for document content. |
+
+## See also
+
+* [**API Request** component](/components-data#api-request)
