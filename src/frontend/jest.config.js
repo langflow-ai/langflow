@@ -12,10 +12,7 @@ module.exports = {
     "<rootDir>/src/**/__tests__/**/*.{test,spec}.{ts,tsx}",
     "<rootDir>/src/**/*.{test,spec}.{ts,tsx}",
   ],
-  testPathIgnorePatterns: [
-    "/node_modules/",
-    "test-utils.tsx",
-  ],
+  testPathIgnorePatterns: ["/node_modules/", "test-utils.tsx"],
   transform: {
     "^.+\\.(ts|tsx)$": "ts-jest",
   },
