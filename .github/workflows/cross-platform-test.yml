@@ -1,0 +1,239 @@
+name: Cross-Platform Installation Test
+
+on:
+  workflow_call:
+    inputs:
+      base-artifact-name:
+        description: "Name of the base package artifact"
+        required: true
+        type: string
+      main-artifact-name:
+        description: "Name of the main package artifact" 
+        required: true
+        type: string
+      test-timeout:
+        description: "Timeout for langflow server startup test"
+        required: false
+        type: number
+        default: 120
+
+jobs:
+  test-installation:
+    name: Test Install - ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.10"
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.13"
+          # Linux ARM64 (using ubuntu-latest with qemu)
+          - os: linux
+            arch: arm64
+            runner: ubuntu-latest
+            python-version: "3.10"
+            use-qemu: true
+          # macOS AMD64
+          - os: macos
+            arch: amd64
+            runner: macos-13
+            python-version: "3.10"
+          - os: macos
+            arch: amd64
+            runner: macos-13
+            python-version: "3.13"
+          # macOS ARM64 (Apple Silicon)
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.10"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.13"
+          # Windows AMD64
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.10"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.13"
+
+    steps:
+      - name: Set up QEMU (for ARM64 on Linux)
+        if: matrix.use-qemu
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Download base package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.base-artifact-name }}
+          path: ./base-dist
+
+      - name: Download main package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.main-artifact-name }}
+          path: ./main-dist
+
+      - name: Create fresh virtual environment
+        run: |
+          uv venv test-env
+        shell: bash
+
+      - name: Install base package (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          ./test-env/Scripts/python -m pip install ./base-dist/*.whl
+        shell: cmd
+
+      - name: Install main package (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          ./test-env/Scripts/python -m pip install ./main-dist/*.whl
+        shell: cmd
+
+      - name: Install base package (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          ./test-env/bin/python -m pip install ./base-dist/*.whl
+        shell: bash
+
+      - name: Install main package (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          ./test-env/bin/python -m pip install ./main-dist/*.whl
+        shell: bash
+
+      - name: Test CLI help command (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          ./test-env/Scripts/python -m langflow --help
+        shell: cmd
+
+      - name: Test CLI help command (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          ./test-env/bin/python -m langflow --help
+        shell: bash
+
+      - name: Test server startup (Windows)
+        if: matrix.os == 'windows'
+        timeout-minutes: ${{ inputs.test-timeout / 60 }}
+        run: |
+          # Start server in background
+          start /B ./test-env/Scripts/python -m langflow run --host localhost --port 7860 --backend-only
+          
+          # Wait for server to be ready
+          $timeout = ${{ inputs.test-timeout }}
+          $elapsed = 0
+          do {
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:7860/api/v1/auto_login" -UseBasicParsing -TimeoutSec 5
+              if ($response.StatusCode -eq 200) {
+                Write-Host "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
+                break
+              }
+            } catch {
+              Start-Sleep -Seconds 5
+              $elapsed += 5
+            }
+          } while ($elapsed -lt $timeout)
+          
+          if ($elapsed -ge $timeout) {
+            Write-Host "❌ Server failed to start within timeout on ${{ matrix.os }}-${{ matrix.arch }}"
+            exit 1
+          }
+          
+          # Stop any running langflow processes
+          Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object {$_.CommandLine -like "*langflow*"} | Stop-Process -Force
+        shell: powershell
+
+      - name: Test server startup (Unix)  
+        if: matrix.os != 'windows'
+        timeout-minutes: ${{ inputs.test-timeout / 60 }}
+        run: |
+          # Start server in background
+          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
+          SERVER_PID=$!
+          
+          # Wait for server to be ready
+          timeout ${{ inputs.test-timeout }} bash -c '
+            until curl -f http://localhost:7860/api/v1/auto_login >/dev/null 2>&1; do 
+              sleep 5
+            done
+          ' || {
+            echo "❌ Server failed to start within timeout on ${{ matrix.os }}-${{ matrix.arch }}"
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          }
+          
+          echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
+          
+          # Clean shutdown
+          kill $SERVER_PID 2>/dev/null || true
+          sleep 5
+        shell: bash
+
+      - name: Test import in Python (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          ./test-env/Scripts/python -c "
+          try:
+              import langflow
+              print('✅ langflow import successful on ${{ matrix.os }}-${{ matrix.arch }}')
+          except Exception as e:
+              print(f'❌ langflow import failed on ${{ matrix.os }}-${{ matrix.arch }}: {e}')
+              exit(1)
+          "
+        shell: cmd
+
+      - name: Test import in Python (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          ./test-env/bin/python -c "
+          try:
+              import langflow
+              print('✅ langflow import successful on ${{ matrix.os }}-${{ matrix.arch }}')
+          except Exception as e:
+              print(f'❌ langflow import failed on ${{ matrix.os }}-${{ matrix.arch }}: {e}')
+              exit(1)
+          "
+        shell: bash
+
+  test-summary:
+    name: Cross-Platform Test Summary
+    needs: test-installation
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test-installation.result }}" != "success" ]; then
+            echo "❌ Cross-platform tests failed - PyPI upload blocked"
+            exit 1
+          else
+            echo "✅ All cross-platform tests passed - PyPI upload can proceed"
+          fi
