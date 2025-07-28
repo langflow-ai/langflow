@@ -5472,7 +5472,7 @@ dependencies = [
     { name = "docstring-parser" },
     { name = "emoji" },
     { name = "fastapi" },
-    { name = "httpx" },
+    { name = "httpx", extra = ["http2"] },
     { name = "json-repair" },
     { name = "langchain-core" },
     { name = "loguru" },
@@ -5494,6 +5494,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "asgi-lifespan" },
     { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -5510,7 +5511,7 @@ requires-dist = [
     { name = "docstring-parser", specifier = ">=0.16" },
     { name = "emoji", specifier = ">=2.14.1" },
     { name = "fastapi", specifier = ">=0.115.13" },
-    { name = "httpx", specifier = ">=0.24.0" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.24.0" },
     { name = "json-repair", specifier = ">=0.30.3" },
     { name = "langchain-core", specifier = ">=0.3.66" },
     { name = "loguru", specifier = ">=0.7.3" },
@@ -5532,6 +5533,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "coverage", specifier = ">=7.9.2" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
