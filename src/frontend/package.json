@@ -149,6 +149,7 @@
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
     "postcss": "^8.4.38",
+    "postcss-loader": "^8.1.1",
     "process": "^0.11.10",
     "react-refresh": "^0.17.0",
     "sass": "^1.89.2",

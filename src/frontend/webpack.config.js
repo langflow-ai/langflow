@@ -1,6 +1,8 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
-console.log("Loaded BACKEND_URL:", process.env.BACKEND_URL);
+// Hardcode the backend URL
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:7860";
+console.log("Using BACKEND_URL:", BACKEND_URL);
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { ModuleFederationPlugin } = require("webpack").container;
@@ -13,6 +15,19 @@ module.exports = (env) => {
   return {
     mode: isDev ? "development" : "production",
     entry: "./src/MFEEntry.tsx",
+    
+    // Add caching for faster rebuilds
+    cache: isDev ? {
+      type: 'memory',
+    } : false,
+    
+    // Optimize for development
+    optimization: isDev ? {
+      removeAvailableModules: false,
+      removeEmptyChunks: false,
+      splitChunks: false,
+    } : {},
+    
     output: {
       publicPath: "auto",
       // publicPath: "http://localhost:3030/",
@@ -20,6 +35,17 @@ module.exports = (env) => {
       filename: "[name].js",
       chunkFilename: "[name].js",
       clean: true,
+    },
+    
+    // Add watch options for better file watching
+    watchOptions: isDev ? {
+      aggregateTimeout: 300,
+      poll: false,
+      ignored: /node_modules/,
+    } : {},
+    
+    performance: {
+      hints: false, // Disable performance warnings
     },
     resolve: {
       fallback: {
@@ -51,7 +77,22 @@ module.exports = (env) => {
         },
         {
           test: /\.s?css$/,
-          use: ["style-loader", "css-loader", "sass-loader"],
+          use: [
+            "style-loader", 
+            "css-loader", 
+            {
+              loader: "postcss-loader",
+              options: {
+                postcssOptions: {
+                  plugins: [
+                    require('tailwindcss'),
+                    require('autoprefixer'),
+                  ],
+                },
+              },
+            },
+            "sass-loader"
+          ],
         },
         {
           test: /\.(png|jpe?g|gif)$/i,
@@ -93,9 +134,28 @@ module.exports = (env) => {
           "./LangflowApp": "./src/MFEEntry.tsx",
         },
         shared: {
-          react: { singleton: true, eager: true, requiredVersion: false },
-          "react-dom": { singleton: true, eager: true, requiredVersion: false },
+          react: { 
+            singleton: true, 
+            eager: true, 
+            requiredVersion: false,
+            // Add HMR support for React
+            ...(isDev && { version: false })
+          },
+          "react-dom": { 
+            singleton: true, 
+            eager: true, 
+            requiredVersion: false,
+            // Add HMR support for React DOM  
+            ...(isDev && { version: false })
+          },
         },
+        // Add development optimizations
+        ...(isDev && {
+          library: {
+            type: "var",
+            name: "langflow"
+          }
+        })
       }),
       new webpack.ProvidePlugin({
         process: "process/browser",
@@ -105,7 +165,7 @@ module.exports = (env) => {
         "import.meta.env": JSON.stringify({
           CI: process.env.CI ?? false,
           LANGFLOW_AUTO_LOGIN: process.env.LANGFLOW_AUTO_LOGIN ?? true,
-          BACKEND_URL: process.env.BACKEND_URL ?? "http://localhost:7860",
+          BACKEND_URL: BACKEND_URL,
           ACCESS_TOKEN_EXPIRE_SECONDS:
             process.env.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60,
         }),
@@ -115,26 +175,46 @@ module.exports = (env) => {
     devServer: {
       port: 3001,
       hot: true,
+      liveReload: false, // Disable live reload in favor of HMR
+      client: {
+        overlay: {
+          errors: true,
+          warnings: false, // Only show errors in overlay
+        },
+        progress: true,
+      },
       historyApiFallback: {
         index: "/index.html",
       },
-      proxy: {
-        "/api/v1/": {
-          target: process.env.BACKEND_URL || "http://localhost:7860",
-          changeOrigin: true,
-          secure: false,
-        },
-        "/api/v2/": {
-          target: process.env.BACKEND_URL || "http://localhost:7860",
-          changeOrigin: true,
-          secure: false,
-        },
-        "/health": {
-          target: process.env.BACKEND_URL || "http://localhost:7860",
-          changeOrigin: true,
-          secure: false,
-        },
+      // Add headers for better HMR
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
       },
+      proxy: [
+        {
+          context: ["/api/v1/"],
+          target: BACKEND_URL,
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
+        {
+          context: ["/api/v2/"],
+          target: BACKEND_URL,
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
+        {
+          context: ["/health"],
+          target: BACKEND_URL,
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
+      ],
     },
   };
 };
