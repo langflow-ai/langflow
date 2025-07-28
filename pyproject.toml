@@ -305,16 +305,13 @@ ignore = [
 external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/*" = [
-    "D1",
-    "INP",
-    "T201",
-]
+"scripts/*" = ["D1", "INP", "T201"]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",
     "S101",
     "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
 ]
 
 [tool.ruff.lint.flake8-builtins]
