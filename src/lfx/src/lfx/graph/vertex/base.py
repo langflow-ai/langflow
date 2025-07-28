@@ -63,6 +63,8 @@ class Vertex:
         self.id: str = data["id"]
         self.base_name = self.id.split("-")[0]
         self.is_state = False
+        # TODO: This won't be enough in the long term
+        # we need to have a better way to determine if a vertex is an input or an output
         type_strings = [self.id.split("-")[0], data["data"]["type"]]
         self.is_input = any(input_component_name in type_strings for input_component_name in INPUT_COMPONENTS)
         self.is_output = any(output_component_name in type_strings for output_component_name in OUTPUT_COMPONENTS)
