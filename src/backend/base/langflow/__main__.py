@@ -722,8 +722,7 @@ def superuser(
 
                 if not auth_user or not auth_user.is_superuser:
                     typer.echo(
-                        "Error: Invalid token or insufficient privileges. "
-                        "Only superusers can create other superusers."
+                        "Error: Invalid token or insufficient privileges. Only superusers can create other superusers."
                     )
                     raise typer.Exit(1)
             except typer.Exit:
