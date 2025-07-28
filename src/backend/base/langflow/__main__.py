@@ -15,6 +15,7 @@ import click
 import httpx
 import typer
 from dotenv import load_dotenv
+from fastapi import HTTPException
 from httpx import HTTPError
 from jose import JWTError
 from multiprocess import cpu_count
@@ -706,23 +707,27 @@ def superuser(
 
             # Validate the auth token
             try:
+                auth_user = None
                 async with session_scope() as session:
                     # Try JWT first
                     user = None
                     try:
                         user = await get_current_user_by_jwt(auth_token, session)
-                    except JWTError:
+                    except (JWTError, HTTPException):
                         # Try API key
                         api_key_result = await check_key(session, auth_token)
                         if api_key_result and hasattr(api_key_result, "is_superuser"):
                             user = api_key_result
+                    auth_user = user
 
-                    if not user or not user.is_superuser:
-                        typer.echo(
-                            "Error: Invalid token or insufficient privileges. "
-                            "Only superusers can create other superusers."
-                        )
-                        raise typer.Exit(1)
+                if not auth_user or not auth_user.is_superuser:
+                    typer.echo(
+                        "Error: Invalid token or insufficient privileges. "
+                        "Only superusers can create other superusers."
+                    )
+                    raise typer.Exit(1)
+            except typer.Exit:
+                raise  # Re-raise typer.Exit without wrapping
             except Exception as e:  # noqa: BLE001
                 typer.echo(f"Error: Authentication failed - {e!s}")
                 raise typer.Exit(1) from None
