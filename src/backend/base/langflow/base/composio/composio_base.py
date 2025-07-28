@@ -730,6 +730,23 @@ class ComposioBaseComponent(Component):
         # Current tool_mode is True if ANY source indicates it's enabled
         current_tool_mode = instance_tool_mode or build_config_tool_mode or (field_name == "tool_mode" and field_value)
 
+        # Handle disconnect operations when tool mode is enabled
+        if field_name == "auth_link" and field_value == "disconnect":
+            try:
+                toolkit_slug = self.app_name.lower()
+                self._disconnect_connection(toolkit_slug)
+            except (ValueError, ConnectionError) as e:
+                logger.error(f"Error disconnecting: {e}")
+                build_config["auth_link"]["value"] = "error"
+                build_config["auth_link"]["auth_tooltip"] = f"Disconnect failed: {e!s}"
+                return build_config
+            else:
+                build_config["auth_link"]["value"] = "connect"
+                build_config["auth_link"]["auth_tooltip"] = "Connect"
+                build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
+                build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
+                return build_config
+
         # CRITICAL: If tool_mode is enabled from ANY source, immediately hide action field and return
         if current_tool_mode:
             build_config["action_button"]["show"] = False
@@ -837,26 +854,11 @@ class ComposioBaseComponent(Component):
                             logger.info(f"Found {initiated_count} INITIATED connection(s) for {toolkit_slug}")
 
                 if has_active_connections:
-                    if field_name == "auth_link" and field_value == "disconnect":
-                        try:
-                            self._disconnect_connection(toolkit_slug)
-                        except (ValueError, ConnectionError) as e:
-                            logger.error(f"Error disconnecting: {e}")
-                            build_config["auth_link"]["value"] = "error"
-                            build_config["auth_link"]["auth_tooltip"] = f"Disconnect failed: {e!s}"
-                            return build_config
-                        else:
-                            build_config["auth_link"]["value"] = "connect"
-                            build_config["auth_link"]["auth_tooltip"] = "Connect"
-                            build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
-                            build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
-                            return build_config
-                    else:
-                        # Show validated connection
-                        build_config["auth_link"]["value"] = "validated"
-                        build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                        build_config["action_button"]["helper_text"] = ""
-                        build_config["action_button"]["helper_text_metadata"] = {}
+                    # Show validated connection
+                    build_config["auth_link"]["value"] = "validated"
+                    build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                    build_config["action_button"]["helper_text"] = ""
+                    build_config["action_button"]["helper_text_metadata"] = {}
                 else:
                     # No active connection - check for existing INITIATED connections first
                     existing_redirect_url = None
