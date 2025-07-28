@@ -8,7 +8,7 @@ for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
 set "ENV_PATH=%PROJECT_ROOT%\.env"
 if exist "%ENV_PATH%" (
     echo Found .env file at: %ENV_PATH%
-    set "ENV_FILE_PARAM=--env-file "%ENV_PATH%""
+    set "ENV_FILE_PARAM=--env-file \"%ENV_PATH%\""
 ) else (
     echo .env file not found at: %ENV_PATH%
     echo Langflow will use default configuration
