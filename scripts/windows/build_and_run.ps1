@@ -3,13 +3,16 @@
 Write-Host "Starting Langflow build and run process..." -ForegroundColor Green
 
 # Check if .env file exists and set env file parameter
-$envPath = "..\..\..env"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$projectRoot = Resolve-Path (Join-Path $scriptDir "..\..")
+$envPath = Join-Path $projectRoot ".env"
 $envFileParam = ""
 if (Test-Path $envPath) {
-    Write-Host "Found .env file, will pass to langflow run" -ForegroundColor Cyan
+    Write-Host "Found .env file at: $envPath" -ForegroundColor Cyan
     $envFileParam = "--env-file `"$envPath`""
 } else {
-    Write-Host ".env file not found, langflow will use default configuration" -ForegroundColor Yellow
+    Write-Host ".env file not found at: $envPath" -ForegroundColor Yellow
+    Write-Host "Langflow will use default configuration" -ForegroundColor Yellow
 }
 
 # Step 1: Install frontend dependencies
