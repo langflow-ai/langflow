@@ -49,7 +49,7 @@ def test_serve_command_missing_api_key():
         # Clear API key from environment
         with patch.dict(os.environ, {}, clear=True):
             runner = CliRunner()
-            result = runner.invoke(app, [temp_path])
+            result = runner.invoke(app, ["serve", temp_path])
 
             assert result.exit_code == 1
             # Check both output and exception since typer may output to different streams
@@ -80,7 +80,7 @@ def test_serve_command_invalid_json():
 
     with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):
         runner = CliRunner()
-        result = runner.invoke(app, ["--flow-json", invalid_json], catch_exceptions=False)
+        result = runner.invoke(app, ["serve", "--flow-json", invalid_json], catch_exceptions=False)
 
         assert result.exit_code == 1
 
@@ -91,7 +91,7 @@ def test_serve_command_nonexistent_file():
 
     with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):
         runner = CliRunner()
-        result = runner.invoke(app, ["/path/to/nonexistent/file.json"], catch_exceptions=False)
+        result = runner.invoke(app, ["serve", "/path/to/nonexistent/file.json"], catch_exceptions=False)
 
         assert result.exit_code == 1
 
