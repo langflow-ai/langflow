@@ -12,8 +12,8 @@
 # - **Document:** The Document containing the JSON object.
 
 
+import orjson
 from langchain_core.documents import Document
-from langflow.services.database.models.base import orjson_dumps
 
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.io import HandleInput, StrInput
@@ -46,11 +46,9 @@ class JSONDocumentBuilder(CustomComponent):
     ) -> Document:
         documents = None
         if isinstance(document, list):
-            documents = [
-                Document(page_content=orjson_dumps({key: doc.page_content}, indent_2=False)) for doc in document
-            ]
+            documents = [Document(page_content=orjson.dumps({key: doc.page_content}).decode()) for doc in document]
         elif isinstance(document, Document):
-            documents = Document(page_content=orjson_dumps({key: document.page_content}, indent_2=False))
+            documents = Document(page_content=orjson.dumps({key: document.page_content}).decode())
         else:
             msg = f"Expected Document or list of Documents, got {type(document)}"
             raise TypeError(msg)
