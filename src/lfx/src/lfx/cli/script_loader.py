@@ -117,7 +117,7 @@ def extract_message_from_result(results: list) -> str:
             message: Message = result.result_dict.results["message"]
             try:
                 # Parse the JSON to get just the text content
-                return message.model_dump_json()
+                return json.dumps(message.model_dump(), ensure_ascii=False)
             except (json.JSONDecodeError, AttributeError):
                 # Fallback to string representation
                 return str(message)
