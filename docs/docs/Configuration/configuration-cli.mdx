@@ -56,10 +56,13 @@ uv run langflow api-key [OPTIONS]
 
 ### langflow copy-db
 
-Copy the database files to the current directory, which is the directory containing `__main__.py`.
-You can find this directory by running `which langflow`.
-
+Copy the database files to the current directory.
 Copy the Langflow database files, `langflow.db` and `langflow-pre.db` (if they exist), from the cache directory to the current directory.
+
+:::note
+The current directory is the directory containing `__main__.py`.
+You can find this directory by running `which langflow`.
+:::
 
 ```bash
 langflow copy-db

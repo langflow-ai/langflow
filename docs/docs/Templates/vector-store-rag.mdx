@@ -13,14 +13,15 @@ This enables **vector search**, a more powerful and context-aware search.
 
 We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account) as the vector database for this starter flow, but you can follow along with any of Langflow's vector database options.
 
+
 ## Prerequisites
 
-* [Install and start Langflow](/get-started-installation)
-* Create an [OpenAI API key](https://platform.openai.com/api-keys)
-* Create an [Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html)
-* Create an [Astra application token scoped to your database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token)
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
+- [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with the following:
+	- An Astra DB application token scoped to read and write to the database
+	- A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
 
-You can use an existing [collection](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or create a new collection through the **Astra DB** component.
 
 ## Open Langflow and start a new project
 
@@ -64,7 +65,7 @@ The **Retriever Flow** (top of the screen) embeds the user's queries into vector
 	Complete the **Name**, **Cloud provider**, and **Region** fields, and then click **Create**. **Database creation takes a few minutes**.
 	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
 	:::info
-	If your collection use the Astra vectorize NVIDIA integration, the **Embedding Model** port is removed, because the collection already generates embeddings with the integrated NVIDIA model. The component fetches the data from the collection, and uses the same model to generate embeddings for queries.
+	If you select a collection embedded with Nvidia through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the Nvidia `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
 	:::
 
 3. If you don't have a collection, create a new one within the component.

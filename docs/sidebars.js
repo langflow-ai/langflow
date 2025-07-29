@@ -146,17 +146,11 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
-            {
-              type: "category",
-              label: "Monitoring",
-              items: [
-                "Integrations/Arize/integrations-arize",
-                "Integrations/integrations-langfuse",
-                "Integrations/integrations-langsmith",
-                "Integrations/integrations-langwatch",
-                "Integrations/integrations-opik",
-              ],
-            },
+            "Integrations/Arize/integrations-arize",
+            "Integrations/integrations-langfuse",
+            "Integrations/integrations-langsmith",
+            "Integrations/integrations-langwatch",
+            "Integrations/integrations-opik",
             "Contributing/contributing-telemetry",
           ],
         },

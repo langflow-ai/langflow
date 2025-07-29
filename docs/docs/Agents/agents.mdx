@@ -96,7 +96,7 @@ You can configure the **Agent** component to use your preferred provider and mod
 
 :::tip
 Many optional **Agent** component input parameters are hidden by default in the visual editor.
-You can access all component parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+You can view and toggle all parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 :::
 
 ### Provider and model
@@ -154,6 +154,9 @@ For more information, see [Store chat memory](/memory#store-chat-memory) and [**
 
 ### Additional parameters
 
+Many optional **Agent** component input parameters are hidden by default in the visual editor.
+You can view and toggle all parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
 With the **Agent** component, the available parameters can change depending on the selected provider and model.
 For example, some models support additional modes, arguments, or features like chat memory and temperature.
 
@@ -163,16 +166,9 @@ Some additional input parameters include the following:
 * **Handle Parse Errors** (`handle_parsing_errors`): When enabled (`true`), this setting allows the agent to fix errors, like typos, when analyzing user input.
 * **Verbose** (`verbose`): When enabled (`true`), this setting records detailed logging output for debugging and analysis.
 
-To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
-
 ## Agent component output
 
 The **Agent** component outputs a **Response** (`response`) that is [`Message` data](/data-types#message) containing the agent's raw response to the query.
 
 Typically, this is passed to a **Chat Output** component to return the response in a human-readable format.
 It can also be passed to other components if you need to process the response further before, or in addition to, returning it to the user.
-
-## See also
-
-* [**Agent** and **MCP Tools** components](/components-agents)
-* [Configure tools for agents](/agents-tools)
