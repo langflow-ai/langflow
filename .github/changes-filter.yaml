@@ -84,3 +84,6 @@ database:
   - "src/frontend/src/controllers/**"
   - "src/frontend/tests/core/features/**"
   - "src/frontend/tests/extended/features/**"
+
+mainpage:
+  - "src/frontend/src/pages/MainPage/**"
