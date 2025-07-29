@@ -353,6 +353,8 @@ def run(
             host=host,
             port=port,
             log_level=log_level,
+            ssl_keyfile=ssl_key_file_path,
+            ssl_certfile=ssl_cert_file_path,
             reload=False,
             workers=get_number_of_workers(workers),
             loop="asyncio",
