@@ -1,31 +1,10 @@
-import {
-  type Connection,
-  type Edge,
-  type OnNodeDrag,
-  type OnSelectionChangeParams,
-  ReactFlow,
-  reconnectEdge,
-  type SelectionDragHandler,
-} from "@xyflow/react";
-import { AnimatePresence } from "framer-motion";
-import _, { cloneDeep } from "lodash";
-import {
-  type KeyboardEvent,
-  type MouseEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
-  COLOR_OPTIONS,
-  NOTE_NODE_MIN_HEIGHT,
-  NOTE_NODE_MIN_WIDTH,
+    COLOR_OPTIONS,
+    NOTE_NODE_MIN_HEIGHT,
+    NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import CustomLoader from "@/customization/components/custom-loader";
@@ -34,13 +13,34 @@ import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
-import { cn, isSupportedNodeTypes } from "@/utils/utils";
+import { isSupportedNodeTypes } from "@/utils/utils";
+import {
+    type Connection,
+    type Edge,
+    type NodeChange,
+    type OnNodeDrag,
+    type OnSelectionChangeParams,
+    ReactFlow,
+    reconnectEdge,
+    type SelectionDragHandler,
+} from "@xyflow/react";
+import _, { cloneDeep } from "lodash";
+import {
+    type KeyboardEvent,
+    type MouseEvent,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
-  INVALID_SELECTION_ERROR_ALERT,
-  UPLOAD_ALERT_LIST,
-  UPLOAD_ERROR_ALERT,
-  WRONG_FILE_ERROR_ALERT,
+    INVALID_SELECTION_ERROR_ALERT,
+    UPLOAD_ALERT_LIST,
+    UPLOAD_ERROR_ALERT,
+    WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -49,35 +49,35 @@ import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
 import type {
-  AllNodeType,
-  EdgeType,
-  NoteNodeType,
+    AllNodeType,
+    EdgeType,
+    NoteNodeType,
 } from "../../../../types/flow";
 import {
-  generateFlow,
-  generateNodeFromFlow,
-  getNodeId,
-  isValidConnection,
-  scapeJSONParse,
-  updateIds,
-  validateSelection,
+    generateFlow,
+    generateNodeFromFlow,
+    getNodeId,
+    isValidConnection,
+    scapeJSONParse,
+    updateIds,
+    validateSelection,
 } from "../../../../utils/reactflowUtils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
-import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import FlowBuildingComponent from "../flowBuildingComponent";
+import {
+    MemoizedBackground,
+    MemoizedCanvasControls,
+    MemoizedLogCanvasControls,
+    MemoizedSidebarTrigger,
+} from "./MemoizedComponents";
 import HelperLines from "./components/helper-lines";
 import {
-  getHelperLines,
-  getSnapPosition,
-  HelperLinesState,
+    getHelperLines,
+    getSnapPosition,
+    HelperLinesState,
 } from "./helpers/helper-lines";
-import {
-  MemoizedBackground,
-  MemoizedCanvasControls,
-  MemoizedLogCanvasControls,
-  MemoizedSidebarTrigger,
-} from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 

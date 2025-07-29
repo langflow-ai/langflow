@@ -32,8 +32,9 @@ export const MemoizedCanvasControls = memo(
         variant="ghost"
         size="icon"
         className="group rounded flex items-center justify-center ml-1"
-
-        onClick={() => {
+        title="Add sticky note"
+        onClick={(e) => {
+          e.stopPropagation();
           setIsAddingNote(true);
           const shadowBox = document.getElementById("shadow-box");
           if (shadowBox) {
@@ -45,7 +46,6 @@ export const MemoizedCanvasControls = memo(
       >
         <IconComponent name="sticky-note" className="!h-5 !w-5 text-muted-foreground group-hover:text-primary" />
       </Button>
-
     </CanvasControls>
   ),
 );

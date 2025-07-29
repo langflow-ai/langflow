@@ -69,14 +69,11 @@ export const CustomControlButton = ({
   );
 };
 
-// New component for dropdown control buttons
+// Component for dropdown control buttons with keyboard shortcuts
 const DropdownControlButton = ({
-  iconName = "",
   tooltipText,
   onClick,
   disabled,
-  backgroundClasses,
-  iconClasses,
   testId,
   name = "",
   shortcut = "",
@@ -91,20 +88,15 @@ const DropdownControlButton = ({
       onClick={onClick}
       variant="ghost"
       disabled={disabled}
-      title={testId?.replace(/_/g, " ")}
+      title={tooltipText}
     >
-      <div
-        className={cn(
-          "flex flex-row items-center justify-between w-full h-full",
-          backgroundClasses,
-        )}
-      >
-        <span className="text-muted-foreground text-sm mr-2 text-muted-foreground">
+      <div className="flex flex-row items-center justify-between w-full h-full">
+        <span className="text-muted-foreground text-sm mr-2">
           {name}
         </span>
-        <div className="flex flex-row items-center justify-center gap-1 text-sm text-placeholder-foreground w-[24px]">
-          <div className="mr-1">{getModifierKey()}</div>
-          <div>{shortcut}</div>
+        <div className="flex flex-row items-center justify-center gap-1 text-sm text-placeholder-foreground">
+          <span className="mr-1">{getModifierKey()}</span>
+          <span>{shortcut}</span>
         </div>
       </div>
     </Button>
@@ -112,21 +104,35 @@ const DropdownControlButton = ({
 };
 
 // Helper function to get OS-specific modifier key
-const getModifierKey = () => {
+const getModifierKey = (): string => {
   const os = getOS();
   return os === "macos" ? "⌘" : "Ctrl";
 };
+
+// Helper function to format zoom percentage
+const formatZoomPercentage = (zoom: number): string => {
+  return `${Math.round(zoom * 100)}%`;
+};
+
+// Keyboard shortcuts configuration
+const SHORTCUTS = {
+  ZOOM_IN: { key: '+', code: 'Equal' },
+  ZOOM_OUT: { key: '-', code: 'Minus' },
+  FIT_VIEW: { key: '1', code: 'Digit1' },
+  RESET_ZOOM: { key: '0', code: 'Digit0' },
+} as const;
 
 const selector = (s: ReactFlowState) => ({
   isInteractive: s.nodesDraggable || s.nodesConnectable || s.elementsSelectable,
   minZoomReached: s.transform[2] <= s.minZoom,
   maxZoomReached: s.transform[2] >= s.maxZoom,
+  zoom: s.transform[2],
 });
 
 const CanvasControls = ({ children }) => {
   const store = useStoreApi();
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
-  const { isInteractive, minZoomReached, maxZoomReached } = useStore(
+  const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
+  const { isInteractive, minZoomReached, maxZoomReached, zoom } = useStore(
     selector,
     shallow,
   );
@@ -142,13 +148,51 @@ const CanvasControls = ({ children }) => {
   );
   const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+      
+      if (!isModifierPressed) return;
+
+      switch (event.code) {
+        case SHORTCUTS.ZOOM_IN.code:
+          event.preventDefault();
+          if (!maxZoomReached) {
+            zoomIn();
+          }
+          break;
+        case SHORTCUTS.ZOOM_OUT.code:
+          event.preventDefault();
+          // If we're at or near minimum zoom, reset to 100% instead
+          if (minZoomReached || zoom <= 0.6) {
+            zoomTo(1);
+          } else {
+            zoomOut();
+          }
+          break;
+        case SHORTCUTS.FIT_VIEW.code:
+          event.preventDefault();
+          fitView();
+          break;
+        case SHORTCUTS.RESET_ZOOM.code:
+          event.preventDefault();
+          zoomTo(1);
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached]);
+
   useEffect(() => {
     store.setState({
       nodesDraggable: !isLocked,
       nodesConnectable: !isLocked,
       elementsSelectable: !isLocked,
     });
-  }, [isLocked]);
+  }, [isLocked, store]);
 
   const handleSaveFlow = useCallback(() => {
     const currentFlow = useFlowStore.getState().currentFlow;
@@ -192,7 +236,10 @@ const CanvasControls = ({ children }) => {
     setDropdownOpen(false);
   }, [fitView]);
 
-  const size = "100%"
+  const handleResetZoom = useCallback(() => {
+    zoomTo(1);
+    setDropdownOpen(false);
+  }, [zoomTo]);
 
   return (
     <Panel
@@ -206,17 +253,20 @@ const CanvasControls = ({ children }) => {
           <Separator orientation="vertical" />
         </span>
       )}
-      {/* Dropdown with all controls */}
+      
+      {/* Canvas Controls Dropdown */}
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             data-testid="canvas_controls_dropdown"
-            className="group  rounded !p-0"
+            className="group rounded !p-0"
             title="Canvas Controls"
           >
             <ShadTooltip content="Canvas Controls" side="top" align="end">
               <div className="rounded py-2.5 px-1 flex items-center justify-center">
-                <div className="text-sm text-primary pr-2">{size}</div>
+                <div className="text-sm text-primary pr-2">
+                  {formatZoomPercentage(zoom)}
+                </div>
                 <IconComponent
                   name={dropdownOpen ? "ChevronDown" : "ChevronUp"}
                   aria-hidden="true"
@@ -232,13 +282,12 @@ const CanvasControls = ({ children }) => {
           className="flex flex-col w-full"
         >
           <DropdownControlButton
-            // iconName="ZoomIn"
             tooltipText="Zoom In"
             onClick={handleZoomIn}
             disabled={maxZoomReached}
             testId="zoom_in_dropdown"
             name="Zoom In"
-            shortcut={`+`}
+            shortcut={SHORTCUTS.ZOOM_IN.key}
           />
           <DropdownControlButton
             tooltipText="Zoom Out"
@@ -246,53 +295,36 @@ const CanvasControls = ({ children }) => {
             disabled={minZoomReached}
             testId="zoom_out_dropdown"
             name="Zoom Out"
-            shortcut={`-`}
+            shortcut={SHORTCUTS.ZOOM_OUT.key}
           />
           <Separator />
           <DropdownControlButton
-            tooltipText="Fit To Zoom"
-            onClick={handleFitView}
-            testId="fit_view_dropdown"
+            tooltipText="Reset zoom to 100%"
+            onClick={handleResetZoom}
+            testId="reset_zoom_dropdown"
             name="Zoom To 100%"
-            shortcut={`0`}
+            shortcut={SHORTCUTS.RESET_ZOOM.key}
           />
           <DropdownControlButton
-            tooltipText="Fit To Zoom"
+            tooltipText="Fit view to show all nodes"
             onClick={handleFitView}
             testId="fit_view_dropdown"
             name="Zoom To Fit"
-            shortcut={`1`}
+            shortcut={SHORTCUTS.FIT_VIEW.key}
           />
-
-          {/* <DropdownControlButton
-            iconName={isInteractive ? "LockOpen" : "Lock"}
-            tooltipText={isInteractive ? "Lock" : "Unlock"}
-            onClick={onToggleInteractivity}
-            backgroundClasses={isInteractive ? "" : "bg-destructive"}
-            iconClasses={
-              isInteractive ? "" : "text-primary-foreground dark:text-primary"
-            }
-            testId="lock_unlock_dropdown"
-          /> */}
-          {/* <DropdownControlButton
-            iconName={helperLineEnabled ? "FoldHorizontal" : "UnfoldHorizontal"}
-            tooltipText={
-              helperLineEnabled ? "Hide Helper Lines" : "Show Helper Lines"
-            }
-            onClick={onToggleHelperLines}
-            backgroundClasses={cn(helperLineEnabled && "bg-muted")}
-            iconClasses={cn(helperLineEnabled && "text-muted-foreground")}
-            testId="helper_lines_dropdown"
-          /> */}
         </DropdownMenuContent>
       </DropdownMenu>
+      
       <span>
         <Separator orientation="vertical" />
       </span>
+      
+      {/* Help Button */}
       <Button
         variant="ghost"
         size="icon"
         className="group rounded flex items-center justify-center mr-1"
+        title="Help"
       >
         <IconComponent
           name="Circle-Help"
