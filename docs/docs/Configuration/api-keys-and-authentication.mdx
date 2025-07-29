@@ -10,7 +10,7 @@ import Icon from "@site/src/components/icon";
 :::warning
 Never expose Langflow ports directly to the internet without proper security measures.
 Disable `LANGFLOW_AUTO_LOGIN`, use a secure `LANGFLOW_SECRET_KEY`, and ensure your Langflow server is behind a reverse proxy with authentication enabled.
-For more information, see [Start a secure Langflow server with authentication](#start-a-secure-langflow-server-with-authentication).
+For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 :::
 
 Authentication credentials help prevent unauthorized access to your Langflow server, flows, and services connected through components.
@@ -19,7 +19,7 @@ There are three types of credentials that you use in Langflow:
 
 * [Langflow API keys](#langflow-api-keys): For authentication with the Langflow API and authorizing server-side Langflow actions like running flows and uploading files.
 * [Component API keys](#component-api-keys): For authentication between Langflow and a service connected through a component, such as a model provider or third-party API.
-* [Authentication environment variables](#authentication-configuration-values): These environment variables configure how Langflow handles user authentication and authorization.
+* [Authentication environment variables](#authentication-environment-variables): These environment variables configure how Langflow handles user authentication and authorization.
 
 ## Langflow API keys
 
