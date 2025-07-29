@@ -1,5 +1,6 @@
 """Constants for field typing used throughout lfx package."""
 
+import importlib.util
 from collections.abc import Callable
 from typing import Text, TypeAlias, TypeVar
 
@@ -161,7 +162,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
 }
 
 # Default import string for component code generation
-DEFAULT_IMPORT_STRING = """from langchain.agents.agent import AgentExecutor
+LANGCHAIN_IMPORT_STRING = """from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -178,6 +179,10 @@ from langchain_core.documents.compressor import BaseDocumentCompressor
 from langchain_core.tools import BaseTool, Tool
 from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
 from langchain_text_splitters import TextSplitter
+"""
+
+
+DEFAULT_IMPORT_STRING = """
 
 from lfx.io import (
     BoolInput,
@@ -205,3 +210,6 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 """
+
+if importlib.util.find_spec("langchain") is not None:
+    DEFAULT_IMPORT_STRING = LANGCHAIN_IMPORT_STRING + DEFAULT_IMPORT_STRING
