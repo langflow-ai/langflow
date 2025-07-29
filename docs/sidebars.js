@@ -139,6 +139,11 @@ module.exports = {
               label: "Use Session IDs"
             },
             "Configuration/configuration-custom-database",
+            {
+              type: "doc",
+              id: "Deployment/deployment-enterprise-database",
+              label: "Database Guide for Enterprise Administrators"
+            },
           ],
         },
         {
