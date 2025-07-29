@@ -43,7 +43,7 @@ lint: dev ## run linters
 # Testing
 test: dev ## run tests
 	@echo "$(GREEN)Running LFX tests...$(NC)"
-	@uv run --package lfx pytest tests/unit -v $(args)
+	@uv run --package lfx pytest tests -v $(args)
 
 test_verbose: dev ## run tests with verbose output
 	@make test args="-v -s"
