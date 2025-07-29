@@ -1,4 +1,3 @@
-```markdown
 ---
 title: "Enable SSL for self-hosted deployments"
 description: "Configure SSL certificates in Langflow using CLI flags or settings files to secure your AI workflows."
@@ -49,11 +48,16 @@ Then configure Langflow:
 langflow --ssl-cert-file-path cert.pem --ssl-key-file-path key.pem
 ```
 
-<Note>
-  Browser warnings with self-signed certificates are expected. For production environments, always use certificates from trusted Certificate Authorities like Let's Encrypt.
-</Note>
+:::warning
+Browser warnings with self-signed certificates are expected.
+For production, always use certificates from a trusted Certificate Authority such as **Let’s Encrypt**.
+:::
 
 ## Windows-Specific Implementation (Critical)
+:::warning
+Browser warnings with self-signed certificates are expected.
+For production, always use certificates from a trusted Certificate Authority such as **Let’s Encrypt**.
+:::
 
 When running Langflow on Windows:
 
@@ -91,7 +95,7 @@ When running Langflow on Windows:
 | Windows SSL not working | Double-check path formatting and run as Administrator if needed |
 | Browser security warning | Expected for self-signed certificates; use trusted CA for production |
 
-<Note>
-  The environment variables <code>LANGFLOW_SSL_CERT_FILE</code> and <code>LANGFLOW_SSL_KEY_FILE</code> are not directly supported. Use CLI flags or set <code>ssl_cert_file</code> and <code>ssl_key_file</code> in your settings file.
-</Note>
-```
+:::tip
+`LANGFLOW_SSL_CERT_FILE` and `LANGFLOW_SSL_KEY_FILE` environment variables are **not** supported.
+Instead, pass `--ssl-cert-file-path` / `--ssl-key-file-path` CLI flags or set `ssl_cert_file` / `ssl_key_file` in your settings file.
+:::
