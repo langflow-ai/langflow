@@ -67,11 +67,18 @@ flags:
     carryforward: true  # Preserve coverage data across builds if missing
 
 # Define coverage components for granular reporting
-components:
-  backend-components:
-    name: "Backend Components" 
-    paths:
-      - src/backend/base/langflow/components/**
+component_management:
+  default_rules:  # default rules that will be inherited by all components
+    statuses:
+      - type: project # in this case every component that doens't have a status defined will have a project type one
+        target: auto
+        branches:
+          - "!main"
+  individual_components:
+    - component_id: backend_components
+      name: "Backend Components"
+      paths:
+        - src/backend/base/langflow/components/**
     # Note: Many components excluded by .coveragerc (bundled + legacy)
     # This tracks coverage of remaining "core" components only
 
