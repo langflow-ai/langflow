@@ -82,9 +82,9 @@ Langflow's resource requirements vary depending on whether you're deploying the 
 
 **Base Requirements**:
 
-* **Runtime**: 2Gi per instance (Langflow Helm Charts - Runtime).
+* **Runtime**: 2Gi per instance.
 * **IDE Backend**: 1Gi per instance.
-* **IDE Frontend**: 512Mi per instance (Langflow Helm Charts - IDE).
+* **IDE Frontend**: 512Mi per instance.
 
 **Factors Affecting RAM Usage**:
 
@@ -195,7 +195,7 @@ Langflow's reliability in production depends on mitigating key failure points, p
 
 **File System Issues**:
 
-* **Impact**: Concurrency issues in file caching (e.g., `/app/data/.cache`) can cause IO errors in multi-instance setups.
+* **Impact**: Concurrency issues in file caching, such as `/app/data/.cache`, can cause IO errors in multi-instance setups.
 * **Mitigation**: Use a shared, POSIX-compliant file system or cloud storage. Avoid ramdisk solutions due to data loss on container shutdown.
 
 **Instance Failures**:
@@ -254,12 +254,12 @@ Running Langflow in production requires robust security measures to protect the 
 
 **Secret Management**:
 
-* Store sensitive data (e.g., API keys) in Kubernetes secrets or external secret managers.
+* Store sensitive data like API keys in Kubernetes secrets or external secret managers.
 * Avoid embedding secrets in flow JSON files.
 
 **Authentication and Authorization**:
 
-* Implement strong authentication for the IDE UI and runtime API (e.g., OAuth, API tokens).
+* Implement strong authentication for the IDE UI and runtime API like OAuth or API tokens.
 * Enforce role-based access control to limit user permissions.
 
 **Data Privacy**:
