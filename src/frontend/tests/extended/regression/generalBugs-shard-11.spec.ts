@@ -49,14 +49,14 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("search api");
-    await page.waitForSelector('[data-testid="searchapiSearch API"]', {
+    await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
       timeout: 1000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("searchapiSearch API")
+      .getByTestId("searchapiSearchApi")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -78,7 +78,7 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await page.getByTestId("title-Search API").first().click();
+    await page.getByTestId("title-SearchApi").first().click();
     await page.getByTestId("tool-mode-button").click();
 
     //connection

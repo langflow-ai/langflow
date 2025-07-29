@@ -171,12 +171,15 @@ jobs:
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
     if: ${{ needs.path-filter.outputs.frontend == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/jest_test.yml
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   test-frontend:
     needs: [path-filter, set-ci-condition]
@@ -204,6 +207,35 @@ jobs:
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
 
+  test-templates:
+    needs: [path-filter, set-ci-condition]
+    name: Test Starter Templates
+    if: ${{ needs.path-filter.outputs.starter-projects == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Test all starter project templates
+        run: |
+          uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
@@ -214,6 +246,7 @@ jobs:
         test-frontend,
         lint-backend,
         test-docs-build,
+        test-templates,
         set-ci-condition,
         path-filter
       ]

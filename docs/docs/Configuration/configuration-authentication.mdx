@@ -36,11 +36,11 @@ The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v
 <details>
 <summary>AUTO_LOGIN and SKIP_AUTH options</summary>
 
-In Langflow versions earlier than 1.5, if `AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
+In Langflow versions earlier than 1.5, if `LANGFLOW_AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
 In this case, API requests don't require a Langflow API key.
 
-In Langflow version 1.5, you can set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true` to skip authentication for API requests.
-However, the `SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
+In Langflow version 1.5, you can set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` to skip authentication for API requests.
+However, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
 </details>
 
 ### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD
@@ -70,38 +70,39 @@ To generate a `LANGFLOW_SECRET_KEY`, follow these steps:
 
 1. Run the command to generate and copy a secret to the clipboard.
 
-<Tabs>
-<TabItem value="unix" label="macOS/Linux">
+        <Tabs>
+        <TabItem value="linux-macos" label="Linux or macOS">
 
-```bash
-# Copy to clipboard (macOS)
-python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
+        ```bash
+        # Copy to clipboard (macOS)
+        python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
 
-# Copy to clipboard (Linux)
-python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
+        # Copy to clipboard (Linux)
+        python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
 
-# Or just print
-python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
-```
-</TabItem>
+        # Or just print
+        python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+        ```
 
-<TabItem value="windows" label="Windows">
+        </TabItem>
+        <TabItem value="Windows" label="Windows">
 
-```bash
-# Copy to clipboard
-python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | clip
+        ```bash
+        # Copy to clipboard
+        python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | clip
 
-# Or just print
-python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
-```
+        # Or just print
+        python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+        ```
 
-</TabItem>
-</Tabs>
+        </TabItem>
+        </Tabs>
 
 2. Paste the value into your `.env` file:
-```text
-LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
-```
+
+    ```text
+    LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
+    ```
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE
 
@@ -134,71 +135,73 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 
 2. Generate a secret key for encrypting sensitive data.
 
-Generate your secret key using one of the following commands:
+    Generate your secret key using one of the following commands:
 
-<Tabs>
-<TabItem value="unix" label="macOS/Linux">
+    <Tabs>
+    <TabItem value="linux-macos" label="Linux or macOS">
 
-```bash
-# Copy to clipboard (macOS)
-python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
+    ```bash
+    # Copy to clipboard (macOS)
+    python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
 
-# Copy to clipboard (Linux)
-python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
+    # Copy to clipboard (Linux)
+    python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
 
-# Or just print
-python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
-```
-</TabItem>
+    # Or just print
+    python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+    ```
 
-<TabItem value="windows" label="Windows">
+    </TabItem>
+    <TabItem value="Windows" label="Windows">
 
-```bash
-# Copy to clipboard
-python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | clip
+    ```bash
+    # Copy to clipboard
+    python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | clip
 
-# Or just print
-python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
-```
+    # Or just print
+    python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+    ```
 
-</TabItem>
-</Tabs>
+    </TabItem>
+    </Tabs>
 
 3. Paste your `LANGFLOW_SECRET_KEY` into the `.env` file.
 
 4. Start Langflow with the configuration from your `.env` file.
 
-```text
-uv run langflow run --env-file .env
-```
+    ```text
+    uv run langflow run --env-file .env
+    ```
 
 5. Verify the server is running. The default location is `http://localhost:7860`.
 
 ### Manage users as an administrator
 
 1. To complete your first-time login as a superuser, go to `http://localhost:7860/login`.
-2. Log in with your superuser credentials:
-* Username: Value of `LANGFLOW_SUPERUSER` (for example, `administrator`)
-* Password: Value of `LANGFLOW_SUPERUSER_PASSWORD` (for example, `securepassword`)
+2. Log in with your superuser credentials.
 
-:::info
-The default values are `langflow` and `langflow`.
-:::
+    * Username: Value of `LANGFLOW_SUPERUSER` (for example, `administrator`)
+    * Password: Value of `LANGFLOW_SUPERUSER_PASSWORD` (for example, `securepassword`)
+
+    The default values are both `langflow`.
 
 3. To manage users on your server, navigate to the `/admin` page at `http://localhost:7860/admin`.
-Click your user profile image, and then click **Admin Page**.
 
-As a superuser, you can create users, set permissions, reset passwords, and delete accounts.
+    Click your user profile image, and then click **Admin Page**.
+
+    As a superuser, you can create users, set permissions, reset passwords, and delete accounts.
 
 4. To create a user, in the Langflow UI, click **New User**, and then complete the following fields:
-* **Username**
-* **Password** and **Confirm Password**
-* Select **Active** and deselect **Superuser** for the new user.
-**Active** users can log into the system and access their flows. **Inactive** users cannot log in or see their flows.
-A **Superuser** has full administrative privileges.
+
+    * **Username**
+    * **Password** and **Confirm Password**
+    * Select **Active** and deselect **Superuser** for the new user.
+    **Active** users can log into the system and access their flows. **Inactive** users cannot log in or see their flows.
+    A **Superuser** has full administrative privileges.
 
 5. To complete user creation, click **Save**.
 Your new user appears in the **Admin Page**.
+
 6. To confirm your new user's functionality, log out of Langflow, and log back in with your new user's credentials.
 Attempt to access the `/admin` page. You should be redirected to the `/flows` page, because the new user is not a superuser.
 

@@ -29,7 +29,7 @@ const FeatureToggles = ({
       {toggles.map((toggle) => (
         <div key={toggle.label} className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="flex gap-2 text-sm font-medium">
+            <span className="flex cursor-default gap-2 text-sm font-medium">
               Show
               <Badge variant={toggle.badgeVariant} size="xq">
                 {toggle.label}
