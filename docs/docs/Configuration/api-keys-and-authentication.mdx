@@ -9,7 +9,7 @@ import Icon from "@site/src/components/icon";
 
 :::warning
 Never expose Langflow ports directly to the internet without proper security measures.
-Disable `LANGFLOW_AUTO_LOGIN`, use a secure `LANGFLOW_SECRET_KEY`, and ensure your Langflow server is behind a reverse proxy with authentication enabled.
+Set `LANGFLOW_AUTO_LOGIN=False`, use a non-default `LANGFLOW_SECRET_KEY`, and deploy your Langflow server behind a reverse proxy with authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 :::
 
@@ -21,27 +21,20 @@ There are three types of credentials that you use in Langflow:
 * [Component API keys](#component-api-keys): For authentication between Langflow and a service connected through a component, such as a model provider or third-party API.
 * [Authentication environment variables](#authentication-environment-variables): These environment variables configure how Langflow handles user authentication and authorization.
 
-## Langflow API keys
+## Langflow API keys {#langflow-api-keys}
 
 You can use Langflow API keys to interact with Langflow programmatically.
 
-The API key has the same permissions and access as the user who created it. This means your API key can only access your own flows, components, and database. You cannot access other users' resources with your own Langflow API keys.
+A Langflow API key has the same permissions and access as the user who created it.
+This means your API key can only access your own flows, components, and database.
+You cannot access other users' resources with your own Langflow API keys.
 
-An API key represents the user who created it. If you create a key as a superuser, then that key will have superuser privileges.
-If you create a key as a regular user, it will have regular user privileges.
+If you create a key as a superuser, then that key has superuser privileges within your Langflow server.
 
-In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
-The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
-
-<details>
-<summary>LANGFLOW_AUTO_LOGIN and LANGFLOW_SKIP_AUTH_AUTO_LOGIN options</summary>
-
-In Langflow versions earlier than 1.5, if `LANGFLOW_AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
-In this case, API requests don't require a Langflow API key.
-
-In Langflow version 1.5, you can set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` to skip authentication for API requests.
-However, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
-</details>
+:::info
+In Langflow version 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is `True`.
+For more information, see [`LANGFLOW_AUTO_LOGIN`](#langflow-auto-login).
+:::
 
 ### Create a Langflow API key
 
@@ -50,112 +43,107 @@ You can generate a Langflow API key with the UI or the CLI.
 The UI-generated key is appropriate for most cases. The CLI-generated key is needed when your Langflow server is running in `--backend-only` mode.
 
 <Tabs>
-  <TabItem value="Langflow UI" label="Langflow UI" default>
+<TabItem value="Langflow UI" label="Langflow UI" default>
 
-    1. In the Langflow UI header, click your profile icon, and then select **Settings**.
-    2. Click **Langflow API Keys**, and then click **Add New**.
-    3. Name your key, and then click **Create API Key**.
-    4. Copy the API key and store it securely.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**, and then click **Add New**.
+3. Name your key, and then click **Create API Key**.
+4. Copy the API key and store it securely.
 
-  </TabItem>
-  <TabItem value="Langflow CLI" label="Langflow CLI">
+</TabItem>
+<TabItem value="Langflow CLI" label="Langflow CLI">
 
-    If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI, because the frontend is not running.
+If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI, because the frontend is not running.
 
-    Depending on your authentication settings, note the following requirements for creating API keys with the Langflow CLI:
+Depending on your authentication settings, note the following requirements for creating API keys with the Langflow CLI:
 
-    * If `AUTO_LOGIN` is `FALSE`, you must be logged in as a superuser.
-    * If `AUTO LOGIN` is `TRUE`, you're already logged in as superuser.
+* If `AUTO_LOGIN` is `FALSE`, you must be logged in as a superuser.
+* If `AUTO LOGIN` is `TRUE`, you're already logged in as superuser.
 
-    To create an API key for a user from the CLI, do the following:
+To create an API key for a user from the CLI, do the following:
 
-    1. In your `.env` file, set `AUTO_LOGIN=FALSE`, and set superuser credentials for your server.
+1. In your `.env` file, set `AUTO_LOGIN=FALSE`, and set superuser credentials for your server.
 
-        ```text
-        LANGFLOW_AUTO_LOGIN=False
-        LANGFLOW_SUPERUSER=administrator
-        LANGFLOW_SUPERUSER_PASSWORD=securepassword
-        ```
+    ```text
+    LANGFLOW_AUTO_LOGIN=False
+    LANGFLOW_SUPERUSER=administrator
+    LANGFLOW_SUPERUSER_PASSWORD=securepassword
+    ```
 
-    2. To confirm your superuser status, call [`GET /users/whoami`](/api-users#get-current-user), and then check that the response contains `"is_superuser": true`:
+2. To confirm your superuser status, call [`GET /users/whoami`](/api-users#get-current-user), and then check that the response contains `"is_superuser": true`:
 
-        ```bash
-        curl -X GET \
-          "$LANGFLOW_URL/api/v1/users/whoami" \
-          -H "accept: application/json" \
-          -H "x-api-key: $LANGFLOW_API_KEY"
-        ```
+    ```bash
+    curl -X GET \
+      "$LANGFLOW_URL/api/v1/users/whoami" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
 
-        <details closed>
-        <summary>Result</summary>
+    <details>
+    <summary>Result</summary>
 
-        ```json
-        {
-          "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
-          "username": "langflow",
-          "profile_image": null,
-          "store_api_key": null,
-          "is_active": true,
-          "is_superuser": true,
-          "create_at": "2025-05-08T17:59:07.855965",
-          "updated_at": "2025-05-29T15:06:56.157860",
-          "last_login_at": "2025-05-29T15:06:56.157016",
-        }
-        ```
+    ```json
+    {
+      "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
+      "username": "langflow",
+      "profile_image": null,
+      "store_api_key": null,
+      "is_active": true,
+      "is_superuser": true,
+      "create_at": "2025-05-08T17:59:07.855965",
+      "updated_at": "2025-05-29T15:06:56.157860",
+      "last_login_at": "2025-05-29T15:06:56.157016",
+    }
+    ```
 
-        </details>
+    </details>
 
-    3. Create an API key:
+3. Create an API key:
 
-        ```shell
-        uv run langflow api-key
-        ```
-  </TabItem>
+    ```shell
+    uv run langflow api-key
+    ```
+
+</TabItem>
 </Tabs>
 
-### Authenticate requests with the Langflow API key
+### Use a Langflow API key
 
-Include your API key in API requests to authenticate requests to Langflow.
-
-API keys allow access only to the flows and components of the specific user who created the key.
+To authenticate Langflow API requests, pass your Langflow API key an `x-api-key` header or query parameter.
 
 <Tabs>
-  <TabItem value="HTTP header" label="HTTP header" default>
+<TabItem value="header" label="HTTP header" default>
 
-    To use the API key when making API requests, include the API key in the HTTP header:
+```shell
+curl -X POST \
+  "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID?stream=false" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{"inputs": {"text":""}, "tweaks": {}}'
+```
 
-        ```shell
-        curl -X POST \
-          "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false" \
-          -H 'Content-Type: application/json' \
-          -H 'x-api-key: LANGFLOW_API_KEY' \
-          -d '{"inputs": {"text":""}, "tweaks": {}}'
-        ```
+</TabItem>
+<TabItem value="parameter" label="Query parameter">
 
-  </TabItem>
-  <TabItem value="Query parameter" label="Query parameter">
+```shell
+curl -X POST \
+  "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID?x-api-key=$LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": {"text":""}, "tweaks": {}}'
+```
 
-    To pass the API key as a query parameter:
-
-        ```shell
-        curl -X POST \
-          "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?x-api-key=LANGFLOW_API_KEY" \
-          -H 'Content-Type: application/json' \
-          -d '{"inputs": {"text":""}, "tweaks": {}}'
-        ```
-
-  </TabItem>
+</TabItem>
 </Tabs>
 
 For more information about forming Langflow API requests, see [Get started with the Langflow API](/api-reference-api-examples) and [Trigger flows with the Langflow API](/concepts-publish).
 
 ### Revoke an API key
 
-To revoke an API key and delete it from your Langflow settings, do the following:
+To revoke and delete an API key, do the following:
 
-    1. In the Langflow UI header, click your profile icon, and then select **Settings**.
-    2. Click **Langflow API Keys**.
-    3. Select the keys you want to delete, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**.
+3. Select the keys you want to delete, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
 This action immediately invalidates the key and prevents it from being used again.
 
@@ -175,168 +163,199 @@ This section describes the available authentication configuration variables.
 
 You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
-### LANGFLOW_AUTO_LOGIN
+### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
-Langflow **does not** allow users to have simultaneous or shared access to flows.
-If `AUTO_LOGIN` is enabled and user management is disabled (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment, but it is not password protected. If two users access the same flow, Langflow saves only the work of the last user to save.
+Langflow doesn't allow users to have simultaneous or shared access to flows in the Langflow UI.
 
-```bash
-LANGFLOW_AUTO_LOGIN=True
-```
+If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. The login form is required to access the Langflow UI, and Langflow API requests require a Langflow API key.
+If `false`, you must also set [`LANGFLOW_SUPERUSER` and `LANGFLOW__SUPERUSER_PASSWORD`](#langflow-superuser).
 
-In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
+If `LANGFLOW_AUTO_LOGIN=True`, Langflow bypasses UI authentication.
+If you also disable user management (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment without password protection. If two users access the same flow, Langflow saves only the work of the most recent user.
+
+#### AUTO_LOGIN and API authentication in version 1.5 and later
+
+In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is `True`.
 The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
 
 <details>
-<summary>AUTO_LOGIN and SKIP_AUTH options</summary>
+<summary>LANGFLOW_AUTO_LOGIN and LANGFLOW_SKIP_AUTH_AUTO_LOGIN options</summary>
 
 In Langflow versions earlier than 1.5, if `LANGFLOW_AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
 In this case, API requests don't require a Langflow API key.
 
-In Langflow version 1.5, you can set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` to skip authentication for API requests.
-However, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
+In Langflow version 1.5, you can set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` _and_ `LANGFLOW_AUTO_LOGIN=true` to skip authentication for API requests _and_ allow automatic login as a superuser for all users.
+This is a temporary bypass for backwards compatibility, and the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
+
+If either `LANGFLOW_AUTO_LOGIN` or `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` are set to `false`, then authentication is required.
 </details>
 
-### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD
+### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD {#langflow-superuser}
 
-These environment variables are only relevant when `LANGFLOW_AUTO_LOGIN` is set to `False`.
-They specify the username and password for the superuser, which is essential for administrative tasks:
+These variables specify the username and password for the Langflow server's superuser.
 
 ```text
 LANGFLOW_SUPERUSER=administrator
 LANGFLOW_SUPERUSER_PASSWORD=securepassword
 ```
 
-### LANGFLOW_SECRET_KEY
+They are required if `LANGFLOW_AUTO_LOGIN=false`.
+Otherwise, they aren't relevant.
 
-This environment variable holds a secret key used for encrypting sensitive data like API keys.
+If required and not set, the default values are `langflow` and `langflow`.
+
+For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled) and the CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
+
+### LANGFLOW_SECRET_KEY {#langflow-secret-key}
+
+This environment variable stores a secret key used for encrypting sensitive data like API keys.
 Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for secret key encryption.
 
-```text
-LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
-```
+If no secret key is provided, Langflow automatically generates one.
 
-If no secret key is provided, Langflow automatically generates one. This is not recommended for production environments, especially in multi-instance deployments like Kubernetes, where auto-generated keys can't decrypt data encrypted by other instances.
+However, you should generate and explicitly set your own key in production environments.
+This is particularly important for multi-instance deployments like Kubernetes to ensure consistent encryption across instances.
 
-To generate a `LANGFLOW_SECRET_KEY`, follow these steps:
+To generate a secret encryption key for `LANGFLOW_SECRET_KEY`, do the following:
 
 1. Run the command to generate and copy a secret to the clipboard.
+
     <Tabs>
-      <TabItem value="unix" label="macOS/Linux">
+    <TabItem value="unix" label="macOS or Linux">
+
+    * **macOS**: Generate a secret key and copy it to the clipboard:
+
         ```bash
-        # Copy to clipboard (macOS)
         python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
-        # Copy to clipboard (Linux)
+        ```
+
+    * **Linux**: Generate a secret key and copy it to the clipboard:
+
+        ```bash
         python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
-        # Or just print
+        ```
+
+    * **Unix**: Generate a secret key and print it to the terminal to manually copy it:
+
+        ```bash
         python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
         ```
-      </TabItem>
-      <TabItem value="windows" label="Windows">
+
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+
+    * Generate a secret key and copy it to the clipboard:
+
         ```bash
         python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
         ```
-      </TabItem>
+
+    * Generate a secret key and print it to the terminal to manually copy it:
+
+        ```bash
+
+        # Or just print
+        python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+        ```
+
+    </TabItem>
     </Tabs>
 
 2. Paste the value into your `.env` file:
-        ```text
-        LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
-        ```
 
-### LANGFLOW_NEW_USER_IS_ACTIVE
+    ```text
+    LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
+    ```
 
-When this option is set to `True`, new users are automatically activated and can log in without requiring explicit activation by the superuser from the **Admin page**.
-By default, this variable is set to `False`, and requires new users to be activated by a superuser.
+### LANGFLOW_NEW_USER_IS_ACTIVE {#langflow-new-user-is-active}
+
+When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), a superuser must explicitly activate a new user's account before they can sign in to the Langflow UI.
+The superuser can also deactivate a user's account as needed.
+
+When `LANGFLOW_NEW_USER_IS_ACTIVE=True`, new user accounts are automatically activated.
+
 ```text
 LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
 
+For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
+
 ## Start a Langflow server with authentication enabled
 
-This section shows you how to configure Langflow with proper authentication using the variables described in [Authentication environment variables](/api-keys-and-authentication#authentication-environment-variables).
+This section shows you how to use the [authentication environment variables](/api-keys-and-authentication#authentication-environment-variables) to deploy a Langflow server with authentication enabled.
+This involves disabling automatic login, setting superuser credentials, generating a secret encryption key, and enabling user management.
 
-Once you are logged in as a Langflow superuser, create a new user on your server and [Create a Langflow API key](#create-a-langflow-api-key) for secure programmatic access.
+This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.
 
-With authentication enabled, users must log in with valid credentials, and you'll need to create Langflow API keys for programmatic access to the API. This configuration is recommended for any deployment where multiple users will access the system or when exposing Langflow to a network.
+With authentication enabled, all users must sign in to the Langflow UI with valid credentials, and API requests require authentication with a Langflow API key.
+Additionally, you must sign in as a superuser to manage users and [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.
 
 ### Start the Langflow server
 
-1. Create a `.env` file with the following configuration:
+1. Create a `.env` file with the following variables:
+
+    ```text
+    LANGFLOW_AUTO_LOGIN=False
+    LANGFLOW_SUPERUSER=
+    LANGFLOW_SUPERUSER_PASSWORD=
+    LANGFLOW_SECRET_KEY=
+    LANGFLOW_NEW_USER_IS_ACTIVE=False
+    ```
+
+    Your `.env` file can have other environment variables.
+    This example focuses on authentication variables.
+
+2. Set `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD` to your desired superuser credentials.
+
+    For a one-time test, you can use basic credentials like `administrator` and `password`.
+    Strong, securely-stored credentials are recommended for true development and production environments.
+
+3. Recommended: Generate and set a `LANGFLOW_SECRET_KEY` for encrypting sensitive data.
+
+    If you don't set a secret key, Langflow generates one automatically, but this isn't recommended for production environments.
+
+    For instructions on generating at setting a secret key, see [`LANGFLOW_SECRET_KEY`](#langflow-secret-key).
+
+4. Save your `.env` file with the populated variables. For example:
 
     ```text
     LANGFLOW_AUTO_LOGIN=False
     LANGFLOW_SUPERUSER=administrator
     LANGFLOW_SUPERUSER_PASSWORD=securepassword
-    LANGFLOW_SECRET_KEY=your_generated_key
+    LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
     LANGFLOW_NEW_USER_IS_ACTIVE=False
     ```
 
-2. Optionally, generate a secret key for encrypting sensitive data.
-Langflow creates a secret key automatically.
-Generate your secret key using one of the following commands:
-
-    <Tabs>
-      <TabItem value="unix" label="macOS/Linux">
-
-      ```bash
-      # Copy to clipboard (macOS)
-      python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
-
-      # Copy to clipboard (Linux)
-      python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
-
-      # Or just print
-      python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
-      ```
-      </TabItem>
-
-      <TabItem value="windows" label="Windows">
-
-      ```bash
-      # Copy to clipboard
-      python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | clip
-
-      # Or just print
-      python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
-      ```
-
-      </TabItem>
-    </Tabs>
-
-3. Paste your `LANGFLOW_SECRET_KEY` into the `.env` file.
-
-4. Start Langflow with the configuration from your `.env` file.
+5. Start Langflow with the configuration from your `.env` file:
 
     ```text
     uv run langflow run --env-file .env
     ```
 
-5. Verify the server is running. The default location is `http://localhost:7860`.
+6. Verify the server is running. The default location is `http://localhost:7860`.
+
+Next, you can add users to your Langflow server to collaborate with others on flows.
 
 ### Manage users as an administrator
 
 1. To complete your first-time login as a superuser, go to `http://localhost:7860/login`.
-2. Log in with your superuser credentials.
-The default values are `langflow` and `langflow`. The defaults are only used if you don't set the environment variables.
-    * Username: Value of `LANGFLOW_SUPERUSER` (for example, `administrator`)
-    * Password: Value of `LANGFLOW_SUPERUSER_PASSWORD` (for example, `securepassword`)
 
-3. To manage users on your server, navigate to the `/admin` page at `http://localhost:7860/admin`.
-Click your user profile image, and then click **Admin Page**.
+    If you aren't using the default location, replace `localhost:7860` with your server's address.
 
-As a superuser, you can create users, set permissions, reset passwords, and delete accounts.
+2. Log in with the superuser credentials you set in your `.env` (`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`).
 
-4. To create a user, in the Langflow UI, click **New User**, and then complete the following fields:
-    * **Username**
-    * **Password** and **Confirm Password**
-    * Select **Active** and deselect **Superuser** for the new user.
-    **Active** users can log into the system and access their flows. **Inactive** users cannot log in or see their flows.
-    A **Superuser** has full administrative privileges.
+3. To manage users on your server, navigate to `/admin`, such as `http://localhost:7860/admin`, click your user profile image, and then click **Admin Page**.
 
-5. To complete user creation, click **Save**.
-Your new user appears in the **Admin Page**.
-6. To confirm your new user's functionality, log out of Langflow, and log back in with your new user's credentials.
-Attempt to access the `/admin` page. You should be redirected to the `/flows` page, because the new user is not a superuser.
+    As a superuser, you can add users, set permissions, reset passwords, and delete accounts.
 
-You have started a Langflow server with authentication enabled.
+4. To add a user, click **New User**, and then complete the user account form:
+
+    1. Enter a username and password.
+    2. To activate the account immediately, select **Active**. Inactive users cannot sign in or access flows they created before becoming inactive.
+    3. Deselect **Superuser** if you don't want the user to have full administrative privileges.
+    4. Click **Save**. The new user appears in the **Admin Page**.
+
+5. To test the new user's access, sign out of Langflow, and then sign in with the new user's credentials.
+
+    Try to access the `/admin` page.
+    You are redirected to the `/flows` page if the new user isn't a superuser.

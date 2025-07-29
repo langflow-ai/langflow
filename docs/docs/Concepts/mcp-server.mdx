@@ -158,7 +158,8 @@ For more information, see the [Cursor's MCP documentation](https://docs.cursor.c
 
 ### MCP server authentication and environment variables {#authentication}
 
-If your Langflow server requires authentication ([`LANGFLOW_AUTO_LOGIN=false`](/environment-variables#LANGFLOW_AUTO_LOGIN)), then you must supply a [Langflow API key](/api-keys-and-authentication) in your MCP client configuration.
+You must provide a Langflow API key in your MCP client configuration if your [Langflow server has authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+
 When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
 
 ```json
