@@ -186,8 +186,8 @@ lfx = { workspace = true }
 [tool.uv.workspace]
 members = [
     "src/backend/base",
- ".",
- "src/lfx",
+    ".",
+    "src/lfx",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -311,8 +311,7 @@ ignore = [
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
 
     # Rules that are TODOs
-    "ANN",
-    "D10"
+    "ANN"
 ]
 
 # Preview rules that are not yet activated
