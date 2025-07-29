@@ -5,6 +5,7 @@ from io import StringIO
 from pathlib import Path
 
 import typer
+from loguru import logger
 
 from lfx.cli.script_loader import (
     extract_structured_result,
@@ -12,6 +13,7 @@ from lfx.cli.script_loader import (
     find_graph_variable,
     load_graph_from_script,
 )
+from lfx.cli.validation import validate_global_variables_for_env
 from lfx.load import load_flow_from_json
 from lfx.schema.schema import InputValueRequest
 
@@ -47,6 +49,11 @@ def execute(
         show_default=True,
         help="Read JSON flow content from stdin (alternative to script_path)",
     ),
+    check_variables: bool | None = typer.Option(
+        default=True,
+        show_default=True,
+        help="Check global variables for environment compatibility",
+    ),
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -62,6 +69,7 @@ def execute(
         output_format: Format for output (json, text, message, or result)
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
+        check_variables: Check global variables for environment compatibility
     """
 
     def verbose_print(message: str) -> None:
@@ -148,6 +156,7 @@ def execute(
             verbose_print("\nLoading and executing JSON flow...")
             graph = load_flow_from_json(script_path, disable_logs=not verbose)
     except Exception as e:
+        logger.exception("Failed to load graph")
         verbose_print(f"✗ Failed to load graph: {e}")
         if temp_file_to_cleanup:
             try:
@@ -161,6 +170,25 @@ def execute(
     verbose_print("Preparing graph for execution...")
     try:
         graph.prepare()
+
+        # Validate global variables for environment compatibility
+
+        if check_variables:
+            validation_errors = validate_global_variables_for_env(graph)
+            if validation_errors:
+                verbose_print("✗ Global variable validation failed:")
+            for error in validation_errors:
+                verbose_print(f"  - {error}")
+            if temp_file_to_cleanup:
+                try:
+                    Path(temp_file_to_cleanup).unlink()
+                    verbose_print(f"✓ Cleaned up temporary file: {temp_file_to_cleanup}")
+                except OSError:
+                    pass
+            if validation_errors:
+                raise typer.Exit(1)
+        else:
+            verbose_print("✓ Global variable validation skipped")
     except Exception as e:
         verbose_print(f"✗ Failed to prepare graph: {e}")
         if temp_file_to_cleanup:

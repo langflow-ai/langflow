@@ -64,6 +64,11 @@ def serve_command(
         "--stdin",
         help="Read JSON flow content from stdin (alternative to script_path)",
     ),
+    check_variables: bool = typer.Option(
+        True,  # noqa: FBT003
+        "--check-variables/--no-check-variables",
+        help="Check global variables for environment compatibility",
+    ),
 ) -> None:
     """Serve LFX flows as a web API.
 
@@ -209,6 +214,19 @@ def serve_command(
         try:
             graph.prepare()
             verbose_print("✓ Graph prepared successfully")
+
+            # Validate global variables for environment compatibility
+            if check_variables:
+                from lfx.cli.validation import validate_global_variables_for_env
+
+                validation_errors = validate_global_variables_for_env(graph)
+                if validation_errors:
+                    verbose_print("✗ Global variable validation failed:")
+                    for error in validation_errors:
+                        verbose_print(f"  - {error}")
+                    raise typer.Exit(1)
+            else:
+                verbose_print("✓ Global variable validation skipped")
         except Exception as e:
             verbose_print(f"✗ Failed to prepare graph: {e}")
             raise typer.Exit(1) from e
