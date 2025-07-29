@@ -213,12 +213,10 @@ This environment variable holds a secret key used for encrypting sensitive data 
 Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for secret key encryption.
 
 ```text
-LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
+LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
 ```
 
-:::warning
 If no secret key is provided, Langflow automatically generates one. This is not recommended for production environments, especially in multi-instance deployments like Kubernetes, where auto-generated keys can't decrypt data encrypted by other instances.
-:::
 
 To generate a `LANGFLOW_SECRET_KEY`, follow these steps:
 
@@ -243,28 +241,28 @@ To generate a `LANGFLOW_SECRET_KEY`, follow these steps:
 
 2. Paste the value into your `.env` file:
         ```text
-        LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
+        LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
         ```
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE
 
 When this option is set to `True`, new users are automatically activated and can log in without requiring explicit activation by the superuser from the **Admin page**.
-By default, this variable is set to `False`.
+By default, this variable is set to `False`, and requires new users to be activated by a superuser.
 ```text
 LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
 
-## Start a secure Langflow server with authentication
+## Start a Langflow server with authentication enabled
 
-Start a secure Langflow server with authentication enabled and secret key encryption using the variables described in [Authentication configuration values](/api-keys-and-authentication#authentication-configuration-values).
+This section shows you how to configure Langflow with proper authentication using the variables described in [Authentication environment variables](/api-keys-and-authentication#authentication-environment-variables).
 
-Once you are logged in as a superuser, create a new user on your server.
+Once you are logged in as a superuser, create a new user on your server and generate API keys for secure programmatic access.
+
+With authentication enabled, users must log in with valid credentials, and you'll need to create Langflow API keys for programmatic access to the API. This configuration is recommended for any deployment where multiple users will access the system or when exposing Langflow to a network.
 
 ### Start the Langflow server
 
-1. Create a `.env` file and populate it with values for a secure server.
-This server creates a superuser account, requires users to log in before using Langflow, and encrypts secrets with `LANGFLOW_SECRET_KEY`, which is added in the next step.
-Create a `.env` file with the following configuration:
+1. Create a `.env` file with the following configuration:
 
     ```text
     LANGFLOW_AUTO_LOGIN=False
@@ -274,7 +272,8 @@ Create a `.env` file with the following configuration:
     LANGFLOW_NEW_USER_IS_ACTIVE=False
     ```
 
-2. Generate a secret key for encrypting sensitive data.
+2. Optionally, generate a secret key for encrypting sensitive data.
+Langflow creates a secret key automatically.
 Generate your secret key using one of the following commands:
 
     <Tabs>
@@ -319,7 +318,7 @@ Generate your secret key using one of the following commands:
 
 1. To complete your first-time login as a superuser, go to `http://localhost:7860/login`.
 2. Log in with your superuser credentials.
-The default values are `langflow` and `langflow`.
+The default values are `langflow` and `langflow`. The defaults are only used if you don't set the environment variables.
     * Username: Value of `LANGFLOW_SUPERUSER` (for example, `administrator`)
     * Password: Value of `LANGFLOW_SUPERUSER_PASSWORD` (for example, `securepassword`)
 
@@ -340,4 +339,4 @@ Your new user appears in the **Admin Page**.
 6. To confirm your new user's functionality, log out of Langflow, and log back in with your new user's credentials.
 Attempt to access the `/admin` page. You should be redirected to the `/flows` page, because the new user is not a superuser.
 
-You have started a secure Langflow server with authentication enabled and secret key encryption.
+You have started a Langflow server with authentication enabled.
