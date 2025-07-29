@@ -38,6 +38,10 @@ To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `TRUE`, or
 * If `AUTO_LOGIN` is `FALSE`, you must be logged in as a superuser.
 * If `AUTO LOGIN` is `TRUE`, you're already logged in as superuser.
 
+:::note
+API key creation via the CLI requires superuser privileges. If [`LANGFLOW_ENABLE_SUPERUSER_CLI`](./environment-variables.mdx#LANGFLOW_ENABLE_SUPERUSER_CLI) is set to `false`, you cannot create superusers via the CLI, which may prevent API key creation if no superuser exists.
+:::
+
 For more information, see [API keys](/configuration-api-keys).
 
 ```bash
@@ -133,6 +137,10 @@ python -m langflow run [OPTIONS]
 ### langflow superuser
 
 Create a superuser account.
+
+:::note
+If [`LANGFLOW_ENABLE_SUPERUSER_CLI`](./environment-variables.mdx#LANGFLOW_ENABLE_SUPERUSER_CLI) is set to `false`, this command will be disabled for security reasons, typically in production environments.
+:::
 
 ```bash
 langflow superuser [OPTIONS]

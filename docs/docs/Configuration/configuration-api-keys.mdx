@@ -50,6 +50,10 @@ Depending on your authentication settings, note the following requirements for c
 * If `AUTO_LOGIN` is `FALSE`, you must be logged in as a superuser.
 * If `AUTO LOGIN` is `TRUE`, you're already logged in as superuser.
 
+:::note
+API key creation via the CLI requires superuser privileges. If [`LANGFLOW_ENABLE_SUPERUSER_CLI`](./environment-variables.mdx#LANGFLOW_ENABLE_SUPERUSER_CLI) is set to `false`, you cannot create superusers via the CLI, which may prevent API key creation if no superuser exists.
+:::
+
 To create an API key for a user from the CLI, do the following:
 
 1. In your `.env` file, set `AUTO_LOGIN=FALSE`, and set superuser credentials for your server.
