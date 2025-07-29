@@ -1,0 +1,63 @@
+---
+sidebar_label: "Enable SSL"
+sidebar_position: 7
+---
+
+# Enabling SSL
+
+This guide will walk you through the process of enabling SSL on your self-hosted Langflow instance.
+
+## Prerequisites
+
+- A self-hosted Langflow instance.
+- A domain name pointing to your server's IP address.
+- A valid SSL certificate and private key. You can obtain a free certificate from [Let's Encrypt](https://letsencrypt.org/).
+
+## Configuration
+
+You can enable SSL in Langflow using either environment variables or CLI flags.
+
+### Using Environment Variables
+
+Set the following environment variables:
+
+- `LANGFLOW_SSL_CERT_FILE`: Path to your SSL certificate file.
+- `LANGFLOW_SSL_KEY_FILE`: Path to your SSL private key file.
+
+For example:
+
+```bash
+export LANGFLOW_SSL_CERT_FILE=/path/to/your/certificate.crt
+export LANGFLOW_SSL_KEY_FILE=/path/to/your/private.key
+langflow
+```
+
+### Using CLI Flags
+
+You can also use the `--ssl-cert-file-path` and `--ssl-key-file-path` flags when starting Langflow:
+
+```bash
+langflow --ssl-cert-file-path /path/to/your/certificate.crt --ssl-key-file-path /path/to/your/private.key
+```
+
+## Generating a Self-Signed Certificate (for testing)
+
+If you don't have a valid SSL certificate, you can generate a self-signed certificate for testing purposes using `openssl`:
+
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+This will create two files: `cert.pem` (your certificate) and `key.pem` (your private key). You can then use these files with Langflow:
+
+```bash
+langflow --ssl-cert-file-path cert.pem --ssl-key-file-path key.pem
+```
+
+When you access your Langflow instance in your browser, you will likely see a warning that the certificate is not trusted. This is expected for self-signed certificates. You can choose to proceed to access your instance.
+
+## Troubleshooting
+
+- **"File not found" error**: Make sure the paths to your certificate and key files are correct.
+- **"Permission denied" error**: Ensure that the user running Langflow has read permissions for the certificate and key files.
+- **Browser warning**: If you are using a self-signed certificate, your browser will display a warning. This is normal. For production environments, it is highly recommended to use a valid certificate from a trusted Certificate Authority (CA).
