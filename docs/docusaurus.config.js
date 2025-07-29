@@ -207,6 +207,20 @@ const config = {
             from: ["/guides-data-message", "/configuration-objects"],
           },
           {
+            to: "/concepts-flows",
+            from: [
+              "/travel-planning-agent",
+              "/starter-projects-travel-planning-agent",
+              "/tutorials-travel-planning-agent",
+              "/starter-projects-dynamic-agent/",
+              "/simple-agent",
+              "/math-agent",
+              "/starter-projects-simple-agent",
+              "/starter-projects-math-agent",
+              "/tutorials-math-agent",
+            ],
+          },
+          {
             to: "/blog-writer",
             from: [
               "/starter-projects-blog-writer",
@@ -228,27 +242,10 @@ const config = {
             ],
           },
           {
-            to: "/simple-agent",
-            from: [
-              "/math-agent",
-              "/starter-projects-simple-agent",
-              "/starter-projects-math-agent",
-              "/tutorials-math-agent",
-            ],
-          },
-          {
             to: "/sequential-agent",
             from: [
               "/starter-projects-sequential-agent",
               "/tutorials-sequential-agent",
-            ],
-          },
-          {
-            to: "/travel-planning-agent",
-            from: [
-              "/starter-projects-travel-planning-agent",
-              "/tutorials-travel-planning-agent",
-              "/starter-projects-dynamic-agent/",
             ],
           },
           {
