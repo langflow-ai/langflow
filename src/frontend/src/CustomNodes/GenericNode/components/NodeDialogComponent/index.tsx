@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -16,7 +17,6 @@ import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
-import { useState } from "react";
 
 interface NodeDialogProps {
   open: boolean;
@@ -137,15 +137,19 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
 
   const handleSuccessCallback = () => {
     // Check if this is a knowledge base creation
-    const isKnowledgeBaseCreation = 
+    const isKnowledgeBaseCreation =
       dialogNodeData?.display_name === "Create Knowledge" ||
       dialogNodeData?.name === "create_knowledge_base" ||
-      (dialogNodeData?.description && dialogNodeData.description.toLowerCase().includes("knowledge"));
+      (dialogNodeData?.description &&
+        dialogNodeData.description.toLowerCase().includes("knowledge"));
 
     if (isKnowledgeBaseCreation) {
       // Get the knowledge base name from field values
-      const knowledgeBaseName = fieldValues["01_new_kb_name"] || fieldValues["new_kb_name"] || "Knowledge Base";
-      
+      const knowledgeBaseName =
+        fieldValues["01_new_kb_name"] ||
+        fieldValues["new_kb_name"] ||
+        "Knowledge Base";
+
       setSuccessData({
         title: `Knowledge Base "${knowledgeBaseName}" created successfully!`,
       });
@@ -164,7 +168,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
         databaseName,
         ...otherFields,
       });
-      
+
       setTimeout(() => {
         handleCloseDialog();
       }, 5000);

@@ -8,9 +8,9 @@ import {
 } from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
+import type { ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
-import type { ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
@@ -61,10 +61,12 @@ const TableComponent = forwardRef<
     ) => {
       try {
         // Check if this is a single-toggle column (Vectorize or Identifier)
-        const isSingleToggleColumn = 
-          colField === "Vectorize" || colField === "vectorize" ||
-          colField === "Identifier" || colField === "identifier";
-        
+        const isSingleToggleColumn =
+          colField === "Vectorize" ||
+          colField === "vectorize" ||
+          colField === "Identifier" ||
+          colField === "identifier";
+
         if (!isSingleToggleColumn) return true;
 
         // Safeguard: ensure we have rowData array
@@ -138,10 +140,12 @@ const TableComponent = forwardRef<
             (props.editable as Array<string>).includes(newCol.field ?? ""))
         ) {
           // Special handling for single-toggle columns (Vectorize and Identifier)
-          const isSingleToggleColumn = 
-            newCol.field === "Vectorize" || newCol.field === "vectorize" ||
-            newCol.field === "Identifier" || newCol.field === "identifier";
-            
+          const isSingleToggleColumn =
+            newCol.field === "Vectorize" ||
+            newCol.field === "vectorize" ||
+            newCol.field === "Identifier" ||
+            newCol.field === "identifier";
+
           if (isSingleToggleColumn) {
             newCol = {
               ...newCol,
@@ -192,10 +196,12 @@ const TableComponent = forwardRef<
           ).find((field) => field.field === newCol.field);
           if (field) {
             // Special handling for single-toggle columns (Vectorize and Identifier)
-            const isSingleToggleColumn = 
-              newCol.field === "Vectorize" || newCol.field === "vectorize" ||
-              newCol.field === "Identifier" || newCol.field === "identifier";
-              
+            const isSingleToggleColumn =
+              newCol.field === "Vectorize" ||
+              newCol.field === "vectorize" ||
+              newCol.field === "Identifier" ||
+              newCol.field === "identifier";
+
             if (isSingleToggleColumn) {
               newCol = {
                 ...newCol,
@@ -392,10 +398,12 @@ const TableComponent = forwardRef<
           onColumnMoved={onColumnMoved}
           onCellValueChanged={(e) => {
             // Handle single-toggle column changes (Vectorize and Identifier) to refresh grid editability
-            const isSingleToggleField = 
-              e.colDef.field === "Vectorize" || e.colDef.field === "vectorize" ||
-              e.colDef.field === "Identifier" || e.colDef.field === "identifier";
-              
+            const isSingleToggleField =
+              e.colDef.field === "Vectorize" ||
+              e.colDef.field === "vectorize" ||
+              e.colDef.field === "Identifier" ||
+              e.colDef.field === "identifier";
+
             if (isSingleToggleField) {
               setTimeout(() => {
                 if (
@@ -412,16 +420,19 @@ const TableComponent = forwardRef<
                   // Also refresh all other single-toggle column cells if they exist
                   const allSingleToggleColumns = realRef.current.api
                     .getColumns()
-                    ?.filter(
-                      (col) => {
-                        const field = col.getColDef().field;
-                        return (
-                          field === "Vectorize" || field === "vectorize" ||
-                          field === "Identifier" || field === "identifier"
-                        );
-                      },
-                    );
-                  if (allSingleToggleColumns && allSingleToggleColumns.length > 0) {
+                    ?.filter((col) => {
+                      const field = col.getColDef().field;
+                      return (
+                        field === "Vectorize" ||
+                        field === "vectorize" ||
+                        field === "Identifier" ||
+                        field === "identifier"
+                      );
+                    });
+                  if (
+                    allSingleToggleColumns &&
+                    allSingleToggleColumns.length > 0
+                  ) {
                     const columnFields = allSingleToggleColumns
                       .map((col) => col.getColDef().field)
                       .filter((field): field is string => field !== undefined);
