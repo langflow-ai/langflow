@@ -5,6 +5,7 @@ import TableNodeComponent from "@/components/core/parameterRenderComponent/compo
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
+import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import DictComponent from "./components/dictComponent";
@@ -22,7 +23,6 @@ import { StrRenderComponent } from "./components/strRenderComponent";
 import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
 import type { InputProps, NodeInfoType } from "./types";
-import CustomInputFileComponent from "@/customization/components/custom-input-file";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -243,7 +243,7 @@ export function ParameterRenderComponent({
       case "connect": {
         const link =
           templateData?.options?.find(
-            (option: any) => option?.name === templateValue
+            (option: any) => option?.name === templateValue,
           )?.link || "";
 
         return (
