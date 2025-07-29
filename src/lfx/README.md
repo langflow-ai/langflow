@@ -30,11 +30,14 @@ uv run lfx serve my_flow.json
 
 Serve a Langflow workflow as a REST API.
 
+**Important:** You must set the `LANGFLOW_API_KEY` environment variable before running the serve command.
+
 ```bash
+export LANGFLOW_API_KEY=your-secret-key
 uv run lfx serve my_flow.json --port 8000
 ```
 
-This creates a FastAPI server with your flow available at `/flows/{flow_id}/run`.
+This creates a FastAPI server with your flow available at `/flows/{flow_id}/run`. The actual flow ID will be displayed when the server starts.
 
 **Options:**
 
@@ -42,17 +45,25 @@ This creates a FastAPI server with your flow available at `/flows/{flow_id}/run`
 - `--port, -p`: Port to bind server (default: 8000)
 - `--verbose, -v`: Show diagnostic output
 - `--env-file`: Path to .env file
+- `--log-level`: Set logging level (debug, info, warning, error, critical)
+- `--check-variables/--no-check-variables`: Check global variables for environment compatibility (default: check)
 
 **Example:**
 
 ```bash
-# Start server (set LANGFLOW_API_KEY=your_key first)
-uv run lfx serve chatbot.json --host 0.0.0.0 --port 8000
+# Set API key (required)
+export LANGFLOW_API_KEY=your-secret-key
 
-# Call API
-curl -X POST http://localhost:8000/flows/{flow_id}/run \
+# Start server
+uv run lfx serve simple_chat.json --host 0.0.0.0 --port 8000
+
+# The server will display the flow ID, e.g.:
+# Flow ID: af9edd65-6393-58e2-9ae5-d5f012e714f4
+
+# Call API using the displayed flow ID
+curl -X POST http://localhost:8000/flows/af9edd65-6393-58e2-9ae5-d5f012e714f4/run \
   -H "Content-Type: application/json" \
-  -H "x-api-key: your_api_key" \
+  -H "x-api-key: your-secret-key" \
   -d '{"input_value": "Hello, world!"}'
 ```
 
@@ -66,20 +77,33 @@ uv run lfx run my_flow.json "What is AI?"
 
 **Options:**
 
-- `--format, -f`: Output format (json, text, message, result)
+- `--format, -f`: Output format (json, text, message, result) (default: json)
 - `--verbose`: Show diagnostic output
+- `--input-value`: Input value to pass to the graph (alternative to positional argument)
+- `--flow-json`: Inline JSON flow content as a string
+- `--stdin`: Read JSON flow from stdin
+- `--check-variables/--no-check-variables`: Check global variables for environment compatibility (default: check)
 
 **Examples:**
 
 ```bash
 # Basic execution
-uv run lfx run chatbot.json "Tell me a joke"
+uv run lfx run simple_chat.json "Tell me a joke"
 
-# JSON output
-uv run lfx run data_processor.json "input text" --format json
+# JSON output (default)
+uv run lfx run simple_chat.json "input text" --format json
 
-# From stdin
-echo '{"nodes": [...]}' | uv run lfx run --stdin
+# Text output only
+uv run lfx run simple_chat.json "Hello" --format text
+
+# Using --input-value flag
+uv run lfx run simple_chat.json --input-value "Hello world"
+
+# From stdin (requires --input-value for input)
+echo '{"nodes": [...]}' | uv run lfx run --stdin --input-value "Your message"
+
+# Inline JSON
+uv run lfx run --flow-json '{"nodes": [...]}' --input-value "Test"
 ```
 
 ## Input Sources
