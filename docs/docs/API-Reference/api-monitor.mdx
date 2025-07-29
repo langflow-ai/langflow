@@ -12,9 +12,6 @@ Use the `/monitor` endpoint to monitor and modify messages passed between Langfl
 
 Retrieve Vertex builds for a specific flow.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
@@ -22,8 +19,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -385,15 +382,11 @@ curl -X GET \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Delete Vertex builds
 
 Delete Vertex builds for a specific flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
@@ -402,15 +395,14 @@ curl -X DELETE \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 204 No Content
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Get messages
 
@@ -429,9 +421,6 @@ To sort the results, use the `order_by` query parameter.
 
 This example retrieves messages sent by `Machine` and `AI` in a given chat session (`session_id`) and orders the messages by timestamp.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/messages?flow_id=$FLOW_ID&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp" \
@@ -439,8 +428,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 [
@@ -475,17 +464,13 @@ curl -X GET \
 ]
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Delete messages
 
 Delete specific messages by their IDs.
 
-This example deletes the message retrieved in the previous Get messages example.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+This example deletes the message retrieved in the previous `GET /messages` example.
 
 ```bash
 curl -v -X DELETE \
@@ -496,24 +481,20 @@ curl -v -X DELETE \
   -d '["MESSAGE_ID_1", "MESSAGE_ID_2"]'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 204 No Content
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Update message
 
 Update a specific message by its ID.
 
 This example updates the `text` value of message `3ab66cc6-c048-48f8-ab07-570f5af7b160`.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X PUT \
@@ -526,8 +507,8 @@ curl -X PUT \
 }'
 ```
 
-</TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -557,17 +538,13 @@ curl -X PUT \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Update session ID
 
 Update the session ID for messages.
 
 This example updates the `session_ID` value `01ce083d-748b-4b8d-97b6-33adbb6a528a` to `different_session_id`.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X PATCH \
@@ -576,8 +553,8 @@ curl -X PATCH \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 [
@@ -612,15 +589,11 @@ curl -X PATCH \
 ]
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Delete messages by session
 
 Delete all messages for a specific session.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
@@ -629,22 +602,18 @@ curl -X DELETE \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 HTTP/1.1 204 No Content
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Get transactions
 
 Retrieve all transactions, which are interactions between components, for a specific flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -653,8 +622,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -678,8 +647,7 @@ curl -X GET \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## See also
 
