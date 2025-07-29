@@ -8,13 +8,13 @@ import TabItem from '@theme/TabItem';
 
 The [Langflow Integrated Development Environment (IDE)](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
 
-### Prerequisites
+## Prerequisites
 
 - A [Kubernetes](https://kubernetes.io/docs/setup/) cluster
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 - [Helm](https://helm.sh/docs/intro/install/)
 
-### Prepare a Kubernetes cluster
+## Prepare a Kubernetes cluster
 
 This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you can use any Kubernetes cluster.
 
@@ -30,7 +30,7 @@ This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you 
 	kubectl config use-context minikube
 	```
 
-### Install the Langflow IDE Helm chart
+## Install the Langflow IDE Helm chart
 
 1. Add the repository to Helm and update it.
 
@@ -51,7 +51,7 @@ This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you 
 	kubectl get pods -n langflow
 	```
 
-### Access the Langflow IDE
+## Access the Langflow IDE
 
 Enable local port forwarding to access Langflow from your local machine.
 
@@ -69,7 +69,7 @@ Now you can do the following:
 - Access the Langflow API at `http://localhost:7860`.
 - Access the Langflow UI at `http://localhost:8080`.
 
-### Configure the Langflow version
+## Configure the Langflow version
 
 Langflow is deployed with the `latest` version by default.
 
@@ -85,7 +85,7 @@ langflow:
       tag: "1.0.0a59"
 ```
 
-### Configure external storage
+## Configure external storage
 
 By default, the chart deploys a SQLite database stored in a local persistent disk. If you want to use an external PostgreSQL database, you can configure it in two ways:
 
@@ -125,7 +125,7 @@ langflow:
       enabled: false
 ```
 
-### Configure scaling
+## Configure scaling
 
 Scale the number of replicas and resources for both frontend and backend services:
 
@@ -153,8 +153,8 @@ langflow:
       #   memory: 512Mi
 ```
 
-:::note
 If your flow relies on a shared state, such as built-in chat memory, you need to set up a shared database when scaling horizontally.
-:::
+
+## See also
 
 For more examples of `langflow-ide` deployment, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/langflow-ide).
