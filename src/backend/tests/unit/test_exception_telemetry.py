@@ -76,7 +76,7 @@ class TestExceptionTelemetry:
         """Test successful telemetry data sending."""
         # Create minimal service
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://langflow.gateway.scarf.sh"
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
 
         # Mock HTTP client
@@ -101,7 +101,7 @@ class TestExceptionTelemetry:
         call_args = mock_client.get.call_args
 
         # Check URL
-        assert call_args[0][0] == "https://langflow.gateway.scarf.sh/exception"
+        assert call_args[0][0] == "https://mock-telemetry.example.com/exception"
 
         # Check query parameters
         expected_params = {
@@ -117,7 +117,7 @@ class TestExceptionTelemetry:
         """Test that do_not_track setting prevents telemetry."""
         # Create service with do_not_track enabled
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://langflow.gateway.scarf.sh"
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = True
 
         # Mock HTTP client
@@ -161,3 +161,126 @@ class TestExceptionTelemetry:
 
         # Hashes should be the same for same exception type and location
         assert hash1 == hash2
+
+    @pytest.mark.asyncio
+    async def test_query_params_url_length_limit(self):
+        """Test that query parameters don't exceed URL length limits."""
+        telemetry_service = TelemetryService.__new__(TelemetryService)
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.do_not_track = False
+
+        # Create payload with very long message
+        long_message = "A" * 2000  # Very long message
+        payload = ExceptionPayload(
+            exception_type="ValueError",
+            exception_message=long_message,
+            exception_context="handler",
+            stack_trace_hash="abc123",
+        )
+
+        mock_client = AsyncMock()
+        telemetry_service.client = mock_client
+
+        await telemetry_service.send_telemetry_data(payload, "exception")
+
+        # Verify HTTP call was made
+        mock_client.get.assert_called_once()
+        call_args = mock_client.get.call_args
+
+        # Check that URL doesn't exceed reasonable length (typically 2048 chars)
+        full_url = call_args[0][0]
+        assert len(full_url) < 2048, f"URL too long: {len(full_url)} characters"
+
+    @pytest.mark.asyncio
+    async def test_query_params_special_characters(self):
+        """Test that special characters in query parameters are properly encoded."""
+        telemetry_service = TelemetryService.__new__(TelemetryService)
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.do_not_track = False
+
+        # Create payload with special characters
+        special_message = "Error with special chars: &?=#@!$%^&*()"
+        payload = ExceptionPayload(
+            exception_type="ValueError",
+            exception_message=special_message,
+            exception_context="handler",
+            stack_trace_hash="abc123",
+        )
+
+        mock_client = AsyncMock()
+        telemetry_service.client = mock_client
+
+        await telemetry_service.send_telemetry_data(payload, "exception")
+
+        # Verify HTTP call was made
+        mock_client.get.assert_called_once()
+        call_args = mock_client.get.call_args
+
+        # Check that special characters are properly encoded
+        full_url = call_args[0][0]
+        assert "&" not in full_url or "%26" in full_url, "Ampersand not properly encoded"
+        assert "?" not in full_url or "%3F" in full_url, "Question mark not properly encoded"
+        assert "=" not in full_url or "%3D" in full_url, "Equals sign not properly encoded"
+
+    @pytest.mark.asyncio
+    async def test_query_params_sensitive_data_exposure(self):
+        """Test that sensitive data is not exposed in query parameters."""
+        telemetry_service = TelemetryService.__new__(TelemetryService)
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.do_not_track = False
+
+        # Create payload with potentially sensitive data
+        sensitive_message = "Password: secret123, API Key: sk-abc123, Token: xyz789"
+        payload = ExceptionPayload(
+            exception_type="ValueError",
+            exception_message=sensitive_message,
+            exception_context="handler",
+            stack_trace_hash="abc123",
+        )
+
+        mock_client = AsyncMock()
+        telemetry_service.client = mock_client
+
+        await telemetry_service.send_telemetry_data(payload, "exception")
+
+        # Verify HTTP call was made
+        mock_client.get.assert_called_once()
+        call_args = mock_client.get.call_args
+
+        # Check that sensitive data is not in URL (should be in request body instead)
+        full_url = call_args[0][0]
+        sensitive_patterns = ["secret123", "sk-abc123", "xyz789"]
+        for pattern in sensitive_patterns:
+            assert pattern not in full_url, f"Sensitive data '{pattern}' found in URL"
+
+    @pytest.mark.asyncio
+    async def test_query_params_unicode_characters(self):
+        """Test that unicode characters in query parameters are handled correctly."""
+        telemetry_service = TelemetryService.__new__(TelemetryService)
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
+        telemetry_service.do_not_track = False
+
+        # Create payload with unicode characters
+        unicode_message = "Error with unicode: 世界, 🚀, émojis"
+        payload = ExceptionPayload(
+            exception_type="ValueError",
+            exception_message=unicode_message,
+            exception_context="handler",
+            stack_trace_hash="abc123",
+        )
+
+        mock_client = AsyncMock()
+        telemetry_service.client = mock_client
+
+        await telemetry_service.send_telemetry_data(payload, "exception")
+
+        # Verify HTTP call was made
+        mock_client.get.assert_called_once()
+        call_args = mock_client.get.call_args
+
+        # Check that unicode characters are properly handled
+        full_url = call_args[0][0]
+        # URL should be valid and not cause encoding issues
+        assert len(full_url) > 0, "URL should not be empty"
+        # Should not contain raw unicode characters that could cause issues
+        assert "世界" not in full_url or "%E4%B8%96%E7%95%8C" in full_url

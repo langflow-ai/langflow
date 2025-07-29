@@ -15,7 +15,7 @@ class TestExceptionTelemetryIntegration:
         """Integration test verifying the exact HTTP request sent to Scarf."""
         # Create service
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://langflow.gateway.scarf.sh"
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
 
         # Mock successful response
@@ -51,7 +51,7 @@ class TestExceptionTelemetryIntegration:
         call_args = mock_client.get.call_args
 
         # Verify URL
-        assert call_args[0][0] == "https://langflow.gateway.scarf.sh/exception"
+        assert call_args[0][0] == "https://mock-telemetry.example.com/exception"
 
         # Verify parameters match our schema
         params = call_args[1]["params"]
@@ -66,7 +66,7 @@ class TestExceptionTelemetryIntegration:
         """Integration test for exception telemetry service without FastAPI."""
         # Create service with mocked dependencies
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://langflow.gateway.scarf.sh"
+        telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
 
         # Mock the async queue and HTTP client
@@ -99,7 +99,7 @@ class TestExceptionTelemetryIntegration:
         assert len(http_calls) == 1
         call = http_calls[0]
 
-        assert call["url"] == "https://langflow.gateway.scarf.sh/exception"
+        assert call["url"] == "https://mock-telemetry.example.com/exception"
         assert call["path"] == "exception"
         assert call["payload"]["exceptionType"] == "RuntimeError"
         assert call["payload"]["exceptionMessage"] == "Service integration test"
