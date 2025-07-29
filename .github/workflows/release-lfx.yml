@@ -28,6 +28,32 @@ on:
         required: true
         type: boolean
         default: true
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to release (e.g., 0.1.0)"
+        required: true
+        type: string
+      publish_pypi:
+        description: "Publish to PyPI"
+        required: true
+        type: boolean
+        default: true
+      build_docker:
+        description: "Build and publish Docker images"
+        required: true
+        type: boolean
+        default: true
+      pre_release:
+        description: "Mark as pre-release"
+        required: false
+        type: boolean
+        default: false
+      create_github_release:
+        description: "Create GitHub release"
+        required: true
+        type: boolean
+        default: true
 
 env:
   PYTHON_VERSION: "3.13"
