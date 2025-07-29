@@ -231,7 +231,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Cloud Platforms",
+          label: "Cloud platforms",
           items: [
             {
               type: "doc",
