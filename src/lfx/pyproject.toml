@@ -112,6 +112,17 @@ builtins-allowed-modules = [ "io", "logging", "socket"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short --strict-markers --disable-warnings --color=yes"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow-running tests",
+    "asyncio: Async tests"
+]
 
 [dependency-groups]
 dev = [

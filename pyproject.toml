@@ -250,13 +250,21 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 timeout = 120
 timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["src/backend/tests"]
+testpaths = ["src/backend/tests", "src/lfx/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
+markers = [
+    "async_test",
+    "api_key_required",
+    "no_blockbuster",
+    "benchmark",
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow-running tests"
+]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
