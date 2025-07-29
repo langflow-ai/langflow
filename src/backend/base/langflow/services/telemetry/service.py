@@ -133,7 +133,7 @@ class TelemetryService(Service):
         # Get the stack trace and hash it for grouping similar exceptions
         stack_trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
         stack_trace_str = "".join(stack_trace)
-        # Use SHA256 for better security practices, truncated for grouping
+        #  Hash stack trace for grouping similar exceptions, truncated to save space
         stack_trace_hash = hashlib.sha256(stack_trace_str.encode()).hexdigest()[:16]
 
         payload = ExceptionPayload(
