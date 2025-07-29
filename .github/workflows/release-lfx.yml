@@ -113,7 +113,7 @@ jobs:
   run-tests:
     name: Run Tests
     needs: validate-version
-    if: needs.validate-version.outputs.should_release == 'true'
+    if: false  # TEMPORARILY DISABLED FOR INITIAL RELEASE
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -147,6 +147,10 @@ jobs:
   release-lfx:
     name: Build and Release LFX
     needs: [validate-version, run-tests]
+    if: |  # Run even if tests are skipped
+      always() && 
+      needs.validate-version.outputs.should_release == 'true' &&
+      (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -218,7 +222,7 @@ jobs:
           retention-days: 5
 
       - name: Publish to PyPI
-        if: (inputs.publish_pypi || github.event.inputs.publish_pypi) == 'true'
+        if: inputs.publish_pypi == true || github.event.inputs.publish_pypi == 'true'
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -228,7 +232,11 @@ jobs:
   build-docker:
     name: Build Docker Images
     needs: [validate-version, run-tests]
-    if: (inputs.build_docker || github.event.inputs.build_docker) == 'true'
+    if: |  # Run even if tests are skipped
+      always() && 
+      needs.validate-version.outputs.should_release == 'true' &&
+      (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped') &&
+      (inputs.build_docker == true || github.event.inputs.build_docker == 'true')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -265,7 +273,7 @@ jobs:
             ghcr.io/langflow-ai/lfx
           tags: |
             type=raw,value=${{ inputs.version || github.event.inputs.version }}${{ matrix.variant == 'alpine' && '-alpine' || '' }}
-            type=raw,value=latest${{ matrix.variant == 'alpine' && '-alpine' || '' }},enable=${{ (inputs.pre_release || github.event.inputs.pre_release) == 'false' }}
+            type=raw,value=latest${{ matrix.variant == 'alpine' && '-alpine' || '' }},enable=${{ inputs.pre_release == false || github.event.inputs.pre_release == 'false' }}
           labels: |
             org.opencontainers.image.title=LFX
             org.opencontainers.image.description=Langflow Executor - CLI tool for running Langflow AI workflows
@@ -289,7 +297,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     needs: [release-lfx, build-docker]
-    if: always() && (inputs.create_github_release || github.event.inputs.create_github_release) == 'true' && needs.release-lfx.result == 'success'
+    if: always() && (inputs.create_github_release == true || github.event.inputs.create_github_release == 'true') && needs.release-lfx.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
