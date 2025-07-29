@@ -118,6 +118,7 @@ dev = [
     "asgi-lifespan>=2.1.0",
     "blockbuster>=1.5.25",
     "coverage>=7.9.2",
+    "hypothesis>=6.136.3",
     "pytest>=8.4.1",
     "pytest-asyncio>=0.26.0",
     "ruff>=0.9.10",
