@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe(
   "Auto_login tests",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database", "@mainpage"] },
 
   () => {
     test(
