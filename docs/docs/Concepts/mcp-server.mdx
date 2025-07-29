@@ -19,7 +19,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 * A [Langflow project](/concepts-flows#projects) with at least one flow.
 
-* Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
+* Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer if you want to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
 * [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok) and an [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) if you want to [deploy a public Langflow server](/deployment-public-server).
 
@@ -38,7 +38,7 @@ The following steps explain how to limit the exposed flows and, optionally, rena
 1. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
 Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Share > MCP Server**.
 
-    The **Auto install** and **JSON** tabs display options for connecting MCP clients to the the project's MCP server.
+    The **Auto install** and **JSON** tabs display options for connecting MCP clients to the project's MCP server.
 
     The **Flows/Tools** section lists the flows that are currently being served as tools.
 
@@ -105,7 +105,7 @@ However, you can connect any [MCP-compatible client](https://modelcontextprotoco
 
 :::important
 Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-In this is not the case, configure the client with the code in the **JSON** tab.
+If this is not the case, use the **JSON** option to configure the MCP server.
 :::
 
 1. Install [Cursor](https://docs.cursor.com/get-started/installation).
@@ -144,7 +144,7 @@ For example:
     If you have [deployed a public Langflow server](/deployment-public-server), the address is automatically included.
 
     :::important
-    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
+    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN=false`](/environment-variables#LANGFLOW_AUTO_LOGIN)), you must include your Langflow API key in the configuration.
     For more information, see [MCP server authentication and environment variables](#authentication).
     :::
 
