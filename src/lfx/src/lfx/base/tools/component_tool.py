@@ -17,9 +17,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from langchain_core.callbacks import Callbacks
-    from langflow.events.event_manager import EventManager
 
     from lfx.custom.custom_component.component import Component
+    from lfx.events.event_manager import EventManager
     from lfx.inputs.inputs import InputTypes
     from lfx.io import Output
     from lfx.schema.content_block import ContentBlock
