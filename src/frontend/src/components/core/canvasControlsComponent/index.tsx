@@ -1,3 +1,15 @@
+import {
+  ControlButton,
+  Panel,
+  type ReactFlowState,
+  useReactFlow,
+  useStore,
+  useStoreApi,
+} from "@xyflow/react";
+import { cloneDeep } from "lodash";
+import { useCallback, useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { shallow } from "zustand/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -11,18 +23,6 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn, getOS } from "@/utils/utils";
-import {
-  ControlButton,
-  Panel,
-  type ReactFlowState,
-  useReactFlow,
-  useStore,
-  useStoreApi,
-} from "@xyflow/react";
-import { cloneDeep } from "lodash";
-import { useCallback, useEffect, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
-import { shallow } from "zustand/shallow";
 
 type CustomControlButtonProps = {
   iconName?: string;
@@ -54,7 +54,12 @@ export const CustomControlButton = ({
       title={testId?.replace(/_/g, " ")}
     >
       <ShadTooltip content={tooltipText} side="right">
-        <div className={cn("rounded p-2.5 flex items-center justify-center", backgroundClasses)}>
+        <div
+          className={cn(
+            "rounded p-2.5 flex items-center justify-center",
+            backgroundClasses,
+          )}
+        >
           <IconComponent
             name={iconName}
             aria-hidden="true"
@@ -192,7 +197,7 @@ const CanvasControls = ({ children }) => {
     setDropdownOpen(false);
   }, [fitView]);
 
-  const size = "100%"
+  const size = "100%";
 
   return (
     <Panel

@@ -1,11 +1,14 @@
-import { default as ForwardedIconComponent, default as IconComponent } from "@/components/common/genericIconComponent";
+import { Background, Panel } from "@xyflow/react";
+import { memo } from "react";
+import {
+  default as ForwardedIconComponent,
+  default as IconComponent,
+} from "@/components/common/genericIconComponent";
 import CanvasControls from "@/components/core/canvasControlsComponent";
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
-import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -32,7 +35,6 @@ export const MemoizedCanvasControls = memo(
         variant="ghost"
         size="icon"
         className="group rounded flex items-center justify-center ml-1"
-
         onClick={() => {
           setIsAddingNote(true);
           const shadowBox = document.getElementById("shadow-box");
@@ -43,9 +45,11 @@ export const MemoizedCanvasControls = memo(
           }
         }}
       >
-        <IconComponent name="sticky-note" className="!h-5 !w-5 text-muted-foreground group-hover:text-primary" />
+        <IconComponent
+          name="sticky-note"
+          className="!h-5 !w-5 text-muted-foreground group-hover:text-primary"
+        />
       </Button>
-
     </CanvasControls>
   ),
 );
