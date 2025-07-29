@@ -148,7 +148,6 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
             f"Skipped {len(failed_count)} component class{'es' if len(failed_count) != 1 else ''} "
             f"in module '{modname}' due to instantiation failure: {', '.join(failed_count)}"
         )
-    logger.debug(f"Processed module {modname}")
     return (top_level, module_components)
 
 
