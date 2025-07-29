@@ -21,7 +21,7 @@ async function getAuthToken(request: any) {
 
 test(
   "vector store from starter projects should have its connections and nodes on the flow",
-  { tag: ["@release", "@starter-projects"] },
+  { tag: ["@release", "@starter-projects", "@mainpage"] },
   async ({ page, request }) => {
     // Get authentication token
     const authToken = await getAuthToken(request);

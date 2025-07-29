@@ -4,7 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to select flows with different methods and perform bulk actions",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release", "@workspace", "@mainpage"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
