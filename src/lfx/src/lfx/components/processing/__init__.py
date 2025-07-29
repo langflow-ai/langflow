@@ -36,7 +36,6 @@ __all__ = [
     "MergeDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
-    "ParseDataFrameComponent",
     "ParseJSONDataComponent",
     "ParserComponent",
     "PromptComponent",
