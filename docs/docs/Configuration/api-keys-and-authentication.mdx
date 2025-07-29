@@ -7,16 +7,28 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Langflow uses API keys and authentication to control and secure access to user data, flows, and administrative actions on the server.
+:::warning
+Never expose Langflow ports directly to the internet without proper security measures.
+Disable `LANGFLOW_AUTO_LOGIN`, use a secure `LANGFLOW_SECRET_KEY`, and ensure your Langflow server is behind a reverse proxy with authentication enabled.
+For more information, see [Start a secure Langflow server with authentication](#start-a-secure-langflow-server-with-authentication).
+:::
 
-## Create a Langflow API key
+Authentication credentials help prevent unauthorized access to your Langflow server, flows, and services connected through components.
+
+There are three types of credentials that you use in Langflow:
+
+* [Langflow API keys](#langflow-api-keys): For authentication with the Langflow API and authorizing server-side Langflow actions like running flows and uploading files.
+* [Component API keys](#component-api-keys): For authentication between Langflow and a service connected through a component, such as a model provider or third-party API.
+* [Authentication environment variables](#authentication-configuration-values): These environment variables configure how Langflow handles user authentication and authorization.
+
+## Langflow API keys
 
 You can use Langflow API keys to interact with Langflow programmatically.
 
-The API key has the same permissions and access as you do when you launch Langflow. This means your API key can only access your own flows, components, and data. You cannot access other users' resources with your own Langflow API keys.
+The API key has the same permissions and access as the user who created it. This means your API key can only access your own flows, components, and database. You cannot access other users' resources with your own Langflow API keys.
 
 An API key represents the user who created it. If you create a key as a superuser, then that key will have superuser privileges.
-Anyone who has that key can authorize superuser actions through the Langflow API, including user management and flow management.
+If you create a key as a regular user, it will have regular user privileges.
 
 In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
 The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
@@ -30,6 +42,8 @@ In this case, API requests don't require a Langflow API key.
 In Langflow version 1.5, you can set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` to skip authentication for API requests.
 However, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
 </details>
+
+### Create a Langflow API key
 
 You can generate a Langflow API key with the UI or the CLI.
 
@@ -99,7 +113,7 @@ The UI-generated key is appropriate for most cases. The CLI-generated key is nee
   </TabItem>
 </Tabs>
 
-## Authenticate requests with the Langflow API key
+### Authenticate requests with the Langflow API key
 
 Include your API key in API requests to authenticate requests to Langflow.
 
@@ -135,15 +149,7 @@ API keys allow access only to the flows and components of the specific user who 
 
 For more information about forming Langflow API requests, see [Get started with the Langflow API](/api-reference-api-examples) and [Trigger flows with the Langflow API](/concepts-publish).
 
-## Create a Langflow secret key
-
-Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for encrypting sensitive data.
-
-If no `LANGFLOW_SECRET_KEY` is provided, Langflow automatically generates one.
-
-For more information, see [LANGFLOW_SECRET_KEY](#langflow_secret_key).
-
-## Revoke an API key
+### Revoke an API key
 
 To revoke an API key and delete it from your Langflow settings, do the following:
 
@@ -153,20 +159,17 @@ To revoke an API key and delete it from your Langflow settings, do the following
 
 This action immediately invalidates the key and prevents it from being used again.
 
-## Add component API keys to Langflow
+## Component API keys
 
-API keys for external services like OpenAI are added as global variables with the Langflow UI, or sourced from the `.env` file.
+Component API keys authorize access to external services that are called by components in your flows. These are not general application credentials, but specifically the API keys required by individual components to connect to services like model providers, databases, or third-party APIs.
+
+Component API keys are added as global variables with the Langflow UI, or sourced from the `.env` file. When stored as global variables, use the **Credential** type for secure handling of sensitive information.
+
+Component API keys are created and managed within the service provider's platform. Deleting a global variable from Langflow does not delete or invalidate the actual API key in the service provider's system. You must delete or rotate component API keys directly within the service provider's interface or API. Langflow only stores the encrypted value of your keys; it does not have control over the actual credentials.
 
 For more information, see [Global variables](/configuration-global-variables).
 
-## Authentication configuration values
-
-    :::warning
-    Never expose Langflow ports directly to the internet without proper security measures.
-
-    Disable `LANGFLOW_AUTO_LOGIN`, use a secure `LANGFLOW_SECRET_KEY`, and ensure your Langflow server is behind a reverse proxy with authentication enabled.
-    For more information, see [Start a secure Langflow server with authentication](#start-a-secure-langflow-server-with-authentication).
-    :::
+## Authentication environment variables
 
 This section describes the available authentication configuration variables.
 
