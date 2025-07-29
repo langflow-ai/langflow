@@ -367,7 +367,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         # Complex types should be filtered out
         assert "files" not in data_obj.data
-        assert "tags" not in data_obj.data  
+        assert "tags" not in data_obj.data
         assert "nested" not in data_obj.data
 
     def test_metadata_filtering_fallback(
@@ -380,7 +380,8 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         def mock_import(name, *args, **kwargs):
             if name == "langchain_community.vectorstores.utils":
-                raise ImportError("Mocked import error")
+                error_msg = "Mocked import error"
+                raise ImportError(error_msg)
             return original_import(name, *args, **kwargs)
 
         monkeypatch.setattr(builtins, "__import__", mock_import)
