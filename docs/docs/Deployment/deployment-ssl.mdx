@@ -1,63 +1,97 @@
+```markdown
 ---
+title: "Enable SSL for self-hosted deployments"
+description: "Configure SSL certificates in Langflow using CLI flags or settings files to secure your AI workflows."
 sidebar_label: "Enable SSL"
 sidebar_position: 7
 ---
 
 # Enabling SSL
 
-This guide will walk you through the process of enabling SSL on your self-hosted Langflow instance.
+This guide provides precise instructions for enabling SSL on your self-hosted Langflow instance across all platforms.
 
-## Prerequisites
+## Production Setup: Using Let's Encrypt
 
-- A self-hosted Langflow instance.
-- A domain name pointing to your server's IP address.
-- A valid SSL certificate and private key. You can obtain a free certificate from [Let's Encrypt](https://letsencrypt.org/).
+Let's Encrypt provides free TLS certificates to secure your Langflow deployment ("Encryption for Everybody" to more than 600M websites):
 
-## Configuration
-
-You can enable SSL in Langflow using either environment variables or CLI flags.
-
-### Using Environment Variables
-
-Set the following environment variables:
-
-- `LANGFLOW_SSL_CERT_FILE`: Path to your SSL certificate file.
-- `LANGFLOW_SSL_KEY_FILE`: Path to your SSL private key file.
-
-For example:
-
+### 1. Install Certbot
 ```bash
-export LANGFLOW_SSL_CERT_FILE=/path/to/your/certificate.crt
-export LANGFLOW_SSL_KEY_FILE=/path/to/your/private.key
-langflow
+# Linux/macOS
+sudo apt install certbot  # Debian/Ubuntu
+brew install certbot     # macOS
+
+# Windows (run as Administrator)
+choco install certbot
 ```
 
-### Using CLI Flags
-
-You can also use the `--ssl-cert-file-path` and `--ssl-key-file-path` flags when starting Langflow:
-
+### 2. Obtain certificates
 ```bash
-langflow --ssl-cert-file-path /path/to/your/certificate.crt --ssl-key-file-path /path/to/your/private.key
+# All platforms (must have domain pointing to your server)
+certbot certonly --standalone -d your-domain.com
 ```
 
-## Generating a Self-Signed Certificate (for testing)
+### 3. Configure Langflow
+```bash
+langflow --ssl-cert-file-path /etc/letsencrypt/live/your-domain.com/fullchain.pem \
+         --ssl-key-file-path /etc/letsencrypt/live/your-domain.com/privkey.pem
+```
 
-If you don't have a valid SSL certificate, you can generate a self-signed certificate for testing purposes using `openssl`:
+## Testing Setup: Self-Signed Certificates
+
+For development/testing only:
 
 ```bash
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
 ```
 
-This will create two files: `cert.pem` (your certificate) and `key.pem` (your private key). You can then use these files with Langflow:
-
+Then configure Langflow:
 ```bash
 langflow --ssl-cert-file-path cert.pem --ssl-key-file-path key.pem
 ```
 
-When you access your Langflow instance in your browser, you will likely see a warning that the certificate is not trusted. This is expected for self-signed certificates. You can choose to proceed to access your instance.
+<Note>
+  Browser warnings with self-signed certificates are expected. For production environments, always use certificates from trusted Certificate Authorities like Let's Encrypt.
+</Note>
+
+## Windows-Specific Implementation (Critical)
+
+When running Langflow on Windows:
+
+1. Langflow uses Uvicorn directly (without Gunicorn)
+2. SSL **must** be explicitly configured
+3. Without these parameters, Langflow will **only serve HTTP traffic**
+
+### Required Steps for Windows:
+1. Generate or obtain your SSL certificates
+2. Always start Langflow with explicit SSL parameters:
+   ```powershell
+   langflow --ssl-cert-file-path "C:\path\to\certificate.crt" --ssl-key-file-path "C:\path\to\private.key"
+   ```
+
+### Path Formatting Tips:
+- Use **forward slashes** (works best with Python tools):
+  ```powershell
+  langflow --ssl-cert-file-path C:/path/to/certificate.crt
+  ```
+- Or use **double backslashes**:
+  ```powershell
+  langflow --ssl-cert-file-path C:\\path\\to\\certificate.crt
+  ```
+- Or **quote paths with single backslashes**:
+  ```powershell
+  langflow --ssl-cert-file-path "C:\path\to\certificate.crt"
+  ```
 
 ## Troubleshooting
 
-- **"File not found" error**: Make sure the paths to your certificate and key files are correct.
-- **"Permission denied" error**: Ensure that the user running Langflow has read permissions for the certificate and key files.
-- **Browser warning**: If you are using a self-signed certificate, your browser will display a warning. This is normal. For production environments, it is highly recommended to use a valid certificate from a trusted Certificate Authority (CA).
+| Issue | Solution |
+|-------|----------|
+| "File not found" | Verify exact paths to certificate and key files |
+| "Permission denied" | Ensure Langflow process has read access to certificate files |
+| Windows SSL not working | Double-check path formatting and run as Administrator if needed |
+| Browser security warning | Expected for self-signed certificates; use trusted CA for production |
+
+<Note>
+  The environment variables <code>LANGFLOW_SSL_CERT_FILE</code> and <code>LANGFLOW_SSL_KEY_FILE</code> are not directly supported. Use CLI flags or set <code>ssl_cert_file</code> and <code>ssl_key_file</code> in your settings file.
+</Note>
+```
