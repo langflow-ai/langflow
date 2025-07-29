@@ -1,34 +1,8 @@
 name: LFX Release
-run-name: LFX Release ${{ inputs.version || github.event.inputs.version || 'dev' }} by @${{ github.actor }}
+run-name: LFX Release ${{ github.event.inputs.version || 'dev' }} by @${{ github.actor }}
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to release (e.g., 0.1.0)"
-        required: true
-        type: string
-      publish_pypi:
-        description: "Publish to PyPI"
-        required: true
-        type: boolean
-        default: true
-      build_docker:
-        description: "Build and publish Docker images"
-        required: true
-        type: boolean
-        default: true
-      pre_release:
-        description: "Mark as pre-release"
-        required: false
-        type: boolean
-        default: false
-      create_github_release:
-        description: "Create GitHub release"
-        required: true
-        type: boolean
-        default: true
-  workflow_call:
     inputs:
       version:
         description: "Version to release (e.g., 0.1.0)"
@@ -93,27 +67,27 @@ jobs:
           version=$(echo $version | sed 's/^v//')
           echo "current_version=$version" >> $GITHUB_OUTPUT
 
-          if [ "$version" != "${{ inputs.version || github.event.inputs.version }}" ]; then
-            echo "❌ Version mismatch: package has $version but input is ${{ inputs.version || github.event.inputs.version }}"
+          if [ "$version" != "${{ github.event.inputs.version }}" ]; then
+            echo "❌ Version mismatch: package has $version but input is ${{ github.event.inputs.version }}"
             echo "Please update the version in pyproject.toml first"
             echo "should_release=false" >> $GITHUB_OUTPUT
             exit 1
           fi
 
           # Check if version already exists on PyPI
-          if curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys[]' | grep -q "^${{ inputs.version || github.event.inputs.version }}$"; then
-            echo "❌ Version ${{ inputs.version || github.event.inputs.version }} already exists on PyPI"
+          if curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys[]' | grep -q "^${{ github.event.inputs.version }}$"; then
+            echo "❌ Version ${{ github.event.inputs.version }} already exists on PyPI"
             echo "should_release=false" >> $GITHUB_OUTPUT
             exit 1
           fi
 
-          echo "✅ Version ${{ inputs.version || github.event.inputs.version }} is valid and not yet released"
+          echo "✅ Version ${{ github.event.inputs.version }} is valid and not yet released"
           echo "should_release=true" >> $GITHUB_OUTPUT
 
   run-tests:
     name: Run Tests
     needs: validate-version
-    if: false  # TEMPORARILY DISABLED FOR INITIAL RELEASE
+    if: needs.validate-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -147,10 +121,6 @@ jobs:
   release-lfx:
     name: Build and Release LFX
     needs: [validate-version, run-tests]
-    if: |  # Run even if tests are skipped
-      always() && 
-      needs.validate-version.outputs.should_release == 'true' &&
-      (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -187,8 +157,8 @@ jobs:
           version=$(echo $version | sed 's/^v//')
 
           # Verify version matches input
-          if [ "$version" != "${{ inputs.version || github.event.inputs.version }}" ]; then
-            echo "Version $version does not match input ${{ inputs.version || github.event.inputs.version }}. Exiting the workflow."
+          if [ "$version" != "${{ github.event.inputs.version }}" ]; then
+            echo "Version $version does not match input ${{ github.event.inputs.version }}. Exiting the workflow."
             exit 1
           fi
 
@@ -222,7 +192,7 @@ jobs:
           retention-days: 5
 
       - name: Publish to PyPI
-        if: inputs.publish_pypi == true || github.event.inputs.publish_pypi == 'true'
+        if: github.event.inputs.publish_pypi == 'true'
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -232,11 +202,7 @@ jobs:
   build-docker:
     name: Build Docker Images
     needs: [validate-version, run-tests]
-    if: |  # Run even if tests are skipped
-      always() && 
-      needs.validate-version.outputs.should_release == 'true' &&
-      (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped') &&
-      (inputs.build_docker == true || github.event.inputs.build_docker == 'true')
+    if: github.event.inputs.build_docker == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -272,13 +238,13 @@ jobs:
             langflowai/lfx
             ghcr.io/langflow-ai/lfx
           tags: |
-            type=raw,value=${{ inputs.version || github.event.inputs.version }}${{ matrix.variant == 'alpine' && '-alpine' || '' }}
-            type=raw,value=latest${{ matrix.variant == 'alpine' && '-alpine' || '' }},enable=${{ inputs.pre_release == false || github.event.inputs.pre_release == 'false' }}
+            type=raw,value=${{ github.event.inputs.version }}${{ matrix.variant == 'alpine' && '-alpine' || '' }}
+            type=raw,value=latest${{ matrix.variant == 'alpine' && '-alpine' || '' }},enable=${{ github.event.inputs.pre_release == 'false' }}
           labels: |
             org.opencontainers.image.title=LFX
             org.opencontainers.image.description=Langflow Executor - CLI tool for running Langflow AI workflows
             org.opencontainers.image.vendor=Langflow
-            org.opencontainers.image.version=${{ inputs.version || github.event.inputs.version }}
+            org.opencontainers.image.version=${{ github.event.inputs.version }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -292,12 +258,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            LFX_VERSION=${{ inputs.version || github.event.inputs.version }}
+            LFX_VERSION=${{ github.event.inputs.version }}
 
   create-release:
     name: Create GitHub Release
     needs: [release-lfx, build-docker]
-    if: always() && (inputs.create_github_release == true || github.event.inputs.create_github_release == 'true') && needs.release-lfx.result == 'success'
+    if: always() && github.event.inputs.create_github_release == 'true' && needs.release-lfx.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -313,29 +279,29 @@ jobs:
         id: notes
         run: |
           cat > release_notes.md << EOF
-          # LFX ${{ inputs.version || github.event.inputs.version }}
+          # LFX ${{ github.event.inputs.version }}
 
           ## 🚀 Installation
 
           ### PyPI
           \`\`\`bash
-          pip install lfx==${{ inputs.version || github.event.inputs.version }}
+          pip install lfx==${{ github.event.inputs.version }}
           # or
-          uv pip install lfx==${{ inputs.version || github.event.inputs.version }}
+          uv pip install lfx==${{ github.event.inputs.version }}
           # or run without installing
-          uvx lfx@${{ inputs.version || github.event.inputs.version }} --help
+          uvx lfx@${{ github.event.inputs.version }} --help
           \`\`\`
 
           ### Docker
           \`\`\`bash
           # Standard image
-          docker pull langflowai/lfx:${{ inputs.version || github.event.inputs.version }}
+          docker pull langflowai/lfx:${{ github.event.inputs.version }}
 
           # Alpine image (smaller)
-          docker pull langflowai/lfx:${{ inputs.version || github.event.inputs.version }}-alpine
+          docker pull langflowai/lfx:${{ github.event.inputs.version }}-alpine
 
           # Run a flow
-          docker run --rm -v \$(pwd):/app/data langflowai/lfx:${{ inputs.version || github.event.inputs.version }} lfx run flow.json --input-value "Hello"
+          docker run --rm -v \$(pwd):/app/data langflowai/lfx:${{ github.event.inputs.version }} lfx run flow.json --input-value "Hello"
           \`\`\`
 
           ## 📦 What's New
@@ -350,17 +316,17 @@ jobs:
 
           ---
 
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ needs.validate-version.outputs.current_version }}...lfx-v${{ inputs.version || github.event.inputs.version }}
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ needs.validate-version.outputs.current_version }}...lfx-v${{ github.event.inputs.version }}
           EOF
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: lfx-v${{ inputs.version || github.event.inputs.version }}
-          name: LFX ${{ inputs.version || github.event.inputs.version }}
+          tag_name: lfx-v${{ github.event.inputs.version }}
+          name: LFX ${{ github.event.inputs.version }}
           body_path: release_notes.md
           draft: false
-          prerelease: ${{ inputs.pre_release || github.event.inputs.pre_release }}
+          prerelease: ${{ github.event.inputs.pre_release }}
           files: |
             dist/*
           generate_release_notes: true
@@ -379,17 +345,17 @@ jobs:
         if: needs.release-lfx.result == 'success'
         run: |
           # Test installation using uv
-          uv pip install lfx==${{ inputs.version || github.event.inputs.version }}
+          uv pip install lfx==${{ github.event.inputs.version }}
           uv run lfx --help
 
       - name: Test Docker image
         if: needs.build-docker.result == 'success'
         run: |
           # Test standard image
-          docker run --rm langflowai/lfx:${{ inputs.version || github.event.inputs.version }} lfx --help
+          docker run --rm langflowai/lfx:${{ github.event.inputs.version }} lfx --help
 
           # Test alpine image
-          docker run --rm langflowai/lfx:${{ inputs.version || github.event.inputs.version }}-alpine lfx --help
+          docker run --rm langflowai/lfx:${{ github.event.inputs.version }}-alpine lfx --help
 
           # Test with a simple flow
           cat > test_flow.json << 'EOF'
@@ -399,7 +365,7 @@ jobs:
           }
           EOF
 
-          docker run --rm -v $(pwd):/app/data langflowai/lfx:${{ inputs.version || github.event.inputs.version }} \
+          docker run --rm -v $(pwd):/app/data langflowai/lfx:${{ github.event.inputs.version }} \
             lfx run /app/data/test_flow.json --input-value "test" || true
 
   notify:
@@ -411,13 +377,13 @@ jobs:
       - name: Notify success
         if: needs.create-release.result == 'success'
         run: |
-          echo "✅ LFX ${{ inputs.version || github.event.inputs.version }} released successfully!"
-          echo "PyPI: https://pypi.org/project/lfx/${{ inputs.version || github.event.inputs.version }}/"
+          echo "✅ LFX ${{ github.event.inputs.version }} released successfully!"
+          echo "PyPI: https://pypi.org/project/lfx/${{ github.event.inputs.version }}/"
           echo "Docker Hub: https://hub.docker.com/r/langflowai/lfx/tags"
-          echo "GitHub Release: https://github.com/${{ github.repository }}/releases/tag/lfx-v${{ inputs.version || github.event.inputs.version }}"
+          echo "GitHub Release: https://github.com/${{ github.repository }}/releases/tag/lfx-v${{ github.event.inputs.version }}"
 
       - name: Notify failure
         if: needs.create-release.result != 'success'
         run: |
-          echo "❌ LFX ${{ inputs.version || github.event.inputs.version }} release failed!"
+          echo "❌ LFX ${{ github.event.inputs.version }} release failed!"
           exit 1
