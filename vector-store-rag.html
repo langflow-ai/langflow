@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.679f183a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.446c6220.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -53,15 +53,12 @@
 <p>We&#x27;ve chosen <a href="https://astra.datastax.com/signup?utm_source=langflow-pre-release&amp;utm_medium=referral&amp;utm_campaign=langflow-announcement&amp;utm_content=create-a-free-astra-db-account" target="_blank" rel="noopener noreferrer">Astra DB</a> as the vector database for this starter flow, but you can follow along with any of Langflow&#x27;s vector database options.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
-<li><a href="/get-started-installation">A running Langflow instance</a></li>
-<li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
-<li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with the following:<!-- -->
-<ul>
-<li>An Astra DB application token scoped to read and write to the database</li>
-<li>A collection created in <a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">Astra</a> or a new collection created in the <strong>Astra DB</strong> component</li>
+<li><a href="/get-started-installation">Install and start Langflow</a></li>
+<li>Create an <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API key</a></li>
+<li>Create an <a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">Astra DB vector database</a></li>
+<li>Create an <a href="https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token" target="_blank" rel="noopener noreferrer">Astra application token scoped to your database</a></li>
 </ul>
-</li>
-</ul>
+<p>You can use an existing <a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">collection</a> or create a new collection through the <strong>Astra DB</strong> component.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="open-langflow-and-start-a-new-project">Open Langflow and start a new project<a href="#open-langflow-and-start-a-new-project" class="hash-link" aria-label="Direct link to Open Langflow and start a new project" title="Direct link to Open Langflow and start a new project">​</a></h2>
 <ol>
 <li>From the Langflow dashboard, click <strong>New Flow</strong>.</li>
@@ -105,7 +102,7 @@ If you don&#x27;t have a collection, select <strong>New database</strong>.
 Complete the <strong>Name</strong>, <strong>Cloud provider</strong>, and <strong>Region</strong> fields, and then click <strong>Create</strong>. <strong>Database creation takes a few minutes</strong>.</li>
 <li>Select your <strong>Collection</strong>. Collections are created in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a> for storing vector data.</li>
 </ol>
-<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>If you select a collection embedded with Nvidia through Astra&#x27;s vectorize service, the <strong>Embedding Model</strong> port is removed, because you have already generated embeddings for this collection with the Nvidia <code>NV-Embed-QA</code> model. The component fetches the data from the collection, and uses the same embeddings for queries.</p></div></div>
+<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>If your collection use the Astra vectorize NVIDIA integration, the <strong>Embedding Model</strong> port is removed, because the collection already generates embeddings with the integrated NVIDIA model. The component fetches the data from the collection, and uses the same model to generate embeddings for queries.</p></div></div>
 </li>
 <li>
 <p>If you don&#x27;t have a collection, create a new one within the component.</p>

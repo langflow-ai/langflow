@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.679f183a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.446c6220.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -56,11 +56,11 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="create-a-notion-integration">Create a Notion Integration<a href="#create-a-notion-integration" class="hash-link" aria-label="Direct link to Create a Notion Integration" title="Direct link to Create a Notion Integration">​</a></h2>
 <ol>
 <li>Go to the <a href="https://www.notion.com/my-integrations" target="_blank" rel="noopener noreferrer">Notion Integrations</a> page.</li>
-<li>Click on the &quot;New integration&quot; button.</li>
-<li>Give your integration a name and select the workspace where you want to use it.</li>
-<li>Click &quot;Submit&quot; to create the integration.</li>
+<li>Click <strong>New Integration</strong>.</li>
+<li>Enter an integration name, and then select the workspace where you want to use it.</li>
+<li>Optional: Enable the <a href="https://developers.notion.com/reference/capabilities" target="_blank" rel="noopener noreferrer">necessary Notion integration capabilities</a> based on your requirements.</li>
+<li>Click <strong>Submit</strong> to create the integration.</li>
 </ol>
-<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>When creating the integration, make sure to enable the necessary capabilities based on your requirements. Refer to the <a href="https://developers.notion.com/reference/capabilities" target="_blank" rel="noopener noreferrer">Notion Integration Capabilities</a> documentation for more information on each capability.</p></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="configure-integration-capabilities">Configure Integration Capabilities<a href="#configure-integration-capabilities" class="hash-link" aria-label="Direct link to Configure Integration Capabilities" title="Direct link to Configure Integration Capabilities">​</a></h2>
 <p>After creating the integration, you need to configure its capabilities to define what actions it can perform and what data it can access.</p>
 <ol>
@@ -76,21 +76,30 @@
 <li>Save the changes.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="obtain-integration-token">Obtain Integration Token<a href="#obtain-integration-token" class="hash-link" aria-label="Direct link to Obtain Integration Token" title="Direct link to Obtain Integration Token">​</a></h2>
+<div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path></svg></span>warning</div><div class="admonitionContent_BuS1"><p>Your integration token is a sensitive piece of information. Make sure to keep it secure and never share it publicly. Store it safely in your Langflow configuration or environment variables.</p></div></div>
 <p>To authenticate your integration with Notion, you need to obtain an integration token.</p>
 <ol>
 <li>In the integration settings page, go to the &quot;Secrets&quot; tab.</li>
 <li>Copy the &quot;Internal Integration Token&quot; value. This token will be used to authenticate your integration with Notion.</li>
 </ol>
-<div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path></svg></span>warning</div><div class="admonitionContent_BuS1"><p>Your integration token is a sensitive piece of information. Make sure to keep it secure and never share it publicly. Store it safely in your Langflow configuration or environment variables.</p></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="grant-integration-access-to-notion-databases">Grant Integration Access to Notion Databases<a href="#grant-integration-access-to-notion-databases" class="hash-link" aria-label="Direct link to Grant Integration Access to Notion Databases" title="Direct link to Grant Integration Access to Notion Databases">​</a></h2>
-<p>For your integration to interact with Notion databases, you need to grant it access to the specific databases it will be working with.</p>
+<p>For your integration to interact with Notion databases, you need to grant it access to the specific databases it must work with:</p>
 <ol>
-<li>Open the Notion database that you want your integration to access.</li>
-<li>Click on the &quot;Share&quot; button in the top-right corner of the page.</li>
-<li>In the &quot;Invite&quot; section, select your integration from the list.</li>
-<li>Click &quot;Invite&quot; to grant the integration access to the database.</li>
+<li>
+<p>Open the Notion database that you want your integration to access.</p>
+</li>
+<li>
+<p>Click <strong>Share</strong>.</p>
+</li>
+<li>
+<p>In the <strong>Invite</strong> section, select your integration from the list.</p>
+</li>
+<li>
+<p>Click <strong>Invite</strong> to grant the integration access to the database.</p>
+<p>If your database contains references to other databases, you need to grant the integration access to those referenced databases as well.
+Repeat this step for each referenced database that your integration must access.</p>
+</li>
 </ol>
-<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>If your database contains references to other databases, you need to grant the integration access to those referenced databases as well. Repeat step 4 for each referenced database to ensure your integration has the necessary access.</p></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="build-with-notion-components-in-langflow">Build with Notion components in Langflow<a href="#build-with-notion-components-in-langflow" class="hash-link" aria-label="Direct link to Build with Notion components in Langflow" title="Direct link to Build with Notion components in Langflow">​</a></h2>
 <p>Once you have set up your Notion integration and granted it access to the required databases, you can start using the Notion components in Langflow:</p>
 <ul>

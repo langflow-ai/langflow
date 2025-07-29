@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.679f183a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.446c6220.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -54,13 +54,13 @@
 <p>The main focus of this tutorial is to show you how to provide files as input to a Langflow flow, so your chatbot can use the content of those files in its responses.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
-<li><a href="/get-started-installation">A running Langflow instance</a></li>
-<li><a href="/configuration-api-keys">A Langflow API key</a></li>
-<li><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
+<li><a href="/get-started-installation">Install and start Langflow</a></li>
+<li>Create a <a href="/configuration-api-keys">Langflow API key</a></li>
+<li>Create an <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API key</a></li>
 </ul>
 <p>This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="create-a-flow-that-accepts-file-input">Create a flow that accepts file input<a href="#create-a-flow-that-accepts-file-input" class="hash-link" aria-label="Direct link to Create a flow that accepts file input" title="Direct link to Create a flow that accepts file input">​</a></h2>
-<p>To ingest files, your flow must have a <strong>File</strong> component attached to a component that receives input, such as a <strong>Prompt</strong> or <strong>Agent</strong> component.</p>
+<p>To ingest files, your flow must have a <strong>File</strong> component attached to a component that receives input, such as a <strong>Prompt Template</strong> or <strong>Agent</strong> component.</p>
 <p>The following steps modify the <a href="/basic-prompting"><strong>Basic prompting</strong></a> template to accept file input:</p>
 <ol>
 <li>
@@ -72,20 +72,20 @@
 </li>
 <li>
 <p>To verify that your API key is valid, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Playground</strong>, and then ask the LLM a question.
-The LLM should respond according to the specifications in the <strong>Prompt</strong> component&#x27;s <strong>Template</strong> field.</p>
+The LLM should respond according to the specifications in the <strong>Prompt Template</strong> component&#x27;s <strong>Template</strong> field.</p>
 </li>
 <li>
-<p>Exit the <strong>Playground</strong>, and then modify the <strong>Prompt</strong> component to accept file input in addition to chat input.
+<p>Exit the <strong>Playground</strong>, and then modify the <strong>Prompt Template</strong> component to accept file input in addition to chat input.
 To do this, edit the <strong>Template</strong> field, and then replace the default prompt with the following text:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>ChatInput:</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>{chat-input}</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>File:</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>{file}</span></div></div><br></code></div></div>
-<p>The <strong>Prompt</strong> component gets a new input port for each value in curly braces. At this point, your <strong>Prompt</strong> component should have <strong>chat-input</strong> and <strong>file</strong> input ports.</p>
-<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>Within the curly braces, you can use any port name you like. For this tutorial, the ports are named after the components that connect to them.</p></div></div>
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>You can use any string to name your template variables.
+These strings become the names of the fields (input ports) on the <strong>Prompt Template</strong> component.</p><p>For this tutorial, the variables are named after the components that connect to them: <strong>chat-input</strong> for the <strong>Chat Input</strong> component and <strong>file</strong> for the <strong>File</strong> component.</p></div></div>
 </li>
 <li>
-<p>Add a <a href="/components-data#file">File component</a> to the flow, and then connect the <strong>Raw Content</strong> output port to the Prompt component&#x27;s <strong>file</strong> input port.
+<p>Add a <a href="/components-data#file"><strong>File</strong> component</a> to the flow, and then connect the <strong>Raw Content</strong> output port to the <strong>Prompt Template</strong> component&#x27;s <strong>file</strong> input port.
 To connect ports, click and drag from one port to the other.</p>
 <p>You can add files directly to the file component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.</p>
-<p>At this point your flow has five components. The Chat Input and File components are connected to the Prompt component&#x27;s input ports. Then, the Prompt component&#x27;s output port is connected to the Language Model component&#x27;s input port. Finally, the Language Model component&#x27;s output port is connected to the Chat Output component, which returns the final response to the user.</p>
+<p>At this point your flow has five components. The Chat Input and File components are connected to the <strong>Prompt Template</strong> component&#x27;s input ports. Then, the <strong>Prompt Template</strong> component&#x27;s output port is connected to the Language Model component&#x27;s input port. Finally, the Language Model component&#x27;s output port is connected to the Chat Output component, which returns the final response to the user.</p>
 <p><img decoding="async" loading="lazy" alt="File loader chat flow" src="/assets/images/tutorial-chat-file-loader-099f2f4c5e4343412557b1a78c4b9209.png" width="4000" height="1564" class="img_ev3q"></p>
 </li>
 </ol>

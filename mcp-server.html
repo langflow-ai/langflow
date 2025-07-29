@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.679f183a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.446c6220.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -59,7 +59,7 @@
 <p>A <a href="/concepts-flows#projects">Langflow project</a> with at least one flow.</p>
 </li>
 <li>
-<p>Any LTS version of <a href="https://docs.npmjs.com/downloading-and-installing-node-js-and-npm" target="_blank" rel="noopener noreferrer">Node.js</a> installed on your computer to use MCP Inspector to <a href="#test-and-debug-flows">test and debug flows</a>.</p>
+<p>Any LTS version of <a href="https://docs.npmjs.com/downloading-and-installing-node-js-and-npm" target="_blank" rel="noopener noreferrer">Node.js</a> installed on your computer if you want to use MCP Inspector to <a href="#test-and-debug-flows">test and debug flows</a>.</p>
 </li>
 <li>
 <p><a href="https://ngrok.com/docs/getting-started/#1-install-ngrok" target="_blank" rel="noopener noreferrer">ngrok installed</a> and an <a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" rel="noopener noreferrer">ngrok authtoken</a> if you want to <a href="/deployment-public-server">deploy a public Langflow server</a>.</p>
@@ -74,7 +74,7 @@
 <li>
 <p>From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the <strong>MCP Server</strong> tab.
 Alternatively, you can quickly access the <strong>MCP Server</strong> tab from within any flow by selecting <strong>Share &gt; MCP Server</strong>.</p>
-<p>The <strong>Auto install</strong> and <strong>JSON</strong> tabs display options for connecting MCP clients to the the project&#x27;s MCP server.</p>
+<p>The <strong>Auto install</strong> and <strong>JSON</strong> tabs display options for connecting MCP clients to the project&#x27;s MCP server.</p>
 <p>The <strong>Flows/Tools</strong> section lists the flows that are currently being served as tools.</p>
 <p><img decoding="async" loading="lazy" alt="MCP server projects page" src="/assets/images/mcp-server-53850e4ac7599dec00dd7d01922ba79f.png" width="4000" height="2174" class="img_ev3q"></p>
 </li>
@@ -119,7 +119,7 @@ For example:</p><div class="ch-codeblock not-prose" data-ch-theme="github-dark">
 <p>The following procedure describes how to connect <a href="https://www.cursor.com/" target="_blank" rel="noopener noreferrer">Cursor</a> to your Langflow project&#x27;s MCP server to consume your flows as tools.
 However, you can connect any <a href="https://modelcontextprotocol.io/clients" target="_blank" rel="noopener noreferrer">MCP-compatible client</a> following similar steps.</p>
 <div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Auto install</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">JSON</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-In this is not the case, configure the client with the code in the <strong>JSON</strong> tab.</p></div></div><ol>
+If this is not the case, use the <strong>JSON</strong> option to configure the MCP server.</p></div></div><ol>
 <li>Install <a href="https://docs.cursor.com/get-started/installation" target="_blank" rel="noopener noreferrer">Cursor</a>.</li>
 <li>In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the <strong>MCP Server</strong> tab.</li>
 <li>To auto install your current Langflow project as an MCP server, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="True"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add</strong>.</li>
@@ -141,7 +141,7 @@ For example:</p>
 <p>The <strong>MCP Server</strong> tab automatically includes the correct <code>PROJECT_NAME</code>, <code>LANGFLOW_SERVER_ADDRESS</code>, and <code>PROJECT_ID</code> values.
 The default Langflow server address is <code>http://localhost:7860</code>.</p>
 <p>If you have <a href="/deployment-public-server">deployed a public Langflow server</a>, the address is automatically included.</p>
-<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>If your Langflow server <a href="/configuration-authentication">requires authentication</a> (<a href="/environment-variables#LANGFLOW_AUTO_LOGIN"><code>LANGFLOW_AUTO_LOGIN</code></a> is set to <code>false</code>), you must include your Langflow API key in the configuration.
+<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>If your Langflow server <a href="/configuration-authentication">requires authentication</a> (<a href="/environment-variables#LANGFLOW_AUTO_LOGIN"><code>LANGFLOW_AUTO_LOGIN=false</code></a>), you must include your Langflow API key in the configuration.
 For more information, see <a href="#authentication">MCP server authentication and environment variables</a>.</p></div></div>
 </li>
 <li>

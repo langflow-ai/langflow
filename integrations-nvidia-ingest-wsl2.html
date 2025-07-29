@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.679f183a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.446c6220.js" defer="defer"></script>
 <script src="/assets/js/main.3957ba71.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -47,17 +47,26 @@
             <span class="sidebar-ad-text sidebar-ad-text-gradient">Download Langflow Desktop</span>
           </div>
         </a>
-      </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Components reference</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Bundles</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">NVIDIA</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">NVIDIA NIM on WSL2</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Integrate NVIDIA NIMs with Langflow</h1></header><p>Connect <strong>Langflow</strong> with <strong>NVIDIA NIM</strong> on an RTX Windows system with <a href="https://learn.microsoft.com/en-us/windows/wsl/install" target="_blank" rel="noopener noreferrer">Windows Subsystem for Linux 2 (WSL2)</a> installed.</p>
+      </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Components reference</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Bundles</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">NVIDIA</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">NVIDIA NIM on WSL2</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Integrate NVIDIA NIMs with Langflow</h1></header><p>Connect Langflow with NVIDIA NIM on an RTX Windows system with <a href="https://learn.microsoft.com/en-us/windows/wsl/install" target="_blank" rel="noopener noreferrer">Windows Subsystem for Linux 2 (WSL2)</a> installed.</p>
 <p><a href="https://docs.nvidia.com/nim/index.html" target="_blank" rel="noopener noreferrer">NVIDIA NIM (NVIDIA Inference Microservices)</a> provides containers to self-host GPU-accelerated inferencing microservices.
 In this example, you connect a model component in <strong>Langflow</strong> to a deployed <code>mistral-nemo-12b-instruct</code> NIM on an <strong>RTX Windows system</strong> with <strong>WSL2</strong>.</p>
 <p>For more information on NVIDIA NIM, see the <a href="https://docs.nvidia.com/nim/index.html" target="_blank" rel="noopener noreferrer">NVIDIA documentation</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
-<li><a href="https://docs.nvidia.com/nim/wsl2/latest/getting-started.html" target="_blank" rel="noopener noreferrer">NVIDIA NIM WSL2 installed</a></li>
-<li>A NIM container deployed according to the model&#x27;s instructions. Prerequisites vary between models.
-For example, to deploy the <code>mistral-nemo-12b-instruct</code> NIM, follow the instructions for <strong>Windows on RTX AI PCs (Beta)</strong> on your <a href="https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct/deploy?environment=wsl2.md" target="_blank" rel="noopener noreferrer">model&#x27;s deployment overview</a></li>
-<li>Windows 11 build 23H2 or later</li>
-<li>At least 12 GB of RAM</li>
+<li>
+<p><a href="https://docs.nvidia.com/nim/wsl2/latest/getting-started.html" target="_blank" rel="noopener noreferrer">NVIDIA NIM WSL2 installed</a></p>
+</li>
+<li>
+<p>A NIM container deployed according to the model&#x27;s instructions</p>
+<p>Prerequisites vary between models.
+For example, to deploy the <code>mistral-nemo-12b-instruct</code> NIM, follow the instructions for <strong>Windows on RTX AI PCs (Beta)</strong> on your <a href="https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct/deploy?environment=wsl2.md" target="_blank" rel="noopener noreferrer">model&#x27;s deployment overview</a>.</p>
+</li>
+<li>
+<p>Windows 11 build 23H2 or later</p>
+</li>
+<li>
+<p>At least 12 GB of RAM</p>
+</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-the-nvidia-nim-in-a-flow">Use the NVIDIA NIM in a flow<a href="#use-the-nvidia-nim-in-a-flow" class="hash-link" aria-label="Direct link to Use the NVIDIA NIM in a flow" title="Direct link to Use the NVIDIA NIM in a flow">​</a></h2>
 <p>To connect the NIM you&#x27;ve deployed with Langflow, add the <strong>NVIDIA</strong> model component to a flow.</p>
