@@ -1,4 +1,7 @@
-import { default as ForwardedIconComponent, default as IconComponent } from "@/components/common/genericIconComponent";
+import {
+  default as ForwardedIconComponent,
+  default as IconComponent,
+} from "@/components/common/genericIconComponent";
 import CanvasControls from "@/components/core/canvasControlsComponent";
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
@@ -44,7 +47,10 @@ export const MemoizedCanvasControls = memo(
           }
         }}
       >
-        <IconComponent name="sticky-note" className="!h-5 !w-5 text-muted-foreground group-hover:text-primary" />
+        <IconComponent
+          name="sticky-note"
+          className="!h-5 !w-5 text-muted-foreground group-hover:text-primary"
+        />
       </Button>
     </CanvasControls>
   ),

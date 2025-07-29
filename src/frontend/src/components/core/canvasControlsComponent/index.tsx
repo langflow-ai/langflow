@@ -54,7 +54,12 @@ export const CustomControlButton = ({
       title={testId?.replace(/_/g, " ")}
     >
       <ShadTooltip content={tooltipText} side="right">
-        <div className={cn("rounded p-2.5 flex items-center justify-center", backgroundClasses)}>
+        <div
+          className={cn(
+            "rounded p-2.5 flex items-center justify-center",
+            backgroundClasses,
+          )}
+        >
           <IconComponent
             name={iconName}
             aria-hidden="true"
