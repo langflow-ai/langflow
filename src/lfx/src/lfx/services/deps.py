@@ -40,6 +40,11 @@ def get_service(service_type: ServiceType, default=None):
 
         service_manager.register_factories(service_manager.get_factories())
 
+    if ServiceType.SETTINGS_SERVICE not in service_manager.factories:
+        from lfx.services.settings.factory import SettingsServiceFactory
+
+        service_manager.register_factory(service_factory=SettingsServiceFactory())
+
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001
