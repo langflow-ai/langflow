@@ -59,7 +59,7 @@ coverage: dev ## run tests with coverage
 build: dev ## build the project
 	@echo "$(GREEN)Building LFX...$(NC)"
 	@rm -rf dist/
-	@uv build $(args)
+	@uv build --out-dir dist $(args)
 	@echo "$(GREEN)LFX build completed. Artifacts in dist/$(NC)"
 
 build_wheel: dev ## build wheel only
@@ -128,3 +128,24 @@ docker_test: docker_build_dev ## run tests in Docker
 docker_clean: ## clean Docker images and containers
 	@echo "$(GREEN)Cleaning LFX Docker images...$(NC)"
 	@$(DOCKER) rmi lfx:latest lfx:dev 2>/dev/null || true
+
+# Release operations
+check_version: ## check current version
+	@echo "$(GREEN)Current LFX version: $(VERSION)$(NC)"
+
+prepare_release: release_check ## prepare for release (run all checks)
+	@echo "$(GREEN)LFX $(VERSION) is ready for release!$(NC)"
+	@echo "Next steps:"
+	@echo "1. Run: ./scripts/release-lfx.sh $(VERSION)"
+	@echo "2. Push changes and tag"
+	@echo "3. Run GitHub Actions release workflow"
+
+bump_version: ## bump version (usage: make bump_version VERSION=0.1.1)
+	@if [ -z "$(VERSION)" ]; then \
+		echo "$(RED)Please specify VERSION. Usage: make bump_version VERSION=0.1.1$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Bumping LFX version to $(VERSION)...$(NC)"
+	@sed -i.bak "s/^version = \".*\"/version = \"$(VERSION)\"/" pyproject.toml
+	@rm pyproject.toml.bak
+	@echo "$(GREEN)Version bumped to $(VERSION)$(NC)"
