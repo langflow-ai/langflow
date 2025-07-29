@@ -255,7 +255,10 @@ jobs:
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
-      EXIT_CODE: ${{ (!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && (needs.check-nightly-status.outputs.should-proceed == 'true' || github.event_name == 'workflow_dispatch')) && '0' || '1' }}
+      EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
+                      contains(needs.*.result, 'cancelled') ||
+                      (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch'))
+                      && '1' || '0' }}
     steps:
       - name: "CI Success"
         run: |
@@ -272,25 +275,33 @@ jobs:
             echo ""
             echo "Failed jobs:"
 
-            # Check each job result
-            if [[ "${{ needs.test-backend.result }}" == "failure" ]]; then
-              echo "  - Backend Tests: Check Python code, tests, and dependencies"
-            fi
-            if [[ "${{ needs.test-frontend-unit.result }}" == "failure" ]]; then
-              echo "  - Frontend Unit Tests: Check React components and unit test logic"
-            fi
-            if [[ "${{ needs.test-frontend.result }}" == "failure" ]]; then
-              echo "  - Frontend E2E Tests: Check integration tests and UI functionality"
-            fi
-            if [[ "${{ needs.lint-backend.result }}" == "failure" ]]; then
-              echo "  - Backend Linting: Run 'make format_backend' then 'make lint' to fix code style issues"
-            fi
-            if [[ "${{ needs.test-docs-build.result }}" == "failure" ]]; then
-              echo "  - Documentation Build: Check documentation syntax and build process"
-            fi
-            if [[ "${{ needs.test-templates.result }}" == "failure" ]]; then
-              echo "  - Template Tests: Check starter project templates"
-            fi
+            # Dynamically list failed jobs with helpful descriptions
+            echo "$JOBS_JSON" | jq -r '
+              to_entries[]
+              | select(.value.result=="failure")
+              | .key as $job
+              | if $job == "test-backend" then
+                  "  - Backend Tests: Check Python code, tests, and dependencies"
+                elif $job == "test-frontend-unit" then
+                  "  - Frontend Unit Tests: Check React components and unit test logic"
+                elif $job == "test-frontend" then
+                  "  - Frontend E2E Tests: Check integration tests and UI functionality"
+                elif $job == "lint-backend" then
+                  "  - Backend Linting: Run '\''make format_backend'\'' then '\''make lint'\'' to fix code style issues"
+                elif $job == "test-docs-build" then
+                  "  - Documentation Build: Check documentation syntax and build process"
+                elif $job == "test-templates" then
+                  "  - Template Tests: Check starter project templates"
+                elif $job == "path-filter" then
+                  "  - Path Filter: File path filtering failed"
+                elif $job == "set-ci-condition" then
+                  "  - CI Condition Check: CI condition evaluation failed"
+                elif $job == "check-nightly-status" then
+                  "  - Nightly Status Check: PyPI package status check failed"
+                else
+                  "  - \($job): See job log for details"
+                end
+            '
 
             echo ""
             echo "🔧 Next steps:"
