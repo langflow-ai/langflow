@@ -1,15 +1,15 @@
+import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep } from "lodash";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
-import { FlowStoreType } from "@/types/zustand/flow";
-import { useUpdateNodeInternals } from "@xyflow/react";
-import { cloneDeep } from "lodash";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
+import type { FlowStoreType } from "@/types/zustand/flow";
 import { Button } from "../../components/ui/button";
 import {
   ICON_STROKE_WIDTH,
@@ -23,8 +23,8 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
-import { NodeDataType } from "../../types/flow";
+import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
+import type { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
@@ -33,8 +33,8 @@ import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
-import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
+import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
@@ -44,7 +44,7 @@ const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
 const MemoizedNodeOutputs = memo(NodeOutputs);
 
-const HiddenOutputsButton = memo(
+const _HiddenOutputsButton = memo(
   ({
     showHiddenOutputs,
     onClick,
@@ -77,7 +77,7 @@ function GenericNode({
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
-  const [validationStatus, setValidationStatus] =
+  const [_validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
 

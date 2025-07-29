@@ -1,0 +1,43 @@
+---
+title: LangWatch
+slug: /integrations-langwatch
+---
+
+[LangWatch](https://app.langwatch.ai/) is an all-in-one LLMOps platform for monitoring, observability, analytics, evaluations and alerting for getting user insights and improve your LLM workflows.
+
+## Integrate LangWatch observability
+
+To integrate with Langflow, add your LangWatch API key as a Langflow environment variable:
+
+1. Get a LangWatch API key from your LangWatch account.
+
+2. Add the key to your Langflow `.env` file:
+
+    ```shell
+    LANGWATCH_API_KEY="API_KEY_STRING"
+    ```
+
+    Alternatively, you can set the environment variable in your terminal session:
+
+    ```shell
+    export LANGWATCH_API_KEY="API_KEY_STRING"
+    ```
+
+3. Restart Langflow with your `.env` file, if you modified the Langflow `.env`:
+
+    ```
+    langflow run --env-file .env
+    ```
+
+4. Run a flow.
+
+5. View the LangWatch dashboard for monitoring and observability.
+
+![LangWatch dashboard](/img/langwatch-dashboard.png)
+
+## Use the LangWatch Evaluator
+
+In your flows, you can use the **LangWatch Evaluator** component to use LangWatch's evaluation endpoints to assess a model's performance.
+
+This component is available in the LangWatch bundle in the **Components** menu.
+For more information, see [Bundles](/components-bundle-components).

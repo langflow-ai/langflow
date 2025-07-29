@@ -712,7 +712,10 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1020,7 +1023,10 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -2294,7 +2300,10 @@
             "frozen": false,
             "icon": "file-text",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "0c57c835f136",
+              "module": "langflow.components.data.file.FileComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

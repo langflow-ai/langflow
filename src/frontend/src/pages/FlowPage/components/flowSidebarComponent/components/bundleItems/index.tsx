@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Disclosure,
@@ -5,8 +6,7 @@ import {
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { memo, useCallback } from "react";
-import { BundleItemProps } from "../../types";
+import type { BundleItemProps } from "../../types";
 import SidebarItemsList from "../sidebarItemsList";
 
 export const BundleItem = memo(
@@ -48,7 +48,7 @@ export const BundleItem = memo(
               <div
                 tabIndex={0}
                 onKeyDown={(e) => handleKeyDownInput(e, item.name)}
-                className="flex cursor-pointer items-center gap-2"
+                className="user-select-none flex cursor-pointer items-center gap-2"
                 data-testid={`disclosure-bundles-${item.display_name.toLowerCase()}`}
               >
                 <ForwardedIconComponent

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { storeComponent } from "../../../../types/store";
+import type { storeComponent } from "../../../../types/store";
 
 const useDataEffect = (
   data: storeComponent,

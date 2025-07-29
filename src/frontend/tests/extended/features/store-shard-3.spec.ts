@@ -143,7 +143,7 @@ test(
     await newPageStore2.waitForSelector('[data-testid="icon-Group"]', {
       timeout: 100000,
     });
-    let iconGroup = await newPageStore2.getByTestId("icon-Group")?.count();
+    const iconGroup = await newPageStore2.getByTestId("icon-Group")?.count();
     expect(iconGroup).not.toBe(0);
     await newPageStore2.getByText("icon-ToyBrick").last().isHidden();
     await newPageStore2.waitForSelector(
@@ -159,7 +159,7 @@ test(
     await newPageStore2.waitForSelector('[data-testid="icon-ToyBrick"]', {
       timeout: 100000,
     });
-    let toyBrick = await newPageStore2.getByTestId("icon-ToyBrick")?.count();
+    const toyBrick = await newPageStore2.getByTestId("icon-ToyBrick")?.count();
     expect(toyBrick).not.toBe(0);
     await newPageStore2.waitForSelector('[data-testid="all-button-store"]', {
       timeout: 100000,
@@ -171,11 +171,11 @@ test(
     await newPageStore2.waitForSelector('[data-testid="icon-ToyBrick"]', {
       timeout: 100000,
     });
-    let iconGroupAllCount = await newPageStore2
+    const iconGroupAllCount = await newPageStore2
       .getByTestId("icon-Group")
       ?.count();
     await newPageStore2.waitForTimeout(500);
-    let toyBrickAllCount = await newPageStore2
+    const toyBrickAllCount = await newPageStore2
       .getByTestId("icon-ToyBrick")
       ?.count();
     await newPageStore2.waitForTimeout(500);

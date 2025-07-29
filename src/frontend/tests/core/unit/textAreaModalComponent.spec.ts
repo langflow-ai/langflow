@@ -31,7 +31,7 @@ test(
 
     await page.getByTestId("modal-promptarea_prompt_template").fill("{text}");
 
-    let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
     if (valueBadgeOne != "text") {
       expect(false).toBeTruthy();
     }

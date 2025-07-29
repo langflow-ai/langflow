@@ -66,11 +66,15 @@ test(
       );
 
       await page.getByText("Exit Anyway", { exact: true }).click();
-    } catch (error) {
-      console.log("Warning text not visible, skipping dialog confirmation");
+    } catch (_error) {
+      console.error("Warning text not visible, skipping dialog confirmation");
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlowDiv = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlowDiv.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,
@@ -114,7 +118,11 @@ test(
 
     await page.getByText("Save And Exit", { exact: true }).click();
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow.click();
 
     await page.waitForSelector("text=loading", {
       state: "hidden",
@@ -162,7 +170,11 @@ test(
       await page.getByText("Save And Exit", { exact: true }).last().click();
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow2 = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow2.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,
