@@ -234,6 +234,10 @@ jobs:
         run: |
           uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
 
+  test-cross-platform:
+    name: Test Cross-Platform Installation
+    uses: ./.github/workflows/cross-platform-test.yml
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
