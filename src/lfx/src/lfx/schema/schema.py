@@ -128,6 +128,14 @@ def build_output_logs(vertex, result) -> dict:
     return outputs
 
 
+class BuildStatus(BaseModel):
+    """Build status schema for API compatibility."""
+
+    status: str
+    message: str | None = None
+    progress: float | None = None
+
+
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
     input_value: str | None = None
