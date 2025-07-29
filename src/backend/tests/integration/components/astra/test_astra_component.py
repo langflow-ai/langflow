@@ -39,7 +39,7 @@ def astradb_client():
     for collection in ALL_COLLECTIONS:
         try:  # noqa: SIM105
             client.drop_collection(collection)
-        except Exception:  # noqa: BLE001, S110
+        except Exception:  # noqa: S110
             pass
 
 
