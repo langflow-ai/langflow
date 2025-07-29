@@ -367,7 +367,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         # Complex types should be filtered out
         assert "files" not in data_obj.data
-        assert "tags" not in data_obj.data  
+        assert "tags" not in data_obj.data
         assert "nested" not in data_obj.data
 
     def test_metadata_filtering_fallback(
