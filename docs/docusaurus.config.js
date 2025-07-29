@@ -224,20 +224,13 @@ const config = {
               "/memory-chatbot",
               "/starter-projects-memory-chatbot",
               "/tutorials-memory-chatbot",
-            ],
-          },
-          {
-            to: "/blog-writer",
-            from: [
-              "/starter-projects-blog-writer",
-              "/tutorials-blog-writer",
-            ],
-          },
-          {
-            to: "/document-qa",
-            from: [
+              "/financial-report-parser",
+              "/document-qa",
               "/starter-projects-document-qa",
               "/tutorials-document-qa",
+              "/blog-writer",
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer",
             ],
           },
           {

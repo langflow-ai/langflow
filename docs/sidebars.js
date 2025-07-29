@@ -48,17 +48,6 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Flow templates",
-          items: [
-            'Templates/basic-prompting',
-            'Templates/blog-writer',
-            'Templates/document-qa',
-            'Templates/vector-store-rag',
-            'Templates/financial-report-parser',
-          ],
-        },
-        {
-          type: "category",
           label: "Run flows",
           items: [
             {
