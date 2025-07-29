@@ -3,13 +3,18 @@ title: Deploy Langflow on Railway
 slug: /deployment-railway
 ---
 
-This guide explains how to deploy Langflow on [Railway](https://railway.app/), a cloud infrastructure platform that provides auto-deploy, managed databases, and automatic scaling.
+This guide explains how to deploy Langflow on [Railway](https://railway.com/?utm_medium=integration&utm_source=docs&utm_campaign=langflow), a cloud infrastructure platform that provides auto-deploy, managed databases, and automatic scaling.
 
-1. Click the following button to go to Railway:
+1. Create a Railway account.
 
-   [![Deploy on Railway](/logos/railway-deploy.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
+   Given the dual-core CPU and 2 GB RAM requirements, a Hobby account on Railway will be enough. For more information see [Railway pricing](https://railway.com/pricing?utm_medium=integration&utm_source=docs&utm_campaign=langflow).
 
-2. Click **Deploy Now**.
+2. Click the following button deploy on Railway:
+
+   [![Deploy on Railway](/logos/railway-deploy.svg)](https://railway.com/new/template/JMXEWp?referralCode=MnPSdg&utm_medium=integration&utm_source=docs&utm_campaign=langflow)
+
+3. (Optional) Add any custom configuration for Langflow you desire.
+
 Railway automatically does the following:
    - Sets up the infrastructure.
    - Deploys Langflow.
@@ -17,4 +22,4 @@ Railway automatically does the following:
 
 Wait for the deployment to complete.
 
-Your Langflow instance is now ready to use.
+Your Langflow instance is now ready to use. It is exposed on a public URL like `https://[your-app-name].up.railway.app`.
