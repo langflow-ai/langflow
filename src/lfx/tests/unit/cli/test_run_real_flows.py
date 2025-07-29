@@ -1,4 +1,4 @@
-"""Integration tests for the execute command with real flows."""
+"""Integration tests for the run command with real flows."""
 
 import json
 from pathlib import Path
@@ -12,7 +12,7 @@ runner = CliRunner()
 
 
 class TestExecuteRealFlows:
-    """Test execute command with real flow files."""
+    """Test run command with real flow files."""
 
     @pytest.fixture
     def test_data_dir(self):
@@ -29,11 +29,11 @@ class TestExecuteRealFlows:
         """Path to the simple chat Python script."""
         return test_data_dir / "simple_chat_no_llm.py"
 
-    def test_execute_json_flow_basic(self, simple_chat_json):
+    def test_run_json_flow_basic(self, simple_chat_json):
         """Test executing a basic JSON flow."""
         result = runner.invoke(
             app,
-            ["execute", str(simple_chat_json), "Hello from test!"],
+            ["run", str(simple_chat_json), "Hello from test!"],
         )
 
         # Should succeed
@@ -45,11 +45,11 @@ class TestExecuteRealFlows:
         assert "result" in output
         assert "Hello from test!" in output["result"]
 
-    def test_execute_json_flow_verbose(self, simple_chat_json):
+    def test_run_json_flow_verbose(self, simple_chat_json):
         """Test executing with verbose output."""
         result = runner.invoke(
             app,
-            ["execute", "--verbose", str(simple_chat_json), "Test verbose"],
+            ["run", "--verbose", str(simple_chat_json), "Test verbose"],
         )
 
         # Should succeed
@@ -68,11 +68,11 @@ class TestExecuteRealFlows:
         assert "Test verbose" in output["result"]
 
     @pytest.mark.parametrize("fmt", ["json", "text", "message", "result"])
-    def test_execute_json_flow_different_formats(self, simple_chat_json, fmt):
+    def test_run_json_flow_different_formats(self, simple_chat_json, fmt):
         """Test different output formats."""
         result = runner.invoke(
             app,
-            ["execute", "-f", fmt, str(simple_chat_json), f"Test {fmt} format"],
+            ["run", "-f", fmt, str(simple_chat_json), f"Test {fmt} format"],
         )
 
         # Should succeed
@@ -89,14 +89,14 @@ class TestExecuteRealFlows:
             # For other formats, check output contains the message
             assert f"Test {fmt} format" in result.stdout
 
-    def test_execute_json_flow_with_stdin(self, simple_chat_json):
+    def test_run_json_flow_with_stdin(self, simple_chat_json):
         """Test executing JSON flow from stdin."""
         with simple_chat_json.open() as f:
             json_content = f.read()
 
         result = runner.invoke(
             app,
-            ["execute", "--stdin", "--input-value", "Hello from stdin!"],
+            ["run", "--stdin", "--input-value", "Hello from stdin!"],
             input=json_content,
         )
 
@@ -109,14 +109,14 @@ class TestExecuteRealFlows:
         assert "result" in output
         assert "Hello from stdin!" in output["result"]
 
-    def test_execute_json_flow_inline(self, simple_chat_json):
+    def test_run_json_flow_inline(self, simple_chat_json):
         """Test executing JSON flow passed inline."""
         with simple_chat_json.open() as f:
             json_content = f.read()
 
         result = runner.invoke(
             app,
-            ["execute", "--flow-json", json_content, "--input-value", "Hello inline!"],
+            ["run", "--flow-json", json_content, "--input-value", "Hello inline!"],
         )
 
         # Should succeed
@@ -128,14 +128,14 @@ class TestExecuteRealFlows:
         assert "result" in output
         assert "Hello inline!" in output["result"]
 
-    def test_execute_python_script(self, simple_chat_py):
+    def test_run_python_script(self, simple_chat_py):
         """Test executing a Python script with a graph."""
         # Python script should exist
         assert simple_chat_py.exists()
 
         result = runner.invoke(
             app,
-            ["execute", str(simple_chat_py), "Hello from Python!"],
+            ["run", str(simple_chat_py), "Hello from Python!"],
         )
 
         # Should succeed
@@ -147,11 +147,11 @@ class TestExecuteRealFlows:
         assert "result" in output
         assert "Hello from Python!" in output["result"]
 
-    def test_execute_no_input_value(self, simple_chat_json):
+    def test_run_no_input_value(self, simple_chat_json):
         """Test executing without input value."""
         result = runner.invoke(
             app,
-            ["execute", str(simple_chat_json)],
+            ["run", str(simple_chat_json)],
         )
 
         # Should succeed even without input
@@ -162,11 +162,11 @@ class TestExecuteRealFlows:
         assert output["success"] is True
         assert "result" in output
 
-    def test_execute_check_variables(self, simple_chat_json):
+    def test_run_check_variables(self, simple_chat_json):
         """Test the check-variables functionality."""
         result = runner.invoke(
             app,
-            ["execute", "--check-variables", str(simple_chat_json), "Test"],
+            ["run", "--check-variables", str(simple_chat_json), "Test"],
         )
 
         # Should succeed as simple_chat_no_llm doesn't have global variables
@@ -177,11 +177,11 @@ class TestExecuteRealFlows:
         assert output["success"] is True
         assert "result" in output
 
-    def test_execute_no_check_variables(self, simple_chat_json):
+    def test_run_no_check_variables(self, simple_chat_json):
         """Test disabling variable checking."""
         result = runner.invoke(
             app,
-            ["execute", "--no-check-variables", str(simple_chat_json), "Test"],
+            ["run", "--no-check-variables", str(simple_chat_json), "Test"],
         )
 
         # Should succeed
@@ -192,7 +192,7 @@ class TestExecuteRealFlows:
         assert output["success"] is True
         assert "result" in output
 
-    def test_execute_error_cases(self):
+    def test_run_error_cases(self):
         """Test various error cases."""
         # No input source
         result = runner.invoke(app, ["execute"])
@@ -200,7 +200,7 @@ class TestExecuteRealFlows:
         # Typer's error message will be different from our custom message
 
         # Non-existent file
-        result = runner.invoke(app, ["execute", "does_not_exist.json"])
+        result = runner.invoke(app, ["run", "does_not_exist.json"])
         assert result.exit_code == 1
         # Without verbose, error should be JSON in stdout
         # Extract the last line which should be the JSON error
@@ -212,7 +212,7 @@ class TestExecuteRealFlows:
             assert "does not exist" in error_output["error"]
 
         # Invalid file extension
-        result = runner.invoke(app, ["execute", "test.txt"])
+        result = runner.invoke(app, ["run", "test.txt"])
         assert result.exit_code == 1
         # Without verbose, error should be JSON in stdout
         # Extract the last line which should be the JSON error
@@ -228,7 +228,7 @@ class TestExecuteRealFlows:
         # Multiple input sources
         result = runner.invoke(
             app,
-            ["execute", "--stdin", "--flow-json", '{"data": {}}', "test"],
+            ["run", "--stdin", "--flow-json", '{"data": {}}', "test"],
         )
         assert result.exit_code == 1
         # Without verbose, error should be JSON in stdout
@@ -239,12 +239,12 @@ class TestExecuteRealFlows:
             assert error_output["success"] is False
             assert "Multiple input sources" in error_output["error"]
 
-    def test_execute_input_precedence(self, simple_chat_json):
+    def test_run_input_precedence(self, simple_chat_json):
         """Test input value precedence (positional over option)."""
         result = runner.invoke(
             app,
             [
-                "execute",
+                "run",
                 str(simple_chat_json),
                 "positional_value",
                 "--input-value",
@@ -262,12 +262,12 @@ class TestExecuteRealFlows:
         assert "positional_value" in output["result"]
         assert "option_value" not in output["result"]
 
-    def test_execute_json_output_format(self, simple_chat_json):
+    def test_run_json_output_format(self, simple_chat_json):
         """Test that JSON output is single-line when not verbose, multi-line when verbose."""
         # Non-verbose mode - should be compact single-line JSON
         result = runner.invoke(
             app,
-            ["execute", str(simple_chat_json), "Test compact"],
+            ["run", str(simple_chat_json), "Test compact"],
         )
 
         # Should succeed
@@ -283,7 +283,7 @@ class TestExecuteRealFlows:
         # Verbose mode - should be pretty-printed multi-line JSON
         result_verbose = runner.invoke(
             app,
-            ["execute", "--verbose", str(simple_chat_json), "Test pretty"],
+            ["run", "--verbose", str(simple_chat_json), "Test pretty"],
         )
 
         # Should succeed
@@ -295,10 +295,10 @@ class TestExecuteRealFlows:
         assert output["success"] is True
         assert "Test pretty" in output["result"]
 
-    def test_execute_error_output_verbose(self):
+    def test_run_error_output_verbose(self):
         """Test that errors go to stderr when verbose is true."""
         # Non-existent file with verbose flag
-        result = runner.invoke(app, ["execute", "--verbose", "does_not_exist.json"])
+        result = runner.invoke(app, ["run", "--verbose", "does_not_exist.json"])
         assert result.exit_code == 1
         # With verbose, error should be in stderr, not JSON in stdout
         assert "does not exist" in result.stderr
@@ -343,7 +343,7 @@ class TestAsyncFunctionality:
 
         result = runner.invoke(
             app,
-            ["execute", str(simple_chat_json), "Test async"],
+            ["run", str(simple_chat_json), "Test async"],
         )
 
         # Should succeed
@@ -361,7 +361,7 @@ class TestAsyncFunctionality:
         # but we can at least verify the flow completes successfully
         result = runner.invoke(
             app,
-            ["execute", "--verbose", str(simple_chat_json), "Test async start"],
+            ["run", "--verbose", str(simple_chat_json), "Test async start"],
         )
 
         # Should succeed

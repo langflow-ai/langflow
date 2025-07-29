@@ -1,6 +1,6 @@
 # lfx - Langflow Executor
 
-lfx is a command-line tool for running Langflow workflows. It provides two main commands: `serve` and `execute`.
+lfx is a command-line tool for running Langflow workflows. It provides two main commands: `serve` and `run`.
 
 ## Installation
 
@@ -12,7 +12,7 @@ uv pip install lfx
 
 # Or run without installing using uvx
 uvx lfx serve my_flow.json
-uvx lfx execute my_flow.json "input"
+uvx lfx run my_flow.json "input"
 ```
 
 ### From source (development)
@@ -56,12 +56,12 @@ curl -X POST http://localhost:8000/flows/{flow_id}/run \
   -d '{"input_value": "Hello, world!"}'
 ```
 
-### `lfx execute` - Run flows directly
+### `lfx run` - Run flows directly
 
 Execute a Langflow workflow and get results immediately.
 
 ```bash
-uv run lfx execute my_flow.json "What is AI?"
+uv run lfx run my_flow.json "What is AI?"
 ```
 
 **Options:**
@@ -73,13 +73,13 @@ uv run lfx execute my_flow.json "What is AI?"
 
 ```bash
 # Basic execution
-uv run lfx execute chatbot.json "Tell me a joke"
+uv run lfx run chatbot.json "Tell me a joke"
 
 # JSON output
-uv run lfx execute data_processor.json "input text" --format json
+uv run lfx run data_processor.json "input text" --format json
 
 # From stdin
-echo '{"nodes": [...]}' | uv run lfx execute --stdin
+echo '{"nodes": [...]}' | uv run lfx run --stdin
 ```
 
 ## Input Sources

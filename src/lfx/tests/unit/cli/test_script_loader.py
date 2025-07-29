@@ -200,7 +200,7 @@ class TestResultExtraction:
     def test_extract_message_from_result_success(self):
         """Test extracting message from result."""
         mock_message = MagicMock()
-        mock_message.model_dump_json.return_value = '{"text": "Hello"}'
+        mock_message.model_dump.return_value = {"text": "Hello"}
 
         mock_result = MagicMock()
         mock_result.vertex.custom_component.display_name = "Chat Output"

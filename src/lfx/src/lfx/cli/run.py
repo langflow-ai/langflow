@@ -33,7 +33,7 @@ def output_error(error_message: str, *, verbose: bool) -> None:
 
 
 @partial(syncify, raise_sync_error=False)
-async def execute(
+async def run(
     script_path: Path | None = typer.Argument(  # noqa: B008
         None, help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
     ),
