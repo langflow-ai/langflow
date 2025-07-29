@@ -231,6 +231,10 @@ const config = {
               "/blog-writer",
               "/starter-projects-blog-writer",
               "/tutorials-blog-writer",
+              "/basic-prompting",
+              "/starter-projects-basic-prompting",
+              "/vector-store-rag",
+              "/starter-projects-vector-store-rag",
             ],
           },
           {
@@ -279,14 +283,6 @@ const config = {
           {
             to: "/deployment-kubernetes-dev",
             from: "/deployment-kubernetes",
-          },
-          {
-            to: "/basic-prompting",
-            from: "/starter-projects-basic-prompting",
-          },
-          {
-            to: "/vector-store-rag",
-            from: "/starter-projects-vector-store-rag",
           },
           {
             to: "/contributing-github-issues",
