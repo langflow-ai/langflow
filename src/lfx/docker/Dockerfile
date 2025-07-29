@@ -6,8 +6,11 @@
 # Used to build LFX and create our virtual environment
 ################################
 
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+# Use an Alpine-based Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.12-alpine AS builder
+
+# Install build dependencies needed for some Python packages on Alpine
+RUN apk add --no-cache build-base libaio-dev linux-headers
 
 WORKDIR /app
 
@@ -16,10 +19,6 @@ ENV UV_COMPILE_BYTECODE=1
 
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
-
-# OS deps (trimmed)
-RUN apt-get update && apt-get install --no-install-recommends -y build-essential git \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- Copy only files that affect dependency resolution (best cache) ---
 # Workspace root metadata + lockfile
@@ -30,6 +29,7 @@ COPY src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY src/lfx/README.md /app/src/lfx/README.md
 
 # Create the venv and install *only* what lfx needs (no dev)
+# We expect some packages to be built from source, so we mount the cache
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --package lfx
 
@@ -44,16 +44,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.3-slim AS runtime
+FROM python:3.12-alpine AS runtime
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y \
-    git \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd lfx -u 1000 -g 0 --no-create-home --home-dir /app/data
+# Create a non-root user
+# -D: Don't assign a password
+# -u: Set user ID
+# -G: Add to group (root)
+# -h: Set home directory
+# -s: Set shell
+RUN adduser -D -u 1000 -G root -h /app/data -s /sbin/nologin lfx
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
