@@ -6,14 +6,11 @@ import orjson
 import pandas as pd
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
-from langflow.api.v2.files import upload_user_file
-from langflow.services.auth.utils import create_user_longterm_token
-from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.custom import Component
 from lfx.io import DropdownInput, HandleInput, StrInput
 from lfx.schema import Data, DataFrame, Message
-from lfx.services.deps import get_session, get_settings_service, get_storage_service
+from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.template.field.base import Output
 
 
@@ -132,12 +129,25 @@ class SaveToFileComponent(Component):
 
     async def _upload_file(self, file_path: Path) -> None:
         """Upload the saved file using the upload_user_file service."""
+        try:
+            from langflow.api.v2.files import upload_user_file
+            from langflow.services.auth.utils import create_user_longterm_token
+            from langflow.services.database.models.user.crud import get_user_by_id
+        except ImportError as e:
+            msg = (
+                "Langflow file upload functionality is not available. "
+                "This feature requires the full Langflow installation. "
+            )
+            raise ImportError(msg) from e
+
         if not file_path.exists():
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
         with file_path.open("rb") as f:
-            async for db in get_session():
+            from lfx.services.session import session_scope
+
+            async with session_scope() as db:
                 user_id, _ = await create_user_longterm_token(db)
                 current_user = await get_user_by_id(db, user_id)
 
