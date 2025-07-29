@@ -96,23 +96,23 @@ Langflow's resource requirements vary depending on whether you're deploying the 
 
 * Start with 2Gi for runtime instances and 1.5Gi total (1Gi backend + 512Mi frontend) for IDE instances.
 * Monitor memory usage with tools like Prometheus to identify bottlenecks.
-* Adjust memory requests and limits in Kubernetes. Example configuration:
+* Adjust memory requests and limits in Kubernetes. For example:
 
-```yaml
-resources:
-  requests:
-    memory: "2Gi"
-    cpu: "1000m"
-  limits:
-    memory: "4Gi"
-    cpu: "2000m"
-```
+    ```yaml
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    ```
 
 * For intensive use (e.g., multi-core CPU setups), allocate 4Gi or more per instance.
 
 ### Disk
 
-**Overview**: Disk storage is used for the database (SQLite or PostgreSQL) and file storage for large files (e.g., documents for RAG). The database stores flow configurations, user data, and settings, while files are managed on disk.
+**Overview**: Disk storage is used for the SQLite or PostgreSQL database and file storage for large files, such as documents for RAG. The database stores flow configurations, user data, and settings, while files are managed on disk.
 
 **Usage**:
 
@@ -122,8 +122,8 @@ resources:
 **Scaling Recommendations**:
 
 * Use an external PostgreSQL database for production to improve scalability and reliability.
-* Configure shared file storage (e.g., NFS or cloud storage) for multi-instance setups to ensure file access across replicas.
-* Estimate initial database size based on expected flows and users (e.g., 10GB for moderate use) and monitor growth.
+* Configure shared file storage such as NFS or cloud storage for multi-instance setups to ensure file access across replicas.
+* Estimate initial database size based on expected flows and users, such as 10GB for moderate use, and monitor growth.
 * Use Persistent Volumes in Kubernetes for database and file storage, with dynamic provisioning for scalability.
 
 ### Instances
@@ -132,35 +132,35 @@ resources:
 
 **Base Configuration**:
 
-* **Runtime**: Default replica count of 3 (Langflow Helm Charts - Runtime).
-* **IDE**: Default replica count of 1 for both backend and frontend (Langflow Helm Charts - IDE).
+* **Runtime**: Default replica count of 3.
+* **IDE**: Default replica count of 1 for both backend and frontend.
 
 **Scaling Recommendations**:
 
 * Implement Horizontal Pod Autoscaler (HPA) in Kubernetes to dynamically adjust replicas based on CPU or memory usage. Example HPA configuration:
 
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: langflow-runtime-hpa
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: langflow-runtime
-  minReplicas: 1
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 80
-```
+    ```yaml
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    metadata:
+      name: langflow-runtime-hpa
+    spec:
+      scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: langflow-runtime
+      minReplicas: 1
+      maxReplicas: 10
+      metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 80
+    ```
 
-* For bursty workloads (e.g., 100,000s of tokens per second), ensure sufficient replicas to handle spikes.
+* For bursty workloads, such as 100,000s of tokens per second, ensure sufficient replicas to handle spikes.
 * Vertically scale by increasing CPU/memory requests for complex flows, but prioritize horizontal scaling for reliability.
 
 ### Users per Instance
