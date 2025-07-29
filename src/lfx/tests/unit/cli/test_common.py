@@ -173,26 +173,28 @@ class TestLoadGraph:
         mock_graph = MagicMock()
         mock_graph.nodes = [1, 2, 3]
 
-        with patch("lfx.cli.common.load_flow_from_json", return_value=mock_graph):
+        with patch("lfx.cli.common.load_flow_from_json", return_value=mock_graph) as mock_load_flow:
             verbose_print = Mock()
             path = Path("/test/flow.json")
 
             result = load_graph_from_path(path, ".json", verbose_print, verbose=True)
 
             assert result == mock_graph
+            mock_load_flow.assert_called_once_with(path, disable_logs=False)
             verbose_print.assert_any_call(f"Analyzing JSON flow: {path}")
             verbose_print.assert_any_call("Loading JSON flow...")
 
     def test_load_graph_from_path_failure(self):
         """Test graph loading failure."""
-        with patch("lfx.cli.common.load_flow_from_json", side_effect=Exception("Load error")):
+        with patch("lfx.cli.common.load_flow_from_json", side_effect=Exception("Load error")) as mock_load_flow:
             verbose_print = Mock()
             path = Path("/test/flow.json")
 
             with pytest.raises(typer.Exit) as exc_info:
-                load_graph_from_path(path, ".json", verbose_print)
+                load_graph_from_path(path, ".json", verbose_print, verbose=False)
 
             assert exc_info.value.exit_code == 1
+            mock_load_flow.assert_called_once_with(path, disable_logs=True)
             verbose_print.assert_any_call("✗ Failed to load graph: Load error")
 
 

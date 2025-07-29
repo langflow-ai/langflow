@@ -175,9 +175,9 @@ class TestCommonFunctions:
             tmp.flush()
 
             mock_verbose_print = Mock()
-            graph = load_graph_from_path(Path(tmp.name), ".json", mock_verbose_print)
+            graph = load_graph_from_path(Path(tmp.name), ".json", mock_verbose_print, verbose=True)
             assert graph == mock_graph
-            mock_load_flow.assert_called_once()
+            mock_load_flow.assert_called_once_with(Path(tmp.name), disable_logs=False)
 
     @patch("lfx.cli.common.load_flow_from_json")
     def test_load_graph_from_path_error(self, mock_load_flow):
@@ -190,7 +190,8 @@ class TestCommonFunctions:
 
             mock_verbose_print = Mock()
             with pytest.raises(typer.Exit):
-                load_graph_from_path(Path(tmp.name), ".json", mock_verbose_print)
+                load_graph_from_path(Path(tmp.name), ".json", mock_verbose_print, verbose=False)
+            mock_load_flow.assert_called_once_with(Path(tmp.name), disable_logs=True)
 
 
 def create_mock_graph():

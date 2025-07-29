@@ -221,11 +221,21 @@ def test_serve_command_json_file():
             app.command()(serve_command)
 
             runner = CliRunner()
-            runner.invoke(app, [temp_path])
+            result = runner.invoke(app, [temp_path, "--verbose"])
+
+            assert result.exit_code == 0, result.stdout
 
             # Should start the server
             assert mock_uvicorn.called
-            assert mock_load.called
+            mock_load.assert_called_once()
+
+            # Check that the mock was called with the correct arguments
+            args, kwargs = mock_load.call_args
+            assert args[0] == Path(temp_path).resolve()
+            assert args[1] == ".json"
+            # args[2] is the verbose_print function, which is harder to assert
+            assert "verbose" in kwargs
+            assert kwargs["verbose"] is True
 
     finally:
         Path(temp_path).unlink()
@@ -256,8 +266,17 @@ def test_serve_command_inline_json():
         app.command()(serve_command)
 
         runner = CliRunner()
-        runner.invoke(app, ["--flow-json", flow_json])
+        result = runner.invoke(app, ["--flow-json", flow_json, "--verbose"])
+
+        assert result.exit_code == 0, result.stdout
 
         # Should start the server
         assert mock_uvicorn.called
-        assert mock_load.called
+        mock_load.assert_called_once()
+
+        # Check that the mock was called with the correct arguments
+        args, kwargs = mock_load.call_args
+        assert args[0].suffix == ".json"
+        assert args[1] == ".json"
+        assert "verbose" in kwargs
+        assert kwargs["verbose"] is True

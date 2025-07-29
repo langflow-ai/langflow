@@ -196,7 +196,7 @@ def serve_command(
             raise typer.Exit(1)
 
         if resolved_path.suffix == ".json":
-            graph = load_graph_from_path(resolved_path, verbose_print, verbose=verbose)
+            graph = load_graph_from_path(resolved_path, resolved_path.suffix, verbose_print, verbose=verbose)
         elif resolved_path.suffix == ".py":
             verbose_print("Loading graph from Python script...")
             from lfx.cli.script_loader import load_graph_from_script
