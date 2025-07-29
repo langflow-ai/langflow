@@ -218,6 +218,12 @@ const config = {
               "/starter-projects-simple-agent",
               "/starter-projects-math-agent",
               "/tutorials-math-agent",
+              "/sequential-agent",
+              "/starter-projects-sequential-agent",
+              "/tutorials-sequential-agent",
+              "/memory-chatbot",
+              "/starter-projects-memory-chatbot",
+              "/tutorials-memory-chatbot",
             ],
           },
           {
@@ -228,24 +234,10 @@ const config = {
             ],
           },
           {
-            to: "/memory-chatbot",
-            from: [
-              "/starter-projects-memory-chatbot",
-              "/tutorials-memory-chatbot",
-            ],
-          },
-          {
             to: "/document-qa",
             from: [
               "/starter-projects-document-qa",
               "/tutorials-document-qa",
-            ],
-          },
-          {
-            to: "/sequential-agent",
-            from: [
-              "/starter-projects-sequential-agent",
-              "/tutorials-sequential-agent",
             ],
           },
           {
