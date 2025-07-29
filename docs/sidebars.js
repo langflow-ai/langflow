@@ -227,6 +227,12 @@ module.exports = {
                 }
               ]
             },
+          ],
+        },
+        {
+          type: "category",
+          label: "Cloud Platforms",
+          items: [
             {
               type: "doc",
               id: "Deployment/deployment-gcp",
