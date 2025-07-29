@@ -357,8 +357,8 @@ class Settings(BaseSettings):
                 msg = "config_dir not set, please set it or provide a database_url"
                 raise ValueError(msg)
 
-            from langflow.utils.version import get_version_info
-            from langflow.utils.version import is_pre_release as langflow_is_pre_release
+            from lfx.utils.version import get_version_info
+            from lfx.utils.version import is_pre_release as langflow_is_pre_release
 
             version = get_version_info()["version"]
             is_pre_release = langflow_is_pre_release(version)
