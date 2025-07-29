@@ -25,6 +25,17 @@ def pytest_configure():
     pytest.LOOP_TEST = data_path / "LoopTest.json"
 
 
+def pytest_collection_modifyitems(config, items):  # noqa: ARG001
+    """Automatically add markers based on test file location."""
+    for item in items:
+        if "tests/unit/" in str(item.fspath):
+            item.add_marker(pytest.mark.unit)
+        elif "tests/integration/" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        elif "tests/slow/" in str(item.fspath):
+            item.add_marker(pytest.mark.slow)
+
+
 @pytest.fixture(autouse=True)
 def check_langflow_is_not_installed():
     # Check if langflow is installed. These tests can only run if langflow is not installed.
