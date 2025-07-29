@@ -330,7 +330,7 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                 if "4" not in response_text:
                     failed_models[model_name] = f"Expected '4' in response but got: {response_text}"
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failed_models[model_name] = f"Exception occurred: {e!s}"
 
         assert not failed_models, "The following models failed the test:\n" + "\n".join(

@@ -155,9 +155,7 @@ async def validate_flow_execution(
 
     try:
         # Create a flow from the template with timeout
-        create_response = await asyncio.wait_for(
-            client.post("api/v1/flows/", json=template_data, headers=headers), timeout=10.0
-        )
+        create_response = await client.post("api/v1/flows/", json=template_data, headers=headers, timeout=10)
 
         if create_response.status_code != 201:  # noqa: PLR2004
             errors.append(f"{filename}: Failed to create flow: {create_response.status_code}")
@@ -167,9 +165,7 @@ async def validate_flow_execution(
 
         try:
             # Build the flow with timeout
-            build_response = await asyncio.wait_for(
-                client.post(f"api/v1/build/{flow_id}/flow", json={}, headers=headers), timeout=15.0
-            )
+            build_response = await client.post(f"api/v1/build/{flow_id}/flow", json={}, headers=headers, timeout=10)
 
             if build_response.status_code != 200:  # noqa: PLR2004
                 errors.append(f"{filename}: Failed to build flow: {build_response.status_code}")
@@ -179,9 +175,7 @@ async def validate_flow_execution(
 
             # Get build events to validate execution
             events_headers = {**headers, "Accept": "application/x-ndjson"}
-            events_response = await asyncio.wait_for(
-                client.get(f"api/v1/build/{job_id}/events", headers=events_headers), timeout=10.0
-            )
+            events_response = await client.get(f"api/v1/build/{job_id}/events", headers=events_headers, timeout=10)
 
             if events_response.status_code != 200:  # noqa: PLR2004
                 errors.append(f"{filename}: Failed to get build events: {events_response.status_code}")
@@ -193,7 +187,7 @@ async def validate_flow_execution(
         finally:
             # Clean up the flow with timeout
             try:  # noqa: SIM105
-                await asyncio.wait_for(client.delete(f"api/v1/flows/{flow_id}", headers=headers), timeout=5.0)
+                await client.delete(f"api/v1/flows/{flow_id}", headers=headers, timeout=10)
             except asyncio.TimeoutError:
                 # Log but don't fail if cleanup times out
                 pass
