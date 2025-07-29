@@ -464,7 +464,7 @@ class TestValidateFlowExecution:
         mock_client.delete.return_value = Mock()
 
         template_data = {"nodes": [], "edges": []}
-        headers = {"Authorization": "Bearer token"}
+        headers = {"Authorization": "Bearer token", "timeout": 10}
 
         errors = await validate_flow_execution(mock_client, template_data, "test.json", headers)
         assert len(errors) == 1
