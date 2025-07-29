@@ -173,13 +173,11 @@ chat_input = ChatInput(
         captured = capsys.readouterr()
         if captured.out:
             # Should be valid JSON when successful
-            try:
-                output_data = json.loads(captured.out)
-                assert isinstance(output_data, dict)
-                assert "result" in output_data  # Should have result field
-            except json.JSONDecodeError:
-                # Non-JSON output is also acceptable in some cases
-                assert len(captured.out.strip()) > 0
+            # Output should always be valid JSON when verbose=False
+            output_data = json.loads(captured.out)
+            assert isinstance(output_data, dict)
+            # Either success with result or error with error field
+            assert "result" in output_data or "error" in output_data
 
     def test_execute_python_script_verbose(self, simple_chat_script, capsys):
         """Test executing a Python script with verbose output."""
