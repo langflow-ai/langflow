@@ -536,7 +536,9 @@ export function brokenEdgeMessage({
     field: string;
   };
 }) {
-  return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
+  return `${source.nodeDisplayName}${
+    source.outputDisplayName ? " | " + source.outputDisplayName : ""
+  } -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
@@ -823,7 +825,8 @@ export interface CookieOptions {
   maxAge?: number;
   expires?: Date;
   secure?: boolean;
-  sameSite?: "Strict" | "Lax" | "None";
+  sameSite?: "strict" | "lax" | "none";
+  httpOnly?: boolean;
 }
 
 /**
@@ -1002,3 +1005,9 @@ export const stripReleaseStageFromVersion = (version: string): string => {
   }
   return version;
 };
+
+export const setCookieWithOptions = (): CookieOptions => ({
+  path: "/",
+  secure: true,
+  sameSite: "strict",
+});
