@@ -66,6 +66,15 @@ flags:
       - src/frontend/
     carryforward: true  # Preserve coverage data across builds if missing
 
+# Define coverage components for granular reporting
+components:
+  backend-components:
+    name: "Backend Components" 
+    paths:
+      - src/backend/base/langflow/components/**
+    # Note: Many components excluded by .coveragerc (bundled + legacy)
+    # This tracks coverage of remaining "core" components only
+
 # Files/directories to exclude from coverage calculations
 ignore:
   # Database migrations - infrastructure code, not business logic
