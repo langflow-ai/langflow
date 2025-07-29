@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
@@ -11,7 +10,6 @@ import type { APIClassType, InputFieldType } from "@/types/api";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
-import InputFileComponent from "./components/inputFileComponent";
 import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
@@ -24,6 +22,7 @@ import { StrRenderComponent } from "./components/strRenderComponent";
 import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
 import type { InputProps, NodeInfoType } from "./types";
+import CustomInputFileComponent from "@/customization/components/custom-input-file";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -171,7 +170,7 @@ export function ParameterRenderComponent({
         );
       case "file":
         return (
-          <InputFileComponent
+          <CustomInputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
             file_path={templateData.file_path}
@@ -244,7 +243,7 @@ export function ParameterRenderComponent({
       case "connect": {
         const link =
           templateData?.options?.find(
-            (option: any) => option?.name === templateValue,
+            (option: any) => option?.name === templateValue
           )?.link || "";
 
         return (
