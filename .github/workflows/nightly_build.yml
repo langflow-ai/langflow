@@ -16,7 +16,7 @@ jobs:
     name: Test LFX Release Workflow
     uses: ./.github/workflows/release-lfx.yml
     with:
-      version: "0.0.1"  # Initial version to reserve package name
+      version: "0.1.0"  # Initial version to reserve package name
       publish_pypi: true
       build_docker: false
       pre_release: true
