@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -17,6 +16,7 @@ import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
+import { useState } from "react";
 
 interface NodeDialogProps {
   open: boolean;
@@ -41,6 +41,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
@@ -134,6 +135,44 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     onClose();
   };
 
+  const handleSuccessCallback = () => {
+    // Check if this is a knowledge base creation
+    const isKnowledgeBaseCreation = 
+      dialogNodeData?.display_name === "Create Knowledge" ||
+      dialogNodeData?.name === "create_knowledge_base" ||
+      (dialogNodeData?.description && dialogNodeData.description.toLowerCase().includes("knowledge"));
+
+    if (isKnowledgeBaseCreation) {
+      // Get the knowledge base name from field values
+      const knowledgeBaseName = fieldValues["01_new_kb_name"] || fieldValues["new_kb_name"] || "Knowledge Base";
+      
+      setSuccessData({
+        title: `Knowledge Base "${knowledgeBaseName}" created successfully!`,
+      });
+    }
+
+    // Only close dialog after success and delay for Astra database tracking
+    if (nodeId.toLowerCase().includes("astra") && name === "database_name") {
+      const {
+        cloud_provider: cloudProvider,
+        new_database_name: databaseName,
+        ...otherFields
+      } = fieldValues;
+      track("Database Created", {
+        nodeId,
+        cloudProvider,
+        databaseName,
+        ...otherFields,
+      });
+      
+      setTimeout(() => {
+        handleCloseDialog();
+      }, 5000);
+    } else {
+      handleCloseDialog();
+    }
+  };
+
   const handleSubmitDialog = async () => {
     // Validate required fields first
     const missingRequiredFields = Object.entries(dialogTemplate)
@@ -167,27 +206,9 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
       postTemplateValue,
       handleErrorData,
       name,
-      handleCloseDialog,
+      handleSuccessCallback,
       nodeClass.tool_mode,
     );
-
-    if (nodeId.toLowerCase().includes("astra") && name === "database_name") {
-      const {
-        cloud_provider: cloudProvider,
-        new_database_name: databaseName,
-        ...otherFields
-      } = fieldValues;
-      track("Database Created", {
-        nodeId,
-        cloudProvider,
-        databaseName,
-        ...otherFields,
-      });
-    }
-
-    setTimeout(() => {
-      handleCloseDialog();
-    }, 5000);
   };
 
   // Render
