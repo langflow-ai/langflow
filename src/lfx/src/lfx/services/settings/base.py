@@ -288,14 +288,6 @@ class Settings(BaseSettings):
             return "direct"
         return value
 
-    @field_validator("dev")
-    @classmethod
-    def set_dev(cls, value):
-        from lfx.settings import set_dev
-
-        set_dev(value)
-        return value
-
     @field_validator("user_agent", mode="after")
     @classmethod
     def set_user_agent(cls, value):
