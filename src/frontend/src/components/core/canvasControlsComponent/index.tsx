@@ -1,3 +1,15 @@
+import {
+  ControlButton,
+  Panel,
+  type ReactFlowState,
+  useReactFlow,
+  useStore,
+  useStoreApi,
+} from "@xyflow/react";
+import { cloneDeep } from "lodash";
+import { useCallback, useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { shallow } from "zustand/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -11,18 +23,6 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn, getOS } from "@/utils/utils";
-import {
-  ControlButton,
-  Panel,
-  type ReactFlowState,
-  useReactFlow,
-  useStore,
-  useStoreApi,
-} from "@xyflow/react";
-import { cloneDeep } from "lodash";
-import { useCallback, useEffect, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
-import { shallow } from "zustand/shallow";
 
 type CustomControlButtonProps = {
   iconName?: string;
@@ -96,9 +96,7 @@ const DropdownControlButton = ({
       title={tooltipText}
     >
       <div className="flex flex-row items-center justify-between w-full h-full">
-        <span className="text-muted-foreground text-sm mr-2">
-          {name}
-        </span>
+        <span className="text-muted-foreground text-sm mr-2">{name}</span>
         <div className="flex flex-row items-center justify-center gap-1 text-sm text-placeholder-foreground">
           <span className="mr-1">{getModifierKey()}</span>
           <span>{shortcut}</span>
@@ -121,10 +119,10 @@ const formatZoomPercentage = (zoom: number): string => {
 
 // Keyboard shortcuts configuration
 const SHORTCUTS = {
-  ZOOM_IN: { key: '+', code: 'Equal' },
-  ZOOM_OUT: { key: '-', code: 'Minus' },
-  FIT_VIEW: { key: '1', code: 'Digit1' },
-  RESET_ZOOM: { key: '0', code: 'Digit0' },
+  ZOOM_IN: { key: "+", code: "Equal" },
+  ZOOM_OUT: { key: "-", code: "Minus" },
+  FIT_VIEW: { key: "1", code: "Digit1" },
+  RESET_ZOOM: { key: "0", code: "Digit0" },
 } as const;
 
 const selector = (s: ReactFlowState) => ({
@@ -157,7 +155,7 @@ const CanvasControls = ({ children }) => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isModifierPressed = event.metaKey || event.ctrlKey;
-      
+
       if (!isModifierPressed) return;
 
       switch (event.code) {
@@ -187,8 +185,8 @@ const CanvasControls = ({ children }) => {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached]);
 
   useEffect(() => {
@@ -258,7 +256,7 @@ const CanvasControls = ({ children }) => {
           <Separator orientation="vertical" />
         </span>
       )}
-      
+
       {/* Canvas Controls Dropdown */}
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
@@ -319,11 +317,11 @@ const CanvasControls = ({ children }) => {
           />
         </DropdownMenuContent>
       </DropdownMenu>
-      
+
       <span>
         <Separator orientation="vertical" />
       </span>
-      
+
       {/* Help Button */}
       <Button
         variant="ghost"
