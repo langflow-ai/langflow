@@ -99,6 +99,9 @@ omit =
     # Init files (typically just imports)
     */__init__.py
 
+    # Deactivate Components
+    */components/deactivated/*
+
 """
 
     # Add bundled components to omit list
