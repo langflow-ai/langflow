@@ -291,7 +291,7 @@ class Settings(BaseSettings):
     @field_validator("dev")
     @classmethod
     def set_dev(cls, value):
-        from langflow.settings import set_dev
+        from lfx.settings import set_dev
 
         set_dev(value)
         return value
