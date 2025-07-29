@@ -5,11 +5,6 @@ import uuid
 from typing import Any
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
-from langflow.api.v2.mcp import get_server
-from langflow.services.auth.utils import create_user_longterm_token
-
-# Import get_server from the backend API
-from langflow.services.database.models.user.crud import get_user_by_id
 from loguru import logger
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
@@ -154,6 +149,17 @@ class MCPToolsComponent(ComponentWithCache):
             return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
+            try:
+                from langflow.api.v2.mcp import get_server
+                from langflow.services.auth.utils import create_user_longterm_token
+                from langflow.services.database.models.user.crud import get_user_by_id
+            except ImportError as e:
+                msg = (
+                    "Langflow MCP server functionality is not available. "
+                    "This feature requires the full Langflow installation."
+                )
+                raise ImportError(msg) from e
+
             async with session_scope() as db:
                 user_id, _ = await create_user_longterm_token(db)
                 current_user = await get_user_by_id(db, user_id)
