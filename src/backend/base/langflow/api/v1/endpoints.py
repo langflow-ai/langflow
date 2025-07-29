@@ -759,7 +759,7 @@ async def get_config() -> ConfigResponse:
     """
     try:
         settings_service: SettingsService = get_settings_service()
-        return ConfigResponse.from_settings(settings_service.settings)
+        return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

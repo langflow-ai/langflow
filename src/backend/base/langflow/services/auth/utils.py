@@ -262,8 +262,8 @@ async def get_current_active_superuser(current_user: Annotated[User, Depends(get
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     """Get the user for webhook execution.
 
-    When AUTO_LOGIN=false, requires API key authentication and validates flow ownership.
-    When AUTO_LOGIN=true, allows execution as the flow owner without API key.
+    When WEBHOOK_AUTH_ENABLE=false, allows execution as the flow owner without API key.
+    When WEBHOOK_AUTH_ENABLE=true, requires API key authentication and validates flow ownership.
 
     Args:
         flow_id: The ID of the flow being executed
@@ -279,25 +279,41 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
 
     settings_service = get_settings_service()
 
-    if settings_service.auth_settings.AUTO_LOGIN:
-        # When auto login is enabled, run webhook as the flow owner without requiring API key
+    if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
+        # When webhook auth is disabled, run webhook as the flow owner without requiring API key
         try:
             return await get_user_by_flow_id_or_endpoint_name(flow_id)
         except Exception as exc:
             raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
 
-    # When auto login is disabled, use existing api_key_security for authentication
+    # When webhook auth is enabled, require API key authentication
     api_key_header_val = request.headers.get("x-api-key")
     api_key_query_val = request.query_params.get("x-api-key")
 
+    # Check if API key is provided
+    if not api_key_header_val and not api_key_query_val:
+        raise HTTPException(status_code=403, detail="API key required when webhook authentication is enabled")
+
+    # Use the provided API key (prefer header over query param)
+    api_key = api_key_header_val or api_key_query_val
+
     try:
-        # Reuse existing api_key_security function
-        authenticated_user = await api_key_security(api_key_query_val, api_key_header_val)
-        if not authenticated_user:
-            raise HTTPException(status_code=403, detail="Invalid API key")
+        # Validate API key directly without AUTO_LOGIN fallback
+        async with get_db_service().with_session() as db:
+            result = await check_key(db, api_key)
+            if not result:
+                logger.warning(f"Invalid API key provided for webhook: {api_key[:10]}...")
+                raise HTTPException(status_code=403, detail="Invalid API key")
+
+            authenticated_user = UserRead.model_validate(result, from_attributes=True)
+            logger.info(f"Webhook API key validated successfully for user: {authenticated_user.username}")
     except HTTPException:
-        # Re-raise with webhook-specific message
-        raise HTTPException(status_code=403, detail="API key required when auto login is disabled")
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as exc:
+        # Handle other exceptions
+        logger.error(f"Webhook API key validation error: {exc}")
+        raise HTTPException(status_code=403, detail="API key authentication failed") from exc
 
     # Get flow owner to check if authenticated user owns this flow
     try:
