@@ -471,7 +471,7 @@ class TestValidateFlowExecution:
         assert "Flow execution validation failed: Build error" in errors[0]
 
         # Verify cleanup was called
-        mock_client.delete.assert_called_once_with("api/v1/flows/flow123", headers=headers)
+        mock_client.delete.assert_called_once_with("api/v1/flows/flow123", headers=headers, timeout=10)
 
 
 class TestValidateEventStream:
