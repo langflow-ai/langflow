@@ -5466,6 +5466,7 @@ source = { editable = "src/lfx" }
 dependencies = [
     { name = "aiofile" },
     { name = "aiofiles" },
+    { name = "asyncer" },
     { name = "cachetools" },
     { name = "chardet" },
     { name = "defusedxml" },
@@ -5507,6 +5508,7 @@ dev = [
 requires-dist = [
     { name = "aiofile", specifier = ">=3.8.0" },
     { name = "aiofiles", specifier = ">=24.1.0" },
+    { name = "asyncer", specifier = ">=0.0.8" },
     { name = "cachetools", specifier = ">=5.5.2" },
     { name = "chardet", specifier = ">=5.2.0" },
     { name = "defusedxml", specifier = ">=0.7.1" },

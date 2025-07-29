@@ -12,8 +12,8 @@ app = typer.Typer(
 )
 
 # Add commands
-app.command(name="serve", help="Serve a flow as an API")(serve_command)
-app.command(name="execute", help="Execute a flow directly")(execute)
+app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True)(serve_command)
+app.command(name="execute", help="Execute a flow directly", no_args_is_help=True)(execute)
 
 
 def main():

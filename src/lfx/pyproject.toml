@@ -35,6 +35,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "tomli>=2.2.1",
     "orjson>=3.10.15",
+    "asyncer>=0.0.8",
 ]
 
 [project.scripts]

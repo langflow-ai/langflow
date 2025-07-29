@@ -1,10 +1,12 @@
 import json
 import sys
 import tempfile
+from functools import partial
 from io import StringIO
 from pathlib import Path
 
 import typer
+from asyncer import syncify
 from loguru import logger
 
 from lfx.cli.script_loader import (
@@ -14,11 +16,11 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.cli.validation import validate_global_variables_for_env
-from lfx.load import load_flow_from_json
 from lfx.schema.schema import InputValueRequest
 
 
-def execute(
+@partial(syncify, raise_sync_error=False)
+async def execute(
     script_path: Path | None = typer.Argument(  # noqa: B008
         None, help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
     ),
@@ -154,7 +156,9 @@ def execute(
         elif file_extension == ".json":
             verbose_print("✓ Valid JSON flow file detected")
             verbose_print("\nLoading and executing JSON flow...")
-            graph = load_flow_from_json(script_path, disable_logs=not verbose)
+            from lfx.load import aload_flow_from_json
+
+            graph = await aload_flow_from_json(script_path, disable_logs=not verbose)
     except Exception as e:
         logger.exception("Failed to load graph")
         verbose_print(f"✗ Failed to load graph: {e}")
@@ -206,7 +210,7 @@ def execute(
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = list(graph.start(inputs))
+        results = [result async for result in graph.async_start(inputs)]
     finally:
         sys.stdout = original_stdout
         sys.stderr = original_stderr
