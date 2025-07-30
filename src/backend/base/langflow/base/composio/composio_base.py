@@ -22,6 +22,47 @@ from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
+def _patch_graph_clean_null_input_types() -> None:
+    """Monkey-patch Graph._create_vertex to clean legacy templates."""
+    try:
+        from langflow.graph.graph.base import Graph
+
+        original_create_vertex = Graph._create_vertex
+
+        def _create_vertex_with_cleanup(self, frontend_data):  
+            try:
+                node_id: str | None = frontend_data.get("id") if isinstance(frontend_data, dict) else None
+                if node_id and "Composio" in node_id:
+                    template = (
+                        frontend_data.get("data", {})
+                        .get("node", {})
+                        .get("template", {})
+                    )
+                    if isinstance(template, dict):
+                        for field_cfg in template.values():
+                            if (
+                                isinstance(field_cfg, dict)
+                                and field_cfg.get("input_types") is None
+                            ):
+                                field_cfg["input_types"] = []
+            except Exception as e: 
+                logger.debug(f"Composio template cleanup encountered error: {e}")
+
+            return original_create_vertex(self, frontend_data)
+
+        # Patch only once
+        if getattr(Graph, "_composio_patch_applied", False) is False: 
+            Graph._create_vertex = _create_vertex_with_cleanup  
+            Graph._composio_patch_applied = True  
+            logger.debug("Applied Composio template cleanup patch to Graph._create_vertex")
+
+    except Exception as e:
+        logger.debug(f"Failed to apply Composio Graph patch: {e}")
+
+
+# Apply the patch at import time
+_patch_graph_clean_null_input_types()
+
 
 class ComposioBaseComponent(Component):
     """Base class for Composio components with common functionality."""
@@ -639,7 +680,12 @@ class ComposioBaseComponent(Component):
         # Add / update the inputs for this action
         for inp in lf_inputs:
             if inp.name is not None:
-                inp_dict = inp.to_dict() if hasattr(inp, "to_dict") else inp.__dict__
+                inp_dict = inp.to_dict() if hasattr(inp, "to_dict") else inp.__dict__.copy()
+
+                # Ensure input_types is always a list
+                if not isinstance(inp_dict.get("input_types"), list):
+                    inp_dict["input_types"] = []
+
                 inp_dict.setdefault("show", True)  # visible once action selected
                 # Preserve previously entered value if user already filled something
                 if inp.name in build_config:
@@ -769,6 +815,11 @@ class ComposioBaseComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Update build config for auth and action selection."""
+        # Clean any legacy None values that may still be present
+        for _fname, _fconfig in build_config.items():
+            if isinstance(_fconfig, dict) and _fconfig.get("input_types") is None:
+                _fconfig["input_types"] = []
+
         # BULLETPROOF tool_mode checking - check all possible places where tool_mode could be stored
         instance_tool_mode = getattr(self, "tool_mode", False) if hasattr(self, "tool_mode") else False
 
