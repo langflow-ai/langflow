@@ -1,7 +1,6 @@
 name: Cross-Platform Installation Test
 
 on:
-  workflow_call:  # Called by the main CI workflow
   workflow_dispatch:
     inputs:
       base-artifact-name:
@@ -15,10 +14,10 @@ on:
         type: string
         default: ""
       test-timeout:
-        description: "Timeout for langflow server startup test (seconds)"
+        description: "Timeout for langflow server startup test (minutes)"
         required: false
         type: number
-        default: 120
+        default: 5
       run-id:
         description: "GitHub run ID to download artifacts from (leave empty for latest successful run)"
         required: false
@@ -31,20 +30,20 @@ on:
         required: true
         type: string
       main-artifact-name:
-        description: "Name of the main package artifact" 
+        description: "Name of the main package artifact"
         required: true
         type: string
       test-timeout:
-        description: "Timeout for langflow server startup test"
+        description: "Timeout for langflow server startup test (minutes)"
         required: false
         type: number
-        default: 120
+        default: 5
 
 jobs:
   build-if-needed:
     name: Build Packages (if no artifacts provided)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && (inputs.base-artifact-name == '' || inputs.main-artifact-name == '')
+    if: inputs.base-artifact-name == '' || inputs.main-artifact-name == ''
     outputs:
       base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
@@ -65,7 +64,7 @@ jobs:
         run: make build_frontend
       - name: Build base package
         run: make build_langflow_base args="--wheel"
-      - name: Build main package  
+      - name: Build main package
         run: make build_langflow args="--wheel"
       - name: Upload base artifact
         uses: actions/upload-artifact@v4
@@ -163,7 +162,7 @@ jobs:
               BASE_NAME="${{ needs.build-if-needed.outputs.base-artifact-name }}"
             fi
             if [ -z "$MAIN_NAME" ]; then
-              MAIN_NAME="${{ needs.build-if-needed.outputs.main-artifact-name }}"  
+              MAIN_NAME="${{ needs.build-if-needed.outputs.main-artifact-name }}"
             fi
           else
             BASE_NAME="${{ inputs.base-artifact-name }}"
@@ -230,11 +229,11 @@ jobs:
 
       - name: Test server startup (Windows)
         if: matrix.os == 'windows'
-        timeout-minutes: ${{ inputs.test-timeout / 60 }}
+        timeout-minutes: ${{ inputs.test-timeout }}
         run: |
           # Start server in background
           start /B ./test-env/Scripts/python -m langflow run --host localhost --port 7860 --backend-only
-          
+
           # Wait for server to be ready
           $timeout = ${{ inputs.test-timeout }}
           $elapsed = 0
@@ -250,27 +249,27 @@ jobs:
               $elapsed += 5
             }
           } while ($elapsed -lt $timeout)
-          
+
           if ($elapsed -ge $timeout) {
             Write-Host "❌ Server failed to start within timeout on ${{ matrix.os }}-${{ matrix.arch }}"
             exit 1
           }
-          
+
           # Stop any running langflow processes
           Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object {$_.CommandLine -like "*langflow*"} | Stop-Process -Force
         shell: powershell
 
-      - name: Test server startup (Unix)  
+      - name: Test server startup (Unix)
         if: matrix.os != 'windows'
-        timeout-minutes: ${{ inputs.test-timeout / 60 }}
+        timeout-minutes: ${{ inputs.test-timeout }}
         run: |
           # Start server in background
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
-          
+
           # Wait for server to be ready
           timeout ${{ inputs.test-timeout }} bash -c '
-            until curl -f http://localhost:7860/api/v1/auto_login >/dev/null 2>&1; do 
+            until curl -f http://localhost:7860/api/v1/auto_login >/dev/null 2>&1; do
               sleep 5
             done
           ' || {
@@ -278,9 +277,9 @@ jobs:
             kill $SERVER_PID 2>/dev/null || true
             exit 1
           }
-          
+
           echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-          
+
           # Clean shutdown
           kill $SERVER_PID 2>/dev/null || true
           sleep 5

@@ -237,6 +237,9 @@ jobs:
   test-cross-platform:
     name: Test Cross-Platform Installation
     uses: ./.github/workflows/cross-platform-test.yml
+    with:
+      base-artifact-name: ""
+      main-artifact-name: ""
 
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
