@@ -9,7 +9,6 @@ Tests all JSON templates in the starter_projects folder to ensure they:
 Validates that templates work correctly and prevent unexpected breakage.
 """
 
-import asyncio
 import json
 from pathlib import Path
 
@@ -28,6 +27,24 @@ def get_starter_projects_path() -> Path:
     return Path("src/backend/base/langflow/initial_setup/starter_projects")
 
 
+def get_template_files():
+    """Get all template files for parameterization."""
+    return list(get_starter_projects_path().glob("*.json"))
+
+
+def get_basic_template_files():
+    """Get basic template files for parameterization."""
+    path = get_starter_projects_path()
+    basic_templates = ["Basic Prompting.json", "Basic Prompt Chaining.json"]
+    return [path / name for name in basic_templates if (path / name).exists()]
+
+
+@pytest.fixture(autouse=True)
+def disable_tracing(monkeypatch):
+    """Disable tracing for all template tests."""
+    monkeypatch.setenv("LANGFLOW_DEACTIVATE_TRACING", "true")
+
+
 class TestStarterProjects:
     """Test all starter project templates."""
 
@@ -36,129 +53,80 @@ class TestStarterProjects:
         path = get_starter_projects_path()
         assert path.exists(), f"Directory not found: {path}"
 
-        templates = list(path.glob("*.json"))
+        templates = get_template_files()
         assert len(templates) > 0, "No template files found"
 
-    def test_all_templates_valid_json(self):
-        """Test all templates are valid JSON."""
-        path = get_starter_projects_path()
-        templates = list(path.glob("*.json"))
+    @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
+    def test_template_valid_json(self, template_file):
+        """Test template is valid JSON."""
+        with template_file.open(encoding="utf-8") as f:
+            try:
+                json.load(f)
+            except json.JSONDecodeError as e:
+                pytest.fail(f"Invalid JSON in {template_file.name}: {e}")
 
-        for template_file in templates:
-            with template_file.open(encoding="utf-8") as f:
-                try:
-                    json.load(f)
-                except json.JSONDecodeError as e:
-                    pytest.fail(f"Invalid JSON in {template_file.name}: {e}")
+    @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
+    def test_template_structure(self, template_file):
+        """Test template has required structure."""
+        with template_file.open(encoding="utf-8") as f:
+            template_data = json.load(f)
 
-    def test_all_templates_structure(self):
-        """Test all templates have required structure."""
-        path = get_starter_projects_path()
-        templates = list(path.glob("*.json"))
+        errors = validate_template_structure(template_data, template_file.name)
+        if errors:
+            error_msg = "\n".join(errors)
+            pytest.fail(f"Template structure errors in {template_file.name}:\n{error_msg}")
 
-        all_errors = []
-        for template_file in templates:
-            with template_file.open(encoding="utf-8") as f:
-                template_data = json.load(f)
+    @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
+    def test_template_can_build_flow(self, template_file):
+        """Test template can be built into working flow."""
+        with template_file.open(encoding="utf-8") as f:
+            template_data = json.load(f)
 
-            errors = validate_template_structure(template_data, template_file.name)
-            all_errors.extend(errors)
-
-        if all_errors:
-            error_msg = "\n".join(all_errors)
-            pytest.fail(f"Template structure errors:\n{error_msg}")
-
-    def test_all_templates_can_build_flow(self):
-        """Test all templates can be built into working flows."""
-        path = get_starter_projects_path()
-        templates = list(path.glob("*.json"))
-
-        all_errors = []
-        for template_file in templates:
-            with template_file.open(encoding="utf-8") as f:
-                template_data = json.load(f)
-
-            errors = validate_flow_can_build(template_data, template_file.name)
-            all_errors.extend(errors)
-
-        if all_errors:
-            error_msg = "\n".join(all_errors)
-            pytest.fail(f"Flow build errors:\n{error_msg}")
+        errors = validate_flow_can_build(template_data, template_file.name)
+        if errors:
+            error_msg = "\n".join(errors)
+            pytest.fail(f"Flow build errors in {template_file.name}:\n{error_msg}")
 
     @pytest.mark.asyncio
-    async def test_all_templates_validate_endpoint(self, client, logged_in_headers):
-        """Test all templates using the validate endpoint."""
-        path = get_starter_projects_path()
-        templates = list(path.glob("*.json"))
+    @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
+    async def test_template_validate_endpoint(self, template_file, client, logged_in_headers):
+        """Test template using the validate endpoint."""
+        with template_file.open(encoding="utf-8") as f:
+            template_data = json.load(f)
 
-        all_errors = []
-        for template_file in templates:
+        errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
+        if errors:
+            error_msg = "\n".join(errors)
+            pytest.fail(f"Endpoint validation errors in {template_file.name}:\n{error_msg}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
+    async def test_template_flow_execution(self, template_file, client, logged_in_headers):
+        """Test template can execute successfully."""
+        try:
             with template_file.open(encoding="utf-8") as f:
                 template_data = json.load(f)
 
             errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
-            all_errors.extend(errors)
+            if errors:
+                error_msg = "\n".join(errors)
+                pytest.fail(f"Template execution errors in {template_file.name}:\n{error_msg}")
 
-        if all_errors:
-            error_msg = "\n".join(all_errors)
-            pytest.fail(f"Endpoint validation errors:\n{error_msg}")
-
-    @pytest.mark.asyncio
-    async def test_all_templates_flow_execution(self, client, logged_in_headers):
-        """Test all templates can execute successfully."""
-        path = get_starter_projects_path()
-        templates = list(path.glob("*.json"))
-
-        all_errors = []
-
-        # Process templates in chunks to avoid timeout issues
-        chunk_size = 5
-        template_chunks = [templates[i : i + chunk_size] for i in range(0, len(templates), chunk_size)]
-
-        for chunk in template_chunks:
-            for template_file in chunk:
-                try:
-                    with template_file.open(encoding="utf-8") as f:
-                        template_data = json.load(f)
-
-                    errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
-                    all_errors.extend(errors)
-
-                except (ValueError, TypeError, KeyError, AttributeError, OSError, json.JSONDecodeError) as e:
-                    error_msg = f"{template_file.name}: Unexpected error during validation: {e!s}"
-                    all_errors.append(error_msg)
-
-            # Brief pause between chunks to avoid overwhelming the system
-            await asyncio.sleep(0.5)
-
-        # All templates must pass - no failures allowed
-        if all_errors:
-            error_msg = "\n".join(all_errors)
-            pytest.fail(f"Template execution errors:\n{error_msg}")
+        except (ValueError, TypeError, KeyError, AttributeError, OSError, json.JSONDecodeError) as e:
+            pytest.fail(f"{template_file.name}: Unexpected error during validation: {e!s}")
 
     @pytest.mark.asyncio
-    async def test_basic_templates_flow_execution(self, client, logged_in_headers):
-        """Test basic templates can execute successfully."""
-        path = get_starter_projects_path()
+    @pytest.mark.parametrize("template_file", get_basic_template_files(), ids=lambda x: x.name)
+    async def test_basic_template_flow_execution(self, template_file, client, logged_in_headers):
+        """Test basic template can execute successfully."""
+        try:
+            with template_file.open(encoding="utf-8") as f:
+                template_data = json.load(f)
 
-        # Only test basic templates that should reliably work
-        basic_templates = ["Basic Prompting.json", "Basic Prompt Chaining.json"]
+            errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
+            if errors:
+                error_msg = "\n".join(errors)
+                pytest.fail(f"Basic template execution errors in {template_file.name}:\n{error_msg}")
 
-        all_errors = []
-        for template_name in basic_templates:
-            template_file = path / template_name
-            if template_file.exists():
-                try:
-                    with template_file.open(encoding="utf-8") as f:
-                        template_data = json.load(f)
-
-                    errors = await validate_flow_execution(client, template_data, template_name, logged_in_headers)
-                    all_errors.extend(errors)
-
-                except (ValueError, TypeError, KeyError, AttributeError, OSError, json.JSONDecodeError) as e:
-                    all_errors.append(f"{template_name}: Unexpected error during validation: {e!s}")
-
-        # All basic templates must pass - no failures allowed
-        if all_errors:
-            error_msg = "\n".join(all_errors)
-            pytest.fail(f"Basic template execution errors:\n{error_msg}")
+        except (ValueError, TypeError, KeyError, AttributeError, OSError, json.JSONDecodeError) as e:
+            pytest.fail(f"{template_file.name}: Unexpected error during validation: {e!s}")
