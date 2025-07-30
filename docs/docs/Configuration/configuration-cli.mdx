@@ -131,6 +131,9 @@ For information about the environment variables that correspond to these options
 
 Create a superuser account.
 
+To disable this command, set [`LANGFLOW_ENABLE_SUPERUSER_CLI=false`](./environment-variables.mdx#LANGFLOW_ENABLE_SUPERUSER_CLI).
+For security reasons, this is recommended in production environments to prevent unauthorized superuser creation.
+
 ```bash
 langflow superuser [OPTIONS]
 # or

@@ -60,15 +60,11 @@ Depending on your authentication settings, note the following requirements for c
 
 To create an API key for a user from the CLI, do the following:
 
-1. In your `.env` file, set `AUTO_LOGIN=FALSE`, and set superuser credentials for your server.
+1. In your `.env` file, make sure the `LANGFLOW_ENABLE_SUPERUSER_CLI` [environment variable](./environment-variables) is set to `true`.
+    Superuser privileges are required to create API keys with the Langflow CLI. If `LANGFLOW_ENABLE_SUPERUSER_CLI` is `false`, you can't create superusers with the Langflow CLI, and you can't create API keys if no superuser exists.
+2. Set `AUTO_LOGIN=FALSE`, and then set superuser credentials for your server.
 
-    ```text
-    LANGFLOW_AUTO_LOGIN=False
-    LANGFLOW_SUPERUSER=administrator
-    LANGFLOW_SUPERUSER_PASSWORD=securepassword
-    ```
-
-2. To confirm your superuser status, call [`GET /users/whoami`](/api-users#get-current-user), and then check that the response contains `"is_superuser": true`:
+3. To confirm your superuser status, call [`GET /users/whoami`](/api-users#get-current-user), and then check that the response contains `"is_superuser": true`:
 
     ```bash
     curl -X GET \
@@ -96,7 +92,7 @@ To create an API key for a user from the CLI, do the following:
 
     </details>
 
-3. Create an API key:
+4. Create an API key:
 
     ```shell
     uv run langflow api-key
