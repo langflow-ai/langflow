@@ -35,9 +35,9 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
         # Send request
         curl --request POST \
-        --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
-        --header 'Content-Type: application/json' \
-        --header 'x-api-key: $LANGFLOW_API_KEY' \
+        --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+        --header "Content-Type: application/json" \
+        --header "x-api-key: $LANGFLOW_API_KEY" \
         --data '{
           "output_type": "chat",
           "input_type": "chat",
