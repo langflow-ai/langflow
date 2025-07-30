@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.46cc88d4.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.c27ec185.js" defer="defer"></script>
 <script src="/assets/js/main.9e5db23c.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -95,7 +95,7 @@ For more information, see <a href="#configure-external-memory">Configure externa
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_LANGCHAIN_CACHE=InMemoryCache</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_CACHE_TYPE=Async</span></div></div><br></code></div></div>
 <p>Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
 The default behavior is suitable for most use cases.</p>
-<p>For other options, see <a href="/environment-variables#LANGFLOW_CACHE_TYPE"><code>LANGFLOW_CACHE_TYPE</code></a>.</p>
+<p>For other options, see the <code>LANGFLOW_CACHE_TYPE</code> <a href="/environment-variables">environment variable</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="store-chat-memory">Store chat memory<a href="#store-chat-memory" class="hash-link" aria-label="Direct link to Store chat memory" title="Direct link to Store chat memory">​</a></h2>
 <p>Chat-based flows with a <strong>Language Model</strong> or <strong>Agent</strong> component have built-in chat memory that is enabled by default.
 This memory allows them to retrieve and reference messages from previous conversations associated with the same session ID.</p>
