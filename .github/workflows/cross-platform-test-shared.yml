@@ -30,7 +30,7 @@ on:
 
 jobs:
   test-installation:
-    name: Test Install - ${{ matrix.os }} ${{ matrix.arch }} Python ${{ matrix.python-version }}
+    name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -168,7 +168,7 @@ jobs:
         run: |
           if [ -n "${{ inputs.langflow-version }}" ]; then
             uv pip install --python ./test-env/Scripts/python.exe langflow==${{ inputs.langflow-version }}
-          else  
+          else
             uv pip install --python ./test-env/Scripts/python.exe langflow
           fi
         shell: bash

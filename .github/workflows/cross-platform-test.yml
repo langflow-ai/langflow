@@ -86,7 +86,7 @@ jobs:
     name: Test Wheel Installation
     needs: [build-if-needed]
     if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
-    uses: ./.github/workflows/shared-cross-platform-test.yml
+    uses: ./.github/workflows/cross-platform-test-shared.yml
     with:
       install-method: "wheel"
       test-timeout: ${{ inputs.test-timeout }}

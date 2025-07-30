@@ -22,7 +22,7 @@ jobs:
   test-pypi-installation:
     if: inputs.test-from-pypi == true
     name: Test PyPI Installation
-    uses: ./.github/workflows/shared-cross-platform-test.yml
+    uses: ./.github/workflows/cross-platform-test-shared.yml
     with:
       install-method: "pypi"
       test-timeout: ${{ inputs.test-timeout }}
