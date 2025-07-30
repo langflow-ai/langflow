@@ -15,3 +15,5 @@ export const ENABLE_VOICE_ASSISTANT = true;
 export const ENABLE_IMAGE_ON_PLAYGROUND = false;
 export const ENABLE_MCP = true;
 export const ENABLE_MCP_NOTICE = false;
+export const ENABLE_MCP_COMPOSER =
+  process.env.LANGFLOW_FEATURE_MCP_COMPOSER === "true";
