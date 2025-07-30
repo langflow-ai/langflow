@@ -143,10 +143,8 @@ For example:
 
     If you have [deployed a public Langflow server](/deployment-public-server), the address is automatically included.
 
-    :::important
-    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN=false`](/environment-variables#LANGFLOW_AUTO_LOGIN)), you must include your Langflow API key in the configuration.
+    If your Langflow server requires authentication, you must include your Langflow API key in the configuration.
     For more information, see [MCP server authentication and environment variables](#authentication).
-    :::
 
 5. Save and close the `mcp.json` file in Cursor.
 The newly added MCP server will appear in the **MCP Servers** section.
@@ -160,7 +158,8 @@ For more information, see the [Cursor's MCP documentation](https://docs.cursor.c
 
 ### MCP server authentication and environment variables {#authentication}
 
-If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/configuration-api-keys) in your MCP client configuration.
+You must provide a Langflow API key in your MCP client configuration if your [Langflow server has authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+
 When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
 
 ```json
@@ -185,7 +184,7 @@ Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
 
 ![MCP server tab showing Generate API key button](/img/mcp-server-api-key.png)
 
-To include environment variables with your MCP server command, include them like this:
+To include other environment variables with your MCP server command, use the `env` object with key-value pairs of environment variables:
 
 ```json
 {
@@ -203,8 +202,6 @@ To include environment variables with your MCP server command, include them like
   }
 }
 ```
-
-Replace `KEY` and `VALUE` with the environment variable name and value you want to include.
 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
 ### Deploy your MCP server externally {#deploy-your-server-externally}
