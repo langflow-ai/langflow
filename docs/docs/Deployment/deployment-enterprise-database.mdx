@@ -3,6 +3,9 @@ title: Langflow database guide for enterprise DBAs
 slug: /deployment-enterprise-database
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 This guide is designed for enterprise database administrators (DBAs) and operators responsible for deploying and managing Langflow in production environments.
 
 Langflow relies on a database to store critical data such as flow configurations, user accounts, project collections, configuration settings, and execution logs.
@@ -24,67 +27,75 @@ The database is accessed during startup, flow execution, user interactions, and 
 
 Langflow defaults to SQLite but supports PostgreSQL for production environments, offering better performance and scalability. Below are the steps to configure Langflow to use PostgreSQL, suitable for standalone or containerized deployments.
 
-### Prerequisites
+1. Set up PostgreSQL:
+   Deploy a PostgreSQL instance (version 12 or higher recommended) using a local server, Docker, or a managed cloud service. Create a database for Langflow and a user with appropriate permissions.
 
-* A running PostgreSQL instance (version 12 or higher recommended).
-* Database credentials with permissions to create and modify tables.
-* Access to the Langflow installation directory or deployment configuration.
+2. Obtain the connection string in the format `postgresql://user:password@host:port/dbname`, such as`postgresql://langflow:securepassword@postgres:5432/langflow`.
 
-### Configuration Steps
+   For High Availability setups, use a virtual IP or proxy hostname. For more information, see [High Availability for PostgreSQL](#high-availability-ha-for-postgresql).
 
-1. **Set Up PostgreSQL**:
-   * Deploy a PostgreSQL instance using a local server, Docker, or a managed cloud service.
-   * Create a database for Langflow and a user with appropriate permissions.
-2. **Obtain the Connection String**:
-   * Format: `postgresql://user:password@host:port/dbname`.
-   * Example: `postgresql://langflow:securepassword@postgres:5432/langflow`.
-   * For High Availability setups, use a virtual IP or proxy hostname. For more information, see [High Availability for PostgreSQL](#high-availability-ha-for-postgresql).
-3. **Configure Langflow**:
-   * **Standalone Installation**:
-     * Create a `.env` file in the Langflow directory: `touch .env`.
-     * Add the connection string: `LANGFLOW_DATABASE_URL="postgresql://langflow:securepassword@postgres:5432/langflow"`.
-     * Reference the `.env.example` file from the Langflow GitHub Repository for additional settings.
-   * **Docker Compose Setup**:
-     * Use or modify the example `docker-compose.yml` from the Langflow GitHub Repository.
-     * Example configuration:
+3. Configure Langflow with the `.env` or `docker-compose.yml` files.
 
-    ```yaml
-    version: '3'
-    services:
-      langflow:
-        image: langflowai/langflow:latest
-        ports:
-          - "7860:7860"
-        environment:
-          - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
-      postgres:
-        image: postgres:16
-        ports:
-          - "5432:5432"
-        environment:
-          - POSTGRES_USER=langflow
-          - POSTGRES_PASSWORD=langflow
-          - POSTGRES_DB=langflow
+    <Tabs groupId="environment">
+      <TabItem value=".env" label=".env" default>
+
+        i. Create a `.env` file in the Langflow directory: `touch .env`.
+
+        ii. Add the connection string to the `.env` file: `LANGFLOW_DATABASE_URL="postgresql://langflow:securepassword@postgres:5432/langflow"`.
+
+        Reference the `.env.example` file from the Langflow GitHub Repository for additional settings.
+
+      </TabItem>
+      <TabItem value="docker-compose.yml" label="docker-compose.yml">
+
+        Use or modify the example `docker-compose.yml` from the Langflow GitHub Repository.
+
+        ```yaml
+        version: '3'
+        services:
+          langflow:
+            image: langflowai/langflow:latest
+            ports:
+              - "7860:7860"
+            environment:
+              - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+          postgres:
+            image: postgres:16
+            ports:
+              - "5432:5432"
+            environment:
+              - POSTGRES_USER=langflow
+              - POSTGRES_PASSWORD=langflow
+              - POSTGRES_DB=langflow
+            volumes:
+              - langflow-postgres:/var/lib/postgresql/data
         volumes:
-          - langflow-postgres:/var/lib/postgresql/data
-    volumes:
-      - langflow-postgres:
-    ```
+          - langflow-postgres:
+        ```
 
-4. **Run Langflow**:
-   * For standalone: `uv run langflow run --env-file .env`.
-   * For Docker Compose: Navigate to the directory containing `docker-compose.yml` and run `docker-compose up`.
-   * Verify connectivity by running a flow and checking PostgreSQL for new tables and activity, such as `SELECT * FROM pg_stat_activity WHERE datname = 'langflow';`.
-5. **Database Migrations**:
-   * Langflow manages its schema using migrations, likely using SQLAlchemy and Alembic.
-   * Run migrations to apply schema changes with `langflow migration --no-test`. To run migrations and preview changes before applying them, run `langflow migration--test`.
-   * Ensure the database user has permissions to create and alter tables.
+      </TabItem>
+    </Tabs>
 
-### Testing the configuration
 
-* Start Langflow and create a test flow using the UI or API.
-* Inspect the PostgreSQL database to confirm new tables and activity.
-* To query the database container, run `docker exec -it <postgres-container> psql -U langflow -d langflow`.
+4. Start Langflow with the value for the connection string.
+
+    <Tabs groupId="environment">
+      <TabItem value=".env" label=".env" default>
+
+      `uv run langflow run --env-file .env`
+
+      </TabItem>
+      <TabItem value="docker-compose.yml" label="docker-compose.yml">
+
+      Navigate to the directory containing `docker-compose.yml` and run `docker-compose up`.
+
+      </TabItem>
+    </Tabs>
+
+5. Optional: Run migrations.
+   Langflow uses SQLAlchemy and Alembic to manage its database schema. When you first connect to PostgreSQL, Langflow will automatically run migrations to create the necessary tables. To manually run migrations, use `langflow migration --no-test`. To preview changes before applying them, use `langflow migration --test`.
+
+5. To verify the configuration, create a test flow using the UI or API and inspect the PostgreSQL database to confirm new tables and activity. You can query the database container with `docker exec -it <postgres-container> psql -U langflow -d langflow` or use `SELECT * FROM pg_stat_activity WHERE datname = 'langflow';` to verify connectivity.
 
 ## High Availability (HA) for PostgreSQL
 
