@@ -63,11 +63,7 @@ jobs:
       - name: Build frontend
         run: make build_frontend
       - name: Build base package
-        run: |
-          make build base=true args="--wheel"
-          # Move base wheel to expected location (same issue as in release.yml)
-          mkdir -p src/backend/base/dist
-          mv dist/langflow_base-*.whl src/backend/base/dist/
+        run: make build_langflow_base args="--wheel"
       - name: Build main package
         run: make build_langflow args="--wheel"
       - name: Upload base artifact
