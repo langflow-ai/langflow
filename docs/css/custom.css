@@ -433,3 +433,22 @@ body {
   border-top: none !important;
   padding: 0;
 }
+
+/* DocSearch Input Styling - Simple border override */
+.DocSearch-Button {
+  border: 1px solid var(--ifm-color-emphasis-300) !important;
+  border-radius: 6px !important;
+  background: var(--ifm-color-content-inverse) !important;
+  color: var(--ifm-color-emphasis-500) !important;
+}
+
+.DocSearch-Button:hover,
+.DocSearch-Button:focus {
+  border-color: var(--ifm-color-primary) !important;
+  box-shadow: 0 0 0 1px var(--ifm-color-primary) !important;
+}
+
+.DocSearch-Search-Icon {
+  color: var(--ifm-color-emphasis-500) !important;
+  size: 16px !important;
+}
