@@ -113,7 +113,9 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
+
       # PyPI publishing moved to after cross-platform testing
+
       - name: Upload Artifact
         if: steps.check-version.outputs.skipped == 'false'
         uses: actions/upload-artifact@v4
@@ -189,7 +191,9 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
+
       # PyPI publishing moved to after cross-platform testing
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -223,7 +227,7 @@ jobs:
           enable-cache: false
           python-version: "3.13"
       - name: Publish base to PyPI
-        if: needs.release-base.outputs.skipped == 'false'
+        if: needs.build-base.outputs.skipped == 'false'
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
