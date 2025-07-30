@@ -168,11 +168,11 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
             continue
         try:
             await delete_vertex_builds_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
         try:
             await delete_transactions_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug(f"Error deleting transactions for flow {flow_id}: {e}")
 
 
@@ -474,7 +474,7 @@ async def active_user(client):  # noqa: ARG001
             user = await session.get(User, user.id, options=[selectinload(User.flows)])
             await _delete_transactions_and_vertex_builds(session, user.flows)
             await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting transactions and vertex builds for user: {e}")
 
     try:
@@ -482,7 +482,7 @@ async def active_user(client):  # noqa: ARG001
             user = await session.get(User, user.id)
             await session.delete(user)
             await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting user: {e}")
 
 
