@@ -1,36 +1,36 @@
 import sys
 
+# Base components that are always available
 from .nvidia import NVIDIAModelComponent
 from .nvidia_embedding import NVIDIAEmbeddingsComponent
-from .nvidia_ingest import NvidiaIngestComponent
 from .nvidia_rerank import NvidiaRerankComponent
 
+# Start with base components that are always available
+__all__ = [
+    "NVIDIAEmbeddingsComponent",
+    "NVIDIAModelComponent",
+    "NvidiaRerankComponent",
+]
+
+# Platform-specific components
+if sys.platform == "win32":
+    from .system_assist import NvidiaSystemAssistComponent
+
+    __all__ += ["NvidiaSystemAssistComponent"]
+
+# Optional dependency components
 # Try to import nemoguardrails component, but don't fail if not available
 try:
     from .nemo_guardrails import NVIDIANeMoGuardrailsComponent
 
-    NEMOGUARDRAILS_AVAILABLE = True
+    __all__ += ["NVIDIANeMoGuardrailsComponent"]
 except ImportError:
-    NEMOGUARDRAILS_AVAILABLE = False
+    pass
 
-if sys.platform == "win32":
-    from .system_assist import NvidiaSystemAssistComponent
+# Try to import nv-ingest component, but don't fail if not available
+try:
+    from .nvidia_ingest import NvidiaIngestComponent
 
-    __all__ = [
-        "NVIDIAEmbeddingsComponent",
-        "NVIDIAModelComponent",
-        "NvidiaIngestComponent",
-        "NvidiaRerankComponent",
-        "NvidiaSystemAssistComponent",
-    ]
-    if NEMOGUARDRAILS_AVAILABLE:
-        __all__ += ["NVIDIANeMoGuardrailsComponent"]
-else:
-    __all__ = [
-        "NVIDIAEmbeddingsComponent",
-        "NVIDIAModelComponent",
-        "NvidiaIngestComponent",
-        "NvidiaRerankComponent",
-    ]
-    if NEMOGUARDRAILS_AVAILABLE:
-        __all__ += ["NVIDIANeMoGuardrailsComponent"]
+    __all__ += ["NvidiaIngestComponent"]
+except ImportError:
+    pass
