@@ -9,8 +9,9 @@ const { ModuleFederationPlugin } = require("webpack").container;
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 
-module.exports = (env) => {
+module.exports = (env, argv) => {
   const isDev = env === "development";
+  const isServe = argv.mode === "production" && process.argv.includes('serve');
 
   return {
     mode: isDev ? "development" : "production",
@@ -169,12 +170,14 @@ module.exports = (env) => {
           ACCESS_TOKEN_EXPIRE_SECONDS:
             process.env.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60,
         }),
+        // Make backend URL available globally for production builds
+        "process.env.BACKEND_URL": JSON.stringify(BACKEND_URL),
       }),
       isDev && new ReactRefreshWebpackPlugin(),
     ].filter(Boolean),
     devServer: {
-      port: 3001,
-      hot: true,
+      port: isDev ? 3001 : 3030,
+      hot: isDev, // Only enable HMR in development
       liveReload: false, // Disable live reload in favor of HMR
       client: {
         overlay: {

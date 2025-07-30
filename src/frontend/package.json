@@ -101,7 +101,7 @@
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite",
     "start:webpack": "webpack serve --config webpack.config.js --env development",
     "build:webpack": "webpack --config webpack.config.js --mode production",
-    "serve:webpack": "serve -l 3030 dist"
+    "serve:webpack": "webpack serve --config webpack.config.js --mode production --port 3030"
   },
   "browserslist": {
     "production": [
