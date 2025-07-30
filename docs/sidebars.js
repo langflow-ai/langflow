@@ -222,6 +222,12 @@ module.exports = {
                 }
               ]
             },
+          ],
+        },
+        {
+          type: "category",
+          label: "Cloud platforms",
+          items: [
             {
               type: "doc",
               id: "Deployment/deployment-gcp",
@@ -242,7 +248,7 @@ module.exports = {
               id: "Deployment/deployment-render",
               label: "Render"
             },
-          ],
+          ]
         },
       ],
     },

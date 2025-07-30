@@ -182,10 +182,10 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. See [`--port`](./configuration-cli.mdx#run-port). |
 | `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | `false` | Expose Prometheus metrics. |
 | `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
-| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | See [`LANGFLOW_CACHE_TYPE`](#LANGFLOW_CACHE_TYPE). |
-| `LANGFLOW_REDIS_DB` | Integer | `0` | See [`LANGFLOW_CACHE_TYPE`](#LANGFLOW_CACHE_TYPE). |
-| `LANGFLOW_REDIS_HOST` | String | `localhost` | See [`LANGFLOW_CACHE_TYPE`](#LANGFLOW_CACHE_TYPE). |
-| `LANGFLOW_REDIS_PORT` | String | `6379` | See [`LANGFLOW_CACHE_TYPE`](#LANGFLOW_CACHE_TYPE). |
+| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | See `LANGFLOW_CACHE_TYPE`. |
+| `LANGFLOW_REDIS_DB` | Integer | `0` | See `LANGFLOW_CACHE_TYPE`. |
+| `LANGFLOW_REDIS_HOST` | String | `localhost` | See `LANGFLOW_CACHE_TYPE`. |
+| `LANGFLOW_REDIS_PORT` | String | `6379` | See `LANGFLOW_CACHE_TYPE`. |
 | `LANGFLOW_REDIS_PASSWORD` | String | Not set | Password for Redis authentication when using Redis cache type. |
 | `LANGFLOW_REMOVE_API_KEYS` | Boolean | `false` | Remove API keys from the projects saved in the database. See [`--remove-api-keys`](./configuration-cli.mdx#run-remove-api-keys). |
 | `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | `false` | Save the Langflow database in `LANGFLOW_CONFIG_DIR` instead of in the Langflow package directory. Note, when this variable is set to default (`false`), the database isn't shared between different virtual environments and the database is deleted when you uninstall Langflow. |
