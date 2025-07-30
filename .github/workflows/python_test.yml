@@ -70,12 +70,19 @@ jobs:
       - name: Install the project
         run: uv sync
 
+      - name: Generate dynamic coverage configuration
+        run: |
+          echo "Generating dynamic coverage configuration..."
+          python3 scripts/generate_coverage_config.py
+          echo "Generated .coveragerc with the following exclusions:"
+          echo "Bundled components and legacy files excluded from coverage"
+
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-report=xml --cov-report=html"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
