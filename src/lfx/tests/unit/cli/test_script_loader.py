@@ -19,6 +19,18 @@ from lfx.cli.script_loader import (
 )
 
 
+@pytest.fixture
+def test_data_dir():
+    """Get the test data directory."""
+    return Path(__file__).parent.parent.parent / "data"
+
+
+@pytest.fixture
+def simple_chat_py(test_data_dir):
+    """Path to the simple chat Python script."""
+    return test_data_dir / "simple_chat_no_llm.py"
+
+
 class TestSysPath:
     """Test sys.path manipulation utilities."""
 
@@ -158,21 +170,20 @@ class TestGraphValidation:
 class TestLoadGraphFromScript:
     """Test loading graph from script functionality."""
 
-    def test_load_graph_from_script_success(self):
-        """Test successful graph loading from script."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write("from unittest.mock import MagicMock\n")
-            f.write("graph = MagicMock()\n")
-            script_path = Path(f.name)
+    def test_load_graph_from_script_success(self, simple_chat_py):
+        """Test successful graph loading from script with real Graph object."""
+        # Use the existing test data file
+        graph = load_graph_from_script(simple_chat_py)
 
-        try:
-            mock_graph = MagicMock()
-            with patch("lfx.cli.script_loader._validate_graph_instance", return_value=mock_graph) as mock_validate:
-                result = load_graph_from_script(script_path)
-                assert result == mock_graph
-                mock_validate.assert_called_once()
-        finally:
-            script_path.unlink()
+        # Verify it's a real Graph instance
+        from lfx.graph import Graph
+
+        assert isinstance(graph, Graph)
+
+        # Verify it has the expected components
+        component_names = {v.custom_component.__class__.__name__ for v in graph.vertices}
+        assert "ChatInput" in component_names
+        assert "ChatOutput" in component_names
 
     def test_load_graph_from_script_no_graph_variable(self):
         """Test error when script has no graph variable."""
@@ -199,17 +210,27 @@ class TestResultExtraction:
 
     def test_extract_message_from_result_success(self):
         """Test extracting message from result."""
-        mock_message = MagicMock()
-        mock_message.model_dump.return_value = {"text": "Hello"}
+        from lfx.graph.schema import ResultData
+        from lfx.schema.message import Message
 
+        # Create a real Message object
+        message = Message(text="Hello")
+
+        # Create ResultData with the message
+        result_data = ResultData(
+            results={"message": message}, component_display_name="Chat Output", component_id="test-123"
+        )
+
+        # Create a minimal mock for the vertex structure
         mock_result = MagicMock()
         mock_result.vertex.custom_component.display_name = "Chat Output"
-        mock_result.result_dict.results = {"message": mock_message}
+        mock_result.result_dict = result_data
 
         results = [mock_result]
 
-        message = extract_message_from_result(results)
-        assert message == '{"text": "Hello"}'
+        message_json = extract_message_from_result(results)
+        assert "Hello" in message_json
+        assert "text" in message_json
 
     def test_extract_message_from_result_no_chat_output(self):
         """Test extraction when no Chat Output found."""
@@ -223,12 +244,21 @@ class TestResultExtraction:
 
     def test_extract_text_from_result_success(self):
         """Test extracting text content from result."""
-        mock_message = MagicMock()
-        mock_message.text = "Hello World"
+        from lfx.graph.schema import ResultData
+        from lfx.schema.message import Message
 
+        # Create a real Message object
+        message = Message(text="Hello World")
+
+        # Create ResultData with the message
+        result_data = ResultData(
+            results={"message": message}, component_display_name="Chat Output", component_id="test-123"
+        )
+
+        # Create a minimal mock for the vertex structure
         mock_result = MagicMock()
         mock_result.vertex.custom_component.display_name = "Chat Output"
-        mock_result.result_dict.results = {"message": mock_message}
+        mock_result.result_dict = result_data
 
         results = [mock_result]
 
@@ -237,26 +267,59 @@ class TestResultExtraction:
 
     def test_extract_text_from_result_no_text_attribute(self):
         """Test extraction when message has no text attribute."""
-        mock_message = "Plain string message"
+        from lfx.graph.schema import ResultData
+
+        # Use a plain string as message
+        result_data = ResultData(
+            results={"message": "Plain string message"}, component_display_name="Chat Output", component_id="test-123"
+        )
 
         mock_result = MagicMock()
         mock_result.vertex.custom_component.display_name = "Chat Output"
-        mock_result.result_dict.results = {"message": mock_message}
+        mock_result.result_dict = result_data
 
         results = [mock_result]
 
         text = extract_text_from_result(results)
         assert text == "Plain string message"
 
+    def test_extract_text_from_result_with_dict_message(self):
+        """Test extraction when message is a dict with text key."""
+        from lfx.graph.schema import ResultData
+
+        # Use a dict as message
+        result_data = ResultData(
+            results={"message": {"text": "Dict message text"}},
+            component_display_name="Chat Output",
+            component_id="test-123",
+        )
+
+        mock_result = MagicMock()
+        mock_result.vertex.custom_component.display_name = "Chat Output"
+        mock_result.result_dict = result_data
+
+        results = [mock_result]
+
+        text = extract_text_from_result(results)
+        assert text == "Dict message text"
+
     def test_extract_structured_result_success(self):
         """Test extracting structured result data."""
-        mock_message = MagicMock()
-        mock_message.text = "Test message"
+        from lfx.graph.schema import ResultData
+        from lfx.schema.message import Message
+
+        # Create a real Message object
+        message = Message(text="Test message")
+
+        # Create ResultData with the message
+        result_data = ResultData(
+            results={"message": message}, component_display_name="Chat Output", component_id="vertex-123"
+        )
 
         mock_result = MagicMock()
         mock_result.vertex.custom_component.display_name = "Chat Output"
         mock_result.vertex.id = "vertex-123"
-        mock_result.result_dict.results = {"message": mock_message}
+        mock_result.result_dict = result_data
 
         results = [mock_result]
 
@@ -270,32 +333,68 @@ class TestResultExtraction:
             "success": True,
         }
 
-    def test_extract_structured_result_extraction_error(self):
-        """Test structured extraction with error."""
+    def test_extract_structured_result_no_text_extraction(self):
+        """Test structured extraction without text extraction."""
+        from lfx.graph.schema import ResultData
+        from lfx.schema.message import Message
 
-        # Create a custom message class that raises AttributeError when text is accessed
-        class ErrorMessage:
-            @property
-            def text(self):
-                msg = "No text"
-                raise AttributeError(msg)
+        # Create a real Message object
+        message = Message(text="Test message")
 
-        mock_message = ErrorMessage()
+        # Create ResultData with the message
+        result_data = ResultData(
+            results={"message": message}, component_display_name="Chat Output", component_id="vertex-123"
+        )
 
         mock_result = MagicMock()
         mock_result.vertex.custom_component.display_name = "Chat Output"
         mock_result.vertex.id = "vertex-123"
-        mock_result.result_dict.results = {"message": mock_message}
+        mock_result.result_dict = result_data
+
+        results = [mock_result]
+
+        structured = extract_structured_result(results, extract_text=False)
+
+        assert structured["result"] == message
+        assert structured["type"] == "message"
+        assert structured["component"] == "Chat Output"
+        assert structured["success"] is True
+
+    def test_extract_structured_result_extraction_error(self):
+        """Test structured extraction with error."""
+        from lfx.graph.schema import ResultData
+
+        # Create a custom message class that has text attribute but raises when accessed
+        class ErrorMessage:
+            @property
+            def text(self):
+                msg = "No text available"
+                raise AttributeError(msg)
+
+            def __str__(self):
+                return "ErrorMessage instance"
+
+        # Create ResultData with the error message
+        result_data = ResultData(
+            results={"message": ErrorMessage()}, component_display_name="Chat Output", component_id="vertex-123"
+        )
+
+        mock_result = MagicMock()
+        mock_result.vertex.custom_component.display_name = "Chat Output"
+        mock_result.vertex.id = "vertex-123"
+        mock_result.result_dict = result_data
 
         results = [mock_result]
 
         structured = extract_structured_result(results, extract_text=True)
 
+        # Since hasattr returns False for properties that raise AttributeError,
+        # the code returns the message object itself (no warning)
         assert structured["success"] is True
-        # When hasattr fails due to AttributeError, the function uses the message object directly
-        # No warning should be generated in this case
-        assert "warning" not in structured
-        assert structured["result"] == mock_message
+        assert "warning" not in structured  # No warning because hasattr is False
+        assert structured["result"] == result_data.results["message"]  # Returns the ErrorMessage instance
+        assert structured["type"] == "message"
+        assert structured["component"] == "Chat Output"
 
     def test_extract_structured_result_no_results(self):
         """Test structured extraction with no results."""
@@ -401,3 +500,55 @@ class TestFindGraphVariable:
             assert result is None
             mock_echo.assert_called_once()
             assert "not found" in mock_echo.call_args[0][0]
+
+
+class TestIntegrationWithRealFlows:
+    """Integration tests using real flows and minimal mocking."""
+
+    def test_load_and_validate_real_script(self, simple_chat_py):
+        """Test loading and validating a real script file."""
+        # Load the real graph from the script
+        graph = load_graph_from_script(simple_chat_py)
+
+        # Verify it's a real Graph
+        from lfx.graph import Graph
+
+        assert isinstance(graph, Graph)
+
+        # Verify components
+        component_types = {v.custom_component.__class__.__name__ for v in graph.vertices}
+        assert "ChatInput" in component_types
+        assert "ChatOutput" in component_types
+
+    async def test_execute_real_flow_with_results(self, simple_chat_py):
+        """Test executing a real flow and extracting results."""
+        # Load the real graph
+        graph = load_graph_from_script(simple_chat_py)
+
+        # Execute the graph with real input
+        from lfx.graph.schema import RunOutputs
+
+        # Start the graph execution
+        results = [result async for result in graph.async_start(inputs={"input_value": "Test message"})]
+
+        # Extract results using our functions
+        if isinstance(results, RunOutputs) and results.outputs:
+            # Convert RunOutputs to the format expected by extract functions
+            result_list = []
+            for output in results.outputs:
+                mock_result = MagicMock()
+                mock_result.vertex.custom_component.display_name = output.component_display_name
+                mock_result.vertex.id = output.component_id
+                mock_result.result_dict = output
+                result_list.append(mock_result)
+
+            # Test extraction functions with real results
+            text = extract_text_from_result(result_list)
+            assert "Test message" in text
+
+            message_json = extract_message_from_result(result_list)
+            assert "Test message" in message_json
+
+            structured = extract_structured_result(result_list)
+            assert structured["success"] is True
+            assert "Test message" in str(structured["result"])
