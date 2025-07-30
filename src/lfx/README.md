@@ -100,10 +100,10 @@ uv run lfx run simple_chat.json "Hello" --format text
 uv run lfx run simple_chat.json --input-value "Hello world"
 
 # From stdin (requires --input-value for input)
-echo '{"nodes": [...]}' | uv run lfx run --stdin --input-value "Your message"
+echo '{"data": {"nodes": [...], "edges": [...]}}' | uv run lfx run --stdin --input-value "Your message"
 
 # Inline JSON
-uv run lfx run --flow-json '{"nodes": [...]}' --input-value "Test"
+uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' --input-value "Test"
 ```
 
 ## Input Sources
@@ -111,7 +111,7 @@ uv run lfx run --flow-json '{"nodes": [...]}' --input-value "Test"
 Both commands support multiple input sources:
 
 - **File path**: `uv run lfx serve my_flow.json`
-- **Inline JSON**: `uv run lfx serve --flow-json '{"nodes": [...]}'`
+- **Inline JSON**: `uv run lfx serve --flow-json '{"data": {"nodes": [...], "edges": [...]}}'`
 - **Stdin**: `uv run lfx serve --stdin`
 
 ## Development
