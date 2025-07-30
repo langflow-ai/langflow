@@ -62,10 +62,26 @@ class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
         config = component.generate_rails_config()
         assert config == custom_yaml
 
-    @patch("langflow.components.nvidia.nemo_guardrails.RailsConfig")
-    @patch("langflow.components.nvidia.nemo_guardrails.RunnableRails")
-    def test_build_model(self, mock_runnable_rails, component_class, default_kwargs):
+    @patch("builtins.__import__")
+    def test_build_model(self, mock_import, component_class, default_kwargs):
         """Test model building with different configurations."""
+        # Mock the nemoguardrails imports
+        mock_rails_config = MagicMock()
+        mock_runnable_rails = MagicMock()
+
+        def side_effect(name, *args, **kwargs):
+            if name == "nemoguardrails":
+                mock_module = MagicMock()
+                mock_module.RailsConfig = mock_rails_config
+                return mock_module
+            if name == "nemoguardrails.integrations.langchain.runnable_rails":
+                mock_module = MagicMock()
+                mock_module.RunnableRails = mock_runnable_rails
+                return mock_module
+            return __import__(name, *args, **kwargs)
+
+        mock_import.side_effect = side_effect
+
         component = component_class(**default_kwargs)
 
         # Test with default configuration

@@ -5,8 +5,6 @@ from typing import Any
 import nest_asyncio
 import requests
 import yaml
-from nemoguardrails import RailsConfig
-from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
@@ -68,7 +66,7 @@ DEFAULT_OFF_TOPIC_MESSAGE = (
 class GuardrailsLanguageModel:
     """Wrapper class that makes RunnableRails properly implement the LanguageModel interface."""
 
-    def __init__(self, runnable_rails: RunnableRails):
+    def __init__(self, runnable_rails):
         self._runnable_rails = runnable_rails
 
     def invoke(self, inputs, **kwargs):
@@ -507,6 +505,16 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
 define bot refuse to respond
   "{self.off_topic_message}"
 """
+
+        # Import nemoguardrails only when needed
+        try:
+            from nemoguardrails import RailsConfig
+            from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
+        except ImportError as e:
+            error_msg = (
+                "nemoguardrails is not installed. Please install it with `uv pip install langflow[nemoguardrails]`"
+            )
+            raise ImportError(error_msg) from e
 
         config = RailsConfig.from_content(yaml_content=yaml_content, colang_content=colang_content)
         runnable_rails = RunnableRails(config=config, llm=self.llm, verbose=self.guardrails_verbose)
