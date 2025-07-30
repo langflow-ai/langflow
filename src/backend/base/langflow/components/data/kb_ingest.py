@@ -22,7 +22,6 @@ from langflow.io import (
     DataFrameInput,
     DropdownInput,
     IntInput,
-    Output,
     SecretStrInput,
     StrInput,
     TableInput,
@@ -186,14 +185,7 @@ class KBIngestionComponent(Component):
     ]
 
     # ------ Outputs -------------------------------------------------------
-    outputs = [
-        Output(
-            name="kb_info",
-            display_name="Info",
-            method="build_kb_info",
-            info="Returns basic metadata of the newly ingested KB.",
-        ),
-    ]
+    outputs = []
 
     # ------ Internal helpers ---------------------------------------------
     def _get_kb_root(self) -> Path:
