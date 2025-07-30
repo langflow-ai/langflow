@@ -110,13 +110,8 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        {
-          type: "doc",
-          id: "Develop/install-custom-dependencies",
-          label: "Install custom dependencies"
-        },
-        "Configuration/configuration-api-keys",
-        "Configuration/configuration-authentication",
+        "Configuration/api-keys-and-authentication",
+        "Develop/install-custom-dependencies",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         {
@@ -146,11 +141,17 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
-            "Integrations/Arize/integrations-arize",
-            "Integrations/integrations-langfuse",
-            "Integrations/integrations-langsmith",
-            "Integrations/integrations-langwatch",
-            "Integrations/integrations-opik",
+            {
+              type: "category",
+              label: "Monitoring",
+              items: [
+                "Integrations/Arize/integrations-arize",
+                "Integrations/integrations-langfuse",
+                "Integrations/integrations-langsmith",
+                "Integrations/integrations-langwatch",
+                "Integrations/integrations-opik",
+              ],
+            },
             "Contributing/contributing-telemetry",
           ],
         },
@@ -221,6 +222,12 @@ module.exports = {
                 }
               ]
             },
+          ],
+        },
+        {
+          type: "category",
+          label: "Cloud platforms",
+          items: [
             {
               type: "doc",
               id: "Deployment/deployment-gcp",
@@ -241,7 +248,7 @@ module.exports = {
               id: "Deployment/deployment-render",
               label: "Render"
             },
-          ],
+          ]
         },
       ],
     },
