@@ -5,7 +5,7 @@ from langchain_community.vectorstores import CouchbaseVectorStore
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
@@ -42,7 +42,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
             from couchbase.cluster import Cluster
             from couchbase.options import ClusterOptions
         except ImportError as e:
-            msg = "Failed to import Couchbase dependencies. Install it using `pip install langflow[couchbase] --pre`"
+            msg = "Failed to import Couchbase dependencies. Install it using `uv pip install langflow[couchbase] --pre`"
             raise ImportError(msg) from e
 
         try:

@@ -9,7 +9,7 @@ from pymongo.operations import SearchIndexModel
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class MongoVectorStoreComponent(LCVectorStoreComponent):

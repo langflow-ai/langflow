@@ -1,3 +1,6 @@
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Sidebar,
@@ -10,10 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import {
-  DEFAULT_FOLDER,
-  DEFAULT_FOLDER_DEPRECATED,
-} from "@/constants/constants";
+import { DEFAULT_FOLDER } from "@/constants/constants";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -36,10 +36,7 @@ import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
-import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
-import { FolderType } from "../../../../../pages/MainPage/entities";
+import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
@@ -68,7 +65,7 @@ const SideBarFoldersButtonsComponent = ({
   const loading = !folders;
   const refInput = useRef<HTMLInputElement>(null);
 
-  const navigate = useCustomNavigate();
+  const _navigate = useCustomNavigate();
 
   const currentFolder = pathname.split("/");
   const urlWithoutPath =
@@ -156,7 +153,7 @@ const SideBarFoldersButtonsComponent = ({
                   });
                 },
                 onError: (err) => {
-                  console.log(err);
+                  console.error(err);
                   setErrorData({
                     title: `Error on uploading your project, try dragging it into an existing project.`,
                     list: [err["response"]["data"]["message"]],
@@ -277,7 +274,7 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleDoubleClick = (event, item) => {
-    if (item.name === DEFAULT_FOLDER_DEPRECATED) {
+    if (item.name === DEFAULT_FOLDER) {
       return;
     }
 
@@ -424,9 +421,7 @@ const SideBarFoldersButtonsComponent = ({
                                 />
                               ) : (
                                 <span className="block w-0 grow truncate text-sm opacity-100">
-                                  {item.name === DEFAULT_FOLDER_DEPRECATED
-                                    ? DEFAULT_FOLDER
-                                    : item.name}
+                                  {item.name}
                                 </span>
                               )}
                             </div>
@@ -473,7 +468,8 @@ const SideBarFoldersButtonsComponent = ({
       {ENABLE_FILE_MANAGEMENT && (
         <SidebarFooter className="border-t">
           <div className="grid w-full items-center gap-2 p-2">
-            {!ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}
+            {/* TODO: Remove this on cleanup */}
+            {ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}
             <SidebarMenuButton
               isActive={checkPathFiles}
               onClick={() => handleFilesClick?.()}

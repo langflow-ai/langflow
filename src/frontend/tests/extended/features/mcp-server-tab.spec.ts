@@ -3,14 +3,14 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
-  "user should be able to manage MCP server actions and configuration",
+  "user should be able to manage MCP server tools and configuration",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     const maxRetries = 5;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`Attempt ${attempt} of ${maxRetries}`);
+        console.warn(`Attempt ${attempt} of ${maxRetries}`);
 
         await awaitBootstrapTest(page);
 
@@ -47,14 +47,14 @@ test(
 
         // Verify MCP server tab is visible
         await expect(page.getByTestId("mcp-server-title")).toBeVisible();
-        await expect(page.getByText("Flows/Actions")).toBeVisible();
+        await expect(page.getByText("Flows/Tools")).toBeVisible();
 
-        // Click on Edit Actions button
+        // Click on Edit Tools button
         await page.getByTestId("button_open_actions").click();
         await page.waitForTimeout(500);
 
         // Verify actions modal is open
-        await expect(page.getByText("MCP Server Actions")).toBeVisible();
+        await expect(page.getByText("MCP Server Tools")).toBeVisible();
 
         // Select some actions
         const rowsCount = await page.getByRole("row").count();
@@ -100,7 +100,7 @@ test(
 
         await page.waitForTimeout(500);
 
-        let count = 0;
+        const count = 0;
 
         while (
           elementText !==
@@ -165,7 +165,9 @@ test(
         await expect(page.getByTestId("icon-check")).toBeVisible();
 
         // Get the SSE URL from the configuration
-        const configJson = await page.locator("pre").textContent();
+        const configJson = await page.evaluate(() => {
+          return navigator.clipboard.readText();
+        });
         expect(configJson).toContain("mcpServers");
         expect(configJson).toContain("mcp-proxy");
         expect(configJson).toContain("uvx");
@@ -175,13 +177,18 @@ test(
           /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
-        const sseUrl = sseUrlMatch![1];
+        const _sseUrl = sseUrlMatch![1];
 
         await page.getByText("macOS/Linux", { exact: true }).click();
 
         await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
+        // Copy configuration
+        await page.getByTestId("icon-copy").click();
+        await expect(page.getByTestId("icon-check")).toBeVisible();
 
-        const configJsonLinux = await page.locator("pre").textContent();
+        const configJsonLinux = await page.evaluate(() => {
+          return navigator.clipboard.readText();
+        });
 
         const sseUrlMatchLinux = configJsonLinux?.match(
           /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
@@ -199,83 +206,81 @@ test(
 
         // Create a new flow with MCP component
         await page.getByTestId("blank-flow").click();
-
         await page.getByTestId("sidebar-search-input").click();
-        await page.getByTestId("sidebar-search-input").fill("mcp connection");
+        await page.getByTestId("sidebar-search-input").fill("mcp");
 
-        await page.waitForSelector('[data-testid="dataMCP Connection"]', {
+        await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
           timeout: 30000,
         });
 
         await page
-          .getByTestId("dataMCP Connection")
+          .getByTestId("agentsMCP Tools")
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 0, y: 0 },
           });
 
         await page.getByTestId("fit_view").click();
+
         await zoomOut(page, 3);
 
-        // Switch to SSE tab and paste the URL
-        await page.getByTestId("tab_1_sse").click();
+        await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
-        await page.waitForSelector('[data-testid="textarea_str_sse_url"]', {
+        try {
+          await page.getByText("Add MCP Server", { exact: true }).click({
+            timeout: 5000,
+          });
+        } catch (_error) {
+          await page
+            .getByTestId("mcp-server-dropdown")
+            .click({ timeout: 3000 });
+          await page.getByText("Add MCP Server", { exact: true }).click({
+            timeout: 5000,
+          });
+        }
+
+        await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
           state: "visible",
           timeout: 30000,
         });
-        await page.waitForTimeout(2000);
 
-        await page.getByTestId("textarea_str_sse_url").fill("");
-        await page.getByTestId("textarea_str_sse_url").fill(sseUrl);
+        await page.waitForSelector('[data-testid="json-input"]', {
+          state: "visible",
+          timeout: 30000,
+        });
 
-        await page.waitForTimeout(2000);
+        await page.getByTestId("json-input").fill(configJsonLinux || "");
 
-        // Wait for the tools to become available
-        let attempts = 0;
-        const maxAttempts = 3;
-        let dropdownEnabled = false;
+        await page.getByTestId("add-mcp-server-button").click();
 
-        while (attempts < maxAttempts && !dropdownEnabled) {
-          await page.getByTestId("refresh-button-sse_url").click();
+        await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
+          timeout: 30000,
+        });
 
-          try {
-            await page.waitForSelector(
-              '[data-testid="dropdown_str_tool"]:not([disabled])',
-              {
-                timeout: 10000,
-                state: "visible",
-              },
-            );
-            dropdownEnabled = true;
-          } catch (error) {
-            attempts++;
-            console.log(`Retry attempt ${attempts} for refresh button`);
-          }
-        }
+        await page.waitForSelector(
+          '[data-testid="dropdown_str_tool"]:not([disabled])',
+          {
+            timeout: 10000,
+            state: "visible",
+          },
+        );
 
-        if (!dropdownEnabled) {
-          throw new Error(
-            "Dropdown did not become enabled after multiple refresh attempts",
-          );
-        }
-
-        // Verify tools are available
-        await page.waitForTimeout(3000);
         await page.getByTestId("dropdown_str_tool").click();
-        await page.waitForTimeout(3000);
 
         const fetchOptionCount = await page.getByText("mcp_test_name").count();
+
         expect(fetchOptionCount).toBeGreaterThan(0);
 
         // If we get here, the test passed
-        console.log(`Test passed on attempt ${attempt}`);
+        console.warn(`Test passed on attempt ${attempt}`);
         return;
       } catch (error) {
-        error = error as Error;
-        console.log(`Attempt ${attempt} failed:`, error);
+        console.error(`Attempt ${attempt} failed:`, error);
 
         if (attempt === maxRetries) {
-          console.log(`All ${maxRetries} attempts failed. Last error:`, error);
+          console.error(
+            `All ${maxRetries} attempts failed. Last error:`,
+            error,
+          );
           throw error;
         }
 

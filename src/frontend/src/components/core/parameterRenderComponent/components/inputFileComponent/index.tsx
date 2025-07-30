@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
@@ -7,7 +8,6 @@ import FileManagerModal from "@/modals/fileManagerModal";
 import FilesRendererComponent from "@/modals/fileManagerModal/components/filesRendererComponent";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
-import { useEffect } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
@@ -18,7 +18,7 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { FileComponentType, InputProps } from "../../types";
+import type { FileComponentType, InputProps } from "../../types";
 
 export default function InputFileComponent({
   value,
@@ -111,7 +111,7 @@ export default function InputFileComponent({
           ),
         )
           .then((results) => {
-            console.log(results);
+            console.warn(results);
             // Filter out any failed uploads
             const successfulUploads = results.filter(
               (r): r is { file_name: string; file_path: string } => r !== null,
@@ -134,7 +134,7 @@ export default function InputFileComponent({
             }
           })
           .catch((e) => {
-            console.log(e);
+            console.error(e);
             // Error handling is done in the onError callback above
           });
       },

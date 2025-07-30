@@ -1,5 +1,5 @@
 import { GetStartedProgress } from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons/components/get-started-progress";
-import { Users } from "@/types/api";
+import type { Users } from "@/types/api";
 
 export function CustomGetStartedProgress({
   userData,

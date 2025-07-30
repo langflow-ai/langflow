@@ -10,7 +10,7 @@ from typing import Any
 from docstring_parser import parse
 
 from langflow.logging.logger import logger
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
@@ -382,6 +382,7 @@ def add_options_to_field(value: dict[str, Any], class_name: str | None, key: str
     options_map = {
         "OpenAI": constants.OPENAI_MODELS,
         "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
+        "ReasoningOpenAI": constants.REASONING_OPENAI_MODELS,
         "Anthropic": constants.ANTHROPIC_MODELS,
         "ChatAnthropic": constants.ANTHROPIC_MODELS,
     }

@@ -2,15 +2,16 @@ from typing import Any
 
 import numpy as np
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, DropdownInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class EmbeddingSimilarityComponent(Component):
     display_name: str = "Embedding Similarity"
     description: str = "Compute selected form of similarity between two embedding vectors."
     icon = "equal"
+    legacy: bool = True
 
     inputs = [
         DataInput(

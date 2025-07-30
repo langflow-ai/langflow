@@ -2,14 +2,15 @@ import importlib
 
 from langchain_experimental.utilities import PythonREPL
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import CodeInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class PythonREPLComponent(Component):
     display_name = "Python Interpreter"
     description = "Run Python code with optional imports. Use print() to see the output."
+    documentation: str = "https://docs.langflow.org/components-processing#python-interpreter"
     icon = "square-terminal"
 
     inputs = [

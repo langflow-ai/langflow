@@ -5,13 +5,13 @@ from http import HTTPStatus
 from typing import Any
 
 import requests
-from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool, Tool
+from pydantic import BaseModel, Field, create_model
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import DictInput, IntInput, SecretStrInput, StrInput, TableInput
 from langflow.logging import logger
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.table import EditMode
 
 
@@ -277,7 +277,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
             name (str, optional): The name of the tool.
 
         Returns:
-            Tool: The built AstraDB tool.
+            Tool: The built Astra DB tool.
         """
         schema_dict = self.create_args_schema()
         return StructuredTool.from_function(

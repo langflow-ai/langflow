@@ -1,3 +1,9 @@
+import useDetectScroll, {
+  Axis,
+  Direction,
+} from "@smakss/react-scroll-direction";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import CustomChatInput from "@/customization/components/custom-chat-input";
@@ -7,22 +13,18 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import useDetectScroll, {
-  Axis,
-  Direction,
-} from "@smakss/react-scroll-direction";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../../stores/flowStore";
-import { ChatMessageType } from "../../../../../types/chat";
-import { chatViewProps } from "../../../../../types/components";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import type { ChatMessageType } from "../../../../../types/chat";
+import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
 import { ChatScrollAnchor } from "./chat-scroll-anchor";
+
+const TIME_TO_DISABLE_SCROLL = 2000;
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -45,7 +47,7 @@ export default function ChatView({
 }: chatViewProps): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
   const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
@@ -129,11 +131,7 @@ export default function ChatView({
     // trigger focus on chat when new session is set
   }, [focusChat]);
 
-  function updateChat(
-    chat: ChatMessageType,
-    message: string,
-    stream_url?: string,
-  ) {
+  function updateChat(chat: ChatMessageType, message: string) {
     chat.message = message;
     if (chat.componentId)
       updateFlowPool(chat.componentId, {
@@ -151,7 +149,7 @@ export default function ChatView({
     !!playgroundPage,
   );
 
-  const onDrop = (e) => {
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
       e.stopPropagation();
       return;
@@ -186,27 +184,68 @@ export default function ChatView({
 
   const [canScroll, setCanScroll] = useState<boolean>(false);
   const [scrolledUp, setScrolledUp] = useState<boolean>(false);
+  const [isLlmResponding, setIsLlmResponding] = useState<boolean>(false);
+  const [lastMessageContent, setLastMessageContent] = useState<string>("");
 
   const handleScroll = () => {
     if (!messagesRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
-    const atBottom = scrollHeight - clientHeight <= scrollTop + 3;
+    const atBottom = scrollHeight - clientHeight <= scrollTop + 30;
 
     if (scrollDir === Direction.Up) {
       setCanScroll(false);
       setScrolledUp(true);
     } else {
-      if (atBottom || !scrolledUp) {
+      if (atBottom && !scrolledUp) {
         setCanScroll(true);
       }
       setScrolledUp(false);
     }
   };
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
 
   useEffect(() => {
-    setCanScroll(true);
-  }, [chatHistory?.length]);
+    setPlaygroundScrollBehaves("smooth");
+
+    if (!chatHistory || chatHistory.length === 0) {
+      setCanScroll(true);
+      return;
+    }
+
+    const lastMessage = chatHistory[chatHistory.length - 1];
+    const currentMessageContent =
+      typeof lastMessage.message === "string"
+        ? lastMessage.message
+        : JSON.stringify(lastMessage.message);
+
+    const isNewMessage = lastMessage.isSend;
+
+    const isStreamingUpdate =
+      !lastMessage.isSend &&
+      currentMessageContent !== lastMessageContent &&
+      currentMessageContent.length > lastMessageContent.length;
+
+    if (isStreamingUpdate) {
+      if (!isLlmResponding) {
+        setIsLlmResponding(true);
+        setCanScroll(true);
+
+        setTimeout(() => {
+          setCanScroll(false);
+        }, TIME_TO_DISABLE_SCROLL);
+      }
+    } else if (isNewMessage || lastMessage.isSend) {
+      setCanScroll(true);
+      if (isLlmResponding) {
+        setIsLlmResponding(false);
+      }
+    }
+
+    setLastMessageContent(currentMessageContent);
+  }, [chatHistory, isLlmResponding, lastMessageContent]);
 
   return (
     <div
@@ -290,8 +329,8 @@ export default function ChatView({
         <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
-          sendMessage={({ repeat, files }) => {
-            sendMessage({ repeat, files });
+          sendMessage={async ({ repeat, files }) => {
+            await sendMessage({ repeat, files });
             track("Playground Message Sent");
           }}
           inputRef={ref}

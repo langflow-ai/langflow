@@ -1,9 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-import boto3
-
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     BoolInput,
     DropdownInput,
@@ -175,6 +173,12 @@ class S3BucketUploaderComponent(Component):
         Returns:
             Any: A boto3 S3 client instance.
         """
+        try:
+            import boto3
+        except ImportError as e:
+            msg = "boto3 is not installed. Please install it using `uv pip install boto3`."
+            raise ImportError(msg) from e
+
         return boto3.client(
             "s3",
             aws_access_key_id=self.aws_access_key_id,

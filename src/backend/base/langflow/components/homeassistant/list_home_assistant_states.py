@@ -7,12 +7,12 @@ from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import SecretStrInput, StrInput
+from langflow.schema.data import Data
 
 
 class ListHomeAssistantStates(LCToolComponent):
-    display_name: str = "List HomeAssistant States"
+    display_name: str = "List Home Assistant States"
     description: str = (
         "Retrieve states from Home Assistant. "
         "The agent only needs to specify 'filter_domain' (optional). "

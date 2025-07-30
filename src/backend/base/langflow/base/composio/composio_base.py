@@ -8,8 +8,8 @@ from composio.exceptions import ApiKeyError
 from composio_langchain import ComposioToolSet
 from langchain_core.tools import Tool
 
-from langflow.custom import Component
-from langflow.inputs import (
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import (
     AuthInput,
     MessageTextInput,
     SecretStrInput,

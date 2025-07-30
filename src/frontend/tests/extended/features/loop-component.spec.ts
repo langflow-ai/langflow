@@ -92,7 +92,7 @@ test(
       .getByTestId("handle-parsercomponent-shownode-parsed text-right")
       .click();
 
-    const loopItemInput = await page
+    const _loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
       .first()
       .click();
@@ -128,7 +128,7 @@ test(
 
     // URL -> Loop Data
     await page
-      .getByTestId("handle-urlcomponent-shownode-result-right")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .first()
       .click();
     await page

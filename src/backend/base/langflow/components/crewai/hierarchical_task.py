@@ -1,5 +1,5 @@
 from langflow.base.agents.crewai.tasks import HierarchicalTask
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import HandleInput, MultilineInput, Output
 
 
@@ -7,6 +7,7 @@ class HierarchicalTaskComponent(Component):
     display_name: str = "Hierarchical Task"
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
     icon = "CrewAI"
+    legacy = True
     inputs = [
         MultilineInput(
             name="task_description",

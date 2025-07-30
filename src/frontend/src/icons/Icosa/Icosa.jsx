@@ -1,4 +1,4 @@
-const SvgIcosa = ({ ...props }) => (
+const SvgIcosa = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     version="1.1"
@@ -6,6 +6,7 @@ const SvgIcosa = ({ ...props }) => (
     width="1.4em"
     height="1.4em"
     viewBox="0 0 676.47998 742.08002"
+    {...props}
   >
     <defs id="defs1" />
     <path

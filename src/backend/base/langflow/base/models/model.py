@@ -9,12 +9,12 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.output_parsers import BaseOutputParser
 
 from langflow.base.constants import STREAM_INFO_TEXT
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageInput
-from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
+from langflow.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 # Enabled detailed thinking for NVIDIA reasoning models.
 #
@@ -83,13 +83,10 @@ class LCModelComponent(Component):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
-    def text_response(self) -> Message:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
+    async def text_response(self) -> Message:
         output = self.build_model()
-        result = self.get_chat_result(
-            runnable=output, stream=stream, input_value=input_value, system_message=system_message
+        result = await self.get_chat_result(
+            runnable=output, stream=self.stream, input_value=self.input_value, system_message=self.system_message
         )
         self.status = result
         return result
@@ -168,37 +165,56 @@ class LCModelComponent(Component):
             status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
-    def get_chat_result(
+    async def get_chat_result(
         self,
         *,
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,
         system_message: str | None = None,
-    ):
+    ) -> Message:
+        # NVIDIA reasoning models use detailed thinking
         if getattr(self, "detailed_thinking", False):
             system_message = DETAILED_THINKING_PREFIX + (system_message or "")
 
-        return self._get_chat_result(
+        return await self._get_chat_result(
             runnable=runnable,
             stream=stream,
             input_value=input_value,
             system_message=system_message,
         )
 
-    def _get_chat_result(
+    async def _get_chat_result(
         self,
         *,
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,
         system_message: str | None = None,
-    ):
+    ) -> Message:
+        """Get chat result from a language model.
+
+        This method handles the core logic of getting a response from a language model,
+        including handling different input types, streaming, and error handling.
+
+        Args:
+            runnable (LanguageModel): The language model to use for generating responses
+            stream (bool): Whether to stream the response
+            input_value (str | Message): The input to send to the model
+            system_message (str | None, optional): System message to prepend. Defaults to None.
+
+        Returns:
+            The model response, either as a Message object or raw content
+
+        Raises:
+            ValueError: If the input message is empty or if there's an error during model invocation
+        """
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
             raise ValueError(msg)
         system_message_added = False
+        message = None
         if input_value:
             if isinstance(input_value, Message):
                 with warnings.catch_warnings():
@@ -220,6 +236,7 @@ class LCModelComponent(Component):
         if system_message and not system_message_added:
             messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
+        lf_message = None
         try:
             # TODO: Depreciated Feature to be removed in upcoming release
             if hasattr(self, "output_parser") and self.output_parser is not None:
@@ -233,9 +250,10 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                return runnable.stream(inputs)
-            message = runnable.invoke(inputs)
-            result = message.content if hasattr(message, "content") else message
+                lf_message, result = await self._handle_stream(runnable, inputs)
+            else:
+                message = runnable.invoke(inputs)
+                result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
                 self.status = status_message
@@ -248,8 +266,41 @@ class LCModelComponent(Component):
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
+        return lf_message or Message(text=result)
 
-        return result
+    async def _handle_stream(self, runnable, inputs):
+        """Handle streaming responses from the language model.
+
+        Args:
+            runnable: The language model configured for streaming
+            inputs: The inputs to send to the model
+
+        Returns:
+            tuple: (Message object if connected to chat output, model result)
+        """
+        lf_message = None
+        if self.is_connected_to_chat_output():
+            # Add a Message
+            if hasattr(self, "graph"):
+                session_id = self.graph.session_id
+            elif hasattr(self, "_session_id"):
+                session_id = self._session_id
+            else:
+                session_id = None
+            model_message = Message(
+                text=runnable.stream(inputs),
+                sender=MESSAGE_SENDER_AI,
+                sender_name="AI",
+                properties={"icon": self.icon, "state": "partial"},
+                session_id=session_id,
+            )
+            model_message.properties.source = self._build_source(self._id, self.display_name, self)
+            lf_message = await self.send_message(model_message)
+            result = lf_message.text
+        else:
+            message = runnable.invoke(inputs)
+            result = message.content if hasattr(message, "content") else message
+        return lf_message, result
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

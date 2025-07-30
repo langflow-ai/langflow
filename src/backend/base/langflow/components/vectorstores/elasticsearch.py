@@ -1,10 +1,12 @@
 from typing import Any
 
+from elasticsearch import Elasticsearch
 from langchain.schema import Document
 from langchain_elasticsearch import ElasticsearchStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import (
+    BoolInput,
     DropdownInput,
     FloatInput,
     HandleInput,
@@ -12,7 +14,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
@@ -97,6 +99,13 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             info="API Key for Elastic Cloud authentication. If used, 'username' and 'password' are not required.",
         ),
+        BoolInput(
+            name="verify_certs",
+            display_name="Verify SSL Certificates",
+            value=True,
+            advanced=True,
+            info="Whether to verify SSL certificates when connecting to Elasticsearch.",
+        ),
     ]
 
     @check_cached_vector_store
@@ -123,6 +132,25 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         if self.api_key:
             es_params["api_key"] = self.api_key
+
+        # Check if we need to verify SSL certificates
+        if self.verify_certs is False:
+            # Build client parameters for Elasticsearch constructor
+            client_params: dict[str, Any] = {}
+            client_params["verify_certs"] = False
+
+            if self.cloud_id:
+                client_params["cloud_id"] = self.cloud_id
+            else:
+                client_params["hosts"] = [self.elasticsearch_url]
+
+            if self.api_key:
+                client_params["api_key"] = self.api_key
+            elif self.username and self.password:
+                client_params["basic_auth"] = (self.username, self.password)
+
+            es_client = Elasticsearch(**client_params)
+            es_params["es_connection"] = es_client
 
         elasticsearch = ElasticsearchStore(**es_params)
 

@@ -23,15 +23,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Run unit tests
         id: run_tests
         continue-on-error: true
         run: uv run pytest src/backend/tests/unit --timeout=120 --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+
 
       - name: Close existing PRs
         uses: actions/github-script@v7

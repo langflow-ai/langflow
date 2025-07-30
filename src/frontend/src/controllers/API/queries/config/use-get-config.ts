@@ -1,3 +1,4 @@
+import axios from "axios";
 import {
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
@@ -5,8 +6,7 @@ import {
 import { EventDeliveryType } from "@/constants/enums";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import axios from "axios";
-import { useQueryFunctionType } from "../../../../types/api";
+import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -44,6 +44,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {

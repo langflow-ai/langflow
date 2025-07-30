@@ -1,5 +1,5 @@
 import FlowSettingsComponent from "@/components/core/flowSettingsComponent";
-import { FlowSettingsPropsType } from "../../types/components";
+import type { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
@@ -22,6 +22,7 @@ export default function FlowSettingsModal({
         <FlowSettingsComponent
           flowData={flowData}
           close={() => setOpen(false)}
+          open={open}
         />
       </BaseModal.Content>
     </BaseModal>

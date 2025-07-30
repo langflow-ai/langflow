@@ -32,7 +32,7 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
-from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
@@ -214,7 +214,6 @@ async def generate_flow_events(
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
-            graph.validate_stream()
             first_layer = sort_vertices(graph)
 
             for vertex_id in first_layer:

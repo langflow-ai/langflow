@@ -1,6 +1,6 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
-from langflow.inputs import BoolInput
+from langflow.inputs.inputs import BoolInput
 from langflow.io import (
     DropdownInput,
     FileInput,
@@ -19,6 +19,7 @@ from langflow.utils.constants import (
 class ChatInput(ChatComponent):
     display_name = "Chat Input"
     description = "Get chat inputs from the Playground."
+    documentation: str = "https://docs.langflow.org/components-io#chat-input"
     icon = "MessagesSquare"
     name = "ChatInput"
     minimized = True

@@ -4,6 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
+
 // TODO: fix this test
 test(
   "user must be able to stop a building",
@@ -79,10 +80,10 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
     await page
-      .getByTestId("handle-splittext-shownode-data or dataframe-left")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .click();
+    await page.getByTestId("handle-splittext-shownode-input-left").click();
 
     //connection 2
     await page

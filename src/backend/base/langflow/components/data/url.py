@@ -5,11 +5,12 @@ from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.data import safe_convert
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
-from langflow.schema import DataFrame, Message
+from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.services.deps import get_settings_service
 
 # Constants
@@ -35,6 +36,7 @@ class URLComponent(Component):
 
     display_name = "URL"
     description = "Fetch content from one or more web pages, following links recursively."
+    documentation: str = "https://docs.langflow.org/components-data#url"
     icon = "layout-template"
     name = "URLComponent"
 
@@ -163,8 +165,8 @@ class URLComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Result", name="page_results", method="fetch_content"),
-        Output(display_name="Raw Result", name="raw_results", method="as_message"),
+        Output(display_name="Extracted Pages", name="page_results", method="fetch_content"),
+        Output(display_name="Raw Content", name="raw_results", method="fetch_content_as_message", tool_mode=False),
     ]
 
     @staticmethod
@@ -240,14 +242,14 @@ class URLComponent(Component):
         """
         try:
             urls = list({self.ensure_url(url) for url in self.urls if url.strip()})
-            logger.info(f"URLs: {urls}")
+            logger.debug(f"URLs: {urls}")
             if not urls:
                 msg = "No valid URLs provided."
                 raise ValueError(msg)
 
             all_docs = []
             for url in urls:
-                logger.info(f"Loading documents from {url}")
+                logger.debug(f"Loading documents from {url}")
 
                 try:
                     loader = self._create_loader(url)
@@ -257,7 +259,7 @@ class URLComponent(Component):
                         logger.warning(f"No documents found for {url}")
                         continue
 
-                    logger.info(f"Found {len(docs)} documents from {url}")
+                    logger.debug(f"Found {len(docs)} documents from {url}")
                     all_docs.extend(docs)
 
                 except requests.exceptions.RequestException as e:
@@ -291,7 +293,7 @@ class URLComponent(Component):
         """Convert the documents to a DataFrame."""
         return DataFrame(data=self.fetch_url_contents())
 
-    def as_message(self) -> Message:
+    def fetch_content_as_message(self) -> Message:
         """Convert the documents to a Message."""
         url_contents = self.fetch_url_contents()
         return Message(text="\n\n".join([x["text"] for x in url_contents]), data={"data": url_contents})

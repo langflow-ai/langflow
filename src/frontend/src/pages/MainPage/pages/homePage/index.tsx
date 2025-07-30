@@ -1,15 +1,19 @@
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_MCP,
+} from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FlowType } from "@/types/flow";
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
@@ -27,6 +31,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
+  const navigate = useCustomNavigate();
 
   const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
     type,
@@ -38,6 +43,18 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     folders[0]?.name ??
     "";
   const flows = useFlowsManagerStore((state) => state.flows);
+
+  useEffect(() => {
+    // Only check if we have a folderId and folders have loaded
+    if (folderId && folders && folders.length > 0) {
+      const folderExists = folders.find((folder) => folder.id === folderId);
+      if (!folderExists) {
+        // Folder doesn't exist for this user, redirect to /all
+        console.error("Invalid folderId, redirecting to /all");
+        navigate("/all");
+      }
+    }
+  }, [folderId, folders, navigate]);
 
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
@@ -77,8 +94,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, []);
 
   const isEmptyFolder =
-    flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
-    undefined;
+    flows?.find(
+      (flow) =>
+        flow.folder_id === (folderId ?? myCollectionId) &&
+        (ENABLE_MCP ? flow.is_component === false : true),
+    ) === undefined;
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
@@ -91,7 +111,16 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
           flow.is_component === (flowType === "components"),
       ) === undefined
     ) {
-      setFlowType(flowType === "flows" ? "components" : "flows");
+      const otherTabHasItems =
+        flows?.find(
+          (flow) =>
+            flow.folder_id === (folderId ?? myCollectionId) &&
+            flow.is_component === (flowType === "flows"),
+        ) !== undefined;
+
+      if (otherTabHasItems) {
+        setFlowType(flowType === "flows" ? "components" : "flows");
+      }
     }
   }, [isEmptyFolder]);
 
@@ -202,7 +231,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     setSelectedFlows((old) =>
       old.filter((id) => data.flows.some((flow) => flow.id === id)),
     );
-  }, [data.flows]);
+  }, [folderData?.flows?.items]);
 
   // Reset key states when navigating away
   useEffect(() => {
@@ -214,7 +243,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
 
   return (
     <CardsWrapComponent
-      onFileDrop={handleFileDrop}
+      onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
       dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
@@ -239,7 +268,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
               {isEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
               ) : (
-                <div className="">
+                <div className="flex h-full flex-col">
                   {isLoading ? (
                     view === "grid" ? (
                       <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
@@ -287,7 +316,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "flows" ? (
-                    <div className="pt-2 text-center text-sm text-secondary-foreground">
+                    <div className="pt-24 text-center text-sm text-secondary-foreground">
                       No flows in this project.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
@@ -298,7 +327,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       , or browse the store.
                     </div>
                   ) : (
-                    <div className="pt-2 text-center text-sm text-secondary-foreground">
+                    <div className="pt-24 text-center text-sm text-secondary-foreground">
                       No saved or custom components. Learn more about{" "}
                       <a
                         href="https://docs.langflow.org/components-custom-components"

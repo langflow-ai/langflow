@@ -2,15 +2,16 @@ import ast
 import operator
 from collections.abc import Callable
 
-from langflow.custom import Component
-from langflow.inputs import MessageTextInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class CalculatorComponent(Component):
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
+    documentation: str = "https://docs.langflow.org/components-helpers#calculator"
     icon = "calculator"
 
     # Cache operators dictionary as a class variable

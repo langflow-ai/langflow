@@ -2,7 +2,7 @@ from langchain.chains import ConversationChain
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
-from langflow.inputs import HandleInput, MultilineInput
+from langflow.inputs.inputs import HandleInput, MultilineInput
 
 
 class ConversationChainComponent(LCChainComponent):
