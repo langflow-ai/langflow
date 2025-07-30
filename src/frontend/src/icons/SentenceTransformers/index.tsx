@@ -1,5 +1,5 @@
-import { useDarkStore } from "@/stores/darkStore";
 import React, { forwardRef } from "react";
+import { useDarkStore } from "@/stores/darkStore";
 import SentenceTransformersSVG from "./sentenceTransformers";
 
 export const SentenceTransformersIcon = forwardRef<
