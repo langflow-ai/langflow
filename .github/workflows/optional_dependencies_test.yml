@@ -1,0 +1,346 @@
+name: Optional Dependencies Tests
+
+on:
+  workflow_call:
+    inputs:
+      python-versions:
+        description: "Python Versions"
+        required: false
+        type: string
+        default: "['3.10']"
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      python-versions:
+        description: "Python Versions"
+        required: false
+        type: string
+        default: "['3.10']"
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+  pull_request:
+    types: [synchronize, labeled]
+  merge_group:
+
+env:
+  PYTHON_VERSION: "3.10"
+  NODE_VERSION: "21"
+
+jobs:
+  test-nemoguardrails:
+    name: Test NeMo Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install nemoguardrails dependencies
+        run: uv sync --extra nemoguardrails
+
+      - name: Run nemoguardrails tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/nvidia/test_nemo_guardrails.py -v
+
+  test-audio:
+    name: Test Audio (Voice Mode)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install audio dependencies
+        run: uv sync --extra audio
+
+      - name: Run audio tests
+        run: |
+          uv run pytest src/backend/tests/unit/test_voice_mode.py -v
+
+  test-docling:
+    name: Test Docling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install docling dependencies
+        run: uv sync --extra docling
+
+      - name: Run docling tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/docling/ -v
+
+  test-postgresql:
+    name: Test PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install postgresql dependencies
+        run: uv sync --extra postgresql
+
+      - name: Run postgresql tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/vectorstores/test_mongodb_atlas.py -v
+
+  test-local:
+    name: Test Local Models
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install local dependencies
+        run: uv sync --extra local
+
+      - name: Run local model tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/languagemodels/ -v
+
+  test-couchbase:
+    name: Test Couchbase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install couchbase dependencies
+        run: uv sync --extra couchbase
+
+      - name: Run couchbase tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/vectorstores/ -v
+
+  test-cassio:
+    name: Test Cassio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install cassio dependencies
+        run: uv sync --extra cassio
+
+      - name: Run cassio tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/vectorstores/ -v
+
+  test-clickhouse:
+    name: Test Clickhouse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install clickhouse-connect dependencies
+        run: uv sync --extra clickhouse-connect
+
+      - name: Run clickhouse tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/vectorstores/ -v
+
+  test-nv-ingest:
+    name: Test NVIDIA Ingest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install nv-ingest dependencies
+        run: uv sync --extra nv-ingest
+
+      - name: Run nv-ingest tests
+        run: |
+          uv run pytest src/backend/tests/unit/components/nvidia/ -v
+
+  # Summary job to report results
+  optional-deps-summary:
+    name: Optional Dependencies Summary
+    needs: [
+      test-nemoguardrails,
+      test-audio,
+      test-docling,
+      test-postgresql,
+      test-local,
+      test-couchbase,
+      test-cassio,
+      test-clickhouse,
+      test-nv-ingest
+    ]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Optional Dependencies Status
+        run: |
+          echo "Optional Dependencies Test Results:"
+          echo "=================================="
+          echo "NeMo Guardrails: ${{ needs.test-nemoguardrails.result }}"
+          echo "Audio (Voice Mode): ${{ needs.test-audio.result }}"
+          echo "Docling: ${{ needs.test-docling.result }}"
+          echo "PostgreSQL: ${{ needs.test-postgresql.result }}"
+          echo "Local Models: ${{ needs.test-local.result }}"
+          echo "Couchbase: ${{ needs.test-couchbase.result }}"
+          echo "Cassio: ${{ needs.test-cassio.result }}"
+          echo "Clickhouse: ${{ needs.test-clickhouse.result }}"
+          echo "NVIDIA Ingest: ${{ needs.test-nv-ingest.result }}"
+
+          # Exit with failure if any optional dependency test failed
+          if [[ "${{ needs.test-nemoguardrails.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-audio.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-docling.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-postgresql.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-local.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-couchbase.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-cassio.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-clickhouse.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-nv-ingest.result }}" == "failure" ]]; then
+            echo "❌ Some optional dependency tests failed"
+            exit 1
+          else
+            echo "✅ All optional dependency tests passed or were skipped"
+          fi

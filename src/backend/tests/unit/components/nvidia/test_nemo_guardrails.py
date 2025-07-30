@@ -1,12 +1,20 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.components.nvidia.nemo_guardrails import NVIDIANeMoGuardrailsComponent
+
+try:
+    from langflow.components.nvidia.nemo_guardrails import NVIDIANeMoGuardrailsComponent
+
+    NEMOGUARDRAILS_AVAILABLE = True
+except ImportError:
+    NEMOGUARDRAILS_AVAILABLE = False
+    pytestmark = pytest.mark.skip(reason="nemoguardrails is not installed. Skipping NeMo Guardrails tests.")
 
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
 
+@pytest.mark.skipif(not NEMOGUARDRAILS_AVAILABLE, reason="nemoguardrails is not installed")
 class TestNVIDIANeMoGuardrailsComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
