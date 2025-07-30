@@ -97,7 +97,6 @@ jobs:
         with:
           name: ${{ inputs.base-artifact-name }}
           path: ./base-dist
-          run-id: ${{ inputs.run-id || github.run_id }}
 
       - name: Download main package artifact
         if: inputs.install-method == 'wheel'
@@ -105,7 +104,6 @@ jobs:
         with:
           name: ${{ inputs.main-artifact-name }}
           path: ./main-dist
-          run-id: ${{ inputs.run-id || github.run_id }}
 
       - name: Create fresh virtual environment
         run: |
