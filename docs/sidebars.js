@@ -110,13 +110,8 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        {
-          type: "doc",
-          id: "Develop/install-custom-dependencies",
-          label: "Install custom dependencies"
-        },
-        "Configuration/configuration-api-keys",
-        "Configuration/configuration-authentication",
+        "Configuration/api-keys-and-authentication",
+        "Develop/install-custom-dependencies",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         {
