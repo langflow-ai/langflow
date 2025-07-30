@@ -22,11 +22,11 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
 
 ## Create an agentic flow
 
-The following steps modify the [**Simple agent**](/simple-agent) template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for an **Agent** component.
+The following steps modify the **Simple Agent** template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for an **Agent** component.
 The **Directory** component loads all files of a given type from a target directory on your local machine, and the **Web search** component performs a DuckDuckGo search.
 When connected to an **Agent** component as tools, the agent has the option to use these components when handling requests.
 
-1. In Langflow, click **New Flow**, and then select the **Simple agent** template.
+1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 2. Remove the **URL** and **Calculator** tools, and  then drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components into your workspace.
 3. In the **Directory** component's **Path** field, enter the directory path and file types that you want to make available to the **Agent** component.
 
