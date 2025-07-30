@@ -661,6 +661,14 @@ class ComposioBaseComponent(Component):
         else:
             # When tool_mode is enabled, hide action field
             build_config["action_button"]["show"] = not self._is_tool_mode_enabled()
+            
+    def create_new_auth_config(self, app_name: str) -> str:
+        """Create a new auth config for the given app name."""
+        composio = self._build_wrapper()
+        auth_config = composio.auth_configs.create(
+            toolkit=app_name, options={"type": "use_composio_managed_auth"}
+        )
+        return auth_config.id
 
     def _initiate_connection(self, app_name: str) -> tuple[str, str]:
         """Initiate OAuth connection and return (redirect_url, connection_id)."""
@@ -669,11 +677,13 @@ class ComposioBaseComponent(Component):
 
             auth_configs = composio.auth_configs.list(toolkit_slug=app_name)
             if len(auth_configs.items) == 0:
-                auth_config = composio.auth_configs.create(
-                    toolkit=app_name, options={"type": "use_composio_managed_auth"}
-                )
-                auth_config_id = auth_config.id
+                auth_config_id = self.create_new_auth_config(app_name)
             else:
+                auth_config_id = None
+                for auth_config in auth_configs.items:
+                    if auth_config.auth_scheme == "OAUTH2":
+                        auth_config_id = auth_config.id
+                        
                 auth_config_id = auth_configs.items[0].id
 
             connection_request = composio.connected_accounts.initiate(
@@ -703,8 +713,11 @@ class ComposioBaseComponent(Component):
         """Check status of a specific connection by ID. Returns status or None if not found."""
         try:
             composio = self._build_wrapper()
+            logger.info(f"ln:706 Connection Id: {connection_id}")
             connection = composio.connected_accounts.get(nanoid=connection_id)
+            logger.info(f"ln:708 Connection: {connection}")
             status = getattr(connection, "status", None)
+            logger.info(f"ln:710 Status: {status}")
             logger.info(f"Connection {connection_id} status: {status}")
         except (ValueError, ConnectionError) as e:
             logger.error(f"Error checking connection {connection_id}: {e}")
@@ -856,15 +869,19 @@ class ComposioBaseComponent(Component):
                     status = self._check_connection_status_by_id(stored_connection_id)
                     if status == "INITIATED":
                         # Get redirect URL from stored connection
-                        composio = self._build_wrapper()
-                        connection = composio.connected_accounts.get(nanoid=stored_connection_id)
-                        state = getattr(connection, "state", None)
-                        if state and hasattr(state, "val"):
-                            redirect_url = getattr(state.val, "redirect_url", None)
-                            if redirect_url:
-                                build_config["auth_link"]["value"] = redirect_url
-                                logger.info(f"Reusing existing OAuth URL for {toolkit_slug}: {redirect_url}")
-                                return build_config
+                        try:
+                            composio = self._build_wrapper()
+                            connection = composio.connected_accounts.get(nanoid=stored_connection_id)
+                            state = getattr(connection, "state", None)
+                            if state and hasattr(state, "val"):
+                                redirect_url = getattr(state.val, "redirect_url", None)
+                                if redirect_url:
+                                    build_config["auth_link"]["value"] = redirect_url
+                                    logger.info(f"Reusing existing OAuth URL for {toolkit_slug}: {redirect_url}")
+                                    return build_config
+                        except Exception as e:
+                            logger.debug(f"Could not retrieve connection {stored_connection_id}: {e}")
+                            # Continue to create new connection below
 
                 # Create new OAuth connection only if no ACTIVE or INITIATED connection exists
                 try:
