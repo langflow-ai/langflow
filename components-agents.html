@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.c27ec185.js" defer="defer"></script>
-<script src="/assets/js/main.9e5db23c.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.6a253553.js" defer="defer"></script>
+<script src="/assets/js/main.a53144de.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -49,7 +49,7 @@
         </a>
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Components reference</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Core components</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Agents</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Agents</h1></header><p>Langflow&#x27;s <strong>Agent</strong> and <strong>MCP Tools</strong> components are critical for building agentic flows.
 These components define the behavior and capabilities of AI agents in your flows.</p>
-<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>How agents work</summary><div><div class="collapsibleContent_i85q"><p>Agents extend Large Language Models (LLMs) by integrating <em>tools</em>, which are functions that provide additional context and enable autonomous task execution.
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>How do agents work?</summary><div><div class="collapsibleContent_i85q"><p>Agents extend Large Language Models (LLMs) by integrating <em>tools</em>, which are functions that provide additional context and enable autonomous task execution.
 These integrations make agents more specialized and powerful than standalone LLMs.</p><p>Whereas an LLM might generate acceptable, inert responses to general queries and tasks, an agent can leverage the integrated context and tools to provide more relevant responses and even take action.
 For example, you might create an agent that can access your company&#x27;s knowledge base, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.</p><p>Agents use LLMs as a reasoning engine to process input, determine which actions to take to address the query, and then generate a response.
 The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.</p><p>In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
@@ -60,11 +60,9 @@ The <code>Tool</code> object&#x27;s description tells the agent what the tool ca
 <p>For examples of agentic flows using the <strong>Agent</strong> and <strong>MCP Tools</strong> components, see the following:</p>
 <ul>
 <li>
-<p><a href="/simple-agent"><strong>Simple Agent</strong> template</a>: Create a basic agentic flow in Langflow with an <strong>Agent</strong> component that can use two other Langflow components as tools.
+<p><a href="/get-started-quickstart">Langflow quickstart</a>: Start with the <strong>Simple Agent</strong> template, modify its tools, and then learn how to use an agentic flow in an application.</p>
+<p>The <strong>Simple Agent</strong> template creates a basic agentic flow with an <strong>Agent</strong> component that can use two other Langflow components as tools.
 The LLM specified in the <strong>Agent</strong> component&#x27;s settings can use its own built-in functionality as well as the functionality provided by the connected tools when generating responses.</p>
-</li>
-<li>
-<p><a href="/get-started-quickstart">Langflow quickstart</a>: Modify the <strong>Simple Agent</strong> template to use different tools, and then learn how to use an agentic flow in an application.</p>
 </li>
 <li>
 <p><a href="/agents-tools#use-an-agent-as-a-tool">Use an agent as a tool</a>: Create a multi-agent flow.</p>

@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.c27ec185.js" defer="defer"></script>
-<script src="/assets/js/main.9e5db23c.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.6a253553.js" defer="defer"></script>
+<script src="/assets/js/main.a53144de.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -58,23 +58,32 @@ These fields help connected agents understand how to use the action, without hav
 <p>A Langflow Agent has a clear idea of each tool&#x27;s capabilities based on the <code>name</code> and <code>description</code> metadata. The <code>enabled</code> boolean controls the tool&#x27;s availability to the agent. If you think an agent is using a tool incorrectly, edit a tool&#x27;s <code>description</code> metadata to help the agent better understand the tool.</p>
 <p>Tool names and descriptions can be edited, but the default tool identifiers cannot be changed. If you want to change the tool identifier, create a custom component.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-an-agent-as-a-tool">Use an agent as a tool<a href="#use-an-agent-as-a-tool" class="hash-link" aria-label="Direct link to Use an agent as a tool" title="Direct link to Use an agent as a tool">​</a></h2>
-<p>The agent component itself also supports <strong>Tool Mode</strong> for creating multi-agent flows.</p>
-<p>Add an agent to your flow that uses a different OpenAI model for a larger context window.</p>
+<p>To create multi-agent flows, you can set another <strong>Agent</strong> component to <strong>Tool Mode</strong>, and then attach that agent as a tool for your primary <strong>Agent</strong> component.</p>
+<p>To try this for yourself, add an additional agent to the <strong>Simple Agent</strong> template:</p>
 <ol>
-<li>Create the <a href="/simple-agent">Simple agent starter flow</a>.</li>
-<li>Add a second agent component to the flow.</li>
-<li>Add your <strong>OpenAI API Key</strong> to the <strong>Agent</strong> component.</li>
-<li>In the <strong>Model Name</strong> field, select <code>gpt-4.1</code>.</li>
-<li>Click <strong>Tool Mode</strong> to use this new agent as a tool.</li>
-<li>Connect the new agent&#x27;s <strong>Toolset</strong> port to the previously created agent&#x27;s <strong>Tools</strong> port.
-The new agent will use <code>gpt-4.1</code> for the larger tasks of scraping and searching information that require large context windows.
-The previously created agent will now use this agent as a tool, with its unique LLM and toolset.</li>
-</ol>
+<li>
+<p>Create a flow based on the <strong>Simple Agent</strong> template.</p>
+</li>
+<li>
+<p>Add a second <strong>Agent</strong> component to the flow.</p>
+</li>
+<li>
+<p>Add your <strong>OpenAI API Key</strong> to both <strong>Agent</strong> components.</p>
+</li>
+<li>
+<p>In the second <strong>Agent</strong> component, change the model to <code>gpt-4.1</code>, and then enable <strong>Tool Mode</strong>.</p>
+</li>
+<li>
+<p>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> <strong>Edit Tools</strong> to set tool names and descriptions that help the primary agent understand how to use those tools.</p>
+<p>For this example, change the tool name to <code>Agent-gpt-41</code> and set the description to <code>Use the gpt-4.1 model for complex problem solving</code>.
+This lets the primary agent know that this tool uses the <code>gpt-4.1</code> model, which could be helpful for tasks requiring a larger context window, such as large scrape and search tasks.</p>
+<p>As another example, you could attach several specialized models to a primary agent, such as agents that are trained on certain tasks or domains, and then the primary agent would call each specialized agent as needed to respond to queries.</p>
+<p>You can also enable and disable tools if you want to limit the available toolset.</p>
+</li>
+<li>
+<p>Connect the new agent&#x27;s <strong>Toolset</strong> port to the existing agent&#x27;s <strong>Tools</strong> port.</p>
 <p><img decoding="async" loading="lazy" alt="Agent as a tool" src="/assets/images/agent-example-agent-as-tool-0e0b6761f97ce60d6b2476dc4188d37c.png" width="4000" height="2600" class="img_ev3q"></p>
-<ol start="7">
-<li>The new agent&#x27;s actions can be edited to help the agent understand how to use it.
-Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> <strong>Edit Tools</strong> to modify its <code>name</code>, <code>description</code>, or <code>enabled</code> metadata.
-For example, the default tool name is <code>Agent</code>. Edit the name to <code>Agent-gpt-41</code>, and edit the description to <code>Use the gpt-4.1 model for complex problem solving</code>. The connected agent will understand that this is the <code>gpt-4.1</code> agent, and will use it for tasks requiring a larger context window.</li>
+</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="components-as-tools">Add custom components as tools<a href="#components-as-tools" class="hash-link" aria-label="Direct link to Add custom components as tools" title="Direct link to Add custom components as tools">​</a></h2>
 <p>An agent can use <a href="/components-custom-components">custom components</a> as tools.</p>
