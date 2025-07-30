@@ -165,13 +165,13 @@ Scaling instances involves adding more replicas to handle increased load, applic
 * For bursty workloads, such as 100,000s of tokens per second, ensure sufficient replicas to handle spikes.
 * Vertically scale by increasing CPU/memory requests for complex flows, but prioritize horizontal scaling for reliability.
 
-### Users per Instance
+### Users per instance
 
 The number of users or requests per instance depends on whether you're supporting developers with the IDE or API clients with the runtime:
 
 * **IDE (Langflow UI)**:
     * Each developer using the UI generates requests to the backend, requiring resources for session handling.
-    * Scale backend replicas based on concurrent developers (e.g., 1 replica per 10-20 developers, adjusted via load testing).
+    * Scale backend replicas based on concurrent developers (e.g., 1 replica per 10-20 developers, adjusted using load testing).
 
 * **Runtime (production flows)**:
     * Users are typically API clients making requests to flow endpoints.
@@ -208,7 +208,7 @@ Langflow's reliability in production depends on mitigating key failure points, p
 * **Impact**: External APIs or services used in flows may fail, causing flow errors.
 * **Mitigation**: Implement retry logic and error handling in flows. Monitor network latency and dependency health.
 
-## Monitoring Recommendations
+## Monitoring recommendations
 
 Effective monitoring ensures Langflow operates reliably and performs well under varying loads.
 
@@ -243,7 +243,7 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
 * Use Grafana dashboards to visualize resource usage and API performance.
 * Configure alerts for critical thresholds (e.g., 90% memory usage, 500ms API latency).
 
-## Security Implications
+## Security implications
 
 Running Langflow in production requires robust security measures to protect the application, data, and users.
 

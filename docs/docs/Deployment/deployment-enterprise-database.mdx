@@ -76,13 +76,13 @@ Langflow defaults to SQLite but supports PostgreSQL for production environments,
    * For Docker Compose: Navigate to the directory containing `docker-compose.yml` and run `docker-compose up`.
    * Verify connectivity by running a flow and checking PostgreSQL for new tables and activity, such as `SELECT * FROM pg_stat_activity WHERE datname = 'langflow';`.
 5. **Database Migrations**:
-   * Langflow manages its schema using migrations, likely via SQLAlchemy and Alembic.
+   * Langflow manages its schema using migrations, likely using SQLAlchemy and Alembic.
    * Run migrations to apply schema changes with `langflow migration --no-test`. To run migrations and preview changes before applying them, run `langflow migration--test`.
    * Ensure the database user has permissions to create and alter tables.
 
-### Testing the Configuration
+### Testing the configuration
 
-* Start Langflow and create a test flow via the UI or API.
+* Start Langflow and create a test flow using the UI or API.
 * Inspect the PostgreSQL database to confirm new tables and activity.
 * To query the database container, run `docker exec -it <postgres-container> psql -U langflow -d langflow`.
 
@@ -90,7 +90,7 @@ Langflow defaults to SQLite but supports PostgreSQL for production environments,
 
 In production, PostgreSQL must be configured for high availability to ensure continuous operation, especially in active-active Langflow deployments where multiple instances rely on the same database.
 
-### High Availability Configuration
+### High Availability configuration
 
 * **Streaming Replication**:
   * Set up one primary database for writes and one or more replicas for reads and failover.
@@ -103,14 +103,14 @@ In production, PostgreSQL must be configured for high availability to ensure con
   * For read-heavy workloads, distribute read queries across replicas using a connection pooler like [PgBouncer](https://www.pgbouncer.org/) or a load balancer.
   * Configure Langflow to use a single connection string pointing to the primary PostgreSQL database or to a proxy.
 
-### Connection String for HA
+### Connection string for HA
 
 * Use a virtual IP or DNS name that resolves to the current primary database.
 * Example: `postgresql://langflow:securepassword@db-proxy:5432/langflow?sslmode=require`.
 * For managed services, use the provided endpoint, such as `langflow.cluster-xyz.us-east-1.rds.amazonaws.com`.
 * Langflow, through [SQLAlchemy](https://docs.sqlalchemy.org/en/20/), supports reconnection attempts and ensures recovery after failover.
 
-### Example HA Setup with Patroni
+### Example HA setup with Patroni
 
 * Deploy a PostgreSQL cluster with Patroni, etcd, and [HAProxy](https://www.haproxy.org/).
 * Configure Langflow's `LANGFLOW_DATABASE_URL` to point to HAProxy's virtual IP.
@@ -128,7 +128,7 @@ In production, PostgreSQL must be configured for high availability to ensure con
 Langflow supports active-active HA by running multiple instances, with all instances connected to the same HA PostgreSQL database behind a load balancer.
 This ensures scalability and resilience for both the IDE (developer UI) and runtime (production flows).
 
-### Deployment Strategy
+### Deployment strategy
 
 * **Multiple Instances**:
   * Deploy Langflow using Kubernetes or Docker Swarm with multiple replicas.
@@ -137,10 +137,10 @@ This ensures scalability and resilience for both the IDE (developer UI) and runt
   * Use a load balancer (e.g., NGINX, AWS ALB) to distribute requests across instances.
   * Configure health checks to route traffic away from failed instances.
 * **Shared Database**:
-  * All instances connect to the same HA PostgreSQL database via the connection string.
+  * All instances connect to the same HA PostgreSQL database using the connection string.
   * Ensure the database can handle concurrent connections (e.g., set `max_connections` appropriately).
 
-### Example Kubernetes Configuration
+### Example Kubernetes configuration
 
     ```yaml
     apiVersion: apps/v1
@@ -185,7 +185,7 @@ This ensures scalability and resilience for both the IDE (developer UI) and runt
 * **Session Management**: For the IDE, ensure session persistence or stateless authentication (e.g., JWT) to avoid issues with load balancing.
 * **File Storage**: Large files are stored on disk, for example at `/opt/langflow/data/`, and require shared storage such as NFS or cloud storage for multi-instance setups.
 
-## Impact of Database Failure
+## Impact of database failure
 
 If the PostgreSQL database becomes unavailable, the following Langflow functions will fail:
 
@@ -205,14 +205,14 @@ If the PostgreSQL database becomes unavailable, the following Langflow functions
 Flows already loaded in memory may continue to function, as their configurations are cached.
 However, any operation requiring database access will fail until the database is restored.
 
-### Mitigation Strategies
+### Mitigation strategies
 
 * **Minimize Downtime**: Use HA configurations with rapid failover, such as Patroni or managed services, to restore access quickly.
 * **Reconnection Handling**: Langflow, through SQLAlchemy, attempts to reconnect to the database after a failure and reduces disruption once the database is back online.
 * **Caching**: Explore caching strategies for frequently accessed data, though not natively supported by Langflow.
 * **Backups**: Implement regular database backups and test restore procedures to recover from catastrophic failures.
 
-## Monitoring and Maintenance
+## Monitoring and maintenance
 
 Database administrators must monitor and maintain the PostgreSQL database to ensure optimal performance and reliability.
 
@@ -235,13 +235,13 @@ Database administrators must monitor and maintain the PostgreSQL database to ens
   * Schedule daily logical backups using `pg_dump` or continuous archiving with a write-ahead log (WAL).
   * Test restore procedures quarterly to ensure data recovery.
 * **Schema Management**:
-  * Langflow manages its schema via migrations, executed with `langflow migration`.
+  * Langflow manages its schema using migrations, executed with `langflow migration`.
   * Avoid manual schema changes to prevent conflicts with Langflow's migration system.
 * **Optimization**:
   * Analyze query patterns, such as frequent reads on flow tables, and create indexes as needed.
   * Tune PostgreSQL parameters, such as `work_mem` and `shared_buffers`, based on workload.
 
-## Security Considerations
+## Security considerations
 
 Securing the database and Langflow's connection to it is critical for enterprise deployments.
 
