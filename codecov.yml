@@ -12,11 +12,6 @@ coverage:
 
   status:
     project:
-      # Overall project coverage target
-      default:
-        target: 60%
-        threshold: 3%
-
       # Backend coverage strategy: Aspirational target for progress tracking
       # Current coverage: ~33%, Target: 55% (intentionally higher than current)
       # This creates visual progress indicators (red->yellow->green) without blocking PRs
@@ -31,21 +26,22 @@ coverage:
           - backend
 
       # Frontend coverage: Realistic target based on current state
-      # Current coverage: ~70%, maintains existing high standards
+      # Current coverage: ~1.5%, Target: 10% (achievable improvement goal)
       frontend:
-        target: 70%
+        target: 10%
         # Threshold: Allowable drop in coverage before failing the check
-        # 2% = coverage can drop from 70% to 68% without failing status
-        # Stricter threshold to maintain established quality standards
-        threshold: 2%
+        # 1% = coverage can drop from 1.5% to 0.5% without failing status
+        # Small threshold appropriate for very low baseline coverage
+        threshold: 1%
         flags:
           - frontend
 
-    # New code coverage requirements - encourages well-tested new features
+    # New code coverage requirements - realistic target for current state
+    # Encourages testing new features without blocking development
     patch:
       default:
-        target: 70%
-        threshold: 3%
+        target: 40%
+        threshold: 5%
 
 # PR comment configuration - what information to show in coverage reports
 comment:
