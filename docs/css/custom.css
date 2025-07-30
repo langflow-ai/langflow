@@ -99,13 +99,13 @@ p {
   font-family: var(--ifm-heading-font-family);
 }
 h1 {
-  font-size: 26px;
+  font-size: 30px;
 }
 h2 {
-  font-size: 22px;
+  font-size: 25px;
 }
 h3 {
-  font-size: 18px;
+  font-size: 22px;
 }
 
 body {
