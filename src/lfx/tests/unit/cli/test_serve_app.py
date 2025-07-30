@@ -1,8 +1,9 @@
 """Unit tests for LFX CLI FastAPI serve app."""
 
+import json
 import os
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -13,6 +14,9 @@ from lfx.cli.serve_app import (
     create_multi_serve_app,
     verify_api_key,
 )
+from lfx.graph import Graph
+from lfx.graph.schema import ResultData
+from lfx.schema.message import Message
 
 
 class TestSecurityFunctions:
@@ -64,30 +68,18 @@ class TestCreateServeApp:
     """Test FastAPI app creation."""
 
     @pytest.fixture
-    def mock_graph(self):
-        """Create a mock graph."""
-        graph = MagicMock()
-        graph.flow_id = "test-flow-id"
+    def simple_chat_json(self):
+        """Load the simple chat JSON test data."""
+        test_data_dir = Path(__file__).parent.parent.parent / "data"
+        json_path = test_data_dir / "simple_chat_no_llm.json"
+        with json_path.open() as f:
+            return json.load(f)
 
-        # Mock nodes as a dictionary for graph analysis
-        mock_node = MagicMock()
-        mock_node.data = {
-            "type": "TestComponent",
-            "display_name": "Test Component",
-            "description": "A test component",
-            "template": {},
-        }
-        graph.nodes = {"node1": mock_node}
-
-        # Mock edges as a list
-        mock_edge = MagicMock()
-        mock_edge.source = "node1"
-        mock_edge.target = "node2"
-        graph.edges = [mock_edge]
-
-        graph.vertices = []
-        graph.prepare = Mock()
-        return graph
+    @pytest.fixture
+    def real_graph(self, simple_chat_json):
+        """Create a real graph using Graph.from_payload to match serve_app expectations."""
+        # Create graph using from_payload with real test data
+        return Graph.from_payload(simple_chat_json, flow_id="test-flow-id")
 
     @pytest.fixture
     def mock_meta(self):
@@ -99,9 +91,9 @@ class TestCreateServeApp:
             description="A test flow",
         )
 
-    def test_create_multi_serve_app_single_flow(self, mock_graph, mock_meta):
+    def test_create_multi_serve_app_single_flow(self, real_graph, mock_meta):
         """Test creating app with single flow."""
-        graphs = {"test-flow-id": mock_graph}
+        graphs = {"test-flow-id": real_graph}
         metas = {"test-flow-id": mock_meta}
         verbose_print = Mock()
 
@@ -121,10 +113,11 @@ class TestCreateServeApp:
         assert "/flows" in routes  # Multi-flow always has this
         assert "/flows/test-flow-id/run" in routes  # Flow-specific endpoint
 
-    def test_create_multi_serve_app_multiple_flows(self, mock_graph, mock_meta):
+    def test_create_multi_serve_app_multiple_flows(self, real_graph, mock_meta, simple_chat_json):
         """Test creating app with multiple flows."""
-        graph2 = MagicMock()
-        graph2.flow_id = "flow-2"
+        # Create second real graph using from_payload
+        graph2 = Graph.from_payload(simple_chat_json, flow_id="flow-2")
+
         meta2 = FlowMeta(
             id="flow-2",
             relative_path="flow2.json",
@@ -132,7 +125,7 @@ class TestCreateServeApp:
             description="Second flow",
         )
 
-        graphs = {"test-flow-id": mock_graph, "flow-2": graph2}
+        graphs = {"test-flow-id": real_graph, "flow-2": graph2}
         metas = {"test-flow-id": mock_meta, "flow-2": meta2}
         verbose_print = Mock()
 
@@ -155,9 +148,9 @@ class TestCreateServeApp:
         assert "/flows/flow-2/run" in routes
         assert "/flows/flow-2/info" in routes
 
-    def test_create_multi_serve_app_mismatched_keys(self, mock_graph, mock_meta):
+    def test_create_multi_serve_app_mismatched_keys(self, real_graph, mock_meta):
         """Test error when graphs and metas have different keys."""
-        graphs = {"test-flow-id": mock_graph}
+        graphs = {"test-flow-id": real_graph}
         metas = {"different-id": mock_meta}
         verbose_print = Mock()
 
@@ -174,42 +167,47 @@ class TestServeAppEndpoints:
     """Test the FastAPI endpoints."""
 
     @pytest.fixture
-    def mock_graph(self):
-        """Create a mock graph with async run capability."""
-        graph = AsyncMock()
-        graph.flow_id = "test-flow-id"
+    def simple_chat_json(self):
+        """Load the simple chat JSON test data."""
+        test_data_dir = Path(__file__).parent.parent.parent / "data"
+        json_path = test_data_dir / "simple_chat_no_llm.json"
+        with json_path.open() as f:
+            return json.load(f)
 
-        # Mock nodes as a dictionary for graph analysis
-        mock_node = MagicMock()
-        mock_node.data = {
-            "type": "TestComponent",
-            "display_name": "Test Component",
-            "description": "A test component",
-            "template": {},
-        }
-        graph.nodes = {"node1": mock_node}
+    @pytest.fixture
+    def real_graph_with_async(self, simple_chat_json):
+        """Create a real graph with async execution capability."""
+        # Create graph using from_payload with real test data
+        graph = Graph.from_payload(simple_chat_json, flow_id="test-flow-id")
 
-        # Mock edges as a list
-        mock_edge = MagicMock()
-        mock_edge.source = "node1"
-        mock_edge.target = "node2"
-        graph.edges = [mock_edge]
+        # Store original async_start to restore later if needed
+        original_async_start = graph.async_start
 
-        graph.vertices = []
-        graph.prepare = Mock()
-
-        # Mock successful execution
-        mock_result = MagicMock(results={"text": "Hello from flow"})
-
+        # Mock successful execution with real ResultData
         async def mock_async_start(inputs):  # noqa: ARG001
+            # Create real Message and ResultData objects
+            message = Message(text="Hello from flow")
+            result_data = ResultData(
+                results={"message": message},
+                component_display_name="Chat Output",
+                component_id=graph.vertices[-1].id if graph.vertices else "test-123",
+            )
+
+            # Create a mock result that mimics the real structure
+            mock_result = MagicMock()
+            mock_result.vertex.custom_component.display_name = "Chat Output"
+            mock_result.vertex.id = result_data.component_id
+            mock_result.result_dict = result_data
+
             yield mock_result
 
         graph.async_start = mock_async_start
+        graph._original_async_start = original_async_start
 
         return graph
 
     @pytest.fixture
-    def app_client(self, mock_graph):
+    def app_client(self, real_graph_with_async):
         """Create test client with single flow app."""
         meta = FlowMeta(
             id="test-flow-id",
@@ -218,7 +216,7 @@ class TestServeAppEndpoints:
             description="A test flow",
         )
 
-        graphs = {"test-flow-id": mock_graph}
+        graphs = {"test-flow-id": real_graph_with_async}
         metas = {"test-flow-id": meta}
         verbose_print = Mock()
 
@@ -234,28 +232,13 @@ class TestServeAppEndpoints:
             return TestClient(app)
 
     @pytest.fixture
-    def multi_flow_client(self, mock_graph):
+    def multi_flow_client(self, real_graph_with_async, simple_chat_json):
         """Create test client with multiple flows."""
-        graph2 = AsyncMock()
-        graph2.flow_id = "flow-2"
-
-        # Mock nodes as a dictionary for graph analysis
-        mock_node2 = MagicMock()
-        mock_node2.data = {
-            "type": "TestComponent2",
-            "display_name": "Test Component 2",
-            "description": "A second test component",
-            "template": {},
-        }
-        graph2.nodes = {"node2": mock_node2}
-
-        # Mock edges as a list
-        mock_edge2 = MagicMock()
-        mock_edge2.source = "node2"
-        mock_edge2.target = "node3"
-        graph2.edges = [mock_edge2]
+        # Create second real graph using the same JSON structure
+        graph2 = Graph.from_payload(simple_chat_json, flow_id="flow-2")
 
         async def mock_async_start2(inputs):  # noqa: ARG001
+            # Return empty results for this test
             yield MagicMock(outputs=[])
 
         graph2.async_start = mock_async_start2
@@ -273,7 +256,7 @@ class TestServeAppEndpoints:
             description="Second flow",
         )
 
-        graphs = {"test-flow-id": mock_graph, "flow-2": graph2}
+        graphs = {"test-flow-id": real_graph_with_async, "flow-2": graph2}
         metas = {"test-flow-id": meta1, "flow-2": meta2}
         verbose_print = Mock()
 
@@ -358,21 +341,20 @@ class TestServeAppEndpoints:
         assert response.status_code == 200
         assert response.json()["success"] is True
 
-    def test_run_endpoint_execution_error(self, app_client, mock_graph):
+    def test_run_endpoint_execution_error(self, app_client):
         """Test flow execution with error."""
-
-        # Make graph raise an error
-        async def mock_async_start_error(inputs):  # noqa: ARG001
-            msg = "Flow execution failed"
-            raise RuntimeError(msg)
-            yield  # Makes it an async generator
-
-        mock_graph.async_start = mock_async_start_error
-
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
 
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
+        # Mock execute_graph_with_capture to raise an error
+        async def mock_execute_error(graph, input_value):  # noqa: ARG001
+            msg = "Flow execution failed"
+            raise RuntimeError(msg)
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_error),
+        ):
             response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 200  # Returns 200 with error in response body
@@ -384,20 +366,19 @@ class TestServeAppEndpoints:
         # The error message should be in the logs
         assert "ERROR: Flow execution failed" in data["logs"]
 
-    def test_run_endpoint_no_results(self, app_client, mock_graph):
+    def test_run_endpoint_no_results(self, app_client):
         """Test flow execution with no results."""
-
-        # Make graph return empty results
-        async def mock_async_start_empty(inputs):  # noqa: ARG001
-            return
-            yield  # Makes it an async generator
-
-        mock_graph.async_start = mock_async_start_empty
-
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
 
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
+        # Mock execute_graph_with_capture to return empty results
+        async def mock_execute_empty(graph, input_value):  # noqa: ARG001
+            return [], ""  # Empty results and logs
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_empty),
+        ):
             response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
         assert response.status_code == 200
@@ -460,26 +441,28 @@ class TestServeAppEndpoints:
 
         assert response.status_code == 422  # Validation error
 
-    def test_flow_execution_with_message_output(self, app_client, mock_graph):
+    def test_flow_execution_with_message_output(self, app_client, real_graph_with_async):
         """Test flow execution with message-type output."""
-        # Mock output with message
-        mock_message = MagicMock()
-        mock_message.text = "Message output"
 
-        mock_out = MagicMock()
-        mock_out.message = mock_message
-        del mock_out.results  # No results attribute
-
-        # Create mock result with message
-        mock_result = MagicMock()
-        mock_result.message = mock_message
-        # Ensure results attribute doesn't exist
-        delattr(mock_result, "results")
-
+        # Create a real message output scenario
         async def mock_async_start_message(inputs):  # noqa: ARG001
+            # Create real Message and ResultData objects
+            message = Message(text="Message output")
+            result_data = ResultData(
+                results={"message": message}, component_display_name="Chat Output", component_id="test-123"
+            )
+
+            # Create result structure
+            mock_result = MagicMock()
+            mock_result.vertex.custom_component.display_name = "Chat Output"
+            mock_result.vertex.id = "test-123"
+            mock_result.result_dict = result_data
+            # Add message attribute for backwards compatibility
+            mock_result.message = message
+
             yield mock_result
 
-        mock_graph.async_start = mock_async_start_message
+        real_graph_with_async.async_start = mock_async_start_message
 
         request_data = {"input_value": "Test input"}
         headers = {"x-api-key": "test-api-key"}
@@ -492,7 +475,7 @@ class TestServeAppEndpoints:
                 "result": "Message output",
                 "success": True,
                 "type": "message",
-                "component": "TestComponent",
+                "component": "Chat Output",
             }
             response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
 
