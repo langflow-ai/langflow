@@ -228,24 +228,30 @@ module.exports = {
               ]
             },
             {
-              type: "doc",
-              id: "Deployment/deployment-gcp",
-              label: "Google Cloud Platform"
-            },
-            {
-              type: "doc",
-              id: "Deployment/deployment-hugging-face-spaces",
-              label: "Hugging Face Spaces"
-            },
-            {
-              type: "doc",
-              id: "Deployment/deployment-railway",
-              label: "Railway"
-            },
-            {
-              type: "doc",
-              id: "Deployment/deployment-render",
-              label: "Render"
+              type: "category",
+              label: "Cloud platforms",
+              items: [
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-gcp",
+                  label: "Google Cloud Platform"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-hugging-face-spaces",
+                  label: "Hugging Face Spaces"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-railway",
+                  label: "Railway"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-render",
+                  label: "Render"
+                },
+              ]
             },
           ],
         },
