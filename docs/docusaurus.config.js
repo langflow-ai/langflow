@@ -207,48 +207,34 @@ const config = {
             from: ["/guides-data-message", "/configuration-objects"],
           },
           {
-            to: "/blog-writer",
+            to: "/concepts-flows",
             from: [
-              "/starter-projects-blog-writer",
-              "/tutorials-blog-writer",
-            ],
-          },
-          {
-            to: "/memory-chatbot",
-            from: [
-              "/starter-projects-memory-chatbot",
-              "/tutorials-memory-chatbot",
-            ],
-          },
-          {
-            to: "/document-qa",
-            from: [
-              "/starter-projects-document-qa",
-              "/tutorials-document-qa",
-            ],
-          },
-          {
-            to: "/simple-agent",
-            from: [
+              "/travel-planning-agent",
+              "/starter-projects-travel-planning-agent",
+              "/tutorials-travel-planning-agent",
+              "/starter-projects-dynamic-agent/",
+              "/simple-agent",
               "/math-agent",
               "/starter-projects-simple-agent",
               "/starter-projects-math-agent",
               "/tutorials-math-agent",
-            ],
-          },
-          {
-            to: "/sequential-agent",
-            from: [
+              "/sequential-agent",
               "/starter-projects-sequential-agent",
               "/tutorials-sequential-agent",
-            ],
-          },
-          {
-            to: "/travel-planning-agent",
-            from: [
-              "/starter-projects-travel-planning-agent",
-              "/tutorials-travel-planning-agent",
-              "/starter-projects-dynamic-agent/",
+              "/memory-chatbot",
+              "/starter-projects-memory-chatbot",
+              "/tutorials-memory-chatbot",
+              "/financial-report-parser",
+              "/document-qa",
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa",
+              "/blog-writer",
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer",
+              "/basic-prompting",
+              "/starter-projects-basic-prompting",
+              "/vector-store-rag",
+              "/starter-projects-vector-store-rag",
             ],
           },
           {
@@ -256,8 +242,10 @@ const config = {
             from: "/components-rag",
           },
           {
-            to: "/configuration-authentication",
+            to: "/api-keys-and-authentication",
             from: [
+              "/configuration-api-keys",
+              "/configuration-authentication",
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
             ],
@@ -297,14 +285,6 @@ const config = {
           {
             to: "/deployment-kubernetes-dev",
             from: "/deployment-kubernetes",
-          },
-          {
-            to: "/basic-prompting",
-            from: "/starter-projects-basic-prompting",
-          },
-          {
-            to: "/vector-store-rag",
-            from: "/starter-projects-vector-store-rag",
           },
           {
             to: "/contributing-github-issues",

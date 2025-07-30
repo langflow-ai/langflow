@@ -31,6 +31,8 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             "sse_url": "https://mcp.deepwiki.com/sse",
             "tool": "echo",
             "mcp_server": {"name": "test_server", "config": {"command": "uvx mcp-server-fetch"}},
+            "mcp_server": {"name": "test_server", "config": {"command": "uvx mcp-server-fetch"}},
+            "tool": "",
         }
 
     @pytest.fixture
@@ -647,6 +649,235 @@ class TestMCPSseClient:
         with (
             patch.object(sse_client, "_get_or_create_session", side_effect=mock_get_session_side_effect),
             patch.object(sse_client, "_get_session_manager") as mock_get_manager,
+        ):
+            mock_manager = AsyncMock()
+            mock_get_manager.return_value = mock_manager
+
+            result = await sse_client.run_tool("test_tool", {"param": "value"})
+
+            # Should have retried and succeeded on second attempt
+            assert call_count == 2
+            assert result is not None
+            # Should have cleaned up the failed session
+            mock_manager._cleanup_session.assert_called_once_with("test_context")
+
+
+class TestMCPSessionManager:
+    @pytest.fixture
+    def session_manager(self):
+        return MCPSessionManager()
+
+    async def test_session_caching(self, session_manager):
+        """Test that sessions are properly cached and reused."""
+        context_id = "test_context"
+        connection_params = MagicMock()
+        transport_type = "stdio"
+
+        # Create a mock session that will appear healthy
+        mock_session = AsyncMock()
+        mock_session._write_stream = MagicMock()
+        mock_session._write_stream._closed = False
+
+        # Create a mock task that appears to be running
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+
+        with (
+            patch.object(session_manager, "_create_stdio_session") as mock_create,
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            mock_create.return_value = mock_session
+
+            # First call should create session
+            session1 = await session_manager.get_session(context_id, connection_params, transport_type)
+
+            # Manually populate the sessions cache as if the session was created properly
+            session_manager.sessions[context_id] = {"session": mock_session, "task": mock_task, "type": transport_type}
+
+            # Second call should return cached session without creating new one
+            session2 = await session_manager.get_session(context_id, connection_params, transport_type)
+
+            assert session1 == session2
+            assert session1 == mock_session
+            # Should only create once since the second call should use the cached session
+            mock_create.assert_called_once()
+
+    async def test_session_cleanup(self, session_manager):
+        """Test session cleanup functionality."""
+        context_id = "test_context"
+
+        # Add a session to the manager with proper mock setup
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)  # Use MagicMock for sync method
+        mock_task.cancel = MagicMock()  # Use MagicMock for sync method
+
+        session_manager.sessions[context_id] = {"session": AsyncMock(), "task": mock_task, "type": "stdio"}
+
+        await session_manager._cleanup_session(context_id)
+
+        # Should cancel the task and remove from sessions
+        mock_task.cancel.assert_called_once()
+        assert context_id not in session_manager.sessions
+
+    async def test_server_switch_detection(self, session_manager):
+        """Test that server switches are properly detected and handled."""
+        context_id = "test_context"
+
+        # First server
+        server1_params = MagicMock()
+        server1_params.command = "server1"
+
+        # Second server
+        server2_params = MagicMock()
+        server2_params.command = "server2"
+
+        with (
+            patch.object(session_manager, "_create_stdio_session") as mock_create,
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            mock_session1 = AsyncMock()
+            mock_session2 = AsyncMock()
+            mock_create.side_effect = [mock_session1, mock_session2]
+
+            # First connection
+            session1 = await session_manager.get_session(context_id, server1_params, "stdio")
+
+            # Switch to different server should create new session
+            session2 = await session_manager.get_session(context_id, server2_params, "stdio")
+
+            assert session1 != session2
+            assert mock_create.call_count == 2
+
+
+# Integration test for header functionality
+class TestHeaderValidation:
+    """Test the header validation functionality."""
+
+    def test_validate_headers_valid_input(self):
+        """Test header validation with valid headers."""
+        headers = {"Authorization": "Bearer token123", "Content-Type": "application/json", "X-API-Key": "secret-key"}
+
+        result = validate_headers(headers)
+
+        # Headers should be normalized to lowercase
+        expected = {"authorization": "Bearer token123", "content-type": "application/json", "x-api-key": "secret-key"}
+        assert result == expected
+
+    def test_validate_headers_empty_input(self):
+        """Test header validation with empty/None input."""
+        assert validate_headers({}) == {}
+        assert validate_headers(None) == {}
+
+    def test_validate_headers_invalid_names(self):
+        """Test header validation with invalid header names."""
+        headers = {
+            "Invalid Header": "value",  # spaces not allowed
+            "Header@Name": "value",  # @ not allowed
+            "Header Name": "value",  # spaces not allowed
+            "Valid-Header": "value",  # this should pass
+        }
+
+        result = validate_headers(headers)
+
+        # Only the valid header should remain
+        assert result == {"valid-header": "value"}
+
+    def test_validate_headers_sanitize_values(self):
+        """Test header value sanitization."""
+        headers = {
+            "Authorization": "Bearer \x00token\x1f with\r\ninjection",
+            "Clean-Header": "  clean value  ",
+            "Empty-After-Clean": "\x00\x01\x02",
+            "Tab-Header": "value\twith\ttabs",  # tabs should be preserved
+        }
+
+        result = validate_headers(headers)
+
+        # Control characters should be removed, whitespace trimmed
+        # Header with injection attempts should be skipped
+        expected = {"clean-header": "clean value", "tab-header": "value\twith\ttabs"}
+        assert result == expected
+
+    def test_validate_headers_non_string_values(self):
+        """Test header validation with non-string values."""
+        headers = {"String-Header": "valid", "Number-Header": 123, "None-Header": None, "List-Header": ["value"]}
+
+        result = validate_headers(headers)
+
+        # Only string headers should remain
+        assert result == {"string-header": "valid"}
+
+    def test_validate_headers_injection_attempts(self):
+        """Test header validation against injection attempts."""
+        headers = {
+            "Injection1": "value\r\nInjected-Header: malicious",
+            "Injection2": "value\nX-Evil: attack",
+            "Safe-Header": "safe-value",
+        }
+
+        result = validate_headers(headers)
+
+        # Injection attempts should be filtered out
+        assert result == {"safe-header": "safe-value"}
+
+
+class TestSSEHeaderIntegration:
+    """Integration test to verify headers are properly passed through the entire SSE flow."""
+
+    async def test_headers_processing(self):
+        """Test that headers flow properly from server config through to SSE client connection."""
+        # Test the header processing function directly
+        headers_input = [
+            {"key": "Authorization", "value": "Bearer test-token"},
+            {"key": "X-API-Key", "value": "secret-key"},
+        ]
+
+        expected_headers = {
+            "authorization": "Bearer test-token",  # normalized to lowercase
+            "x-api-key": "secret-key",
+        }
+
+        # Test _process_headers function with validation
+        processed_headers = _process_headers(headers_input)
+        assert processed_headers == expected_headers
+
+        # Test different input formats
+        # Test dict input with validation
+        dict_headers = {"Authorization": "Bearer dict-token", "Invalid Header": "bad"}
+        result = _process_headers(dict_headers)
+        # Invalid header should be filtered out, valid header normalized
+        assert result == {"authorization": "Bearer dict-token"}
+
+        # Test None input
+        assert _process_headers(None) == {}
+
+        # Test empty list
+        assert _process_headers([]) == {}
+
+        # Test malformed list
+        malformed_headers = [{"key": "Auth"}, {"value": "token"}]  # Missing value/key
+        assert _process_headers(malformed_headers) == {}
+
+        # Test list with invalid header names
+        invalid_headers = [
+            {"key": "Valid-Header", "value": "good"},
+            {"key": "Invalid Header", "value": "bad"},  # spaces not allowed
+        ]
+        result = _process_headers(invalid_headers)
+        assert result == {"valid-header": "good"}
+
+    async def test_sse_client_header_storage(self):
+        """Test that SSE client properly stores headers in connection params."""
+        sse_client = MCPSseClient()
+        test_url = "http://test.url"
+        test_headers = {"Authorization": "Bearer test123", "Custom": "value"}
+        expected_headers = {"authorization": "Bearer test123", "custom": "value"}  # normalized
+
+        with (
+            patch.object(sse_client, "validate_url", return_value=(True, "")),
+            patch.object(sse_client, "pre_check_redirect", return_value=test_url),
+            patch.object(sse_client, "_get_or_create_session") as mock_get_session,
+        ):
         ):
             mock_manager = AsyncMock()
             mock_get_manager.return_value = mock_manager
