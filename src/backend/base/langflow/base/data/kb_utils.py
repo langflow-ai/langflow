@@ -87,17 +87,17 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
             tf = term_counts[term_lower]
 
             # Inverse document frequency (IDF)
-            idf = (
-                math.log((n_docs - document_frequencies[term] + 0.5) / (document_frequencies[term] + 0.5))
-                if document_frequencies[term] > 0
-                else 0
-            )
+            # Use standard BM25 IDF formula that ensures non-negative values
+            idf = math.log(n_docs / document_frequencies[term]) if document_frequencies[term] > 0 else 0
 
             # BM25 score calculation
             numerator = tf * (k1 + 1)
             denominator = tf + k1 * (1 - b + b * (doc_length / avg_doc_length))
 
-            doc_score += idf * (numerator / denominator)
+            # Handle division by zero when tf=0 and k1=0
+            term_score = 0 if denominator == 0 else idf * (numerator / denominator)
+
+            doc_score += term_score
 
         scores.append(doc_score)
 
