@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from langchain_community.vectorstores import CouchbaseVectorStore
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
@@ -36,7 +36,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> CouchbaseVectorStore:
+    def build_vector_store(self) -> CouchbaseSearchVectorStore:
         try:
             from couchbase.auth import PasswordAuthenticator
             from couchbase.cluster import Cluster
@@ -65,7 +65,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if documents:
-            couchbase_vs = CouchbaseVectorStore.from_documents(
+            couchbase_vs = CouchbaseSearchVectorStore.from_documents(
                 documents=documents,
                 cluster=cluster,
                 bucket_name=self.bucket_name,
@@ -76,7 +76,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
             )
 
         else:
-            couchbase_vs = CouchbaseVectorStore(
+            couchbase_vs = CouchbaseSearchVectorStore(
                 cluster=cluster,
                 bucket_name=self.bucket_name,
                 scope_name=self.scope_name,
