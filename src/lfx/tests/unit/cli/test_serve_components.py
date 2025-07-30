@@ -20,6 +20,7 @@ from lfx.cli.serve_app import (
     _generate_dynamic_run_description,
     create_multi_serve_app,
 )
+from lfx.graph import Graph
 
 
 class TestDataModels:
@@ -80,13 +81,33 @@ class TestGraphAnalysis:
 
     def test_analyze_graph_structure_basic(self):
         """Test basic graph structure analysis."""
-        # Mock a simple graph
+        # Create a mock graph that matches what _analyze_graph_structure expects
         mock_graph = Mock()
-        mock_graph.nodes = {
-            "node1": Mock(data={"type": "TextInput", "display_name": "Input", "description": "Text input"}),
-            "node2": Mock(data={"type": "TextOutput", "display_name": "Output", "description": "Text output"}),
+
+        # Create mock node objects with the expected structure
+        node1 = Mock()
+        node1.data = {
+            "type": "ChatInput",
+            "display_name": "Chat Input",
+            "description": "Input component",
+            "template": {"input_value": {"type": "str"}},
         }
-        mock_graph.edges = [Mock(source="node1", target="node2")]
+
+        node2 = Mock()
+        node2.data = {
+            "type": "ChatOutput",
+            "display_name": "Chat Output",
+            "description": "Output component",
+            "template": {"output_value": {"type": "str"}},
+        }
+
+        mock_graph.nodes = {"input-1": node1, "output-1": node2}
+
+        # Create mock edges
+        edge = Mock()
+        edge.source = "input-1"
+        edge.target = "output-1"
+        mock_graph.edges = [edge]
 
         analysis = _analyze_graph_structure(mock_graph)
 
@@ -115,19 +136,27 @@ class TestGraphAnalysis:
 
     def test_generate_dynamic_run_description(self):
         """Test dynamic description generation."""
+        # Create a mock graph for _generate_dynamic_run_description
         mock_graph = Mock()
-        mock_graph.nodes = {
-            "input": Mock(data={"type": "TextInput", "template": {"text_input": {"type": "str"}}}),
-            "output": Mock(data={"type": "TextOutput", "template": {"text_output": {"type": "str"}}}),
-        }
-        mock_graph.edges = [Mock(source="input", target="output")]
 
-        description = _generate_dynamic_run_description(mock_graph)
+        # Mock the analyze function to return expected data
+        with patch("lfx.cli.serve_app._analyze_graph_structure") as mock_analyze:
+            mock_analyze.return_value = {
+                "node_count": 2,
+                "edge_count": 1,
+                "components": [{"type": "ChatInput"}, {"type": "ChatOutput"}],
+                "input_types": ["text"],
+                "output_types": ["text"],
+                "entry_points": [{"template": {"input_value": {"type": "str"}}}],
+                "exit_points": [{"template": {"output_value": {"type": "str"}}}],
+            }
 
-        assert "Execute the deployed LFX graph" in description
-        assert "Authentication Required" in description
-        assert "Example Request" in description
-        assert "Example Response" in description
+            description = _generate_dynamic_run_description(mock_graph)
+
+            assert "Execute the deployed LFX graph" in description
+            assert "Authentication Required" in description
+            assert "Example Request" in description
+            assert "Example Response" in description
 
 
 class TestCommonFunctions:
@@ -153,16 +182,22 @@ class TestCommonFunctions:
             tmp.flush()
 
             path = Path(tmp.name)
-            mock_verbose_print = Mock()
-            file_ext, result = validate_script_path(str(path), mock_verbose_print)
+
+            def verbose_print(msg):
+                pass  # Real function
+
+            file_ext, result = validate_script_path(str(path), verbose_print)
             assert result == path
             assert file_ext == ".json"
 
     def test_validate_script_path_invalid(self):
         """Test script path validation with invalid path."""
-        mock_verbose_print = Mock()
+
+        def verbose_print(msg):
+            pass  # Real function
+
         with pytest.raises(typer.Exit):
-            validate_script_path("/nonexistent/path.json", mock_verbose_print)
+            validate_script_path("/nonexistent/path.json", verbose_print)
 
     @patch("lfx.cli.common.load_flow_from_json")
     def test_load_graph_from_path_success(self, mock_load_flow):
@@ -174,8 +209,10 @@ class TestCommonFunctions:
             tmp.write(b'{"test": "flow"}')
             tmp.flush()
 
-            mock_verbose_print = Mock()
-            graph = load_graph_from_path(Path(tmp.name), ".json", mock_verbose_print, verbose=True)
+            def verbose_print(msg):
+                pass  # Real function
+
+            graph = load_graph_from_path(Path(tmp.name), ".json", verbose_print, verbose=True)
             assert graph == mock_graph
             mock_load_flow.assert_called_once_with(Path(tmp.name), disable_logs=False)
 
@@ -188,21 +225,30 @@ class TestCommonFunctions:
             tmp.write(b"invalid json")
             tmp.flush()
 
-            mock_verbose_print = Mock()
+            def verbose_print(msg):
+                pass  # Real function
+
             with pytest.raises(typer.Exit):
-                load_graph_from_path(Path(tmp.name), ".json", mock_verbose_print, verbose=False)
+                load_graph_from_path(Path(tmp.name), ".json", verbose_print, verbose=False)
             mock_load_flow.assert_called_once_with(Path(tmp.name), disable_logs=True)
 
 
-def create_mock_graph():
-    """Helper function to create a properly mocked graph."""
-    mock_graph = Mock()
-    mock_graph.nodes = {
-        "input": Mock(data={"type": "TextInput", "display_name": "Input", "template": {}}),
-        "output": Mock(data={"type": "TextOutput", "display_name": "Output", "template": {}}),
-    }
-    mock_graph.edges = [Mock(source="input", target="output")]
-    return mock_graph
+# Removed create_mock_graph - use create_real_graph() instead
+
+
+def simple_chat_json():
+    """Load the simple chat JSON test data."""
+    test_data_dir = Path(__file__).parent.parent.parent / "data"
+    json_path = test_data_dir / "simple_chat_no_llm.json"
+    with json_path.open() as f:
+        return json.load(f)
+
+
+def create_real_graph():
+    """Helper function to create a real LFX graph with nodes/edges for serve_app."""
+    # Load real JSON data and create graph using from_payload
+    json_data = simple_chat_json()
+    return Graph.from_payload(json_data, flow_id="test-flow-id")
 
 
 class TestFastAPIAppCreation:
@@ -211,9 +257,11 @@ class TestFastAPIAppCreation:
     def test_create_multi_serve_app_basic(self, tmp_path):
         """Test basic multi-serve app creation."""
         root_dir = tmp_path
-        graphs = {"test-flow": create_mock_graph()}
+        graphs = {"test-flow": create_real_graph()}
         metas = {"test-flow": FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow")}
-        verbose_print = Mock()
+
+        def verbose_print(msg):
+            pass  # Real function
 
         with patch("lfx.cli.serve_app.verify_api_key"):
             app = create_multi_serve_app(root_dir=root_dir, graphs=graphs, metas=metas, verbose_print=verbose_print)
@@ -224,9 +272,11 @@ class TestFastAPIAppCreation:
     def test_create_multi_serve_app_mismatched_keys(self, tmp_path):
         """Test app creation with mismatched graph/meta keys."""
         root_dir = tmp_path
-        graphs = {"flow1": create_mock_graph()}
+        graphs = {"flow1": create_real_graph()}
         metas = {"flow2": FlowMeta(id="flow2", relative_path="test.json", title="Test")}
-        verbose_print = Mock()
+
+        def verbose_print(msg):
+            pass  # Real function
 
         with pytest.raises(ValueError, match="graphs and metas must contain the same keys"):
             create_multi_serve_app(root_dir=root_dir, graphs=graphs, metas=metas, verbose_print=verbose_print)
@@ -238,14 +288,18 @@ class TestFastAPIEndpoints:
     def setup_method(self, tmp_path):
         """Set up test client with mock data."""
         self.root_dir = tmp_path
-        self.mock_graph = create_mock_graph()
-        self.graphs = {"test-flow": self.mock_graph}
+        self.real_graph = create_real_graph()
+        self.graphs = {"test-flow": self.real_graph}
         self.metas = {
             "test-flow": FlowMeta(
                 id="test-flow", relative_path="test.json", title="Test Flow", description="A test flow"
             )
         }
-        self.verbose_print = Mock()
+
+        def verbose_print(msg):
+            pass  # Real function
+
+        self.verbose_print = verbose_print
 
         # Create the app first
         with patch("lfx.cli.serve_app.verify_api_key"):
@@ -308,7 +362,7 @@ class TestFastAPIEndpoints:
 
         # Test that the exception would be raised properly
         with pytest.raises(Exception, match="Execution failed"):
-            await mock_execute(self.mock_graph, "test input")
+            await mock_execute(self.real_graph, "test input")
 
     def test_flow_info_endpoint(self):
         """Test the flow info endpoint returns basic metadata."""
@@ -339,9 +393,9 @@ class TestErrorHandling:
         with patch("lfx.cli.serve_app.verify_api_key", return_value="test-key"):
             app = create_multi_serve_app(
                 root_dir=tmp_path,
-                graphs={"test": create_mock_graph()},
+                graphs={"test": create_real_graph()},
                 metas={"test": FlowMeta(id="test", relative_path="test.json", title="Test")},
-                verbose_print=Mock(),
+                verbose_print=lambda msg: None,  # noqa: ARG005
             )
             client = TestClient(app)
 
@@ -358,9 +412,9 @@ class TestErrorHandling:
         with patch("lfx.cli.serve_app.verify_api_key", return_value="test-key"):
             app = create_multi_serve_app(
                 root_dir=tmp_path,
-                graphs={"test": create_mock_graph()},
+                graphs={"test": create_real_graph()},
                 metas={"test": FlowMeta(id="test", relative_path="test.json", title="Test")},
-                verbose_print=Mock(),
+                verbose_print=lambda msg: None,  # noqa: ARG005
             )
             client = TestClient(app)
 
@@ -377,9 +431,9 @@ class TestIntegration:
     @patch("lfx.cli.common.load_flow_from_json")
     def test_full_app_integration(self, mock_load_flow):
         """Test full app integration with realistic data."""
-        # Setup mock graph
-        mock_graph = create_mock_graph()
-        mock_load_flow.return_value = mock_graph
+        # Setup real graph
+        real_graph = create_real_graph()
+        mock_load_flow.return_value = real_graph
 
         # Create temporary flow file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
@@ -389,9 +443,12 @@ class TestIntegration:
             flow_path = Path(tmp.name)
 
             # Test flow loading
-            mock_verbose_print = Mock()
+            def verbose_print(msg):
+                pass  # Real function
+
+            mock_verbose_print = verbose_print
             loaded_graph = load_graph_from_path(flow_path, ".json", mock_verbose_print)
-            assert loaded_graph == mock_graph
+            assert loaded_graph == real_graph
 
             # Test flow ID generation
             flow_id = flow_id_from_path(flow_path, flow_path.parent)
