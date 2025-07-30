@@ -198,13 +198,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     def search_documents(self) -> list[Data]:
         """Search for documents in the vector store, with optional score and metadata filter."""
-        if self._cached_vector_store is not None:
-            vs = self._cached_vector_store
-        else:
-            vs = self.build_vector_store()
-            self._cached_vector_store = vs
-
+        
+        vs = self._get_or_build_vector_store()
         query = self.search_query
+
         if not query:
             self.status = ""
             return []
@@ -214,20 +211,37 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         filt = self.advance_search_filter
         threshold = float(self.sim_threshold or 0.0)
 
-        if mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_relevance_scores"):
-            docs_and_scores = vs.similarity_search_with_relevance_scores(query, k=k, filter=filt or None)
-            results: list[Data] = []
-            for doc, score in docs_and_scores:
-                if score >= threshold:
-                    data = Data(
-                        metadata={**getattr(doc, "metadata", {})},
-                        score={"score": score},
-                        text=doc.page_content,
-                    )
-                    results.append(data)
-            self.status = results
-            return results
+        if self._use_similarity_with_score(mode, vs):
+            return self._search_with_score(vs, query, k, filt, threshold)
 
+        self._log_search_params(query, mode, k, threshold, filt)
+
+        if self._use_standard_search(mode, vs):
+            return self._search_standard(vs, query, mode, k, filt)
+
+        return []
+
+    # --- Helper methods below ---
+
+    def _get_or_build_vector_store(self):
+        if self._cached_vector_store is not None:
+            return self._cached_vector_store
+        self._cached_vector_store = self.build_vector_store()
+        return self._cached_vector_store
+
+    def _use_similarity_with_score(self, mode: str, vs) -> bool:
+        return mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_relevance_scores")
+
+    def _search_with_score(self, vs, query, k, filt, threshold) -> list[Data]:
+        docs_and_scores = vs.similarity_search_with_relevance_scores(query, k=k, filter=filt or None)
+        results: list[Data] = [
+            Data(metadata={**getattr(doc, "metadata", {})}, score={"score": score}, text=doc.page_content)
+            for doc, score in docs_and_scores if score >= threshold
+        ]
+        self.status = results
+        return results
+
+    def _log_search_params(self, query, mode, k, threshold, filt):
         if filt:
             self.log(f"Filter: {filt}")
         self.log(f"Search input: {query}")
@@ -235,17 +249,14 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Number of results: {k}")
         self.log(f"Similarity threshold: {threshold}")
 
-        if mode.lower() in ["similarity", "mmr"] and hasattr(vs, "search"):
-            search_args = {
-                "query": query,
-                "search_type": mode.lower(),
-                "k": k,
-            }
-            if filt:
-                search_args["filter"] = filt
-            docs = vs.search(**search_args)
-            data_list = [Data(metadata={**getattr(d, "metadata", {})}, text=d.page_content) for d in docs]
-            self.status = data_list
-            return data_list
+    def _use_standard_search(self, mode: str, vs) -> bool:
+        return mode.lower() in ["similarity", "mmr"] and hasattr(vs, "search")
 
-        return super().search_documents()
+    def _search_standard(self, vs, query, mode, k, filt) -> list[Data]:
+        search_args = {"query": query, "search_type": mode.lower(), "k": k}
+        if filt:
+            search_args["filter"] = filt
+        docs = vs.search(**search_args)
+        data_list = [Data(metadata={**getattr(d, "metadata", {})}, text=d.page_content) for d in docs]
+        self.status = data_list
+        return data_list
