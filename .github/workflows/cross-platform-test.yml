@@ -92,6 +92,7 @@ jobs:
       test-timeout: ${{ inputs.test-timeout }}
       base-artifact-name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name }}
       main-artifact-name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name }}
+      run-id: ${{ inputs.run-id || github.run_id }}
 
   test-summary:
     name: Cross-Platform Test Summary
