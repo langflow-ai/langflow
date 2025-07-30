@@ -7,21 +7,28 @@ import Icon from "@site/src/components/icon";
 
 Configure tools connected to agents to extend their capabilities.
 
-## Edit a tool component's actions
+## Edit a tool's actions
 
-To edit a tool's actions, in the tool component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify its `name`, `description`, or `enabled` metadata.
-These fields help connected agents understand how to use the action, without having to modify the agent's prompt instructions.
+When you set any component to **Tool Mode** or **Tool** output, an agent can use the functions or actions provided by that component.
 
-For example, the [URL](/components-data#url) component has two actions available when **Tool Mode** is enabled:
+To edit a tool's actions, in the tool component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify the following settings for each action:
+
+* `name`: A human-readable name for the action.
+* `description`: A human-readable description of the action's purpose.
+* `enabled`: Whether the action is available (true) or not (false).
+
+These fields tell the agent which actions it can use and how to use them, without requiring you to modify the agent's prompt instructions.
+If you think an agent is using a tool incorrectly, edit the `description` to help the agent better understand the tool.
+
+For example, the [**URL** component](/components-data#url) has two actions available when in **Tool Mode**:
 
 | Tool Name | Description | Enabled |
 |-----------|-------------|---------|
 | `fetch_content` | Fetch content from web pages recursively | true |
 | `fetch_content_as_message` | Fetch web content formatted as messages | true |
 
-A Langflow Agent has a clear idea of each tool's capabilities based on the `name` and `description` metadata. The `enabled` boolean controls the tool's availability to the agent. If you think an agent is using a tool incorrectly, edit a tool's `description` metadata to help the agent better understand the tool.
-
-Tool names and descriptions can be edited, but the default tool identifiers cannot be changed. If you want to change the tool identifier, create a custom component.
+Tools also have a default tool identifier.
+This value can't be changed unless you create a custom component.
 
 ## Use an agent as a tool
 
@@ -50,7 +57,7 @@ To try this for yourself, add an additional agent to the **Simple Agent** templa
 
 An agent can use [custom components](/components-custom-components) as tools.
 
-1. To add a custom component to the agent flow, click **New Custom Component**.
+1. To add a custom component to an agentic flow, click **New Custom Component** in the **Components** menu.
 
 2. Enter Python code into the **Code** pane to create the custom component.
 
@@ -115,8 +122,8 @@ An agent can use [custom components](/components-custom-components) as tools.
     ```
     </details>
 
-3. To use the custom component as a tool, click **Tool Mode**.
-4. Connect the custom component's tool output to the agent's tools input.
+3. Enable **Tool Mode** in the custom component.
+4. Connect the custom component's tool output to the **Agent** component's **Tools** input.
 5. Open the <Icon name="Play" aria-hidden="true" /> **Playground** and instruct the agent, `Use the text analyzer on this text: "Agents really are thinking machines!"`
 
     Based on your instruction, the agent should call the `analyze_text` action and return the result.
@@ -148,7 +155,7 @@ Langflow supports **Tool Mode** for the following data types:
 * `MultilineInput`
 * `DropdownInput`
 
-For example, the [components as tools](#components-as-tools) example above adds `tool_mode=True` to the `MessageTextInput` input so the custom component can be used as a tool.
+For example, the example code in [Use custom components as tools](#components-as-tools) included `tool_mode=True` to the `MessageTextInput` input so the custom component could be used as a tool:
 
 ```python
 inputs = [
@@ -164,20 +171,19 @@ inputs = [
 
 ## Use flows as tools
 
-An agent can use flows that are saved in your workspace as tools with the [Run flow](/components-logic#run-flow) component.
+An agent can use flows that are saved in your workspace as tools with the [**Run Flow** component](/components-logic#run-flow).
 
-1. To add a **Run flow** component, click and drag a **Run flow** component to your workspace.
+1. Add a **Run Flow** component to your flow.
 2. Select the flow you want the agent to use as a tool.
-3. Enable **Tool Mode** in the component.
-The **Run flow** component displays your flow as an available action.
-4. Connect the **Run flow** component's tool output to the agent's tools input.
-5. Ask the agent, `What tools are you using to answer my questions?`
-Your flow should be visible in the response as a tool.
-6. Ask the agent to specifically use the connected tool to answer your question.
+3. Enable **Tool Mode**.
+The selected flow becomes an [action](#edit-a-tools-actions) in the **Run Flow** component.
+4. Connect the **Run Flow** component's **Tool** output to the **Agent** component's **Tools** input.
+5. Open the **Playground**, and then ask the agent, `What tools are you using to answer my questions?`
+Your flow should be visible in the response as an available tool.
+6. Ask the agent a question that specifically uses the connected flow as a tool.
 The connected flow returns an answer based on your question.
-For example, a Basic Prompting flow connected as a tool returns a different result depending upon its LLM and prompt instructions.
 
-![Run Flow as tool connected to an agent](/img/agent-example-run-flow-as-tool.png)
+![Run Flow component connected to an Agent component as a tool](/img/agent-example-run-flow-as-tool.png)
 
 ## See also
 
