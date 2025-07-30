@@ -715,7 +715,13 @@
                 "info": "Select the knowledge to load data from.",
                 "load_from_db": false,
                 "name": "knowledge_base",
-                "options": [],
+                "options": [
+                  "PDF Data",
+                  "PDFData",
+                  "new_test_kb",
+                  "PDFData2",
+                  "langflow_website"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "refresh_button": true,
@@ -901,7 +907,13 @@
                 "info": "Select the knowledge to load data from.",
                 "load_from_db": false,
                 "name": "knowledge_base",
-                "options": [],
+                "options": [
+                  "PDF Data",
+                  "PDFData",
+                  "new_test_kb",
+                  "PDFData2",
+                  "langflow_website"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
