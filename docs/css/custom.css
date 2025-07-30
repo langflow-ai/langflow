@@ -67,6 +67,34 @@ p {
   text-align: start;
 }
 
+/* Tabs Styling */
+.tabs-container {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tabs {
+  margin-bottom: 1rem;
+}
+
+.tabs__item {
+  border: none;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  margin-right: 0rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0;
+}
+
+.tabs__item:hover {
+  background-color: var(--ifm-hover-overlay);
+}
+
+.tabs__item--active {
+  border-bottom-color: var(--ifm-tabs-color-active);
+}
+
 /* apply */
 #hero-apply {
   z-index: -1;
