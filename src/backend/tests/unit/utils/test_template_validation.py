@@ -464,14 +464,14 @@ class TestValidateFlowExecution:
         mock_client.delete.return_value = Mock()
 
         template_data = {"nodes": [], "edges": []}
-        headers = {"Authorization": "Bearer token"}
+        headers = {"Authorization": "Bearer token", "timeout": 10}
 
         errors = await validate_flow_execution(mock_client, template_data, "test.json", headers)
         assert len(errors) == 1
         assert "Flow execution validation failed: Build error" in errors[0]
 
         # Verify cleanup was called
-        mock_client.delete.assert_called_once_with("api/v1/flows/flow123", headers=headers)
+        mock_client.delete.assert_called_once_with("api/v1/flows/flow123", headers=headers, timeout=10)
 
 
 class TestValidateEventStream:
