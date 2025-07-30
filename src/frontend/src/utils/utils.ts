@@ -1005,9 +1005,3 @@ export const stripReleaseStageFromVersion = (version: string): string => {
   }
   return version;
 };
-
-export const setCookieWithOptions = (): CookieOptions => ({
-  path: "/",
-  secure: true,
-  sameSite: "strict",
-});
