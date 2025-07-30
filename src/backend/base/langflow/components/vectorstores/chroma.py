@@ -198,7 +198,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     def search_documents(self) -> list[Data]:
         """Search for documents in the vector store, with optional score and metadata filter."""
-        
         vs = self._get_or_build_vector_store()
         query = self.search_query
 
@@ -236,7 +235,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         docs_and_scores = vs.similarity_search_with_relevance_scores(query, k=k, filter=filt or None)
         results: list[Data] = [
             Data(metadata={**getattr(doc, "metadata", {})}, score={"score": score}, text=doc.page_content)
-            for doc, score in docs_and_scores if score >= threshold
+            for doc, score in docs_and_scores
+            if score >= threshold
         ]
         self.status = results
         return results
