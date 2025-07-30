@@ -24,5 +24,9 @@ export const useGetInstallationStatus = (enabled: boolean = true) => {
     refetchInterval: enabled ? 2000 : false, // Poll every 2 seconds when enabled
     refetchIntervalInBackground: false,
     retry: false,
+    staleTime: 0, // Always consider data stale to ensure fresh updates
+    gcTime: 0, // Don't cache data - always fetch fresh
+    refetchOnWindowFocus: false, // Prevent unwanted refetches
+    refetchOnMount: true, // Always refetch on component mount
   });
 };

@@ -18,7 +18,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useGetHealthQuery } from "@/controllers/API/queries/health";
 import {
   useClearInstallationStatus,
   useGetInstallationStatus,
@@ -26,31 +25,25 @@ import {
 } from "@/controllers/API/queries/packages";
 import useAlertStore from "@/stores/alertStore";
 import { usePackageManagerStore } from "@/stores/packageManagerStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 
 export default function PackageManagerPage() {
   const [packageName, setPackageName] = useState("");
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showProgressDialog, setShowProgressDialog] = useState(false);
-  const [backendWentDown, setBackendWentDown] = useState(false);
-  const [installationWasSuccessful, setInstallationWasSuccessful] =
-    useState(false);
-  const [restartStartTime, setRestartStartTime] = useState<number | null>(null);
   const [lastHandledError, setLastHandledError] = useState<string | null>(null);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const clearTempNotificationList = useAlertStore(
+    (state) => state.clearTempNotificationList,
+  );
   const setIsInstallingPackage = usePackageManagerStore(
     (state) => state.setIsInstallingPackage,
-  );
-  const setHealthCheckTimeout = useUtilityStore(
-    (state) => state.setHealthCheckTimeout,
   );
 
   const queryClient = useQueryClient();
   const installPackageMutation = useInstallPackage();
   const installationStatus = useGetInstallationStatus(showProgressDialog);
-  const healthCheck = useGetHealthQuery({ enableInterval: showProgressDialog });
   const clearInstallationStatusMutation = useClearInstallationStatus();
 
   const handleInstallClick = () => {
@@ -58,22 +51,17 @@ export default function PackageManagerPage() {
       setErrorData({ title: "Package name is required" });
       return;
     }
+    // Only clear notifications when starting a new installation
+    clearTempNotificationList(); // Clear currently displayed notifications
+    setLastHandledError(null); // Reset error tracking
     setShowInstallDialog(true);
   };
 
   const handleConfirmInstall = async () => {
     setShowInstallDialog(false);
-    // Clear any existing error alerts and stored errors before starting new installation
-    setErrorData({ title: "", list: [] });
-    localStorage.removeItem("packageInstallationError");
     setShowProgressDialog(true);
     setIsInstallingPackage(true);
-    setBackendWentDown(false); // Reset the restart tracking
-    setInstallationWasSuccessful(false); // Reset success tracking
-    setRestartStartTime(null); // Reset restart timer
     setLastHandledError(null); // Reset error tracking
-    // Clear any existing health check timeout states
-    setHealthCheckTimeout(null);
 
     try {
       // Clear any previous installation status before starting new installation
@@ -102,166 +90,102 @@ export default function PackageManagerPage() {
       });
       setShowProgressDialog(false);
       setIsInstallingPackage(false);
-      setBackendWentDown(false);
-      setInstallationWasSuccessful(false);
-      setRestartStartTime(null);
     }
   };
 
-  // Check if backend is back online after installation
-  const isBackendOnline =
-    healthCheck.data?.status === "ok" &&
-    !healthCheck.isFetching &&
-    !healthCheck.isError;
-  const isBackendDown = healthCheck.isError || healthCheck.isFetching;
-
-  // Get installation status from backend (this persists during the installation but resets on restart)
+  // Get installation status from backend
   const installationResult = installationStatus.data?.last_result;
-  const currentlySuccessful = installationResult?.status === "completed";
-  const hasInstallationError = installationResult?.status === "failed";
 
-  // Track when installation becomes successful (using useEffect to prevent infinite renders)
+  // Handle installation completion (success or failure)
   useEffect(() => {
-    if (currentlySuccessful && !installationWasSuccessful) {
-      console.log(
-        "Setting installationWasSuccessful = true, package:",
-        packageName,
-      );
-      setInstallationWasSuccessful(true);
-    }
-  }, [currentlySuccessful, installationWasSuccessful]);
-
-  // Track when installation has an error (using useEffect to prevent infinite renders)
-  useEffect(() => {
-    if (
-      hasInstallationError &&
-      installationResult &&
-      !installationWasSuccessful
-    ) {
-      // Store the error to show after restart
-      const rawError = installationResult.message || "Unknown error";
-      let cleanError = rawError;
-
-      // For dependency resolution errors, extract key information
-      if (rawError.includes("No solution found when resolving dependencies")) {
-        const pkgName = installationResult.package_name || "package";
-        if (rawError.includes("requires-python")) {
-          cleanError = `Package '${pkgName}' requires a different Python version than what's currently available. Please check the package documentation for compatibility requirements.`;
-        } else {
-          cleanError = `Package '${pkgName}' has dependency conflicts that prevent installation. This may be due to version incompatibilities with existing packages.`;
-        }
-      }
-      // For other uv errors, try to extract the first meaningful line
-      else if (rawError.includes("×")) {
-        const lines = rawError.split("\n");
-        const errorLine = lines.find((line) => line.includes("×")) || lines[0];
-        cleanError = errorLine.replace(/^\s*×\s*/, "").trim();
-      }
-
-      // Store error in local state to show after restart
-      localStorage.setItem(
-        "packageInstallationError",
-        JSON.stringify({
-          title: "Installation Failed",
-          list: [cleanError],
-          packageName: packageName,
-        }),
-      );
-    }
-  }, [
-    hasInstallationError,
-    installationResult,
-    installationWasSuccessful,
-    packageName,
-  ]);
-
-  // Track when backend goes down after installation (using useEffect to prevent infinite renders)
-  useEffect(() => {
-    // Simplified: If installation API succeeded and backend goes down, it means restart is happening
+    // Only proceed if we have a definitive status from the backend
     if (
       showProgressDialog &&
-      installPackageMutation.isSuccess &&
-      isBackendDown &&
-      !backendWentDown
+      installationResult &&
+      (installationResult.status === "completed" ||
+        installationResult.status === "failed")
     ) {
-      console.log("Setting backendWentDown = true");
-      setBackendWentDown(true);
-      setRestartStartTime(Date.now());
-    }
-  }, [
-    showProgressDialog,
-    installPackageMutation.isSuccess,
-    isBackendDown,
-    backendWentDown,
-  ]);
+      // Ensure this notification is for the current package being installed
+      if (installationResult.package_name !== packageName.trim()) {
+        console.log(
+          `Ignoring stale result for ${installationResult.package_name}, current package is ${packageName}`,
+        );
+        return;
+      }
 
-  // Close progress dialog after backend restart (using useEffect to prevent infinite renders)
-  useEffect(() => {
-    const hasCompletedRestart = backendWentDown && isBackendOnline;
-    const hasTimedOut =
-      restartStartTime && Date.now() - restartStartTime > 30000; // 30 seconds timeout
+      const errorKey = `${installationResult.package_name}-${installationResult.status}`;
 
-    if (showProgressDialog && (hasCompletedRestart || hasTimedOut)) {
+      // Prevent duplicate notifications
+      if (errorKey === lastHandledError) {
+        return;
+      }
+
       console.log(
-        hasTimedOut
-          ? "Closing dialog due to timeout"
-          : "Closing dialog after restart completion",
+        `Processing installation result: ${installationResult.package_name} - ${installationResult.status}`,
       );
+
       setShowProgressDialog(false);
       setIsInstallingPackage(false);
-      setBackendWentDown(false);
-      setInstallationWasSuccessful(false);
-      setRestartStartTime(null);
+      setLastHandledError(errorKey);
 
-      // Check if there was an error stored before restart
-      const storedError = localStorage.getItem("packageInstallationError");
-      if (storedError) {
-        // Show error after restart
-        const errorData = JSON.parse(storedError);
-        setErrorData(errorData);
-        localStorage.removeItem("packageInstallationError");
-      } else if (hasTimedOut) {
-        // Show timeout message
+      if (installationResult.status === "completed") {
         setSuccessData({
-          title: `Package '${packageName}' installation completed. Please refresh the page if the backend is not responding.`,
+          title: `Package '${installationResult.package_name}' installed successfully! The package is now available for import.`,
         });
-      } else {
-        // Show success - if we completed a restart cycle without errors, it was successful
-        console.log("Showing success notification for package:", packageName);
-        setSuccessData({
-          title: `Package '${packageName}' installed successfully! The application has been restarted with the new package.`,
+      } else if (installationResult.status === "failed") {
+        // Extract and clean the error message
+        const rawError = installationResult.message || "Unknown error";
+        let cleanError = rawError;
+
+        // For dependency resolution errors, extract key information
+        if (
+          rawError.includes("No solution found when resolving dependencies")
+        ) {
+          const pkgName = installationResult.package_name || "package";
+          if (rawError.includes("requires-python")) {
+            cleanError = `Package '${pkgName}' requires a different Python version than what's currently available. Please check the package documentation for compatibility requirements.`;
+          } else {
+            cleanError = `Package '${pkgName}' has dependency conflicts that prevent installation. This may be due to version incompatibilities with existing packages.`;
+          }
+        }
+        // For other uv errors, try to extract the first meaningful line
+        else if (rawError.includes("×")) {
+          const lines = rawError.split("\n");
+          const errorLine =
+            lines.find((line) => line.includes("×")) || lines[0];
+          cleanError = errorLine.replace(/^\s*×\s*/, "").trim();
+        }
+
+        setErrorData({
+          title: "Installation Failed",
+          list: [cleanError],
         });
       }
       setPackageName("");
     }
   }, [
     showProgressDialog,
-    backendWentDown,
-    isBackendOnline,
-    restartStartTime,
-    installationWasSuccessful,
+    installationResult,
     packageName,
+    lastHandledError,
     setErrorData,
     setSuccessData,
     setIsInstallingPackage,
-    healthCheck.data,
-    installationStatus.data,
-    installationResult,
   ]);
 
-  // Show error if installation API call failed (using useEffect to prevent infinite renders)
+  // Show error if installation API call failed (not installation itself failed)
   useEffect(() => {
     if (showProgressDialog && installPackageMutation.isError) {
       setShowProgressDialog(false);
       setIsInstallingPackage(false);
-      setBackendWentDown(false);
-      setInstallationWasSuccessful(false);
-      setRestartStartTime(null);
       const error = installPackageMutation.error as any;
       const errorMessage =
         error?.response?.data?.detail || error?.message || "Unknown error";
+
+      // Only show API-level errors here, not installation failures
+      // Installation failures are handled by the installation status handler
       setErrorData({
-        title: "Installation Failed",
+        title: "Installation Request Failed",
         list: [
           errorMessage.length > 200
             ? errorMessage.substring(0, 200) + "..."
@@ -276,70 +200,6 @@ export default function PackageManagerPage() {
     installPackageMutation.error,
     setErrorData,
     setIsInstallingPackage,
-  ]);
-
-  // Handle installation failure that doesn't trigger restart (e.g., dependency conflicts)
-  useEffect(() => {
-    const errorKey = installationResult
-      ? `${installationResult.package_name}-${installationResult.status}-${installationResult.message}`
-      : null;
-
-    if (
-      showProgressDialog &&
-      installPackageMutation.isSuccess &&
-      hasInstallationError &&
-      !backendWentDown &&
-      installationResult &&
-      errorKey &&
-      errorKey !== lastHandledError
-    ) {
-      console.log("Installation failed without restart, showing error");
-      setShowProgressDialog(false);
-      setIsInstallingPackage(false);
-      setBackendWentDown(false);
-      setInstallationWasSuccessful(false);
-      setRestartStartTime(null);
-      setLastHandledError(errorKey);
-
-      // Clear the installation status cache to prevent stale data
-      queryClient.removeQueries({ queryKey: ["installation-status"] });
-
-      // Extract and clean the error message
-      const rawError = installationResult.message || "Unknown error";
-      let cleanError = rawError;
-
-      // For dependency resolution errors, extract key information
-      if (rawError.includes("No solution found when resolving dependencies")) {
-        const pkgName = installationResult.package_name || "package";
-        if (rawError.includes("requires-python")) {
-          cleanError = `Package '${pkgName}' requires a different Python version than what's currently available. Please check the package documentation for compatibility requirements.`;
-        } else {
-          cleanError = `Package '${pkgName}' has dependency conflicts that prevent installation. This may be due to version incompatibilities with existing packages.`;
-        }
-      }
-      // For other uv errors, try to extract the first meaningful line
-      else if (rawError.includes("×")) {
-        const lines = rawError.split("\n");
-        const errorLine = lines.find((line) => line.includes("×")) || lines[0];
-        cleanError = errorLine.replace(/^\s*×\s*/, "").trim();
-      }
-
-      setErrorData({
-        title: "Installation Failed",
-        list: [cleanError],
-      });
-      setPackageName("");
-    }
-  }, [
-    showProgressDialog,
-    installPackageMutation.isSuccess,
-    hasInstallationError,
-    backendWentDown,
-    installationResult,
-    lastHandledError,
-    setErrorData,
-    setIsInstallingPackage,
-    packageName,
   ]);
 
   return (
@@ -360,7 +220,7 @@ export default function PackageManagerPage() {
           </CardTitle>
           <CardDescription>
             Enter the name of a Python package to install it into your Langflow
-            environment. The application will restart automatically after
+            environment. The package will be available immediately after
             installation.
           </CardDescription>
         </CardHeader>
@@ -403,11 +263,11 @@ export default function PackageManagerPage() {
           </p>
 
           <Alert>
-            <ForwardedIconComponent name="AlertTriangle" className="h-4 w-4" />
+            <ForwardedIconComponent name="Info" className="h-4 w-4" />
             <AlertDescription>
-              <strong>Warning:</strong> Installing packages will restart the
-              Langflow application. Make sure to save any unsaved work before
-              proceeding.
+              <strong>Note:</strong> Packages are installed directly into your
+              Langflow environment and will be available immediately for import
+              in your flows.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -425,8 +285,8 @@ export default function PackageManagerPage() {
               This will:
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Install the package using uv package manager</li>
-                <li>Restart the Langflow application</li>
-                <li>Temporarily interrupt your current session</li>
+                <li>Make the package available for import in your flows</li>
+                <li>Complete without interrupting your current session</li>
               </ul>
             </DialogDescription>
           </DialogHeader>
@@ -481,27 +341,21 @@ export default function PackageManagerPage() {
                 <p className="text-sm text-muted-foreground">
                   {installPackageMutation.isPending
                     ? "Installation in progress..."
-                    : installationWasSuccessful && !backendWentDown
-                      ? "Installation complete. Backend is restarting..."
-                      : installationWasSuccessful && backendWentDown
-                        ? "Backend restarted. Coming back online..."
-                        : installPackageMutation.isSuccess &&
-                            !installationWasSuccessful &&
-                            !hasInstallationError
-                          ? "Checking installation status..."
-                          : "Waiting for installation to complete..."}
+                    : installPackageMutation.isSuccess &&
+                        (!installationResult ||
+                          (installationResult.status !== "completed" &&
+                            installationResult.status !== "failed"))
+                      ? "Checking installation status..."
+                      : "Waiting for installation to complete..."}
                 </p>
               </div>
             </div>
 
             <Alert>
-              <ForwardedIconComponent
-                name="AlertTriangle"
-                className="h-4 w-4"
-              />
+              <ForwardedIconComponent name="Info" className="h-4 w-4" />
               <AlertDescription>
-                Do not close this dialog or refresh the page. The application
-                will restart automatically after the package is installed.
+                Please wait while the package is being installed. This process
+                typically takes a few moments to complete.
               </AlertDescription>
             </Alert>
           </div>

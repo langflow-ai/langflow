@@ -1,15 +1,15 @@
 import asyncio
 import platform
 import shutil
-import sys
-import threading
-from datetime import datetime, timezone
+import subprocess
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from loguru import logger
 from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -71,73 +71,6 @@ def _find_uv_executable() -> str:
     raise RuntimeError(msg)
 
 
-def _restart_in_thread() -> None:
-    """Restart the application in a separate thread to avoid blocking HTTP connections."""
-    import time
-
-    # Give frontend time to poll the completion status
-    time.sleep(3)
-
-    # Check if we're in development mode (uvicorn with --reload)
-    is_development = any("--reload" in arg for arg in sys.argv) or "watchfiles" in sys.modules
-
-    try:
-        logger.info("Initiating application restart...")
-
-        if is_development:
-            # Development mode: uvicorn --reload should handle restarts automatically
-            # when .venv files change during package installation
-            logger.info("Development environment detected.")
-            logger.info("Package installation completed. Uvicorn auto-reload should handle restart.")
-
-            # Only touch files as a fallback if needed
-            # Wait a bit to see if uvicorn already started reloading
-            time.sleep(2)
-
-            try:
-                project_root = _find_project_root()
-                reload_files = [
-                    project_root / "langflow" / "main.py",
-                    project_root / "langflow" / "__init__.py",
-                ]
-
-                # Only touch files if we're still running (no reload happened)
-                for file_path in reload_files:
-                    try:
-                        if file_path.exists():
-                            logger.info(f"Fallback: Triggering uvicorn reload by touching {file_path}")
-                            file_path.touch()
-                            return
-                    except (OSError, PermissionError) as e:
-                        logger.warning(f"Failed to touch {file_path}: {e}")
-                        continue
-
-            except (OSError, RuntimeError, AttributeError, ImportError) as e:
-                logger.info(f"Could not trigger fallback restart: {e}")
-                logger.info("Package installation completed. Manual restart may be needed.")
-                return
-        else:
-            # Production/server mode: just log and let process manager handle it
-            logger.info("Production environment detected. Package installed successfully.")
-            logger.info("Please restart the application manually or let your process manager handle it.")
-            return
-
-        # If we get here, restart failed
-        logger.warning("Could not restart application automatically. Package installation completed successfully.")
-        logger.info("Manual restart recommended to use the new package.")
-
-    except (OSError, RuntimeError, AttributeError, ImportError, PermissionError) as e:
-        logger.error(f"Restart attempt failed: {e}")
-        logger.info("Package installation completed successfully. Manual restart may be required.")
-
-
-async def _restart_application_with_delay() -> None:
-    """Restart the application with delay for frontend polling."""
-    # Start restart in a separate thread to completely detach from HTTP request
-    thread = threading.Thread(target=_restart_in_thread, daemon=True)
-    thread.start()
-
-
 def _is_valid_windows_package_name(package_name: str) -> bool:
     """Validate package name for Windows forbidden characters."""
     forbidden_chars = ["<", ">", ":", '"', "|", "?", "*"]
@@ -179,6 +112,7 @@ async def install_package_background(installation_id: UUID) -> None:
     from langflow.services.deps import session_scope
 
     async with session_scope() as session:
+        installation = None
         try:
             # Get installation record
             installation = await session.get(PackageInstallation, installation_id)
@@ -252,7 +186,7 @@ async def install_package_background(installation_id: UUID) -> None:
                 stdout_text = stdout.decode("utf-8") if stdout else ""
                 stderr_text = stderr.decode("utf-8") if stderr else ""
 
-            # Enhanced error detection for Windows - FIXED
+            # Enhanced error detection - FIXED
             installation_failed = False
 
             # Check return code first
@@ -260,32 +194,36 @@ async def install_package_background(installation_id: UUID) -> None:
                 installation_failed = True
                 logger.error(f"UV command failed with return code: {process.returncode}")
 
-            # Additional Windows-specific error detection
-            if platform.system() == "Windows":
-                # Check for specific error patterns in stderr and stdout
-                error_patterns = [
-                    "No solution found when resolving dependencies",
-                    "we can conclude that all versions of",
-                    "cannot be used",
-                    "requirements are unsatisfiable",
-                    "Ã—",  # This is the x character in Windows encoding
-                    "error:",
-                    "failed",
-                    "Error:",
-                    "ERROR:",
-                ]
+            # Check for error patterns in output (all platforms)
+            error_patterns = [
+                "No solution found when resolving dependencies",
+                "we can conclude that all versions of",
+                "cannot be used",
+                "requirements are unsatisfiable",
+                "error:",
+                "failed",
+                "Error:",
+                "ERROR:",
+            ]
 
-                combined_output = f"{stdout_text} {stderr_text}".lower()
-                for pattern in error_patterns:
-                    if pattern.lower() in combined_output:
-                        installation_failed = True
-                        logger.error(f"Detected error pattern '{pattern}' in output")
-                        break
+            # Add Windows-specific patterns
+            if platform.system() == "Windows":
+                error_patterns.append("Ã—")  # This is the x character in Windows encoding
+
+            combined_output = f"{stdout_text} {stderr_text}".lower()
+            for pattern in error_patterns:
+                if pattern.lower() in combined_output:
+                    installation_failed = True
+                    logger.error(f"Detected error pattern '{pattern}' in output")
+                    break
+
+            logger.info(f"Installation failed status for {package_name}: {installation_failed}")
 
             if not installation_failed:
                 logger.info(f"Successfully installed package: {package_name}")
                 installation.status = InstallationStatus.COMPLETED
                 installation.message = f"Package '{package_name}' installed successfully"
+                logger.info(f"Setting installation status to COMPLETED for {package_name}")
             else:
                 # Combine stdout and stderr for complete error message
                 error_message = stderr_text or stdout_text or "Unknown error"
@@ -303,59 +241,33 @@ async def install_package_background(installation_id: UUID) -> None:
                 logger.error(f"Failed to install package {package_name}: {error_message}")
                 installation.status = InstallationStatus.FAILED
                 installation.message = f"Failed to install package '{package_name}': {error_message}"
+                logger.info(f"Setting installation status to FAILED for {package_name}")
 
             # Update installation record
             installation.updated_at = datetime.now(timezone.utc)
             session.add(installation)
             await session.commit()
+            logger.info(f"Database updated - Final status for {package_name}: {installation.status}")
 
-            # Only restart if installation was successful
+            # Package installation completed - no restart needed
             if not installation_failed:
-                # Give frontend time to poll the completion status before restart
-                await asyncio.sleep(1)
-
-                # Check if uvicorn auto-reload is likely to handle restart automatically
-                # This happens when .venv files change during package installation
-                is_development = any("--reload" in arg for arg in sys.argv) or "watchfiles" in sys.modules
-
-                if is_development:
-                    logger.info("Development mode detected. Package installation completed successfully.")
-                    logger.info("Uvicorn should automatically restart due to .venv file changes.")
-                    # Don't schedule additional restart to avoid conflicts
-                else:
-                    # Schedule restart with delay only in production mode
-                    logger.info("Restarting application after successful package installation...")
-                    restart_task = asyncio.create_task(_restart_application_with_delay())
-                    restart_task.add_done_callback(lambda _: None)
+                logger.info("Package installation completed successfully. Package is now available for import.")
             else:
-                logger.info("Package installation failed. Skipping application restart.")
+                logger.info("Package installation failed.")
 
-        except (OSError, RuntimeError) as e:
-            logger.exception("Error installing package")
-            # Update installation record with error
-            installation = await session.get(PackageInstallation, installation_id)
+        except (OSError, RuntimeError, subprocess.CalledProcessError, asyncio.TimeoutError) as e:
+            logger.exception(f"Unexpected error during package installation: {e}")
+            # Ensure status is always updated even for unexpected errors
             if installation:
-                installation.status = InstallationStatus.FAILED
-                installation.message = f"Error installing package: {e!s}"
-                installation.updated_at = datetime.now(timezone.utc)
-                session.add(installation)
-                await session.commit()
-
-            # Give frontend time to poll the failure status before restart
-            await asyncio.sleep(1)
-
-            # Check if uvicorn auto-reload is likely to handle restart automatically
-            is_development = any("--reload" in arg for arg in sys.argv) or "watchfiles" in sys.modules
-
-            if is_development:
-                logger.info("Development mode detected. Package installation failed.")
-                logger.info("Uvicorn should automatically restart due to any .venv file changes.")
-                # Don't schedule additional restart to avoid conflicts
-            else:
-                # Schedule restart even after exception in production mode
-                logger.info("Restarting application after package installation exception to reset state...")
-                restart_task = asyncio.create_task(_restart_application_with_delay())
-                restart_task.add_done_callback(lambda _: None)
+                try:
+                    installation.status = InstallationStatus.FAILED
+                    installation.message = f"Unexpected error during installation: {e!s}"
+                    installation.updated_at = datetime.now(timezone.utc)
+                    session.add(installation)
+                    await session.commit()
+                except (SQLAlchemyError, OSError) as commit_error:
+                    logger.error(f"Failed to update installation status after error: {commit_error}")
+            logger.info("Package installation failed due to unexpected error.")
 
 
 @router.post("/install", response_model=PackageInstallResponse, status_code=202)
@@ -385,12 +297,32 @@ async def install_package(
         raise HTTPException(status_code=400, detail="Invalid package name")
 
     # Check if there's already an installation in progress for this user
-    result = await session.exec(
+    # Also clean up any stuck installations (older than 10 minutes)
+
+    stuck_cutoff = datetime.now(timezone.utc) - timedelta(minutes=10)
+    stuck_installations = await session.exec(
         select(PackageInstallation)
         .where(PackageInstallation.user_id == current_user.id)
         .where(PackageInstallation.status == InstallationStatus.IN_PROGRESS)
+        .where(PackageInstallation.updated_at < stuck_cutoff)
     )
-    if result.first():
+
+    # Clean up any stuck installations
+    for stuck_installation in stuck_installations:
+        logger.warning(f"Cleaning up stuck installation: {stuck_installation.id}")
+        stuck_installation.status = InstallationStatus.FAILED
+        stuck_installation.message = "Installation timed out and was cleaned up"
+        stuck_installation.updated_at = datetime.now(timezone.utc)
+        session.add(stuck_installation)
+
+    # Now check for active installations
+    active_result = await session.exec(
+        select(PackageInstallation)
+        .where(PackageInstallation.user_id == current_user.id)
+        .where(PackageInstallation.status == InstallationStatus.IN_PROGRESS)
+        .where(PackageInstallation.updated_at >= stuck_cutoff)
+    )
+    if active_result.first():
         raise HTTPException(status_code=409, detail="Package installation already in progress")
 
     # Create installation record
