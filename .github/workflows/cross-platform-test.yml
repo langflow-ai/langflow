@@ -69,7 +69,7 @@ jobs:
           mkdir -p src/backend/base/dist
           mv dist/langflow_base-*.whl src/backend/base/dist/
       - name: Build main package
-        run: make build args="--wheel"
+        run: make build_langflow args="--wheel"
       - name: Upload base artifact
         uses: actions/upload-artifact@v4
         with:
