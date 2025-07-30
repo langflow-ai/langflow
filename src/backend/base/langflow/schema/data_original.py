@@ -36,21 +36,31 @@ class Data(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def validate_data(cls, values):
+        # Ensure values is a dictionary
         if not isinstance(values, dict):
             msg = "Data must be a dictionary"
             raise ValueError(msg)  # noqa: TRY004
-        if "data" not in values or values["data"] is None:
-            values["data"] = {}
-        if not isinstance(values["data"], dict):
+
+        # Initialize data dictionary if not present or None
+        data = values.get("data")
+        if data is None:
+            data = {}
+            values["data"] = data
+        # If data exists but is not a dict, log a warning
+        elif not isinstance(data, dict):
             msg = (
                 f"Invalid data format: expected dictionary but got {type(values).__name__}."
                 " This will raise an error in version langflow==1.3.0."
             )
             logger.warning(msg)
+
         # Any other keyword should be added to the data dictionary
-        for key in values:
-            if key not in values["data"] and key not in {"text_key", "data", "default_value"}:
-                values["data"][key] = values[key]
+        data = values["data"]  # in case of replacement above
+        # Keep set outside loop for performance
+        special_keys = {"text_key", "data", "default_value"}
+        for key, val in values.items():
+            if key not in data and key not in special_keys:
+                data[key] = val
         return values
 
     @model_serializer(mode="plain", when_used="json")
