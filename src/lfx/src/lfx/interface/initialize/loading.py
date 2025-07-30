@@ -139,7 +139,7 @@ async def update_params_with_load_from_db_fields(
             settings_service and settings_service.settings.use_noop_database
         )
         if is_noop_session:
-            logger.warning("Loading variables from environment variables because database is not available.")
+            logger.trace("Loading variables from environment variables because database is not available.")
             return load_from_env_vars(params, load_from_db_fields)
         for field in load_from_db_fields:
             if field not in params or not params[field]:
