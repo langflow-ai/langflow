@@ -117,7 +117,7 @@ def extract_message_from_result(results: list) -> str:
             message: Message = result.result_dict.results["message"]
             try:
                 # Parse the JSON to get just the text content
-                return json.dumps(message.model_dump(), ensure_ascii=False)
+                return json.dumps(json.loads(message.model_dump_json()), ensure_ascii=False)
             except (json.JSONDecodeError, AttributeError):
                 # Fallback to string representation
                 return str(message)
@@ -132,10 +132,13 @@ def extract_text_from_result(results: list) -> str:
             and result.vertex.custom_component
             and result.vertex.custom_component.display_name == "Chat Output"
         ):
-            message: Message = result.result_dict.results["message"]
+            message: dict | Message = result.result_dict.results.get("message")
             try:
                 # Return just the text content
-                text_content = message.text if hasattr(message, "text") else str(message)
+                if isinstance(message, dict):
+                    text_content = message.get("text") if message.get("text") else str(message)
+                else:
+                    text_content = message.text
                 return str(text_content)
             except AttributeError:
                 # Fallback to string representation
