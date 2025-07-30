@@ -13,20 +13,20 @@ With the agent connected, your application can use any connected tools to retrie
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
-- [A Langflow API key](/configuration-api-keys)
-- [An OpenAI API key](https://platform.openai.com/api-keys)
-- [Langflow JavaScript client installed](/typescript-client)
+* [Install and start Langflow](/get-started-installation)
+* Create a [Langflow API key](/api-keys-and-authentication)
+* Install the [Langflow JavaScript client](/typescript-client)
+* Create an [OpenAI API key](https://platform.openai.com/api-keys)
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
 ## Create an agentic flow
 
-The following steps modify the [**Simple agent**](/simple-agent) template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for an **Agent** component.
+The following steps modify the **Simple Agent** template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for an **Agent** component.
 The **Directory** component loads all files of a given type from a target directory on your local machine, and the **Web search** component performs a DuckDuckGo search.
 When connected to an **Agent** component as tools, the agent has the option to use these components when handling requests.
 
-1. In Langflow, click **New Flow**, and then select the **Simple agent** template.
+1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 2. Remove the **URL** and **Calculator** tools, and  then drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components into your workspace.
 3. In the **Directory** component's **Path** field, enter the directory path and file types that you want to make available to the **Agent** component.
 
@@ -69,7 +69,7 @@ With your flow operational, connect it to a JavaScript application to use the ag
 
     * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
     * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
-    * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/configuration-api-keys).
+    * `LANGFLOW_API_KEY`: A valid [Langflow API key](/api-keys-and-authentication).
 
 2. Copy the following script into a JavaScript file, and then replace the placeholders with the information you gathered in the previous step.
 If you're using the `customer_orders.csv` example file, you can run this example as-is with the example email address in the code sample.

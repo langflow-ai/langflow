@@ -25,15 +25,15 @@ In this tutorial, you will use the Langflow **MCP Tools** component to connect m
 
 ## Prerequisites
 
-* [A running Langflow instance](/get-started-installation)
-* [A Langflow API key](/configuration-api-keys)
-* [An OpenAI API key](https://platform.openai.com/api-keys)
+* [Install and start Langflow](/get-started-installation)
+* Create a [Langflow API key](/api-keys-and-authentication)
+* Create an [OpenAI API key](https://platform.openai.com/api-keys)
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
 ## Create an agentic flow
 
-1. In Langflow, click **New Flow**, and then select the [**Simple agent**](/simple-agent) template.
+1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 
 2. In the **Agent** component, enter your OpenAI API key.
 
@@ -216,7 +216,7 @@ You can use the same input or a new input that prompts the agent to use other to
 
     * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
     * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
-    * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/configuration-api-keys).
+    * `LANGFLOW_API_KEY`: A valid [Langflow API key](/api-keys-and-authentication).
 
 2. Copy the following script into a Python file, and then replace the placeholders with the information you gathered in the previous step:
 

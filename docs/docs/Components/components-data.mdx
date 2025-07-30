@@ -5,7 +5,7 @@ slug: /components-data
 
 import Icon from "@site/src/components/icon";
 
-You can use Langflow's data components to bring data into your flows from various sources like files, API endpoints, and URLs.
+You can use Langflow's **Data** components to bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
 
 * **Load files**: Import data from a file or directory with the [**File**](#file) and [**Directory**](#directory) components.
@@ -22,7 +22,7 @@ Additionally, some components return raw data, whereas others can convert, restr
 This means that some similar components might produce different results.
 
 :::tip
-Data components pair well with [processing components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
+**Data** components pair well with [**Processing** components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
 
 This can include basic operations, like saving a file in a specific format, or more complex tasks, like using a **Text Splitter** component to break down a large document into smaller chunks before generating embeddings for vector search.
 :::
@@ -115,7 +115,7 @@ For more information about uploading files and working with files in flows, see 
 ### File type and size limits
 
 By default, the maximum file size is 100 MB.
-To modify this value, change the [`--max-file-size-upload` environment variable](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
+To modify this value, change the `--max-file-size-upload` [environment variable](/environment-variables).
 
 <details>
 <summary>Supported file types</summary>
@@ -417,7 +417,7 @@ For production use, consider using another search component with more robust API
 
 The following steps demonstrate one way that you can use a **Web Search** component in a flow:
 
-1. Create a flow based on the [**Basic Prompting** template](/basic-prompting).
+1. Create a flow based on the **Basic Prompting** template.
 
 2. Add a **Web Search** component, and then enter a search query, such as `environmental news`.
 

@@ -22,9 +22,9 @@ For setup instructions, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## Additional Guides
 
-- [Contribute Bundles](./docs/docs/Contributing/contributing-bundles.md)
-- [Contribute Components](./docs/docs/Contributing/contributing-components.md)
-- [Contribute Tests](./docs/docs/Contributing/contributing-component-tests.md)
-- [Contribute Templates](./docs/docs/Contributing/contributing-templates.md)
+- [Contribute Bundles](./docs/docs/Contributing/contributing-bundles.mdx)
+- [Contribute Components](./docs/docs/Contributing/contributing-components.mdx)
+- [Contribute Tests](./docs/docs/Contributing/contributing-component-tests.mdx)
+- [Contribute Templates](./docs/docs/Contributing/contributing-templates.mdx)
 
 Thank you for helping improve Langflow!

@@ -85,7 +85,7 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
 
 2. Use the returned `file_path` to send the image file to other components that can accept file input. Where you specify the file path depends on the component type.
 
-    The following example runs a [Basic Prompting flow](/basic-prompting), passing the image file and the query `describe this image` as input for the **Chat Input** component.
+    The following example runs the **Basic Prompting** template flow, passing the image file and the query `describe this image` as input for the **Chat Input** component.
     In this case, the file path is specified in `tweaks`.
 
     ```bash
@@ -233,8 +233,8 @@ You must include the ampersand (`@`) in the request to instruct curl to upload t
 ### Send files to your flows (v2)
 
 :::important
-The `/v2/files` endpoint does not support sending **image** files to flows.
-To send **image** files to your flows through the API, follow the procedure in [Upload image files (v1)](#upload-image-files-v1).
+The `/v2/files` endpoint can't send image files to flows.
+To send image files to your flows through the API, see [Upload image files (v1)](#upload-image-files-v1).
 :::
 
 Send a file to your flow for analysis using the [File](/components-data#file) component and the API.
