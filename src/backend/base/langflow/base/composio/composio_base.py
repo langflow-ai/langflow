@@ -375,6 +375,11 @@ class ComposioBaseComponent(Component):
 
     def _validate_schema_inputs(self, action_key: str) -> list[InputTypes]:
         """Convert the JSON schema for *action_key* into Langflow input objects."""
+        # Skip validation for default/placeholder values
+        if action_key in ("disabled", "placeholder", ""):
+            logger.debug(f"Skipping schema validation for placeholder value: {action_key}")
+            return []
+            
         schema_dict = self._action_schemas.get(action_key)
         if not schema_dict:
             logger.warning(f"No schema found for action key: {action_key}")
@@ -620,6 +625,12 @@ class ComposioBaseComponent(Component):
             display_name = selected_value
 
         action_key = self.desanitize_action_name(display_name)
+        
+        # Skip validation for default/placeholder values
+        if action_key in ("disabled", "placeholder", ""):
+            logger.debug(f"Skipping action config update for placeholder value: {action_key}")
+            return
+            
         lf_inputs = self._validate_schema_inputs(action_key)
 
         # First remove inputs belonging to other actions
@@ -771,6 +782,38 @@ class ComposioBaseComponent(Component):
         # Current tool_mode is True if ANY source indicates it's enabled
         current_tool_mode = instance_tool_mode or build_config_tool_mode or (field_name == "tool_mode" and field_value)
 
+        # CRITICAL: Ensure dynamic action metadata is available whenever we have an API key
+        # This must happen BEFORE any early returns to ensure tools are always loaded
+        should_populate = False
+        api_key_available = hasattr(self, "api_key") and self.api_key
+        actions_empty = not self._actions_data or len(self._actions_data) == 0
+        
+        # Debug logging
+        logger.info(f"Action population check - API key available: {api_key_available}, Actions empty: {actions_empty}, Field: {field_name}")
+        
+        if field_name == "api_key" and field_value:
+            should_populate = True
+            logger.info("Will populate actions: API key field updated")
+        elif api_key_available and actions_empty:
+            should_populate = True
+            logger.info("Will populate actions: API key available but no actions loaded")
+        
+        if should_populate:
+            logger.info(f"Populating actions data for {getattr(self, 'app_name', 'unknown')}...")
+            self._populate_actions_data()
+            logger.info(f"Actions populated: {len(self._actions_data)} actions found")
+            
+            # CRITICAL: Set action options immediately after populating, before any early returns
+            if self._actions_data:
+                self._build_action_maps()
+                build_config["action_button"]["options"] = [
+                    {"name": self.sanitize_action_name(action), "metadata": action} for action in self._actions_data
+                ]
+                logger.info(f"Action options set in build_config: {len(build_config['action_button']['options'])} options")
+            else:
+                build_config["action_button"]["options"] = []
+                logger.warning("No actions found, setting empty options")
+
         # Handle disconnect operations when tool mode is enabled
         if field_name == "auth_link" and field_value == "disconnect":
             try:
@@ -903,10 +946,6 @@ class ComposioBaseComponent(Component):
             # Don't proceed with any other logic that might override this
             return build_config
 
-        # Ensure dynamic action metadata is available whenever we have an API key
-        if (field_name == "api_key" and field_value) or (self.api_key and not self._actions_data):
-            self._populate_actions_data()
-
         if field_name == "tool_mode":
             if field_value is True:
                 build_config["action_button"]["show"] = False  # Hide action field when tool mode is enabled
@@ -944,9 +983,14 @@ class ComposioBaseComponent(Component):
 
         # Update action options only if tool_mode is disabled
         self._build_action_maps()
-        build_config["action_button"]["options"] = [
-            {"name": self.sanitize_action_name(action), "metadata": action} for action in self._actions_data
-        ]
+        # Only set options if they haven't been set already during action population
+        if "options" not in build_config.get("action_button", {}) or not build_config["action_button"]["options"]:
+            build_config["action_button"]["options"] = [
+                {"name": self.sanitize_action_name(action), "metadata": action} for action in self._actions_data
+            ]
+            logger.debug("Setting action options from main logic path")
+        else:
+            logger.debug("Action options already set, skipping duplicate setting")
         # Only set show=True if tool_mode is not enabled
         if not current_tool_mode:
             build_config["action_button"]["show"] = True
