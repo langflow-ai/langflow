@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -9,10 +8,7 @@ from threading import Lock, Semaphore
 from typing import TypedDict
 
 import orjson
-from loguru import _defaults, logger
-from loguru._error_interceptor import ErrorInterceptor
-from loguru._file_sink import FileSink
-from loguru._simple_sinks import AsyncSink
+from loguru import logger
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 from typing_extensions import NotRequired, override
@@ -154,24 +150,6 @@ class LogConfig(TypedDict):
     log_format: NotRequired[str]
 
 
-class AsyncFileSink(AsyncSink):
-    def __init__(self, file):
-        self._sink = FileSink(
-            path=file,
-            rotation="10 MB",  # Log rotation based on file size
-            delay=True,
-        )
-        super().__init__(self.write_async, None, ErrorInterceptor(_defaults.LOGURU_CATCH, -1))
-
-    async def complete(self):
-        await asyncio.to_thread(self._sink.stop)
-        for task in self._tasks:
-            await self._complete_task(task)
-
-    async def write_async(self, message):
-        await asyncio.to_thread(self._sink.write, message)
-
-
 def is_valid_log_format(format_string) -> bool:
     """Validates a logging format string by attempting to format it with a dummy LogRecord.
 
@@ -204,6 +182,7 @@ def configure(
     log_env: str | None = None,
     log_format: str | None = None,
     async_file: bool = False,
+    log_rotation: str | None = None,
 ) -> None:
     if disable and log_level is None and log_file is None:
         logger.disable("langflow")
@@ -252,12 +231,20 @@ def configure(
             logger.debug(f"Cache directory: {cache_dir}")
             log_file = cache_dir / "langflow.log"
             logger.debug(f"Log file: {log_file}")
+
+        if os.getenv("LANGFLOW_LOG_ROTATION") and log_rotation is None:
+            log_rotation = os.getenv("LANGFLOW_LOG_ROTATION")
+        elif log_rotation is None:
+            log_rotation = "1 day"
+
         try:
             logger.add(
-                sink=AsyncFileSink(log_file) if async_file else log_file,
+                sink=log_file,
                 level=log_level.upper(),
                 format=log_format,
                 serialize=True,
+                enqueue=async_file,
+                rotation=log_rotation,
             )
         except Exception:  # noqa: BLE001
             logger.exception("Error setting up log file")
