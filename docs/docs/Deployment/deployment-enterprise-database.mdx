@@ -1,15 +1,16 @@
 ---
-title: Langflow Database Guide for Enterprise DBAs
+title: Langflow database guide for enterprise DBAs
 slug: /deployment-enterprise-database
 ---
 
 This guide is designed for enterprise database administrators (DBAs) and operators responsible for deploying and managing Langflow in production environments.
+
 Langflow relies on a database to store critical data such as flow configurations, user accounts, project collections, configuration settings, and execution logs.
 While SQLite is the default database, PostgreSQL is recommended for production due to its scalability, performance, and robustness.
 
-## Langflow Database Usage
+## Langflow database usage
 
-Langflow uses its database to manage core internal functions essential for both the IDE (used by developers via the UI) and runtime (for production flows). The database is integral to the application's operation, storing:
+Langflow uses its database to manage core internal functions essential for both the IDE (used by developers through the Langflow UI) and runtime (for production flows). The database is integral to the application's operation because it stores the following information:
 
 * **Flow Configurations**: Definitions of flows, including nodes, edges, and components, stored as JSON or database records.
 * **User Data**: User accounts, permissions, and settings for multi-user environments.
@@ -17,7 +18,7 @@ Langflow uses its database to manage core internal functions essential for both 
 * **Configuration Settings**: Application settings, such as API keys and environment variables.
 * **Execution Logs**: Records of flow execution and system activity for monitoring and debugging.
 
-The database is accessed during startup, flow execution, user interactions, and administrative tasks, making its availability critical for most Langflow operations.
+The database is accessed during startup, flow execution, user interactions, and administrative tasks. Its availability critical for most Langflow operations.
 
 ## Configure Langflow with PostgreSQL
 

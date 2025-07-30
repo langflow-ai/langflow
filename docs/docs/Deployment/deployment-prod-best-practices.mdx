@@ -58,16 +58,18 @@ This separation is designed to enhance security, optimize resource allocation, a
   * **Optimized resource usage and cost efficiency**: By separating the two environments, you can allocate resources more effectively. Each flow can be deployed independently, providing fine-grained resource control.
   * **Scalability**: The runtime environment can be scaled independently based on application load and performance requirements, without affecting the development environment.
 
-## Scaling Resources
+## Scaling resources
 
-Langflow's resource requirements vary depending on whether you're deploying the IDE for development or the runtime for production flows. Below are detailed strategies for scaling RAM, disk, instances, and users per instance.
+Langflow's resource requirements depend on whether you're deploying the IDE for development or the runtime for production flows.
 
-**IDE vs. Runtime**:
+This section describes strategies for scaling RAM, disk, instances, and users per instance.
+
+### Resource requirements by deployment type
 
 * **IDE**: Deploy for developers using the UI. Requires frontend (512Mi RAM, 0.3 CPU) and backend (1Gi RAM, 0.5 CPU) services.
 * **Runtime**: Deploy for production flows. Headless, requiring 2Gi RAM and 1 CPU per instance, focused on API endpoints.
 
-### Example Resource Configuration
+### Example resource configuration
 
 | Component | RAM Request | CPU Request | Replica Count | Notes |
 |-----------|-------------|-------------|---------------|-------|
@@ -78,21 +80,21 @@ Langflow's resource requirements vary depending on whether you're deploying the 
 
 ### RAM
 
-**Overview**: RAM usage in Langflow depends on flow complexity, the size of language models, and concurrent request volume. The runtime, used for production flows, has a baseline requirement, while the IDE (for developers) requires additional resources for the frontend and backend.
+ RAM usage in Langflow depends on flow complexity, the size of language models, and concurrent request volume. The runtime (for production flows) has a baseline requirement, while the IDE (for developers) requires additional resources for the frontend and backend.
 
-**Base Requirements**:
+#### Base requirements
 
 * **Runtime**: 2Gi per instance.
 * **IDE Backend**: 1Gi per instance.
 * **IDE Frontend**: 512Mi per instance.
 
-**Factors Affecting RAM Usage**:
+#### Factors affecting RAM usage:
 
 * **Flow Complexity**: Flows with many nodes or large datasets (e.g., RAG pipelines) increase memory needs.
 * **Language Models**: Larger LLMs or embeddings loaded in-memory consume significant RAM.
 * **Concurrent Requests**: More simultaneous API calls or UI sessions require additional memory.
 
-**Scaling Recommendations**:
+#### Scaling recommendations:
 
 * Start with 2Gi for runtime instances and 1.5Gi total (1Gi backend + 512Mi frontend) for IDE instances.
 * Monitor memory usage with tools like Prometheus to identify bottlenecks.
@@ -112,14 +114,14 @@ Langflow's resource requirements vary depending on whether you're deploying the 
 
 ### Disk
 
-**Overview**: Disk storage is used for the SQLite or PostgreSQL database and file storage for large files, such as documents for RAG. The database stores flow configurations, user data, and settings, while files are managed on disk.
+Disk storage is used for the SQLite or PostgreSQL database and file storage for large files, such as documents for RAG. The database stores flow configurations, user data, and settings, while files are managed on disk.
 
-**Usage**:
+#### Usage
 
 * **Database**: Stores flow definitions, user profiles, and logs. Size depends on the number of flows and users.
 * **File Storage**: Large files are stored in directories like `/opt/langflow/data/` or `.cache/langflow/`.
 
-**Scaling Recommendations**:
+#### Scaling recomendations
 
 * Use an external PostgreSQL database for production to improve scalability and reliability.
 * Configure shared file storage such as NFS or cloud storage for multi-instance setups to ensure file access across replicas.
@@ -128,14 +130,14 @@ Langflow's resource requirements vary depending on whether you're deploying the 
 
 ### Instances
 
-**Overview**: Scaling instances involves adding more replicas to handle increased load, applicable to both IDE and runtime deployments. Horizontal scaling is preferred for production environments.
+Scaling instances involves adding more replicas to handle increased load, applicable to both IDE and runtime deployments. Horizontal scaling is preferred for production environments.
 
-**Base Configuration**:
+#### Base configuration
 
 * **Runtime**: Default replica count of 3.
 * **IDE**: Default replica count of 1 for both backend and frontend.
 
-**Scaling Recommendations**:
+#### Scaling recommendations
 
 * Implement Horizontal Pod Autoscaler (HPA) in Kubernetes to dynamically adjust replicas based on CPU or memory usage. Example HPA configuration:
 
@@ -165,20 +167,18 @@ Langflow's resource requirements vary depending on whether you're deploying the 
 
 ### Users per Instance
 
-**Overview**: The number of users or requests per instance depends on whether you're supporting developers via the IDE or API clients via the runtime.
+The number of users or requests per instance depends on whether you're supporting developers with the IDE or API clients with the runtime:
 
-**UI (IDE)**:
+* **IDE (Langflow UI)**:
+    * Each developer using the UI generates requests to the backend, requiring resources for session handling.
+    * Scale backend replicas based on concurrent developers (e.g., 1 replica per 10-20 developers, adjusted via load testing).
 
-* Each developer using the UI generates requests to the backend, requiring resources for session handling.
-* Scale backend replicas based on concurrent developers (e.g., 1 replica per 10-20 developers, adjusted via load testing).
+* **Runtime (production flows)**:
+    * Users are typically API clients making requests to flow endpoints.
+    * Capacity depends on request rate and flow complexity. For example, a single instance with 2vCPUs and 2GB RAM can handle ~30 concurrent connections for simple flows.
+    * Perform load testing to determine the number of requests per instance and scale replicas accordingly.
 
-**Production Flows (Runtime)**:
-
-* Users are typically API clients making requests to flow endpoints.
-* Capacity depends on request rate and flow complexity. For example, a single instance with 2vCPUs and 2GB RAM can handle ~30 concurrent connections for simple flows.
-* Perform load testing to determine the number of requests per instance and scale replicas accordingly.
-
-**Scaling Recommendations**:
+#### Scaling recommendations
 
 * Use load balancers to distribute requests across replicas.
 * Monitor API request rates and response times to adjust replica counts.
@@ -188,22 +188,22 @@ Langflow's resource requirements vary depending on whether you're deploying the 
 
 Langflow's reliability in production depends on mitigating key failure points, particularly around the database, file system, and instance availability.
 
-**Database Failure**:
+### Database failure
 
 * **Impact**: Disrupts flow retrieval, saving, user authentication, user management, project collection access, configuration updates, and log writing.
 * **Mitigation**: Use a replicated PostgreSQL setup with high availability and regular backups. Flows already loaded in memory may continue to function.
 
-**File System Issues**:
+### File system issues
 
 * **Impact**: Concurrency issues in file caching, such as `/app/data/.cache`, can cause IO errors in multi-instance setups.
 * **Mitigation**: Use a shared, POSIX-compliant file system or cloud storage. Avoid ramdisk solutions due to data loss on container shutdown.
 
-**Instance Failures**:
+### Instance failures
 
 * **Impact**: A single instance failure can disrupt service if not replicated.
 * **Mitigation**: Deploy multiple replicas with Kubernetes to ensure availability. Use health checks to detect and replace failed pods.
 
-**Network and Dependency Failures**:
+### Network and dependency failures
 
 * **Impact**: External APIs or services used in flows may fail, causing flow errors.
 * **Mitigation**: Implement retry logic and error handling in flows. Monitor network latency and dependency health.
@@ -212,32 +212,32 @@ Langflow's reliability in production depends on mitigating key failure points, p
 
 Effective monitoring ensures Langflow operates reliably and performs well under varying loads.
 
-**Database Health**:
+### Database health
 
 * Monitor availability, query performance, and resource usage (CPU, memory, disk).
 * Use tools like pgAdmin or cloud-native monitoring for PostgreSQL.
 
-**Application Logs**:
+### Application logs
 
 * Collect and analyze logs for errors, warnings, and flow execution issues.
 * Centralize logs using tools like ELK Stack or Fluentd.
 
-**Resource Usage**:
+### Resource usage
 
 * Track CPU, memory, and disk usage of Langflow instances.
 * Use Prometheus and Grafana for real-time monitoring in Kubernetes.
 
-**API Performance**:
+### API performance
 
 * Monitor response times, error rates, and request throughput.
 * Set alerts for high latency or error spikes.
 
-**Observability Tools**:
+### Observability tools
 
 * Integrate with LangSmith or LangFuse for detailed flow tracing and metrics.
 * Use these tools to debug flow performance and optimize execution.
 
-**Example Monitoring Setup**:
+### Example monitoring setup
 
 * Deploy Prometheus for metrics collection.
 * Use Grafana dashboards to visualize resource usage and API performance.
@@ -247,33 +247,37 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
 
 Running Langflow in production requires robust security measures to protect the application, data, and users.
 
-**Container Security**:
+### Container security
 
 * Enable `readOnlyRootFilesystem: true` in runtime containers to prevent unauthorized modifications.
 * Only disable if necessary and with compensating controls.
 
-**Secret Management**:
+### Secrets management
 
 * Store sensitive data like API keys in Kubernetes secrets or external secret managers.
 * Avoid embedding secrets in flow JSON files.
 
-**Authentication and Authorization**:
+### Authentication and authorization
 
 * Implement strong authentication for the IDE UI and runtime API like OAuth or API tokens.
 * Enforce role-based access control to limit user permissions.
 
-**Data Privacy**:
+### Data privacy
 
 * Ensure compliance with regulations like GDPR if handling personal data.
 * Encrypt sensitive data at rest and in transit.
 
-**Encryption**:
+### Encryption
 
 * Use HTTPS for all communications to secure data in transit.
 * Configure TLS for PostgreSQL connections.
 
-**Additional Security Measures**:
+### Additional security measures
 
 * Conduct regular security audits and apply software updates.
 * Restrict network access to Langflow services using firewalls or network policies.
 * Monitor for suspicious activity using intrusion detection systems.
+
+## See also
+
+* [Database guide for enterprise DBAs](/deployment-enterprise-database)

@@ -70,7 +70,7 @@ For more information, see the [Kubernetes documentation](https://kubernetes.io/d
     kubectl get svc -n langflow
     ```
 
-The service name is your release name followed by `-langflow-runtime`. For example, if you used `helm install my-langflow-app-with-flow` the service name is `my-langflow-app-with-flow-langflow-runtime`.
+    The service name is your release name followed by `-langflow-runtime`. For example, if you used `helm install my-langflow-app-with-flow` the service name is `my-langflow-app-with-flow-langflow-runtime`.
 
 2. Enable port forwarding to access Langflow from your local machine:
 
@@ -78,7 +78,7 @@ The service name is your release name followed by `-langflow-runtime`. For examp
     kubectl port-forward -n langflow svc/my-langflow-app-with-flow-langflow-runtime 7860:7860
     ```
 
-3. Confirm you can access the API at `http://localhost:7860/api/v1/flows/` and view a list of flows.
+3. Confirm you can access the API at `http://localhost:7860/api/v1/flows/` and view a list of flows:
     ```shell
     curl -v http://localhost:7860/api/v1/flows/
     ```

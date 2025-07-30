@@ -137,7 +137,7 @@ module.exports = {
             {
               type: "doc",
               id: "Deployment/deployment-enterprise-database",
-              label: "Database Guide for Enterprise Administrators"
+              label: "Database guide for enterprise administrators"
             },
           ],
         },
