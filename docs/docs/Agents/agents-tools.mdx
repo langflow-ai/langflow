@@ -7,28 +7,44 @@ import Icon from "@site/src/components/icon";
 
 Configure tools connected to agents to extend their capabilities.
 
-## Edit a tool's actions
+## Edit a tool's actions {#edit-a-tools-actions}
 
-When you set any component to **Tool Mode** or **Tool** output, an agent can use the functions or actions provided by that component.
+When you set any component to **Tool Mode** or **Tool** output, an agent can use the actions (functions) provided by that component.
+Available actions are listed in the tool component's **Actions** list.
 
-To edit a tool's actions, in the tool component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify the following settings for each action:
+You can change each action's labels, descriptions, and availability to help the agent understand how to use the tool and prevent it from using irrelevant or undesired actions.
 
-* `name`: A human-readable name for the action.
-* `description`: A human-readable description of the action's purpose.
-* `enabled`: Whether the action is available (true) or not (false).
+:::tip
+If an agent seems to be using a tool incorrectly, try editing the action metadata to clarify the tool's purpose and disable unnecessary actions.
 
-These fields tell the agent which actions it can use and how to use them, without requiring you to modify the agent's prompt instructions.
-If you think an agent is using a tool incorrectly, edit the `description` to help the agent better understand the tool.
+You can also try using a **Prompt Template** component to pass additional instructions or examples to the agent.
+:::
 
-For example, the [**URL** component](/components-data#url) has two actions available when in **Tool Mode**:
+To view and edit a tool's actions, click <Icon name="Settings2" aria-hidden="true"/> **Edit Tool Actions** on the tool component.
 
-| Tool Name | Description | Enabled |
-|-----------|-------------|---------|
-| `fetch_content` | Fetch content from web pages recursively | true |
-| `fetch_content_as_message` | Fetch web content formatted as messages | true |
+The following information is provided for each action:
 
-Tools also have a default tool identifier.
-This value can't be changed unless you create a custom component.
+* **Enabled**: A checkbox that determines whether the action is available to the agent.
+If checked, the action is enabled.
+If unchecked, the action is disabled.
+
+* **Name**: A human-readable string name for the action, such as `Fetch Content`. This cannot be changed.
+
+* **Description**: A human-readable description of the action's purpose, such as `Fetch content from web pages recursively`.
+
+    To edit this value, double-click the action's row to open the edit pane.
+    Changes are saved automatically when you click out of the field or close the dialog.
+
+* **Slug**: An encoded name for the action, usually the same as the name but in snake case, such as `fetch_content`.
+
+    To edit this value, double-click the action's row to open the edit pane.
+    Changes are saved automatically when you click out of the field or close the dialog.
+
+To edit the **Description** or **Slug**, double-click anywhere on the action's row to open the edit pane.
+Note that the **Name** field on the edit page maps to the **Slug** column.
+Changes are saved automatically when you click out of a field or close the dialog.
+
+Optionally, you can provide fixed values for an action's inputs. Typically you want to leave these blank so the agent can provide its own values. You might use a fixed value if you're trying to debug an agent's behavior or your use case requires a fixed input for an action.
 
 ## Use an agent as a tool
 
@@ -40,9 +56,9 @@ To try this for yourself, add an additional agent to the **Simple Agent** templa
 2. Add a second **Agent** component to the flow.
 3. Add your **OpenAI API Key** to both **Agent** components.
 4. In the second **Agent** component, change the model to `gpt-4.1`, and then enable **Tool Mode**.
-5. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to set tool names and descriptions that help the primary agent understand how to use those tools.
+5. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tool Actions** to [edit the tool's actions](#edit-a-tools-actions).
 
-    For this example, change the tool name to `Agent-gpt-41` and set the description to `Use the gpt-4.1 model for complex problem solving`.
+    For this example, change the action **Slug** to `Agent-gpt-41` and set the description to `Use the gpt-4.1 model for complex problem solving`.
     This lets the primary agent know that this tool uses the `gpt-4.1` model, which could be helpful for tasks requiring a larger context window, such as large scrape and search tasks.
 
     As another example, you could attach several specialized models to a primary agent, such as agents that are trained on certain tasks or domains, and then the primary agent would call each specialized agent as needed to respond to queries.
