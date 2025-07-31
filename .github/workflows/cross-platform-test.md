@@ -1,25 +1,25 @@
 # Cross-Platform Install Tests
 
-Guide for running cross-platform installation tests manually and programmatically.
+Unified workflow for testing langflow installation across multiple platforms, supporting both manual and programmatic execution.
 
-## Available Tests
+## Manual Testing
 
 ### 1. Test from PyPI
 Tests published langflow packages from PyPI across all platforms.
 
 **Via GitHub UI:**
-1. Go to **Actions** → **Manual Cross-Platform Test**
-2. Check **"Test from PyPI"**
+1. Go to **Actions** → **Cross-Platform Installation Test**
+2. Check **"Test from PyPI instead of building from source"**
 3. Optionally specify a version (leave empty for latest)
 4. Click **"Run workflow"**
 
 **Via CLI:**
 ```bash
 # Test latest version
-gh workflow run cross-platform-test-manual.yml -f test-from-pypi=true
+gh workflow run cross-platform-test.yml -f test-from-pypi=true
 
 # Test specific version
-gh workflow run cross-platform-test-manual.yml \
+gh workflow run cross-platform-test.yml \
   -f test-from-pypi=true \
   -f langflow-version="1.0.18"
 ```
@@ -28,14 +28,28 @@ gh workflow run cross-platform-test-manual.yml \
 Builds and tests langflow from current branch source code.
 
 **Via GitHub UI:**
-1. Go to **Actions** → **Manual Cross-Platform Test**
-2. Leave **"Test from PyPI"** unchecked
+1. Go to **Actions** → **Cross-Platform Installation Test**
+2. Leave **"Test from PyPI instead of building from source"** unchecked
 3. Click **"Run workflow"**
 
 **Via CLI:**
 ```bash
 # Test current branch
-gh workflow run cross-platform-test-manual.yml -f test-from-pypi=false
+gh workflow run cross-platform-test.yml -f test-from-pypi=false
+```
+
+## Programmatic Testing
+
+For CI, releases, and other automated workflows that test wheel installation:
+
+```yaml
+jobs:
+  test-cross-platform:
+    uses: ./.github/workflows/cross-platform-test.yml
+    with:
+      base-artifact-name: "dist-base"
+      main-artifact-name: "dist-main"
+      test-timeout: 120  # optional, defaults to 5
 ```
 
 ## Platforms Tested
@@ -59,11 +73,11 @@ gh workflow run cross-platform-test-manual.yml -f test-from-pypi=false
 
 ```bash
 # Extended timeout (10 minutes instead of default 5)
-gh workflow run cross-platform-test-manual.yml \
+gh workflow run cross-platform-test.yml \
   -f test-timeout=10
 
 # Test specific PyPI version
-gh workflow run cross-platform-test-manual.yml \
+gh workflow run cross-platform-test.yml \
   -f test-from-pypi=true \
   -f langflow-version="1.0.18"
 ```
@@ -94,36 +108,56 @@ gh workflow run cross-platform-test-manual.yml \
 
 ### Workflow Architecture
 
+**Unified Single-File Design:**
+
 ```
-Manual Entry Point:
-└── cross-platform-test-manual.yml (workflow_dispatch)
-    ├── PyPI Mode → cross-platform-test-shared.yml
-    └── Source Mode → cross-platform-test.yml → cross-platform-test-shared.yml
-
-Programmatic Entry Point:
-└── cross-platform-test.yml (workflow_call only)
-    └── cross-platform-test-shared.yml
+cross-platform-test.yml
+├── workflow_dispatch (Manual UI)
+│   ├── PyPI Testing (test-from-pypi=true)
+│   └── Source Testing (test-from-pypi=false)
+└── workflow_call (Programmatic API)
+    └── Wheel Testing (always uses wheel method)
 ```
 
-- **Manual Workflow**: User-facing interface with PyPI/source options
-- **Main Workflow**: Internal workflow for programmatic calls (CI, releases)
-- **Shared Workflow**: Core test execution logic (matrix jobs)
-- **Single Entry Point**: Use `cross-platform-test-manual.yml` for all manual testing
+**Key Benefits:**
+- **Single File**: No complex workflow chains or parameter passing issues
+- **Unified Logic**: Same test matrix for all use cases  
+- **Smart Routing**: Automatically determines install method based on trigger type
+- **Context-Aware**: Summary messages adapt to manual vs programmatic usage
 
-### Parameter Requirements
+### Trigger Types
 
-⚠️ **Important**: When calling reusable workflows from `workflow_dispatch` triggers, **all parameters must be explicitly provided**, even optional ones with defaults. Missing optional parameters can cause workflows to be silently skipped.
+**Manual (`workflow_dispatch`):**
+- Simple boolean toggle: "Test from PyPI" vs "Test from Source"
+- User-friendly parameter names
+- Context-specific success/failure messages
 
-**Example of correct parameter passing:**
+**Programmatic (`workflow_call`):**
+- Full parameter control for CI/releases
+- Backward compatible with existing workflows
+- Always uses wheel installation method (tests built artifacts)
+
+### Implementation Details
+
+The workflow uses dynamic job conditions to route execution:
+
 ```yaml
-uses: ./.github/workflows/cross-platform-test-shared.yml
-with:
-  install-method: "wheel" 
-  test-timeout: 5
-  langflow-version: ""          # ← Required even though optional
-  base-artifact-name: "dist"
-  main-artifact-name: "dist"  
-  run-id: ""                   # ← Required even though optional
+# Build only runs for source testing or when no artifacts provided
+build-if-needed:
+  if: |
+    (github.event_name == 'workflow_dispatch' && inputs.test-from-pypi == false) ||
+    (github.event_name == 'workflow_call' && (inputs.base-artifact-name == '' || inputs.main-artifact-name == ''))
+
+# Test matrix adapts install method based on trigger
+test-installation:
+  steps:
+    - name: Determine install method
+      # workflow_dispatch: maps boolean to install method  
+      # workflow_call: always uses wheel method
+    - name: Install from PyPI
+      if: steps.install-method.outputs.method == 'pypi'
+    - name: Install from wheels  
+      if: steps.install-method.outputs.method == 'wheel'
 ```
 
 ## Results
