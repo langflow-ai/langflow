@@ -18,14 +18,14 @@ async function checkBackendHealth(): Promise<HealthResponse> {
 
 export const useBackendHealth = (
   enabled: boolean = true,
-  refetchInterval: number = 2000,
+  refetchInterval: number = 5000,
 ) => {
   return useQuery<HealthResponse, AxiosError>({
     queryKey: ["backend-health"],
     queryFn: checkBackendHealth,
     enabled,
     refetchInterval,
-    retry: false,
+    retry: 0,
     refetchOnWindowFocus: false,
   });
 };

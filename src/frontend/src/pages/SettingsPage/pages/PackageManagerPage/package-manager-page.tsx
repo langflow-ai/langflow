@@ -30,6 +30,8 @@ import { TEXTS } from "./helpers/constants";
 import useBackendRestarting from "./hooks/use-backend-restarting";
 import useCheckInstallationResult from "./hooks/use-check-installation-result";
 
+const POLLING_INTERVAL = 5000;
+
 export default function PackageManagerPage() {
   const [packageName, setPackageName] = useState("");
   const [showInstallDialog, setShowInstallDialog] = useState(false);
@@ -61,7 +63,7 @@ export default function PackageManagerPage() {
   const installPackageMutation = useInstallPackage();
   const installationStatus = useGetInstallationStatus(showProgressDialog);
 
-  const backendHealth = useBackendHealth(showProgressDialog, 1000);
+  const backendHealth = useBackendHealth(showProgressDialog, POLLING_INTERVAL);
 
   const handleInstallClick = () => {
     if (!packageName.trim()) {

@@ -65,7 +65,7 @@ export default function InstalledPackagesTable() {
     !restoreLangflowMutation.isError;
   const installationStatus = useGetInstallationStatus(shouldPollStatus);
 
-  const backendHealth = useBackendHealth(showProgressDialog, 2000);
+  const backendHealth = useBackendHealth(showProgressDialog, 5000);
 
   const handleRestoreClick = () => {
     clearTempNotificationList();
