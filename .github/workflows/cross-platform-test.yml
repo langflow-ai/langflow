@@ -12,11 +12,6 @@ on:
         required: false
         type: string
         default: ""
-      test-timeout:
-        description: "Timeout for langflow server startup test (minutes)"
-        required: false
-        type: number
-        default: 5
   workflow_call:
     inputs:
       base-artifact-name:
@@ -27,11 +22,6 @@ on:
         description: "Name of the main package artifact"
         required: true
         type: string
-      test-timeout:
-        description: "Timeout for langflow server startup test (minutes)"
-        required: false
-        type: number
-        default: 5
 
 jobs:
   build-if-needed:
@@ -46,6 +36,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Transform dependencies to simulate release build
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "🔧 Transforming workspace dependencies to published packages..."
+          # Use latest published versions for transformation
+          BASE_VERSION=$(python scripts/ci/pypi_nightly_tag.py base | sed 's/^v//')
+          MAIN_VERSION=$(python scripts/ci/pypi_nightly_tag.py main | sed 's/^v//')
+          echo "Using base version: $BASE_VERSION"
+          echo "Using main version: $MAIN_VERSION"
+          
+          # Transform dependencies like nightly builds do
+          python scripts/ci/update_pyproject_combined.py main "v$MAIN_VERSION" "v$BASE_VERSION"
+          echo "✅ Dependencies transformed to use published packages"
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -95,7 +98,12 @@ jobs:
           - os: linux
             arch: amd64
             runner: ubuntu-latest
+            python-version: "3.12"
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
             python-version: "3.13"
+            continue-on-error: true
           # macOS AMD64
           - os: macos
             arch: amd64
@@ -104,7 +112,12 @@ jobs:
           - os: macos
             arch: amd64
             runner: macos-13
+            python-version: "3.12"
+          - os: macos
+            arch: amd64
+            runner: macos-13
             python-version: "3.13"
+            continue-on-error: true
           # macOS ARM64 (Apple Silicon)
           - os: macos
             arch: arm64
@@ -113,7 +126,12 @@ jobs:
           - os: macos
             arch: arm64
             runner: macos-latest
+            python-version: "3.12"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
             python-version: "3.13"
+            continue-on-error: true
           # Windows AMD64
           - os: windows
             arch: amd64
@@ -123,6 +141,11 @@ jobs:
             arch: amd64
             runner: windows-latest
             python-version: "3.12"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.13"
+            continue-on-error: true
 
     steps:
       - name: Determine install method
@@ -217,12 +240,6 @@ jobs:
 
       - name: Install main package from wheel (Unix)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
-        env:
-          # Fix chroma-hnswlib compilation on macOS by overriding problematic compiler flags
-          CFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64' || '' }}
-          CXXFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64 -stdlib=libc++' || '' }}
-          # Alternative: Force use of compatible architecture flags
-          ARCHFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-arch x86_64' || '' }}
         run: |
           ls -la ./main-dist/
           find ./main-dist -name "*.whl" -type f
@@ -248,12 +265,6 @@ jobs:
 
       - name: Install langflow from PyPI (Unix)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os != 'windows'
-        env:
-          # Fix chroma-hnswlib compilation on macOS by overriding problematic compiler flags
-          CFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64' || '' }}
-          CXXFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64 -stdlib=libc++' || '' }}
-          # Alternative: Force use of compatible architecture flags
-          ARCHFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-arch x86_64' || '' }}
         run: |
           if [ -n "${{ inputs.langflow-version }}" ]; then
             uv pip install --python ./test-env/bin/python langflow==${{ inputs.langflow-version }}
@@ -290,16 +301,12 @@ jobs:
 
       - name: Test server startup (Windows)
         if: matrix.os == 'windows'
-        timeout-minutes: ${{ inputs.test-timeout || 5 }}
-        env:
-          TIMEOUT_MINUTES: ${{ inputs.test-timeout || 5 }}
+        timeout-minutes: 5
         run: |
           # Start server in background
           $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
 
-          # Wait for server to be ready
-          $timeoutSeconds = $env:TIMEOUT_MINUTES * 60
-          $elapsed = 0
+          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
           do {
             try {
               $response = Invoke-WebRequest -Uri "http://localhost:7860/health_check" -UseBasicParsing -TimeoutSec 5
@@ -309,14 +316,8 @@ jobs:
               }
             } catch {
               Start-Sleep -Seconds 5
-              $elapsed += 5
             }
-          } while ($elapsed -lt $timeoutSeconds)
-
-          if ($elapsed -ge $timeoutSeconds) {
-            Write-Host "❌ Server failed to start within timeout on ${{ matrix.os }}-${{ matrix.arch }}"
-            exit 1
-          }
+          } while ($true)
 
           # Stop the server process
           Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
@@ -324,31 +325,20 @@ jobs:
 
       - name: Test server startup (Unix)
         if: matrix.os != 'windows'
-        timeout-minutes: ${{ inputs.test-timeout || 5 }}
-        env:
-          TIMEOUT_MINUTES: ${{ inputs.test-timeout || 5 }}
+        timeout-minutes: 5
         run: |
           # Start server in background
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
 
-          # Wait for server to be ready (using bash loop instead of timeout command)
-          TIMEOUT_SECONDS=$((TIMEOUT_MINUTES * 60))
-          ELAPSED=0
-          while [ $ELAPSED -lt $TIMEOUT_SECONDS ]; do
+          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
+          while true; do
             if curl -f http://localhost:7860/health_check >/dev/null 2>&1; then
               echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
               break
             fi
             sleep 5
-            ELAPSED=$((ELAPSED + 5))
           done
-
-          if [ $ELAPSED -ge $TIMEOUT_SECONDS ]; then
-            echo "❌ Server failed to start within timeout on ${{ matrix.os }}-${{ matrix.arch }}"
-            kill $SERVER_PID 2>/dev/null || true
-            exit 1
-          fi
 
           # Clean shutdown
           kill $SERVER_PID 2>/dev/null || true

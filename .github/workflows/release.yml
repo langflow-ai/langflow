@@ -208,7 +208,6 @@ jobs:
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
-      test-timeout: 120
 
   publish-base:
     name: Publish Langflow Base to PyPI
