@@ -20,6 +20,18 @@ on:
         type: string
 
 jobs:
+  debug-context:
+    name: Debug Context
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug workflow context
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Langflow version input: '${{ inputs.langflow-version }}'"
+          echo "Base artifact name: '${{ inputs.base-artifact-name }}'"
+          echo "Main artifact name: '${{ inputs.main-artifact-name }}'"
+          echo "Should build condition: ${{ github.event_name == 'workflow_dispatch' && inputs.langflow-version == '' }}"
+
   build-if-needed:
     name: Build Packages (if no artifacts provided)
     runs-on: ubuntu-latest
