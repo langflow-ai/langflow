@@ -37,40 +37,47 @@ def get_unified_models_detailed(
     if include_unsupported is None:
         include_unsupported = False
 
-    # Gather all models from imported *_MODELS_DETAILED lists
-    all_models: list[dict] = []
-    for models_detailed in MODELS_DETAILED:
-        all_models.extend(models_detailed)
-
-    # Apply filters
-    filtered_models: list[dict] = []
-    for md in all_models:
-        # Skip models flagged as not_supported unless explicitly included
-        if (not include_unsupported) and md.get("not_supported", False):
-            continue
-
-        if provider and md.get("provider") != provider:
-            continue
-        if model_name and md.get("name") != model_name:
-            continue
-        if model_type and md.get("model_type") != model_type:
-            continue
-        # Match arbitrary metadata key/value pairs
-        if any(md.get(k) != v for k, v in metadata_filters.items()):
-            continue
-
-        filtered_models.append(md)
-
-    # Group by provider
+    # Prepare filter items as tuple for speed
+    filter_items = metadata_filters.items()
     provider_map: dict[str, list[dict]] = {}
-    for metadata in filtered_models:
-        prov = metadata.get("provider", "Unknown")
-        provider_map.setdefault(prov, []).append(
-            {
-                "model_name": metadata.get("name"),
-                "metadata": {k: v for k, v in metadata.items() if k not in ("provider", "name")},
-            }
-        )
+
+    for models_detailed in MODELS_DETAILED:
+        for md in models_detailed:
+            # Fast path: skip unsupported if not included
+            if not include_unsupported and md.get("not_supported", False):
+                continue
+
+            prov = md.get("provider")
+            name = md.get("name")
+            mtype = md.get("model_type")
+
+            if provider is not None and prov != provider:
+                continue
+            if model_name is not None and name != model_name:
+                continue
+            if model_type is not None and mtype != model_type:
+                continue
+
+            # Fast all() for metadata filters
+            if filter_items:
+                for k, v in filter_items:
+                    if md.get(k) != v:
+                        break
+                else:
+                    # all matched
+                    # Move model below
+                    metadata = md.copy()
+                    metadata.pop("provider", None)
+                    metadata.pop("name", None)
+                    provider_map.setdefault(prov or "Unknown", []).append({"model_name": name, "metadata": metadata})
+                    continue  # model handled
+                continue  # failed metadata filter
+
+            # If no metadata_filters, just proceed
+            metadata = md.copy()
+            metadata.pop("provider", None)
+            metadata.pop("name", None)
+            provider_map.setdefault(prov or "Unknown", []).append({"model_name": name, "metadata": metadata})
 
     # Format as requested
     return [{"provider": prov, "models": models} for prov, models in provider_map.items()]
