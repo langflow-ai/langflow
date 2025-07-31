@@ -1,3 +1,4 @@
+import copy
 import re
 from typing import Any
 
@@ -22,6 +23,7 @@ from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
+
 def _patch_graph_clean_null_input_types() -> None:
     """Monkey-patch Graph._create_vertex to clean legacy templates."""
     try:
@@ -29,7 +31,7 @@ def _patch_graph_clean_null_input_types() -> None:
 
         original_create_vertex = Graph._create_vertex
 
-        def _create_vertex_with_cleanup(self, frontend_data):  
+        def _create_vertex_with_cleanup(self, frontend_data):
             try:
                 node_id: str | None = frontend_data.get("id") if isinstance(frontend_data, dict) else None
                 if node_id and "Composio" in node_id:
@@ -45,15 +47,15 @@ def _patch_graph_clean_null_input_types() -> None:
                                 and field_cfg.get("input_types") is None
                             ):
                                 field_cfg["input_types"] = []
-            except Exception as e: 
+            except Exception as e:
                 logger.debug(f"Composio template cleanup encountered error: {e}")
 
             return original_create_vertex(self, frontend_data)
 
         # Patch only once
-        if getattr(Graph, "_composio_patch_applied", False) is False: 
-            Graph._create_vertex = _create_vertex_with_cleanup  
-            Graph._composio_patch_applied = True  
+        if getattr(Graph, "_composio_patch_applied", False) is False:
+            Graph._create_vertex = _create_vertex_with_cleanup
+            Graph._composio_patch_applied = True
             logger.debug("Applied Composio template cleanup patch to Graph._create_vertex")
 
     except Exception as e:
@@ -106,6 +108,10 @@ class ComposioBaseComponent(Component):
     ]
 
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
+
+    # Class-level caches
+    _actions_cache: dict[str, dict[str, Any]] = {}
+    _action_schema_cache: dict[str, dict[str, Any]] = {}
 
     outputs = [
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
@@ -213,6 +219,16 @@ class ComposioBaseComponent(Component):
     def _populate_actions_data(self):
         """Fetch the list of actions for the toolkit and build helper maps."""
         if self._actions_data:
+            return
+
+        # Try to load from the class-level cache
+        toolkit_slug = self.app_name.lower()
+        if toolkit_slug in self.__class__._actions_cache:
+            # Deep-copy so that any mutation on this instance does not affect the
+            # cached master copy.
+            self._actions_data = copy.deepcopy(self.__class__._actions_cache[toolkit_slug])
+            self._action_schemas = copy.deepcopy(self.__class__._action_schema_cache.get(toolkit_slug, {}))
+            logger.debug(f"Loaded actions for {toolkit_slug} from in-process cache")
             return
 
         api_key = getattr(self, "api_key", None)
@@ -411,6 +427,11 @@ class ComposioBaseComponent(Component):
             self._all_fields = {f for d in self._actions_data.values() for f in d["action_fields"]}
             self._build_action_maps()
 
+            # Cache actions for this toolkit so subsequent component instances
+            # can reuse them without hitting the Composio API again.
+            self.__class__._actions_cache[toolkit_slug] = copy.deepcopy(self._actions_data)
+            self.__class__._action_schema_cache[toolkit_slug] = copy.deepcopy(self._action_schemas)
+
         except ValueError as e:
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
 
@@ -420,7 +441,7 @@ class ComposioBaseComponent(Component):
         if action_key in ("disabled", "placeholder", ""):
             logger.debug(f"Skipping schema validation for placeholder value: {action_key}")
             return []
-            
+
         schema_dict = self._action_schemas.get(action_key)
         if not schema_dict:
             logger.warning(f"No schema found for action key: {action_key}")
@@ -666,12 +687,12 @@ class ComposioBaseComponent(Component):
             display_name = selected_value
 
         action_key = self.desanitize_action_name(display_name)
-        
+
         # Skip validation for default/placeholder values
         if action_key in ("disabled", "placeholder", ""):
             logger.debug(f"Skipping action config update for placeholder value: {action_key}")
             return
-            
+
         lf_inputs = self._validate_schema_inputs(action_key)
 
         # First remove inputs belonging to other actions
@@ -707,7 +728,7 @@ class ComposioBaseComponent(Component):
         else:
             # When tool_mode is enabled, hide action field
             build_config["action_button"]["show"] = not self._is_tool_mode_enabled()
-            
+
     def create_new_auth_config(self, app_name: str) -> str:
         """Create a new auth config for the given app name."""
         composio = self._build_wrapper()
@@ -729,7 +750,7 @@ class ComposioBaseComponent(Component):
                 for auth_config in auth_configs.items:
                     if auth_config.auth_scheme == "OAUTH2":
                         auth_config_id = auth_config.id
-                        
+
                 auth_config_id = auth_configs.items[0].id
 
             connection_request = composio.connected_accounts.initiate(
@@ -761,7 +782,6 @@ class ComposioBaseComponent(Component):
             composio = self._build_wrapper()
             logger.info(f"ln:706 Connection Id: {connection_id}")
             connection = composio.connected_accounts.get(nanoid=connection_id)
-            logger.info(f"ln:708 Connection: {connection}")
             status = getattr(connection, "status", None)
             logger.info(f"ln:710 Status: {status}")
             logger.info(f"Connection {connection_id} status: {status}")
@@ -851,22 +871,22 @@ class ComposioBaseComponent(Component):
         should_populate = False
         api_key_available = hasattr(self, "api_key") and self.api_key
         actions_empty = not self._actions_data or len(self._actions_data) == 0
-        
+
         # Debug logging
         logger.info(f"Action population check - API key available: {api_key_available}, Actions empty: {actions_empty}, Field: {field_name}")
-        
+
         if field_name == "api_key" and field_value:
             should_populate = True
             logger.info("Will populate actions: API key field updated")
         elif api_key_available and actions_empty:
             should_populate = True
             logger.info("Will populate actions: API key available but no actions loaded")
-        
+
         if should_populate:
             logger.info(f"Populating actions data for {getattr(self, 'app_name', 'unknown')}...")
             self._populate_actions_data()
             logger.info(f"Actions populated: {len(self._actions_data)} actions found")
-            
+
             # CRITICAL: Set action options immediately after populating, before any early returns
             if self._actions_data:
                 self._build_action_maps()
@@ -934,22 +954,22 @@ class ComposioBaseComponent(Component):
                             logger.debug(f"Could not retrieve connection {stored_connection_id}: {e}")
                             # Continue to create new connection below
 
-                # Create new OAuth connection only if no ACTIVE or INITIATED connection exists
-                try:
-                    redirect_url, connection_id = self._initiate_connection(toolkit_slug)
-                    build_config["auth_link"]["value"] = redirect_url
-                    build_config["auth_link"]["connection_id"] = connection_id  # Store connection ID
-                    logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
-                except (ValueError, ConnectionError) as e:
-                    logger.error(f"Error creating OAuth connection: {e}")
-                    build_config["auth_link"]["value"] = "connect"
-                    build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
-                    return build_config
+                # Create new OAuth connection ONLY if we truly have no usable connection yet
+                if existing_active is None and not (stored_connection_id and status in ("ACTIVE", "INITIATED")):
+                    try:
+                        redirect_url, connection_id = self._initiate_connection(toolkit_slug)
+                        build_config["auth_link"]["value"] = redirect_url
+                        build_config["auth_link"]["connection_id"] = connection_id  # Store connection ID
+                        logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
+                        return build_config
+                    except (ValueError, ConnectionError) as e:
+                        logger.error(f"Error creating OAuth connection: {e}")
+                        build_config["auth_link"]["value"] = "connect"
+                        build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
+                        return build_config
                 else:
-                    build_config["auth_link"]["auth_tooltip"] = "Connect"
-                    build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
-                    build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
-                    return build_config
+                    # We already have a usable connection; no new OAuth request
+                    build_config["auth_link"]["auth_tooltip"] = "Disconnect"
 
             except (ValueError, ConnectionError) as e:
                 logger.error(f"Error in connection initiation: {e}")
@@ -986,6 +1006,13 @@ class ComposioBaseComponent(Component):
                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                 build_config["action_button"]["helper_text"] = ""
                 build_config["action_button"]["helper_text_metadata"] = {}
+            else:
+                build_config["auth_link"]["value"] = "connect"
+                build_config["auth_link"]["auth_tooltip"] = "Connect"
+                build_config["action_button"]["helper_text"] = (
+                    "Please connect before selecting actions."
+                )
+                build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
 
         # CRITICAL: If tool_mode is enabled from ANY source, immediately hide action field and return
         if current_tool_mode:
