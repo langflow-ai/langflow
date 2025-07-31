@@ -25,6 +25,7 @@ import {
 } from "@/controllers/API/queries/packages";
 import useAlertStore from "@/stores/alertStore";
 import { usePackageManagerStore } from "@/stores/packageManagerStore";
+import InstalledPackagesTable from "./components/InstalledPackagesTable";
 
 export default function PackageManagerPage() {
   const [packageName, setPackageName] = useState("");
@@ -67,11 +68,10 @@ export default function PackageManagerPage() {
       // Clear any previous installation status before starting new installation
       await clearInstallationStatusMutation.mutateAsync();
 
-      // Force invalidate and refetch the installation status query
+      // Force invalidate the installation status query (this will trigger a refetch)
       await queryClient.invalidateQueries({
         queryKey: ["installation-status"],
       });
-      await queryClient.refetchQueries({ queryKey: ["installation-status"] });
 
       // Small delay to ensure status is cleared
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -132,6 +132,8 @@ export default function PackageManagerPage() {
         setSuccessData({
           title: `Package '${installationResult.package_name}' installed successfully! The package is now available for import.`,
         });
+        // Refresh the installed packages list to show the newly installed package
+        queryClient.invalidateQueries({ queryKey: ["installed-packages"] });
       } else if (installationResult.status === "failed") {
         // Extract and clean the error message
         const rawError = installationResult.message || "Unknown error";
@@ -273,6 +275,9 @@ export default function PackageManagerPage() {
         </CardContent>
       </Card>
 
+      {/* Installed Packages Table */}
+      <InstalledPackagesTable />
+
       {/* Install Confirmation Dialog */}
       <Dialog open={showInstallDialog} onOpenChange={setShowInstallDialog}>
         <DialogContent>
@@ -334,7 +339,7 @@ export default function PackageManagerPage() {
             <div className="flex items-center gap-3 p-4 rounded-lg bg-muted">
               <ForwardedIconComponent
                 name="Loader2"
-                className="h-5 w-5 animate-spin text-blue-500"
+                className="h-5 w-5 animate-spin text-primary"
               />
               <div>
                 <p className="font-medium">Installing {packageName}</p>

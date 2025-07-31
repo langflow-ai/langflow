@@ -18,6 +18,7 @@ class InstallationStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+    UNINSTALLED = "uninstalled"
 
 
 class PackageInstallationBase(SQLModel):
