@@ -20,11 +20,27 @@ To try building and running a flow in a few minutes, see the [Langflow quickstar
 
 ## Create a flow
 
-There are four ways to create a flow in the Langflow UI:
+From the [**Projects** page](#projects), there are four ways to create a flow in the Langflow UI:
 
-* **Create a blank flow**: From the [**Projects** page](#projects), select a project, and then click **New Flow**.
-* **Create a flow from a template**: From the [**Projects** page](#projects), select a project, and then click **New Flow**.
-* **Duplicate an existing flow**: From the [**Projects** page](#projects), locate the flow you want to copy, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Duplicate**.
+* **Create a blank flow**: Select a project, click **New Flow**, and then click **Blank Flow**.
+
+* **Create a flow from a template**: Select a project, click **New Flow**, and then click the template that you want to use.
+
+    <details>
+    <summary>What are templates?</summary>
+
+    Templates are pre-built flows that you can use as a starting point for your own flow.
+    They range from basic flows with a few components to complex flows with many components and sub-flows.
+
+    For example, the **Basic Prompting** template demonstrates a small flow that passes both chat input and pre-defined instructions (as a prompt) to an LLM.
+    In contrast, the **Vector Store RAG** template consists of two sub-flows that demonstrate how to create a Retrieval Augmented Generation (RAG) chatbot. One sub-flow populates the vector store with contextually relevant data and embeddings, and the other sub-flow queries the vector store for similar data to answer user questions.
+
+    You can also [contribute templates](/contributing-templates) to the Langflow codebase.
+
+    </details>
+
+* **Duplicate an existing flow**: Locate the flow you want to copy, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Duplicate**.
+
 * **Import a flow**: See [Import and export flows](/concepts-flows-import).
 
 You can also create a flow with the [Langflow API](/api-flows), but the Langflow team recommends using the visual editor until you are familiar with flow creation.
@@ -88,7 +104,7 @@ By default, flows and [flow logs](/logging) are stored on local disk at the foll
 - **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
 - **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/cache`
 
-The flow storage location can be customized with the [`LANGFLOW_CONFIG_DIR`](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable, and the flow log storage location can be customized with the [`LANGFLOW_LOG_FILE`](/environment-variables#LANGFLOW_LOG_FILE) environment variable.
+The overall storage location can be customized with the `LANGFLOW_CONFIG_DIR` environment variable, and the flow log storage location can be customized separately with the `LANGFLOW_LOG_FILE` environment variable.
 
 ## See also
 
