@@ -357,3 +357,55 @@ async def upload_file(
         flow.folder_id = new_project.id
 
     return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+
+
+@router.get("/export/{project_id}", status_code=200)
+async def export_project(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Export a project with all its flows in the new format."""
+    try:
+        # Get project with flows
+        project = (
+            await session.exec(
+                select(Folder)
+                .options(selectinload(Folder.flows))
+                .where(Folder.id == project_id, Folder.user_id == current_user.id)
+            )
+        ).first()
+
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Filter flows for current user
+        flows = [flow for flow in project.flows if flow.user_id == current_user.id]
+
+        # Build export structure
+        export_data = {
+            "version": "1.0",  # Export format version
+            "langflow_version": "1.5.0",  # TODO: Get from settings/version
+            "export_type": "project",
+            "exported_at": datetime.now(tz=timezone.utc).isoformat(),
+            "project": {
+                "id": str(project.id),
+                "name": project.name,
+                "description": project.description,
+                "auth_settings": project.auth_settings or {},
+            },
+            "flows": [FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json") for flow in flows],
+        }
+
+        # Return as JSON response
+        return Response(
+            content=orjson.dumps(export_data),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{project.name}_export.json"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
