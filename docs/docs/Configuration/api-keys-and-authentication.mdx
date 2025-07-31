@@ -159,6 +159,12 @@ This is a temporary bypass for backwards compatibility, and the `LANGFLOW_SKIP_A
 If either `LANGFLOW_AUTO_LOGIN` or `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` are set to `false`, then authentication is required.
 </details>
 
+### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
+
+Controls the availability of the `langflow superuser` command in the Langflow CLI.
+The default is `True`, but `False` is recommended to prevent unrestricted superuser creation.
+For more information, see [`langflow superuser`](/configuration-cli#langflow-superuser).
+
 ### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD {#langflow-superuser}
 
 These variables specify the username and password for the Langflow server's superuser.
@@ -248,12 +254,6 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
 
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
-
-### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
-
-Controls the availability of the `langflow superuser` command in the Langflow CLI.
-The default is `True`, but `False` is recommended to prevent unrestricted superuser creation.
-For more information, see [`langflow superuser`](/configuration-cli#langflow-superuser).
 
 ## Start a Langflow server with authentication enabled
 
