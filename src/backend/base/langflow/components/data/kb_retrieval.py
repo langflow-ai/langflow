@@ -7,14 +7,14 @@ from langchain_chroma import Chroma
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.deps import get_settings_service
 
-KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
-KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
+settings = get_settings_service().settings
+KNOWLEDGE_BASES_ROOT_PATH = Path(settings.knowledge_bases_dir).expanduser()
 
 
 class KBRetrievalComponent(Component):
@@ -37,13 +37,6 @@ class KBRetrievalComponent(Component):
             refresh_button=True,
             real_time_refresh=True,
         ),
-        StrInput(
-            name="kb_root_path",
-            display_name="KB Root Path",
-            info="Root directory for knowledge bases (defaults to ~/.langflow/knowledge_bases)",
-            advanced=True,
-            value=KNOWLEDGE_BASES_DIR,
-        ),
         SecretStrInput(
             name="api_key",
             display_name="Embedding Provider API Key",
@@ -65,9 +58,9 @@ class KBRetrievalComponent(Component):
             required=False,
         ),
         BoolInput(
-            name="include_embeddings",
-            display_name="Include Embeddings",
-            info="Whether to include embeddings in the output data.",
+            name="include_metadata",
+            display_name="Include Metadata",
+            info="Whether to include all metadata and embeddings in the output. If false, only content is returned.",
             value=True,
             advanced=True,
         ),
@@ -88,13 +81,10 @@ class KBRetrievalComponent(Component):
         Returns:
             A list of knowledge base names.
         """
-        # Return the list of directories in the knowledge base root path
-        kb_root_path = Path(self.kb_root_path).expanduser()
-
-        if not kb_root_path.exists():
+        if not KNOWLEDGE_BASES_ROOT_PATH.exists():
             return []
 
-        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
+        return [str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()]
 
     def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
         if field_name == "knowledge_base":
@@ -186,8 +176,7 @@ class KBRetrievalComponent(Component):
         Returns:
             A DataFrame containing the data rows from the knowledge base.
         """
-        kb_root_path = Path(self.kb_root_path).expanduser()
-        kb_path = kb_root_path / self.knowledge_base
+        kb_path = KNOWLEDGE_BASES_ROOT_PATH / self.knowledge_base
 
         metadata = self._get_kb_metadata(kb_path)
         if not metadata:
@@ -221,31 +210,39 @@ class KBRetrievalComponent(Component):
             # For each result, make it a tuple to match the expected output format
             results = [(doc, 0) for doc in results]  # Assign a dummy score of 0
 
-        # If enabled, get embeddings for the results
-        if self.include_embeddings:
-            doc_ids = [doc[0].metadata.get("_id") for doc in results]
+        # If metadata is enabled, get embeddings for the results
+        id_to_embedding = {}
+        if self.include_metadata and results:
+            doc_ids = [doc[0].metadata.get("_id") for doc in results if doc[0].metadata.get("_id")]
 
-            # Access underlying client to get embeddings
-            collection = chroma._client.get_collection(name=self.knowledge_base)
-            embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["embeddings", "metadatas"])
+            # Only proceed if we have valid document IDs
+            if doc_ids:
+                # Access underlying client to get embeddings
+                collection = chroma._client.get_collection(name=self.knowledge_base)
+                embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["embeddings", "metadatas"])
 
-            # Create a mapping from document ID to embedding
-            id_to_embedding = {}
-            for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
-                if metadata and "_id" in metadata:
-                    id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
+                # Create a mapping from document ID to embedding
+                for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
+                    if metadata and "_id" in metadata:
+                        id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
 
-        # Append embeddings to each element
+        # Build output data based on include_metadata setting
         data_list = []
         for doc in results:
-            kwargs = {
-                "content": doc[0].page_content,
-                **doc[0].metadata,
-            }
-            if self.search_query:
-                kwargs["_score"] = -1 * doc[1]
-            if self.include_embeddings:
+            if self.include_metadata:
+                # Include all metadata, embeddings, and content
+                kwargs = {
+                    "content": doc[0].page_content,
+                    **doc[0].metadata,
+                }
+                if self.search_query:
+                    kwargs["_score"] = -1 * doc[1]
                 kwargs["_embeddings"] = id_to_embedding.get(doc[0].metadata.get("_id"))
+            else:
+                # Only include content
+                kwargs = {
+                    "content": doc[0].page_content,
+                }
 
             data_list.append(Data(**kwargs))
 
