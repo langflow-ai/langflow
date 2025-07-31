@@ -4,8 +4,40 @@ slug: /configuration-cli
 ---
 
 import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
-The Langflow command line interface (Langflow CLI) is the main interface for managing and running the Langflow server.
+The Langflow command line interface is the main interface for managing and running the Langflow server.
+
+The Langflow CLI is automatically installed when you [install the Langflow package](/get-started-installation).
+
+## How to use the CLI
+
+The Langflow CLI can be invoked in several ways, depending on your installation method and environment.
+
+The recommended approach is to run the CLI with `uv run` from within a virtual environment where Langflow is installed.
+
+If Langflow is installed globally or added to your PATH, you can execute the CLI directly with `langflow`.
+
+For example, to start Langflow on the default port, run the following command:
+
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow run
+```
+
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
+
+```bash
+langflow run
+```
+
+  </TabItem>
+</Tabs>
 
 ## Precedence
 
@@ -16,11 +48,9 @@ For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable
 This also applies to Boolean environment variables.
 For example, if your set `LANGFLOW_REMOVE_API_KEYS=True` in your `.env` file, then you can change this to `False` by running the CLI with `--no-remove-api-keys`.
 
-## Options
+## Langflow CLI options
 
 All Langflow CLI commands support options that modify the command's behavior or set environment variables.
-
-### Option syntax
 
 To set values for options, you can use either of the following syntax styles:
 
@@ -32,37 +62,32 @@ Values with spaces must be surrounded by quotation marks:
 * `--option 'Value with Spaces'`
 * `--option="Value with Spaces"`
 
-### Boolean forms
-
 Boolean options enable and disable settings.
-They accept no value.
-Instead, each Boolean option has a true (enabled) and false (disabled) form:
+They have a true (enabled) and false (disabled) form:
 
 * Enabled (true): `--option`
 * Disabled (false): `--no-option`
 
-For example, `--remove-api-keys` is equivalent to `LANGFLOW_REMOVE_API_KEYS=True`:
+For example, `--remove-api-keys` is equivalent to setting `LANGFLOW_REMOVE_API_KEYS=True` as an [environment variable](/environment-variables).
 
 ```bash
-langflow run --remove-api-keys
+uv run langflow run --remove-api-keys
 ```
 
-In contrast, `--no-remove-api-keys` is equivalent to `LANGFLOW_REMOVE_API_KEYS=False`:
+In contrast, `--no-remove-api-keys` is equivalent to `LANGFLOW_REMOVE_API_KEYS=False` as an [environment variable](/environment-variables).
 
 ```bash
-langflow run --no-remove-api-keys
+uv run langflow run --no-remove-api-keys
 ```
 
 ### Default options
 
 The following options are available for all Langflow CLI commands:
 
+* `--version`, `-v`: Show the version and exit.
 * `--install-completion`: Install auto-completion for the current shell.
 * `--show-completion`: Show the location of the auto-completion config file, if installed.
 * `--help`: Print information about command usage, options, and arguments.
-
-These are modifiers that change the output or execution of a command.
-They aren't Booleans, and they accept no values.
 
 ## CLI commands
 
@@ -72,88 +97,167 @@ The following sections describe the available CLI commands and any non-default o
 
 Running the CLI without any arguments prints a list of available options and commands:
 
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow
+```
+
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
+
 ```bash
 langflow
-# or
-python -m langflow
 ```
+
+  </TabItem>
+</Tabs>
 
 ### langflow api-key {#langflow-api-key}
 
-Create a Langflow API key with superuser privileges.
+Create a Langflow API key.
+
+The logged-in user must be a superuser to create API keys with the CLI.
+
 For more information, see [Langflow API keys](/api-keys-and-authentication#langflow-api-keys).
 
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
 ```bash
-langflow api-key
-# or
 uv run langflow api-key
 ```
 
-### langflow copy-db
-
-Copy the Langflow database files from the cache directory to the current directory containing `__main__.py`.
-You can find this directory by running `which langflow`.
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
 
 ```bash
-langflow copy-db
-# or
-python -m langflow copy-db
+langflow api-key
 ```
 
-The database files are `langflow.db` and `langflow-pre.db`.
-If these files don't exist in the cache directory, then nothing is copied.
-
-### langflow migration
-
-Run or test database migrations:
-
-```bash
-langflow migration [OPTIONS]
-# or
-python -m langflow migration [OPTIONS]
-```
+  </TabItem>
+</Tabs>
 
 #### Options
 
 | Option | Default | Type | Description |
 |--------|---------|--------|-------------|
-| `--test` | `true` | Boolean | Run migrations in test mode. Use `--no-test` to disable test mode. |
-| `--fix` | `false` (`--no-fix`) | Boolean | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
+| `--log-level` | `error` | String | Set the logging level. |
+
+### langflow copy-db
+
+Copy the Langflow database files from the cache directory to the current Langflow installation directory, which is the directory containing `__main__.py`.
+You can find the copy target directory by running `which langflow`.
+
+The files copied are:
+
+* `langflow.db` - The main Langflow database, stored in the user cache directory.
+* `langflow-pre.db` - The pre-release database, if it exists.
+
+If these files don't exist in the cache directory, then nothing is copied.
+
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow copy-db
+```
+
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
+
+```bash
+langflow copy-db
+```
+
+  </TabItem>
+</Tabs>
+
+### langflow migration
+
+Manages database schema migrations for Langflow using [Alembic](https://alembic.sqlalchemy.org/en/latest/), a database migration tool for SQLAlchemy.
+
+The `migration` command has two modes:
+
+* Test mode checks if migrations can be applied safely without actually running the migrations.
+This is the default mode, and should be run before running `--fix`.
+
+* Fix mode actually applies the migrations to update your database schema.
+This is a destructive operation that can potentially delete data, so run `langflow migration --test` before running `--fix`.
+
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow migration [OPTIONS]
+```
+
+  </TabItem>
+  <TabItem value="Global" label="Global">
+
+```bash
+langflow migration [OPTIONS]
+```
+
+  </TabItem>
+</Tabs>
+
+#### Options
+
+| Option | Default | Type | Description |
+|--------|---------|--------|-------------|
+| `--test` | `test` | Boolean | Run migrations in test mode. Use `--no-test` to disable test mode. |
+| `--fix` | `no-fix` | Boolean | Fix migrations. This is a destructive operation, and all affected data will be deleted.|
 
 ### langflow run
 
 Start the Langflow server.
 
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow run [OPTIONS]
+```
+
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
+
 ```bash
 langflow run [OPTIONS]
-# or
-python -m langflow run [OPTIONS]
 ```
+
+  </TabItem>
+</Tabs>
 
 #### Options
 
 | Option | Default | Type | Description |
 |--------|---------|--------|-------------|
-| <Link id="run-host"/>`--host` | `localhost` | String | The host on which the Langflow server will run. |
-| <Link id="run-workers"/>`--workers` | `1` | Integer | Number of worker processes. |
-| <Link id="run-worker-timeout"/>`--worker-timeout` | `300` | Integer | Worker timeout in seconds. |
-| <Link id="run-port"/>`--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use. |
-| <Link id="run-components-path"/>`--components-path` | `langflow/components` | String | Path to the directory containing custom components. |
+| `--auto-saving` | `true` | Boolean | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving. |
+| `--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds. |
+| `--backend-only` | `false` (`--no-backend-only`) | Boolean | Only run Langflow's backend server (no frontend). |
+| `--cache` | `async` | Enum | Type of cache to use as one of `async`, `redis`, `memory`, or `disk`. |
+| `--components-path` | Not set | String | Path to the directory containing custom components. |
+| `--dev` | `false` (`--no-dev`) | Boolean | Run in development mode (may contain bugs). |
 | `--env-file` | Not set | String | Path to the `.env` file containing environment variables. |
-| `--log-level` | `critical` | Enum | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
+| `--frontend-path` | Not set | String | Path to the frontend directory containing build files. This is for development purposes only. |
+| `--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. |
+| `--host` | `localhost` | String | The host on which the Langflow server will run. |
 | `--log-file` | `logs/langflow.log` | String | Set the path to the log file for Langflow. |
-| <Link id="run-cache"/>`--cache` | `async` | Enum | Type of cache to use as one of `async`, `redis`, `memory`, or `disk`. |
-| <Link id="run-frontend-path"/>`--frontend-path` | `./frontend` | String | Path to the frontend directory containing build files. This is for development purposes only. |
-| <Link id="run-open-browser"/>`--open-browser` | `true` | Boolean | Open the system web browser on startup. Use `--no-open-browser` to disable opening the system web browser on startup. |
-| <Link id="run-remove-api-keys"/>`--remove-api-keys` | `false` (`--no-remove-api-keys`) | Boolean | Remove API keys from the projects saved in the database. |
-| <Link id="run-backend-only"/>`--backend-only` | `false` (`--no-backend-only`) | Boolean | Only run Langflow's backend server (no frontend). |
-| <Link id="run-store"/>`--store` | `true` | Boolean | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features. |
-| <Link id="run-auto-saving"/>`--auto-saving` | `true` | Boolean | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving. |
-| <Link id="run-auto-saving-interval"/>`--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds. |
-| <Link id="run-health-check-max-retries"/>`--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check. |
-| <Link id="run-max-file-size-upload"/>`--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes. |
+| `--log-level` | `critical` | Enum | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
+| `--log-rotation` | Not set | String | Set the log rotation (Time/Size). |
+| `--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes. |
+| `--open-browser` | `false` | Boolean | Open the system web browser on startup. Use `--no-open-browser` to disable opening the system web browser on startup. |
+| `--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use. |
+| `--remove-api-keys` | `false` (`--no-remove-api-keys`) | Boolean | Remove API keys from the projects saved in the database. |
 | `--ssl-cert-file-path` | Not set | String | Path to the SSL certificate file on the local system. |
 | `--ssl-key-file-path` | Not set | String | Path to the SSL key file on the local system. |
+| `--store` | `true` | Boolean | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features. |
+| `--webhook-polling-interval` | `5000` | Integer | Set the polling interval for the webhook in milliseconds. |
+| `--worker-timeout` | `300` | Integer | Worker timeout in seconds. |
+| `--workers` | `1` | Integer | Number of worker processes. |
 
 For information about the environment variables that correspond to these options, see [Supported environment variables](/environment-variables#supported-variables).
 
@@ -167,17 +271,29 @@ Controlled by the [`LANGFLOW_ENABLE_SUPERUSER_CLI`](/api-keys-and-authentication
 * **`LANGFLOW_ENABLE_SUPERUSER_CLI=False` (Recommended)**: Disables the `langflow superuser` command.
 For security reasons, this is recommended to prevent unauthorized superuser creation, especially in production environments.
 
+<Tabs groupId="Invocation">
+  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+
+```bash
+uv run langflow superuser [OPTIONS]
+```
+
+  </TabItem>
+  <TabItem value="Direct" label="Direct">
+
 ```bash
 langflow superuser [OPTIONS]
-# or
-python -m langflow superuser [OPTIONS]
 ```
+
+  </TabItem>
+</Tabs>
 
 #### Options
 
 | Option | Default | Type | Description |
 |--------|---------|--------|-------------|
-| `--username` | `langflow` | String | Specify the name for the superuser. |
-| `--password` | `langflow` | String | Specify the password for the superuser. |
+| `--username` | Required | String | Specify the name for the superuser. |
+| `--password` | Required | String | Specify the password for the superuser. |
+| `--log-level` | `error` | String | Set the logging level. |
 
 For more information, see [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](/api-keys-and-authentication#langflow-superuser).
