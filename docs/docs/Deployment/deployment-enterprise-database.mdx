@@ -97,9 +97,15 @@ Langflow defaults to SQLite but supports PostgreSQL for production environments,
 
 5. To verify the configuration, create a test flow using the UI or API and inspect the PostgreSQL database to confirm new tables and activity. You can query the database container with `docker exec -it <postgres-container> psql -U langflow -d langflow` or use `SELECT * FROM pg_stat_activity WHERE datname = 'langflow';` to verify connectivity.
 
-## Advanced PostgreSQL Configurations
+## Advanced PostgreSQL configurations
 
-Now that you have a basic PostgreSQL setup working with Langflow, here are additional configurations you can implement for production environments:
+Once your basic setup is running with Langflow connected to PostgreSQL, you might want to configure High Availability to prevent downtime if your database server fails, or Active-Active configurations to handle more users and provide automatic failover if one Langflow instance goes down.
+
+Some situations to prepare for in these configurations:
+
+* **Concurrency**: PostgreSQL handles concurrent connections well, but monitor for contention or deadlocks during high load.
+* **Session Management**: For the IDE, ensure session persistence or stateless authentication such as JWT to avoid issues with load balancing.
+* **File Storage**: Large files are stored on disk, for example at `/opt/langflow/data/`, and require shared storage such as NFS or cloud storage for multi-instance setups.
 
 ### High Availability (HA) for PostgreSQL
 
@@ -118,16 +124,9 @@ Choose between synchronous or asynchronous replication based on your latency and
 
     For example, to configure HA using Patroni:
 
-    * Deploy a PostgreSQL cluster with Patroni, etcd, and [HAProxy](https://www.haproxy.org/).
-    * Configure Langflow's `LANGFLOW_DATABASE_URL` to point to HAProxy's virtual IP.
-    * Monitor failover events and ensure replicas are in sync.
-
-    | Component | Role | Configuration |
-    |-----------|------|----------------|
-    | PostgreSQL | Primary/Replica | Streaming replication, WAL enabled |
-    | Patroni | Failover Management | Monitors nodes, promotes replica on failure |
-    | etcd | Consensus | Stores cluster state |
-    | HAProxy | Load Balancing | Directs connections to primary |
+    1. Deploy a PostgreSQL cluster with Patroni, etcd, and [HAProxy](https://www.haproxy.org/).
+    2. Configure Langflow's `LANGFLOW_DATABASE_URL` to point to HAProxy's virtual IP.
+    3. Monitor failover events and ensure replicas are in sync.
 
 3. Update your PostgreSQL connection string to point to the HA setup.
      * Use a virtual IP or DNS name that resolves to the current primary database, such as `postgresql://langflow:securepassword@db-proxy:5432/langflow?sslmode=require`.
@@ -138,23 +137,20 @@ Choose between synchronous or asynchronous replication based on your latency and
 For read-heavy workloads, distribute read queries across replicas using a connection pooler like [PgBouncer](https://www.pgbouncer.org/) or with a load balancer.
 Configure Langflow to use a single connection string pointing to the primary PostgreSQL database or to a proxy.
 
-### Active-Active HA for Langflow
+### Active-Active High Availability for Langflow
 
-Building on your HA PostgreSQL setup, you can deploy multiple Langflow instances in an active-active configuration. This ensures scalability and resilience for both the IDE (developer UI) and runtime (production flows).
+Building on your HA PostgreSQL setup, you can deploy multiple Langflow instances in an active-active configuration to ensure scalability and resilience.
 
-### Deployment strategy
+To configure Active-Active HA for Langflow, follow these steps:
 
-* **Multiple Instances**:
-  * Deploy Langflow using Kubernetes or Docker Swarm with multiple replicas.
-  * Example: 3 runtime replicas for production flows, 2 IDE backend replicas for developers.
-* **Load Balancer**:
-  * Use a load balancer (e.g., NGINX, AWS ALB) to distribute requests across instances.
-  * Configure health checks to route traffic away from failed instances.
-* **Shared Database**:
-  * All instances connect to the same HA PostgreSQL database using the connection string.
-  * Ensure the database can handle concurrent connections (e.g., set `max_connections` appropriately).
+1. Deploy multiple Langflow instances using Kubernetes or Docker Swarm.
+The example configuration deploys 3 `langflow-runtime` replicas for production flows.
 
-### Example Kubernetes configuration
+2. Include a load balancer to distribute requests across the 3 instances.
+The example configuration includes the Kubernetes load balancer service to distribute traffic to healthy pods.
+
+3. Ensure all instances connect to the same HA PostgreSQL database.
+The example configuration uses the same connection string from your HA PostgreSQL setup.
 
     ```yaml
     apiVersion: apps/v1
@@ -192,12 +188,6 @@ Building on your HA PostgreSQL setup, you can deploy multiple Langflow instances
         targetPort: 7860
       type: LoadBalancer
     ```
-
-### Considerations
-
-* **Concurrency**: PostgreSQL handles concurrent connections well, but monitor for contention or deadlocks during high load.
-* **Session Management**: For the IDE, ensure session persistence or stateless authentication (e.g., JWT) to avoid issues with load balancing.
-* **File Storage**: Large files are stored on disk, for example at `/opt/langflow/data/`, and require shared storage such as NFS or cloud storage for multi-instance setups.
 
 ## Impact of database failure
 
@@ -274,3 +264,8 @@ Securing the database and Langflow's connection to it is critical for enterprise
 * **Updates**:
   * Apply security patches to PostgreSQL and Langflow promptly.
   * Monitor for vulnerabilities using tools like Dependabot for Langflow dependencies.
+
+## See also
+
+* [Configure an external PostgreSQL database](/configuration-custom-database)
+* [Langflow architecture and best practices on Kubernetes](/deployment-prod-best-practices)
