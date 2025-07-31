@@ -345,7 +345,9 @@ export default function NodeStatus({
         : isAuthenticated && !isPolling
           ? "border-accent-emerald-foreground hover:border-accent-amber-foreground"
           : "",
-      connectionLink === "" && (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY") && "cursor-not-allowed opacity-50",
+      connectionLink === "" &&
+        (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY") &&
+        "cursor-not-allowed opacity-50",
     );
   };
 
@@ -423,7 +425,11 @@ export default function NodeStatus({
               <div>
                 <Button
                   unstyled
-                  disabled={(connectionLink === "" && (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY")) || connectionLink === "error"}
+                  disabled={
+                    (connectionLink === "" &&
+                      (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY")) ||
+                    connectionLink === "error"
+                  }
                   className={getConnectionButtonClasses(
                     connectionLink,
                     isAuthenticated,
