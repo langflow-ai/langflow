@@ -1,11 +1,14 @@
 import asyncio
 import platform
+import re
 import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 from uuid import UUID
 
+import tomllib
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from loguru import logger
 from pydantic import BaseModel
@@ -122,82 +125,56 @@ def _validate_package_name(package_name: str) -> bool:
     return _validate_package_specification(package_name)
 
 
+@lru_cache(maxsize=1)
 def _get_core_dependencies() -> set[str]:
     """Get the list of core dependencies from pyproject.toml to prevent accidental removal."""
+    pyproject_path = None
+
     try:
-        import re
-        from pathlib import Path
-
-        import tomllib
-
-        # Find the main project root (not the backend base)
-        # Look for the main pyproject.toml with langflow project configuration
         current_path = Path(__file__).resolve()
 
-        # Go up from the current file to find the main project root
-        for parent in [current_path, *list(current_path.parents)]:
-            pyproject_path = parent / "pyproject.toml"
-            if pyproject_path.exists():
-                # Check if this is the main langflow pyproject.toml
-                try:
-                    with pyproject_path.open("rb") as f:
-                        pyproject_data = tomllib.load(f)
-
-                    # Check if this is the main langflow project
-                    project_name = pyproject_data.get("project", {}).get("name", "")
-                    if project_name == "langflow":
-                        logger.info(f"Found main langflow pyproject.toml at: {pyproject_path}")
-                        break
-                except (OSError, tomllib.TOMLDecodeError):
-                    logger.debug(f"Could not read {pyproject_path}, trying next")
-                    continue
+        # Efficiently find the main langflow pyproject.toml
+        for parent in [current_path, *current_path.parents]:
+            candidate = parent / "pyproject.toml"
+            if not candidate.exists():
+                continue
+            try:
+                with candidate.open("rb") as f:
+                    pyproject_data = tomllib.load(f)
+                project_name = pyproject_data.get("project", {}).get("name", "")
+                if project_name == "langflow":
+                    logger.info(f"Found main langflow pyproject.toml at: {candidate}")
+                    pyproject_path = candidate
+                    dependencies = pyproject_data.get("project", {}).get("dependencies", [])
+                    break
+            except Exception:
+                logger.debug(f"Could not read {candidate}, trying next")
+                continue
         else:
+            from langflow.api.v1.packages import _find_project_root  # local import to avoid global dependency cycles
+
             logger.warning("Could not find main langflow pyproject.toml")
             pyproject_path = _find_project_root() / "pyproject.toml"
+            if not pyproject_path.exists():
+                logger.warning(f"pyproject.toml not found at {pyproject_path}")
+                return set()
+            with pyproject_path.open("rb") as f:
+                pyproject_data = tomllib.load(f)
+            dependencies = pyproject_data.get("project", {}).get("dependencies", [])
 
-        if not pyproject_path.exists():
-            logger.warning(f"pyproject.toml not found at {pyproject_path}")
-            return set()
-
-        # Read and parse pyproject.toml
-        with pyproject_path.open("rb") as f:
-            pyproject_data = tomllib.load(f)
-
-        dependencies = pyproject_data.get("project", {}).get("dependencies", [])
-
-        # Extract base package names from dependency specifications
-        core_packages = set()
-        for dep in dependencies:
-            # Remove version specifiers and extras to get base package name
-            # Handle patterns like: package>=1.0.0, package[extra]>=1.0.0, package==1.0.0; condition
-            base_name = re.split(r"[<>=!~\[\];]", dep)[0].strip()
-            if base_name:
-                core_packages.add(base_name.lower())
-
+        # Extract base package names fast
+        core_packages = {_DEP_NAME_RE.split(dep, 1)[0].strip().lower() for dep in dependencies if dep}
         logger.info(f"Found {len(core_packages)} core dependencies in pyproject.toml")
-        return core_packages  # noqa: TRY300
+        return core_packages
 
-    except (OSError, tomllib.TOMLDecodeError) as e:
+    except Exception as e:
         logger.error(f"Failed to read core dependencies from pyproject.toml: {e}")
-        # Return a minimal set of critical packages to prevent catastrophic failures
-        return {
-            "requests",
-            "openai",
-            "langchain",
-            "langchain-core",
-            "langchain-openai",
-            "fastapi",
-            "uvicorn",
-            "sqlmodel",
-            "pydantic",
-            "langflow-base",
-        }
+        return set(_FALLBACK_CORE_DEPS)
 
 
 def _is_core_dependency(package_name: str) -> bool:
     """Check if a package is a core dependency that should not be uninstalled."""
-    core_deps = _get_core_dependencies()
-    return package_name.lower() in core_deps
+    return package_name.lower() in _get_core_dependencies()
 
 
 async def _get_system_dependencies() -> set[str]:
@@ -997,3 +974,19 @@ async def get_installed_packages(
     except (OSError, RuntimeError) as e:
         logger.error(f"Error getting installed packages: {e}")
         raise HTTPException(status_code=500, detail="Failed to get installed packages") from e
+
+
+_DEP_NAME_RE = re.compile(r"[<>=!~\[\];]")
+
+_FALLBACK_CORE_DEPS = {
+    "requests",
+    "openai",
+    "langchain",
+    "langchain-core",
+    "langchain-openai",
+    "fastapi",
+    "uvicorn",
+    "sqlmodel",
+    "pydantic",
+    "langflow-base",
+}
