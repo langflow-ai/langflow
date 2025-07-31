@@ -36,19 +36,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Transform dependencies to simulate release build
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "🔧 Transforming workspace dependencies to published packages..."
-          # Use latest published versions for transformation
-          BASE_VERSION=$(python scripts/ci/pypi_nightly_tag.py base | sed 's/^v//')
-          MAIN_VERSION=$(python scripts/ci/pypi_nightly_tag.py main | sed 's/^v//')
-          echo "Using base version: $BASE_VERSION"
-          echo "Using main version: $MAIN_VERSION"
-          
-          # Transform dependencies like nightly builds do
-          python scripts/ci/update_pyproject_combined.py main "v$MAIN_VERSION" "v$BASE_VERSION"
-          echo "✅ Dependencies transformed to use published packages"
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -63,13 +50,18 @@ jobs:
         run: make build_frontend
       - name: Build base package
         run: make build_langflow_base args="--wheel"
+      - name: Move base package to correct directory
+        run: |
+          # Base package builds to dist/ but should be in src/backend/base/dist/
+          mkdir -p src/backend/base/dist
+          mv dist/langflow_base*.whl src/backend/base/dist/
       - name: Build main package
         run: make build_langflow args="--wheel"
       - name: Upload base artifact
         uses: actions/upload-artifact@v4
         with:
           name: adhoc-dist-base
-          path: /home/runner/work/langflow/langflow/dist
+          path: src/backend/base/dist
       - name: Upload main artifact
         uses: actions/upload-artifact@v4
         with:
