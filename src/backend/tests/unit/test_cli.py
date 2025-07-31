@@ -76,8 +76,8 @@ class TestSuperuserCommand:
             result = runner.invoke(app, ["superuser"], input="newuser\nnewpass\n", catch_exceptions=True)
 
             assert result.exit_code == 1
-            assert "Error: Creating a superuser requires authentication." in result.stdout
-            assert "Please provide --auth-token" in result.stdout
+            assert "Error: Creating a superuser requires authentication." in result.output
+            assert "Please provide --auth-token" in result.output
 
     def test_additional_superuser_blocked_in_auto_login_mode(self, runner):
         """Test additional superuser creation blocked when AUTO_LOGIN=true."""
@@ -94,8 +94,8 @@ class TestSuperuserCommand:
             result = runner.invoke(app, ["superuser"], input="newuser\nnewpass\n", catch_exceptions=True)
 
             assert result.exit_code == 1
-            assert "Error: Cannot create additional superusers when AUTO_LOGIN is enabled." in result.stdout
-            assert "AUTO_LOGIN mode is for development with only the default superuser." in result.stdout
+            assert "Error: Cannot create additional superusers when AUTO_LOGIN is enabled." in result.output
+            assert "AUTO_LOGIN mode is for development with only the default superuser." in result.output
 
     def test_cli_disabled_blocks_creation(self, runner):
         """Test ENABLE_SUPERUSER_CLI=false blocks superuser creation."""
@@ -110,8 +110,8 @@ class TestSuperuserCommand:
             result = runner.invoke(app, ["superuser"], input="admin\npassword\n", catch_exceptions=True)
 
             assert result.exit_code == 1
-            assert "Error: Superuser creation via CLI is disabled." in result.stdout
-            assert "Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature." in result.stdout
+            assert "Error: Superuser creation via CLI is disabled." in result.output
+            assert "Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature." in result.output
 
     @pytest.mark.skip(reason="Skip -- default superuser is created by initialize_services() function")
     def test_auto_login_forces_default_credentials(self, runner):
@@ -132,9 +132,9 @@ class TestSuperuserCommand:
                 catch_exceptions=True,
             )
 
-            assert result.exit_code == 0, f"Exit code: {result.exit_code}, Output: {result.stdout}"
-            assert "AUTO_LOGIN enabled. Creating default superuser 'langflow'..." in result.stdout
-            assert "Default credentials are langflow/langflow" in result.stdout
+            assert result.exit_code == 0, f"Exit code: {result.exit_code}, Output: {result.output}"
+            assert "AUTO_LOGIN enabled. Creating default superuser 'langflow'..." in result.output
+            assert "Default credentials are langflow/langflow" in result.output
 
     def test_failed_auth_token_validation(self, runner):
         """Test failed superuser creation with invalid auth token."""
@@ -157,5 +157,5 @@ class TestSuperuserCommand:
             assert result.exit_code == 1
             assert (
                 "Error: Invalid token or insufficient privileges. Only superusers can create other superusers."
-                in result.stdout
+                in result.output
             )
