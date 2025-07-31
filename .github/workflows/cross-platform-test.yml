@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.test-from-pypi == false) ||
-      (github.event_name == 'workflow_call' && (inputs.base-artifact-name == '' || inputs.main-artifact-name == ''))
+      (github.event_name == 'workflow_call' && inputs.base-artifact-name == '' && inputs.main-artifact-name == '')
     outputs:
       base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
@@ -150,6 +150,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
+          ignore-empty-workdir: true
 
       # Download artifacts for wheel installation
       - name: Download base package artifact
@@ -278,12 +279,14 @@ jobs:
       - name: Test server startup (Windows)
         if: matrix.os == 'windows'
         timeout-minutes: ${{ inputs.test-timeout }}
+        env:
+          TIMEOUT_MINUTES: ${{ inputs.test-timeout }}
         run: |
           # Start server in background
           $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
 
           # Wait for server to be ready
-          $timeoutSeconds = ${{ inputs.test-timeout }} * 60
+          $timeoutSeconds = $env:TIMEOUT_MINUTES * 60
           $elapsed = 0
           do {
             try {
@@ -310,13 +313,15 @@ jobs:
       - name: Test server startup (Unix)
         if: matrix.os != 'windows'
         timeout-minutes: ${{ inputs.test-timeout }}
+        env:
+          TIMEOUT_MINUTES: ${{ inputs.test-timeout }}
         run: |
           # Start server in background
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
 
           # Wait for server to be ready (using bash loop instead of timeout command)
-          TIMEOUT_SECONDS=$((${{ inputs.test-timeout }} * 60))
+          TIMEOUT_SECONDS=$((TIMEOUT_MINUTES * 60))
           ELAPSED=0
           while [ $ELAPSED -lt $TIMEOUT_SECONDS ]; do
             if curl -f http://localhost:7860/health_check >/dev/null 2>&1; then
