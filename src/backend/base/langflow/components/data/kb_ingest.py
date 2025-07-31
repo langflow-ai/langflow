@@ -13,19 +13,10 @@ import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
-from platformdirs import user_cache_dir
 
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.custom import Component
-from langflow.io import (
-    BoolInput,
-    DataFrameInput,
-    DropdownInput,
-    IntInput,
-    SecretStrInput,
-    StrInput,
-    TableInput,
-)
+from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
@@ -35,8 +26,8 @@ from langflow.services.deps import get_settings_service
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
-KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
-KNOWLEDGE_BASES_ROOT_PATH = Path(KNOWLEDGE_BASES_DIR).expanduser()
+settings = get_settings_service().settings
+KNOWLEDGE_BASES_ROOT_PATH = Path(settings.knowledge_bases_dir).expanduser()
 
 
 class KBIngestionComponent(Component):
@@ -81,6 +72,7 @@ class KBIngestionComponent(Component):
                                 display_name="API Key",
                                 info="Provider API key for embedding model",
                                 required=True,
+                                load_from_db=True,
                             ),
                         },
                     },
@@ -154,13 +146,6 @@ class KBIngestionComponent(Component):
             advanced=True,
             value=1000,
         ),
-        StrInput(
-            name="kb_root_path",
-            display_name="KB Root Path",
-            info="Root directory for knowledge bases (defaults to ~/.langflow/knowledge_bases)",
-            advanced=True,
-            value=KNOWLEDGE_BASES_DIR,
-        ),
         SecretStrInput(
             name="api_key",
             display_name="Embedding Provider API Key",
@@ -175,36 +160,15 @@ class KBIngestionComponent(Component):
             advanced=True,
             value=False,
         ),
-        BoolInput(
-            name="silent_errors",
-            display_name="Silent Errors",
-            info="Continue processing even if some operations fail",
-            advanced=True,
-            value=False,
-        ),
     ]
 
     # ------ Outputs -------------------------------------------------------
-    outputs = []
+    outputs = [Output(display_name="DataFrame", name="dataframe", method="build_kb_info")]
 
     # ------ Internal helpers ---------------------------------------------
     def _get_kb_root(self) -> Path:
-        """Get KB root path with File Component pattern."""
-        if self.kb_root_path:
-            return Path(self._resolve_path(self.kb_root_path))
-        return Path.home() / ".langflow" / "knowledge_bases"
-
-    def _resolve_path(self, path: str) -> str:
-        """Resolves the path to an absolute path."""
-        if not path:
-            return path
-        path_object = Path(path)
-
-        if path_object.parts and path_object.parts[0] == "~":
-            path_object = path_object.expanduser()
-        elif path_object.is_relative_to("."):
-            path_object = path_object.resolve()
-        return str(path_object)
+        """Return the root directory for knowledge bases."""
+        return KNOWLEDGE_BASES_ROOT_PATH
 
     def _validate_column_config(self, df_source: pd.DataFrame) -> list[dict[str, Any]]:
         """Validate column configuration using Structured Output patterns."""
@@ -221,9 +185,8 @@ class KBIngestionComponent(Component):
             col_name = config.get("column_name")
             if col_name not in df_columns:
                 msg = f"Column '{col_name}' not found in DataFrame. Available columns: {sorted(df_columns)}"
-                if not self.silent_errors:
-                    raise ValueError(msg)
                 self.log(f"Warning: {msg}")
+                raise ValueError(msg)
 
         return config_list
 
@@ -370,11 +333,8 @@ class KBIngestionComponent(Component):
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
-            # Set up vector store directory (following Local DB pattern)
-            if self.kb_root_path:
-                base_dir = Path(self._resolve_path(self.kb_root_path))
-            else:
-                base_dir = Path(user_cache_dir("langflow", "langflow"))
+            # Set up vector store directory
+            base_dir = self._get_kb_root()
 
             vector_store_dir = base_dir / self.knowledge_base
             vector_store_dir.mkdir(parents=True, exist_ok=True)
@@ -412,11 +372,8 @@ class KBIngestionComponent(Component):
         """Convert DataFrame to Data objects for vector store."""
         data_objects: list[Data] = []
 
-        # Set up vector store directory (following Local DB pattern)
-        if self.kb_root_path:
-            base_dir = Path(self._resolve_path(self.kb_root_path))
-        else:
-            base_dir = Path(user_cache_dir("langflow", "langflow"))
+        # Set up vector store directory
+        base_dir = self._get_kb_root()
 
         # If we don't allow duplicates, we need to get the existing hashes
         chroma = Chroma(
@@ -532,10 +489,10 @@ class KBIngestionComponent(Component):
                 settings_service = get_settings_service()
                 metadata = json.loads(metadata_path.read_text())
                 embedding_model = metadata.get("embedding_model")
-            try:
-                api_key = decrypt_api_key(metadata["api_key"], settings_service)
-            except (InvalidToken, TypeError, ValueError) as e:
-                logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+                try:
+                    api_key = decrypt_api_key(metadata["api_key"], settings_service)
+                except (InvalidToken, TypeError, ValueError) as e:
+                    logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
 
             # Check if a custom API key was provided, update metadata if so
             if self.api_key:
@@ -582,7 +539,7 @@ class KBIngestionComponent(Component):
             A list of knowledge base names.
         """
         # Return the list of directories in the knowledge base root path
-        kb_root_path = Path(self.kb_root_path).expanduser()
+        kb_root_path = self._get_kb_root()
 
         if not kb_root_path.exists():
             return []
@@ -608,7 +565,7 @@ class KBIngestionComponent(Component):
                 embed_model.embed_query("test")
 
                 # Create the new knowledge base directory
-                kb_path = Path(KNOWLEDGE_BASES_ROOT_PATH, field_value["01_new_kb_name"]).expanduser()
+                kb_path = KNOWLEDGE_BASES_ROOT_PATH / field_value["01_new_kb_name"]
                 kb_path.mkdir(parents=True, exist_ok=True)
 
                 # Save the embedding metadata
