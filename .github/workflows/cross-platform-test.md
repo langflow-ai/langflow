@@ -160,6 +160,40 @@ test-installation:
       if: steps.install-method.outputs.method == 'wheel'
 ```
 
+## Known Issues
+
+### macOS AMD64 Python 3.13 Compilation Failures
+
+**Issue**: Nightly/release builds may fail on macOS AMD64 with Python 3.13 due to `chroma-hnswlib` compilation errors:
+```
+clang: error: unsupported argument 'native' to option '-march='
+error: command '/usr/bin/clang++' failed with exit code 1
+```
+
+**Root Cause**: Systematic difference in dependency resolution between workspace builds vs published packages:
+
+| Build Type | Package Source | Dependencies | chromadb | Result |
+|------------|----------------|--------------|----------|---------|
+| **Manual/Source** | Workspace (`langflow-base = { workspace = true }`) | 162 packages | ❌ Not included | ✅ Success |
+| **Nightly/Release** | Published (`langflow-base-nightly==0.5.0.dev21`) | 420 packages | ✅ Included | ❌ Compilation fails |
+
+**Technical Details**:
+1. **Workspace builds** use local `src/backend/base/pyproject.toml` which excludes `chromadb`
+2. **Nightly builds** modify dependencies via `scripts/ci/update_uv_dependency.py`:
+   - Changes: `langflow-base~=0.5.0` → `langflow-base-nightly==0.5.0.dev21`
+   - Uses published PyPI package with full dependency tree including `chromadb==0.5.23`
+3. **macOS clang** doesn't support `-march=native` flag used by `chroma-hnswlib` compilation
+
+**Workarounds**:
+- Manual testing (source builds) works consistently
+- Issue only affects nightly/release automated builds
+- Some runs may succeed if compatible `chroma-hnswlib` wheels are available on PyPI
+
+**Files Involved**:
+- `scripts/ci/update_uv_dependency.py` - Modifies dependency resolution
+- `scripts/ci/update_pyproject_combined.py` - Orchestrates nightly build changes
+- `pyproject.toml` vs `src/backend/base/pyproject.toml` - Different dependency trees
+
 ## Results
 
 - ✅ **Success**: All platforms pass installation and basic functionality
