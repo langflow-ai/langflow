@@ -1,5 +1,6 @@
 import asyncio
 import platform
+import re
 import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
@@ -54,15 +55,14 @@ class InstalledPackage(BaseModel):
 def _find_project_root() -> Path:
     """Find project root by looking for pyproject.toml or setup.py."""
     current_path = Path(__file__).resolve()
+    project_markers = {"pyproject.toml", "setup.py", "requirements.txt", ".git"}
 
-    # Start from current file and go up the directory tree
-    for parent in [current_path, *list(current_path.parents)]:
-        # Look for common project root indicators
-        if any((parent / marker).exists() for marker in ["pyproject.toml", "setup.py", "requirements.txt", ".git"]):
+    # Check each parent including self; stop at first found
+    for parent in (current_path,) + tuple(current_path.parents):
+        if any((parent / marker).exists() for marker in project_markers):
             logger.info(f"Found project root at: {parent}")
             return parent
 
-    # Fallback to current working directory
     logger.warning("Could not find project root, using current working directory")
     return Path.cwd()
 
@@ -125,61 +125,54 @@ def _validate_package_name(package_name: str) -> bool:
 def _get_core_dependencies() -> set[str]:
     """Get the list of core dependencies from pyproject.toml to prevent accidental removal."""
     try:
-        import re
-        from pathlib import Path
-
         import tomllib
 
-        # Find the main project root (not the backend base)
-        # Look for the main pyproject.toml with langflow project configuration
         current_path = Path(__file__).resolve()
-
-        # Go up from the current file to find the main project root
-        for parent in [current_path, *list(current_path.parents)]:
-            pyproject_path = parent / "pyproject.toml"
-            if pyproject_path.exists():
-                # Check if this is the main langflow pyproject.toml
+        pyproject_path = None
+        pyproject_data = None
+        # Only check pyproject.toml in each parent path, not re-parsing multiple times
+        for parent in (current_path,) + tuple(current_path.parents):
+            candidate = parent / "pyproject.toml"
+            if candidate.exists():
                 try:
-                    with pyproject_path.open("rb") as f:
-                        pyproject_data = tomllib.load(f)
-
-                    # Check if this is the main langflow project
-                    project_name = pyproject_data.get("project", {}).get("name", "")
-                    if project_name == "langflow":
-                        logger.info(f"Found main langflow pyproject.toml at: {pyproject_path}")
+                    with candidate.open("rb") as f:
+                        data = tomllib.load(f)
+                    project = data.get("project")
+                    # Check for main langflow project name
+                    if project and project.get("name") == "langflow":
+                        logger.info(f"Found main langflow pyproject.toml at: {candidate}")
+                        pyproject_path = candidate
+                        pyproject_data = data
                         break
                 except (OSError, tomllib.TOMLDecodeError):
-                    logger.debug(f"Could not read {pyproject_path}, trying next")
-                    continue
+                    logger.debug(f"Could not read {candidate}, trying next")
         else:
-            logger.warning("Could not find main langflow pyproject.toml")
+            # Fallback if not found
             pyproject_path = _find_project_root() / "pyproject.toml"
+            if not pyproject_path.exists():
+                logger.warning(f"pyproject.toml not found at {pyproject_path}")
+                return set()
+            with pyproject_path.open("rb") as f:
+                pyproject_data = tomllib.load(f)
 
-        if not pyproject_path.exists():
-            logger.warning(f"pyproject.toml not found at {pyproject_path}")
-            return set()
+        # Read dependencies from pyproject.toml dict (already loaded)
+        dependencies = []
+        if pyproject_data is not None:
+            project = pyproject_data.get("project")
+            if project is not None:
+                dependencies = project.get("dependencies", [])
 
-        # Read and parse pyproject.toml
-        with pyproject_path.open("rb") as f:
-            pyproject_data = tomllib.load(f)
-
-        dependencies = pyproject_data.get("project", {}).get("dependencies", [])
-
-        # Extract base package names from dependency specifications
-        core_packages = set()
-        for dep in dependencies:
-            # Remove version specifiers and extras to get base package name
-            # Handle patterns like: package>=1.0.0, package[extra]>=1.0.0, package==1.0.0; condition
-            base_name = re.split(r"[<>=!~\[\];]", dep)[0].strip()
-            if base_name:
-                core_packages.add(base_name.lower())
+        # Use precompiled regex to extract base names efficiently
+        core_packages = set(
+            _DEP_BASE_NAME_RE.split(dep)[0].strip().lower() for dep in dependencies if dep and dep.strip()
+        )
 
         logger.info(f"Found {len(core_packages)} core dependencies in pyproject.toml")
         return core_packages  # noqa: TRY300
 
-    except (OSError, tomllib.TOMLDecodeError) as e:
+    except (OSError, ImportError, Exception) as e:  # Also catch ImportError for tomllib
         logger.error(f"Failed to read core dependencies from pyproject.toml: {e}")
-        # Return a minimal set of critical packages to prevent catastrophic failures
+        # Return minimal fallback critical packages to prevent catastrophic failures
         return {
             "requests",
             "openai",
@@ -997,3 +990,6 @@ async def get_installed_packages(
     except (OSError, RuntimeError) as e:
         logger.error(f"Error getting installed packages: {e}")
         raise HTTPException(status_code=500, detail="Failed to get installed packages") from e
+
+
+_DEP_BASE_NAME_RE = re.compile(r"[<>=!~\[\];]")
