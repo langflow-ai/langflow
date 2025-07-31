@@ -43,7 +43,6 @@ uv venv
 uv pip install langflow -U
 ```
 
-
 2. To run Langflow, run:
 
 ```shell
