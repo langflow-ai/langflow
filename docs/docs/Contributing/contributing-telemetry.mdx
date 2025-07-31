@@ -24,7 +24,7 @@ Langflow telemetry collects data on flow runs, your environment, and component u
 
 ### Run
 
-This is a telemetry event that gets sent every time a flow is executed.
+This telemetry event is sent every time a flow is executed.
 
 - **IsWebhook**: Indicates whether the operation was triggered with a webhook.
 - **Seconds**: Duration in seconds for how long the operation lasted, providing insights into performance.
@@ -39,7 +39,7 @@ This telemetry event captures information about application lifecycle and runtim
 
 ### Version
 
-This event is sent once when the telemetry service starts.
+This telemetry event is sent once when the telemetry service starts.
 
 - **Version**: The specific version of Langflow used, which helps in tracking feature adoption and compatibility.
 - **Platform**: Operating system of the host machine, which helps determine the most popular platforms for development and testing efforts.
@@ -52,7 +52,7 @@ This event is sent once when the telemetry service starts.
 
 ### Playground
 
-This event monitors performance and usage patterns in the Playground environment.
+This telemetry event monitors performance and usage patterns in the Playground environment.
 
 - **Seconds**: Duration in seconds for Playground execution, offering insights into performance during testing or experimental stages.
 - **ComponentCount**: Number of components used in the Playground, which helps understand complexity and usage patterns.
@@ -60,7 +60,7 @@ This event monitors performance and usage patterns in the Playground environment
 
 ### Component
 
-This event is sent for each component execution.
+This telemetry event is sent for each component execution.
 
 - **Name**: Identifies the component, providing data on which components are most utilized or prone to issues.
 - **Seconds**: Time taken by the component to execute, offering performance metrics.
