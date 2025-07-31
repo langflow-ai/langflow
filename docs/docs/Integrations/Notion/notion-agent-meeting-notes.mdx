@@ -42,7 +42,7 @@ This component allows users to input the meeting transcript directly into the fl
   - Sort Direction
 - **Output**: List of database data
 
-### Prompt
+### Prompt Template
 
 This component creates a dynamic prompt template using the following inputs:
 - Meeting Transcript
@@ -54,7 +54,7 @@ This component creates a dynamic prompt template using the following inputs:
 
 - **Purpose**: Analyzes the meeting transcript and identifies tasks and action items.
 - **Inputs**:
-  - System Prompt (from the Prompt component)
+  - System Prompt (from the **Prompt Template** component)
   - Language Model (OpenAI)
   - Tools:
     - Notion Search
@@ -69,7 +69,7 @@ This component creates a dynamic prompt template using the following inputs:
 
 - **Purpose**: Executes actions in Notion based on the meeting summary.
 - **Inputs**:
-  - System Prompt (from the second Prompt component)
+  - System Prompt (from the second **Prompt Template** component)
   - Language Model (OpenAI)
   - Tools:
     - List Database Properties
@@ -131,12 +131,12 @@ Displays the final output of the Notion Agent in the Playground.
 To run the Notion Agent for Meeting Notes:
 
 1. Open Langflow and create a new project.
-2. Add the components listed above to your flow canvas, or download the [Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)(Download link) and **Import** the JSON file into Langflow.
+2. Add the components listed above to your flow, or [download the Meeting Agent flow JSON](./Meeting_Notes_Agent.json) and then [import the flow](/concepts-flows-import) into your Langflow project.
 3. Connect the components as shown in the flow diagram.
 4. Input the Notion and OpenAI API keys in their respective components.
-5. Paste your meeting transcript into the Meeting Transcript component.
+5. Paste your meeting transcript into the **Meeting Transcript** component.
 6. Run the flow by clicking <Icon name="Play" aria-hidden="True" /> **Run component** on the **Chat Output** component.
-7. Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.
+7. Review the output in the **Chat Output** component, which will summarize the actions taken in your Notion workspace.
 
 For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.
 
