@@ -217,6 +217,12 @@ jobs:
 
       - name: Install main package from wheel (Unix)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
+        env:
+          # Fix chroma-hnswlib compilation on macOS by overriding problematic compiler flags
+          CFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64' || '' }}
+          CXXFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64 -stdlib=libc++' || '' }}
+          # Alternative: Force use of compatible architecture flags
+          ARCHFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-arch x86_64' || '' }}
         run: |
           ls -la ./main-dist/
           find ./main-dist -name "*.whl" -type f
@@ -242,6 +248,12 @@ jobs:
 
       - name: Install langflow from PyPI (Unix)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os != 'windows'
+        env:
+          # Fix chroma-hnswlib compilation on macOS by overriding problematic compiler flags
+          CFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64' || '' }}
+          CXXFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-O3 -mmacosx-version-min=10.7 -march=x86-64 -stdlib=libc++' || '' }}
+          # Alternative: Force use of compatible architecture flags
+          ARCHFLAGS: ${{ matrix.os == 'macos' && matrix.python-version == '3.13' && '-arch x86_64' || '' }}
         run: |
           if [ -n "${{ inputs.langflow-version }}" ]; then
             uv pip install --python ./test-env/bin/python langflow==${{ inputs.langflow-version }}
@@ -278,9 +290,9 @@ jobs:
 
       - name: Test server startup (Windows)
         if: matrix.os == 'windows'
-        timeout-minutes: ${{ inputs.test-timeout }}
+        timeout-minutes: ${{ inputs.test-timeout || 5 }}
         env:
-          TIMEOUT_MINUTES: ${{ inputs.test-timeout }}
+          TIMEOUT_MINUTES: ${{ inputs.test-timeout || 5 }}
         run: |
           # Start server in background
           $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
@@ -312,9 +324,9 @@ jobs:
 
       - name: Test server startup (Unix)
         if: matrix.os != 'windows'
-        timeout-minutes: ${{ inputs.test-timeout }}
+        timeout-minutes: ${{ inputs.test-timeout || 5 }}
         env:
-          TIMEOUT_MINUTES: ${{ inputs.test-timeout }}
+          TIMEOUT_MINUTES: ${{ inputs.test-timeout || 5 }}
         run: |
           # Start server in background
           ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
