@@ -7,13 +7,17 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from lfx.components.models.embedding_model import EmbeddingModelComponent
     from lfx.components.models.language_model import LanguageModelComponent
+    from lfx.components.models.models_provider_setup import ModelsProviderSetupComponent
+
 
 _dynamic_imports = {
     "EmbeddingModelComponent": "embedding_model",
     "LanguageModelComponent": "language_model",
+    "ModelsProviderSetupComponent": "models_provider_setup",
+
 }
 
-__all__ = ["EmbeddingModelComponent", "LanguageModelComponent"]
+__all__ = ["EmbeddingModelComponent", "LanguageModelComponent", "ModelsProviderSetupComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
