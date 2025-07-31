@@ -43,9 +43,6 @@ uv venv
 uv pip install langflow -U
 ```
 
-```shell
-make build_frontend
-```
 
 2. To run Langflow, run:
 
