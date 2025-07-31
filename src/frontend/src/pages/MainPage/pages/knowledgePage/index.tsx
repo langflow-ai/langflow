@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { useEffect, useRef, useState } from "react";
 import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
 import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
 
@@ -70,7 +70,7 @@ export const KnowledgePage = () => {
       closeDrawer();
     } else {
       setSelectedKnowledgeBase(knowledgeBase);
-      setIsDrawerOpen(true);
+      // setIsDrawerOpen(true);
     }
   };
 
