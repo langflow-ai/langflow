@@ -73,7 +73,7 @@ class TestSuperuserCommand:
             mock_settings2.return_value.auth_settings = mock_auth_settings
 
             # Try to create a superuser without auth - should fail
-            result = runner.invoke(app, ["superuser"], input="newuser\nnewpass\n")
+            result = runner.invoke(app, ["superuser"], input="newuser\nnewpass\n", catch_exceptions=True)
 
             assert result.exit_code == 1
             assert "Error: Creating a superuser requires authentication." in result.stdout
@@ -91,7 +91,7 @@ class TestSuperuserCommand:
             mock_settings2.return_value.auth_settings = mock_auth_settings
 
             # Try to create a superuser - should fail
-            result = runner.invoke(app, ["superuser"], input="newuser\nnewpass\n")
+            result = runner.invoke(app, ["superuser"], input="newuser\nnewpass\n", catch_exceptions=True)
 
             assert result.exit_code == 1
             assert "Error: Cannot create additional superusers when AUTO_LOGIN is enabled." in result.stdout
@@ -107,7 +107,7 @@ class TestSuperuserCommand:
             mock_settings.return_value.auth_settings = mock_auth_settings
             mock_settings2.return_value.auth_settings = mock_auth_settings
 
-            result = runner.invoke(app, ["superuser"], input="admin\npassword\n")
+            result = runner.invoke(app, ["superuser"], input="admin\npassword\n", catch_exceptions=True)
 
             assert result.exit_code == 1
             assert "Error: Superuser creation via CLI is disabled." in result.stdout
@@ -126,7 +126,11 @@ class TestSuperuserCommand:
             mock_settings2.return_value.auth_settings = mock_auth_settings
 
             # Even with custom CLI args, should use defaults in AUTO_LOGIN mode
-            result = runner.invoke(app, ["superuser", "--username", "custom", "--password", "custom123"])
+            result = runner.invoke(
+                app,
+                ["superuser", "--username", "custom", "--password", "custom123"],
+                catch_exceptions=True,
+            )
 
             assert result.exit_code == 0, f"Exit code: {result.exit_code}, Output: {result.stdout}"
             assert "AUTO_LOGIN enabled. Creating default superuser 'langflow'..." in result.stdout
@@ -145,7 +149,9 @@ class TestSuperuserCommand:
 
             # Tyy to create a superuser with invalid token - should fail
             result = runner.invoke(
-                app, ["superuser", "--auth-token", "invalid-token", "--username", "newuser", "--password", "newpass"]
+                app,
+                ["superuser", "--auth-token", "invalid-token", "--username", "newuser", "--password", "newpass"],
+                catch_exceptions=True,
             )
 
             assert result.exit_code == 1
