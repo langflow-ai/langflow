@@ -3,7 +3,6 @@ title: Langflow CLI
 slug: /configuration-cli
 ---
 
-import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
@@ -18,26 +17,17 @@ The Langflow CLI can be invoked in several ways, depending on your installation 
 
 The recommended approach is to run the CLI with `uv run` from within a virtual environment where Langflow is installed.
 
-If Langflow is installed globally or added to your PATH, you can execute the CLI directly with `langflow`.
-
 For example, to start Langflow on the default port, run the following command:
 
-<Tabs groupId="Invocation">
-  <TabItem value="uv (recommended)" label="uv (recommended)" default>
+    ```bash
+    uv run langflow run
+    ```
 
-```bash
-uv run langflow run
-```
+If Langflow is installed globally or added to your PATH, you can execute the CLI directly with `langflow`.
 
-  </TabItem>
-  <TabItem value="Direct" label="Direct">
-
-```bash
-langflow run
-```
-
-  </TabItem>
-</Tabs>
+    ```bash
+    langflow run
+    ```
 
 ## Precedence
 
