@@ -70,7 +70,7 @@ export const KnowledgePage = () => {
       closeDrawer();
     } else {
       setSelectedKnowledgeBase(knowledgeBase);
-      setIsDrawerOpen(true);
+      // setIsDrawerOpen(true);
     }
   };
 
