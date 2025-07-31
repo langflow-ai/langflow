@@ -25,24 +25,26 @@ Tool names and descriptions can be edited, but the default tool identifiers cann
 
 ## Use an agent as a tool
 
-The agent component itself also supports **Tool Mode** for creating multi-agent flows.
+To create multi-agent flows, you can set another **Agent** component to **Tool Mode**, and then attach that agent as a tool for your primary **Agent** component.
 
-Add an agent to your flow that uses a different OpenAI model for a larger context window.
+To try this for yourself, add an additional agent to the **Simple Agent** template:
 
-1. Create the [Simple agent starter flow](/simple-agent).
-2. Add a second agent component to the flow.
-3. Add your **OpenAI API Key** to the **Agent** component.
-4. In the **Model Name** field, select `gpt-4.1`.
-5. Click **Tool Mode** to use this new agent as a tool.
-6. Connect the new agent's **Toolset** port to the previously created agent's **Tools** port.
-The new agent will use `gpt-4.1` for the larger tasks of scraping and searching information that require large context windows.
-The previously created agent will now use this agent as a tool, with its unique LLM and toolset.
+1. Create a flow based on the **Simple Agent** template.
+2. Add a second **Agent** component to the flow.
+3. Add your **OpenAI API Key** to both **Agent** components.
+4. In the second **Agent** component, change the model to `gpt-4.1`, and then enable **Tool Mode**.
+5. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to set tool names and descriptions that help the primary agent understand how to use those tools.
 
-![Agent as a tool](/img/agent-example-agent-as-tool.png)
+    For this example, change the tool name to `Agent-gpt-41` and set the description to `Use the gpt-4.1 model for complex problem solving`.
+    This lets the primary agent know that this tool uses the `gpt-4.1` model, which could be helpful for tasks requiring a larger context window, such as large scrape and search tasks.
 
-7. The new agent's actions can be edited to help the agent understand how to use it.
-Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify its `name`, `description`, or `enabled` metadata.
-For example, the default tool name is `Agent`. Edit the name to `Agent-gpt-41`, and edit the description to `Use the gpt-4.1 model for complex problem solving`. The connected agent will understand that this is the `gpt-4.1` agent, and will use it for tasks requiring a larger context window.
+    As another example, you could attach several specialized models to a primary agent, such as agents that are trained on certain tasks or domains, and then the primary agent would call each specialized agent as needed to respond to queries.
+
+    You can also enable and disable tools if you want to limit the available toolset.
+
+6. Connect the new agent's **Toolset** port to the existing agent's **Tools** port.
+
+    ![Agent as a tool](/img/agent-example-agent-as-tool.png)
 
 ## Add custom components as tools {#components-as-tools}
 
@@ -176,3 +178,10 @@ The connected flow returns an answer based on your question.
 For example, a Basic Prompting flow connected as a tool returns a different result depending upon its LLM and prompt instructions.
 
 ![Run Flow as tool connected to an agent](/img/agent-example-run-flow-as-tool.png)
+
+## See also
+
+* [**Agent** and **MCP Tools** components](/components-agents)
+* [Use Langflow agents](/agents)
+* [Use Langflow as an MCP client](/mcp-client)
+* [Use Langflow as an MCP server](/mcp-server)

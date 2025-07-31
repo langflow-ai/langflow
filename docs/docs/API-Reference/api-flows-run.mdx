@@ -20,7 +20,7 @@ For more information, see [Generate API code snippets](/concepts-publish#generat
 Execute a specified flow by ID or name.
 Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
-The following example runs a [Basic Prompting](/basic-prompting) flow with flow parameters passed in the request body.
+The following example runs the **Basic Prompting** template flow with flow parameters passed in the request body.
 This flow requires a chat input string (`input_value`), and uses default values for all other parameters.
 
 ```bash
@@ -178,7 +178,8 @@ curl -X POST \
 Use the `/webhook` endpoint to start a flow by sending an HTTP `POST` request.
 
 :::tip
-After you add a **Webhook** component to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook cURL** tab to get an automatically generated `POST /webhook` request for your flow.
+After you add a [**Webhook** component](/components-data#webhook) to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook cURL** tab to get an automatically generated `POST /webhook` request for your flow.
+For more information, see [Trigger flows with webhooks](/webhook).
 :::
 
 ```bash
@@ -200,8 +201,6 @@ curl -X POST \
 ```
 
 </details>
-
-For more information, see [Webhook component](/components-data#webhook) and [Trigger flows with webhooks](/webhook).
 
 ## Deprecated flow trigger endpoints
 
