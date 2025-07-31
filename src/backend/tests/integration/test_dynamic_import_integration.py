@@ -194,7 +194,7 @@ class TestDynamicImportIntegration:
             try:
                 component = helpers.CalculatorComponent
                 results.append(component)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 errors.append(e)
 
         # Create multiple threads accessing the same component

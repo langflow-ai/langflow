@@ -25,7 +25,7 @@ class TestAllModulesImportable:
                 # Verify it's actually a module
                 assert hasattr(category_module, "__name__"), f"Category {category_name} is not a module"
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failed_imports.append(f"{category_name}: {e!s}")
 
         if failed_imports:
@@ -48,13 +48,13 @@ class TestAllModulesImportable:
                             assert callable(component), f"Component {component_name} is not callable"
                             successful_imports += 1
 
-                        except Exception as e:  # noqa: BLE001
+                        except Exception as e:
                             failed_imports.append(f"{category_name}.{component_name}: {e!s}")
                 else:
                     # Category doesn't have __all__, skip
                     continue
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failed_imports.append(f"Category {category_name}: {e!s}")
 
         print(f"Successfully imported {successful_imports} components")  # noqa: T201
@@ -90,7 +90,7 @@ class TestAllModulesImportable:
                     if missing_in_all:
                         failed_mappings.append(f"{category_name}: Missing in __all__: {missing_in_all}")
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failed_mappings.append(f"{category_name}: Error checking mappings: {e!s}")
 
         if failed_mappings:
@@ -116,7 +116,7 @@ class TestAllModulesImportable:
                 assert component is not None
                 assert callable(component)
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failed_imports.append(f"{module_name}.{component_name}: {e!s}")
 
         if failed_imports:
@@ -146,7 +146,7 @@ class TestAllModulesImportable:
                     if not hasattr(category_module, "__dir__"):
                         failed_modules.append(f"{category_name}: Has _dynamic_imports but no __dir__")
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 failed_modules.append(f"{category_name}: Error checking attributes: {e!s}")
 
         if failed_modules:
@@ -170,7 +170,7 @@ class TestAllModulesImportable:
                         first_component_name = category_module.__all__[0]
                         getattr(category_module, first_component_name)
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 pytest.fail(f"Circular import issue with order {order}: {e!s}")
 
     def test_component_access_caching(self):
@@ -266,7 +266,7 @@ class TestSpecificModulePatterns:
                     module = getattr(components, module_name)
                     # Should be able to import even if empty
                     assert module is not None
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     pytest.fail(f"Failed to import potentially empty module {module_name}: {e}")
 
     def test_platform_specific_imports(self):
