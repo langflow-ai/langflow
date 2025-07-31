@@ -20,6 +20,8 @@ To opt out of telemetry, set the `LANGFLOW_DO_NOT_TRACK` or `DO_NOT_TRACK` e
 
 ## Data that Langflow collects
 
+Langflow telemetry collects data on flow runs, your environment, and component usage.
+
 ### Run
 
 - **IsWebhook**: Indicates whether the operation was triggered with a webhook.
@@ -29,18 +31,18 @@ To opt out of telemetry, set the `LANGFLOW_DO_NOT_TRACK` or `DO_NOT_TRACK` e
 
 ### Shutdown
 
-- **Time Running**: Total runtime before shutdown, useful for understanding application lifecycle and optimizing uptime.
+- **Time Running**: Total runtime before shutdown, which is useful for understanding the application lifecycle and optimizing uptime.
 
 ### Version
 
 - **Version**: The specific version of Langflow used, which helps in tracking feature adoption and compatibility.
-- **Platform**: Operating system of the host machine, which aids in focusing our support for popular platforms like Windows, macOS, and Linux.
+- **Platform**: Operating system of the host machine, which helps determine the most popular platforms for development and testing efforts.
 - **Python**: The version of Python used, assisting in maintaining compatibility and support for various Python versions.
 - **Arch**: Architecture of the system, such as x86 or ARM, which helps prioritize hardware optimization and testing in the Langflow codebase.
 - **AutoLogin**: Indicates whether the auto-login feature is enabled, reflecting user preference settings.
 - **CacheType**: Type of caching mechanism used, which impacts performance and efficiency.
-- **BackendOnly**: Boolean indicating whether you are running Langflow in a backend-only mode, useful for understanding deployment configurations.
-- **Desktop**: Indicates whether Langflow is running in desktop mode, helping to understand usage patterns across different deployment types.
+- **BackendOnly**: Boolean indicating whether Langflow is running in backend-only mode, useful for understanding deployment configurations.
+- **Desktop**: Indicates whether Langflow is running in desktop mode (Langflow Desktop), helping to understand usage patterns across different deployment types.
 
 ### Playground
 
