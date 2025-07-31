@@ -90,35 +90,70 @@ jobs:
           echo "  inputs.base-artifact-name: '${{ inputs.base-artifact-name }}'"
           echo "  inputs.main-artifact-name: '${{ inputs.main-artifact-name }}'"
 
-  debug-parameters:
-    name: Debug Parameters
+  resolve-parameters:
+    name: Resolve Parameters
     needs: [build-if-needed]
     if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
     runs-on: ubuntu-latest
+    outputs:
+      base-artifact-name: ${{ steps.resolve.outputs.base-artifact-name }}
+      main-artifact-name: ${{ steps.resolve.outputs.main-artifact-name }}
+      test-timeout: ${{ steps.resolve.outputs.test-timeout }}
     steps:
-      - name: Show parameters being passed to shared workflow
+      - name: Resolve artifact names
+        id: resolve
         run: |
-          echo "Parameters that will be passed to shared workflow:"
-          echo "  install-method: wheel"
-          echo "  test-timeout: ${{ inputs.test-timeout || 5 }}"
-          echo "  base-artifact-name: ${{ inputs.base-artifact-name != '' && inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}"
-          echo "  main-artifact-name: ${{ inputs.main-artifact-name != '' && inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}"
+          # Resolve base artifact name
+          if [ -n "${{ inputs.base-artifact-name }}" ] && [ "${{ inputs.base-artifact-name }}" != "" ]; then
+            BASE_NAME="${{ inputs.base-artifact-name }}"
+          elif [ -n "${{ needs.build-if-needed.outputs.base-artifact-name }}" ]; then
+            BASE_NAME="${{ needs.build-if-needed.outputs.base-artifact-name }}"
+          else
+            BASE_NAME="adhoc-dist-base"
+          fi
+          
+          # Resolve main artifact name
+          if [ -n "${{ inputs.main-artifact-name }}" ] && [ "${{ inputs.main-artifact-name }}" != "" ]; then
+            MAIN_NAME="${{ inputs.main-artifact-name }}"
+          elif [ -n "${{ needs.build-if-needed.outputs.main-artifact-name }}" ]; then
+            MAIN_NAME="${{ needs.build-if-needed.outputs.main-artifact-name }}"
+          else
+            MAIN_NAME="adhoc-dist-main"
+          fi
+          
+          # Resolve test timeout
+          if [ -n "${{ inputs.test-timeout }}" ]; then
+            TIMEOUT="${{ inputs.test-timeout }}"
+          else
+            TIMEOUT="5"
+          fi
+          
+          echo "base-artifact-name=${BASE_NAME}" >> $GITHUB_OUTPUT
+          echo "main-artifact-name=${MAIN_NAME}" >> $GITHUB_OUTPUT
+          echo "test-timeout=${TIMEOUT}" >> $GITHUB_OUTPUT
+          
+          echo "Resolved parameters:"
+          echo "  base-artifact-name: ${BASE_NAME}"
+          echo "  main-artifact-name: ${MAIN_NAME}"
+          echo "  test-timeout: ${TIMEOUT}"
           echo ""
-          echo "Build job results:"
-          echo "  build-if-needed.result: ${{ needs.build-if-needed.result }}"
-          echo "  build-if-needed.outputs.base-artifact-name: ${{ needs.build-if-needed.outputs.base-artifact-name }}"
-          echo "  build-if-needed.outputs.main-artifact-name: ${{ needs.build-if-needed.outputs.main-artifact-name }}"
+          echo "Input values:"
+          echo "  inputs.base-artifact-name: '${{ inputs.base-artifact-name }}'"
+          echo "  inputs.main-artifact-name: '${{ inputs.main-artifact-name }}'"
+          echo "  inputs.test-timeout: '${{ inputs.test-timeout }}'"
+          echo "  build-if-needed.outputs.base-artifact-name: '${{ needs.build-if-needed.outputs.base-artifact-name }}'"
+          echo "  build-if-needed.outputs.main-artifact-name: '${{ needs.build-if-needed.outputs.main-artifact-name }}'"
 
   test-wheel-installation:
     name: Test Wheel Installation
-    needs: [build-if-needed, debug-parameters]
+    needs: [build-if-needed, resolve-parameters]
     if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
     uses: ./.github/workflows/cross-platform-test-shared.yml
     with:
       install-method: "wheel"
-      test-timeout: ${{ inputs.test-timeout || 5 }}
-      base-artifact-name: ${{ inputs.base-artifact-name != '' && inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
-      main-artifact-name: ${{ inputs.main-artifact-name != '' && inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
+      test-timeout: ${{ needs.resolve-parameters.outputs.test-timeout }}
+      base-artifact-name: ${{ needs.resolve-parameters.outputs.base-artifact-name }}
+      main-artifact-name: ${{ needs.resolve-parameters.outputs.main-artifact-name }}
 
   test-summary:
     name: Cross-Platform Test Summary
