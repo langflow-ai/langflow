@@ -151,9 +151,11 @@ jobs:
     uses: ./.github/workflows/cross-platform-test-shared.yml
     with:
       install-method: "wheel"
-      test-timeout: ${{ needs.resolve-parameters.outputs.test-timeout }}
-      base-artifact-name: ${{ needs.resolve-parameters.outputs.base-artifact-name }}
-      main-artifact-name: ${{ needs.resolve-parameters.outputs.main-artifact-name }}
+      test-timeout: 5
+      langflow-version: ""
+      base-artifact-name: "adhoc-dist-base"
+      main-artifact-name: "adhoc-dist-main"
+      run-id: ""
 
   test-summary:
     name: Cross-Platform Test Summary
