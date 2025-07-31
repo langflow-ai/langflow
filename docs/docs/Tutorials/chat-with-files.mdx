@@ -15,44 +15,47 @@ The main focus of this tutorial is to show you how to provide files as input to 
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
-- [A Langflow API key](/configuration-api-keys)
-- [An OpenAI API key](https://platform.openai.com/api-keys)
+* [Install and start Langflow](/get-started-installation)
+* Create a [Langflow API key](/api-keys-and-authentication)
+* Create an [OpenAI API key](https://platform.openai.com/api-keys)
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
 ## Create a flow that accepts file input
 
-To ingest files, your flow must have a **File** component attached to a component that receives input, such as a **Prompt** or **Agent** component.
+To ingest files, your flow must have a **File** component attached to a component that receives input, such as a **Prompt Template** or **Agent** component.
 
-The following steps modify the [**Basic prompting**](/basic-prompting) template to accept file input:
+The following steps modify the **Basic Prompting** template to accept file input:
 
-1. In Langflow, click **New Flow**, and then select the **Basic prompting** template.
+1. In Langflow, click **New Flow**, and then select the **Basic Prompting** template.
 2. In the **Language Model** component, enter your OpenAI API key.
 
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 3. To verify that your API key is valid, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question.
-The LLM should respond according to the specifications in the **Prompt** component's **Template** field.
-4. Exit the **Playground**, and then modify the **Prompt** component to accept file input in addition to chat input.
+The LLM should respond according to the specifications in the **Prompt Template** component's **Template** field.
+4. Exit the **Playground**, and then modify the **Prompt Template** component to accept file input in addition to chat input.
 To do this, edit the **Template** field, and then replace the default prompt with the following text:
+
     ```text
     ChatInput:
     {chat-input}
     File:
     {file}
     ```
-    The **Prompt** component gets a new input port for each value in curly braces. At this point, your **Prompt** component should have **chat-input** and **file** input ports.
 
     :::tip
-    Within the curly braces, you can use any port name you like. For this tutorial, the ports are named after the components that connect to them.
+    You can use any string to name your template variables.
+    These strings become the names of the fields (input ports) on the **Prompt Template** component.
+
+    For this tutorial, the variables are named after the components that connect to them: **chat-input** for the **Chat Input** component and **file** for the **File** component.
     :::
 
-5. Add a [File component](/components-data#file) to the flow, and then connect the **Raw Content** output port to the Prompt component's **file** input port.
+5. Add a [**File** component](/components-data#file) to the flow, and then connect the **Raw Content** output port to the **Prompt Template** component's **file** input port.
 To connect ports, click and drag from one port to the other.
 
     You can add files directly to the file component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
 
-    At this point your flow has five components. The Chat Input and File components are connected to the Prompt component's input ports. Then, the Prompt component's output port is connected to the Language Model component's input port. Finally, the Language Model component's output port is connected to the Chat Output component, which returns the final response to the user.
+    At this point your flow has five components. The Chat Input and File components are connected to the **Prompt Template** component's input ports. Then, the **Prompt Template** component's output port is connected to the Language Model component's input port. Finally, the Language Model component's output port is connected to the Chat Output component, which returns the final response to the user.
 
     ![File loader chat flow](/img/tutorial-chat-file-loader.png)
 
@@ -78,7 +81,7 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
     * `FILE_COMPONENT_ID`: The UUID of the File component in your flow, such as `File-KZP68`. To find the component ID, open your flow in Langflow, click the File component, and then click **Controls**.
     * `CHAT_INPUT`: The message you want to send to the Chat Input of your flow, such as `Evaluate this resume for a job opening in my Marketing department.`
     * `FILE_NAME` and `FILE_PATH`: The name and path to the local file that you want to send to your flow.
-    * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/configuration-api-keys).
+    * `LANGFLOW_API_KEY`: A valid [Langflow API key](/api-keys-and-authentication).
 
 2. Copy the following script into a Python file, and then replace the placeholders with the information you gathered in the previous step:
 

@@ -14,7 +14,7 @@ Other types of storage, like traditional structured databases and chat memory, a
 ## Use a vector store component in a flow
 
 :::tip
-For examples of vector store components in flows, see [Create a vector RAG chatbot](/chat-with-rag) and [Embedding Model components](/components-embedding-models).
+For examples of vector store components in flows, see [Create a vector RAG chatbot](/chat-with-rag) and [**Embedding Model** components](/components-embedding-models).
 :::
 
 This example uses the **Chroma DB** vector store component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The vector store component generates embeddings with the connected [model](/components-models) component, and stores them in the connected vector database.
@@ -50,14 +50,14 @@ This component implements an [Astra DB Serverless vector store](https://docs.dat
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| token | Astra DB Application Token | The authentication token for accessing Astra DB. |
+| token | Astra DB Application Token | An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. |
 | environment | Environment | The environment for the Astra DB API Endpoint. For example, `dev` or `prod`. |
-| database_name | Database | The database name for the Astra DB instance. |
+| database_name | Database | The name of the database that you want this component to connect to, or select **New Database** to create a new database. To create a new database, you must provide the database details, and then wait for the database to initialize. |
 | api_endpoint | Astra DB API Endpoint | The API endpoint for the Astra DB instance. This supersedes the database selection. |
-| collection_name | Collection | The name of the collection within Astra DB where the vectors are stored. |
+| collection_name | Collection | The name of the collection that you want to use with this flow, or click **New Collection** to create a new collection. |
 | keyspace | Keyspace | An optional keyspace within Astra DB to use for the collection. |
-| embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra vectorize. |
-| embedding_model | Embedding Model | Specify the embedding model. Not required for Astra vectorize collections. |
+| embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra vectorize. If the collection has a vectorize integration, **Astra Vectorize** can be selected automatically. |
+| embedding_model | Embedding Model | Specify the embedding model. Not required if the embedding choice is **Astra Vectorize** because the component automatically uses the integrated model. |
 | number_of_results | Number of Search Results | The number of search results to return. Default:`4`. |
 | search_type | Search Type | The search type to use. The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
 | search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
@@ -90,7 +90,7 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
     With vectorize, the embedding model you choose when you create a collection cannot be changed later.
     :::
 
-For an example of using the **Astra DB** component with an embedding model, see the [**Vector Store RAG** template](/vector-store-rag).
+For an example of using the **Astra DB** component with an embedding model, see the **Vector Store RAG** template.
 
 ### Hybrid search
 

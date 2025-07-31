@@ -104,7 +104,7 @@ The following example flows show how to use the **CleanlabEvaluator** and **Clea
 ### Evaluate and remediate responses from an LLM
 
 :::tip
-You can [download the the Evaluate and Remediate flow](./eval_and_remediate_cleanlab.json), and then import it to your Langflow instance to follow along.
+You can [download the Evaluate and Remediate flow](./eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance to follow along.
 :::
 
 This flow evaluates and remediates the trustworthiness of a response from any LLM using the **CleanlabEvaluator** and **CleanlabRemediator** components.
@@ -127,13 +127,12 @@ To hide untrustworthy responses, configure the **CleanlabRemediator** component 
 
 ### Evaluate RAG pipeline
 
-This example flow includes the [Vector Store RAG](/vector-store-rag) template with the **CleanlabRAGEvaluator** component added to evaluate the flow's context, query, and response.
-
-To use the **CleanlabRAGEvaluator** component in a flow, connect the `context`, `query`, and `response` outputs from any RAG pipeline to the **CleanlabRAGEvaluator** component.
+As an example, create a flow based on the **Vector Store RAG** template, and then add the **CleanlabRAGEvaluator** component to evaluate the flow's context, query, and response.
+Connect the **context**, **query**, and **response** outputs from the other components in the RAG flow to the **CleanlabRAGEvaluator** component.
 
 ![Evaluate RAG pipeline](./eval_rag.png)
 
-Here is an example of the `Evaluation Summary` output from the **CleanlabRAGEvaluator** component.
+Here is an example of the `Evaluation Summary` output from the **CleanlabRAGEvaluator** component:
 
 ![Evaluate RAG pipeline](./eval_summary_rag.png)
 
