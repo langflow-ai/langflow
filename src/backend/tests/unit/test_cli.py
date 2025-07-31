@@ -58,6 +58,7 @@ def test_components_path(runner, default_settings, tmp_path):
     assert str(temp_dir) in settings_service.settings.components_path
 
 
+@pytest.mark.xdist_group(name="serial-superuser-tests")
 class TestSuperuserCommand:
     """Deterministic tests for the superuser CLI command."""
 
