@@ -80,22 +80,23 @@ class RunnableVerticesManager:
         Returns:
             bool: True if all predecessor conditions are met, False otherwise
         """
-        pending: set[str] = self.run_predecessors.get(vertex_id, set())
+        pending = self.run_predecessors[vertex_id]
         if not pending:
             return True
 
         if vertex_id in self.cycle_vertices:
-            pending_set = set(pending)
-            running_predecessors = pending_set & self.vertices_being_run
-
-            # If this vertex has already run at least once, be strict: wait until NOTHING is pending or running
+            # pending is always a set; avoid unnecessary copying
             if vertex_id in self.ran_at_least_once:
                 # Wait if there are still pending or running predecessors; otherwise allow.
-                return not (pending_set or running_predecessors)
+                # We only need to check if pending or any are running.
+                if pending or (pending & self.vertices_being_run):
+                    return False
+                return True
 
             # FIRST execution of a cycle vertex
             # Allow running **only** if it's a loop AND *all* pending predecessors are cycle vertices
-            return is_loop and pending_set <= self.cycle_vertices
+            return is_loop and pending <= self.cycle_vertices
+
         return False
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
