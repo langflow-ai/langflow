@@ -48,21 +48,6 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Flow templates",
-          items: [
-            'Templates/basic-prompting',
-            'Templates/simple-agent',
-            'Templates/blog-writer',
-            'Templates/document-qa',
-            'Templates/memory-chatbot',
-            'Templates/vector-store-rag',
-            'Templates/financial-report-parser',
-            'Templates/sequential-agent',
-            'Templates/travel-planning-agent',
-          ],
-        },
-        {
-          type: "category",
           label: "Run flows",
           items: [
             {
@@ -110,13 +95,8 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        {
-          type: "doc",
-          id: "Develop/install-custom-dependencies",
-          label: "Install custom dependencies"
-        },
-        "Configuration/configuration-api-keys",
-        "Configuration/configuration-authentication",
+        "Configuration/api-keys-and-authentication",
+        "Develop/install-custom-dependencies",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         {
@@ -192,6 +172,11 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-ssl",
+          label: "SSL"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -227,6 +212,12 @@ module.exports = {
                 }
               ]
             },
+          ],
+        },
+        {
+          type: "category",
+          label: "Cloud platforms",
+          items: [
             {
               type: "doc",
               id: "Deployment/deployment-gcp",
@@ -247,12 +238,8 @@ module.exports = {
               id: "Deployment/deployment-render",
               label: "Render"
             },
-            {
-              type: "doc",
-              id: "Deployment/deployment-ssl",
-              label: "SSL"
-            },
-          ],
+
+          ]
         },
       ],
     },
