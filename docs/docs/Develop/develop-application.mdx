@@ -75,7 +75,7 @@ However, if you set an environment variable in both `docker.env` and the Dockerf
 For simplicity, the examples in the Langflow documentation might use direct references to API keys and other sensitive values.
 In your own applications, you should always follow industry best practices for managing secrets, such as using environment variables or secret management tools.
 
-For information about generating authentication keys and managing secrets in Langflow, see [Authentication](/configuration-authentication).
+For information about generating authentication keys and managing secrets in Langflow, see [API keys and authentication](/api-keys-and-authentication).
 
 ### Storage
 
@@ -206,11 +206,11 @@ For information about publishing your image on Docker Hub and running a Langflow
             "session_id": "charizard_test_request"
         }'
         ```
-        
+
         <details>
         <summary>About this example</summary>
 
-        This command runs the Pokédex template flow.
+        This command runs the **Pokédex** template flow.
         It provides chat input about a specific Pokémon, uses an optional custom `session_id`, and enables response streaming with `?stream=true`.
 
         The default [session ID](/session-id) is the flow ID.
