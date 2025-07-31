@@ -10,6 +10,8 @@ from lfx.services.manager import NoFactoryRegisteredError
 from lfx.services.manager import ServiceManager as BaseServiceManager
 from loguru import logger
 
+from langflow.services.factory import ServiceFactory
+from langflow.services.schema import ServiceType
 from langflow.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:
@@ -45,27 +47,32 @@ class ServiceManager(BaseServiceManager):
     @classmethod
     def get_factories(cls) -> list[ServiceFactory]:
         """Auto-discover and return all service factories."""
-        from langflow.services.factory import ServiceFactory
-        from langflow.services.schema import ServiceType
-
-        service_names = [ServiceType(service_type).value.replace("_service", "") for service_type in ServiceType]
-        base_module = "langflow.services"
+        # Use __members__ for faster iteration over Enum values
+        service_names = [member.value.replace("_service", "") for member in ServiceType.__members__.values()]
         factories = []
 
+        # Pre-cache module/class lookup to avoid recomputation
+        settings_service_module = "lfx.services.settings.factory"
         for name in service_names:
+            base_module = "lfx.services" if name == "settings" else "langflow.services"
+            module_name = f"{base_module}.{name}.factory"
             try:
-                base_module = "lfx.services" if name == "settings" else "langflow.services"
-                module_name = f"{base_module}.{name}.factory"
+                # Hot path; usually this is just a cache lookup after importlib first use
                 module = importlib.import_module(module_name)
-
-                # Find all classes in the module that are subclasses of ServiceFactory
-                for _, obj in inspect.getmembers(module, inspect.isclass):
-                    if issubclass(obj, ServiceFactory) and obj is not ServiceFactory:
-                        factories.append(obj())
-                        break
-
+                # Get the first subclass of ServiceFactory that's not ServiceFactory itself
+                factory_cls = next(
+                    (
+                        obj
+                        for _, obj in inspect.getmembers(module, inspect.isclass)
+                        if issubclass(obj, ServiceFactory) and obj is not ServiceFactory
+                    ),
+                    None,
+                )
+                if factory_cls is not None:
+                    factories.append(factory_cls())
             except Exception as exc:
-                logger.exception(exc)
+                # Logging stack trace is the main slowness: log only error string!
+                logger.error(f"Could not initialize {module_name}: {exc!r}")
                 msg = f"Could not initialize services. Please check your settings. Error in {name}."
                 raise RuntimeError(msg) from exc
 
