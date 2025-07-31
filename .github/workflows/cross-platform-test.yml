@@ -1,0 +1,109 @@
+name: Cross-Platform Installation Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-artifact-name:
+        description: "Name of the base package artifact (leave empty to use latest from main branch)"
+        required: false
+        type: string
+        default: ""
+      main-artifact-name:
+        description: "Name of the main package artifact (leave empty to use latest from main branch)"
+        required: false
+        type: string
+        default: ""
+      test-timeout:
+        description: "Timeout for langflow server startup test (minutes)"
+        required: false
+        type: number
+        default: 5
+      run-id:
+        description: "GitHub run ID to download artifacts from (leave empty for latest successful run)"
+        required: false
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      base-artifact-name:
+        description: "Name of the base package artifact"
+        required: true
+        type: string
+      main-artifact-name:
+        description: "Name of the main package artifact"
+        required: true
+        type: string
+      test-timeout:
+        description: "Timeout for langflow server startup test (minutes)"
+        required: false
+        type: number
+        default: 5
+
+jobs:
+  build-if-needed:
+    name: Build Packages (if no artifacts provided)
+    runs-on: ubuntu-latest
+    if: inputs.base-artifact-name == '' || inputs.main-artifact-name == ''
+    outputs:
+      base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
+      main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+      - name: Install the project
+        run: uv sync
+      - name: Install frontend dependencies
+        run: make install_frontendci
+      - name: Build frontend
+        run: make build_frontend
+      - name: Build base package
+        run: make build_langflow_base args="--wheel"
+      - name: Build main package
+        run: make build_langflow args="--wheel"
+      - name: Upload base artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: adhoc-dist-base
+          path: /home/runner/work/langflow/langflow/dist
+      - name: Upload main artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: adhoc-dist-main
+          path: dist
+      - name: Set artifact names
+        id: set-names
+        run: |
+          echo "base-artifact-name=adhoc-dist-base" >> $GITHUB_OUTPUT
+          echo "main-artifact-name=adhoc-dist-main" >> $GITHUB_OUTPUT
+
+  test-wheel-installation:
+    name: Test Wheel Installation
+    needs: [build-if-needed]
+    if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
+    uses: ./.github/workflows/cross-platform-test-shared.yml
+    with:
+      install-method: "wheel"
+      test-timeout: ${{ inputs.test-timeout }}
+      base-artifact-name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name }}
+      main-artifact-name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name }}
+
+  test-summary:
+    name: Cross-Platform Test Summary
+    needs: test-wheel-installation
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test-wheel-installation.result }}" != "success" ]; then
+            echo "❌ Cross-platform tests failed - PyPI upload blocked"
+            exit 1
+          else
+            echo "✅ All cross-platform tests passed - PyPI upload can proceed"
+          fi

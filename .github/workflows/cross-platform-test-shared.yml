@@ -1,0 +1,319 @@
+name: Shared Cross-Platform Test Logic
+
+on:
+  workflow_call:
+    inputs:
+      test-timeout:
+        description: "Timeout for langflow server startup test (minutes)"
+        required: false
+        type: number
+        default: 5
+      install-method:
+        description: "Installation method: 'wheel' for local wheels, 'pypi' for PyPI packages"
+        required: true
+        type: string
+      langflow-version:
+        description: "Langflow version to install from PyPI (only used if install-method is 'pypi')"
+        required: false
+        type: string
+        default: ""
+      base-artifact-name:
+        description: "Name of the base package artifact (only used if install-method is 'wheel')"
+        required: false
+        type: string
+        default: ""
+      main-artifact-name:
+        description: "Name of the main package artifact (only used if install-method is 'wheel')"
+        required: false
+        type: string
+        default: ""
+      run-id:
+        description: "GitHub run ID to download artifacts from (leave empty for current run)"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  test-installation:
+    name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux AMD64
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.10"
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.13"
+          # macOS AMD64
+          - os: macos
+            arch: amd64
+            runner: macos-13
+            python-version: "3.10"
+          - os: macos
+            arch: amd64
+            runner: macos-13
+            python-version: "3.13"
+          # macOS ARM64 (Apple Silicon)
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.10"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.13"
+          # Windows AMD64
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.10"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.12"
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      # Download artifacts for wheel installation
+      - name: Download base package artifact
+        if: inputs.install-method == 'wheel'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.base-artifact-name }}
+          path: ./base-dist
+
+      - name: Download main package artifact
+        if: inputs.install-method == 'wheel'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.main-artifact-name }}
+          path: ./main-dist
+
+      - name: Create fresh virtual environment
+        run: |
+          uv venv test-env --seed
+        shell: bash
+
+      # Wheel installation steps
+      - name: Install base package from wheel (Windows)
+        if: inputs.install-method == 'wheel' && matrix.os == 'windows'
+        run: |
+          ls -la ./base-dist/
+          find ./base-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./base-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install main package from wheel (Windows)
+        if: inputs.install-method == 'wheel' && matrix.os == 'windows'
+        run: |
+          ls -la ./main-dist/
+          find ./main-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./main-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install base package from wheel (Unix)
+        if: inputs.install-method == 'wheel' && matrix.os != 'windows'
+        run: |
+          ls -la ./base-dist/
+          find ./base-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./base-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install main package from wheel (Unix)
+        if: inputs.install-method == 'wheel' && matrix.os != 'windows'
+        run: |
+          ls -la ./main-dist/
+          find ./main-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./main-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      # PyPI installation steps
+      - name: Install langflow from PyPI (Windows)
+        if: inputs.install-method == 'pypi' && matrix.os == 'windows'
+        run: |
+          if [ -n "${{ inputs.langflow-version }}" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe langflow==${{ inputs.langflow-version }}
+          else
+            uv pip install --python ./test-env/Scripts/python.exe langflow
+          fi
+        shell: bash
+
+      - name: Install langflow from PyPI (Unix)
+        if: inputs.install-method == 'pypi' && matrix.os != 'windows'
+        run: |
+          if [ -n "${{ inputs.langflow-version }}" ]; then
+            uv pip install --python ./test-env/bin/python langflow==${{ inputs.langflow-version }}
+          else
+            uv pip install --python ./test-env/bin/python langflow
+          fi
+        shell: bash
+
+      # Install additional dependencies
+      - name: Install additional dependencies (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          uv pip install --python ./test-env/Scripts/python.exe openai
+        shell: bash
+
+      - name: Install additional dependencies (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          uv pip install --python ./test-env/bin/python openai
+        shell: bash
+
+      # Test steps
+      - name: Test CLI help command (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          test-env\Scripts\python.exe -m langflow --help
+        shell: cmd
+
+      - name: Test CLI help command (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          ./test-env/bin/python -m langflow --help
+        shell: bash
+
+      - name: Test server startup (Windows)
+        if: matrix.os == 'windows'
+        timeout-minutes: ${{ inputs.test-timeout }}
+        run: |
+          # Start server in background
+          $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
+
+          # Wait for server to be ready
+          $timeoutSeconds = ${{ inputs.test-timeout }} * 60
+          $elapsed = 0
+          do {
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:7860/health_check" -UseBasicParsing -TimeoutSec 5
+              if ($response.StatusCode -eq 200) {
+                Write-Host "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
+                break
+              }
+            } catch {
+              Start-Sleep -Seconds 5
+              $elapsed += 5
+            }
+          } while ($elapsed -lt $timeoutSeconds)
+
+          if ($elapsed -ge $timeoutSeconds) {
+            Write-Host "❌ Server failed to start within timeout on ${{ matrix.os }}-${{ matrix.arch }}"
+            exit 1
+          }
+
+          # Stop the server process
+          Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
+        shell: powershell
+
+      - name: Test server startup (Unix)
+        if: matrix.os != 'windows'
+        timeout-minutes: ${{ inputs.test-timeout }}
+        run: |
+          # Start server in background
+          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
+          SERVER_PID=$!
+
+          # Wait for server to be ready (using bash loop instead of timeout command)
+          TIMEOUT_SECONDS=$((${{ inputs.test-timeout }} * 60))
+          ELAPSED=0
+          while [ $ELAPSED -lt $TIMEOUT_SECONDS ]; do
+            if curl -f http://localhost:7860/health_check >/dev/null 2>&1; then
+              echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
+              break
+            fi
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+          done
+
+          if [ $ELAPSED -ge $TIMEOUT_SECONDS ]; then
+            echo "❌ Server failed to start within timeout on ${{ matrix.os }}-${{ matrix.arch }}"
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
+
+          # Clean shutdown
+          kill $SERVER_PID 2>/dev/null || true
+          sleep 5
+        shell: bash
+
+      - name: Test import in Python (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          test-env\Scripts\python.exe -c "
+          try:
+              import langflow
+              print('✅ langflow import successful on ${{ matrix.os }}-${{ matrix.arch }}')
+          except Exception as e:
+              print(f'❌ langflow import failed on ${{ matrix.os }}-${{ matrix.arch }}: {e}')
+              exit(1)
+          "
+        shell: cmd
+
+      - name: Test import in Python (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          ./test-env/bin/python -c "
+          try:
+              import langflow
+              print('✅ langflow import successful on ${{ matrix.os }}-${{ matrix.arch }}')
+          except Exception as e:
+              print(f'❌ langflow import failed on ${{ matrix.os }}-${{ matrix.arch }}: {e}')
+              exit(1)
+          "
+        shell: bash
+
+  test-summary:
+    name: Cross-Platform Test Summary
+    needs: test-installation
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test-installation.result }}" != "success" ]; then
+            echo "❌ Cross-platform tests failed"
+            exit 1
+          else
+            echo "✅ All cross-platform tests passed"
+          fi

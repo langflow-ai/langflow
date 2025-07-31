@@ -70,7 +70,7 @@ You can upload images to the **Playground** chat interface and as runtime input 
 
 * In the **Playground**, you can drag-and-drop images into the chat input area, or you can click the **Attach image** icon to select an image to upload.
 
-* When you trigger a flow with the `/api/v1/run/$FLOW_ID` endpoint, you can use the `files` parameter to attach the base64-encoded image data to the request payload:
+* When you trigger a flow with the `/api/v1/run/$FLOW_ID` endpoint, you can use the `files` parameter to attach image data as a base64-encoded string:
 
    ```bash
    curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID" \
@@ -94,7 +94,7 @@ For videos, see the **Twelve Labs** and **YouTube** [bundles](/components-bundle
 ## Set the maximum file size
 
 By default, the maximum file size is 100 MB.
-To modify this value, change the [`--max-file-size-upload` environment variable](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
+To modify this value, change the `--max-file-size-upload` [environment variable](/environment-variables).
 
 ## See also
 

@@ -30,7 +30,7 @@ For example, with the [**Message History**](/components-helpers#message-history)
 
 The following steps demonstrate how to add variables to a **Prompt Template** component:
 
-1. Create a flow based on the [**Basic prompting** template](/basic-prompting).
+1. Create a flow based on the **Basic prompting** template.
 
     This template already has a **Prompt Template** component, but the template only contains natural language instructions: `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
 
@@ -42,9 +42,12 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
     For example, the following template creates `context` and `user_question` variables:
 
     ```text
-    Given the context
+    Given the context:
+
     {context}
-    Answer the question
+
+    Answer the question:
+
     {user_question}
     ```
 
@@ -57,6 +60,9 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
    * Connect the fields to other components to pass the output from those components to the variables.
    * Use Langflow global variables.
    * Enter fixed values directly into the fields.
+
+You can add as many variables as you like in your template.
+For example, you could add variables for `{references}` and `{instructions}`, and then feed that information in from other components, such as **Text Input**, **URL**, or **File** components.
 
 ## See also
 
