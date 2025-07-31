@@ -48,7 +48,7 @@ def _patch_graph_clean_null_input_types() -> None:
         # Patch only once
         if getattr(Graph, "_composio_patch_applied", False) is False:
             Graph._create_vertex = _create_vertex_with_cleanup  # type: ignore[method-assign]
-            setattr(Graph, "_composio_patch_applied", True)  # type: ignore[attr-defined]
+            Graph._composio_patch_applied = True  # type: ignore[attr-defined]
             logger.debug("Applied Composio template cleanup patch to Graph._create_vertex")
 
     except (AttributeError, TypeError) as e:
