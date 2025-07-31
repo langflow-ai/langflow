@@ -32,9 +32,6 @@ The `/logs` endpoint requires log retrieval to be enabled in your Langflow insta
 
 Stream logs in real-time using Server Sent Events (SSE).
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/logs-stream" \
@@ -42,8 +39,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 keepalive
@@ -65,8 +62,7 @@ keepalive
 keepalive
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Retrieve logs with optional parameters
 
@@ -79,9 +75,6 @@ Retrieve logs with optional query parameters:
 The default values for all three parameters is `0`.
 With default values, the endpoint returns the last 10 lines of logs.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/logs?lines_before=0&lines_after=0&timestamp=0" \
@@ -89,8 +82,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 {
@@ -103,9 +96,8 @@ curl -X GET \
   "1736354770588": "2025-01-08T11:46:10.588105-0500 DEBUG Create service ServiceType.CHAT_SERVICE\n",
   "1736354771021": "2025-01-08T11:46:11.021817-0500 DEBUG Telemetry data sent successfully.\n",
   "1736354775619": "2025-01-08T11:46:15.619545-0500 DEBUG Create service ServiceType.STORE_SERVICE\n",
-  "1736354775699": "2025-01-08T11:46:15.699661-0500 DEBUG File 046-rocket.svg retrieved successfully from flow /Users/mendon.kissling/Library/Caches/langflow/profile_pictures/Space.\n"
+  "1736354775699": "2025-01-08T11:46:15.699661-0500 DEBUG File 046-rocket.svg retrieved successfully from flow /Users/USER/Library/Caches/langflow/profile_pictures/Space.\n"
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>

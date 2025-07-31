@@ -175,7 +175,7 @@ outputs = [
 ]
 ```
 
-In this example, both outputs will be available via a dropdown selection in the UI.
+In this example, both outputs are available through a dropdown menu in the Langflow UI.
 
 Note: Since `group_outputs=False` is the default behavior, it does not need to be explicitly set in the component.
 
@@ -235,7 +235,7 @@ def some_method(self):
 
 By default, Langflow looks for custom components in the `langflow/components` directory.
 
-If you're creating custom components in a different location using the [LANGFLOW_COMPONENTS_PATH](/environment-variables#LANGFLOW_COMPONENTS_PATH) environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
+If you're creating custom components in a different location using the `LANGFLOW_COMPONENTS_PATH` [environment variable](/environment-variables), components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
 
 ```
 /your/custom/components/path/    # Base directory set by LANGFLOW_COMPONENTS_PATH
@@ -280,7 +280,7 @@ Inputs are defined in a class-level `inputs` list. When Langflow loads the compo
 
 An input is usually an instance of a class from `langflow.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`). The most common constructor parameters are:
 
-* **`name`**: The internal variable name, accessed via `self.<name>`.
+* **`name`**: The internal variable name, accessed with `self.<name>`.
 * **`display_name`**: The label shown to users in the UI.
 * **`info`** *(optional)*: A tooltip or short description.
 * **`value`** *(optional)*: The default value.
@@ -489,8 +489,8 @@ When using typed annotations, consider the following best practices:
 In **Langflow**, dynamic fields allow inputs to change or appear based on user interactions. You can make an input dynamic by setting `dynamic=True`.
 Optionally, setting `real_time_refresh=True` triggers the `update_build_config` method to adjust the input's visibility or properties in real time, creating a contextual UI that only displays relevant fields based on the user's choices.
 
-In this example, the operator field triggers updates via `real_time_refresh=True`.
-The `regex_pattern` field is initially hidden and controlled via `dynamic=True`.
+In this example, the operator field triggers updates with `real_time_refresh=True`.
+The `regex_pattern` field is initially hidden and controlled with `dynamic=True`.
 
 ```python
 from langflow.io import DropdownInput, StrInput
