@@ -215,7 +215,6 @@ jobs:
     with:
       base-artifact-name: "dist-nightly-base"
       main-artifact-name: "dist-nightly-main"
-      test-timeout: 120
 
   publish-nightly-base:
     name: Publish Langflow Base Nightly to PyPI

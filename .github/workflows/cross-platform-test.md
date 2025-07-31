@@ -25,7 +25,7 @@ gh workflow run cross-platform-test.yml \
 ```
 
 ### 2. Test from Source
-Builds and tests langflow from current branch source code.
+Builds and tests langflow from current branch source code using release-like dependency resolution (transforms workspace dependencies to published packages for testing parity).
 
 **Via GitHub UI:**
 1. Go to **Actions** → **Cross-Platform Installation Test**
@@ -34,7 +34,7 @@ Builds and tests langflow from current branch source code.
 
 **Via CLI:**
 ```bash
-# Test current branch
+# Test current branch with release-like dependencies
 gh workflow run cross-platform-test.yml -f test-from-pypi=false
 ```
 
@@ -58,8 +58,9 @@ jobs:
 - **macOS**: Intel (AMD64), Apple Silicon (ARM64)
 - **Windows**: AMD64
 - **Python versions**:
-  - **Linux & macOS**: 3.10 and 3.13
-  - **Windows**: 3.10 and 3.12 (3.12 used instead of 3.13 for better stability)
+  - **All platforms**: 3.10, 3.12, and 3.13
+  - **Stability**: 3.10 and 3.12 are required to pass (blocking)
+  - **Preview**: 3.13 testing is optional (non-blocking) to monitor ecosystem readiness
 
 ## What Gets Tested
 
@@ -93,7 +94,7 @@ gh workflow run cross-platform-test.yml \
 
 ### Installation Methods
 - **PyPI testing**: Uses `uv pip install` with official PyPI packages
-- **Source testing**: Builds wheels from source, then installs locally
+- **Source testing**: Transforms workspace dependencies to published packages (like nightly builds), then builds wheels from source and installs locally
 - **Dependencies**: Automatically installs additional packages (`openai`) for full functionality
 
 ### Health Checking
@@ -102,8 +103,8 @@ gh workflow run cross-platform-test.yml \
 - **Timeout**: Configurable timeout with proper cross-platform handling
 
 ### Platform-Specific Optimizations
-- **Windows**: Uses Python 3.12 for better package ecosystem stability
-- **Unix**: Uses Python 3.13 for latest language features where stable
+- **Stable versions**: Python 3.10 and 3.12 provide reliable package ecosystem support
+- **Preview testing**: Python 3.13 runs as non-blocking to monitor when it becomes viable
 - **Virtual Environments**: Uses `uv venv --seed` for consistent pip availability
 
 ### Workflow Architecture
@@ -129,6 +130,7 @@ cross-platform-test.yml
 
 **Manual (`workflow_dispatch`):**
 - Simple boolean toggle: "Test from PyPI" vs "Test from Source"
+- Source testing always uses release-like dependency resolution for testing parity
 - User-friendly parameter names
 - Context-specific success/failure messages
 
@@ -162,9 +164,9 @@ test-installation:
 
 ## Known Issues
 
-### macOS AMD64 Python 3.13 Compilation Failures
+### macOS Compilation Issues (Historical)
 
-**Issue**: Nightly/release builds may fail on macOS AMD64 with Python 3.13 due to `chroma-hnswlib` compilation errors:
+**Issue**: Previously, nightly/release builds could fail on macOS with Python 3.13 due to `chroma-hnswlib` compilation errors:
 ```
 clang: error: unsupported argument 'native' to option '-march='
 error: command '/usr/bin/clang++' failed with exit code 1
@@ -184,10 +186,11 @@ error: command '/usr/bin/clang++' failed with exit code 1
    - Uses published PyPI package with full dependency tree including `chromadb==0.5.23`
 3. **macOS clang** doesn't support `-march=native` flag used by `chroma-hnswlib` compilation
 
-**Workarounds**:
-- Manual testing (source builds) works consistently
-- Issue only affects nightly/release automated builds
-- Some runs may succeed if compatible `chroma-hnswlib` wheels are available on PyPI
+**Current Status**:
+- **Stable testing**: Python 3.10 and 3.12 are required to pass (blocking jobs)
+- **Preview testing**: Python 3.13 runs as non-blocking to monitor ecosystem readiness
+- **Compilation issues**: Python 3.13 may still fail due to `chroma-hnswlib` but won't block releases
+- **Manual testing**: Source builds now use the same dependency transformation as nightly builds for testing parity
 
 **Files Involved**:
 - `scripts/ci/update_uv_dependency.py` - Modifies dependency resolution
