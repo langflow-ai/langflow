@@ -3,7 +3,7 @@
 Tests the core import_mod function used throughout the dynamic import system.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from langflow.components._importing import import_mod
@@ -55,24 +55,21 @@ class TestImportAttr:
         with pytest.raises(TypeError, match="package.*required"):
             import_mod("something", "some_module", None)
 
-    @patch("langflow.components._import_utils.import_module")
-    def test_module_not_found_error_handling(self, mock_import_module):
+    def test_module_not_found_error_handling(self):
         """Test specific ModuleNotFoundError handling."""
-        mock_import_module.side_effect = ModuleNotFoundError("No module named 'test'")
+        with patch("importlib.import_module") as mock_import_module:
+            mock_import_module.side_effect = ModuleNotFoundError("No module named 'test'")
 
-        with pytest.raises(ImportError, match="not found"):
-            import_mod("TestComponent", "test_module", "test.package")
+            with pytest.raises(ImportError, match="not found"):
+                import_mod("TestComponent", "test_module", "test.package")
 
-    @patch("langflow.components._import_utils.import_module")
-    def test_getattr_error_handling(self, mock_import_module):
+    def test_getattr_error_handling(self):
         """Test AttributeError handling when getting attribute from module."""
-        # Mock module that doesn't have the requested attribute
-        mock_module = Mock()
-        del mock_module.TestComponent  # Ensure attribute doesn't exist
-        mock_import_module.return_value = mock_module
-
+        # Test the case where the module exists but doesn't have the attribute
+        # Use a real module that exists
         with pytest.raises(AttributeError):
-            import_mod("TestComponent", "test_module", "test.package")
+            # os module exists but doesn't have 'NonExistentAttribute'
+            import_mod("NonExistentAttribute", "path", "os")
 
     def test_relative_import_behavior(self):
         """Test that relative imports are constructed correctly."""

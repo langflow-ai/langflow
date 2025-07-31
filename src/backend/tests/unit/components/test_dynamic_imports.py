@@ -160,17 +160,21 @@ class TestComponentDynamicImports:
         assert callable(calculator_class)
         assert hasattr(calculator_class, "__init__")
 
-    @patch("langflow.components._import_utils.import_module")
-    def test_import_error_handling(self, mock_import_module):
+    def test_import_error_handling(self):
         """Test error handling when import fails."""
-        # Mock import_module to raise ImportError
-        mock_import_module.side_effect = ImportError("Module not found")
-
-        # Import a fresh module to test error handling
         import langflow.components.notdiamond as notdiamond_components
 
-        with pytest.raises(AttributeError, match="Could not import"):
-            _ = notdiamond_components.NotDiamondComponent
+        # Patch the import_mod function directly
+        with patch("langflow.components.notdiamond.import_mod") as mock_import_mod:
+            # Mock import_mod to raise ImportError
+            mock_import_mod.side_effect = ImportError("Module not found")
+
+            # Clear any cached attribute
+            if "NotDiamondComponent" in notdiamond_components.__dict__:
+                del notdiamond_components.__dict__["NotDiamondComponent"]
+
+            with pytest.raises(AttributeError, match="Could not import"):
+                _ = notdiamond_components.NotDiamondComponent
 
     def test_consistency_check(self):
         """Test that __all__ and _dynamic_imports are consistent."""
