@@ -79,35 +79,6 @@ jobs:
             python-version: "3.12"
 
     steps:
-      - name: Debug workflow inputs
-        run: |
-          echo "Shared workflow received inputs:"
-          echo "  install-method: ${{ inputs.install-method }}"
-          echo "  test-timeout: ${{ inputs.test-timeout }}"
-          echo "  base-artifact-name: '${{ inputs.base-artifact-name }}'"
-          echo "  main-artifact-name: '${{ inputs.main-artifact-name }}'"
-          echo "  langflow-version: '${{ inputs.langflow-version }}'"
-          echo "  run-id: '${{ inputs.run-id }}'"
-          echo ""
-          echo "Matrix values:"
-          echo "  os: ${{ matrix.os }}"
-          echo "  arch: ${{ matrix.arch }}"
-          echo "  python-version: ${{ matrix.python-version }}"
-          echo "  runner: ${{ matrix.runner }}"
-        shell: bash
-
-      - name: Validate required parameters for wheel installation
-        if: inputs.install-method == 'wheel'
-        run: |
-          if [ -z "${{ inputs.base-artifact-name }}" ] || [ -z "${{ inputs.main-artifact-name }}" ]; then
-            echo "❌ Error: base-artifact-name and main-artifact-name are required when install-method is 'wheel'"
-            echo "  base-artifact-name: '${{ inputs.base-artifact-name }}'"
-            echo "  main-artifact-name: '${{ inputs.main-artifact-name }}'"
-            exit 1
-          fi
-          echo "✅ Required parameters for wheel installation are present"
-        shell: bash
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -332,17 +303,3 @@ jobs:
           "
         shell: bash
 
-  test-summary:
-    name: Cross-Platform Test Summary
-    needs: test-installation
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Check test results
-        run: |
-          if [ "${{ needs.test-installation.result }}" != "success" ]; then
-            echo "❌ Cross-platform tests failed"
-            exit 1
-          else
-            echo "✅ All cross-platform tests passed"
-          fi
