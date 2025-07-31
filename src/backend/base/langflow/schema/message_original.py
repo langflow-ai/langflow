@@ -104,11 +104,11 @@ class Message(Data):
     @field_validator("files", mode="before")
     @classmethod
     def validate_files(cls, value):
+        if isinstance(value, list):
+            return value
         if not value:
-            value = []
-        elif not isinstance(value, list):
-            value = [value]
-        return value
+            return []
+        return [value]
 
     def model_post_init(self, /, _context: Any) -> None:
         new_files: list[Any] = []
