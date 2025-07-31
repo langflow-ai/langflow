@@ -3,12 +3,8 @@ name: Cross-Platform Installation Test
 on:
   workflow_dispatch:
     inputs:
-      test-from-pypi:
-        description: "Test from PyPI instead of building from source"
-        type: boolean
-        default: false
       langflow-version:
-        description: "Langflow version to test from PyPI (leave empty for latest)"
+        description: "Langflow version to test from PyPI (leave empty to test from source)"
         required: false
         type: string
         default: ""
@@ -24,12 +20,24 @@ on:
         type: string
 
 jobs:
+  debug-github-context:
+    name: Debug GitHub Context
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug all GitHub context
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Workflow ref: ${{ github.workflow_ref }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Triggering actor: ${{ github.triggering_actor }}"
+          echo "Event path: ${{ github.event_path }}"
+          echo "Repository: ${{ github.repository }}"
+
   build-if-needed:
     name: Build Packages (if no artifacts provided)
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' && inputs.test-from-pypi == false) ||
-      (github.event_name == 'workflow_call' && inputs.base-artifact-name == '' && inputs.main-artifact-name == '')
+    if: inputs.langflow-version == '' && github.workflow == 'Cross-Platform Installation Test'
     outputs:
       base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
@@ -144,7 +152,7 @@ jobs:
         id: install-method
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ inputs.test-from-pypi }}" = "true" ]; then
+            if [ -n "${{ inputs.langflow-version }}" ]; then
               echo "method=pypi" >> $GITHUB_OUTPUT
             else
               echo "method=wheel" >> $GITHUB_OUTPUT
@@ -373,7 +381,7 @@ jobs:
         run: |
           if [ "${{ needs.test-installation.result }}" != "success" ]; then
             if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-              if [ "${{ inputs.test-from-pypi }}" = "true" ]; then
+              if [ -n "${{ inputs.langflow-version }}" ]; then
                 echo "❌ PyPI installation tests failed"
               else
                 echo "❌ Source build and installation tests failed"
@@ -384,7 +392,7 @@ jobs:
             exit 1
           else
             if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-              if [ "${{ inputs.test-from-pypi }}" = "true" ]; then
+              if [ -n "${{ inputs.langflow-version }}" ]; then
                 echo "✅ PyPI installation tests passed"
               else
                 echo "✅ Source build and installation tests passed"
