@@ -17,6 +17,8 @@ describe("usePackageManagerStore", () => {
     act(() => {
       usePackageManagerStore.setState({
         isInstallingPackage: false,
+        isBackendRestarting: false,
+        restartDetectedAt: null,
       });
     });
     consoleSpy.error.mockClear();
@@ -33,7 +35,11 @@ describe("usePackageManagerStore", () => {
       const { result } = renderHook(() => usePackageManagerStore());
 
       expect(result.current.isInstallingPackage).toBe(false);
+      expect(result.current.isBackendRestarting).toBe(false);
+      expect(result.current.restartDetectedAt).toBe(null);
       expect(typeof result.current.setIsInstallingPackage).toBe("function");
+      expect(typeof result.current.setIsBackendRestarting).toBe("function");
+      expect(typeof result.current.setRestartDetectedAt).toBe("function");
     });
   });
 
@@ -134,16 +140,31 @@ describe("usePackageManagerStore", () => {
       // Check that all expected properties exist
       expect(state).toHaveProperty("isInstallingPackage");
       expect(state).toHaveProperty("setIsInstallingPackage");
+      expect(state).toHaveProperty("isBackendRestarting");
+      expect(state).toHaveProperty("setIsBackendRestarting");
+      expect(state).toHaveProperty("restartDetectedAt");
+      expect(state).toHaveProperty("setRestartDetectedAt");
 
       // Check types
       expect(typeof state.isInstallingPackage).toBe("boolean");
       expect(typeof state.setIsInstallingPackage).toBe("function");
+      expect(typeof state.isBackendRestarting).toBe("boolean");
+      expect(typeof state.setIsBackendRestarting).toBe("function");
+      expect(
+        state.restartDetectedAt === null ||
+          typeof state.restartDetectedAt === "number",
+      ).toBe(true);
+      expect(typeof state.setRestartDetectedAt).toBe("function");
 
-      // Should not have unexpected properties
+      // Should have all expected properties
       const keys = Object.keys(state);
-      expect(keys).toHaveLength(2);
+      expect(keys).toHaveLength(6);
       expect(keys).toContain("isInstallingPackage");
       expect(keys).toContain("setIsInstallingPackage");
+      expect(keys).toContain("isBackendRestarting");
+      expect(keys).toContain("setIsBackendRestarting");
+      expect(keys).toContain("restartDetectedAt");
+      expect(keys).toContain("setRestartDetectedAt");
     });
   });
 
