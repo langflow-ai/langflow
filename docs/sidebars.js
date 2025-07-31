@@ -48,21 +48,6 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Flow templates",
-          items: [
-            'Templates/basic-prompting',
-            'Templates/simple-agent',
-            'Templates/blog-writer',
-            'Templates/document-qa',
-            'Templates/memory-chatbot',
-            'Templates/vector-store-rag',
-            'Templates/financial-report-parser',
-            'Templates/sequential-agent',
-            'Templates/travel-planning-agent',
-          ],
-        },
-        {
-          type: "category",
           label: "Run flows",
           items: [
             {
