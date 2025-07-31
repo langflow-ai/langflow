@@ -70,6 +70,7 @@ export default function NodeStatus({
   );
 
   const connectionLink = nodeAuth?.value;
+  const apiKeyValue = (data.node?.template as any)?.api_key?.value ?? "";
   const isAuthenticated = nodeAuth?.value === "validated";
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -344,7 +345,9 @@ export default function NodeStatus({
         : isAuthenticated && !isPolling
           ? "border-accent-emerald-foreground hover:border-accent-amber-foreground"
           : "",
-      connectionLink === "" && "cursor-not-allowed opacity-50",
+      connectionLink === "" &&
+        (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY") &&
+        "cursor-not-allowed opacity-50",
     );
   };
 
@@ -422,7 +425,11 @@ export default function NodeStatus({
               <div>
                 <Button
                   unstyled
-                  disabled={connectionLink === "" || connectionLink === "error"}
+                  disabled={
+                    (connectionLink === "" &&
+                      (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY")) ||
+                    connectionLink === "error"
+                  }
                   className={getConnectionButtonClasses(
                     connectionLink,
                     isAuthenticated,
