@@ -27,6 +27,9 @@ jobs:
       install-method: "pypi"
       test-timeout: ${{ inputs.test-timeout }}
       langflow-version: ${{ inputs.langflow-version }}
+      base-artifact-name: ""
+      main-artifact-name: ""
+      run-id: ""
 
   test-source-build:
     if: inputs.test-from-pypi == false
@@ -36,6 +39,7 @@ jobs:
       base-artifact-name: ""
       main-artifact-name: ""
       test-timeout: ${{ inputs.test-timeout }}
+      run-id: ""
 
   test-summary:
     name: Test Summary
