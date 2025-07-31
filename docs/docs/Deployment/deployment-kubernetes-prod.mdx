@@ -35,28 +35,37 @@ For more information, see the [Kubernetes documentation](https://kubernetes.io/d
 
     If you have a created a [custom image with packaged flows](/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file with the `--set` flag.
 
-* Use a custom image with bundled flows:
-    ```shell
-    helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set image.repository=myuser/langflow-hello-world --set image.tag=1.0.0
-    ```
+    <Tabs groupId="">
+      <TabItem value="Install chart with custom image" label="Install chart with custom image" default>
 
-* Alternatively, install the chart and download the flows from a URL with the `--set` flag:
-    ```shell
-    helm install my-langflow-app-with-flow langflow/langflow-runtime \
-      -n langflow \
-      --create-namespace \
-      --set 'downloadFlows.flows[0].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
-    ```
+        Use a custom image with bundled flows:
+        ```shell
+        helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set image.repository=myuser/langflow-hello-world --set image.tag=1.0.0
+        ```
 
-    :::important
-    You may need to escape the square brackets in this command if you are using a shell that requires it:
-    ```shell
-    helm install my-langflow-app-with-flow langflow/langflow-runtime \
-      -n langflow \
-      --create-namespace \
-      --set 'downloadFlows.flows\[0\].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
-    ```
-    :::
+      </TabItem>
+      <TabItem value="Install chart and download flow" label="Install chart and download flow">
+
+        Alternatively, install the chart and download the flows from a URL with the `--set` flag:
+        ```shell
+        helm install my-langflow-app-with-flow langflow/langflow-runtime \
+          -n langflow \
+          --create-namespace \
+          --set 'downloadFlows.flows[0].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
+        ```
+
+        :::important
+        You may need to escape the square brackets in this command if you are using a shell that requires it:
+        ```shell
+        helm install my-langflow-app-with-flow langflow/langflow-runtime \
+          -n langflow \
+          --create-namespace \
+          --set 'downloadFlows.flows\[0\].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
+        ```
+        :::
+
+      </TabItem>
+    </Tabs>
 
 3. Check the status of the pods.
     ```shell
@@ -187,8 +196,3 @@ To scale the application vertically by increasing the resources for the pods, ch
 
 * [Langflow architecture and best practices on Kubernetes](/deployment-prod-best-practices)
 * [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts)
-
-
-
-
-
