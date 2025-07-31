@@ -644,6 +644,209 @@ class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
 
 
+class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a model input dropdown field with Provider:ModelName format.
+
+    This class provides a unified dropdown interface for selecting language models or embedding models
+    with options formatted as "Provider:ModelName" (e.g., "OpenAI:gpt-4o").
+    API keys should be passed to the build_model() method from the component.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input.
+        model_type (str): The type of model - either "language" or "embedding".
+        options (list[str]): List of available model options in "Provider:ModelName" format.
+        value (str): Selected model option in "Provider:ModelName" format.
+        temperature (float): Temperature setting for language models.
+        max_tokens (int): Maximum tokens for language models.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
+    model_type: str = "language"
+    options: list[dict[str, str]] = Field(default_factory=list)
+    placeholder: str = "Select a Model"
+    value: Any = Field(default_factory=list)
+    temperature: float = 0.1
+    max_tokens: int = 256
+    limit: int = 1  # Only allow single selection
+    search_category: list[str] = Field(default=["OpenAI", "Anthropic"])
+
+    def __init__(self, **kwargs):
+        """Initialize ModelInput with default options based on model_type."""
+        super().__init__(**kwargs)
+        if not self.options:
+            self.options = self._get_options_for_model_type(self.model_type)
+        if not self.value and self.options:
+            self.value = [self.options[0]]  # SortableListInput expects a list
+
+    def _get_language_model_options(self) -> list[dict[str, str]]:
+        """Get language model options with Provider:ModelName format and icons."""
+        # OpenAI language models
+        from langflow.base.models.openai_constants import OPENAI_MODELS_DETAILED
+
+        openai_options = [
+            {
+                "name": f"OpenAI:{model_meta['name']}",
+                "icon": model_meta.get("icon", "OpenAI"),
+                "category": "OpenAI",
+            }
+            for model_meta in OPENAI_MODELS_DETAILED
+            if not model_meta.get("not_supported", False)
+        ]
+
+        # Anthropic language models
+        from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+
+        anthropic_options = [
+            {
+                "name": f"Anthropic:{model_meta['name']}",
+                "icon": model_meta.get("icon", "Anthropic"),
+                "category": "Anthropic",
+            }
+            for model_meta in ANTHROPIC_MODELS_DETAILED
+            if not model_meta.get("deprecated", False)
+        ]
+
+        return openai_options + anthropic_options
+
+    def _get_embedding_model_options(self) -> list[dict[str, str]]:
+        """Get embedding model options with Provider:ModelName format and icons."""
+        # OpenAI embedding models
+        openai_embed_models = [
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-ada-002",
+        ]
+        return [{"name": f"OpenAI:{model}", "icon": "OpenAI"} for model in openai_embed_models]
+
+    def _get_options_for_model_type(self, model_type: str) -> list[dict[str, str]]:
+        """Get options based on model type."""
+        if model_type == "language":
+            return self._get_language_model_options()
+        if model_type == "embedding":
+            return self._get_embedding_model_options()
+        return self._get_language_model_options()  # Default to language models
+
+    def parse_model_selection(self, selection: str) -> tuple[str, str]:
+        """Parse Provider:ModelName selection into provider and model_name.
+
+        Args:
+            selection: String in format "Provider:ModelName"
+
+        Returns:
+            Tuple of (provider, model_name)
+        """
+        if ":" in selection:
+            provider, model_name = selection.split(":", 1)
+            return provider.strip(), model_name.strip()
+        # Fallback if format is incorrect
+        return "OpenAI", selection
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        """Validates the model input value."""
+        # Handle different input formats for SortableListInput
+        if isinstance(v, list):
+            return v  # Already a list, good for SortableListInput
+        if isinstance(v, str):
+            # Handle backward compatibility - convert string to list format
+            if v and ":" in v:
+                return [{"name": v, "icon": ""}]  # Convert string to list format
+            return []
+        if v is None:
+            return []
+        # Try to convert other types to list
+        return [{"name": str(v), "icon": ""}]
+
+    def build_model(self, api_key: str = "", **kwargs) -> Any | None:
+        """Build and return the configured model instance based on selection.
+
+        Args:
+            api_key: API key (should be passed from component)
+            **kwargs: Additional parameters to pass to the model
+
+        Returns:
+            Language model instance for language models, Embedding model instance for embedding models.
+        """
+        # Extract the selected model from the list (SortableListInput returns a list)
+        if not self.value or not isinstance(self.value, list) or not self.value:
+            return None
+
+        # Get the first (and only) selected item
+        selected_item = self.value[0]
+        model_selection = selected_item.get("name", "") if isinstance(selected_item, dict) else str(selected_item)
+        if not model_selection or ":" not in model_selection:
+            return None
+
+        # Parse the selection
+        provider, model_name = model_selection.split(":", 1)
+        provider = provider.strip()
+        model_name = model_name.strip()
+
+        if not provider or not model_name:
+            return None
+
+        if not api_key:
+            return None
+
+        if self.model_type == "language":
+            return self._build_language_model(provider, model_name, api_key, **kwargs)
+        if self.model_type == "embedding":
+            return self._build_embedding_model(provider, model_name, api_key, **kwargs)
+        return None
+
+    def _build_language_model(self, provider: str, model_name: str, api_key: str, **kwargs) -> Any | None:
+        """Build a language model instance."""
+        try:
+            if not api_key:
+                return None
+
+            # Use provided kwargs or instance attributes for model parameters
+            temperature = kwargs.get("temperature", self.temperature)
+            max_tokens = kwargs.get("max_tokens", self.max_tokens)
+
+            if provider == "OpenAI":
+                from langchain_openai import ChatOpenAI
+
+                return ChatOpenAI(
+                    openai_api_key=api_key,
+                    model_name=model_name,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            if provider == "Anthropic":
+                from langchain_anthropic import ChatAnthropic
+
+                return ChatAnthropic(
+                    anthropic_api_key=api_key,
+                    model=model_name,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+        except ImportError:
+            # If the required package is not installed, return None
+            pass
+        return None
+
+    def _build_embedding_model(self, provider: str, model_name: str, api_key: str, **_kwargs) -> Any | None:
+        """Build an embedding model instance."""
+        try:
+            if not api_key:
+                return None
+
+            if provider == "OpenAI":
+                from langchain_openai import OpenAIEmbeddings
+
+                return OpenAIEmbeddings(
+                    openai_api_key=api_key,
+                    model=model_name,
+                )
+        except ImportError:
+            # If the required package is not installed, return None
+            pass
+        return None
+
+
 DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
 
 
@@ -674,6 +877,7 @@ InputTypes: TypeAlias = (
     | HandleInput
     | IntInput
     | McpInput
+    | ModelInput
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput

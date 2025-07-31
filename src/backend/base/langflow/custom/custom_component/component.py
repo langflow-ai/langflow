@@ -826,11 +826,22 @@ class Component(CustomComponent):
         return await self.build_results()
 
     def __getattr__(self, name: str) -> Any:
+        # Check for ModelInput first, before checking _attributes
+        if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
+            input_obj = self.__dict__["_inputs"][name]
+            # Special handling for ModelInput: return the object itself instead of just the value
+            if hasattr(input_obj, "__class__") and input_obj.__class__.__name__ == "ModelInput":
+                # Update the input object's value with the current parameter value if available
+                if hasattr(self, "_attributes") and name in self._attributes:
+                    input_obj.value = self._attributes[name]
+                return input_obj
+            # For non-ModelInput types, check _attributes first for the actual runtime value
+            if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
+                return self.__dict__["_attributes"][name]
+            return input_obj.value
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
             # It is a dict of attributes that are not inputs or outputs all the raw data it should have the loop input.
             return self.__dict__["_attributes"][name]
-        if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
-            return self.__dict__["_inputs"][name].value
         if "_outputs_map" in self.__dict__ and name in self.__dict__["_outputs_map"]:
             return self.__dict__["_outputs_map"][name]
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
