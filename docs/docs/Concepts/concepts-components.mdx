@@ -18,11 +18,11 @@ In the Langflow header, click your profile icon, select **Settings**, and then c
 
 To add a component to a flow, drag the component from the **Components** menu to the [**Workspace**](/concepts-overview).
 
-The **Components** menu is organized by component type, and some components are hidden by default:
+The **Components** menu is organized by component type or provider, and some components are hidden by default.
 
-* **Beta components**: These are Langflow's core components. They are grouped by purpose, such as **Inputs** or **Data**. Be aware that these components are in beta and not suitable for production workloads.
-* **Legacy components**: You can still use these components, but they are no longer supported. Legacy components are hidden by default; click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
-* **Bundles**: These components support specific integrations, and they are grouped by provider.
+* **Core**: The categories near the top of the **Components** menu are Langflow's core components. They are grouped by purpose, such as **Inputs and Outputs** or **Data**. **Beta** components are newly released and still in development.
+* **Bundles**: These components support specific third-party integrations, and they are grouped by provider.
+* **Legacy**: You can still use these components, but they are no longer supported. Legacy components are hidden by default; click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
 
 ### Configure a component
 
@@ -83,7 +83,7 @@ Ports either accept input or produce output of a specific data type.
 You can infer the data type from the field the port is attached to or from the [port's color](#port-colors).
 For example, the **System Message** field accepts [message data](/data-types#message), as illustrated by the blue port icon: <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} />.
 
-![Prompt component with multiple inputs](/img/prompt-component.png)
+![Prompt Template component with multiple inputs](/img/prompt-component.png)
 
 When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.
 For information about the programmatic representation of each data type, see [Langflow data types](/data-types).
@@ -99,17 +99,17 @@ For information about the programmatic representation of each data type, see [La
 ### Dynamic ports
 
 Some components have ports that are dynamically added or removed.
-For example, the **Prompt** component accepts inputs within curly braces, and new ports are opened when a value within curly braces is detected in the **Template** field.
+For example, the **Prompt Template** component accepts inputs within curly braces, and new ports are opened when a value within curly braces is detected in the **Template** field.
 
-![Prompt component with multiple inputs](/img/prompt-component-with-multiple-inputs.png)
+![Prompt Template component with multiple inputs](/img/prompt-component-with-multiple-inputs.png)
 
 ### Output type selection
 
 Some components include dropdown menus to select the type of output sent to the next component.
 
 For example, the **Language Model** component includes **Model Response** or **Language Model** outputs.
-The **Model Response** output sends a [Message](/data-types#message) output on to another Message port.
-The **Language Model** output can be connected to components like [Structured output](/components-processing#structured-output) to use the LLM to power the component's reasoning.
+The **Model Response** output sends a [`Message`](/data-types#message) output on to another `Message` port.
+The **Language Model** output can be connected to components like the [**Structured Output** component](/components-processing#structured-output) to use the LLM to power the component's reasoning.
 
 In the component code, `group_outputs` is set to `False` by default, which forces the outputs into the same dropdown menu, and only allows one output to be selected.
 When `group_outputs=True`, outputs are displayed individually.
@@ -149,7 +149,7 @@ In the context of creating and running flows, component code does the following:
 All components inherit from a base `Component` class that defines the component's interface and behavior.
 For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [`LCTextSplitterComponent`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
 
-Each component's code includes definitions for inputs and outputs, which are represented in the **Workspace** as [component ports](/concepts-components#component-ports).
+Each component's code includes definitions for inputs and outputs, which are represented in the **Workspace** as [component ports](#component-ports).
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
 These values determine the component settings, such as display names and tooltips in the Langflow UI.
 
@@ -236,7 +236,7 @@ Components are updated to the latest available version, based on the version of 
 
 ## Group components
 
-Multiple components can be grouped into a single component for reuse. This is useful for organizing large flows by combining related components together, such as a RAG **Agent** component and an associated vector database component.
+Multiple components can be grouped into a single component for reuse. This is useful for organizing large flows by combining related components together, such as a RAG **Agent** component and it's associated **Embeddings Model** and **Vector Store** components.
 
 1. Hold <kbd>Shift</kbd>, and then click and drag to highlight all components you want to merge. Components must be completely within the selection area to be merged.
 
