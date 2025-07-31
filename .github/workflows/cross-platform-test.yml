@@ -81,17 +81,44 @@ jobs:
         run: |
           echo "base-artifact-name=adhoc-dist-base" >> $GITHUB_OUTPUT
           echo "main-artifact-name=adhoc-dist-main" >> $GITHUB_OUTPUT
+      - name: Debug artifact names
+        run: |
+          echo "Build job outputs:"
+          echo "  base-artifact-name: adhoc-dist-base"
+          echo "  main-artifact-name: adhoc-dist-main"
+          echo "Input parameters:"
+          echo "  inputs.base-artifact-name: '${{ inputs.base-artifact-name }}'"
+          echo "  inputs.main-artifact-name: '${{ inputs.main-artifact-name }}'"
+
+  debug-parameters:
+    name: Debug Parameters
+    needs: [build-if-needed]
+    if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show parameters being passed to shared workflow
+        run: |
+          echo "Parameters that will be passed to shared workflow:"
+          echo "  install-method: wheel"
+          echo "  test-timeout: ${{ inputs.test-timeout || 5 }}"
+          echo "  base-artifact-name: ${{ inputs.base-artifact-name != '' && inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}"
+          echo "  main-artifact-name: ${{ inputs.main-artifact-name != '' && inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}"
+          echo ""
+          echo "Build job results:"
+          echo "  build-if-needed.result: ${{ needs.build-if-needed.result }}"
+          echo "  build-if-needed.outputs.base-artifact-name: ${{ needs.build-if-needed.outputs.base-artifact-name }}"
+          echo "  build-if-needed.outputs.main-artifact-name: ${{ needs.build-if-needed.outputs.main-artifact-name }}"
 
   test-wheel-installation:
     name: Test Wheel Installation
-    needs: [build-if-needed]
+    needs: [build-if-needed, debug-parameters]
     if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
     uses: ./.github/workflows/cross-platform-test-shared.yml
     with:
       install-method: "wheel"
-      test-timeout: ${{ inputs.test-timeout }}
-      base-artifact-name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name }}
-      main-artifact-name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name }}
+      test-timeout: ${{ inputs.test-timeout || 5 }}
+      base-artifact-name: ${{ inputs.base-artifact-name != '' && inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
+      main-artifact-name: ${{ inputs.main-artifact-name != '' && inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
 
   test-summary:
     name: Cross-Platform Test Summary
