@@ -225,7 +225,6 @@ __all__: list[str] = [
     "tools",
     "twelvelabs",
     "unstructured",
-    "vectara",
     "vectorstores",
     "vertexai",
     "wikipedia",
