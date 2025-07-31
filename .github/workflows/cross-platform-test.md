@@ -1,6 +1,6 @@
-# Ad-Hoc Cross-Platform Install Tests
+# Cross-Platform Install Tests
 
-Quick guide for running cross-platform installation tests manually.
+Guide for running cross-platform installation tests manually and programmatically.
 
 ## Available Tests
 
@@ -16,10 +16,10 @@ Tests published langflow packages from PyPI across all platforms.
 **Via CLI:**
 ```bash
 # Test latest version
-gh workflow run manual-cross-platform-test.yml -f test-from-pypi=true
+gh workflow run cross-platform-test-manual.yml -f test-from-pypi=true
 
 # Test specific version
-gh workflow run manual-cross-platform-test.yml \
+gh workflow run cross-platform-test-manual.yml \
   -f test-from-pypi=true \
   -f langflow-version="1.0.18"
 ```
@@ -35,7 +35,7 @@ Builds and tests langflow from current branch source code.
 **Via CLI:**
 ```bash
 # Test current branch
-gh workflow run manual-cross-platform-test.yml -f test-from-pypi=false
+gh workflow run cross-platform-test-manual.yml -f test-from-pypi=false
 ```
 
 ## Platforms Tested
@@ -59,11 +59,11 @@ gh workflow run manual-cross-platform-test.yml -f test-from-pypi=false
 
 ```bash
 # Extended timeout (10 minutes instead of default 5)
-gh workflow run manual-cross-platform-test.yml \
+gh workflow run cross-platform-test-manual.yml \
   -f test-timeout=10
 
 # Test specific PyPI version
-gh workflow run manual-cross-platform-test.yml \
+gh workflow run cross-platform-test-manual.yml \
   -f test-from-pypi=true \
   -f langflow-version="1.0.18"
 ```
@@ -93,9 +93,38 @@ gh workflow run manual-cross-platform-test.yml \
 - **Virtual Environments**: Uses `uv venv --seed` for consistent pip availability
 
 ### Workflow Architecture
-- **Shared Logic**: Common test steps defined in `shared-cross-platform-test.yml`
-- **DRY principle**: No code duplication between manual and automated workflows
-- **Flexible**: Supports both wheel and PyPI installation methods through single workflow
+
+```
+Manual Entry Point:
+└── cross-platform-test-manual.yml (workflow_dispatch)
+    ├── PyPI Mode → cross-platform-test-shared.yml
+    └── Source Mode → cross-platform-test.yml → cross-platform-test-shared.yml
+
+Programmatic Entry Point:
+└── cross-platform-test.yml (workflow_call only)
+    └── cross-platform-test-shared.yml
+```
+
+- **Manual Workflow**: User-facing interface with PyPI/source options
+- **Main Workflow**: Internal workflow for programmatic calls (CI, releases)
+- **Shared Workflow**: Core test execution logic (matrix jobs)
+- **Single Entry Point**: Use `cross-platform-test-manual.yml` for all manual testing
+
+### Parameter Requirements
+
+⚠️ **Important**: When calling reusable workflows from `workflow_dispatch` triggers, **all parameters must be explicitly provided**, even optional ones with defaults. Missing optional parameters can cause workflows to be silently skipped.
+
+**Example of correct parameter passing:**
+```yaml
+uses: ./.github/workflows/cross-platform-test-shared.yml
+with:
+  install-method: "wheel" 
+  test-timeout: 5
+  langflow-version: ""          # ← Required even though optional
+  base-artifact-name: "dist"
+  main-artifact-name: "dist"  
+  run-id: ""                   # ← Required even though optional
+```
 
 ## Results
 
