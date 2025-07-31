@@ -33,13 +33,12 @@ class PackageInstallResponse(BaseModel):
     status: str
 
 
-class PackageUninstallRequest(BaseModel):
-    package_name: str
+class PackageRestoreRequest(BaseModel):
+    confirm: bool = False
 
 
-class PackageUninstallResponse(BaseModel):
+class PackageRestoreResponse(BaseModel):
     message: str
-    package_name: str
     status: str
 
 
@@ -52,18 +51,35 @@ class InstalledPackage(BaseModel):
 
 
 def _find_project_root() -> Path:
-    """Find project root by looking for pyproject.toml or setup.py."""
+    """Find the main project root (not langflow-base) by looking for the main langflow pyproject.toml."""
     current_path = Path(__file__).resolve()
 
-    # Start from current file and go up the directory tree
+    # Start from current file and go up the directory tree to find main langflow project
     for parent in [current_path, *list(current_path.parents)]:
-        # Look for common project root indicators
-        if any((parent / marker).exists() for marker in ["pyproject.toml", "setup.py", "requirements.txt", ".git"]):
-            logger.info(f"Found project root at: {parent}")
+        pyproject_file = parent / "pyproject.toml"
+        if pyproject_file.exists():
+            try:
+                import tomllib
+
+                with pyproject_file.open("rb") as f:
+                    pyproject_data = tomllib.load(f)
+                project_name = pyproject_data.get("project", {}).get("name", "")
+
+                # Look specifically for the main "langflow" project, not "langflow-base"
+                if project_name == "langflow":
+                    logger.info(f"Found main langflow project root at: {parent}")
+                    return parent
+            except (OSError, tomllib.TOMLDecodeError):
+                logger.debug(f"Could not read pyproject.toml at {pyproject_file}")
+                continue
+
+        # Also check for .git as fallback
+        if (parent / ".git").exists():
+            logger.info(f"Found git root at: {parent}")
             return parent
 
     # Fallback to current working directory
-    logger.warning("Could not find project root, using current working directory")
+    logger.warning("Could not find main project root, using current working directory")
     return Path.cwd()
 
 
@@ -123,74 +139,109 @@ def _validate_package_name(package_name: str) -> bool:
 
 
 def _get_core_dependencies() -> set[str]:
-    """Get the list of core dependencies from pyproject.toml to prevent accidental removal."""
+    """Get the list of core dependencies from pyproject.toml files to prevent accidental removal."""
     try:
         import re
         from pathlib import Path
 
         import tomllib
 
-        # Find the main project root (not the backend base)
-        # Look for the main pyproject.toml with langflow project configuration
+        core_packages = set()
+
+        # Check both main langflow and langflow-base dependencies
+        pyproject_paths = []
+
+        # Find the main project root
         current_path = Path(__file__).resolve()
-
-        # Go up from the current file to find the main project root
         for parent in [current_path, *list(current_path.parents)]:
-            pyproject_path = parent / "pyproject.toml"
-            if pyproject_path.exists():
-                # Check if this is the main langflow pyproject.toml
+            main_pyproject = parent / "pyproject.toml"
+            if main_pyproject.exists():
                 try:
-                    with pyproject_path.open("rb") as f:
+                    with main_pyproject.open("rb") as f:
                         pyproject_data = tomllib.load(f)
-
-                    # Check if this is the main langflow project
                     project_name = pyproject_data.get("project", {}).get("name", "")
                     if project_name == "langflow":
-                        logger.info(f"Found main langflow pyproject.toml at: {pyproject_path}")
+                        pyproject_paths.append(main_pyproject)
+                        logger.info(f"Found main langflow pyproject.toml at: {main_pyproject}")
                         break
                 except (OSError, tomllib.TOMLDecodeError):
-                    logger.debug(f"Could not read {pyproject_path}, trying next")
                     continue
-        else:
-            logger.warning("Could not find main langflow pyproject.toml")
-            pyproject_path = _find_project_root() / "pyproject.toml"
 
-        if not pyproject_path.exists():
-            logger.warning(f"pyproject.toml not found at {pyproject_path}")
-            return set()
+        # Also check langflow-base pyproject.toml
+        # Go up from api/v1/packages.py to base/ directory
+        base_path = current_path.parent.parent.parent.parent / "pyproject.toml"
+        if base_path.exists():
+            try:
+                with base_path.open("rb") as f:
+                    pyproject_data = tomllib.load(f)
+                project_name = pyproject_data.get("project", {}).get("name", "")
+                if project_name == "langflow-base":
+                    pyproject_paths.append(base_path)
+                    logger.info(f"Found langflow-base pyproject.toml at: {base_path}")
+            except (OSError, tomllib.TOMLDecodeError):
+                pass
 
-        # Read and parse pyproject.toml
-        with pyproject_path.open("rb") as f:
-            pyproject_data = tomllib.load(f)
+        # Process all found pyproject.toml files
+        for pyproject_path in pyproject_paths:
+            with pyproject_path.open("rb") as f:
+                pyproject_data = tomllib.load(f)
 
-        dependencies = pyproject_data.get("project", {}).get("dependencies", [])
+            dependencies = pyproject_data.get("project", {}).get("dependencies", [])
+            project_name = pyproject_data.get("project", {}).get("name", "unknown")
 
-        # Extract base package names from dependency specifications
-        core_packages = set()
-        for dep in dependencies:
-            # Remove version specifiers and extras to get base package name
-            # Handle patterns like: package>=1.0.0, package[extra]>=1.0.0, package==1.0.0; condition
-            base_name = re.split(r"[<>=!~\[\];]", dep)[0].strip()
-            if base_name:
-                core_packages.add(base_name.lower())
+            # Extract base package names from dependency specifications
+            for dep in dependencies:
+                # Remove version specifiers and extras to get base package name
+                # Handle patterns like: package>=1.0.0, package[extra]>=1.0.0, package==1.0.0; condition
+                base_name = re.split(r"[<>=!~\[\];]", dep)[0].strip()
+                if base_name:
+                    core_packages.add(base_name.lower())
 
-        logger.info(f"Found {len(core_packages)} core dependencies in pyproject.toml")
+            logger.info(f"Found {len(dependencies)} dependencies in {project_name}")
+
+        # Add essential runtime dependencies that might not be in pyproject.toml but are needed
+        essential_runtime_deps = {
+            "openai",  # Often used by components but not always in core deps
+            "anthropic",  # Claude/Anthropic integration
+            "google-generativeai",  # Google AI integration
+            "mistralai",  # Mistral AI integration
+            "cohere",  # Cohere integration
+            "tiktoken",  # OpenAI tokenizer
+            "langchain-openai",  # OpenAI integration for langchain
+            "langchain-anthropic",  # Anthropic integration for langchain
+            "langchain-google-genai",  # Google integration for langchain
+            "requests",  # HTTP client
+            "httpx",  # Async HTTP client
+        }
+
+        core_packages.update(essential_runtime_deps)
+
+        logger.info(f"Total core dependencies found: {len(core_packages)}")
         return core_packages  # noqa: TRY300
 
     except (OSError, tomllib.TOMLDecodeError) as e:
         logger.error(f"Failed to read core dependencies from pyproject.toml: {e}")
-        # Return a minimal set of critical packages to prevent catastrophic failures
+        # Return a comprehensive set of critical packages to prevent catastrophic failures
         return {
             "requests",
+            "pandas",
             "openai",
+            "anthropic",
+            "google-generativeai",
+            "mistralai",
+            "cohere",
+            "tiktoken",
             "langchain",
             "langchain-core",
             "langchain-openai",
+            "langchain-anthropic",
+            "langchain-google-genai",
             "fastapi",
             "uvicorn",
             "sqlmodel",
             "pydantic",
             "langflow-base",
+            "httpx",
         }
 
 
@@ -200,44 +251,67 @@ def _is_core_dependency(package_name: str) -> bool:
     return package_name.lower() in core_deps
 
 
-async def _get_system_dependencies() -> set[str]:
-    """Get all packages currently installed in the system as dependencies."""
+async def cleanup_orphaned_installation_records(session, user_id: UUID) -> int:
+    """Clean up orphaned package installation records that no longer exist in the system."""
+    import asyncio
+    import json
+
+    # Get all user installations that are marked as COMPLETED
+    user_installations = await session.exec(
+        select(PackageInstallation)
+        .where(PackageInstallation.user_id == user_id)
+        .where(PackageInstallation.status == InstallationStatus.COMPLETED)
+    )
+
+    # Get actual installed packages from system
     try:
         uv_executable = _find_uv_executable()
         project_root = _find_project_root()
 
-        # Get dependency tree information
-        command = [str(uv_executable), "pip", "list", "--format=json"]
-
         process = await asyncio.create_subprocess_exec(
-            *command,
+            str(uv_executable),
+            "pip",
+            "list",
+            "--format=json",
             cwd=project_root,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-
         stdout, stderr = await process.communicate()
 
         if process.returncode == 0:
-            import json
+            system_packages_data = json.loads(stdout.decode("utf-8"))
+            system_packages = {pkg["name"].lower() for pkg in system_packages_data}
+        else:
+            logger.warning("Could not get system package list for cleanup")
+            return 0
 
-            packages_data = json.loads(stdout.decode("utf-8"))
-            return {pkg["name"].lower() for pkg in packages_data}
+    except (OSError, RuntimeError, json.JSONDecodeError) as e:
+        logger.warning(f"Error getting system packages for cleanup: {e}")
+        return 0
 
-    except (OSError, json.JSONDecodeError, subprocess.SubprocessError) as e:
-        logger.error(f"Failed to get system dependencies: {e}")
-        return set()
+    # Remove installation records for packages not in system
+    cleaned_count = 0
+    import re
+
+    for installation in user_installations:
+        base_name = re.split(r"[<>=!~]", installation.package_name)[0].strip().lower()
+        if base_name not in system_packages:
+            logger.info(f"Cleaning up orphaned installation record: {installation.package_name}")
+            await session.delete(installation)
+            cleaned_count += 1
+
+    if cleaned_count > 0:
+        await session.commit()
+        logger.info(f"Cleaned up {cleaned_count} orphaned installation records")
+
+    return cleaned_count
 
 
-def _is_dependency_of_others(package_name: str) -> bool:
-    """Check if a package is a dependency of other packages."""
-    # For now, we'll use the core dependency check as a proxy
-    # A more sophisticated approach would parse dependency trees
-    return _is_core_dependency(package_name)
+async def restore_langflow_background(installation_id: UUID) -> None:
+    """Background task to restore langflow by reinstalling from zero and clearing all user packages."""
+    import asyncio
 
-
-async def uninstall_package_background(installation_id: UUID) -> None:
-    """Background task to uninstall package using uv with cross-platform support."""
     from langflow.services.deps import session_scope
 
     async with session_scope() as session:
@@ -255,25 +329,103 @@ async def uninstall_package_background(installation_id: UUID) -> None:
             session.add(installation)
             await session.commit()
 
-            package_name = installation.package_name
-
             # Find UV executable and project root
             uv_executable = _find_uv_executable()
             project_root = _find_project_root()
 
-            logger.info(f"Starting uninstallation of package: {package_name}")
+            logger.info("Starting Langflow restore process")
             logger.info(f"Found UV executable at: {uv_executable}")
             logger.info(f"Found project root at: {project_root}")
 
-            # Use uv pip uninstall instead of uv remove to avoid dependency resolution issues
-            # This only removes the package from the virtual environment without modifying project dependencies
-            # which prevents accidentally removing dependencies needed by the main project
-            command = [str(uv_executable), "pip", "uninstall", package_name]
+            # Step 1: Get list of user-installed packages to remove
+            user_installations = await session.exec(
+                select(PackageInstallation)
+                .where(PackageInstallation.user_id == installation.user_id)
+                .where(PackageInstallation.status == InstallationStatus.COMPLETED)
+            )
 
-            logger.info(f"Executing command: {' '.join(command)} in {project_root}")
+            packages_to_remove = []
+            import re
+
+            for user_installation in user_installations:
+                if user_installation.id != installation.id:  # Don't include current restore record
+                    base_name = re.split(r"[<>=!~]", user_installation.package_name)[0].strip()
+                    packages_to_remove.append(base_name)
+
+            logger.info(f"Found {len(packages_to_remove)} user-installed packages to remove: {packages_to_remove}")
+
+            # Step 2: Remove user-installed packages individually to avoid removing core dependencies
+            restore_failed = False
+            error_messages = []
+
+            if packages_to_remove:
+                for package in packages_to_remove:
+                    # Skip trying to remove the restore marker package
+                    if package == "langflow-restore":
+                        logger.info(f"Skipping removal of restore marker package: {package}")
+                        continue
+
+                    remove_command = [str(uv_executable), "remove", package]
+                    logger.info(f"Removing package: {package}")
+
+                    process = await asyncio.create_subprocess_exec(
+                        *remove_command,
+                        cwd=project_root,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+
+                    stdout, stderr = await process.communicate()
+
+                    # Handle encoding properly for Windows
+                    stdout_text = ""
+                    stderr_text = ""
+
+                    if platform.system() == "Windows":
+                        # Try multiple encodings for Windows
+                        for encoding in ["utf-8", "cp1252", "latin1"]:
+                            try:
+                                stdout_text = stdout.decode(encoding) if stdout else ""
+                                stderr_text = stderr.decode(encoding) if stderr else ""
+                                break
+                            except UnicodeDecodeError:
+                                continue
+                        else:
+                            # Fallback with error replacement
+                            stdout_text = stdout.decode("utf-8", errors="replace") if stdout else ""
+                            stderr_text = stderr.decode("utf-8", errors="replace") if stderr else ""
+                    else:
+                        stdout_text = stdout.decode("utf-8") if stdout else ""
+                        stderr_text = stderr.decode("utf-8") if stderr else ""
+
+                    # Check if removal failed for critical reasons
+                    if process.returncode != 0:
+                        combined_output = f"{stdout_text} {stderr_text}".lower()
+                        # Only fail if it's a real error, not just "package not found"
+                        not_found_phrases = [
+                            "not found",
+                            "no packages",
+                            "already removed",
+                            "could not be found in",
+                            "dependency could not be found",
+                            "not in dependencies",
+                        ]
+                        if not any(phrase in combined_output for phrase in not_found_phrases):
+                            restore_failed = True
+                            error_msg = stderr_text or stdout_text or f"Failed to remove {package}"
+                            error_messages.append(error_msg)
+                            logger.error(f"Failed to remove package {package}: {error_msg}")
+                        else:
+                            logger.info(f"Package {package} was not found or already removed - this is expected")
+                    else:
+                        logger.info(f"Successfully removed package: {package}")
+
+            # Step 3: Run sync with --frozen to use existing lock file without creating new one
+            sync_command = [str(uv_executable), "sync", "--frozen"]
+            logger.info(f"Running final sync with frozen lock: {' '.join(sync_command)} in {project_root}")
 
             process = await asyncio.create_subprocess_exec(
-                *command,
+                *sync_command,
                 cwd=project_root,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -302,104 +454,102 @@ async def uninstall_package_background(installation_id: UUID) -> None:
                 stdout_text = stdout.decode("utf-8") if stdout else ""
                 stderr_text = stderr.decode("utf-8") if stderr else ""
 
-            # Enhanced error detection
-            uninstallation_failed = False
-
-            # Check return code first
+            # Check final sync result
             if process.returncode != 0:
-                uninstallation_failed = True
-                logger.error(f"UV command failed with return code: {process.returncode}")
+                sync_error = stderr_text or stdout_text or "Sync failed"
+                error_messages.append(sync_error)
+                restore_failed = True
+                logger.error(f"Final sync failed: {sync_error}")
+            else:
+                logger.info("Final sync completed successfully")
 
-            # Check for error patterns in output
-            # Use more precise error detection to avoid false positives from warnings
-            error_patterns = [
-                " error:",  # Space before error to avoid matching "warning"
-                "error ",  # Space after error
-                "\nerror:",  # Error at start of line
-                "failed to",
-                "failed:",
-                " failed ",
-                "Error:",
-                "ERROR:",
-                "not found",
-                "No such package",
-                "package not found",
-                "could not find",
-                "uninstallation failed",
-            ]
+            logger.info(f"Restore failed status: {restore_failed}")
 
-            combined_output = f"{stdout_text} {stderr_text}".lower()
-            for pattern in error_patterns:
-                if pattern.lower() in combined_output:
-                    uninstallation_failed = True
-                    logger.error(f"Detected error pattern '{pattern}' in output")
-                    break
+            if not restore_failed:
+                logger.info("Successfully restored Langflow to original state")
+                installation.status = InstallationStatus.COMPLETED
+                installation.message = "Langflow restored successfully - all user-installed packages removed"
+                logger.info("Setting restore status to COMPLETED")
 
-            logger.info(f"Uninstallation failed status for {package_name}: {uninstallation_failed}")
-
-            if not uninstallation_failed:
-                logger.info(f"Successfully uninstalled package: {package_name}")
-                installation.status = InstallationStatus.UNINSTALLED
-                installation.message = f"Package '{package_name}' uninstalled successfully"
-                logger.info(f"Setting installation status to UNINSTALLED for {package_name}")
-
-                # Mark any previously installed packages with the same base name as uninstalled
-                # This handles cases where the same package was installed multiple times with different versions
-                import re
-
-                base_package_name = re.split(r"[<>=!~]", package_name)[0].strip()
-
-                previous_installations = await session.exec(
+                # Completely remove all user package installation records to ensure clean state
+                user_installations_to_delete = await session.exec(
                     select(PackageInstallation)
                     .where(PackageInstallation.user_id == installation.user_id)
-                    .where(PackageInstallation.status == InstallationStatus.COMPLETED)
+                    .where(
+                        PackageInstallation.status.in_(
+                            [InstallationStatus.COMPLETED, InstallationStatus.FAILED, InstallationStatus.UNINSTALLED]
+                        )
+                    )
                 )
 
-                for prev_installation in previous_installations:
-                    if prev_installation.id != installation.id:  # Don't update the current uninstall record
-                        prev_base_name = re.split(r"[<>=!~]", prev_installation.package_name)[0].strip()
-                        if prev_base_name.lower() == base_package_name.lower():
-                            prev_installation.status = InstallationStatus.UNINSTALLED
-                            prev_installation.updated_at = datetime.now(timezone.utc)
-                            session.add(prev_installation)
-                            logger.info(f"Marked previous installation {prev_installation.id} as UNINSTALLED")
-            else:
-                # Combine stdout and stderr for complete error message
-                error_message = stderr_text or stdout_text or "Unknown error"
+                deleted_count = 0
+                for user_installation in user_installations_to_delete:
+                    if user_installation.id != installation.id:  # Don't delete the current restore record
+                        logger.info(
+                            f"Removing installation record: {user_installation.package_name} "
+                            f"(ID: {user_installation.id})"
+                        )
+                        await session.delete(user_installation)
+                        deleted_count += 1
 
-                # Clean up the error message for Windows
-                if platform.system() == "Windows":
-                    import re
+                logger.info(f"Clean restore completed - removed {deleted_count} package installation records")
 
-                    # Remove problematic unicode characters and clean up the message
-                    error_message = re.sub(r"[^\x00-\x7F]+", " ", error_message)
-                    # Clean up multiple spaces
-                    error_message = re.sub(r"\s+", " ", error_message).strip()
+                # Mark restore as completed first so frontend can detect success
+                installation.status = InstallationStatus.COMPLETED
+                installation.message = "Langflow restored successfully - all user-installed packages removed"
+                installation.updated_at = datetime.now(timezone.utc)
+                session.add(installation)
+                await session.commit()
+                logger.info("Setting restore status to COMPLETED")
 
-                logger.error(f"Failed to uninstall package {package_name}: {error_message}")
-                installation.status = InstallationStatus.FAILED
-                installation.message = f"Failed to uninstall package '{package_name}': {error_message}"
-                logger.info(f"Setting installation status to FAILED for {package_name}")
+                # Wait longer to allow frontend to detect completion before cleanup
+                import asyncio
 
-            # Update installation record
+                await asyncio.sleep(10)
+
+                # Now remove the restore operation record to leave completely clean table
+                logger.info(f"Removing restore operation record: {installation.package_name} (ID: {installation.id})")
+                await session.delete(installation)
+                await session.commit()
+                logger.info("Package installation table completely cleaned - restore process complete")
+                # After deletion, we cannot update the installation record anymore
+                return
+            # Combine all error messages
+            error_message = "; ".join(error_messages) if error_messages else "Unknown error during restore"
+
+            # Clean up the error message for Windows
+            if platform.system() == "Windows":
+                import re
+
+                # Remove problematic unicode characters and clean up the message
+                error_message = re.sub(r"[^\x00-\x7F]+", " ", error_message)
+                # Clean up multiple spaces
+                error_message = re.sub(r"\s+", " ", error_message).strip()
+
+            logger.error(f"Failed to restore Langflow: {error_message}")
+            installation.status = InstallationStatus.FAILED
+            installation.message = f"Failed to restore Langflow: {error_message}"
+            logger.info("Setting restore status to FAILED")
+
+            # Update installation record for failure case
             installation.updated_at = datetime.now(timezone.utc)
             session.add(installation)
             await session.commit()
-            logger.info(f"Database updated - Final status for {package_name}: {installation.status}")
+            logger.info(f"Database updated - Final restore status: {installation.status}")
 
         except (OSError, RuntimeError, subprocess.CalledProcessError, asyncio.TimeoutError) as e:
-            logger.exception(f"Unexpected error during package uninstallation: {e}")
+            logger.exception(f"Unexpected error during Langflow restore: {e}")
             # Ensure status is always updated even for unexpected errors
             if installation:
                 try:
                     installation.status = InstallationStatus.FAILED
-                    installation.message = f"Unexpected error during uninstallation: {e!s}"
+                    installation.message = f"Unexpected error during restore: {e!s}"
                     installation.updated_at = datetime.now(timezone.utc)
                     session.add(installation)
                     await session.commit()
                 except (SQLAlchemyError, OSError) as commit_error:
                     logger.error(f"Failed to update installation status after error: {commit_error}")
-            logger.info("Package uninstallation failed due to unexpected error.")
+            logger.info("Langflow restore failed due to unexpected error.")
 
 
 async def install_package_background(installation_id: UUID) -> None:
@@ -748,101 +898,25 @@ async def clear_installation_status(
     return {"message": "Installation status cleared"}
 
 
-@router.post("/uninstall", response_model=PackageUninstallResponse, status_code=202)
-async def uninstall_package(
+@router.post("/restore", response_model=PackageRestoreResponse, status_code=202)
+async def restore_langflow(
     *,
-    package_request: PackageUninstallRequest,
+    restore_request: PackageRestoreRequest,
     background_tasks: BackgroundTasks,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    """Uninstall a Python package using uv."""
+    """Restore Langflow by reinstalling from zero and removing all user-installed packages."""
     if not get_settings_service().settings.package_manager:
         raise HTTPException(status_code=403, detail="Package manager is disabled")
 
-    package_name = package_request.package_name.strip()
-
-    # Basic validation for package name (no version specifiers for uninstall)
-    if not package_name or not package_name.replace("-", "").replace("_", "").replace(".", "").isalnum():
-        raise HTTPException(status_code=400, detail="Invalid package name")
-
-    # Prevent uninstalling core dependencies
-    if _is_core_dependency(package_name):
-        raise HTTPException(
-            status_code=403,
-            detail=f"Cannot uninstall '{package_name}' as it is a core dependency required by Langflow. "
-            f"Removing this package could break the application.",
+    if not restore_request.confirm:
+        error_detail = (
+            "Restore confirmation is required. This will remove all user-installed packages and restart the backend."
         )
+        raise HTTPException(status_code=400, detail=error_detail)
 
-    # Check if the package was actually installed by this user (look at currently installed packages)
-    # Use the same logic as get_installed_packages to find currently installed packages
-    all_installations = await session.exec(
-        select(PackageInstallation)
-        .where(PackageInstallation.user_id == current_user.id)
-        .where(PackageInstallation.status.in_([InstallationStatus.COMPLETED, InstallationStatus.UNINSTALLED]))
-    )
-
-    # Group by base package name to find currently installed packages
-    import re
-    from collections import defaultdict
-
-    package_status = defaultdict(list)
-    for installation in all_installations:
-        base_name = re.split(r"[<>=!~]", installation.package_name)[0].strip().lower()
-        package_status[base_name].append(installation)
-
-    # Check if the requested package is currently installed (not uninstalled)
-    currently_installed_packages = []
-    for base_name, installations in package_status.items():
-        # Sort by created_at to get chronological order
-        installations.sort(key=lambda x: x.created_at or datetime.min.replace(tzinfo=timezone.utc))
-
-        # Check the latest status for this package
-        latest_installation = installations[-1]
-        if latest_installation.status == InstallationStatus.COMPLETED:
-            currently_installed_packages.append(base_name)
-
-    if package_name.lower() not in currently_installed_packages:
-        # If package is not in our database, check if it's actually installed in the system
-        # This handles cases where packages were installed before our tracking system
-        try:
-            uv_executable = _find_uv_executable()
-            project_root = _find_project_root()
-
-            # Check if package is actually installed
-            command = [str(uv_executable), "pip", "list", "--format=json"]
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                cwd=project_root,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
-
-            if process.returncode == 0:
-                import json
-
-                packages_data = json.loads(stdout.decode("utf-8"))
-                system_packages = [pkg["name"].lower() for pkg in packages_data]
-
-                if package_name.lower() in system_packages:
-                    # Package exists in system but not tracked - allow uninstall but warn
-                    logger.warning(f"Package '{package_name}' found in system but not in database - allowing uninstall")
-                else:
-                    raise HTTPException(
-                        status_code=404, detail=f"Package '{package_name}' is not installed in the system"
-                    )
-            else:
-                raise HTTPException(
-                    status_code=404, detail=f"Package '{package_name}' was not installed through this package manager"
-                )
-        except (OSError, json.JSONDecodeError, subprocess.SubprocessError) as e:
-            logger.error(f"Failed to check system packages: {e}")
-            raise HTTPException(
-                status_code=404, detail=f"Package '{package_name}' was not installed through this package manager"
-            ) from e
-
-    # Check if there's already an installation/uninstallation in progress for this user
+    # Check if there's already an operation in progress for this user
     stuck_cutoff = datetime.now(timezone.utc) - timedelta(minutes=10)
     stuck_installations = await session.exec(
         select(PackageInstallation)
@@ -869,9 +943,9 @@ async def uninstall_package(
     if active_result.first():
         raise HTTPException(status_code=409, detail="Package operation already in progress")
 
-    # Create uninstallation record
+    # Create restore record
     installation_data = PackageInstallationCreate(
-        package_name=package_name,
+        package_name="langflow-restore",  # Special marker for restore operations
         user_id=current_user.id,
     )
     installation = PackageInstallation.model_validate(installation_data.model_dump())
@@ -879,11 +953,12 @@ async def uninstall_package(
     await session.commit()
     await session.refresh(installation)
 
-    # Start background uninstallation
-    background_tasks.add_task(uninstall_package_background, installation.id)
+    # Start background restore
+    background_tasks.add_task(restore_langflow_background, installation.id)
 
-    return PackageUninstallResponse(
-        message=f"Package uninstallation started for '{package_name}'", package_name=package_name, status="started"
+    return PackageRestoreResponse(
+        message="Langflow restore started - all user-installed packages will be removed and the backend will restart",
+        status="started",
     )
 
 
@@ -897,13 +972,19 @@ async def get_installed_packages(
         raise HTTPException(status_code=403, detail="Package manager is disabled")
 
     try:
+        # Clean up any orphaned installation records first
+        cleaned_count = await cleanup_orphaned_installation_records(session, current_user.id)
+        if cleaned_count > 0:
+            logger.info(f"Cleaned up {cleaned_count} orphaned package records")
+
         # Get successfully installed packages for the current user from database
         # We need to find packages that are COMPLETED (installed) but not UNINSTALLED
-        all_installations = await session.exec(
+        result = await session.exec(
             select(PackageInstallation)
             .where(PackageInstallation.user_id == current_user.id)
             .where(PackageInstallation.status.in_([InstallationStatus.COMPLETED, InstallationStatus.UNINSTALLED]))
         )
+        all_installations = list(result)
 
         # Group by base package name to find currently installed packages
         import re
@@ -980,7 +1061,11 @@ async def get_installed_packages(
                 else:
                     # Package was installed by user but no longer in system
                     # This could happen if it was manually uninstalled outside our system
-                    logger.warning(f"Package {base_package_name} was installed by user but not found in system")
+                    # or if the restore process removed it but database cleanup is pending
+                    logger.debug(
+                        f"Package {base_package_name} was installed by user but not found in system - "
+                        f"may have been removed externally"
+                    )
 
             return user_packages  # noqa: TRY300
 

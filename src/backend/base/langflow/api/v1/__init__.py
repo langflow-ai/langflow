@@ -15,9 +15,18 @@ from langflow.api.v1.store import router as store_router
 from langflow.api.v1.users import router as users_router
 from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
-from langflow.api.v1.voice_mode import router as voice_mode_router
+
+# Try to import voice_mode, but don't fail if dependencies are missing
+try:
+    from langflow.api.v1.voice_mode import router as voice_mode_router
+
+    VOICE_MODE_AVAILABLE = True
+except ImportError:
+    voice_mode_router = None
+    VOICE_MODE_AVAILABLE = False
 
 __all__ = [
+    "VOICE_MODE_AVAILABLE",
     "api_key_router",
     "chat_router",
     "endpoints_router",

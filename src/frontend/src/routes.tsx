@@ -34,7 +34,7 @@ import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
-import PackageManagerPage from "./pages/SettingsPage/pages/PackageManagerPage";
+import PackageManagerPage from "./pages/SettingsPage/pages/PackageManagerPage/package-manager-page";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
 

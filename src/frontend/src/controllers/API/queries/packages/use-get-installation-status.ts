@@ -21,12 +21,12 @@ export const useGetInstallationStatus = (enabled: boolean = true) => {
     queryKey: ["installation-status"],
     queryFn: getInstallationStatus,
     enabled,
-    refetchInterval: enabled ? 2000 : false, // Poll every 2 seconds when enabled
+    refetchInterval: enabled ? 2000 : false,
     refetchIntervalInBackground: false,
     retry: false,
-    staleTime: 0, // Always consider data stale to ensure fresh updates
-    gcTime: 0, // Don't cache data - always fetch fresh
-    refetchOnWindowFocus: false, // Prevent unwanted refetches
-    refetchOnMount: true, // Always refetch on component mount
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
   });
 };
