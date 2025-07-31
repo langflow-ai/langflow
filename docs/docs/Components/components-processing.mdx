@@ -380,9 +380,9 @@ This component allows you to execute Python code with imported packages.
 1. To use this component in a flow,in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
 At least one import is required.
 2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
-3. Optionally, enable **Tool Mode** and connect the interpreter to an **Agent** as a tool.
+3. Optionally, enable **Tool Mode** and connect the interpreter to an **Agent** component as a tool.
 For example, connect a **Python Interpreter** component and a [**Calculator** component](/components-helpers#calculator) as tools for an **Agent** component, and then test how it chooses different tools to solve math problems.
-![Python Interpreter and calculator connected to Agent](/img/component-python-interpreter.png)
+![Python Interpreter and Calculator components connected to an Agent component](/img/component-python-interpreter.png)
 4. Ask the agent an easier math question.
 The **Calculator** tool can add, subtract, multiple, divide, or perform exponentiation.
 The agent executes the `evaluate_expression` tool to correctly answer the question.
@@ -418,7 +418,7 @@ result = math.sqrt(df['squares'].mean())
 print(f"Square root of mean squares: {result}")
 ```
 
-The Agent correctly chooses the `run_python_repl` tool to solve the problem.
+The agent correctly chooses the `run_python_repl` tool to solve the problem.
 
 Result:
 ```text
@@ -436,7 +436,7 @@ Output:
 }
 ```
 
-If you don't include the package imports in the chat, the Agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the **Python Interpreter** component in the **Global Imports** field.
+If you don't include the package imports in the chat, the agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the **Python Interpreter** component in the **Global Imports** field.
 
 ### Python Interpreter parameters
 

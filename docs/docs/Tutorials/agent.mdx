@@ -7,9 +7,9 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial shows you how to connect a JavaScript application to a Langflow [agent](/agents).
+This tutorial shows you how to connect a JavaScript application to a [Langflow agent](/agents).
 
-With the agent connected, your application can use any connected tools to retrieve more contextual and timely data without changing any application code. The tools are selected by the agent's internal LLM to solve problems and answer questions.
+With an agent, your application can use any connected tools to retrieve more contextual and timely data without changing any application code. The tools are selected by the agent's internal LLM to solve problems and answer questions.
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ With the agent connected, your application can use any connected tools to retrie
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
-## Create an agentic flow
+## Create an agent flow
 
 The following steps modify the **Simple Agent** template to connect a [**Directory** component](/components-data#directory) and a [**Web Search** component](/components-data#web-search) as tools for an **Agent** component.
 The **Directory** component loads all files of a given type from a target directory on your local machine, and the **Web Search** component performs a DuckDuckGo search.
@@ -52,7 +52,7 @@ When connected to an **Agent** component as tools, the agent has the option to u
 
 In this example, the application sends a customer's email address to the Langflow agent. The agent compares the customer's previous orders within the **Directory** component, searches the web for used versions of those items, and returns three results.
 
-1. To include the email address as a value in your flow, add a [**Prompt Template** component](/components-prompts) to your flow between the **Chat Input** and **Agent**.
+1. To include the email address as a value in your flow, add a [**Prompt Template** component](/components-prompts) to your flow between the **Chat Input** and **Agent** components.
 2. In the **Prompt Template** component's **Template** field, enter `Recommend 3 used items for {email}, based on previous orders.`
 Adding the `{email}` value in curly braces creates a new input in the **Prompt Template** component, and the component connected to the `{email}` port is supplying the value for that variable.
 This creates a point for the user's email to enter the flow from your request.
