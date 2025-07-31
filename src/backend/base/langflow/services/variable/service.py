@@ -134,9 +134,13 @@ class DatabaseVariableService(VariableService, Service):
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
 
+        if variable.category is not None:
+            db_variable.category = variable.category
+
         variable.value = variable.value or ""
-        encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
-        variable.value = encrypted
+        if variable.type == CREDENTIAL_TYPE:
+            encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+            variable.value = encrypted
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
