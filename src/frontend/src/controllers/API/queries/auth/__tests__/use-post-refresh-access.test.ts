@@ -1,34 +1,39 @@
 // Refresh token functionality tests
 
-import { LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
-import useSetCookieAuth from "@/shared/hooks/use-set-cookie-auth";
+// Mock all dependencies before imports
+jest.mock("@/utils/utils", () => ({
+  setAuthCookie: jest.fn(),
+}));
 
-// Mock dependencies
-jest.mock("@/shared/hooks/use-set-cookie-auth");
+jest.mock(
+  "@/stores/authStore",
+  () => jest.fn((selector) => false), // autoLogin = false
+);
 
-const mockUseSetCookieAuth = useSetCookieAuth as jest.MockedFunction<
-  typeof useSetCookieAuth
->;
+jest.mock("@/controllers/API/api", () => ({
+  api: {
+    post: jest.fn(),
+  },
+}));
 
-// Mock the refresh token hook behavior
-const createMockRefreshToken = () => {
-  const mockApiPost = jest.fn();
+jest.mock("@/controllers/API/services/request-processor", () => ({
+  UseRequestProcessor: jest.fn(() => ({
+    mutate: jest.fn((key, fn, options) => ({
+      mutate: async () => {
+        return await fn();
+      },
+    })),
+  })),
+}));
 
-  const refreshAccess = async () => {
-    const response = await mockApiPost("/refresh");
-    mockUseSetCookieAuth(LANGFLOW_REFRESH_TOKEN, response.data.refresh_token);
-    return response.data;
-  };
+jest.mock("react-cookie", () => ({
+  Cookies: jest.fn().mockImplementation(() => ({})),
+}));
 
-  const mutate = async () => {
-    return await refreshAccess();
-  };
+import { useRefreshAccessToken } from "../use-post-refresh-access";
 
-  return {
-    mutate,
-    mockApiPost,
-  };
-};
+const mockSetAuthCookie = require("@/utils/utils").setAuthCookie;
+const mockApiPost = require("@/controllers/API/api").api.post;
 
 describe("refresh token functionality", () => {
   beforeEach(() => {
@@ -43,14 +48,17 @@ describe("refresh token functionality", () => {
         token_type: "bearer",
       };
 
-      const { mutate, mockApiPost } = createMockRefreshToken();
       mockApiPost.mockResolvedValue({ data: mockRefreshResponse });
 
-      const result = await mutate();
+      const refreshMutation = useRefreshAccessToken();
+      const result = await refreshMutation.mutate();
 
-      expect(mockApiPost).toHaveBeenCalledWith("/refresh");
-      expect(mockUseSetCookieAuth).toHaveBeenCalledWith(
-        LANGFLOW_REFRESH_TOKEN,
+      expect(mockApiPost).toHaveBeenCalledWith(
+        expect.stringContaining("refresh"),
+      );
+      expect(mockSetAuthCookie).toHaveBeenCalledWith(
+        expect.any(Object), // cookies instance
+        "refresh_token_lf",
         "new-refresh-token",
       );
       expect(result).toEqual(mockRefreshResponse);
@@ -63,10 +71,10 @@ describe("refresh token functionality", () => {
         token_type: "bearer",
       };
 
-      const { mutate, mockApiPost } = createMockRefreshToken();
       mockApiPost.mockResolvedValue({ data: mockRefreshResponse });
 
-      const result = await mutate();
+      const refreshMutation = useRefreshAccessToken();
+      const result = await refreshMutation.mutate();
 
       expect(result).toEqual(mockRefreshResponse);
     });
@@ -75,26 +83,25 @@ describe("refresh token functionality", () => {
   describe("error handling", () => {
     it("should throw error when refresh API fails", async () => {
       const mockError = new Error("Refresh failed");
-
-      const { mutate, mockApiPost } = createMockRefreshToken();
       mockApiPost.mockRejectedValue(mockError);
 
-      await expect(mutate()).rejects.toThrow("Refresh failed");
+      const refreshMutation = useRefreshAccessToken();
+      await expect(refreshMutation.mutate()).rejects.toThrow("Refresh failed");
     });
 
     it("should not set cookie when API fails", async () => {
       const mockError = new Error("API Error");
-
-      const { mutate, mockApiPost } = createMockRefreshToken();
       mockApiPost.mockRejectedValue(mockError);
 
+      const refreshMutation = useRefreshAccessToken();
+
       try {
-        await mutate();
+        await refreshMutation.mutate();
       } catch (error) {
         // Expected to throw
       }
 
-      expect(mockUseSetCookieAuth).not.toHaveBeenCalled();
+      expect(mockSetAuthCookie).not.toHaveBeenCalled();
     });
   });
 
@@ -106,14 +113,15 @@ describe("refresh token functionality", () => {
         token_type: "bearer",
       };
 
-      const { mutate, mockApiPost } = createMockRefreshToken();
       mockApiPost.mockResolvedValue({ data: mockRefreshResponse });
 
-      await mutate();
+      const refreshMutation = useRefreshAccessToken();
+      await refreshMutation.mutate();
 
-      expect(mockUseSetCookieAuth).toHaveBeenCalledTimes(1);
-      expect(mockUseSetCookieAuth).toHaveBeenCalledWith(
-        LANGFLOW_REFRESH_TOKEN,
+      expect(mockSetAuthCookie).toHaveBeenCalledTimes(1);
+      expect(mockSetAuthCookie).toHaveBeenCalledWith(
+        expect.any(Object), // cookies instance
+        "refresh_token_lf",
         "refresh-token-xyz",
       );
     });
@@ -125,14 +133,15 @@ describe("refresh token functionality", () => {
         token_type: "bearer",
       };
 
-      const { mutate, mockApiPost } = createMockRefreshToken();
       mockApiPost.mockResolvedValue({ data: mockRefreshResponse });
 
-      const response = await mutate();
+      const refreshMutation = useRefreshAccessToken();
+      const response = await refreshMutation.mutate();
 
       // Verify cookie was set before response was returned
-      expect(mockUseSetCookieAuth).toHaveBeenCalledWith(
-        LANGFLOW_REFRESH_TOKEN,
+      expect(mockSetAuthCookie).toHaveBeenCalledWith(
+        expect.any(Object), // cookies instance
+        "refresh_token_lf",
         "refresh-token-abc",
       );
       expect(response).toEqual(mockRefreshResponse);

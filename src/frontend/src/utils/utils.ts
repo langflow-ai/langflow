@@ -6,6 +6,7 @@ import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/
 import useAlertStore from "@/stores/alertStore";
 import { type ColumnField, FormatterType } from "@/types/utils/functions";
 import "moment-timezone";
+import { Cookies } from "react-cookie";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -1004,4 +1005,20 @@ export const stripReleaseStageFromVersion = (version: string): string => {
     }
   }
   return version;
+};
+
+export const getAuthCookie = (cookies: Cookies, tokenName: string) => {
+  return cookies.get(tokenName);
+};
+
+export const setAuthCookie = (
+  cookies: Cookies,
+  tokenName: string,
+  value: string,
+) => {
+  cookies.set(tokenName, value, {
+    path: "/",
+    secure: true,
+    sameSite: "strict",
+  });
 };

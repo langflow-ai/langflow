@@ -1,10 +1,47 @@
 import { Cookies } from "react-cookie";
-import useSetCookieAuth from "../use-set-cookie-auth";
+
+// Mock all complex dependencies to avoid import issues
+jest.mock("@/stores/authStore", () => ({
+  __esModule: true,
+  default: jest.fn(() => ({})),
+}));
+
+jest.mock("@/stores/darkStore", () => ({
+  useDarkStore: {
+    getState: () => ({ refreshStars: jest.fn() }),
+    setState: jest.fn(),
+    subscribe: jest.fn(),
+    destroy: jest.fn(),
+  },
+}));
+
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: jest.fn(() => ({})),
+}));
+
+jest.mock("@/utils/styleUtils", () => ({}));
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender",
+  () => () => null,
+);
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor",
+  () => () => null,
+);
+
+// Jest can't find this module to mock it, let's skip this mock
+
+// Jest can't find this module either
 
 // Mock react-cookie
 jest.mock("react-cookie");
 
-describe("useSetCookieAuth", () => {
+import { setAuthCookie } from "@/utils/utils";
+
+describe("setAuthCookie", () => {
   let mockCookies: jest.Mocked<Cookies>;
 
   beforeEach(() => {
@@ -13,9 +50,6 @@ describe("useSetCookieAuth", () => {
       set: jest.fn(),
       remove: jest.fn(),
     } as any;
-    (Cookies as jest.MockedClass<typeof Cookies>).mockImplementation(
-      () => mockCookies,
-    );
   });
 
   afterEach(() => {
@@ -26,7 +60,7 @@ describe("useSetCookieAuth", () => {
     const tokenName = "access_token_lf";
     const tokenValue = "test-access-token";
 
-    useSetCookieAuth(tokenName, tokenValue);
+    setAuthCookie(mockCookies, tokenName, tokenValue);
 
     expect(mockCookies.set).toHaveBeenCalledWith(tokenName, tokenValue, {
       path: "/",
@@ -43,7 +77,7 @@ describe("useSetCookieAuth", () => {
     ];
 
     testCases.forEach(({ tokenName, value }) => {
-      useSetCookieAuth(tokenName, value);
+      setAuthCookie(mockCookies, tokenName, value);
 
       expect(mockCookies.set).toHaveBeenCalledWith(tokenName, value, {
         path: "/",
@@ -57,7 +91,7 @@ describe("useSetCookieAuth", () => {
     const tokenName = "test_token";
     const tokenValue = "";
 
-    useSetCookieAuth(tokenName, tokenValue);
+    setAuthCookie(mockCookies, tokenName, tokenValue);
 
     expect(mockCookies.set).toHaveBeenCalledWith(tokenName, tokenValue, {
       path: "/",
@@ -67,7 +101,7 @@ describe("useSetCookieAuth", () => {
   });
 
   it("should use correct cookie options for security", () => {
-    useSetCookieAuth("test_token", "test_value");
+    setAuthCookie(mockCookies, "test_token", "test_value");
 
     const cookieOptions = mockCookies.set.mock.calls[0][2];
 
@@ -85,7 +119,7 @@ describe("useSetCookieAuth", () => {
     const tokenName = "test_token";
     const tokenValue = "token-with-special-chars_@#$%";
 
-    useSetCookieAuth(tokenName, tokenValue);
+    setAuthCookie(mockCookies, tokenName, tokenValue);
 
     expect(mockCookies.set).toHaveBeenCalledWith(tokenName, tokenValue, {
       path: "/",

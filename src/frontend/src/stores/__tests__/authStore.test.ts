@@ -1,4 +1,37 @@
 import { act, renderHook } from "@testing-library/react";
+
+// Mock the darkStore to avoid import.meta issues
+jest.mock("../darkStore", () => ({
+  useDarkStore: {
+    getState: () => ({ refreshStars: jest.fn() }),
+    setState: jest.fn(),
+    subscribe: jest.fn(),
+    destroy: jest.fn(),
+  },
+}));
+
+// Mock all complex dependencies to avoid import issues
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: jest.fn(() => ({})),
+}));
+
+jest.mock("@/utils/styleUtils", () => ({}));
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender",
+  () => () => null,
+);
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor",
+  () => () => null,
+);
+
+// Jest can't find this module to mock it, let's skip this mock
+
+// Jest can't find this module either
+
 import useAuthStore from "../authStore";
 
 // We can't easily mock the cookie hook at initialization time, so we'll test actual behavior
