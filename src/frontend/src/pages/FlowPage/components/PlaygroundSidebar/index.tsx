@@ -287,7 +287,7 @@ export function PlaygroundSidebar() {
       <SidebarContent className="p-0">
         <div className="flex h-full w-full bg-background">
           <ChatViewWrapper
-            playgroundPage={true}
+            playgroundPage={false}
             selectedViewField={selectedViewField}
             visibleSession={visibleSession}
             sessions={sessions}
