@@ -1,3 +1,5 @@
+import { TwelveLabsIcon } from "./TwelveLabs";
+
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
