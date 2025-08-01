@@ -251,7 +251,6 @@ export default function ChatView({
     <div
       className={cn(
         "flex h-full w-full flex-col rounded-md",
-        visibleSession ? "h-[95%]" : "h-full",
         sidebarOpen &&
           !isVoiceAssistantActive &&
           "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0",
@@ -287,8 +286,7 @@ export default function ChatView({
               )}
             </>
           ) : (
-            <>
-              <div className="flex h-full w-full flex-col items-center justify-center">
+            <div className="flex h-full w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
                   <LangflowLogo
                     title="Langflow logo"
@@ -308,8 +306,8 @@ export default function ChatView({
                     </p>
                   </div>
                 </div>
-              </div>
-            </>
+
+            </div>
           ))}
         <div
           className={
@@ -325,7 +323,7 @@ export default function ChatView({
         </div>
       </div>
 
-      <div className="m-auto w-full max-w-[768px] md:w-5/6">
+      <div className="w-full">
         <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
