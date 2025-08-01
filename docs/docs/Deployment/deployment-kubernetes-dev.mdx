@@ -6,7 +6,7 @@ slug: /deployment-kubernetes-dev
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-The [Langflow Integrated Development Environment (IDE)](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
+The [Langflow Integrated Development Environment (IDE)](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide) Helm chart is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the visual editor.
 
 ## Prerequisites
 
@@ -60,14 +60,15 @@ Enable local port forwarding to access Langflow from your local machine.
 kubectl port-forward -n langflow svc/langflow-service-backend 7860:7860
 ```
 
-2. To make the Langflow UI accessible from your local machine at port 8080:
+2. To make the visual editor accessible from your local machine at port 8080:
+
 ```shell
 kubectl port-forward -n langflow svc/langflow-service 8080:8080
 ```
 
 Now you can do the following:
 - Access the Langflow API at `http://localhost:7860`.
-- Access the Langflow UI at `http://localhost:8080`.
+- Access the visual editor at `http://localhost:8080`.
 
 ## Configure the Langflow version
 
