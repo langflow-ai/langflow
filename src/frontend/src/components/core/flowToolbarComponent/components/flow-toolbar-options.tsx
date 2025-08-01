@@ -10,7 +10,6 @@ export default function FlowToolbarOptions() {
       <div className="flex h-full w-full gap-1.5 rounded-sm transition-all">
         <PlaygroundButton
           hasIO={hasIO}
-          canvasOpen
         />
       </div>
       <PublishDropdown />
