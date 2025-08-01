@@ -15,6 +15,12 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         """Return the component class to test."""
         return KBRetrievalComponent
 
+    @pytest.fixture(autouse=True)
+    def mock_knowledge_base_path(self, tmp_path):
+        """Mock the knowledge base root path directly."""
+        with patch("langflow.components.data.kb_retrieval.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+            yield
+
     @pytest.fixture
     def default_kwargs(self, tmp_path):
         """Return default kwargs for component instantiation."""
