@@ -32,6 +32,7 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.utils.version import get_version_info
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -384,9 +385,10 @@ async def export_project(
         flows = [flow for flow in project.flows if flow.user_id == current_user.id]
 
         # Build export structure
+        version_info = get_version_info()
         export_data = {
             "version": "1.0",  # Export format version
-            "langflow_version": "1.5.0",  # TODO: Get from settings/version
+            "langflow_version": version_info["version"],
             "export_type": "project",
             "exported_at": datetime.now(tz=timezone.utc).isoformat(),
             "project": {
