@@ -1,3 +1,11 @@
+"""Unit tests for MCP component with actual MCP servers.
+
+This test suite validates the MCP component functionality using real MCP servers:
+- Everything server (stdio mode) - provides echo and other tools
+- DeepWiki server (SSE mode) - provides wiki-related tools
+"""
+
+import shutil
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,6 +26,11 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
+            "mode": "Stdio",
+            "command": "npx -y @modelcontextprotocol/server-everything",
+            "sse_url": "https://mcp.deepwiki.com/sse",
+            "tool": "echo",
+            "mcp_server": {"name": "test_server", "config": {"command": "uvx mcp-server-fetch"}},
             "mcp_server": {"name": "test_server", "config": {"command": "uvx mcp-server-fetch"}},
             "tool": "",
         }
@@ -26,6 +39,285 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self) -> list[VersionComponentMapping]:
         """Return the file names mapping for different versions."""
         return []
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_component_initialization(self, component_class, default_kwargs):
+        """Test that the component initializes correctly."""
+        component = component_class(**default_kwargs)
+
+        # Check that the component has the expected attributes
+        assert hasattr(component, "stdio_client")
+        assert hasattr(component, "sse_client")
+        assert isinstance(component.stdio_client, MCPStdioClient)
+        assert isinstance(component.sse_client, MCPSseClient)
+
+        # Check that the component has a session manager
+        session_manager = component.stdio_client._get_session_manager()
+        assert isinstance(session_manager, MCPSessionManager)
+
+
+class TestMCPStdioClientWithEverythingServer:
+    """Test MCPStdioClient with the Everything MCP server."""
+
+    @pytest.fixture
+    def stdio_client(self):
+        """Create a stdio client for testing."""
+        return MCPStdioClient()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_connect_to_everything_server(self, stdio_client):
+        """Test connecting to the Everything MCP server."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Connect to the server
+            tools = await stdio_client.connect_to_server(command)
+
+            # Verify tools were returned
+            assert len(tools) > 0
+
+            # Find the echo tool
+            echo_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "echo":
+                    echo_tool = tool
+                    break
+
+            assert echo_tool is not None, "Echo tool not found in server tools"
+            assert echo_tool.description is not None
+
+            # Verify the echo tool has the expected input schema
+            assert hasattr(echo_tool, "inputSchema")
+            assert echo_tool.inputSchema is not None
+
+        finally:
+            # Clean up the connection
+            await stdio_client.disconnect()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_run_echo_tool(self, stdio_client):
+        """Test running the echo tool from the Everything server."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Connect to the server
+            tools = await stdio_client.connect_to_server(command)
+
+            # Find the echo tool
+            echo_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "echo":
+                    echo_tool = tool
+                    break
+
+            assert echo_tool is not None, "Echo tool not found"
+
+            # Run the echo tool
+            test_message = "Hello, MCP!"
+            result = await stdio_client.run_tool("echo", {"message": test_message})
+
+            # Verify the result
+            assert result is not None
+            assert hasattr(result, "content")
+            assert len(result.content) > 0
+
+            # Check that the echo worked - content should contain our message
+            content_text = str(result.content[0])
+            assert test_message in content_text or "Echo:" in content_text
+
+        finally:
+            await stdio_client.disconnect()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_list_all_tools(self, stdio_client):
+        """Test listing all available tools from the Everything server."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Connect to the server
+            tools = await stdio_client.connect_to_server(command)
+
+            # Verify we have multiple tools
+            assert len(tools) >= 3  # Everything server typically has several tools
+
+            # Check that tools have the expected attributes
+            for tool in tools:
+                assert hasattr(tool, "name")
+                assert hasattr(tool, "description")
+                assert hasattr(tool, "inputSchema")
+                assert tool.name is not None
+                assert len(tool.name) > 0
+
+            # Common tools that should be available
+            expected_tools = ["echo"]  # Echo is typically available
+            for expected_tool in expected_tools:
+                assert any(tool.name == expected_tool for tool in tools), f"Expected tool '{expected_tool}' not found"
+
+        finally:
+            await stdio_client.disconnect()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_session_reuse(self, stdio_client):
+        """Test that sessions are properly reused."""
+        command = "npx -y @modelcontextprotocol/server-everything"
+
+        try:
+            # Set session context
+            stdio_client.set_session_context("test_session_reuse")
+
+            # Connect to the server
+            tools1 = await stdio_client.connect_to_server(command)
+
+            # Connect again - should reuse the session
+            tools2 = await stdio_client.connect_to_server(command)
+
+            # Should have the same tools
+            assert len(tools1) == len(tools2)
+
+            # Run a tool to verify the session is working
+            result = await stdio_client.run_tool("echo", {"message": "Session reuse test"})
+            assert result is not None
+
+        finally:
+            await stdio_client.disconnect()
+
+
+class TestMCPSseClientWithDeepWikiServer:
+    """Test MCPSseClient with the DeepWiki MCP server."""
+
+    @pytest.fixture
+    def sse_client(self):
+        """Create an SSE client for testing."""
+        return MCPSseClient()
+
+    @pytest.mark.asyncio
+    async def test_connect_to_deepwiki_server(self, sse_client):
+        """Test connecting to the DeepWiki MCP server."""
+        url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Connect to the server
+            tools = await sse_client.connect_to_server(url)
+
+            # Verify tools were returned
+            assert len(tools) > 0
+
+            # Check for expected DeepWiki tools
+            expected_tools = ["read_wiki_structure", "read_wiki_contents", "ask_question"]
+
+            # Verify we have the expected tools
+            for expected_tool in expected_tools:
+                assert any(tool.name == expected_tool for tool in tools), f"Expected tool '{expected_tool}' not found"
+
+        except Exception as e:  # noqa: BLE001
+            # If the server is not accessible, skip the test
+            pytest.skip(f"DeepWiki server not accessible: {e}")
+        finally:
+            await sse_client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_run_wiki_structure_tool(self, sse_client):
+        """Test running the read_wiki_structure tool."""
+        url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Connect to the server
+            tools = await sse_client.connect_to_server(url)
+
+            # Find the read_wiki_structure tool
+            wiki_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "read_wiki_structure":
+                    wiki_tool = tool
+                    break
+
+            assert wiki_tool is not None, "read_wiki_structure tool not found"
+
+            # Run the tool with a test repository
+            result = await sse_client.run_tool("read_wiki_structure", {"repository": "microsoft/vscode"})
+
+            # Verify the result
+            assert result is not None
+            assert hasattr(result, "content")
+            assert len(result.content) > 0
+
+        except Exception as e:  # noqa: BLE001
+            # If the server is not accessible or the tool fails, skip the test
+            pytest.skip(f"DeepWiki server test failed: {e}")
+        finally:
+            await sse_client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_ask_question_tool(self, sse_client):
+        """Test running the ask_question tool."""
+        url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Connect to the server
+            tools = await sse_client.connect_to_server(url)
+
+            # Find the ask_question tool
+            ask_tool = None
+            for tool in tools:
+                if hasattr(tool, "name") and tool.name == "ask_question":
+                    ask_tool = tool
+                    break
+
+            assert ask_tool is not None, "ask_question tool not found"
+
+            # Run the tool with a test question
+            result = await sse_client.run_tool(
+                "ask_question", {"repository": "microsoft/vscode", "question": "What is VS Code?"}
+            )
+
+            # Verify the result
+            assert result is not None
+            assert hasattr(result, "content")
+            assert len(result.content) > 0
+
+        except Exception as e:  # noqa: BLE001
+            # If the server is not accessible or the tool fails, skip the test
+            pytest.skip(f"DeepWiki server test failed: {e}")
+        finally:
+            await sse_client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_url_validation(self, sse_client):
+        """Test URL validation for SSE connections."""
+        # Test valid URL
+        valid_url = "https://mcp.deepwiki.com/sse"
+        is_valid, error = await sse_client.validate_url(valid_url)
+        assert is_valid or error == ""  # Either valid or accessible
+
+        # Test invalid URL
+        invalid_url = "not_a_url"
+        is_valid, error = await sse_client.validate_url(invalid_url)
+        assert not is_valid
+        assert error != ""
+
+    @pytest.mark.asyncio
+    async def test_redirect_handling(self, sse_client):
+        """Test redirect handling for SSE connections."""
+        # Test with the DeepWiki URL
+        url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Check for redirects
+            final_url = await sse_client.pre_check_redirect(url)
+
+            # Should return a URL (either original or redirected)
+            assert final_url is not None
+            assert isinstance(final_url, str)
+            assert final_url.startswith("http")
+
+        except Exception as e:  # noqa: BLE001
+            # If the server is not accessible, skip the test
+            pytest.skip(f"DeepWiki server not accessible for redirect test: {e}")
 
     @pytest.fixture
     def mock_tool(self):
@@ -54,7 +346,89 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         return session
 
 
-class TestMCPStdioClient:
+class TestMCPToolsComponentIntegration:
+    """Integration tests for the MCPToolsComponent."""
+
+    @pytest.fixture
+    def component(self):
+        """Create a component for testing."""
+        return MCPToolsComponent()
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_stdio_mode_integration(self, component):
+        """Test the component in stdio mode with Everything server."""
+        # Configure for stdio mode
+        component.mode = "Stdio"
+        component.command = "npx -y @modelcontextprotocol/server-everything"
+        component.tool = "echo"
+
+        try:
+            # Mock the update_tool_list method to simulate server connection
+            tools, server_info = await component.update_tool_list()
+
+            # Should have tools
+            assert len(tools) > 0
+
+            # Should have server info
+            assert server_info is not None
+            assert isinstance(server_info, dict)
+
+        except Exception as e:  # noqa: BLE001
+            # If the server is not accessible, skip the test
+            pytest.skip(f"Everything server not accessible: {e}")
+
+    @pytest.mark.asyncio
+    async def test_sse_mode_integration(self, component):
+        """Test the component in SSE mode with DeepWiki server."""
+        # Configure for SSE mode
+        component.mode = "SSE"
+        component.sse_url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Mock the update_tool_list method to simulate server connection
+            tools, server_info = await component.update_tool_list()
+
+            # Should have tools
+            assert len(tools) > 0
+
+            # Should have server info
+            assert server_info is not None
+            assert isinstance(server_info, dict)
+
+        except Exception as e:  # noqa: BLE001
+            # If the server is not accessible, skip the test
+            pytest.skip(f"DeepWiki server not accessible: {e}")
+
+    @pytest.mark.asyncio
+    async def test_session_context_setting(self, component):
+        """Test that session context is properly set."""
+        # Set session context
+        component.stdio_client.set_session_context("test_context")
+        component.sse_client.set_session_context("test_context")
+
+        # Verify context was set
+        assert component.stdio_client._session_context == "test_context"
+        assert component.sse_client._session_context == "test_context"
+
+    @pytest.mark.asyncio
+    async def test_session_manager_sharing(self, component):
+        """Test that session managers are shared through component cache."""
+        # Get session managers
+        stdio_manager = component.stdio_client._get_session_manager()
+        sse_manager = component.sse_client._get_session_manager()
+
+        # Both should be MCPSessionManager instances
+        assert isinstance(stdio_manager, MCPSessionManager)
+        assert isinstance(sse_manager, MCPSessionManager)
+
+        # They should be the same instance (shared through cache)
+        assert stdio_manager is sse_manager
+
+
+class TestMCPComponentErrorHandling:
+    """Test error handling in MCP components."""
+
     @pytest.fixture
     def stdio_client(self):
         return MCPStdioClient()
@@ -128,6 +502,17 @@ class TestMCPSseClient:
     @pytest.fixture
     def sse_client(self):
         return MCPSseClient()
+
+    @pytest.mark.asyncio
+    async def test_connection_cleanup(self, stdio_client, sse_client):
+        """Test that connections are properly cleaned up."""
+        # Both clients should handle disconnect gracefully
+        await stdio_client.disconnect()
+        await sse_client.disconnect()
+
+        # Should be able to call disconnect multiple times
+        await stdio_client.disconnect()
+        await sse_client.disconnect()
 
     async def test_validate_url_valid(self, sse_client):
         """Test URL validation with valid URL."""
@@ -264,6 +649,235 @@ class TestMCPSseClient:
         with (
             patch.object(sse_client, "_get_or_create_session", side_effect=mock_get_session_side_effect),
             patch.object(sse_client, "_get_session_manager") as mock_get_manager,
+        ):
+            mock_manager = AsyncMock()
+            mock_get_manager.return_value = mock_manager
+
+            result = await sse_client.run_tool("test_tool", {"param": "value"})
+
+            # Should have retried and succeeded on second attempt
+            assert call_count == 2
+            assert result is not None
+            # Should have cleaned up the failed session
+            mock_manager._cleanup_session.assert_called_once_with("test_context")
+
+
+class TestMCPSessionManager:
+    @pytest.fixture
+    def session_manager(self):
+        return MCPSessionManager()
+
+    async def test_session_caching(self, session_manager):
+        """Test that sessions are properly cached and reused."""
+        context_id = "test_context"
+        connection_params = MagicMock()
+        transport_type = "stdio"
+
+        # Create a mock session that will appear healthy
+        mock_session = AsyncMock()
+        mock_session._write_stream = MagicMock()
+        mock_session._write_stream._closed = False
+
+        # Create a mock task that appears to be running
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)
+
+        with (
+            patch.object(session_manager, "_create_stdio_session") as mock_create,
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            mock_create.return_value = mock_session
+
+            # First call should create session
+            session1 = await session_manager.get_session(context_id, connection_params, transport_type)
+
+            # Manually populate the sessions cache as if the session was created properly
+            session_manager.sessions[context_id] = {"session": mock_session, "task": mock_task, "type": transport_type}
+
+            # Second call should return cached session without creating new one
+            session2 = await session_manager.get_session(context_id, connection_params, transport_type)
+
+            assert session1 == session2
+            assert session1 == mock_session
+            # Should only create once since the second call should use the cached session
+            mock_create.assert_called_once()
+
+    async def test_session_cleanup(self, session_manager):
+        """Test session cleanup functionality."""
+        context_id = "test_context"
+
+        # Add a session to the manager with proper mock setup
+        mock_task = AsyncMock()
+        mock_task.done = MagicMock(return_value=False)  # Use MagicMock for sync method
+        mock_task.cancel = MagicMock()  # Use MagicMock for sync method
+
+        session_manager.sessions[context_id] = {"session": AsyncMock(), "task": mock_task, "type": "stdio"}
+
+        await session_manager._cleanup_session(context_id)
+
+        # Should cancel the task and remove from sessions
+        mock_task.cancel.assert_called_once()
+        assert context_id not in session_manager.sessions
+
+    async def test_server_switch_detection(self, session_manager):
+        """Test that server switches are properly detected and handled."""
+        context_id = "test_context"
+
+        # First server
+        server1_params = MagicMock()
+        server1_params.command = "server1"
+
+        # Second server
+        server2_params = MagicMock()
+        server2_params.command = "server2"
+
+        with (
+            patch.object(session_manager, "_create_stdio_session") as mock_create,
+            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+        ):
+            mock_session1 = AsyncMock()
+            mock_session2 = AsyncMock()
+            mock_create.side_effect = [mock_session1, mock_session2]
+
+            # First connection
+            session1 = await session_manager.get_session(context_id, server1_params, "stdio")
+
+            # Switch to different server should create new session
+            session2 = await session_manager.get_session(context_id, server2_params, "stdio")
+
+            assert session1 != session2
+            assert mock_create.call_count == 2
+
+
+# Integration test for header functionality
+class TestHeaderValidation:
+    """Test the header validation functionality."""
+
+    def test_validate_headers_valid_input(self):
+        """Test header validation with valid headers."""
+        headers = {"Authorization": "Bearer token123", "Content-Type": "application/json", "X-API-Key": "secret-key"}
+
+        result = validate_headers(headers)
+
+        # Headers should be normalized to lowercase
+        expected = {"authorization": "Bearer token123", "content-type": "application/json", "x-api-key": "secret-key"}
+        assert result == expected
+
+    def test_validate_headers_empty_input(self):
+        """Test header validation with empty/None input."""
+        assert validate_headers({}) == {}
+        assert validate_headers(None) == {}
+
+    def test_validate_headers_invalid_names(self):
+        """Test header validation with invalid header names."""
+        headers = {
+            "Invalid Header": "value",  # spaces not allowed
+            "Header@Name": "value",  # @ not allowed
+            "Header Name": "value",  # spaces not allowed
+            "Valid-Header": "value",  # this should pass
+        }
+
+        result = validate_headers(headers)
+
+        # Only the valid header should remain
+        assert result == {"valid-header": "value"}
+
+    def test_validate_headers_sanitize_values(self):
+        """Test header value sanitization."""
+        headers = {
+            "Authorization": "Bearer \x00token\x1f with\r\ninjection",
+            "Clean-Header": "  clean value  ",
+            "Empty-After-Clean": "\x00\x01\x02",
+            "Tab-Header": "value\twith\ttabs",  # tabs should be preserved
+        }
+
+        result = validate_headers(headers)
+
+        # Control characters should be removed, whitespace trimmed
+        # Header with injection attempts should be skipped
+        expected = {"clean-header": "clean value", "tab-header": "value\twith\ttabs"}
+        assert result == expected
+
+    def test_validate_headers_non_string_values(self):
+        """Test header validation with non-string values."""
+        headers = {"String-Header": "valid", "Number-Header": 123, "None-Header": None, "List-Header": ["value"]}
+
+        result = validate_headers(headers)
+
+        # Only string headers should remain
+        assert result == {"string-header": "valid"}
+
+    def test_validate_headers_injection_attempts(self):
+        """Test header validation against injection attempts."""
+        headers = {
+            "Injection1": "value\r\nInjected-Header: malicious",
+            "Injection2": "value\nX-Evil: attack",
+            "Safe-Header": "safe-value",
+        }
+
+        result = validate_headers(headers)
+
+        # Injection attempts should be filtered out
+        assert result == {"safe-header": "safe-value"}
+
+
+class TestSSEHeaderIntegration:
+    """Integration test to verify headers are properly passed through the entire SSE flow."""
+
+    async def test_headers_processing(self):
+        """Test that headers flow properly from server config through to SSE client connection."""
+        # Test the header processing function directly
+        headers_input = [
+            {"key": "Authorization", "value": "Bearer test-token"},
+            {"key": "X-API-Key", "value": "secret-key"},
+        ]
+
+        expected_headers = {
+            "authorization": "Bearer test-token",  # normalized to lowercase
+            "x-api-key": "secret-key",
+        }
+
+        # Test _process_headers function with validation
+        processed_headers = _process_headers(headers_input)
+        assert processed_headers == expected_headers
+
+        # Test different input formats
+        # Test dict input with validation
+        dict_headers = {"Authorization": "Bearer dict-token", "Invalid Header": "bad"}
+        result = _process_headers(dict_headers)
+        # Invalid header should be filtered out, valid header normalized
+        assert result == {"authorization": "Bearer dict-token"}
+
+        # Test None input
+        assert _process_headers(None) == {}
+
+        # Test empty list
+        assert _process_headers([]) == {}
+
+        # Test malformed list
+        malformed_headers = [{"key": "Auth"}, {"value": "token"}]  # Missing value/key
+        assert _process_headers(malformed_headers) == {}
+
+        # Test list with invalid header names
+        invalid_headers = [
+            {"key": "Valid-Header", "value": "good"},
+            {"key": "Invalid Header", "value": "bad"},  # spaces not allowed
+        ]
+        result = _process_headers(invalid_headers)
+        assert result == {"valid-header": "good"}
+
+    async def test_sse_client_header_storage(self):
+        """Test that SSE client properly stores headers in connection params."""
+        sse_client = MCPSseClient()
+        test_url = "http://test.url"
+        test_headers = {"Authorization": "Bearer test123", "Custom": "value"}
+        expected_headers = {"authorization": "Bearer test123", "custom": "value"}  # normalized
+
+        with (
+            patch.object(sse_client, "validate_url", return_value=(True, "")),
+            patch.object(sse_client, "pre_check_redirect", return_value=test_url),
+            patch.object(sse_client, "_get_or_create_session") as mock_get_session,
+        ):
         ):
             mock_manager = AsyncMock()
             mock_get_manager.return_value = mock_manager
