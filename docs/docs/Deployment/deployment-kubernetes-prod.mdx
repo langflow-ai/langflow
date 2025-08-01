@@ -111,7 +111,7 @@ The following example gets the first flow ID from the flows list, and then runs 
 ## Configure secrets and environment variables
 
 Use the `.env` section of the Langflow runtime Helm chart's [`values.yaml`](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file to define environment variables for your Langflow deployment.
-This includes built-in [Langflow environment variables](/environment-variables), as well as [global variables](/configuation-global-variables) used by your flows.
+This includes built-in [Langflow environment variables](/environment-variables), as well as [global variables](/configuration-global-variables) used by your flows.
 
 Langflow can source global variables from your runtime environment, such as Kubernetes secrets referenced in `values.yaml`.
 For example, the Langflow runtime Helm chart's [example flow JSON](https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json) uses a global variable that is a secret.
