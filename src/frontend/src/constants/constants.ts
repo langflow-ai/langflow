@@ -1091,3 +1091,13 @@ export const DATASTAX_DOCS_URL =
   "https://docs.datastax.com/en/langflow/index.html";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
+
+export const CATEGORY_GLOBAL = "Global";
+export const CATEGORY_SETTINGS = "Settings";
+export const CATEGORY_LLM = "LLM";
+
+export const VALID_CATEGORIES = [
+  CATEGORY_GLOBAL,
+  CATEGORY_SETTINGS,
+  CATEGORY_LLM,
+];
