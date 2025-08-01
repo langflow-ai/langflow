@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial shows you how to connect MCP tools to your applications using Langflow's [**MCP Tools** component](/mcp-client).
+This tutorial shows you how to connect MCP servers to your applications using Langflow's [**MCP Tools** component](/mcp-client).
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) helps agents integrate with LLMs through _MCP clients_ and _MCP servers_.
 Specifically, MCP servers host tools that agents (MCP clients) use to complete specialized tasks.
@@ -79,7 +79,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     * Langflow Docker image: Install the server inside the Docker container.
     * Langflow Desktop or system-wide Langflow OSS: Install the server globally or in the same user environment where you run Langflow.
 
-2. In your **Simple Agent** flow, remove the **URL** and **Calculator** tools, and then add the [**MCP Tools**](/mcp-client) component to your workspace.
+2. In your **Simple Agent** flow, remove the **URL** and **Calculator** tools, and then add an [**MCP Tools**](/mcp-client) component.
 
 3. Click the **MCP Tools** component, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
 

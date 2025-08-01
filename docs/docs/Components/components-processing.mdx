@@ -380,7 +380,7 @@ This component allows you to execute Python code with imported packages.
 1. To use this component in a flow,in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
 At least one import is required.
 2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
-3. Optionally, enable **Tool Mode** and connect the interpreter to an **Agent** component as a tool.
+3. Optional: Enable **Tool Mode**, and then connect the **Python Interpreter** component to an **Agent** component as a tool.
 For example, connect a **Python Interpreter** component and a [**Calculator** component](/components-helpers#calculator) as tools for an **Agent** component, and then test how it chooses different tools to solve math problems.
 ![Python Interpreter and Calculator components connected to an Agent component](/img/component-python-interpreter.png)
 4. Ask the agent an easier math question.
@@ -463,8 +463,8 @@ This example uses `.md` in one **Save to File** component, and `.xlsx` in anothe
 This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
 The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
 :::tip
-If you enter a format in the `file_path` that is not accepted, the component appends the proper format to the file.
-For example, if the selected `file_format` is `csv`, and you enter `file_path` as `./output/test.txt`, the file is saved as `./output/test.txt.csv` so the file is not corrupted.
+If the `file_format` and `file_path` extension don't align, the component appends the specified format to the file.
+For example, if the `file_format` is `csv`, and the `file_path` is `./output/test.txt`, then the file is saved as `./output/test.txt.csv` so the file isn't corrupted.
 :::
 5. Send a POST request to the **Webhook** containing your JSON data.
 Replace `YOUR_FLOW_ID` with your flow ID.
@@ -733,7 +733,7 @@ This example uses a **Prompt Template** component to give the chatbot context, s
 5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
 6. Click **Playground**, and then ask about `latest news`.
 
-The search results are returned to the Playground as a message.
+The search results are returned to the **Playground** as a message.
 
 Result:
 ```text

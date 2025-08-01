@@ -64,7 +64,7 @@ Many components can be tools for agents, including [Model Context Protocol (MCP)
 3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
 4. To test the **Calculator** tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
-To help you test and evaluate your flows, the Playground shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
+To help you test and evaluate your flows, the **Playground** shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
 In this case, a math question causes the agent to select the **Calculator** tool and use an action like `evaluate_expression`.
 
 ![Playground with Agent tool](/img/quickstart-simple-agent-playground.png)
@@ -93,7 +93,7 @@ For example, you can use the `/run` endpoint to run a flow and get the result.
 
 Langflow provides code snippets to help you get started with the Langflow API.
 
-1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
+1. When editing a flow, click **Share**, and then click **API access**.
 
     The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
     The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
@@ -528,7 +528,7 @@ To assist with formatting, you can define tweaks in Langflow's **Input Schema** 
 
 1. To open the **Input Schema** pane, from the **API access** pane, click **Input Schema**.
 2. In the **Input Schema** pane, select the parameter you want to modify in your next request.
-Enabling parameters in the **Input Schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
+Enabling parameters in the **Input Schema** pane doesn't permanently change the listed parameters. It only adds them to the sample code snippets.
 3. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
 Langflow updates the `tweaks` object in the code snippets based on your input parameters, and includes default values to guide you.
 Use the updated code snippets in your script to run your flow with your overrides.

@@ -19,7 +19,7 @@ For example **Data** ports, represented by <Icon name="Circle" size="16" aria-la
 When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.
 
 :::tip
-* In the visual editor, hover over a port to see connection details for that port.
+* In the [workspace](/concepts-overview#workspace), hover over a port to see connection details for that port.
 
 * Click a port to filter the **Components** menu by compatible components.
 
@@ -179,7 +179,7 @@ This data type is used by many components.
 Components that accept or produce `Message` data may not include all attributes in the incoming or outgoing `Message` data.
 As long as the data is compatible with the `Message` schema, it can be valid.
 
-When building flows, focus on the fields shown on each component in the visual editor, rather than the data types passed between components.
+When building flows, focus on the fields shown on each component in the workspace, rather than the data types passed between components.
 The details of a particular data type are often only relevant when you are debugging a flow or component that isn't producing the expected output.
 
 For example, a **Chat Input** component only requires the content of the **Input Text** (`input_value`) field.
@@ -239,7 +239,7 @@ Langflow API responses can be extremely verbose, so your applications must inclu
 For an example, see the [Langflow quickstart](/get-started-quickstart).
 
 Additionally, input sent to the input port of input/output components does _not_ need to be a complete `Message` object because the component constructs the `Message` object that is then passed to other components in the flow or returned as flow output.
-In fact, some components should not receive a complete `Message` object because some attributes, like `timestamp` should be added by the component for accuracy.
+In fact, some components shouldn't receive a complete `Message` object because some attributes, like `timestamp` should be added by the component for accuracy.
 
 ## Tool
 

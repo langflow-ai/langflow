@@ -43,7 +43,7 @@ This component has two modes, depending on the type of server you want to access
 3. To use environment variables in your server command, enter each variable in the **Env** fields as you would define them in a script, such as `VARIABLE=value`.
 
     :::important
-    Langflow passes environment variables from the `.env` file to MCP, but it doesn't pass global variables declared in the Langflow UI.
+    Langflow passes environment variables from the `.env` file to MCP, but it doesn't pass global variables declared in your Langflow **Settings**.
     To define an MCP server environment variable as a global variable, add it to Langflow's `.env` file at startup.
     For more information, see [global variables](/configuration-global-variables).
     :::
@@ -78,7 +78,7 @@ To leverage flows-as-tools, use the **MCP Tools** component in **Server-Sent Eve
 1. Add an **MCP Tools** component to your flow, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and then select **SSE** mode.
 2. In the **MCP SSE URL** field, modify the default address to point at your Langflow server's SSE endpoint. The default value for other Langflow installations is `http://localhost:7860/api/v1/mcp/sse`.
 In SSE mode, all flows available from the targeted server are treated as tools.
-3. In the [component's header menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
+3. In the [component's header menu](/concepts-components#component-menus), enable **Tool Mode** so you can use the component with an agent.
 4. Connect the **MCP Tools** component's **Toolset** port to an **Agent** component's **Tools** port.
 5. If not already present in your flow, make sure you also attach **Chat Input** and **Chat Output** components to the **Agent** component.
 
@@ -107,4 +107,4 @@ Click <Icon name="Ellipsis" aria-hidden="true"/> **More** to edit or delete an M
 ## See also
 
 - [Use Langflow as an MCP server](/mcp-server)
-- [Use a DataStax Astra DB MCP server with the MCP tools component](/mcp-component-astra)
+- [Use a DataStax Astra DB MCP server with the MCP Tools component](/mcp-component-astra)

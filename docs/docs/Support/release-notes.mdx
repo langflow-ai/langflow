@@ -27,13 +27,13 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
       -H "x-api-key: $LANGFLOW_API_KEY"
     ```
 
-   To export flows from the Langflow UI, see [Import and export flows](/concepts-flows-import).
+   To export flows from the visual editor, see [Import and export flows](/concepts-flows-import).
 
 2. Install the new version:
 
    * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
    * **Langflow Docker image**: Run the new image in a separate container.
-   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the Langflow header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
 
 3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
 
@@ -130,7 +130,8 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 ### New features and enhancements
 
 - Introduced MCP server functionality to serve Langflow tools to MCP-compatible clients.
-- Renamed "Folders" to "Projects". The `/folders` endpoints now redirect to `/projects`.
+- Renamed **Folders** to **Projects** in the visual editor.
+- The `/folders` endpoints now redirect to `/projects`.
 
 ### Deprecations
 

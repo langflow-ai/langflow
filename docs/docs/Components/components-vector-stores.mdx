@@ -466,7 +466,7 @@ For an example flow, see the **Graph RAG** template in Langflow.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| embedding_model | Embedding Model | Specify the embedding model. This is not required for collections embedded with [Astra vectorize](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
+| embedding_model | Embedding Model | Specify the embedding model. This isn't required for collections embedded with [Astra vectorize](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
 | vector_store | Vector Store Connection | Connection to the vector store. |
 | edge_definition | Edge Definition | Edge definition for the graph traversal. For more information, see the [GraphRAG documentation](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/). |
 | strategy | Traversal Strategies | The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
@@ -561,7 +561,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | persist_directory | String | Custom base directory to save the vector store. Collections are stored under `$DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, it uses your system's cache folder. |
 | existing_collections | String | Select a previously created collection to search through its stored data. |
 | embedding | Embeddings | The embedding function to use for the vector store. |
-| allow_duplicates | Boolean | If false, will not add documents that are already in the vector store. |
+| allow_duplicates | Boolean | If false, the component won't add documents that are already in the vector store. |
 | search_type | String | Type of search to perform: "Similarity" or "MMR". |
 | ingest_data | Data/DataFrame | Data to store. It is embedded and indexed for semantic search. |
 | search_query | String | Enter text to search for similar content in the selected collection. |

@@ -26,8 +26,8 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 
     This template has two flows.
 
-    The **Load Data Flow** at the bottom of the workspace populates a vector store with data from a file.
-    This data is used to respond to queries submitted to the **Retriever Flow**, which is at the top of the workspace.
+    The **Load Data Flow** populates a vector store with data from a file.
+    This data is used to respond to queries submitted to the **Retriever Flow**.
 
     Specifically, the **Load Data Flow** ingests data from a local file, splits the data into chunks, loads and indexes the data in your vector database, and then computes embeddings for the chunks. The embeddings are also stored with the loaded data. This flow only needs to run when you need to load data into your vector database.
 
@@ -53,14 +53,14 @@ This tutorial uses Chroma DB.
 
 ## Load data and generate embeddings
 
-To load data and generate embeddings, you can use the Langflow UI or the `/v2/files` endpoint.
+To load data and generate embeddings, you can use the visual editor or the `/v2/files` endpoint.
 
-The Langflow UI option is simpler, but it is only recommended for scenarios where the user who created the flow is the same user who loads data into the database.
+The visual editor option is simpler, but it is only recommended for scenarios where the user who created the flow is the same user who loads data into the database.
 
 In situations where many users load data or you need to load data programmatically, use the Langflow API option.
 
 <Tabs>
-<TabItem value="UI" label="Langflow UI" default>
+<TabItem value="visual" label="Visual editor" default>
 
 1. In your RAG chatbot flow, click the **File** component, and then click **File**.
 2. Select the local file you want to upload, and then click **Open**.

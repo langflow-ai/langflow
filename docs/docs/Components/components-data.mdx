@@ -70,7 +70,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 |------|--------------|------|
 | mode | Mode | Input parameter. Set the mode to either **URL** or **curl**. |
 | urls | URL | Input parameter. Enter one or more comma-separated URLs for the request. |
-| curl | cURL | Input parameter. **curl mode** only. Enter a complete curl command. Other component parameters are populated from the command arguments. |
+| curl | curl | Input parameter. **curl mode** only. Enter a complete curl command. Other component parameters are populated from the command arguments. |
 | method | Method | Input parameter. The HTTP method to use. |
 | query_params | Query Parameters | Input parameter. The query parameters to append to the URL. |
 | body | Body | Input parameter. The body to send with POST, PATCH, and PUT requests as a dictionary. |
@@ -101,7 +101,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | max_concurrency    | IntInput         | Input parameter. The maximum concurrency for loading multiple files. |
 | load_hidden        | BoolInput        | Input parameter. If true, hidden files are loaded.                  |
 | recursive          | BoolInput        | Input parameter. If true, the search is recursive.                  |
-| silent_errors      | BoolInput        | Input parameter. If true, errors do not raise an exception.         |
+| silent_errors      | BoolInput        | Input parameter. If true, errors don't raise an exception.         |
 | use_multithreading | BoolInput        | Input parameter. If true, multithreading is used.                   |
 
 ## File
@@ -168,7 +168,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | silent_errors | Silent Errors | Input parameter. If true, errors in the component don't raise an exception. The default is false/disabled. |
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If true (default), the **Server File Path** (`file_path`) is deleted after processing. |
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If true/enabled (default), files with unsupported extensions are accepted but not processed. If false/disabled, the **File** component either can throw an error if an unsupported file type is provided. |
-| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file is not specified. |
+| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
 
 ### File output
@@ -478,7 +478,7 @@ The **Webhook** component defines a webhook trigger that runs a flow when it rec
 
 ### Trigger the webhook
 
-When you add a **Webhook** component to your flow, a **Webhook cURL** tab is added to the flow's [**API Access** pane](/concepts-publish#api-access).
+When you add a **Webhook** component to your flow, a **Webhook curl** tab is added to the flow's [**API Access** pane](/concepts-publish#api-access).
 This tab automatically generates an HTTP POST request code snippet that you can use to trigger your flow through the **Webhook** component.
 For example:
 
@@ -497,14 +497,14 @@ For more information, see [Trigger flows with webhooks](/webhook).
 | Name | Display Name | Description |
 |------|--------------|-------------|
 | data | Payload | Input parameter. Receives a payload from external systems through HTTP POST requests. |
-| curl | cURL | Input parameter. The cURL command template for making requests to this webhook. |
+| curl | curl | Input parameter. The curl command template for making requests to this webhook. |
 | endpoint | Endpoint | Input parameter. The endpoint URL where this webhook receives requests. |
-| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [`Data`](/data-types#data) object if no input is provided. If the input is not valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow. |
+| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [`Data`](/data-types#data) object if no input is provided. If the input isn't valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow. |
 
 ## Additional Data components
 
 Langflow's core components are meant to be generic and support a range of use cases.
-Core components are typically not limited to a single provider.
+Core components typically aren't limited to a single provider.
 
 If the core **Data** components don't meet your needs, you can find provider-specific components in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
 
