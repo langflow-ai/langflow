@@ -48,6 +48,14 @@ interface FlowSidebarComponentProps {
   setShowLegacy?: (value: boolean) => void;
 }
 
+/**
+ * Renders the sidebar UI for browsing, searching, and filtering categorized components or nodes, with support for fuzzy search, keyboard shortcuts, and drag-and-drop.
+ *
+ * The sidebar displays available categories and bundles, allows users to filter by beta, legacy, or configuration status, and provides search functionality with real-time filtering. It also supports keyboard navigation and drag-and-drop for adding components.
+ *
+ * @param isLoading - If true, displays loading skeletons instead of sidebar content.
+ * @returns The sidebar React element for component selection and management.
+ */
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const data = useTypesStore((state) => state.data);
 
