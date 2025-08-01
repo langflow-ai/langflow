@@ -61,10 +61,10 @@ This component implements an [Astra DB Serverless vector store](https://docs.dat
 | search_type | Search Type | The search type to use. The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
 | search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
 | advanced_search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
-| autodetect_collection | Autodetect Collection | A boolean flag to determine whether to autodetect the collection. |
+| autodetect_collection | Autodetect Collection | Boolean flag to determine whether to autodetect the collection. |
 | content_field | Content Field | A field to use as the text content field for the vector store. |
 | deletion_field | Deletion Based On Field | When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new data is loaded. |
-| ignore_invalid_documents | Ignore Invalid Documents | A boolean flag to determine whether to ignore invalid documents at runtime. |
+| ignore_invalid_documents | Ignore Invalid Documents | Boolean flag to determine whether to ignore invalid documents at runtime. |
 | astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | An optional dictionary of additional parameters for the AstraDBVectorStore. |
 
 **Outputs**
