@@ -10,13 +10,30 @@ import "./App.css";
 import "./style/applies.css";
 
 import App from "./App";
+import { useEffect } from "react";
 
-const container = document.getElementById("root");
-if (container) {
-  const root = ReactDOM.createRoot(container);
-  root.render(
+// uncomment if you need to run this independently
+// const container = document.getElementById("root");
+// if (container) {
+//   const root = ReactDOM.createRoot(container);
+//   root.render(
+//       <App />
+//   );
+// }
+
+// export default App;
+
+const LangflowApp = () => {
+  useEffect(() => {
+    console.log("Langflow App mounted");
+  }, []);
+  return (
+    <>
+      <h1>Langflow</h1>
+      {/* <button onClick={() => alert("Working!")}>Test Button</button> */}
       <App />
+    </>
   );
-}
+};
 
-export default App;
+export default LangflowApp;

@@ -36,13 +36,17 @@ export const URLs = {
 export function getURL(
   key: keyof typeof URLs,
   params: any = {},
-  v2: boolean = false,
+  v2: boolean = false
 ) {
   let url = URLs[key];
   for (const paramKey of Object.keys(params)) {
     url += `/${params[paramKey]}`;
   }
-  return `${v2 ? BASE_URL_API_V2 : BASE_URL_API}${url}`;
+
+  const apiBase = v2 ? BASE_URL_API_V2 : BASE_URL_API;
+  const host = (window as any).API_URL || ""; // Use empty string if not set
+
+  return `${host}${apiBase}${url}`;
 }
 
 export type URLsType = typeof URLs;
