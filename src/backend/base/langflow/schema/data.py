@@ -1,12 +1,8 @@
-"""Data class for langflow - imports from the enhanced version.
+"""Data class for langflow - imports from lfx.
 
-This maintains backward compatibility while using the new inheritance approach.
+This maintains backward compatibility while using the lfx implementation.
 """
 
-# Import everything from the enhanced Data class
-# Import utility functions that are still needed
-from lfx.schema.data import custom_serializer, serialize_data
-
-from langflow.schema.data_enhanced import Data
+from lfx.schema.data import Data, custom_serializer, serialize_data
 
 __all__ = ["Data", "custom_serializer", "serialize_data"]
