@@ -696,7 +696,13 @@
                 "info": "Select the knowledge to load data from.",
                 "load_from_db": false,
                 "name": "knowledge_base",
-                "options": [],
+                "options": [
+                  "DSKB",
+                  "DS_Wiki",
+                  "DS_K",
+                  "DS2",
+                  "DS23"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "refresh_button": true,
@@ -845,7 +851,13 @@
                 "info": "Select the knowledge to load data from.",
                 "load_from_db": false,
                 "name": "knowledge_base",
-                "options": [],
+                "options": [
+                  "DSKB",
+                  "DS_Wiki",
+                  "DS_K",
+                  "DS2",
+                  "DS23"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
