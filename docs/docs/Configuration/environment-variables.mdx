@@ -383,29 +383,31 @@ To make environment variables available to GUI apps on macOS, you need to use `l
 
 3. Add the following content to `dev.langflow.env.plist`, and then add, change, or remove Langflow environment variables as needed for your configuration.
 
-    This example sets the `LANGFLOW_CONFIG_DIR` environment variable for all GUI apps launched from the macOS GUI.
+    This example sets multiple environmental variables for all GUI apps launched from the macOS GUI.
 
     ```xml
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-      <dict>
-        <key>Label</key>
-        <string>dev.langflow.env</string>
-        <key>ProgramArguments</key>
-        <array>
-          <string>launchctl</string>
-          <string>setenv</string>
-          <string>LANGFLOW_CONFIG_DIR</string>
-          <string>/Users/your_user/custom/config</string>
-        </array>
-        <key>RunAtLoad</key>
-        <true/>
-      </dict>
-    </plist>
+     <?xml version="1.0" encoding="UTF-8"?>
+     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+     <plist version="1.0">
+     <dict>
+       <key>Label</key>
+       <string>dev.langflow.env</string>
+       <key>ProgramArguments</key>
+       <array>
+         <string>/bin/sh</string>
+         <string>-c</string>
+          <string>
+            launchctl setenv LANGFLOW_CONFIG_DIR /Users/your_user/custom/config &&
+            launchctl setenv LANGFLOW_PORT 7860 &&
+            launchctl setenv LANGFLOW_HOST localhost &&
+            launchctl setenv ARIZE_API_KEY ak-...
+          </string>
+       </array>
+       <key>RunAtLoad</key>
+       <true/>
+     </dict>
+     </plist>
     ```
-
 4. Load the file with `launchctl`:
 
     ```bash
