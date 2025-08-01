@@ -16,6 +16,7 @@ import { FlowSidebarComponent } from "./components/flowSidebarComponent";
 import { MemoizedSidebarTrigger } from "./components/PageComponent/MemoizedComponents";
 import { PlaygroundSidebar } from "./components/PlaygroundSidebar";
 import Page from "./components/PageComponent";
+import { useShortcutsStore } from "@/stores/shortcuts";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -158,6 +159,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const isMobile = useIsMobile();
 
+  const openPlayground = useShortcutsStore((state) => state.openPlayground);
+
   return (
     <>
       <div className="flow-page-positioning">
@@ -170,7 +173,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             </SidebarProvider>
             </div>
             
-                          <SidebarProvider width="400px" defaultOpen={false}>
+              <SidebarProvider width="400px" defaultOpen={false} shortcut={openPlayground}>
                 <main className="flex w-full overflow-hidden">
                   <div className="h-full w-full relative">
                     <Page 
