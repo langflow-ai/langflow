@@ -108,11 +108,11 @@ For more information, see [Configure an external PostgreSQL database](/configura
 
     When you first connect to PostgreSQL, Langflow automatically runs migrations to create the necessary tables.
 
-    To manually run migrations, run `langflow migration --test` to preview the changes, and then run `langflow migration --no-test` to apply the migrations.
+    To manually run migrations, run `langflow migration` to preview the changes, and then run `langflow migration --fix` to apply the changes.
 
     :::danger
     Migrations are a destructive operation that can delete data.
-    Always run `--test` to preview changes before applying them.
+    Always run `langflow migration` first to preview changes before applying them with `--fix`.
     For more information, see [Langflow CLI](/configuration-cli).
     :::
 
