@@ -52,23 +52,9 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
 
   return (
-    <div className="flex w-full flex-col-reverse">
-      <div
-        data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
-      >
-        <TextAreaWrapper
-          isBuilding={isBuilding}
-          checkSendingOk={checkSendingOk}
-          send={send}
-          noInput={noInput}
-          chatValue={chatValue}
-          CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
-          CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
-          inputRef={inputRef}
-          files={files}
-          isDragging={isDragging}
-        />
+    <div className="flex w-full flex-col">
+      {/* File preview section */}
+      {files.length > 0 && (
         <div className={classNameFilePreview}>
           {files.map((file) => (
             <FilePreview
@@ -82,33 +68,56 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
             />
           ))}
         </div>
-        <div className="flex w-full items-end justify-between">
-          <div className={isBuilding ? "cursor-not-allowed" : ""}>
-            {(!playgroundPage ||
-              (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
-              <UploadFileButton
-                isBuilding={isBuilding}
-                fileInputRef={fileInputRef}
-                handleFileChange={handleFileChange}
-                handleButtonClick={handleButtonClick}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {ENABLE_VOICE_ASSISTANT && (
-              <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
-            )}
+      )}
+      
+      {/* Input container */}
+      <div
+        data-testid="input-wrapper"
+        className="flex flex-col w-full items-end gap-2 rounded-md border border-input bg-background p-2 hover:border-muted-foreground focus-within:border-primary"
+      >
+        {/* Left side buttons */}
+        
 
-            <div className={playgroundPage ? "ml-auto" : ""}>
-              <ButtonSendWrapper
-                send={send}
-                noInput={noInput}
-                chatValue={chatValue}
-                files={files}
-              />
-            </div>
-          </div>
+        {/* Text input area */}
+        <div className="flex-1 w-full">
+          <TextAreaWrapper
+            isBuilding={isBuilding}
+            checkSendingOk={checkSendingOk}
+            send={send}
+            noInput={noInput}
+            chatValue={chatValue}
+            CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
+            CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
+            inputRef={inputRef}
+            files={files}
+            isDragging={isDragging}
+          />
         </div>
+
+        {/* Send button */}
+        <div className="flex-shrink-0 flex items-center justify-between w-full gap-2">
+        <div className="flex items-center gap-1">
+            <UploadFileButton
+              isBuilding={isBuilding}
+              fileInputRef={fileInputRef}
+              handleFileChange={handleFileChange}
+              handleButtonClick={handleButtonClick}
+            />
+          
+        </div>
+          <div className="flex items-center gap-1">
+            
+          
+        {ENABLE_VOICE_ASSISTANT && (
+            <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
+          )}
+          <ButtonSendWrapper
+            send={send}
+            noInput={noInput}
+            chatValue={chatValue}
+            files={files}
+          />
+        </div></div>
       </div>
     </div>
   );
