@@ -771,10 +771,8 @@ class ComposioBaseComponent(Component):
         """Check status of a specific connection by ID. Returns status or None if not found."""
         try:
             composio = self._build_wrapper()
-            logger.info(f"ln:706 Connection Id: {connection_id}")
             connection = composio.connected_accounts.get(nanoid=connection_id)
             status = getattr(connection, "status", None)
-            logger.info(f"ln:710 Status: {status}")
             logger.info(f"Connection {connection_id} status: {status}")
         except (ValueError, ConnectionError) as e:
             logger.error(f"Error checking connection {connection_id}: {e}")
@@ -882,6 +880,17 @@ class ComposioBaseComponent(Component):
         else:
             build_config["action_button"]["options"] = []
             logger.warning("No actions found, setting empty options")
+
+        # clear stored connection_id when api_key is changed
+        if field_name == "api_key" and field_value:
+            stored_connection_before = build_config.get("auth_link", {}).get("connection_id")
+            if "auth_link" in build_config and "connection_id" in build_config["auth_link"]:
+                build_config["auth_link"].pop("connection_id", None)
+                build_config["auth_link"]["value"] = "connect"
+                build_config["auth_link"]["auth_tooltip"] = "Connect"
+                logger.info(f"Cleared stored connection_id '{stored_connection_before}' due to API key change")
+            else:
+                logger.info("DEBUG: EARLY No stored connection_id to clear on API key change")
 
         # Handle disconnect operations when tool mode is enabled
         if field_name == "auth_link" and field_value == "disconnect":
@@ -1056,6 +1065,7 @@ class ComposioBaseComponent(Component):
             build_config["action_button"]["options"] = []
             build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
             build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
+            build_config["auth_link"].pop("connection_id", None)
             return build_config
 
         # Only proceed with connection logic if we have an API key
