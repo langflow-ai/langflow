@@ -31,66 +31,68 @@ export const ChatViewWrapper = ({
         selectedViewField ? "hidden" : "",
       )}
     >
-      <div
-        className={cn(
-          "mb-4 flex h-[5%] items-center text-base font-semibold",
-          playgroundPage ? "justify-between" : "lg:justify-start",
-        )}
-      >
-        <div className={cn(sidebarOpen ? "lg:hidden" : "left-4")}>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(true)}
-              className="h-8 w-8"
-            >
-              <IconComponent
-                name="PanelLeftOpen"
-                className="h-[18px] w-[18px] text-ring"
-              />
-            </Button>
-          </div>
-        </div>
-        {visibleSession && sessions.length > 0 && (
-          <div
-            className={cn(
-              "truncate text-center font-semibold",
-              playgroundPage ? "" : "mr-12 flex-grow lg:mr-0",
-              sidebarOpen ? "blur-sm lg:blur-0" : "",
-            )}
-          >
-            {visibleSession === currentFlowId
-              ? "Default Session"
-              : `${visibleSession}`}
-          </div>
-        )}
+      {!playgroundPage && (
         <div
           className={cn(
-            sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
+            "mb-4 flex h-[5%] items-center text-base font-semibold",
+            "lg:justify-start",
           )}
         >
-          <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
-            <Button
-              className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setvisibleSession(undefined);
-                setSelectedViewField(undefined);
-              }}
+          <div className={cn(sidebarOpen ? "lg:hidden" : "left-4")}>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                className="h-8 w-8"
+              >
+                <IconComponent
+                  name="PanelLeftOpen"
+                  className="h-[18px] w-[18px] text-ring"
+                />
+              </Button>
+            </div>
+          </div>
+          {visibleSession && sessions.length > 0 && (
+            <div
+              className={cn(
+                "truncate text-center font-semibold",
+                "mr-12 flex-grow lg:mr-0",
+                sidebarOpen ? "blur-sm lg:blur-0" : "",
+              )}
             >
-              <IconComponent
-                name="Plus"
-                className="!h-[18px] !w-[18px] text-ring"
-              />
-            </Button>
-          </ShadTooltip>
-          {!playgroundPage && <Separator orientation="vertical" />}
+              {visibleSession === currentFlowId
+                ? "Default Session"
+                : `${visibleSession}`}
+            </div>
+          )}
+          <div
+            className={cn(
+              sidebarOpen ? "pointer-events-none opacity-0" : "",
+              "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+              "absolute right-12 top-2 h-8",
+            )}
+          >
+            <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
+              <Button
+                className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setvisibleSession(undefined);
+                  setSelectedViewField(undefined);
+                }}
+              >
+                <IconComponent
+                  name="Plus"
+                  className="!h-[18px] !w-[18px] text-ring"
+                />
+              </Button>
+            </ShadTooltip>
+            <Separator orientation="vertical" />
+          </div>
         </div>
-      </div>
+      )}
 
       {messagesFetched && (
         <ChatView
