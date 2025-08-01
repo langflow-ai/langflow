@@ -168,28 +168,24 @@ Manages database schema migrations for Langflow using [Alembic](https://alembic.
 
 The `migration` command has two modes:
 
-* **Test mode (`--test`)**: Checks if migrations can be applied safely without actually running the migrations.
-	This is the default mode if not set.
-
+* **Test mode (default)**: Checks if migrations can be applied safely without actually running the migrations.
+Test mode is the default option. To run it, run `langflow migration`, with no options.
 * **Fix mode (`--fix`)**: Applies the migrations to update your database schema.
-
-:::danger
 `langflow migration --fix` is a destructive operation that can delete data.
-Always run `--test` before running `--fix`.
-:::
+Always run `langflow migration` first to test the migrations.
 
 <Tabs groupId="Invocation">
   <TabItem value="uv (recommended)" label="uv (recommended)" default>
 
 ```bash
-uv run langflow migration [OPTIONS]
+uv run langflow migration
 ```
 
   </TabItem>
   <TabItem value="Global" label="Global">
 
 ```bash
-langflow migration [OPTIONS]
+langflow migration
 ```
 
   </TabItem>
@@ -199,8 +195,7 @@ langflow migration [OPTIONS]
 
 | Option | Default | Type | Description |
 |--------|---------|--------|-------------|
-| `--test` | `test` | Boolean | Run migrations in test mode. Use `--no-test` to disable test mode. |
-| `--fix` | `no-fix` | Boolean | Fix migrations. This is a destructive operation, and all affected data will be deleted.|
+| `--fix` | `false` | Boolean | Apply migrations (destructive operation). Without the `--fix` flag, migrations are only tested. |
 
 ### langflow run
 
@@ -225,14 +220,16 @@ langflow run [OPTIONS]
 
 #### Options
 
+For boolean options, the default shows the actual CLI flag that is enabled by default, with the boolean value in parentheses. For example, `--auto-saving` (true) means the `--auto-saving` flag is enabled by default, while `--no-backend-only` (false) means the `--no-backend-only` flag is enabled by default, which disables backend-only mode..
+
 | Option | Default | Type | Description |
 |--------|---------|--------|-------------|
-| `--auto-saving` | `true` | Boolean | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving. |
+| `--auto-saving` | `--auto-saving` (true) | Boolean | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving. |
 | `--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds. |
-| `--backend-only` | `false` (`--no-backend-only`) | Boolean | Only run Langflow's backend server (no frontend). |
+| `--backend-only` | `--no-backend-only` (false) | Boolean | Only run Langflow's backend server (no frontend). |
 | `--cache` | `async` | String | Type of cache to use as one of `async`, `redis`, `memory`, or `disk`. |
 | `--components-path` | Not set | String | Path to the directory containing custom components. |
-| `--dev` | `false` (`--no-dev`) | Boolean | Run in development mode (may contain bugs). |
+| `--dev` | `--no-dev` (false) | Boolean | Run in development mode (may contain bugs). |
 | `--env-file` | Not set | String | Path to the `.env` file containing environment variables. |
 | `--frontend-path` | Not set | String | Path to the frontend directory containing build files. This is for development purposes only. |
 | `--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. |
@@ -241,17 +238,19 @@ langflow run [OPTIONS]
 | `--log-level` | `critical` | String | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
 | `--log-rotation` | Not set | String | Set the log rotation (Time/Size). |
 | `--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes. |
-| `--open-browser` | `false` | Boolean | Open the system web browser on startup. Use `--no-open-browser` to disable opening the system web browser on startup. |
+| `--open-browser` | `--no-open-browser` (false) | Boolean | Open the system web browser on startup. Use `--open-browser` to enable opening the system web browser on startup. |
 | `--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use. |
-| `--remove-api-keys` | `false` (`--no-remove-api-keys`) | Boolean | Remove API keys from the projects saved in the database. |
+| `--remove-api-keys` | `--no-remove-api-keys` (false) | Boolean | Remove API keys from the projects saved in the database. |
 | `--ssl-cert-file-path` | Not set | String | Path to the SSL certificate file on the local system. |
 | `--ssl-key-file-path` | Not set | String | Path to the SSL key file on the local system. |
-| `--store` | `true` | Boolean | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features. |
+| `--store` | `--store` (true) | Boolean | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features. |
 | `--webhook-polling-interval` | `5000` | Integer | Set the polling interval for the webhook in milliseconds. |
 | `--worker-timeout` | `300` | Integer | Worker timeout in seconds. |
 | `--workers` | `1` | Integer | Number of worker processes. |
 
-For information about the environment variables that correspond to these options, see [Supported environment variables](/environment-variables#supported-variables).
+Only commonly used and non-sensitive configuration options are exposed as CLI parameters. Other configuration options are available as environment variables.
+
+For information about environment variables, see [Supported environment variables](/environment-variables#supported-variables).
 
 ### langflow superuser {#langflow-superuser}
 
@@ -259,8 +258,8 @@ Create a superuser account.
 
 Controlled by the [`LANGFLOW_ENABLE_SUPERUSER_CLI`](/api-keys-and-authentication#langflow-enable-superuser-cli) environment variable:
 
-* `LANGFLOW_ENABLE_SUPERUSER_CLI=True` (Default): The `langflow superuser` command is available, and superuser creation is unrestricted.
-* `LANGFLOW_ENABLE_SUPERUSER_CLI=False` Disables the `langflow superuser` command.
+* **`LANGFLOW_ENABLE_SUPERUSER_CLI=True` (default)**: The `langflow superuser` command is available, and superuser creation is unrestricted.
+* **`LANGFLOW_ENABLE_SUPERUSER_CLI=False` (recommended)**: Disables the `langflow superuser` command.
 For security reasons, this is recommended to prevent unauthorized superuser creation, especially in production environments.
 
 <Tabs groupId="Invocation">
@@ -287,5 +286,7 @@ langflow superuser [OPTIONS]
 | `--username` | Required | String | Specify the name for the superuser. |
 | `--password` | Required | String | Specify the password for the superuser. |
 | `--log-level` | `error` | String | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
+
+The CLI command always prompts for username and password, so they are required. These values are distinct from the system auto-login defaults (`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD` environment variables), which default to `langflow`/`langflow`.
 
 For more information, see [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](/api-keys-and-authentication#langflow-superuser).

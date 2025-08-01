@@ -141,7 +141,7 @@ You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/ma
 This variable controls whether authentication is required to access your Langflow server, including the visual editor and API:
 
 * If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor and use a Langflow API key for Langflow API requests.
-If `false`, you must also set [`LANGFLOW_SUPERUSER` and `LANGFLOW__SUPERUSER_PASSWORD`](#langflow-superuser).
+If `false`, you must also set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser).
 
 * If `LANGFLOW_AUTO_LOGIN=True`, Langflow bypasses authentication for the visual editor and API requests.
 All users can access the same environment without password protection.
@@ -185,7 +185,7 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 They are required if `LANGFLOW_AUTO_LOGIN=false`.
 Otherwise, they aren't relevant.
 
-If required and not set, the default values are `langflow` and `langflow`.
+If required and not set, the default values are `langflow` and `langflow`. These defaults apply to the system auto-login behavior, not the CLI command.
 
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled) and the CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
 
@@ -319,7 +319,7 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     ```
 
     Starting Langflow with an `.env` file automatically authenticates you as the superuser set in `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`.
-    If you don't explicitly set these variables, the default values are `langflow` and `langflow`.
+    If you don't explicitly set these variables, the default values are `langflow` and `langflow` for system auto-login.
 
 6. Verify the server is running. The default location is `http://localhost:7860`.
 
