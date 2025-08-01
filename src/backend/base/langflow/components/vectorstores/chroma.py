@@ -154,6 +154,14 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
         if documents and self.embedding is not None:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
-            vector_store.add_documents(documents)
+            # Filter complex metadata to prevent ChromaDB errors
+            try:
+                from langchain_community.vectorstores.utils import filter_complex_metadata
+
+                filtered_documents = filter_complex_metadata(documents)
+                vector_store.add_documents(filtered_documents)
+            except ImportError:
+                self.log("Warning: Could not import filter_complex_metadata. Adding documents without filtering.")
+                vector_store.add_documents(documents)
         else:
             self.log("No documents to add to the Vector Store.")
