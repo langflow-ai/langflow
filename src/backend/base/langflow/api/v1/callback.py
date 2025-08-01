@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from langchain_core.agents import AgentAction, AgentFinish
@@ -11,9 +11,6 @@ from typing_extensions import override
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
 from langflow.services.deps import get_chat_service
-
-if TYPE_CHECKING:
-    pass
 
 
 # https://github.com/hwchase17/chat-langchain/blob/master/callback.py
