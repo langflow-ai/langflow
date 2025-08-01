@@ -14,7 +14,11 @@ from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.deps import get_settings_service
 
 settings = get_settings_service().settings
-KNOWLEDGE_BASES_ROOT_PATH = Path(settings.knowledge_bases_dir).expanduser()
+knowledge_directory = settings.knowledge_bases_dir
+if not knowledge_directory:
+    msg = "Knowledge bases directory is not set in the settings."
+    raise ValueError(msg)
+KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
 
 
 class KBRetrievalComponent(Component):

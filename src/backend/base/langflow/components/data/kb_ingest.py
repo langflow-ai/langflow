@@ -27,7 +27,11 @@ HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-t
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
 settings = get_settings_service().settings
-KNOWLEDGE_BASES_ROOT_PATH = Path(settings.knowledge_bases_dir).expanduser()
+knowledge_directory = settings.knowledge_bases_dir
+if not knowledge_directory:
+    msg = "Knowledge bases directory is not set in the settings."
+    raise ValueError(msg)
+KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
 
 
 class KBIngestionComponent(Component):
