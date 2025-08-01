@@ -205,97 +205,50 @@ export default function ChatMessage({
 
   return (
     <>
-      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
+      <div className={cn("w-full py-2", chat.isSend ? "flex justify-end" : "")}>
         <div
           className={cn(
-            "group relative flex w-full gap-4 rounded-md p-2",
-            editMessage ? "" : "hover:bg-muted",
+            "group relative",
+            chat.isSend 
+              ? "rounded-xl bg-muted border border-border px-3 py-2 w-full"
+              : "rounded-md",
+            editMessage ? "" : "",
           )}
         >
-          <div
-            className={cn(
-              "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
-              !chat.isSend
-                ? "bg-muted"
-                : "border border-border hover:border-input",
-            )}
-            style={
-              chat.properties?.background_color
-                ? { backgroundColor: chat.properties.background_color }
-                : {}
-            }
-          >
-            {!chat.isSend ? (
-              <div className="flex h-[18px] w-[18px] items-center justify-center">
-                {chat.properties?.icon ? (
-                  chat.properties.icon.match(
-                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-                  ) ? (
-                    <span className="">{chat.properties.icon}</span>
-                  ) : (
-                    <ForwardedIconComponent name={chat.properties.icon} />
-                  )
-                ) : (
-                  <img
-                    src={Robot}
-                    className="absolute bottom-0 left-0 scale-[60%]"
-                    alt={"robot_image"}
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="flex h-[18px] w-[18px] items-center justify-center">
-                {chat.properties?.icon ? (
-                  chat.properties.icon.match(
-                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-                  ) ? (
-                    <div className="">{chat.properties.icon}</div>
-                  ) : (
-                    <ForwardedIconComponent name={chat.properties.icon} />
-                  )
-                ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
-                  <CustomProfileIcon />
-                ) : playgroundPage ? (
-                  <ForwardedIconComponent name="User" />
-                ) : (
-                  <CustomProfileIcon />
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex w-[94%] flex-col">
-            <div>
-              <div
-                className={cn(
-                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
-                )}
-                style={
-                  chat.properties?.text_color
-                    ? { color: chat.properties.text_color }
-                    : {}
-                }
-                data-testid={
-                  "sender_name_" + chat.sender_name?.toLocaleLowerCase()
-                }
-              >
-                <span className="flex items-center gap-2">
-                  {chat.sender_name}
-                  {isAudioMessage && (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
-                      <ForwardedIconComponent
-                        name="mic"
-                        className="h-3 w-3 text-muted-foreground"
-                      />
-                    </div>
-                  )}
-                </span>
-                {chat.properties?.source && !playgroundPage && (
-                  <div className="text-mmd font-normal text-muted-foreground">
-                    {chat.properties?.source.source}
-                  </div>
-                )}
-              </div>
+          {/* Show sender name only for AI messages */}
+          {!chat.isSend && (
+            <div
+              className={cn(
+                "pb-1 text-xs font-medium text-muted-foreground",
+              )}
+              data-testid={
+                "sender_name_" + chat.sender_name?.toLocaleLowerCase()
+              }
+            >
+              {chat.sender_name}
             </div>
+          )}
+          
+          
+          <div className="flex w-full gap-3 items-center">
+            {chat.isSend && (
+          <div className=" h-[24px] w-[24px] items-center justify-center inline-flex">
+          {chat.properties?.icon ? (
+            chat.properties.icon.match(
+              /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
+            ) ? (
+              <div className="">{chat.properties.icon}</div>
+            ) : (
+              <ForwardedIconComponent name={chat.properties.icon} />
+            )
+          ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
+            <CustomProfileIcon />
+          ) : playgroundPage ? (
+            <ForwardedIconComponent name="User" />
+          ) : (
+            <CustomProfileIcon />
+          )}
+        </div>)}
             {chat.content_blocks && chat.content_blocks.length > 0 && (
               <ContentBlockDisplay
                 playgroundPage={playgroundPage}
@@ -309,124 +262,80 @@ export default function ChatMessage({
                 chatId={chat.id}
               />
             )}
-            {!chat.isSend ? (
-              <div className="form-modal-chat-text-position flex-grow">
-                <div className="form-modal-chat-text">
-                  {hidden && chat.thought && chat.thought !== "" && (
-                    <div
-                      onClick={(): void => setHidden((prev) => !prev)}
-                      className="form-modal-chat-icon-div"
-                    >
-                      <IconComponent
-                        name="MessageSquare"
-                        className="form-modal-chat-icon"
-                      />
-                    </div>
-                  )}
-                  {chat.thought && chat.thought !== "" && !hidden && (
-                    <SanitizedHTMLWrapper
-                      className="form-modal-chat-thought"
-                      content={convert.toHtml(chat.thought ?? "")}
-                      onClick={() => setHidden((prev) => !prev)}
-                    />
-                  )}
-                  {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-                  <div className="flex w-full flex-col">
-                    <div
-                      className="flex w-full flex-col dark:text-white"
-                      data-testid="div-chat-message"
-                    >
-                      <div
-                        data-testid={
-                          "chat-message-" + chat.sender_name + "-" + chatMessage
-                        }
-                        className="flex w-full flex-col"
-                      >
-                        {chatMessage === "" && isBuilding && lastMessage ? (
-                          <IconComponent
-                            name="MoreHorizontal"
-                            className="h-8 w-8 animate-pulse"
-                          />
-                        ) : (
-                          <div className="min-h-8 w-full">
-                            {editMessage ? (
-                              <EditMessageField
-                                key={`edit-message-${chat.id}`}
-                                message={decodedMessage}
-                                onEdit={(message) => {
-                                  handleEditMessage(message);
-                                }}
-                                onCancel={() => setEditMessage(false)}
-                              />
-                            ) : (
-                              <CustomMarkdownField
-                                isAudioMessage={isAudioMessage}
-                                chat={chat}
-                                isEmpty={isEmpty}
-                                chatMessage={chatMessage}
-                                editedFlag={editedFlag}
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="form-modal-chat-text-position flex-grow">
-                <div className="flex w-full flex-col">
-                  {editMessage ? (
-                    <EditMessageField
-                      key={`edit-message-${chat.id}`}
-                      message={decodedMessage}
-                      onEdit={(message) => {
-                        handleEditMessage(message);
-                      }}
-                      onCancel={() => setEditMessage(false)}
+            
+            {/* Simplified message content */}
+            <div className="w-full">
+              {editMessage ? (
+                <EditMessageField
+                  key={`edit-message-${chat.id}`}
+                  message={decodedMessage}
+                  onEdit={(message) => {
+                    handleEditMessage(message);
+                  }}
+                  onCancel={() => setEditMessage(false)}
+                />
+              ) : (
+                <>
+                  {chatMessage === "" && isBuilding && lastMessage ? (
+                    <IconComponent
+                      name="MoreHorizontal"
+                      className="h-4 w-4 animate-pulse"
                     />
                   ) : (
-                    <>
-                      <div
-                        className={cn(
-                          "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
-                          isEmpty ? "text-muted-foreground" : "text-primary",
-                        )}
-                        data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                      >
-                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
-                        {editedFlag}
-                      </div>
-                    </>
+                    <div 
+                      className={cn(
+                        "whitespace-pre-wrap break-words text-sm",
+                        chat.isSend 
+                          ? "text-foreground" 
+                          : isEmpty 
+                            ? "text-muted-foreground" 
+                            : "text-foreground"
+                      )}
+                      data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                    >
+                      {chat.isSend ? (
+                        isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage
+                      ) : (
+                        <CustomMarkdownField
+                          isAudioMessage={isAudioMessage}
+                          chat={chat}
+                          isEmpty={isEmpty}
+                          chatMessage={chatMessage}
+                          editedFlag={editedFlag}
+                        />
+                      )}
+                    </div>
                   )}
+                  
+                  {/* File attachments */}
                   {chat.files && (
-                    <div className="my-2 flex flex-col gap-5">
+                    <div className="mt-2 flex flex-col gap-2">
                       {chat.files?.map((file, index) => {
                         return <FileCardWrapper index={index} path={file} />;
                       })}
                     </div>
                   )}
-                </div>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
           {!editMessage && (
-            <div className="invisible absolute -top-4 right-0 group-hover:visible">
-              <div>
-                <EditMessageButton
-                  onCopy={() => {
-                    navigator.clipboard.writeText(chatMessage);
-                  }}
-                  onDelete={() => {}}
-                  onEdit={() => setEditMessage(true)}
-                  className="h-fit group-hover:visible"
-                  isBotMessage={!chat.isSend}
-                  onEvaluate={handleEvaluateAnswer}
-                  evaluation={chat.properties?.positive_feedback}
-                  isAudioMessage={isAudioMessage}
-                />
-              </div>
+            <div className={cn(
+              "invisible absolute group-hover:visible",
+              chat.isSend ? "-left-4 top-0" : "-right-4 top-0"
+            )}>
+              <EditMessageButton
+                onCopy={() => {
+                  navigator.clipboard.writeText(chatMessage);
+                }}
+                onDelete={() => {}}
+                onEdit={() => setEditMessage(true)}
+                className="h-fit group-hover:visible"
+                isBotMessage={!chat.isSend}
+                onEvaluate={handleEvaluateAnswer}
+                evaluation={chat.properties?.positive_feedback}
+                isAudioMessage={isAudioMessage}
+              />
             </div>
           )}
         </div>
