@@ -3,7 +3,7 @@ title: Agents
 slug: /components-agents
 ---
 
-Langflow's **Agent** and **MCP Tools** components are critical for building agentic flows.
+Langflow's **Agent** and **MCP Tools** components are critical for building agent flows.
 These components define the behavior and capabilities of AI agents in your flows.
 
 <details>
@@ -25,13 +25,13 @@ The `Tool` object's description tells the agent what the tool can do so that it 
 
 </details>
 
-## Examples of agentic flows
+## Examples of agent flows
 
-For examples of agentic flows using the **Agent** and **MCP Tools** components, see the following:
+For examples of flows using the **Agent** and **MCP Tools** components, see the following:
 
-* [Langflow quickstart](/get-started-quickstart): Start with the **Simple Agent** template, modify its tools, and then learn how to use an agentic flow in an application.
+* [Langflow quickstart](/get-started-quickstart): Start with the **Simple Agent** template, modify its tools, and then learn how to use an agent flow in an application.
 
-    The **Simple Agent** template creates a basic agentic flow with an **Agent** component that can use two other Langflow components as tools.
+    The **Simple Agent** template creates a basic agent flow with an **Agent** component that can use two other Langflow components as tools.
     The LLM specified in the **Agent** component's settings can use its own built-in functionality as well as the functionality provided by the connected tools when generating responses.
 
 * [Use an agent as a tool](/agents-tools#use-an-agent-as-a-tool): Create a multi-agent flow.
@@ -40,7 +40,7 @@ For examples of agentic flows using the **Agent** and **MCP Tools** components, 
 
 ## Agent component {#agent-component}
 
-The **Agent** component is the primary agent actor in your agentic flows.
+The **Agent** component is the primary agent actor in your agent flows.
 This component uses an LLM integration to respond to input, such as a chat message or file upload.
 
 The agent can use the tools already available in the base LLM model as well as additional tools that you connect to the **Agent** component's **Tools** port.
@@ -50,7 +50,7 @@ For more information about using this component, see [Use Langflow agents](/agen
 
 ## MCP Tools component {#mcp-connection}
 
-The **MCP Tools** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's functions as tools for Langflow agents to use to respond to input.
+The **MCP Tools** component connects to a Model Context Protocol (MCP) server and exposes the MCP server's functions as tools for Langflow agents to use to respond to input.
 
 In addition to publicly available MCP servers and your own custom-built MCP servers, you can connect Langflow MCP servers, which allow your agent to use your Langflow flows as tools.
 To do this, use the **MCP Tools** component's [SSE mode](/mcp-client#mcp-sse-mode) to connect to your Langflow MCP server at the `/api/v1/mcp/sse` endpoint.
@@ -65,7 +65,7 @@ For more information about using this component and serving flows as MCP tools, 
 
 </details>
 
-## Legacy agent components
+## Legacy Agent components
 
 The following components are legacy components.
 You can still use these components in your flows, but they are no longer maintained and they can be removed in future releases.
@@ -147,7 +147,7 @@ It accepts the following parameters:
 <details>
 <summary>CrewAI Sequential Task Agent</summary>
 
-This component creates a CrewAI Task and its associated Agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
+This component creates a CrewAI Task and its associated agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
 For more information, see the [CrewAI sequential agents documentation](https://docs.crewai.com/how-to/Sequential/).
 
 It accepts the following parameters:

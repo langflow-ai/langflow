@@ -145,7 +145,7 @@ The following table lists the environment variables supported by Langflow.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `DO_NOT_TRACK` | Boolean | `false` | If this option is enabled, Langflow does not track telemetry. |
+| `DO_NOT_TRACK` | Boolean | `false` | If `true`, Langflow telemetry is disabled. |
 | `LANGFLOW_AUTO_LOGIN` | Boolean | `true` | See [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login). |
 | `LANGFLOW_AUTO_SAVING` | Boolean | `true` | Enable flow auto-saving. See [`--auto-saving`](./configuration-cli.mdx#run-auto-saving). |
 | `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds. See [`--auto-saving-interval`](./configuration-cli.mdx#run-auto-saving-interval). |
@@ -164,18 +164,18 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE` | Boolean | `false` | If set to `true`, disables tracking of API key usage (`total_uses` and `last_used_at`) to avoid database contention under high concurrency. |
 | `LANGFLOW_ENABLE_LOG_RETRIEVAL` | Boolean | `false` | Enable log retrieval functionality. |
 | `LANGFLOW_ENABLE_SUPERUSER_CLI` | Boolean | `true` | Allow creation of superusers with the Langflow CLI command [`langflow superuser`](./configuration-cli.mdx#langflow-superuser). Recommended to be `false` in production for security reasons. |
-| `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` | If enabled, [global variables](/configuration-global-variables) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
+| `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` | If enabled, [global variables](/configuration-global-variables) set in your Langflow **Settings** can use an environment variable with the same name if Langflow can't retrieve the variable value from the global variables. |
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only. See [`--frontend-path`](./configuration-cli.mdx#run-frontend-path). |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check. See [`--health-check-max-retries`](./configuration-cli.mdx#run-health-check-max-retries). |
 | `LANGFLOW_HOST` | String | `localhost` | The host on which the Langflow server will run. See [`--host`](./configuration-cli.mdx#run-host). |
 | `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Type of cache to use. Possible values: `InMemoryCache`, `SQLiteCache`. See [`--cache`](./configuration-cli.mdx#run-cache). |
 | `LANGFLOW_LOG_LEVEL` | String | `INFO` | Set the logging level for Langflow. Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
-| `LANGFLOW_LOG_FILE` | String | Not set | Path to the log file. If this option is not set, logs are written to stdout. |
+| `LANGFLOW_LOG_FILE` | String | Not set | Path to the log file. If this option isn't set, logs are written to stdout. |
 | `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval. Only used if `LANGFLOW_ENABLE_LOG_RETRIEVAL` is enabled. |
 | `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes. See [`--max-file-size-upload`](./configuration-cli.mdx#run-max-file-size-upload). |
-| `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the UI. Lists longer than this will be truncated when displayed in the UI. Does not affect data passed between components nor outputs. |
-| `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the UI. Responses longer than this will be truncated when displayed in the UI. Does not truncate responses between components nor outputs. |
-| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | `true` | If this option is set to False, Langflow does not enable the MCP server. |
+| `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect data passed between components nor outputs. |
+| `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate responses between components nor outputs. |
+| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | `true` | If this option is set to False, Langflow doesn't enable the MCP server. |
 | <sup><sup>`LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS`</sup></sup> | Boolean | `false` | If this option is set to True, Langflow sends progress notifications in the MCP server. |
 | `LANGFLOW_NEW_USER_IS_ACTIVE` | Boolean | `false` | See [`LANGFLOW_NEW_USER_IS_ACTIVE`](/api-keys-and-authentication#langflow-new-user-is-active). |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `false` | Open the system web browser on startup. See [`--open-browser`](./configuration-cli.mdx#run-open-browser). |
@@ -213,7 +213,7 @@ The following examples show how to configure Langflow using environment variable
 
 The `.env` file is a text file that contains key-value pairs of environment variables.
 
-Create or edit a file named `.env` in your project root directory and add your configuration:
+Create or edit a `.env` file in the root directory of your application or Langflow environment, and then add your configuration variables to the file:
 
 ```text title=".env"
 DO_NOT_TRACK=true

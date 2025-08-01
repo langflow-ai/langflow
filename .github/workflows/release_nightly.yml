@@ -215,13 +215,14 @@ jobs:
     with:
       base-artifact-name: "dist-nightly-base"
       main-artifact-name: "dist-nightly-main"
-      test-timeout: 120
 
   publish-nightly-base:
     name: Publish Langflow Base Nightly to PyPI
     needs: [build-nightly-base, test-cross-platform]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Download base artifact
         uses: actions/download-artifact@v4
         with:
@@ -245,6 +246,8 @@ jobs:
     needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Download main artifact
         uses: actions/download-artifact@v4
         with:
