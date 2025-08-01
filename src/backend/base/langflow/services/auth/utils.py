@@ -16,7 +16,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
+from langflow.services.database.models.user.crud import (
+    get_user_by_id,
+    get_user_by_username,
+    update_user_last_login_at,
+)
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service, get_session, get_settings_service
 from langflow.services.settings.service import SettingsService
@@ -145,7 +149,7 @@ async def get_current_user(
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
     db: Annotated[AsyncSession, Depends(get_session)],
-) -> User:
+) -> User | UserRead:
     if token:
         return await get_current_user_by_jwt(token, db)
     user = await api_key_security(query_param, header_param)
@@ -241,21 +245,29 @@ async def get_current_user_for_websocket(
             return user_read
 
     raise WebSocketException(
-        code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
+        code=status.WS_1008_POLICY_VIOLATION,
+        reason="Missing or invalid credentials (cookie, token or API key).",
     )
 
 
-async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
+async def get_current_active_user(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     return current_user
 
 
-async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+async def get_current_active_superuser(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     if not current_user.is_superuser:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
     return current_user
 
 
@@ -321,7 +333,10 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     username = settings_service.auth_settings.SUPERUSER
     super_user = await get_user_by_username(db, username)
     if not super_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Super user hasn't been created",
+        )
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
         data={"sub": str(super_user.id), "type": "access"},
