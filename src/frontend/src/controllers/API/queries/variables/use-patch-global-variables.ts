@@ -9,6 +9,7 @@ interface PatchGlobalVariablesParams {
   value?: string;
   id: string;
   default_fields?: string[];
+  category?: string;
 }
 
 export const usePatchGlobalVariables: useMutationFunctionType<
