@@ -13,6 +13,8 @@ import { customStringify } from "@/utils/reactflowUtils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSidebarComponent } from "./components/flowSidebarComponent";
+import { MemoizedSidebarTrigger } from "./components/PageComponent/MemoizedComponents";
+import { PlaygroundSidebar } from "./components/PlaygroundSidebar";
 import Page from "./components/PageComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
@@ -27,6 +29,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isLoading, setIsLoading] = useState(false);
+
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -160,13 +163,23 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
+            <div className="flex h-full">
             <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
               {!view && <FlowSidebarComponent isLoading={isLoading} />}
-              <main className="flex w-full overflow-hidden">
-                <div className="h-full w-full">
-                  <Page setIsLoading={setIsLoading} />
-                </div>
-              </main>
+              <MemoizedSidebarTrigger />
+            </SidebarProvider>
+            </div>
+            
+                          <SidebarProvider width="400px" defaultOpen={false}>
+                <main className="flex w-full overflow-hidden">
+                  <div className="h-full w-full relative">
+                    <Page 
+                      setIsLoading={setIsLoading}
+                    />
+                  </div>
+                </main>
+              
+              <PlaygroundSidebar />
             </SidebarProvider>
           </div>
         )}
