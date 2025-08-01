@@ -30,21 +30,21 @@ test(
     // Check if we're on the files page
     await page.waitForSelector('[data-testid="mainpage_title"]');
     const title = await page.getByTestId("mainpage_title");
-    expect(await title.textContent()).toContain("My Files");
+    expect(await title.textContent()).toContain("Files");
 
     // Check for empty state when no files are present
     const noFilesText = await page.getByText("No files");
     expect(noFilesText).toBeTruthy();
 
     const uploadMessage = await page.getByText(
-      "Upload files or import from your preferred cloud.",
+      "Upload files or import from your preferred cloud."
     );
     expect(uploadMessage).toBeTruthy();
 
     // Check if upload buttons are present
     const uploadButton = await page.getByText("Upload");
     expect(uploadButton).toBeTruthy();
-  },
+  }
 );
 
 test(
@@ -89,7 +89,7 @@ test(
     // Verify file appears in the list
     const uploadedFileName = await page.getByText(fileName + ".txt");
     expect(await uploadedFileName.isVisible()).toBeTruthy();
-  },
+  }
 );
 
 test(
@@ -115,7 +115,7 @@ test(
     await page.getByText("My Files").first().click();
 
     // Create DataTransfer object and file
-    const dataTransfer = await page.evaluateHandle((fileName) => {
+    const dataTransfer = await page.evaluateHandle(fileName => {
       const data = new DataTransfer();
       const file = new File(["test content"], `${fileName}.txt`, {
         type: "text/plain",
@@ -130,7 +130,7 @@ test(
       "dragover",
       {
         dataTransfer,
-      },
+      }
     );
     await page.dispatchEvent('[data-testid="drag-wrap-component"]', "drop", {
       dataTransfer,
@@ -145,7 +145,7 @@ test(
     await expect(uploadedFileName).toBeVisible({
       timeout: 1000,
     });
-  },
+  }
 );
 
 test(
@@ -164,7 +164,7 @@ test(
       path.join(__dirname, "../../assets/test-file.py"),
     ];
 
-    const fileContents = testFiles.map((file) => fs.readFileSync(file));
+    const fileContents = testFiles.map(file => fs.readFileSync(file));
 
     await awaitBootstrapTest(page, { skipModal: true });
 
@@ -217,7 +217,7 @@ test(
         timeout: 1000,
       });
     }
-  },
+  }
 );
 
 test(
@@ -236,7 +236,7 @@ test(
       path.join(__dirname, "../../assets/test-file.py"),
     ];
 
-    const fileContents = testFiles.map((file) => fs.readFileSync(file));
+    const fileContents = testFiles.map(file => fs.readFileSync(file));
 
     await awaitBootstrapTest(page, { skipModal: true });
 
@@ -286,12 +286,12 @@ test(
 
     // Verify only JSON file is visible
     expect(
-      await page.getByText(fileNames.json + ".json").isVisible(),
+      await page.getByText(fileNames.json + ".json").isVisible()
     ).toBeTruthy();
 
     // Verify other files are not visible
     expect(
-      await page.getByText(fileNames.txt + ".txt").isVisible(),
+      await page.getByText(fileNames.txt + ".txt").isVisible()
     ).toBeFalsy();
     expect(await page.getByText(fileNames.py + ".py").isVisible()).toBeFalsy();
 
@@ -303,10 +303,10 @@ test(
     expect(await page.getByText(fileNames.py + ".py").isVisible()).toBeTruthy();
 
     expect(
-      await page.getByText(fileNames.json + ".json").isVisible(),
+      await page.getByText(fileNames.json + ".json").isVisible()
     ).toBeFalsy();
     expect(
-      await page.getByText(fileNames.txt + ".txt").isVisible(),
+      await page.getByText(fileNames.txt + ".txt").isVisible()
     ).toBeFalsy();
 
     // Clear search and verify all files are visible again
@@ -316,7 +316,7 @@ test(
     for (const name of Object.values(fileNames)) {
       expect(await page.getByText(name).isVisible()).toBeTruthy();
     }
-  },
+  }
 );
 
 test(
@@ -335,7 +335,7 @@ test(
       path.join(__dirname, "../../assets/test-file.py"),
     ];
 
-    const fileContents = testFiles.map((file) => fs.readFileSync(file));
+    const fileContents = testFiles.map(file => fs.readFileSync(file));
 
     await awaitBootstrapTest(page, { skipModal: true });
 
@@ -394,13 +394,13 @@ test(
     await page.keyboard.up("Shift");
 
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(5).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(5).isChecked()
     ).toBe(true);
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(6).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(6).isChecked()
     ).toBe(true);
     expect(
-      await page.locator('input[data-ref="eInput"]').nth(7).isChecked(),
+      await page.locator('input[data-ref="eInput"]').nth(7).isChecked()
     ).toBe(true);
 
     // Check if the bulk actions toolbar appears
@@ -425,7 +425,7 @@ test(
 
     // Check for success message
     const downloadSuccessMessage = await page.getByText(
-      /Files? downloaded successfully/,
+      /Files? downloaded successfully/
     );
     await expect(downloadSuccessMessage).toBeTruthy();
 
@@ -451,7 +451,7 @@ test(
 
     // Check for success message
     const deleteSuccessMessage = await page.getByText(
-      "Files deleted successfully",
+      "Files deleted successfully"
     );
     await expect(deleteSuccessMessage).toBeTruthy();
     await page.waitForTimeout(500);
@@ -462,5 +462,5 @@ test(
       (await page.getByText(fileNames.txt + ".txt").count()) +
       (await page.getByText(fileNames.json + ".json").count());
     await expect(remainingFileCount).toBe(1);
-  },
+  }
 );
