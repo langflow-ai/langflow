@@ -15,7 +15,11 @@ router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
 
 settings = get_settings_service().settings
-KNOWLEDGE_BASES_DIR = Path(settings.knowledge_bases_dir).expanduser()
+knowledge_directory = settings.knowledge_bases_dir
+if not knowledge_directory:
+    msg = "Knowledge bases directory is not set in the settings."
+    raise ValueError(msg)
+KNOWLEDGE_BASES_DIR = Path(knowledge_directory).expanduser()
 
 
 class KnowledgeBaseInfo(BaseModel):
