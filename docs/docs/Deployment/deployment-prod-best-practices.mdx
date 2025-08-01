@@ -1,23 +1,25 @@
 ---
-title: Langflow best practices on Kubernetes
+title: Best practices for Langflow on Kubernetes
 slug: /deployment-prod-best-practices
 ---
 
 This guide provides best practices for deploying Langflow in production environments on Kubernetes.
 
-## Resource requirements and scaling
+## Resources and scaling
 
 Langflow's minimum resource requirements vary by deployment type:
 
-* **IDE (development)**: Deploy both the Langflow visual editor (frontend) and API (backend). Typically, this is used for development environments where developers use the visual editor to create and manage flows before packing and serving them through a production runtime deployment.
+* **IDE (development)**: Deploy both the Langflow visual editor (frontend) and API (backend). Typically, this is used for development environments where developers use the visual editor to create and manage flows before packaging and serving them through a production runtime deployment.
 
     The frontend service requires a minimum of 512Mi RAM and 0.3 CPU per instance with 1 replica.
 
     The backend service requires a minimum of 1Gi RAM and 0.5 CPU per instance with 1 replica.
 
-* **Runtime (production)**: Deploy the Langflow runtime for production flows, which is headless and focused on serving the Langflow API. This is used for production environments where flows are executed programmatically without the need for the visual editor.
+* **Runtime (production)**: Deploy the Langflow runtime for production flows, which is headless (backend only) service focused on serving the Langflow API. This is used for production environments where flows are executed programmatically without the need for the visual editor.
 
     Minimum requirements include 2Gi RAM and 1000m (1 CPU) per instance with 3 replicas.
+
+For more information about Langflow deployment types, see [Langflow architecture on Kubernetes](/deployment-architecture).
 
 ### Estimate, test, and adjust
 
@@ -42,12 +44,14 @@ An external PostgreSQL database is recommended for production deployments to imp
 
 Your resource allocation and replication strategy must be able to support the PostgreSQL service and storage.
 For example, for a runtime (production) deployment, you might allocate 4Gi RAM, 2 CPU, and multiple replicas for high availability.
+Tune PostgreSQL parameters, such as `work_mem` and `shared_buffers`, as needed based on resource requirements and usage metrics.
 
 Recommended configurations include:
 
-* Persistent storage
-* High Availability (HA)
+* Persistent storage to prevent data loss on container shutdown
+* High Availability (HA) or Active-Active for automatic failover, scaling, and load balancing
 * Shared databases for multi-instance deployments
+* Shared storage, such as NFS or cloud storage, for multi-instance deployments to access large files stored on disk, such as in `/opt/langflow/data/`.
 
 For more information, see [Configure an external PostgreSQL database](/configuration-custom-database) and [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
 
@@ -79,37 +83,37 @@ spec:
         averageUtilization: 80
 ```
 
-## Failure Points
+## Failure points
 
 Langflow's reliability in production depends on mitigating key failure points, particularly around the database, file system, and instance availability:
 
-* **Database failures**: For information about database administration and stability in production deployments, see [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+* **Database failures**: See [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
 * **File system failures**: Concurrency issues in file caching, such as `/app/data/.cache`, can cause IO errors in multi-instance setups.
 To avoid this, use a shared, POSIX-compliant file system or cloud storage.
 Use persistent volumes instead of ramdisk solutions that result in data loss on container shutdown.
 * **Instance failures**: Deploy multiple replicas to avoid service disruptions when a single instance fails. Use health checks to detect and replace failed pods.
 * **Network and dependency failures**: External APIs or services used in flows may fail, causing flow errors. Implement retry logic and error handling in flows or application code. Monitor network latency and dependency health.
 
-## Monitoring recommendations
+## Monitoring
 
 Effective monitoring ensures Langflow operates reliably and performs well under varying loads:
 
-* **Database monitoring**: Monitor database availability, query performance, and resource usage (CPU, memory, disk). Use tools like pgAdmin or cloud-native monitoring for PostgreSQL.
+* **Database monitoring**: See [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
 * **Application logs**: Collect and analyze logs for errors, warnings, and flow execution issues. Centralize logs using tools like ELK Stack or Fluentd. You can also inspect [Langflow logs](/logging).
 * **Resource usage**: Track CPU, memory, and disk usage of Langflow instances. Use Prometheus and Grafana for real-time metrics collection and monitoring in Kubernetes.
 * **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
 * **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.
 
-## Security implications
+## Security
 
 Running Langflow in production requires robust security measures to protect the application, data, and users.
 Follow industry best practices and use secure Langflow configurations, such as the following:
 
-* **Container security**: Apply security best practices for containerized applications. For example, set `readOnlyRootFilesystem: true` in runtime (production) containers to prevent unauthorized modifications.
-* **Secrets management**: Store sensitive data like API keys in Kubernetes secrets or external secret managers.
-* **Authentication and authorization**: Start your Langflow server with authentication enabled. For more information, see [API keys and authentication](/api-keys-and-authentication).
-* **Encryption and privacy**: Follow industry best practices and legal requirements for data privacy and encryption of data in transit and at rest, including GDPR requirements, HTTPS communications over the public internet, and TLS for PostgreSQL connections.
-* **Security posture maintenance**: Conduct regular security audits and apply software updates, restrict network access with firewalls or network policies, and monitor for suspicious activity using intrusion detection systems.
+* **Container security**: Apply security best practices for containerized applications. For example, set `readOnlyRootFilesystem: true` in runtime (production) containers to prevent unauthorized modifications. Restrict access to files and codebases containing sensitive data and configuration files that shouldn't be exposed to unauthorized users.
+* **Secrets management**: Store sensitive data like API keys and PostgreSQL credentials in Kubernetes secrets or external secrets managers like HashiCorp Vault.
+* **Authentication, authorization, and access control**: Start your Langflow server with authentication enabled, as explained in [API keys and authentication](/api-keys-and-authentication). Restrict network and resource access with firewalls, network policies, network security groups, or VPCs. For example, restrict PostgreSQL database access to Langflow instances.
+* **Encryption and privacy**: Follow industry best practices and legal requirements for data privacy and encryption of data in transit and at rest, including GDPR requirements, HTTPS, TLS, and SSL. For example, configure PostgreSQL with valid SSL certificates and append `?sslmode=require` or `?sslmode=verify-full` to the connection string to enable SSL for database connections.
+* **Security posture maintenance**: Conduct regular security audits, keep current with software updates, and monitor for suspicious activity using intrusion detection systems.
 
 ## See also
 
