@@ -59,7 +59,7 @@ jobs:
           LANGFLOW_SUPERUSER_PASSWORD: 123456
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "21"
           cache: "npm"
