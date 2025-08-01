@@ -420,9 +420,19 @@ async def restore_langflow_background(installation_id: UUID) -> None:
                     else:
                         logger.info(f"Successfully removed package: {package}")
 
-            # Step 3: Run sync with --frozen to use existing lock file without creating new one
-            sync_command = [str(uv_executable), "sync", "--frozen"]
-            logger.info(f"Running final sync with frozen lock: {' '.join(sync_command)} in {project_root}")
+            # Step 3: Detect if we have a lock file, otherwise use pip install
+            lock_file = project_root / "uv.lock"
+            if lock_file.exists():
+                # Use frozen sync when lock file exists
+                sync_command = [str(uv_executable), "sync", "--frozen"]
+                logger.info(
+                    f"Found lock file, running sync with frozen lock: {' '.join(sync_command)} in {project_root}"
+                )
+            else:
+                # No lock file - likely running with 'uv run langflow run'
+                # Use pip install to reinstall langflow
+                sync_command = [str(uv_executable), "pip", "install", "langflow"]
+                logger.info(f"No lock file found, reinstalling langflow: {' '.join(sync_command)} in {project_root}")
 
             process = await asyncio.create_subprocess_exec(
                 *sync_command,
