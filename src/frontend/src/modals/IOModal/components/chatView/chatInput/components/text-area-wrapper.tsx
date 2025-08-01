@@ -33,7 +33,7 @@ const TextAreaWrapper = ({
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
   const additionalClassNames =
-    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent";
+    "form-input block w-full border-0 custom-scroll focus:border-0 rounded-none shadow-none focus:ring-0 p-2 sm:text-sm !bg-transparent resize-none outline-none";
 
   useEffect(() => {
     if (!isBuilding && !noInput) {
@@ -56,9 +56,9 @@ const TextAreaWrapper = ({
       style={{
         resize: "none",
         bottom: `${inputRef?.current?.scrollHeight}px`,
-        maxHeight: "150px",
+        maxHeight: "120px",
         overflow: `${
-          inputRef.current && inputRef.current.scrollHeight > 150
+          inputRef.current && inputRef.current.scrollHeight > 120
             ? "auto"
             : "hidden"
         }`,
