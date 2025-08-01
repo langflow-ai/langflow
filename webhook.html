@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -51,7 +51,7 @@
 <!-- -->
 <p>You can use the <strong>Webhook</strong> component to start a flow run in response to an external event.</p>
 <p>With the <strong>Webhook</strong> component, a flow can receive data directly from external sources. Then, the flow can parse the data and pass it to other components in the flow to initiate other actions, such as calling APIs, writing to databases, and chatting with LLMs.
-If the input is not valid JSON, the <strong>Webhook</strong> component wraps it in a <code>payload</code> object so that it can be accepted as input to trigger the flow.</p>
+If the input isn&#x27;t valid JSON, the <strong>Webhook</strong> component wraps it in a <code>payload</code> object so that it can be accepted as input to trigger the flow.</p>
 <p>The <strong>Webhook</strong> component provides a versatile entrypoint that can make your flows more event-driven and integrated with your entire stack of applications and services.
 For example:</p>
 <ul>
@@ -86,8 +86,8 @@ For example:</p>
 </li>
 <li>
 <p>From the <strong>Webhook</strong> component&#x27;s <strong>Endpoint</strong> field, copy the API endpoint that you will use to send data to the <strong>Webhook</strong> component and trigger the flow.</p>
-<p>Alternatively, to get a complete <code>POST /v1/webhook/$FLOW_ID</code> code snippet, open the flow&#x27;s <a href="/concepts-publish#api-access"><strong>API access</strong> pane</a>, and then click the <strong>Webhook cURL</strong> tab.
-You can also modify the default curl command in the <strong>Webhook</strong> component&#x27;s <strong>cURL</strong> field.
+<p>Alternatively, to get a complete <code>POST /v1/webhook/$FLOW_ID</code> code snippet, open the flow&#x27;s <a href="/concepts-publish#api-access"><strong>API access</strong> pane</a>, and then click the <strong>Webhook curl</strong> tab.
+You can also modify the default curl command in the <strong>Webhook</strong> component&#x27;s <strong>curl</strong> field.
 If this field isn&#x27;t visible by default, click the <strong>Webhook</strong> component, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> <strong>Controls</strong> in the <a href="/concepts-components#component-menus">component&#x27;s header menu</a>.</p>
 </li>
 <li>
@@ -125,7 +125,7 @@ To learn about triggering flows with payloads from external applications, see th
 <p>This mode passes the data received by the <strong>Webhook</strong> component as a string that is printed by the <strong>Chat Output</strong> component.</p>
 </li>
 <li>
-<p>Click <strong>Share</strong>, select <strong>API access</strong>, and then copy the <strong>Webhook cURL</strong> code snippet.</p>
+<p>Click <strong>Share</strong>, select <strong>API access</strong>, and then copy the <strong>Webhook curl</strong> code snippet.</p>
 </li>
 <li>
 <p>Optional: Edit the <code>data</code> in the code snippet if you want to pass a different payload.</p>
@@ -144,7 +144,7 @@ Then, you can examine the string output and troubleshoot your parsing template, 
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
 <li><a href="/api-reference-api-examples">Get started with the Langflow API</a></li>
-<li><a href="/components-data#webhook">Webhook component</a></li>
+<li><a href="/components-data#webhook"><strong>Webhook</strong> component</a></li>
 <li><a href="/api-flows-run">Flow trigger endpoints</a></li>
 </ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/concepts-publish"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Trigger flows with the Langflow API</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/concepts-playground"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Test flows</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#configure-the-webhook-component" class="table-of-contents__link toc-highlight">Configure the Webhook component</a></li><li><a href="#trigger-flows-with-composio-webhooks" class="table-of-contents__link toc-highlight">Trigger flows with Composio webhooks</a></li><li><a href="#troubleshoot-flows-with-webhook-components" class="table-of-contents__link toc-highlight">Troubleshoot flows with Webhook components</a><ul><li><a href="#validate-data-received-by-the-webhook-component" class="table-of-contents__link toc-highlight">Validate data received by the Webhook component</a></li><li><a href="#parser-component-build-failure" class="table-of-contents__link toc-highlight">Parser component build failure</a></li></ul></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>

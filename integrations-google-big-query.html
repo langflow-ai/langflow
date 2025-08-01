@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -71,25 +71,25 @@ For more information, see <a href="https://cloud.google.com/bigquery/docs/access
 <li>Click <strong>Add Key</strong>, and then click <strong>Create new key</strong>.</li>
 <li>Under <strong>Key type</strong>, select <strong>JSON</strong>, and then click <strong>Create</strong>.
 A JSON private key file is downloaded to your machine.
-Now that you have a service account and a JSON private key, you need to configure the credentials in the Langflow BigQuery component.</li>
+Now that you have a service account and a JSON private key, you need to configure the credentials in the Langflow <strong>BigQuery</strong> component.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="configure-credentials-in-the-langflow-component">Configure credentials in the Langflow component<a href="#configure-credentials-in-the-langflow-component" class="hash-link" aria-label="Direct link to Configure credentials in the Langflow component" title="Direct link to Configure credentials in the Langflow component">​</a></h2>
 <p>With your service account configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.</p>
 <ol>
-<li>Create a new project in Langflow.</li>
-<li>From the <strong>Components</strong> menu, drag and drop the BigQuery component to your workspace.</li>
-<li>In the BigQuery component&#x27;s <strong>Upload Service Account JSON</strong> field, click <strong>Select file</strong>.</li>
+<li>Create a new flow in Langflow.</li>
+<li>In the <strong>Components</strong> menu, find the <strong>BigQuery</strong> component, and then add it to your flow.</li>
+<li>In the <strong>BigQuery</strong> component&#x27;s <strong>Upload Service Account JSON</strong> field, click <strong>Select file</strong>.</li>
 <li>In the <strong>My Files</strong> pane, select <strong>Click or drag files here</strong>.
 Your file browser opens.</li>
 <li>In your file browser, select the service account JSON file, and then click <strong>Open</strong>.</li>
 <li>In the <strong>My Files</strong> pane, select your service account JSON file, and then click <strong>Select files</strong>.
-The BigQuery component can now query your datasets and tables using your service account JSON file.</li>
+The <strong>BigQuery</strong> component can now query your datasets and tables using your service account JSON file.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="query-a-bigquery-dataset">Query a BigQuery dataset<a href="#query-a-bigquery-dataset" class="hash-link" aria-label="Direct link to Query a BigQuery dataset" title="Direct link to Query a BigQuery dataset">​</a></h2>
 <p>With your component credentials configured, query your BigQuery datasets and tables to confirm connectivity.</p>
 <ol>
 <li>
-<p>Connect <strong>Chat Input</strong> and <strong>Chat Output</strong> components to the BigQuery component.</p>
+<p>Connect <strong>Chat Input</strong> and <strong>Chat Output</strong> components to the <strong>BigQuery</strong> component.</p>
 <p><img decoding="async" loading="lazy" alt="BigQuery component connected to chat input and output" src="/assets/images/integrations-bigquery-48f5e5cc351d8caf9e9837ed495a5367.png" width="4000" height="1680" class="img_ev3q"></p>
 </li>
 <li>

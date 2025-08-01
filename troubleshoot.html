@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -54,7 +54,7 @@
 <p>As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.</p>
 <p>If a component appears to be missing from the expected location on the <strong>Components</strong> menu, try the following:</p>
 <ul>
-<li>Search for the component or check other component categories, including <a href="/components-bundle-components"><strong>Bundles</strong></a>.</li>
+<li>Search for the component or check other component categories, including <a href="/components-bundle-components">bundles</a>.</li>
 <li><a href="/concepts-components#component-menus">Expose legacy components</a>, which are hidden by default.</li>
 <li>Check the <a href="https://github.com/langflow-ai/langflow/releases/latest" target="_blank" rel="noopener noreferrer">Changelog</a> for component changes in recent releases.</li>
 <li>Make sure the component isn&#x27;t already present in your flow if it is a single-use component.</li>
@@ -62,12 +62,12 @@
 <p>If you still cannot locate the component, see <a href="/contributing-github-issues">Langflow GitHub Issues and Discussions</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="no-input-in-the-playground">No input in the Playground<a href="#no-input-in-the-playground" class="hash-link" aria-label="Direct link to No input in the Playground" title="Direct link to No input in the Playground">​</a></h2>
 <p>If there is no message input field in the <strong>Playground</strong>, make sure your flow has a <a href="/components-io#chat-io"><strong>Chat Input</strong> component</a> that is connected, directly or indirectly, to the <strong>Input</strong> port of a <strong>Language Model</strong> or <strong>Agent</strong> component.</p>
-<p>Because the <strong>Playground</strong> is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have <strong>Chat Input</strong>, <strong>Language Model</strong>/<strong>Agent</strong>, and <strong>Chat Output</strong> components to be fully supported by the <strong>Playground</strong>&#x27;s chat interface.</p>
-<p>For more information, see <a href="/concepts-playground">Test flows in the <strong>Playground</strong></a>.</p>
+<p>Because the <strong>Playground</strong> is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have <strong>Chat Input</strong>, <strong>Language Model</strong>/<strong>Agent</strong>, and <strong>Chat Output</strong> components to be fully supported by the <strong>Playground</strong> chat interface.</p>
+<p>For more information, see <a href="/concepts-playground">Test flows in the Playground</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="missing-key-no-key-found-or-invalid-api-key">Missing key, no key found, or invalid API key<a href="#missing-key-no-key-found-or-invalid-api-key" class="hash-link" aria-label="Direct link to Missing key, no key found, or invalid API key" title="Direct link to Missing key, no key found, or invalid API key">​</a></h2>
 <p>If you get an API key error when running a flow, try the following:</p>
 <ul>
-<li>For all components that require credentials, make sure those components have a valid credential in the component&#x27;s settings, such as the <strong>API key</strong> field.</li>
+<li>For all components that require credentials, make sure those components have a valid credential in the component&#x27;s settings, such as the <strong>API Key</strong> field.</li>
 <li>If you store your credentials in <a href="/configuration-global-variables">Langflow global variables</a>, make sure you selected the correct global variable and that the variable contains a valid credential.</li>
 <li>Make sure the provided credentials are active, have the required permissions, and, if applicable, have sufficient funds in the account to execute the required action. For example, model providers require credits to use their LLMs.</li>
 </ul>
@@ -114,7 +114,7 @@
 </li>
 </ul>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="environment-variables-not-available-from-terminal">Environment variables not available from terminal<a href="#environment-variables-not-available-from-terminal" class="hash-link" aria-label="Direct link to Environment variables not available from terminal" title="Direct link to Environment variables not available from terminal">​</a></h3>
-<p>Environment variables set in your terminal are not automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
+<p>Environment variables set in your terminal aren&#x27;t automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
 To set environment variables for Langflow Desktop, see <a href="/environment-variables#set-environment-variables-for-langflow-desktop">Set environment variables for Langflow Desktop</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="package-is-not-installed">Package is not installed<a href="#package-is-not-installed" class="hash-link" aria-label="Direct link to Package is not installed" title="Direct link to Package is not installed">​</a></h3>
 <p>In Langflow OSS, you can follow the error message&#x27;s instructions to install the missing dependency.</p>

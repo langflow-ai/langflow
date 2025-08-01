@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -50,11 +50,11 @@
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Flows</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Build flows</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Build flows</h1></header><p>A <em>flow</em> is a functional representation of an application workflow.
 Flows receive input, process it, and produce output.</p>
 <p>Flows consist of <em>components</em> that represent individual steps in your application&#x27;s workflow.</p>
-<p><img decoding="async" loading="lazy" alt="Basic prompting flow within the Workspace" src="/assets/images/workspace-basic-prompting-61154cb9a883e7d5862f6c3d272add85.png" width="4000" height="2188" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Basic Prompting flow in the workspace" src="/assets/images/workspace-basic-prompting-61154cb9a883e7d5862f6c3d272add85.png" width="4000" height="2188" class="img_ev3q"></p>
 <p>Langflow flows are fully serializable and can be saved and loaded from the file system where Langflow is installed.</p>
 <div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>To try building and running a flow in a few minutes, see the <a href="/get-started-quickstart">Langflow quickstart</a>.</p></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="create-a-flow">Create a flow<a href="#create-a-flow" class="hash-link" aria-label="Direct link to Create a flow" title="Direct link to Create a flow">​</a></h2>
-<p>From the <a href="#projects"><strong>Projects</strong> page</a>, there are four ways to create a flow in the Langflow UI:</p>
+<p>From the <a href="#projects"><strong>Projects</strong> page</a>, there are four ways to create a flow:</p>
 <ul>
 <li>
 <p><strong>Create a blank flow</strong>: Select a project, click <strong>New Flow</strong>, and then click <strong>Blank Flow</strong>.</p>
@@ -72,13 +72,13 @@ In contrast, the <strong>Vector Store RAG</strong> template consists of two sub-
 <p><strong>Import a flow</strong>: See <a href="/concepts-flows-import">Import and export flows</a>.</p>
 </li>
 </ul>
-<p>You can also create a flow with the <a href="/api-flows">Langflow API</a>, but the Langflow team recommends using the visual editor until you are familiar with flow creation.</p>
+<p>You can also create a flow with the <a href="/api-flows">Langflow API</a>, but the Langflow team recommends using the <a href="/concepts-overview">visual editor</a> until you are familiar with flow creation.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="add-components">Add components<a href="#add-components" class="hash-link" aria-label="Direct link to Add components" title="Direct link to Add components">​</a></h3>
-<p>Flows consist of <a href="/concepts-components">components</a>, which are nodes that you configure and connect in the Langflow <a href="/concepts-overview">visual editor</a>.
+<p>Flows consist of <a href="/concepts-components">components</a>, which are nodes that you configure and connect in the <a href="/concepts-overview#workspace">workspace</a>.
 Each component performs a specific task, like serving an AI model or connecting a data source.</p>
 <p>Drag and drop components from the <strong>Components</strong> menu to add them to your flow.
 Then, configure the component settings and connect the components together.</p>
-<p><img decoding="async" loading="lazy" alt="Chat input and output connected to Language model component" src="/assets/images/connect-component-d52a14c256f3653e49ce2e2dd311fcef.png" width="3700" height="1880" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Chat Input and Output connected to a Language Model component" src="/assets/images/connect-component-d52a14c256f3653e49ce2e2dd311fcef.png" width="3700" height="1880" class="img_ev3q"></p>
 <p>Each component has configuration settings and options. Some of these are common to all components, and some are unique to specific components.</p>
 <p>To form a cohesive flow, you connect components by <em>edges</em> or <em>ports</em>, which have a specific data type they receive or send.
 For example, message ports send text strings between components.</p>
@@ -107,6 +107,7 @@ To create a project, click <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 <li><strong>Delete a flow</strong>: Locate the flow you want to delete, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong>, and then select <strong>Delete</strong>.</li>
 <li><strong>Serve flows as MCP tools</strong>: See <a href="/mcp-server">Use Langflow as an MCP server</a>.</li>
 </ul>
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>To get back to the <strong>Projects</strong> page after editing a flow, click the project name or Langflow icon in the Langflow header.</p></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="flow-storage-and-logs">Flow storage and logs<a href="#flow-storage-and-logs" class="hash-link" aria-label="Direct link to Flow storage and logs" title="Direct link to Flow storage and logs">​</a></h2>
 <p>By default, flows and <a href="/logging">flow logs</a> are stored on local disk at the following default locations:</p>
 <ul>

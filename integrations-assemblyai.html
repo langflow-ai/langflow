@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -54,12 +54,7 @@
 <li>Generating subtitles</li>
 <li>Applying LLMs to audio files</li>
 </ul>
-<p>More info about AssemblyAI:</p>
-<ul>
-<li><a href="https://www.assemblyai.com/" target="_blank" rel="noopener noreferrer">Website</a></li>
-<li><a href="https://www.assemblyai.com/docs" target="_blank" rel="noopener noreferrer">AssemblyAI API Docs</a></li>
-<li><a href="https://www.assemblyai.com/dashboard/signup" target="_blank" rel="noopener noreferrer">Get a Free API key</a></li>
-</ul>
+<p>For more information about AssemblyAI features and functionality used by AssemblyAI components, see the <a href="https://www.assemblyai.com/docs" target="_blank" rel="noopener noreferrer">AssemblyAI API Docs</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
 <li>
@@ -123,7 +118,7 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <p><strong>Input</strong>:</p>
 <ul>
 <li>AssemblyAI API Key: Your API key.</li>
-<li>Transcription Result: The output of the <em>Poll Transcript</em> component.</li>
+<li>Transcription Result: The output of the <strong>Poll Transcript</strong> component.</li>
 <li>Subtitle Format: The format of the captions (SRT or VTT).</li>
 <li>Character per Caption (Optional): The maximum number of characters per caption (0 for no limit).</li>
 </ul>
@@ -143,8 +138,8 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <p><strong>Input</strong>:</p>
 <ul>
 <li>AssemblyAI API Key: Your API key.</li>
-<li>Transcription Result: The output of the <em>Poll Transcript</em> component.</li>
-<li>Input Prompt: The text to prompt the model. You can type your prompt in this field or connect it to a <em>Prompt</em> component.</li>
+<li>Transcription Result: The output of the <strong>Poll Transcript</strong> component.</li>
+<li>Input Prompt: The text to prompt the model. You can type your prompt in this field or connect it to a <strong>Prompt Template</strong> component.</li>
 <li>Final Model: The model that is used for the final prompt after compression is performed. Default is Claude 3.5 Sonnet.</li>
 <li>Temperature (Optional): The temperature to use for the model. Default is 0.0.</li>
 <li>Max Output Size (Optional): Max output size in tokens, up to 4000. Default is 2000.</li>
@@ -192,33 +187,52 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <li>As a standalone component, all transcripts can be listed.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-the-transcription-and-speech-ai-flow">Run the Transcription and Speech AI Flow<a href="#run-the-transcription-and-speech-ai-flow" class="hash-link" aria-label="Direct link to Run the Transcription and Speech AI Flow" title="Direct link to Run the Transcription and Speech AI Flow">​</a></h2>
-<p>To run the Transcription and Speech AI Flow:</p>
 <ol>
-<li>Open Langflow and create a new project.</li>
-<li>Add the components listed above to your flow canvas, or download the <a href="/assets/files/AssemblyAI_Flow-368be24ae9542f0b8b5253cc9d97b42f.json" target="_blank">AssemblyAI Transcription and Speech AI Flow</a>(Download link) and <strong>Import</strong> the JSON file into Langflow.</li>
-<li>Connect the components as shown in the flow diagram. <strong>Tip</strong>: Freeze the path of the <em>Start Transcript</em> component to only submit the file once.</li>
-<li>Input the AssemblyAI API key in in all components that require the key (Start Transcript, Poll Transcript, Get Subtitles, LeMUR, List Transcripts).</li>
-<li>Select an audio or video file in the <em>Start Transcript</em> component.</li>
-<li>Run the flow by clicking <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <em>Parse Data</em> component. Make sure that the specified template is <code>{text}</code>.</li>
-<li>To generate subtitles, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <em>List Transcript</em> component.</li>
+<li>
+<p>Build the flow manually or import a pre-build JSON file:</p>
+<ul>
+<li>Recommended: <a href="/assets/files/AssemblyAI_Flow-368be24ae9542f0b8b5253cc9d97b42f.json" target="_blank">Download the AssemblyAI Transcription and Speech AI flow JSON</a>, and then <a href="/concepts-flows-import">import the flow</a> into Langflow.</li>
+<li>Create a blank flow, and then add the previously described components to your flow, connecting them as shown in the flow diagram.</li>
+</ul>
+</li>
+<li>
+<p>Input your AssemblyAI API key in all components that require the key (<strong>Start Transcript</strong>, <strong>Poll Transcript</strong>, <strong>Get Subtitles</strong>, <strong>LeMUR</strong>, <strong>List Transcripts</strong>).</p>
+</li>
+<li>
+<p>Select an audio or video file for the <strong>Start Transcript</strong> component.</p>
+<p>Optional: After adding a file to the <strong>Start Transcript</strong> component, run and <a href="/concepts-components#freeze-a-component">freeze the component</a> so you only submit the file once, no matter how many times you run the flow.
+To do this, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> to preload the file, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>Show More</strong> and select <strong>Freeze</strong> to lock the result.
+Subsequent flow runs use the frozen component&#x27;s cached output.</p>
+</li>
+<li>
+<p>Test the transcription by clicking <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>Parser</strong> component. Make sure that the specified template is <code>{text}</code>.</p>
+<p>Running one component runs all upstream components as well as the selected component and then stops the flow run.
+In this case, the <strong>Start Transcript</strong> and <strong>Poll Transcript</strong> components are upstream from the <strong>Parser</strong> component.
+If you froze the <strong>Start Transcript</strong> component, the flow sends the cached output from <strong>Start Transcript</strong>, runs the <strong>Poll Transcript</strong> component, to get the transcription result.
+Check the flow logs or inspect the output of the <strong>Parser</strong> component to see the transcribed text result.</p>
+</li>
+<li>
+<p>To generate subtitles and run the full flow, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>List Transcript</strong> component.</p>
+</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="customization">Customization<a href="#customization" class="hash-link" aria-label="Direct link to Customization" title="Direct link to Customization">​</a></h2>
 <p>The flow can be customized by:</p>
 <ol>
-<li>Modifying the parameters in the <em>Start Transcript</em> component.</li>
-<li>Modifying the subtitle format in the <em>Get Subtitles</em> component.</li>
-<li>Modifying the LLM prompt for input of the <em>LeMUR</em> component.</li>
-<li>Modifying the LLM parameters (e.g., temperature) in the <em>LeMUR</em> component.</li>
+<li>Modifying the parameters in the <strong>Start Transcript</strong> component.</li>
+<li>Modifying the subtitle format in the <strong>Get Subtitles</strong> component.</li>
+<li>Modifying the LLM prompt for input of the <strong>LeMUR</strong> component.</li>
+<li>Modifying the LLM parameters (e.g., temperature) in the <strong>LeMUR</strong> component.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="troubleshooting">Troubleshooting<a href="#troubleshooting" class="hash-link" aria-label="Direct link to Troubleshooting" title="Direct link to Troubleshooting">​</a></h2>
 <p>If you encounter issues:</p>
 <ol>
 <li>Ensure the API key is correctly set in all components that require the key.</li>
-<li>To use LeMUR, you need to upgrade your AssemblyAI account, since this is not included in the free account.</li>
+<li>To use LeMUR, you need to upgrade your AssemblyAI account, since this isn&#x27;t included in the free account.</li>
 <li>Verify that all components are properly connected in the flow.</li>
 <li>Review the Langflow logs for any error messages.</li>
-</ol>
-<p>For more advanced usage, refer to the <a href="https://www.assemblyai.com/docs/" target="_blank" rel="noopener noreferrer">AssemblyAI API documentation</a>. If you need more help, you can reach out to the <a href="https://www.assemblyai.com/contact/support" target="_blank" rel="noopener noreferrer">AssemblyAI support</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/bundles-arxiv"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">arXiv</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/bundles-azure"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Azure</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#components" class="table-of-contents__link toc-highlight">Components</a><ul><li><a href="#assemblyai-start-transcript" class="table-of-contents__link toc-highlight">AssemblyAI Start Transcript</a></li><li><a href="#assemblyai-poll-transcript" class="table-of-contents__link toc-highlight">AssemblyAI Poll Transcript</a></li><li><a href="#assemblyai-get-subtitles" class="table-of-contents__link toc-highlight">AssemblyAI Get Subtitles</a></li><li><a href="#assemblyai-lemur" class="table-of-contents__link toc-highlight">AssemblyAI LeMUR</a></li><li><a href="#assemblyai-list-transcripts" class="table-of-contents__link toc-highlight">AssemblyAI List Transcripts</a></li></ul></li><li><a href="#flow-process" class="table-of-contents__link toc-highlight">Flow Process</a></li><li><a href="#run-the-transcription-and-speech-ai-flow" class="table-of-contents__link toc-highlight">Run the Transcription and Speech AI Flow</a></li><li><a href="#customization" class="table-of-contents__link toc-highlight">Customization</a></li><li><a href="#troubleshooting" class="table-of-contents__link toc-highlight">Troubleshooting</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+<li>Check the <a href="https://www.assemblyai.com/docs/" target="_blank" rel="noopener noreferrer">AssemblyAI API documentation</a>.</li>
+<li>Contact <a href="https://www.assemblyai.com/contact/support" target="_blank" rel="noopener noreferrer">AssemblyAI support</a>.</li>
+</ol></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/bundles-arxiv"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">arXiv</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/bundles-azure"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Azure</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#components" class="table-of-contents__link toc-highlight">Components</a><ul><li><a href="#assemblyai-start-transcript" class="table-of-contents__link toc-highlight">AssemblyAI Start Transcript</a></li><li><a href="#assemblyai-poll-transcript" class="table-of-contents__link toc-highlight">AssemblyAI Poll Transcript</a></li><li><a href="#assemblyai-get-subtitles" class="table-of-contents__link toc-highlight">AssemblyAI Get Subtitles</a></li><li><a href="#assemblyai-lemur" class="table-of-contents__link toc-highlight">AssemblyAI LeMUR</a></li><li><a href="#assemblyai-list-transcripts" class="table-of-contents__link toc-highlight">AssemblyAI List Transcripts</a></li></ul></li><li><a href="#flow-process" class="table-of-contents__link toc-highlight">Flow Process</a></li><li><a href="#run-the-transcription-and-speech-ai-flow" class="table-of-contents__link toc-highlight">Run the Transcription and Speech AI Flow</a></li><li><a href="#customization" class="table-of-contents__link toc-highlight">Customization</a></li><li><a href="#troubleshooting" class="table-of-contents__link toc-highlight">Troubleshooting</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/img/lf-docs-light.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--light_NVdE" width="160" height="40"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--dark_xIcU" width="160" height="40"></div></div></div></footer><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

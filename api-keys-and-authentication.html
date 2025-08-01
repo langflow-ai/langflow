@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -71,14 +71,14 @@ A Langflow API key cannot be used to access resources outside of your own Langfl
 <p>In multi-user environments, users who aren&#x27;t superusers cannot use their API keys to access other users&#x27; resources.
 You must <a href="#start-a-langflow-server-with-authentication-enabled">start your Langflow server with authentication enabled</a> to allow user management and creation of non-superuser accounts.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="create-a-langflow-api-key">Create a Langflow API key<a href="#create-a-langflow-api-key" class="hash-link" aria-label="Direct link to Create a Langflow API key" title="Direct link to Create a Langflow API key">​</a></h3>
-<p>You can generate a Langflow API key with the UI or the CLI.</p>
-<p>The UI-generated key is appropriate for most development use cases. The CLI-generated key is needed when your Langflow server is running in <code>--backend-only</code> mode.</p>
-<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Langflow UI</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Langflow CLI</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
-<li>In the Langflow UI header, click your profile icon, and then select <strong>Settings</strong>.</li>
+<p>You can generate a Langflow API key in your Langflow <strong>Settings</strong> or with the Langflow CLI.</p>
+<p>The CLI option is required if your Langflow server is running in <code>--backend-only</code> mode.</p>
+<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Langflow Settings</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Langflow CLI</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
+<li>In the Langflow header, click your profile icon, and then select <strong>Settings</strong>.</li>
 <li>Click <strong>Langflow API Keys</strong>, and then click <strong>Add New</strong>.</li>
 <li>Name your key, and then click <strong>Create API Key</strong>.</li>
 <li>Copy the API key and store it securely.</li>
-</ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>If you&#x27;re serving your flow with <code>--backend-only=true</code>, you can&#x27;t create API keys in the UI because the frontend isn&#x27;t running.
+</ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>If you&#x27;re serving your flow with <code>--backend-only=true</code>, you can&#x27;t create API keys in your Langflow <strong>Settings</strong> because the frontend isn&#x27;t running.
 In this case, you must create API keys with the Langflow CLI.</p><ol>
 <li>
 <p>Recommended: <a href="#start-a-langflow-server-with-authentication-enabled">Start your Langflow server with authentication enabled</a>.</p>
@@ -98,25 +98,39 @@ In this case, you must create API keys with the Langflow CLI.</p><ol>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="revoke-an-api-key">Revoke an API key<a href="#revoke-an-api-key" class="hash-link" aria-label="Direct link to Revoke an API key" title="Direct link to Revoke an API key">​</a></h3>
 <p>To revoke and delete an API key, do the following:</p>
 <ol>
-<li>In the Langflow UI header, click your profile icon, and then select <strong>Settings</strong>.</li>
+<li>In the Langflow header, click your profile icon, and then select <strong>Settings</strong>.</li>
 <li>Click <strong>Langflow API Keys</strong>.</li>
 <li>Select the keys you want to delete, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg> <strong>Delete</strong>.</li>
 </ol>
 <p>This action immediately invalidates the key and prevents it from being used again.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="component-api-keys">Component API keys<a href="#component-api-keys" class="hash-link" aria-label="Direct link to Component API keys" title="Direct link to Component API keys">​</a></h2>
-<p>Component API keys authorize access to external services that are called by components in your flows. These are not general application credentials, but specifically the API keys required by individual components to connect to services like model providers, databases, or third-party APIs.</p>
-<p>Component API keys are added as global variables with the Langflow UI, or sourced from the <code>.env</code> file. When stored as global variables, use the <strong>Credential</strong> type for secure handling of sensitive information.</p>
-<p>Component API keys are created and managed within the service provider&#x27;s platform. Deleting a global variable from Langflow does not delete or invalidate the actual API key in the service provider&#x27;s system. You must delete or rotate component API keys directly within the service provider&#x27;s interface or API. Langflow only stores the encrypted value of your keys; it does not have control over the actual credentials.</p>
-<p>For more information, see <a href="/configuration-global-variables">Global variables</a>.</p>
+<p>Component API keys authorize access to external services that are called by components in your flows, such as model providers, databases, or third-party APIs.
+These aren&#x27;t Langflow API keys or general application credentials.</p>
+<p>In Langflow, you can store component API keys in global variables in your <strong>Settings</strong> or import them from your Langflow <code>.env</code> file.
+When creating global variables, use the <strong>Credential</strong> type for secure handling of sensitive information.
+For more information, see <a href="/configuration-global-variables">Global variables</a>.</p>
+<p>You create and manage component API keys within the service provider&#x27;s platform.
+Langflow only stores the encrypted key value or a secure reference to a key stored elsewhere; it doesn&#x27;t manage the actual credentials at the source.
+This means that deleting a global variable from Langflow doesn&#x27;t delete or invalidate the actual API key in the service provider&#x27;s system.
+You must delete or rotate component API keys directly using the service provider&#x27;s interface or API.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="authentication-environment-variables">Authentication environment variables<a href="#authentication-environment-variables" class="hash-link" aria-label="Direct link to Authentication environment variables" title="Direct link to Authentication environment variables">​</a></h2>
 <p>This section describes the available authentication configuration variables.</p>
 <p>You can use the <a href="https://github.com/langflow-ai/langflow/blob/main/.env.example" target="_blank" rel="noopener noreferrer"><code>.env.example</code></a> file in the Langflow repository as a template for your own <code>.env</code> file.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-auto-login">LANGFLOW_AUTO_LOGIN<a href="#langflow-auto-login" class="hash-link" aria-label="Direct link to LANGFLOW_AUTO_LOGIN" title="Direct link to LANGFLOW_AUTO_LOGIN">​</a></h3>
-<p>Langflow doesn&#x27;t allow users to have simultaneous or shared access to flows in the Langflow UI.</p>
-<p>If <code>LANGFLOW_AUTO_LOGIN=False</code>, automatic login is disabled. The login form is required to access the Langflow UI, and Langflow API requests require a Langflow API key.
+<p>This variable controls whether authentication is required to access your Langflow server, including the visual editor and API:</p>
+<ul>
+<li>
+<p>If <code>LANGFLOW_AUTO_LOGIN=False</code>, automatic login is disabled. Users must sign in to the visual editor and use a Langflow API key for Langflow API requests.
 If <code>false</code>, you must also set <a href="#langflow-superuser"><code>LANGFLOW_SUPERUSER</code> and <code>LANGFLOW__SUPERUSER_PASSWORD</code></a>.</p>
-<p>If <code>LANGFLOW_AUTO_LOGIN=True</code>, Langflow bypasses UI authentication.
-If you also disable user management (<code>LANGFLOW_NEW_USER_IS_ACTIVE=true</code>), users can access the same environment without password protection. If two users access the same flow, Langflow saves only the work of the most recent user.</p>
+</li>
+<li>
+<p>If <code>LANGFLOW_AUTO_LOGIN=True</code>, Langflow bypasses authentication for the visual editor and API requests.
+All users can access the same environment without password protection.
+If you don&#x27;t have user management enabled, all users are effectively superusers.</p>
+</li>
+</ul>
+<p>Langflow doesn&#x27;t allow users to simultaneously edit the same flow in real time.
+If two users edit the same flow, Langflow saves only the work of the most recent editor based on the state of that user&#x27;s <a href="/concepts-overview#workspace">workspace</a>. Any changes made by the other user in the interim are overwritten.</p>
 <h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="auto_login-and-api-authentication-in-version-15-and-later">AUTO_LOGIN and API authentication in version 1.5 and later<a href="#auto_login-and-api-authentication-in-version-15-and-later" class="hash-link" aria-label="Direct link to AUTO_LOGIN and API authentication in version 1.5 and later" title="Direct link to AUTO_LOGIN and API authentication in version 1.5 and later">​</a></h4>
 <p>In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when <code>AUTO_LOGIN</code> is <code>True</code>.
 The only exceptions are the MCP endpoints <code>/v1/mcp</code>, <code>/v1/mcp-projects</code>, and <code>/v2/mcp</code>, which never require authentication.</p>
@@ -170,11 +184,12 @@ This is particularly important for multi-instance deployments like Kubernetes to
 </li>
 </ol>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-new-user-is-active">LANGFLOW_NEW_USER_IS_ACTIVE<a href="#langflow-new-user-is-active" class="hash-link" aria-label="Direct link to LANGFLOW_NEW_USER_IS_ACTIVE" title="Direct link to LANGFLOW_NEW_USER_IS_ACTIVE">​</a></h3>
-<p>When <code>LANGFLOW_NEW_USER_IS_ACTIVE=False</code> (default), a superuser must explicitly activate a new user&#x27;s account before they can sign in to the Langflow UI.
+<p>When <code>LANGFLOW_NEW_USER_IS_ACTIVE=False</code> (default), a superuser must explicitly activate a new user&#x27;s account before they can sign in to the visual editor.
 The superuser can also deactivate a user&#x27;s account as needed.</p>
 <p>When <code>LANGFLOW_NEW_USER_IS_ACTIVE=True</code>, new user accounts are automatically activated.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_NEW_USER_IS_ACTIVE=False</span></div></div><br></code></div></div>
-<p>For more information, see <a href="#start-a-langflow-server-with-authentication-enabled">Start a Langflow server with authentication enabled</a>.</p>
+<p>Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
+For more information, see <a href="#start-a-langflow-server-with-authentication-enabled">Start a Langflow server with authentication enabled</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-enable-superuser-cli">LANGFLOW_ENABLE_SUPERUSER_CLI<a href="#langflow-enable-superuser-cli" class="hash-link" aria-label="Direct link to LANGFLOW_ENABLE_SUPERUSER_CLI" title="Direct link to LANGFLOW_ENABLE_SUPERUSER_CLI">​</a></h3>
 <p>Controls the availability of the <code>langflow superuser</code> command in the Langflow CLI.
 The default is <code>True</code>, but <code>False</code> is recommended to prevent unrestricted superuser creation.
@@ -183,7 +198,7 @@ For more information, see <a href="/configuration-cli#langflow-superuser"><code>
 <p>This section shows you how to use the <a href="/api-keys-and-authentication#authentication-environment-variables">authentication environment variables</a> to deploy a Langflow server with authentication enabled.
 This involves disabling automatic login, setting superuser credentials, generating a secret encryption key, and enabling user management.</p>
 <p>This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.</p>
-<p>With authentication enabled, all users must sign in to the Langflow UI with valid credentials, and API requests require authentication with a Langflow API key.
+<p>With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
 Additionally, you must sign in as a superuser to manage users and <a href="#create-a-langflow-api-key">create a Langflow API key</a> with superuser privileges.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="start-the-langflow-server">Start the Langflow server<a href="#start-the-langflow-server" class="hash-link" aria-label="Direct link to Start the Langflow server" title="Direct link to Start the Langflow server">​</a></h3>
 <ol>
@@ -228,7 +243,7 @@ If you don&#x27;t explicitly set these variables, the default values are <code>l
 <p>Log in with the superuser credentials you set in your <code>.env</code> (<code>LANGFLOW_SUPERUSER</code> and <code>LANGFLOW_SUPERUSER_PASSWORD</code>).</p>
 </li>
 <li>
-<p>To manage users on your server, navigate to <code>/admin</code>, such as <code>http://localhost:7860/admin</code>, click your user profile image, and then click <strong>Admin Page</strong>.</p>
+<p>To manage users on your server, navigate to <code>/admin</code>, such as <code>http://localhost:7860/admin</code>, click your profile icon, and then click <strong>Admin Page</strong>.</p>
 <p>As a superuser, you can add users, set permissions, reset passwords, and delete accounts.</p>
 </li>
 <li>

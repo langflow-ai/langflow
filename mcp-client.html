@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -48,10 +48,10 @@
           </div>
         </a>
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Model Context Protocol (MCP)</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Use Langflow as an MCP client</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Use Langflow as an MCP client</h1></header><p>Langflow integrates with the <a href="https://modelcontextprotocol.io/introduction" target="_blank" rel="noopener noreferrer">Model Context Protocol (MCP)</a> as both an MCP server and an MCP client.</p>
-<p>This page describes how to use Langflow as an MCP client with the <a href="#use-the-mcp-tools-component">MCP Tools</a> component and the <a href="#manage-connected-mcp-servers">MCP servers</a> page in <strong>Settings</strong>.</p>
+<p>This page describes how to use Langflow as an MCP client with the <a href="#use-the-mcp-tools-component"><strong>MCP Tools</strong> component</a> and connected <a href="#manage-connected-mcp-servers">MCP servers</a>.</p>
 <p>For information about using Langflow as an MCP server, see <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-the-mcp-tools-component">Use the MCP tools component<a href="#use-the-mcp-tools-component" class="hash-link" aria-label="Direct link to Use the MCP tools component" title="Direct link to Use the MCP tools component">​</a></h2>
-<p>The <strong>MCP Tools</strong> component connects to a <a href="https://modelcontextprotocol.io/introduction" target="_blank" rel="noopener noreferrer">Model Context Protocol (MCP)</a> server and exposes the MCP server&#x27;s tools as tools for <a href="/agents">Langflow agents</a>.</p>
+<p>The <strong>MCP Tools</strong> component connects to an MCP server so that a <a href="/agents">Langflow agent</a> can use the server&#x27;s tools when responding to user queries.</p>
 <p>This component has two modes, depending on the type of server you want to access:</p>
 <ul>
 <li><a href="#mcp-stdio-mode">Connect to a non-Langflow MCP server</a> with a JSON configuration file, server start command, or SSE URL to access tools provided by external, non-Langflow MCP servers.</li>
@@ -78,7 +78,7 @@ For an example of an <code>npx</code> MCP server in Langflow, see <a href="/mcp-
 </li>
 <li>
 <p>To use environment variables in your server command, enter each variable in the <strong>Env</strong> fields as you would define them in a script, such as <code>VARIABLE=value</code>.</p>
-<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>Langflow passes environment variables from the <code>.env</code> file to MCP, but it doesn&#x27;t pass global variables declared in the Langflow UI.
+<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>Langflow passes environment variables from the <code>.env</code> file to MCP, but it doesn&#x27;t pass global variables declared in your Langflow <strong>Settings</strong>.
 To define an MCP server environment variable as a global variable, add it to Langflow&#x27;s <code>.env</code> file at startup.
 For more information, see <a href="/configuration-global-variables">global variables</a>.</p></div></div>
 </li>
@@ -88,16 +88,16 @@ For more information, see <a href="/configuration-global-variables">global varia
 <p>At this point, the <strong>MCP Tools</strong> component is serving a tool, but nothing is using the tool. The next steps explain how to make the tool available to an <a href="/components-agents"><strong>Agent</strong> component</a> so that the agent can use the tool in its responses.</p>
 </li>
 <li>
-<p>In the <a href="/concepts-components#component-menus">component menu</a>, enable <strong>Tool mode</strong> so you can use the component with an agent.</p>
+<p>In the <a href="/concepts-components#component-menus">component&#x27;s header menu</a>, enable <strong>Tool mode</strong> so you can use the component with an agent.</p>
 </li>
 <li>
 <p>Connect the <strong>MCP Tools</strong> component&#x27;s <strong>Toolset</strong> port to an <strong>Agent</strong> component&#x27;s <strong>Tools</strong> port.</p>
-<p>If not already present in your flow, make sure you also attach <strong>Chat input</strong> and <strong>Chat output</strong> components to the <strong>Agent</strong> component.</p>
-<p><img decoding="async" loading="lazy" alt="MCP tools component in stdio mode" src="/assets/images/component-mcp-stdio-a13a643e61ceea972c4a3f64dd1ae72f.png" width="4000" height="2608" class="img_ev3q"></p>
+<p>If not already present in your flow, make sure you also attach <strong>Chat Input</strong> and <strong>Chat Output</strong> components to the <strong>Agent</strong> component.</p>
+<p><img decoding="async" loading="lazy" alt="MCP Tools component in STDIO mode" src="/assets/images/component-mcp-stdio-a13a643e61ceea972c4a3f64dd1ae72f.png" width="4000" height="2608" class="img_ev3q"></p>
 </li>
 <li>
-<p>Test your flow to make sure the MCP server is connected and the selected tool is used by the agent: Click <strong>Playground</strong>, and then enter a prompt that uses the tool you connected through the <strong>MCP Tools</strong> component.
-For example, if you use <code>mcp-server-fetch</code> with the <code>fetch</code> tool, you could ask the agent to summarize recent tech news. The agent calls the MCP server function <code>fetch</code>, and then returns the response.</p>
+<p>Test your flow to make sure the MCP server is connected and the selected tool is used by the agent. Open the <strong>Playground</strong>, and then enter a prompt that uses the tool you connected through the <strong>MCP Tools</strong> component.</p>
+<p>For example, if you use <code>mcp-server-fetch</code> with the <code>fetch</code> tool, you could ask the agent to summarize recent tech news. The agent calls the MCP server function <code>fetch</code>, and then returns the response.</p>
 </li>
 <li>
 <p>If you want the agent to be able to use more tools, repeat these steps to add more tools components with different servers or tools.</p>
@@ -108,25 +108,40 @@ For example, if you use <code>mcp-server-fetch</code> with the <code>fetch</code
 For more information about your projects&#x27; MCP servers, including how to manage exposed flows, see <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
 <p>To leverage flows-as-tools, use the <strong>MCP Tools</strong> component in <strong>Server-Sent Events (SSE)</strong> mode to connect to a project&#x27;s <code>/api/v1/mcp/sse</code> endpoint:</p>
 <ol>
-<li>Add an <strong>MCP Tools</strong> component to your flow, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add MCP Server</strong>, and then select <strong>SSE</strong> mode.</li>
-<li>In the <strong>MCP SSE URL</strong> field, modify the default address to point at your Langflow server&#x27;s SSE endpoint. The default value for other Langflow installations is <code>http://localhost:7860/api/v1/mcp/sse</code>.
-In SSE mode, all flows available from the targeted server are treated as tools.</li>
-<li>In the <a href="/concepts-components#component-menus">component menu</a>, enable <strong>Tool mode</strong> so you can use the component with an agent.</li>
-<li>Connect the <strong>MCP Tools</strong> component&#x27;s <strong>Toolset</strong> port to an <strong>Agent</strong> component&#x27;s <strong>Tools</strong> port. If not already present in your flow, make sure you also attach <strong>Chat input</strong> and <strong>Chat output</strong> components to the <strong>Agent</strong> component.
-<img decoding="async" loading="lazy" alt="MCP component with SSE mode enabled" src="/assets/images/component-mcp-sse-mode-2e742342a52231247733d8486ab612fd.png" width="4000" height="2438" class="img_ev3q"></li>
-<li>Test your flow to make sure the agent uses your flows to respond to queries: Click <strong>Playground</strong>, and then enter a prompt that uses a flow that you connected through the <strong>MCP Tools</strong> component.</li>
-<li>If you want the agent to be able to use more flows, repeat these steps to add more <strong>MCP Tools</strong> components with different servers or tools selected.</li>
+<li>
+<p>Add an <strong>MCP Tools</strong> component to your flow, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add MCP Server</strong>, and then select <strong>SSE</strong> mode.</p>
+</li>
+<li>
+<p>In the <strong>MCP SSE URL</strong> field, modify the default address to point at your Langflow server&#x27;s SSE endpoint. The default value for other Langflow installations is <code>http://localhost:7860/api/v1/mcp/sse</code>.
+In SSE mode, all flows available from the targeted server are treated as tools.</p>
+</li>
+<li>
+<p>In the <a href="/concepts-components#component-menus">component&#x27;s header menu</a>, enable <strong>Tool Mode</strong> so you can use the component with an agent.</p>
+</li>
+<li>
+<p>Connect the <strong>MCP Tools</strong> component&#x27;s <strong>Toolset</strong> port to an <strong>Agent</strong> component&#x27;s <strong>Tools</strong> port.</p>
+</li>
+<li>
+<p>If not already present in your flow, make sure you also attach <strong>Chat Input</strong> and <strong>Chat Output</strong> components to the <strong>Agent</strong> component.</p>
+<p><img decoding="async" loading="lazy" alt="MCP component with SSE mode enabled" src="/assets/images/component-mcp-sse-mode-2e742342a52231247733d8486ab612fd.png" width="4000" height="2438" class="img_ev3q"></p>
+</li>
+<li>
+<p>Test your flow to make sure the agent uses your flows to respond to queries. Open the <strong>Playground</strong>, and then enter a prompt that uses a flow that you connected through the <strong>MCP Tools</strong> component.</p>
+</li>
+<li>
+<p>If you want the agent to be able to use more tools, repeat these steps to add more tools components with different servers or tools.</p>
+</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="mcp-tools-parameters">MCP Tools parameters<a href="#mcp-tools-parameters" class="hash-link" aria-label="Direct link to MCP Tools parameters" title="Direct link to MCP Tools parameters">​</a></h2>
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>command</td><td>String</td><td>Input parameter. Stdio mode only. The MCP server startup command. Default: <code>uvx mcp-sse-shim@latest</code>.</td></tr><tr><td>sse_url</td><td>String</td><td>Input parameter. SSE mode only. The SSE URL for a Langflow project&#x27;s MCP server. Default for Langflow Desktop: <code>http://localhost:7868/</code>. Default for other installations: <code>http://localhost:7860/api/v1/mcp/sse</code></td></tr><tr><td>tools</td><td>List[Tool]</td><td>Output parameter. <a href="/data-types#tool"><code>Tool</code></a> object containing a list of tools exposed by the MCP server.</td></tr></tbody></table>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="manage-connected-mcp-servers">Manage connected MCP servers<a href="#manage-connected-mcp-servers" class="hash-link" aria-label="Direct link to Manage connected MCP servers" title="Direct link to Manage connected MCP servers">​</a></h2>
-<p>The <strong>Settings &gt; MCP Servers</strong> page manages the MCP servers connected to the Langflow client.</p>
-<p>To add a new MCP server, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add MCP Server</strong> to open the configuration pane, and follow the steps in <a href="#use-the-mcp-tools-component">Use the MCP Tools component</a>.</p>
-<p>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong> to configure or delete the MCP server.</p>
+<p>To manage MCP servers connected to your Langflow client, go to <strong>Settings</strong>, and then click <strong>MCP Servers</strong>.</p>
+<p>To add a new MCP server, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add MCP Server</strong>, and then follow the steps in <a href="#use-the-mcp-tools-component">Use the MCP Tools component</a> to configure the connection.</p>
+<p>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong> to edit or delete an MCP server.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
 <li><a href="/mcp-server">Use Langflow as an MCP server</a></li>
-<li><a href="/mcp-component-astra">Use a DataStax Astra DB MCP server with the MCP tools component</a></li>
+<li><a href="/mcp-component-astra">Use a DataStax Astra DB MCP server with the MCP Tools component</a></li>
 </ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/agents-tools"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Configure tools for agents</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/mcp-server"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Use Langflow as an MCP server</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#use-the-mcp-tools-component" class="table-of-contents__link toc-highlight">Use the MCP tools component</a><ul><li><a href="#mcp-stdio-mode" class="table-of-contents__link toc-highlight">Connect to a non-Langflow MCP server</a></li><li><a href="#mcp-sse-mode" class="table-of-contents__link toc-highlight">Connect a Langflow MCP server</a></li></ul></li><li><a href="#mcp-tools-parameters" class="table-of-contents__link toc-highlight">MCP Tools parameters</a></li><li><a href="#manage-connected-mcp-servers" class="table-of-contents__link toc-highlight">Manage connected MCP servers</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>

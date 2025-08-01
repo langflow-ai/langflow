@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -62,7 +62,9 @@ For example:</p>
 <table><thead><tr><th>Name</th><th>Display Name</th><th>Description</th></tr></thead><tbody><tr><td>template</td><td>Template</td><td>Input parameter. Create a prompt template with dynamic variables (<code>{VARIABLE_NAME}</code>).</td></tr><tr><td>prompt</td><td>Prompt Message</td><td>Output parameter. The built prompt message returned by the <code>build_prompt</code> method.</td></tr></tbody></table>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="define-variables-in-prompts">Define variables in prompts<a href="#define-variables-in-prompts" class="hash-link" aria-label="Direct link to Define variables in prompts" title="Direct link to Define variables in prompts">​</a></h2>
 <p>Variables in a <strong>Prompt Template</strong> component dynamically add fields to the <strong>Prompt Template</strong> component so that your flow can receive definitions for those values from other components, Langflow global variables, or fixed input.</p>
-<p>For example, with the <a href="/components-helpers#message-history"><strong>Message History</strong></a> component, you can use a <code>{memory}</code> variable to pass chat history to the prompt.</p>
+<p>For example, with the <a href="/components-helpers#message-history"><strong>Message History</strong> component</a>, you can use a <code>{memory}</code> variable to pass chat history to the prompt.
+However, the <strong>Language Model</strong> and <strong>Agent</strong> components include built-in chat memory that is enabled by default.
+For more information, see <a href="/memory">Memory management options</a>.</p>
 <p>The following steps demonstrate how to add variables to a <strong>Prompt Template</strong> component:</p>
 <ol>
 <li>
@@ -93,8 +95,8 @@ For example, the following template creates <code>context</code> and <code>user_
 For example, you could add variables for <code>{references}</code> and <code>{instructions}</code>, and then feed that information in from other components, such as <strong>Text Input</strong>, <strong>URL</strong>, or <strong>File</strong> components.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
-<li><a href="/bundles-langchain#prompt-hub">LangChain Prompt Hub</a></li>
-<li><a href="/components-processing">Processing components</a></li>
+<li><a href="/bundles-langchain#prompt-hub"><strong>LangChain Prompt Hub</strong> component</a></li>
+<li><a href="/components-processing"><strong>Processing</strong> components</a></li>
 </ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/components-processing"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Processing components</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/components-logic"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Logic</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prompt-template-parameters" class="table-of-contents__link toc-highlight">Prompt Template parameters</a></li><li><a href="#define-variables-in-prompts" class="table-of-contents__link toc-highlight">Define variables in prompts</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>

@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -79,7 +79,7 @@
 </li>
 <li><strong>Output</strong>: List of database data</li>
 </ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prompt">Prompt<a href="#prompt" class="hash-link" aria-label="Direct link to Prompt" title="Direct link to Prompt">​</a></h3>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prompt-template">Prompt Template<a href="#prompt-template" class="hash-link" aria-label="Direct link to Prompt Template" title="Direct link to Prompt Template">​</a></h3>
 <p>This component creates a dynamic prompt template using the following inputs:</p>
 <ul>
 <li>Meeting Transcript</li>
@@ -92,7 +92,7 @@
 <li><strong>Purpose</strong>: Analyzes the meeting transcript and identifies tasks and action items.</li>
 <li><strong>Inputs</strong>:<!-- -->
 <ul>
-<li>System Prompt (from the Prompt component)</li>
+<li>System Prompt (from the <strong>Prompt Template</strong> component)</li>
 <li>Language Model (OpenAI)</li>
 <li>Tools:<!-- -->
 <ul>
@@ -112,7 +112,7 @@
 <li><strong>Purpose</strong>: Executes actions in Notion based on the meeting summary.</li>
 <li><strong>Inputs</strong>:<!-- -->
 <ul>
-<li>System Prompt (from the second Prompt component)</li>
+<li>System Prompt (from the second <strong>Prompt Template</strong> component)</li>
 <li>Language Model (OpenAI)</li>
 <li>Tools:<!-- -->
 <ul>
@@ -187,17 +187,28 @@
 <li>The Chat Output displays a summary of actions taken in Notion.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-the-notion-meeting-notes-flow">Run the Notion Meeting Notes flow<a href="#run-the-notion-meeting-notes-flow" class="hash-link" aria-label="Direct link to Run the Notion Meeting Notes flow" title="Direct link to Run the Notion Meeting Notes flow">​</a></h2>
-<p>To run the Notion Agent for Meeting Notes:</p>
 <ol>
-<li>Open Langflow and create a new project.</li>
-<li>Add the components listed above to your flow canvas, or download the <a href="/assets/files/Meeting_Notes_Agent-b29188c0cb70736d19dd52965db5f352.json" target="_blank">Flow Meeting Agent Flow</a>(Download link) and <strong>Import</strong> the JSON file into Langflow.</li>
-<li>Connect the components as shown in the flow diagram.</li>
-<li>Input the Notion and OpenAI API keys in their respective components.</li>
-<li>Paste your meeting transcript into the Meeting Transcript component.</li>
-<li>Run the flow by clicking <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>Chat Output</strong> component.</li>
-<li>Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.</li>
-</ol>
+<li>
+<p>Create a flow manually or import a pre-built flow JSON file:</p>
+<ul>
+<li>Recommended: <a href="/assets/files/Meeting_Notes_Agent-b29188c0cb70736d19dd52965db5f352.json" target="_blank">Download the Meeting Agent flow JSON</a> and then <a href="/concepts-flows-import">import the flow</a> into Langflow.</li>
+<li>Create a blank flow, and then add the previously described components to your flow, connecting them as shown in the flow diagram.</li>
+</ul>
+</li>
+<li>
+<p>Input the Notion and OpenAI API keys in their respective components.</p>
+</li>
+<li>
+<p>Paste your meeting transcript into the <strong>Meeting Transcript</strong> component.</p>
 <p>For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.</p>
+</li>
+<li>
+<p>Run the flow by clicking <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>Chat Output</strong> component or open the <strong>Playground</strong>.</p>
+</li>
+<li>
+<p>Review the output summarizing the actions taken in your Notion workspace.</p>
+</li>
+</ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="customization">Customization<a href="#customization" class="hash-link" aria-label="Direct link to Customization" title="Direct link to Customization">​</a></h2>
 <p>The flow can be customized to meet your team&#x27;s specific needs.</p>
 <p>Customize this flow by:</p>
@@ -214,7 +225,7 @@
 <li>Verify that all components are properly connected in the flow.</li>
 <li>Review the Langflow logs for any error messages.</li>
 </ol>
-<p>For more advanced usage and integration options, refer to the <a href="https://developers.notion.com/" target="_blank" rel="noopener noreferrer">Notion API documentation</a> and <a href="/">Langflow documentation</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/integrations/notion/notion-agent-conversational"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Notion Conversational Agent</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/bundles-novita"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Novita</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#components" class="table-of-contents__link toc-highlight">Components</a><ul><li><a href="#meeting-transcript-text-input" class="table-of-contents__link toc-highlight">Meeting Transcript (text input)</a></li><li><a href="#list-users-notion-component" class="table-of-contents__link toc-highlight">List Users (Notion component)</a></li><li><a href="#list-databases-notion-component" class="table-of-contents__link toc-highlight">List Databases (Notion component)</a></li><li><a href="#prompt" class="table-of-contents__link toc-highlight">Prompt</a></li><li><a href="#meeting-summarizer-tool-calling-agent" class="table-of-contents__link toc-highlight">Meeting Summarizer (Tool Calling Agent)</a></li><li><a href="#notion-agent-tool-calling-agent" class="table-of-contents__link toc-highlight">Notion Agent (Tool Calling Agent)</a></li><li><a href="#notion-components-tools" class="table-of-contents__link toc-highlight">Notion components (tools)</a></li><li><a href="#chat-output" class="table-of-contents__link toc-highlight">Chat Output</a></li></ul></li><li><a href="#flow-process" class="table-of-contents__link toc-highlight">Flow Process</a></li><li><a href="#run-the-notion-meeting-notes-flow" class="table-of-contents__link toc-highlight">Run the Notion Meeting Notes flow</a></li><li><a href="#customization" class="table-of-contents__link toc-highlight">Customization</a></li><li><a href="#troubleshooting" class="table-of-contents__link toc-highlight">Troubleshooting</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+<p>For more advanced usage and integration options, refer to the <a href="https://developers.notion.com/" target="_blank" rel="noopener noreferrer">Notion API documentation</a> and <a href="/">Langflow documentation</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/integrations/notion/notion-agent-conversational"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Notion Conversational Agent</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/bundles-novita"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Novita</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#components" class="table-of-contents__link toc-highlight">Components</a><ul><li><a href="#meeting-transcript-text-input" class="table-of-contents__link toc-highlight">Meeting Transcript (text input)</a></li><li><a href="#list-users-notion-component" class="table-of-contents__link toc-highlight">List Users (Notion component)</a></li><li><a href="#list-databases-notion-component" class="table-of-contents__link toc-highlight">List Databases (Notion component)</a></li><li><a href="#prompt-template" class="table-of-contents__link toc-highlight">Prompt Template</a></li><li><a href="#meeting-summarizer-tool-calling-agent" class="table-of-contents__link toc-highlight">Meeting Summarizer (Tool Calling Agent)</a></li><li><a href="#notion-agent-tool-calling-agent" class="table-of-contents__link toc-highlight">Notion Agent (Tool Calling Agent)</a></li><li><a href="#notion-components-tools" class="table-of-contents__link toc-highlight">Notion components (tools)</a></li><li><a href="#chat-output" class="table-of-contents__link toc-highlight">Chat Output</a></li></ul></li><li><a href="#flow-process" class="table-of-contents__link toc-highlight">Flow Process</a></li><li><a href="#run-the-notion-meeting-notes-flow" class="table-of-contents__link toc-highlight">Run the Notion Meeting Notes flow</a></li><li><a href="#customization" class="table-of-contents__link toc-highlight">Customization</a></li><li><a href="#troubleshooting" class="table-of-contents__link toc-highlight">Troubleshooting</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/img/lf-docs-light.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--light_NVdE" width="160" height="40"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--dark_xIcU" width="160" height="40"></div></div></div></footer><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

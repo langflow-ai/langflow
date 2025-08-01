@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -64,8 +64,8 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-deployment">Langflow deployment<a href="#langflow-deployment" class="hash-link" aria-label="Direct link to Langflow deployment" title="Direct link to Langflow deployment">​</a></h2>
 <p>A typical Langflow deployment includes:</p>
 <ul>
-<li><strong>Langflow API and UI</strong>: The Langflow service is the core component of the Langflow platform. It provides a RESTful API for executing flows.</li>
-<li><strong>Kubernetes cluster</strong>: The Kubernetes cluster provides a platform for deploying and managing the Langflow service and its supporting components.</li>
+<li><strong>Langflow API and visual editor</strong>: The Langflow service is the core part of the Langflow platform. It provides a RESTful API for executing flows.</li>
+<li><strong>Kubernetes cluster</strong>: The Kubernetes cluster provides a platform for deploying and managing the Langflow service and supporting services.</li>
 <li><strong>Persistent storage</strong>: Persistent storage is used to store the Langflow service&#x27;s data, such as models and training data.</li>
 <li><strong>Ingress controller</strong>: The ingress controller provides a single entry point for traffic to the Langflow service.</li>
 <li><strong>Load balancer</strong>: Balances traffic across multiple Langflow replicas.</li>
@@ -86,7 +86,7 @@
 <ul>
 <li><strong>Isolation</strong>: By separating the development and production environments, you can better isolate different phases of the application lifecycle. This isolation minimizes the risk of development-related issues impacting the production environments.</li>
 <li><strong>Access control</strong>: Different security policies and access controls can be applied to each environment. Developers may require broader access in the IDE for testing and debugging, while the runtime environment can be locked down with stricter security measures.</li>
-<li><strong>Reduced attack surface</strong>: The runtime environment is configured to include only essential components, reducing the attack surface and potential vulnerabilities.</li>
+<li><strong>Reduced attack surface</strong>: The runtime environment is configured to include only essential parts, reducing the attack surface and potential vulnerabilities.</li>
 </ul>
 </li>
 <li><strong>Resource allocation</strong>

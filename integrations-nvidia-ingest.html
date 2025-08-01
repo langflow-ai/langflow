@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -48,9 +48,10 @@
           </div>
         </a>
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Components reference</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Bundles</span></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">NVIDIA</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">NVIDIA Ingest</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Integrate NVIDIA Retriever Extraction with Langflow</h1></header><style>[data-ch-theme="github-dark"] {  --ch-t-colorScheme: dark;--ch-t-foreground: #c9d1d9;--ch-t-background: #0d1117;--ch-t-lighter-inlineBackground: #0d1117e6;--ch-t-editor-background: #0d1117;--ch-t-editor-foreground: #c9d1d9;--ch-t-editor-lineHighlightBackground: #6e76811a;--ch-t-editor-rangeHighlightBackground: #ffffff0b;--ch-t-editor-infoForeground: #3794FF;--ch-t-editor-selectionBackground: #264F78;--ch-t-focusBorder: #1f6feb;--ch-t-tab-activeBackground: #0d1117;--ch-t-tab-activeForeground: #c9d1d9;--ch-t-tab-inactiveBackground: #010409;--ch-t-tab-inactiveForeground: #8b949e;--ch-t-tab-border: #30363d;--ch-t-tab-activeBorder: #0d1117;--ch-t-editorGroup-border: #30363d;--ch-t-editorGroupHeader-tabsBackground: #010409;--ch-t-editorLineNumber-foreground: #6e7681;--ch-t-input-background: #0d1117;--ch-t-input-foreground: #c9d1d9;--ch-t-input-border: #30363d;--ch-t-icon-foreground: #8b949e;--ch-t-sideBar-background: #010409;--ch-t-sideBar-foreground: #c9d1d9;--ch-t-sideBar-border: #30363d;--ch-t-list-activeSelectionBackground: #6e768166;--ch-t-list-activeSelectionForeground: #c9d1d9;--ch-t-list-hoverBackground: #6e76811a;--ch-t-list-hoverForeground: #c9d1d9; }</style>
+<!-- -->
 <p>The <strong>NVIDIA Retriever Extraction</strong> component integrates with the <a href="https://github.com/NVIDIA/nv-ingest" target="_blank" rel="noopener noreferrer">NVIDIA nv-ingest</a> microservice for data ingestion, processing, and extraction of text files.</p>
 <p>The <code>nv-ingest</code> service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation. The extractor service&#x27;s High Resolution mode uses the <code>nemoretriever-parse</code> extraction method for better quality extraction from scanned PDF documents. This feature is only available for PDF files.</p>
-<p>The <strong>NVIDIA Retriever Extraction</strong> component imports the NVIDIA <code>Ingestor</code> client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of <a href="/data-types#data">Data</a> objects. <code>Ingestor</code> accepts additional configuration options for data extraction from other text formats. To configure these options, see the <a href="/integrations-nvidia-ingest#parameters">component parameters</a>.</p>
+<p>The <strong>NVIDIA Retriever Extraction</strong> component imports the NVIDIA <code>Ingestor</code> client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of <a href="/data-types#data"><code>Data</code></a> objects. <code>Ingestor</code> accepts additional configuration options for data extraction from other text formats. To configure these options, see the <a href="#parameters">component parameters</a>.</p>
 <div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extraction.</p></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
@@ -70,34 +71,38 @@
 </li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-the-nvidia-retriever-extraction-component-in-a-flow">Use the NVIDIA Retriever Extraction component in a flow<a href="#use-the-nvidia-retriever-extraction-component-in-a-flow" class="hash-link" aria-label="Direct link to Use the NVIDIA Retriever Extraction component in a flow" title="Direct link to Use the NVIDIA Retriever Extraction component in a flow">​</a></h2>
-<p>The <strong>NVIDIA Retriever Extraction</strong> component accepts <strong>Message</strong> inputs and outputs <strong>Data</strong>. The component calls an NVIDIA Ingest microservice&#x27;s endpoint to ingest a local file and extract the text.</p>
-<p>To use the NVIDIA Retriever Extraction component in your flow, follow these steps:</p>
+<p>The <strong>NVIDIA Retriever Extraction</strong> component accepts <code>Message</code> inputs, and then outputs <code>Data</code>. The component calls an NVIDIA Ingest microservice&#x27;s endpoint to ingest a local file and extract the text.</p>
+<p>To use the <strong>NVIDIA Retriever Extraction</strong> component in your flow, follow these steps:</p>
 <ol>
-<li>In the component library, click the <strong>NVIDIA Retriever Extraction</strong> component, and then drag it onto the canvas.</li>
-<li>In the <strong>Base URL</strong> field, enter the URL of the NVIDIA Ingest endpoint.
-Optionally, add the endpoint URL as a <strong>Global variable</strong>:<!-- -->
-<ol>
-<li>Click <strong>Settings</strong>, and then click <strong>Global Variables</strong>.</li>
-<li>Click <strong>Add New</strong>.</li>
-<li>Name your variable. Paste your endpoint in the <strong>Value</strong> field.</li>
-<li>In the <strong>Apply To Fields</strong> field, select the field you want to globally apply this variable to. In this case, select <strong>NVIDIA Base URL</strong>.</li>
-<li>Click <strong>Save Variable</strong>.</li>
-</ol>
+<li>
+<p>Add the <strong>NVIDIA Retriever Extraction</strong> component to your flow.</p>
 </li>
-<li>Click the <strong>Select files</strong> button to select which file you want to ingest.</li>
-<li>Select which text type to extract from the file.
-The component supports text, charts, tables, images, and infographics.
-Optionally, for PDF files, enable High Resolution mode for better quality extraction from scanned documents.</li>
-<li>Select whether to split the text into chunks.
-Modify the splitting parameters in the component&#x27;s <strong>Configuration</strong> tab.</li>
-<li>Click <strong>Run</strong> to ingest the file.</li>
-<li>To confirm the component is ingesting the file, open the <strong>Logs</strong> pane to view the output of the flow.</li>
-<li>To store the processed data in a vector database, add an <strong>AstraDB Vector</strong> component to your flow, and connect the <strong>NVIDIA Retriever Extraction</strong> component to the <strong>AstraDB Vector</strong> component with a <strong>Data</strong> output.</li>
-</ol>
+<li>
+<p>In the <strong>Base URL</strong> field, enter the URL of the NVIDIA Ingest endpoint.
+You can also store the URL as a <a href="/configuration-global-variables">global variable</a> to reuse it in multiple components and flows.</p>
+</li>
+<li>
+<p>Click <strong>Select Files</strong> to select a file to ingest.</p>
+</li>
+<li>
+<p>Select which text type to extract from the file: text, charts, tables, images, or infographics.</p>
+</li>
+<li>
+<p>Optional: For PDF files, enable <strong>High Resolution Mode</strong> for better quality extraction from scanned documents.</p>
+</li>
+<li>
+<p>Select whether to split the text into chunks.</p>
+<p>You can modify the splitting parameters and other hidden settings through the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> <strong>Controls</strong> in the <a href="/concepts-components#component-menus">component&#x27;s header menu</a>.</p>
+</li>
+<li>
+<p>Click <strong>Run component</strong> to ingest the file, and then open the <strong>Logs</strong> pane to confirm the component ingested the file.</p>
+</li>
+<li>
+<p>To store the processed data in a vector database, add a <strong>Vector Store</strong> component to your flow, and then connect the <strong>NVIDIA Retriever Extraction</strong> component&#x27;s <code>Data</code> output to the <strong>Vector Store</strong> component&#x27;s input.</p>
+<p>When you run the flow with a <strong>Vector Store</strong> component, the processed data is stored in the vector database.
+You can query your database to retrieve the uploaded data.</p>
 <p><img decoding="async" loading="lazy" alt="NVIDIA Retriever Extraction component flow" src="/assets/images/nvidia-component-ingest-astra-c6f0107751252206ab0d500a25ba3f9c.png" width="1722" height="1548" class="img_ev3q"></p>
-<ol start="9">
-<li>Run the flow.
-Inspect your Astra DB vector database to view the processed data.</li>
+</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="parameters">NVIDIA Retriever Extraction component parameters<a href="#parameters" class="hash-link" aria-label="Direct link to NVIDIA Retriever Extraction component parameters" title="Direct link to NVIDIA Retriever Extraction component parameters">​</a></h2>
 <p>The <strong>NVIDIA Retriever Extraction</strong> component has the following parameters.</p>
@@ -105,7 +110,7 @@ Inspect your Astra DB vector database to view the processed data.</li>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="inputs">Inputs<a href="#inputs" class="hash-link" aria-label="Direct link to Inputs" title="Direct link to Inputs">​</a></h3>
 <table><thead><tr><th>Name</th><th>Display Name</th><th>Info</th></tr></thead><tbody><tr><td>base_url</td><td>NVIDIA Ingestion URL</td><td>The URL of the NVIDIA Ingestion API.</td></tr><tr><td>path</td><td>Path</td><td>File path to process.</td></tr><tr><td>extract_text</td><td>Extract Text</td><td>Extract text from documents. Default: <code>True</code>.</td></tr><tr><td>extract_charts</td><td>Extract Charts</td><td>Extract text from charts. Default: <code>False</code>.</td></tr><tr><td>extract_tables</td><td>Extract Tables</td><td>Extract text from tables. Default: <code>True</code>.</td></tr><tr><td>extract_images</td><td>Extract Images</td><td>Extract images from document. Default: <code>True</code>.</td></tr><tr><td>extract_infographics</td><td>Extract Infographics</td><td>Extract infographics from document. Default: <code>False</code>.</td></tr><tr><td>text_depth</td><td>Text Depth</td><td>The level at which text is extracted. Options: &#x27;document&#x27;, &#x27;page&#x27;, &#x27;block&#x27;, &#x27;line&#x27;, &#x27;span&#x27;. Default: <code>page</code>.</td></tr><tr><td>split_text</td><td>Split Text</td><td>Split text into smaller chunks. Default: <code>True</code>.</td></tr><tr><td>chunk_size</td><td>Chunk Size</td><td>The number of tokens per chunk. Default: <code>500</code>.</td></tr><tr><td>chunk_overlap</td><td>Chunk Overlap</td><td>Number of tokens to overlap from previous chunk. Default: <code>150</code>.</td></tr><tr><td>filter_images</td><td>Filter Images</td><td>Filter images (see advanced options for filtering criteria). Default: <code>False</code>.</td></tr><tr><td>min_image_size</td><td>Minimum Image Size Filter</td><td>Minimum image width/length in pixels. Default: <code>128</code>.</td></tr><tr><td>min_aspect_ratio</td><td>Minimum Aspect Ratio Filter</td><td>Minimum allowed aspect ratio (width / height). Default: <code>0.2</code>.</td></tr><tr><td>max_aspect_ratio</td><td>Maximum Aspect Ratio Filter</td><td>Maximum allowed aspect ratio (width / height). Default: <code>5.0</code>.</td></tr><tr><td>dedup_images</td><td>Deduplicate Images</td><td>Filter duplicated images. Default: <code>True</code>.</td></tr><tr><td>caption_images</td><td>Caption Images</td><td>Generate captions for images using the NVIDIA captioning model. Default: <code>True</code>.</td></tr><tr><td>high_resolution</td><td>High Resolution (PDF only)</td><td>Process PDF in high-resolution mode for better quality extraction from scanned PDF. Default: <code>False</code>.</td></tr></tbody></table>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="outputs">Outputs<a href="#outputs" class="hash-link" aria-label="Direct link to Outputs" title="Direct link to Outputs">​</a></h3>
-<p>The <strong>NVIDIA Retriever Extraction</strong> component outputs a list of <a href="/data-types#data">Data</a> objects where each object contains:</p>
+<p>The <strong>NVIDIA Retriever Extraction</strong> component outputs a list of <a href="/data-types#data"><code>Data</code></a> objects where each object contains:</p>
 <ul>
 <li><code>text</code>: The extracted content.<!-- -->
 <ul>

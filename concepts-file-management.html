@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -59,7 +59,7 @@ You can also manage all files that have been uploaded to your Langflow server.</
 <li>
 <p>Navigate to Langflow file management:</p>
 <ul>
-<li>In the Langflow UI, on the <a href="/concepts-flows#projects"><strong>Projects</strong> page</a> page, click <strong>My Files</strong> below the list of projects.</li>
+<li>In Langflow, on the <a href="/concepts-flows#projects"><strong>Projects</strong> page</a> page, click <strong>My Files</strong> below the list of projects.</li>
 <li>From a browser, navigate to your Langflow server&#x27;s <code>/files</code> endpoint, such as <code>http://localhost:7860/files</code>. Modify the base URL as needed for your Langflow server.</li>
 <li>For programmatic file management, use the <a href="/api-files">Langflow API files endpoints</a>. However, the following steps assume you&#x27;re using the file management UI.</li>
 </ul>
@@ -90,7 +90,7 @@ If you download multiple files in a single action, they are saved together in a 
 <p>For example, add a <strong>File</strong> component to your flow, click <strong>Select files</strong>, and then select files from the <strong>My Files</strong> list.</p>
 <p>This list includes all files in your server&#x27;s file management system, but you can only select <a href="/components-data#file">file types that are supported by the <strong>File</strong> component</a>.
 If you need another file type, you must use a different component that supports that file type, or you need to convert it to a supported type before uploading it.</p>
-<p>For more information about the <strong>File</strong> component and other data loading components, see <a href="/components-data">Data components</a>.</p>
+<p>For more information about the <strong>File</strong> component and other data loading components, see <a href="/components-data"><strong>Data</strong> components</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="load-files-at-runtime">Load files at runtime<a href="#load-files-at-runtime" class="hash-link" aria-label="Direct link to Load files at runtime" title="Direct link to Load files at runtime">​</a></h3>
 <p>You can use preloaded files in your flows, and you can load files at runtime, if your flow accepts file input.
 For an example, see <a href="/chat-with-files">Create a chatbot that can ingest files</a>.</p>
@@ -121,8 +121,8 @@ For an example, see <a href="/chat-with-files">Create a chatbot that can ingest 
 To modify this value, change the <code>--max-file-size-upload</code> <a href="/environment-variables">environment variable</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
-<li><a href="/components-data">Data components</a></li>
-<li><a href="/components-processing">Processing components</a></li>
+<li><a href="/components-data"><strong>Data</strong> components</a></li>
+<li><a href="/components-processing"><strong>Processing</strong> components</a></li>
 </ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/environment-variables"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Environment variables</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/memory"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Manage memory</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#use-the-file-management-ui" class="table-of-contents__link toc-highlight">Use the file management UI</a></li><li><a href="#upload-and-manage-files-with-the-langflow-api" class="table-of-contents__link toc-highlight">Upload and manage files with the Langflow API</a></li><li><a href="#use-files-in-a-flow" class="table-of-contents__link toc-highlight">Use files in a flow</a><ul><li><a href="#load-files-at-runtime" class="table-of-contents__link toc-highlight">Load files at runtime</a></li></ul></li><li><a href="#upload-images" class="table-of-contents__link toc-highlight">Upload images</a></li><li><a href="#work-with-video-files" class="table-of-contents__link toc-highlight">Work with video files</a></li><li><a href="#set-the-maximum-file-size" class="table-of-contents__link toc-highlight">Set the maximum file size</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>

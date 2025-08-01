@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -66,7 +66,7 @@
 </li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="select-flows-to-serve">Select and configure flows to expose as MCP tools<a href="#select-flows-to-serve" class="hash-link" aria-label="Direct link to Select and configure flows to expose as MCP tools" title="Direct link to Select and configure flows to expose as MCP tools">​</a></h2>
-<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>MCP flow requirements</div><div class="admonitionContent_BuS1"><p>A flow must contain a <a href="/components-io#chat-output"><strong>Chat Output</strong></a> component to be used as a tool by MCP clients.</p></div></div>
+<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>MCP flow requirements</div><div class="admonitionContent_BuS1"><p>A flow must contain a <a href="/components-io#chat-output"><strong>Chat Output</strong> component</a> to be used as a tool by MCP clients.</p></div></div>
 <p>Each <a href="/concepts-flows#projects">Langflow project</a> has an MCP server that exposes the project&#x27;s flows as tools that MCP clients can use to generate responses.</p>
 <p>By default, all flows in a project are exposed as tools on the project&#x27;s MCP server.</p>
 <p>The following steps explain how to limit the exposed flows and, optionally, rename flows for agentic use:</p>
@@ -83,7 +83,7 @@ Alternatively, you can quickly access the <strong>MCP Server</strong> tab from w
 </li>
 <li>
 <p>In the <strong>MCP Server Tools</strong> window, select the flows that you want exposed as tools.</p>
-<p><img decoding="async" loading="lazy" alt="MCP server tools" src="/assets/images/mcp-server-tools-ddc0f1dc04109b9f3daf6a2f380073c4.png" width="4000" height="2030" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="MCP Server Tools" src="/assets/images/mcp-server-tools-ddc0f1dc04109b9f3daf6a2f380073c4.png" width="4000" height="2030" class="img_ev3q"></p>
 </li>
 <li>
 <p>Recommended: Edit the <strong>Tool Name</strong> and <strong>Tool Description</strong> to help MCP clients determine which actions your flows provide and when to use those actions:</p>
@@ -119,7 +119,7 @@ For example:</p><div class="ch-codeblock not-prose" data-ch-theme="github-dark">
 <p>The following procedure describes how to connect <a href="https://www.cursor.com/" target="_blank" rel="noopener noreferrer">Cursor</a> to your Langflow project&#x27;s MCP server to consume your flows as tools.
 However, you can connect any <a href="https://modelcontextprotocol.io/clients" target="_blank" rel="noopener noreferrer">MCP-compatible client</a> following similar steps.</p>
 <div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Auto install</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">JSON</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-If this is not the case, use the <strong>JSON</strong> option to configure the MCP server.</p></div></div><ol>
+If this isn&#x27;t the case, use the <strong>JSON</strong> option to configure the MCP server.</p></div></div><ol>
 <li>Install <a href="https://docs.cursor.com/get-started/installation" target="_blank" rel="noopener noreferrer">Cursor</a>.</li>
 <li>In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the <strong>MCP Server</strong> tab.</li>
 <li>To auto install your current Langflow project as an MCP server, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="True"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add</strong>.</li>
@@ -201,7 +201,7 @@ From this tab, you can monitor how your flows are being registered as tools by M
 </li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="troubleshooting-mcp-server">Troubleshooting MCP server<a href="#troubleshooting-mcp-server" class="hash-link" aria-label="Direct link to Troubleshooting MCP server" title="Direct link to Troubleshooting MCP server">​</a></h2>
-<p>If Claude for Desktop is not using your server&#x27;s tools correctly, you may need to explicitly define the path to your local <code>uvx</code> or <code>npx</code> executable file in the <code>claude_desktop_config.json</code> configuration file.</p>
+<p>If Claude for Desktop isn&#x27;t using your server&#x27;s tools correctly, you may need to explicitly define the path to your local <code>uvx</code> or <code>npx</code> executable file in the <code>claude_desktop_config.json</code> configuration file.</p>
 <ol>
 <li>
 <p>To find your UVX path, run <code>which uvx</code>.</p>

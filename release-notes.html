@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -60,14 +60,14 @@ In the event of breaking changes or bugs, your existing installation is preserve
 <li>
 <p>Recommended: <a href="/api-projects#export-a-project">Export your projects</a> to create backups of your flows:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>curl -X GET \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>&quot;$LANGFLOW_SERVER_URL/api/v1/projects/download/$PROJECT_ID&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;accept: application/json&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;x-api-key: $LANGFLOW_API_KEY&quot;</span></div></div><br></code></div></div>
-<p>To export flows from the Langflow UI, see <a href="/concepts-flows-import">Import and export flows</a>.</p>
+<p>To export flows from the visual editor, see <a href="/concepts-flows-import">Import and export flows</a>.</p>
 </li>
 <li>
 <p>Install the new version:</p>
 <ul>
 <li><strong>Langflow OSS Python package</strong>: Install the new version in a new virtual environment. For instructions, see <a href="/get-started-installation#install-and-run-the-langflow-oss-python-package">Install and run the Langflow OSS Python package</a>.</li>
 <li><strong>Langflow Docker image</strong>: Run the new image in a separate container.</li>
-<li><strong>Langflow Desktop</strong>: To upgrade in place, open Langflow Desktop, and then click <strong>Upgrade Available</strong> in the header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then <a href="/concepts-flows-import">import your flows</a> to the new installation.</li>
+<li><strong>Langflow Desktop</strong>: To upgrade in place, open Langflow Desktop, and then click <strong>Upgrade Available</strong> in the Langflow header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then <a href="/concepts-flows-import">import your flows</a> to the new installation.</li>
 </ul>
 </li>
 <li>
@@ -80,7 +80,8 @@ In the event of breaking changes or bugs, your existing installation is preserve
 </li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="150">1.5.0<a href="#150" class="hash-link" aria-label="Direct link to 1.5.0" title="Direct link to 1.5.0">​</a></h2>
-<p>The following updates are included in this version:</p>
+<p>Highlights of this release include the following changes.
+For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer">Changelog</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="new-features-and-enhancements">New features and enhancements<a href="#new-features-and-enhancements" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements">​</a></h3>
 <ul>
 <li>
@@ -91,9 +92,9 @@ For more information, see <a href="/api-keys-and-authentication">API keys and au
 </li>
 <li>
 <p>Centralized <strong>Language Model</strong> and <strong>Embedding Model</strong> components</p>
-<p>The <a href="/components-models"><strong>Language Model</strong></a> and <a href="/components-embedding-models"><strong>Embedding Model</strong></a> components are now core components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment with different models without swapping out single-provider components.
+<p>The <a href="/components-models"><strong>Language Model</strong> component</a> and <a href="/components-embedding-models"><strong>Embedding Model</strong> component</a> are now core components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment with different models without swapping out single-provider components.
 Find them in the <strong>Components</strong> menu in the <strong>Models</strong> category.</p>
-<p>The single-provider components are still available for your flows in the <strong>Components</strong> menu in the <a href="/components-bundle-components"><strong>Bundles</strong></a> section.</p>
+<p>The single-provider components are still available for your flows in the <strong>Components</strong> menu in the <a href="/components-bundle-components"><strong>Bundles</strong></a> section, and you can connect them to the <strong>Language Model</strong> and <strong>Embedding Model</strong> components with the <strong>Custom</strong> provider option.</p>
 </li>
 <li>
 <p>MCP server one-click installation</p>
@@ -111,55 +112,61 @@ For more information, see <a href="/mcp-client">Use Langflow as an MCP client</a
 <p>The <strong>Input schema</strong> pane replaces the need to manage tweak values in the <strong>API access</strong> pane. When you enable a parameter in the <strong>Input schema</strong> pane, the parameter is automatically added to your flow&#x27;s code snippets, providing ready-to-use templates for making requests in your preferred programming language.</p>
 </li>
 <li>
-<p>Tool components are redistributed</p>
-<p>All components in the <strong>Tools</strong> category were moved to other core component categories, <a href="/components-bundle-components">bundles</a>, or marked as legacy.</p>
-<p>The <a href="/mcp-client"><strong>MCP Tools</strong> component</a> is now under the <strong>Agents</strong> core components category.</p>
+<p><strong>Tools</strong> components are redistributed</p>
+<p>All components in the <strong>Tools</strong> category were moved to other component categories, such as <strong>Helpers</strong> and <a href="/components-bundle-components">bundles</a>, or marked as legacy.</p>
+<p>The <a href="/mcp-client"><strong>MCP Tools</strong> component</a> is now under the <strong>Agents</strong> category.</p>
 <p>Tools that performed the same function were combined into single components that support multiple providers, such as the <a href="/components-data#web-search"><strong>Web Search</strong> component</a> and the <a href="/components-data#news-search"><strong>News Search</strong> component</a>.</p>
-<p>For more information, see the <a href="/components-tools">Tools components</a> page.</p>
+<p>For more information, see <a href="/components-tools"><strong>Tools</strong> components</a>.</p>
 </li>
 <li>
 <p>Stability improvements</p>
 <p>General stability improvements and bug fixes for enhanced reliability.
 See an issue? <a href="https://github.com/langflow-ai/langflow/issues" target="_blank" rel="noopener noreferrer">Raise it on GitHub</a>.</p>
 </li>
-</ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="new-integrations-and-bundles">New integrations and bundles<a href="#new-integrations-and-bundles" class="hash-link" aria-label="Direct link to New integrations and bundles" title="Direct link to New integrations and bundles">​</a></h3>
+<li>
+<p>New integrations and bundles</p>
 <ul>
-<li><a href="/integrations-cleanlab">Cleanlab integration</a></li>
+<li><a href="/integrations-cleanlab"><strong>Cleanlab</strong> bundle</a></li>
+</ul>
+</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="142">1.4.2<a href="#142" class="hash-link" aria-label="Direct link to 1.4.2" title="Direct link to 1.4.2">​</a></h2>
-<p>The following updates are included in this version:</p>
+<p>Highlights of this release include the following changes.
+For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer">Changelog</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="new-features-and-enhancements-1">New features and enhancements<a href="#new-features-and-enhancements-1" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements">​</a></h3>
 <ul>
 <li>Enhanced file and flow management system with improved bulk capabilities.</li>
+<li>Added the <strong>BigQuery</strong> component</li>
+<li>Added the <strong>Twelve Labs</strong> bundle</li>
+<li>Added the <strong>NVIDIA System Assistant</strong> component</li>
 </ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="new-integrations-and-bundles-1">New integrations and bundles<a href="#new-integrations-and-bundles-1" class="hash-link" aria-label="Direct link to New integrations and bundles" title="Direct link to New integrations and bundles">​</a></h3>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="deprecations">Deprecations<a href="#deprecations" class="hash-link" aria-label="Direct link to Deprecations" title="Direct link to Deprecations">​</a></h3>
 <ul>
-<li>BigQuery component for connecting to BQ datasets.</li>
-<li>Twelve Labs integration bundle.</li>
-<li>NVIDIA system assistant component.</li>
-</ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="deprecated-features">Deprecated features<a href="#deprecated-features" class="hash-link" aria-label="Direct link to Deprecated features" title="Direct link to Deprecated features">​</a></h3>
-<ul>
-<li>Deprecated the Combine text component.</li>
+<li>Deprecated the <strong>Combine Text</strong> component.</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="141">1.4.1<a href="#141" class="hash-link" aria-label="Direct link to 1.4.1" title="Direct link to 1.4.1">​</a></h2>
-<p>The following updates are included in this version:</p>
+<p>Highlights of this release include the following changes.
+For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer">Changelog</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="new-features-and-enhancements-2">New features and enhancements<a href="#new-features-and-enhancements-2" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements">​</a></h3>
 <ul>
-<li>Added an enhanced &quot;Breaking Changes&quot; feature to help update components during version updates without breaking flows.</li>
+<li>Added an enhanced <strong>Breaking Changes</strong> feature to help update components without breaking flows after updating Langflow.</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="140">1.4.0<a href="#140" class="hash-link" aria-label="Direct link to 1.4.0" title="Direct link to 1.4.0">​</a></h2>
-<p>The following updates are included in this version:</p>
+<p>Highlights of this release include the following changes.
+For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer">Changelog</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="new-features-and-enhancements-3">New features and enhancements<a href="#new-features-and-enhancements-3" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements">​</a></h3>
 <ul>
 <li>Introduced MCP server functionality to serve Langflow tools to MCP-compatible clients.</li>
-<li>Renamed &quot;Folders&quot; to &quot;Projects&quot;. The <code>/folders</code> endpoints now redirect to <code>/projects</code>.</li>
+<li>Renamed <strong>Folders</strong> to <strong>Projects</strong> in the visual editor.</li>
+<li>The <code>/folders</code> endpoints now redirect to <code>/projects</code>.</li>
 </ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="deprecated-features-1">Deprecated features<a href="#deprecated-features-1" class="hash-link" aria-label="Direct link to Deprecated features" title="Direct link to Deprecated features">​</a></h3>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="deprecations-1">Deprecations<a href="#deprecations-1" class="hash-link" aria-label="Direct link to Deprecations" title="Direct link to Deprecations">​</a></h3>
 <ul>
-<li>Deprecated the Google Gmail, Drive, and Search components.</li>
-</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/contributing-bundles"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Contribute bundles</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/troubleshoot"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Troubleshoot</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prepare-to-upgrade" class="table-of-contents__link toc-highlight">Prepare to upgrade</a></li><li><a href="#150" class="table-of-contents__link toc-highlight">1.5.0</a><ul><li><a href="#new-features-and-enhancements" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#new-integrations-and-bundles" class="table-of-contents__link toc-highlight">New integrations and bundles</a></li></ul></li><li><a href="#142" class="table-of-contents__link toc-highlight">1.4.2</a><ul><li><a href="#new-features-and-enhancements-1" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#new-integrations-and-bundles-1" class="table-of-contents__link toc-highlight">New integrations and bundles</a></li><li><a href="#deprecated-features" class="table-of-contents__link toc-highlight">Deprecated features</a></li></ul></li><li><a href="#141" class="table-of-contents__link toc-highlight">1.4.1</a><ul><li><a href="#new-features-and-enhancements-2" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#140" class="table-of-contents__link toc-highlight">1.4.0</a><ul><li><a href="#new-features-and-enhancements-3" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecated-features-1" class="table-of-contents__link toc-highlight">Deprecated features</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+<li>Deprecated the <strong>Gmail</strong>, <strong>Google Drive</strong>, and <strong>Google Search</strong> components.
+For alternatives, see the <a href="/bundles-google"><strong>Google</strong> bundle</a>.</li>
+</ul>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="earlier-releases">Earlier releases<a href="#earlier-releases" class="hash-link" aria-label="Direct link to Earlier releases" title="Direct link to Earlier releases">​</a></h2>
+<p>See the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer">Changelog</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/contributing-bundles"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Contribute bundles</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/troubleshoot"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Troubleshoot</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prepare-to-upgrade" class="table-of-contents__link toc-highlight">Prepare to upgrade</a></li><li><a href="#150" class="table-of-contents__link toc-highlight">1.5.0</a><ul><li><a href="#new-features-and-enhancements" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#142" class="table-of-contents__link toc-highlight">1.4.2</a><ul><li><a href="#new-features-and-enhancements-1" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#141" class="table-of-contents__link toc-highlight">1.4.1</a><ul><li><a href="#new-features-and-enhancements-2" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#140" class="table-of-contents__link toc-highlight">1.4.0</a><ul><li><a href="#new-features-and-enhancements-3" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations-1" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#earlier-releases" class="table-of-contents__link toc-highlight">Earlier releases</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/img/lf-docs-light.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--light_NVdE" width="160" height="40"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--dark_xIcU" width="160" height="40"></div></div></div></footer><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

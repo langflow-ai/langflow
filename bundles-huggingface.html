@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -67,7 +67,7 @@ You can toggle parameters through the <svg xmlns="http://www.w3.org/2000/svg" wi
 Authentication is required when not using a local model.</p>
 <p>For more information about using embedding model components in flows, see <a href="/components-embedding-models"><strong>Embedding Model</strong> components</a> and <a href="#local-hugging-face-model">Use a local Hugging Face embeddings model</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="hugging-face-embeddings-inference-parameters">Hugging Face Embeddings Inference parameters<a href="#hugging-face-embeddings-inference-parameters" class="hash-link" aria-label="Direct link to Hugging Face Embeddings Inference parameters" title="Direct link to Hugging Face Embeddings Inference parameters">​</a></h3>
-<table><thead><tr><th>Name</th><th>Display Name</th><th>Info</th></tr></thead><tbody><tr><td>API Key</td><td>API Key</td><td>Input parameter. Your <a href="https://huggingface.co/docs/hub/security-tokens" target="_blank" rel="noopener noreferrer">Hugging Face API token</a> for accessing the Hugging Face Inference API, if required. Local inference models do not require an API key.</td></tr><tr><td>API URL</td><td>API URL</td><td>Input parameter. The URL of the Hugging Face Inference API.</td></tr><tr><td>Model Name</td><td>Model Name</td><td>Input parameter. The name of the model to use for embeddings.</td></tr></tbody></table>
+<table><thead><tr><th>Name</th><th>Display Name</th><th>Info</th></tr></thead><tbody><tr><td>API Key</td><td>API Key</td><td>Input parameter. Your <a href="https://huggingface.co/docs/hub/security-tokens" target="_blank" rel="noopener noreferrer">Hugging Face API token</a> for accessing the Hugging Face Inference API, if required. Local inference models don&#x27;t require an API key.</td></tr><tr><td>API URL</td><td>API URL</td><td>Input parameter. The URL of the Hugging Face Inference API.</td></tr><tr><td>Model Name</td><td>Model Name</td><td>Input parameter. The name of the model to use for embeddings.</td></tr></tbody></table>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="local-hugging-face-model">Use a local Hugging Face embeddings model<a href="#local-hugging-face-model" class="hash-link" aria-label="Direct link to Use a local Hugging Face embeddings model" title="Direct link to Use a local Hugging Face embeddings model">​</a></h3>
 <p>To connect the local Hugging Face model to the <strong>Hugging Face Embeddings Inference</strong> component and use it in a flow, follow these steps:</p>
 <ol>
@@ -79,10 +79,10 @@ Authentication is required when not using a local model.</p>
 </li>
 <li>
 <p>Replace the two <strong>OpenAI Embeddings</strong> components with <strong>Hugging Face Embeddings Inference</strong> components.</p>
-<p>Make sure to reconnect the <strong>Embedding Model</strong> ports from each embedding model component to its corresponding <strong>Astra DB</strong> vector store component.</p>
+<p>Make sure to reconnect the <strong>Embedding Model</strong> ports from each <strong>Embeddings Inference</strong> component to its corresponding <strong>Astra DB</strong> vector store component.</p>
 </li>
 <li>
-<p>Configure the <strong>Astra DB</strong> vector store components to connect to your Astra organization, or replace both <strong>Astra DB</strong> vector store components with other <a href="/components-vector-stores">vector store components</a>.</p>
+<p>Configure the <strong>Astra DB</strong> vector store components to connect to your Astra organization, or replace both <strong>Astra DB</strong> vector store components with other <a href="/components-vector-stores"><strong>Vector Store</strong> components</a>.</p>
 </li>
 <li>
 <p>Connect each <strong>Hugging Face Embeddings Inference</strong> component to your local inference model:</p>

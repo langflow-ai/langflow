@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.9ab1be7e.js" defer="defer"></script>
-<script src="/assets/js/main.a53144de.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.8505dadb.js" defer="defer"></script>
+<script src="/assets/js/main.926a9998.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -66,10 +66,10 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-composio-components-in-a-flow">Use Composio components in a flow<a href="#use-composio-components-in-a-flow" class="hash-link" aria-label="Direct link to Use Composio components in a flow" title="Direct link to Use Composio components in a flow">​</a></h2>
 <ol>
 <li>
-<p>In the Langflow <strong>Workspace</strong>, add an <strong>Agent</strong> component.</p>
+<p>In Langflow, create a flow.</p>
 </li>
 <li>
-<p>In the <strong>Workspace</strong>, add the <strong>Composio Tools</strong> component.</p>
+<p>Add an <strong>Agent</strong> component and a <strong>Composio Tools</strong> component.</p>
 </li>
 <li>
 <p>Connect the <strong>Agent</strong> component&#x27;s <strong>Tools</strong> port to the <strong>Composio Tools</strong> component&#x27;s <strong>Tools</strong> port.</p>
@@ -79,17 +79,17 @@
 </li>
 <li>
 <p>In the <strong>Tool Name</strong> field, select the tool you want your agent to have access to.</p>
-<p>For this example, select the <strong>Gmail</strong> tool to allow your agent to control an email account with the Composio tool.</p>
+<p>For this example, select the <strong>Gmail</strong> tool to allow your agent to control an email account with the <strong>Composio Tools</strong> component.</p>
 </li>
 <li>
-<p>In the <strong>Actions</strong> field, select the action you want the <strong>Agent</strong> to take with the <strong>Gmail</strong> tool.</p>
+<p>In the <strong>Actions</strong> field, select the action you want the agent to take with the <strong>Gmail</strong> tool.</p>
 <p>The <strong>Gmail</strong> tool supports multiple actions, and it also supports multiple actions within the same tool.
 For this example, select <strong>GMAIL_CREATE_EMAIL_DRAFT</strong>.
 For more information, see the <a href="https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions" target="_blank" rel="noopener noreferrer">Composio documentation</a>.</p>
 </li>
 <li>
 <p>Add <strong>Chat Input</strong> and <strong>Chat Output</strong> components to your flow, and then connect them to the <strong>Agent</strong> component&#x27;s <strong>Input</strong> and <strong>Response</strong>, respectively.</p>
-<p><img decoding="async" loading="lazy" alt="Simple agent flow with a Composio Tools component" src="/assets/images/composio-create-flow-721683820e7883461ec7fcf3ecead784.png" width="2484" height="1616" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Simple Agent flow with a Composio Tools component" src="/assets/images/composio-create-flow-721683820e7883461ec7fcf3ecead784.png" width="2484" height="1616" class="img_ev3q"></p>
 </li>
 <li>
 <p>In the <strong>Agent</strong> component, enter your OpenAI API key or configure the <strong>Agent</strong> component to use a different LLM.</p>
