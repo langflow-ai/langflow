@@ -1,11 +1,8 @@
-"""Message schema module using inheritance approach.
+"""Message class for langflow - imports from lfx.
 
-This module imports the enhanced Message class that inherits from the base lfx.schema.message.Message.
-This approach breaks circular dependencies while maintaining backward compatibility.
+This maintains backward compatibility while using the lfx implementation.
 """
 
-from langflow.schema.content_block import ContentBlock
-from langflow.schema.message_enhanced import ErrorMessage, Message
-from langflow.schema.message_original import MessageResponse
+from lfx.schema.message import ContentBlock, DefaultModel, ErrorMessage, Message, MessageResponse
 
-__all__ = ["ContentBlock", "ErrorMessage", "Message", "MessageResponse"]
+__all__ = ["ContentBlock", "DefaultModel", "ErrorMessage", "Message", "MessageResponse"]

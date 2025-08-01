@@ -2,75 +2,54 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import traceback
-from collections.abc import AsyncIterator, Iterator  # noqa: TC003
+from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
+from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from pydantic import ConfigDict, Field, field_serializer, field_validator
+from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
+from langchain_core.prompts.prompt import PromptTemplate
+from loguru import logger
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.schema.content_block import ContentBlock
+from lfx.schema.content_types import ErrorContent
 from lfx.schema.data import Data
-from lfx.schema.image import Image
-from lfx.schema.properties import Properties
+from lfx.schema.image import Image, get_file_paths, is_image_file
+from lfx.schema.properties import Properties, Source
+from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
+from lfx.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
-    from langchain_core.prompts import BaseChatPromptTemplate
-
     from lfx.schema.dataframe import DataFrame
 
 
-def timestamp_to_datetime_validator(value: Any) -> datetime:
-    """Convert timestamp to datetime object for base Message class."""
-    if isinstance(value, datetime):
-        # Ensure timezone is UTC
-        if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value
-    if isinstance(value, str):
-        # Parse string timestamp
-        try:
-            if " UTC" in value or " utc" in value.upper():
-                cleaned_value = value.replace(" UTC", "").replace(" utc", "")
-                dt = datetime.strptime(cleaned_value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-                return dt.replace(tzinfo=timezone.utc)
-            dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-            return dt.replace(tzinfo=timezone.utc)
-        except ValueError:
-            return datetime.now(timezone.utc)
-    # For other types, return current time
-    return datetime.now(timezone.utc)
-
-
 class Message(Data):
-    """Base Message class for lfx package.
-
-    This is a lightweight version with core functionality only.
-    The enhanced version with complex dependencies is in langflow.schema.message_enhanced.
-    """
-
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    # Core fields
-    id: str | UUID | None = None
+    # Helper class to deal with image data
     text_key: str = "text"
     text: str | AsyncIterator | Iterator | None = Field(default="")
     sender: str | None = None
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
-    content_blocks: list[ContentBlock] = Field(default_factory=list)
     session_id: str | UUID | None = Field(default="")
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
+    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+    )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
+
     properties: Properties = Field(default_factory=Properties)
     category: Literal["message", "error", "warning", "info"] | None = "message"
+    content_blocks: list[ContentBlock] = Field(default_factory=list)
     duration: int | None = None
 
     @field_validator("flow_id", mode="before")
@@ -83,7 +62,7 @@ class Message(Data):
     @field_validator("content_blocks", mode="before")
     @classmethod
     def validate_content_blocks(cls, value):
-        """Convert content_blocks from dicts to ContentBlock objects."""
+        # value may start with [ or not
         if isinstance(value, list):
             return [
                 ContentBlock.model_validate_json(v) if isinstance(v, str) else ContentBlock.model_validate(v)
@@ -100,35 +79,7 @@ class Message(Data):
             value = Properties.model_validate_json(value)
         elif isinstance(value, dict):
             value = Properties.model_validate(value)
-        elif isinstance(value, Properties):
-            return value
         return value
-
-    @field_validator("timestamp", mode="before")
-    @classmethod
-    def validate_timestamp(cls, value):
-        """Convert timestamp to string format for storage."""
-        if isinstance(value, datetime):
-            return value.strftime("%Y-%m-%d %H:%M:%S UTC")
-        if isinstance(value, str):
-            # Validate the string format and standardize it
-            try:
-                # Handle format with timezone
-                if " UTC" in value.upper():
-                    return value
-                time_date_parts = 2
-                if " " in value and len(value.split()) == time_date_parts:
-                    # Format: "YYYY-MM-DD HH:MM:SS"
-                    return f"{value} UTC"
-                # Try to parse and reformat
-                dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-                return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
-            except ValueError:
-                # If parsing fails, return current time as string
-                return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        else:
-            # For other types, return current time as string
-            return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     @field_serializer("flow_id")
     def serialize_flow_id(self, value):
@@ -138,26 +89,12 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        """Keep timestamp as datetime object for model_dump()."""
-        if isinstance(value, datetime):
-            # Ensure timezone is UTC
-            if value.tzinfo is None:
-                return value.replace(tzinfo=timezone.utc)
-            return value
-        if isinstance(value, str):
-            # Parse string back to datetime
-            try:
-                # Handle format with timezone
-                if " UTC" in value or " utc" in value.upper():
-                    cleaned_value = value.replace(" UTC", "").replace(" utc", "")
-                    dt = datetime.strptime(cleaned_value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-                    return dt.replace(tzinfo=timezone.utc)
-                dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-                return dt.replace(tzinfo=timezone.utc)
-            except ValueError:
-                return datetime.now(timezone.utc)
-        # For other types, return current time
-        return datetime.now(timezone.utc)
+        try:
+            # Try parsing with timezone
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+        except ValueError:
+            # Try parsing without timezone
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -168,24 +105,104 @@ class Message(Data):
             value = [value]
         return value
 
+    def model_post_init(self, /, _context: Any) -> None:
+        new_files: list[Any] = []
+        for file in self.files or []:
+            if is_image_file(file):
+                new_files.append(Image(path=file))
+            else:
+                new_files.append(file)
+        self.files = new_files
+        if "timestamp" not in self.data:
+            self.data["timestamp"] = self.timestamp
+
     def set_flow_id(self, flow_id: str) -> None:
-        """Set the flow ID for this message."""
         self.flow_id = flow_id
+
+    def to_lc_message(
+        self,
+    ) -> BaseMessage:
+        """Converts the Data to a BaseMessage.
+
+        Returns:
+            BaseMessage: The converted BaseMessage.
+        """
+        # The idea of this function is to be a helper to convert a Data to a BaseMessage
+        # It will use the "sender" key to determine if the message is Human or AI
+        # If the key is not present, it will default to AI
+        # But first we check if all required keys are present in the data dictionary
+        # they are: "text", "sender"
+        if self.text is None or not self.sender:
+            logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
+        text = "" if not isinstance(self.text, str) else self.text
+
+        if self.sender == MESSAGE_SENDER_USER or not self.sender:
+            if self.files:
+                contents = [{"type": "text", "text": text}]
+                contents.extend(self.get_file_content_dicts())
+                human_message = HumanMessage(content=contents)
+            else:
+                human_message = HumanMessage(content=text)
+            return human_message
+
+        return AIMessage(content=text)
 
     @classmethod
     def from_lc_message(cls, lc_message: BaseMessage) -> Message:
-        """Create a Message from a LangChain message.
+        if lc_message.type == "human":
+            sender = MESSAGE_SENDER_USER
+            sender_name = MESSAGE_SENDER_NAME_USER
+        elif lc_message.type == "ai":
+            sender = MESSAGE_SENDER_AI
+            sender_name = MESSAGE_SENDER_NAME_AI
+        elif lc_message.type == "system":
+            sender = "System"
+            sender_name = "System"
+        else:
+            sender = lc_message.type
+            sender_name = lc_message.type
 
-        This is a simplified version that creates basic Message objects.
+        return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
+
+    @classmethod
+    def from_data(cls, data: Data) -> Message:
+        """Converts Data to a Message.
+
+        Args:
+            data: The Data to convert.
+
+        Returns:
+            The converted Message.
         """
-        sender = MESSAGE_SENDER_AI if isinstance(lc_message, AIMessage) else MESSAGE_SENDER_USER
-        sender_name = MESSAGE_SENDER_NAME_AI if isinstance(lc_message, AIMessage) else MESSAGE_SENDER_NAME_USER
-
         return cls(
-            text=lc_message.content,
-            sender=sender,
-            sender_name=sender_name,
+            text=data.text,
+            sender=data.sender,
+            sender_name=data.sender_name,
+            files=data.files,
+            session_id=data.session_id,
+            timestamp=data.timestamp,
+            flow_id=data.flow_id,
+            error=data.error,
+            edit=data.edit,
         )
+
+    @field_serializer("text", mode="plain")
+    def serialize_text(self, value):
+        if isinstance(value, AsyncIterator | Iterator):
+            return ""
+        return value
+
+    # Keep this async method for backwards compatibility
+    def get_file_content_dicts(self):
+        content_dicts = []
+        files = get_file_paths(self.files)
+
+        for file in files:
+            if isinstance(file, Image):
+                content_dicts.append(file.to_content_dict())
+            else:
+                content_dicts.append(create_image_content_dict(file))
+        return content_dicts
 
     def load_lc_prompt(self):
         if "prompt" not in self:
@@ -209,64 +226,30 @@ class Message(Data):
         self.prompt["kwargs"]["messages"] = messages
         return load(self.prompt)
 
-    def get_file_content_dicts(self):
-        """Get file content dictionaries for all files in the message."""
-        from lfx.schema.image import get_file_paths
-        from lfx.utils.image import create_image_content_dict
-
-        content_dicts = []
-        files = get_file_paths(self.files)
-
-        for file in files:
-            if isinstance(file, Image):
-                content_dicts.append(file.to_content_dict())
-            else:
-                content_dicts.append(create_image_content_dict(file))
-        return content_dicts
-
-    def to_lc_message(self) -> BaseMessage:
-        """Converts the Data to a BaseMessage.
-
-        Returns:
-            BaseMessage: The converted BaseMessage.
-        """
-        # The idea of this function is to be a helper to convert a Data to a BaseMessage
-        # It will use the "sender" key to determine if the message is Human or AI
-        # If the key is not present, it will default to AI
-        # But first we check if all required keys are present in the data dictionary
-        # they are: "text", "sender"
-        if self.text is None or not self.sender:
-            from loguru import logger
-
-            logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        text = "" if not isinstance(self.text, str) else self.text
-
-        if self.sender == MESSAGE_SENDER_USER or not self.sender:
-            if self.files:
-                contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
-                human_message = HumanMessage(content=contents)
-            else:
-                human_message = HumanMessage(content=text)
-            return human_message
-
-        return AIMessage(content=text)
-
     @classmethod
-    def from_lc_prompt(cls, prompt: BaseChatPromptTemplate) -> Message:
-        """Create a Message from a LangChain prompt template."""
+    def from_lc_prompt(
+        cls,
+        prompt: BaseChatPromptTemplate,
+    ):
         prompt_json = prompt.to_json()
         return cls(prompt=prompt_json)
 
+    def format_text(self):
+        prompt_template = PromptTemplate.from_template(self.template)
+        variables_with_str_values = dict_values_to_string(self.variables)
+        formatted_prompt = prompt_template.format(**variables_with_str_values)
+        self.text = formatted_prompt
+        return formatted_prompt
+
     @classmethod
-    def from_template(cls, template: str, **variables) -> Message:
-        """Create a Message from a template string with variables.
+    async def from_template_and_variables(cls, template: str, **variables):
+        # This method has to be async for backwards compatibility with versions
+        # >1.0.15, <1.1
+        return cls.from_template(template, **variables)
 
-        This matches the message_original implementation exactly.
-        """
-        from fastapi.encoders import jsonable_encoder
-        from langchain_core.prompts.chat import ChatPromptTemplate
-
+    # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
+    @classmethod
+    def from_template(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
         message = HumanMessage(content=text)
@@ -280,14 +263,9 @@ class Message(Data):
 
         prompt_template = ChatPromptTemplate.from_messages([message])
 
-        instance.data["prompt"] = jsonable_encoder(prompt_template.to_json())
-        instance.data["messages"] = instance.data["prompt"].get("kwargs", {}).get("messages", [])
+        instance.prompt = jsonable_encoder(prompt_template.to_json())
+        instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
-
-    @classmethod
-    async def from_template_and_variables(cls, template: str, **variables) -> Message:
-        """Backwards compatibility method for versions >1.0.15, <1.1."""
-        return cls.from_template(template, **variables)
 
     @classmethod
     async def create(cls, **kwargs):
@@ -304,87 +282,192 @@ class Message(Data):
 
         return DataFrame(data=[self])
 
-    def get_text(self) -> str:
-        """Get the message text as a string.
 
-        Returns:
-            str: The text content of the message.
-        """
-        if isinstance(self.text, str):
-            return self.text
-        return str(self.text) if self.text else ""
+class DefaultModel(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        json_encoders={
+            datetime: lambda v: v.isoformat(),
+            UUID: lambda v: str(v),
+        },
+    )
 
-    def format_text(self) -> str:
-        """Format the message text using template and variables.
+    def json(self, **kwargs):
+        # Usa a função de serialização personalizada
+        return super().model_dump_json(**kwargs, encoder=self.custom_encoder)
 
-        This matches the message_original implementation.
-        """
-        # Check if we have template and variables in data
-        if "template" in self.data and "variables" in self.data:
-            from langchain_core.prompts.prompt import PromptTemplate
+    @staticmethod
+    def custom_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
+        raise TypeError(msg)
 
-            prompt_template = PromptTemplate.from_template(self.data["template"])
-            variables_with_str_values = dict_values_to_string(self.data["variables"])
-            formatted_prompt = prompt_template.format(**variables_with_str_values)
-            self.text = formatted_prompt
-            return formatted_prompt
 
-        # Fallback to simple text formatting
-        if isinstance(self.text, str):
-            return self.text
-        return str(self.text) if self.text else ""
+class MessageResponse(DefaultModel):
+    id: str | UUID | None = Field(default=None)
+    flow_id: UUID | None = Field(default=None)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sender: str
+    sender_name: str
+    session_id: str
+    text: str
+    files: list[str] = []
+    edit: bool
+    duration: float | None = None
+
+    properties: Properties | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None
+
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def validate_content_blocks(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        if isinstance(v, list):
+            return [cls.validate_content_blocks(block) for block in v]
+        if isinstance(v, dict):
+            return ContentBlock.model_validate(v)
+        return v
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def validate_properties(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        return v
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        return v
+
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, v):
+        return timestamp_to_str(v)
+
+    @field_serializer("files")
+    @classmethod
+    def serialize_files(cls, v):
+        if isinstance(v, list):
+            return json.dumps(v)
+        return v
+
+    @classmethod
+    def from_message(cls, message: Message, flow_id: str | None = None):
+        # first check if the record has all the required fields
+        if message.text is None or not message.sender or not message.sender_name:
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
+        return cls(
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            files=message.files or [],
+            timestamp=message.timestamp,
+            flow_id=flow_id,
+        )
 
 
 class ErrorMessage(Message):
-    """Error message with traceback formatting."""
-
-    def __init__(
-        self,
-        *,
-        text: str = "",
-        exception: BaseException | None = None,
-        traceback_str: str = "",
-        **data,
-    ):
-        if exception:
-            text = self._format_markdown_reason(exception)
-        elif traceback_str:
-            text = traceback_str
-
-        super().__init__(
-            text=text,
-            category="error",
-            error=True,
-            **data,
-        )
+    """A message class specifically for error messages with predefined error-specific attributes."""
 
     @staticmethod
     def _format_markdown_reason(exception: BaseException) -> str:
-        """Format exception as markdown."""
-        exception_type = type(exception).__name__
-        exception_message = str(exception)
-        traceback_str = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
-
-        return f"""## {exception_type}
-
-{exception_message}
-
-### Traceback
-```python
-{traceback_str}
-```
-"""
+        """Format the error reason with markdown formatting."""
+        reason = f"**{exception.__class__.__name__}**\n"
+        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
+            reason += f" - **{exception.body.get('message')}**\n"
+        elif hasattr(exception, "code"):
+            reason += f" - **Code: {exception.code}**\n"
+        elif hasattr(exception, "args") and exception.args:
+            reason += f" - **Details: {exception.args[0]}**\n"
+        elif isinstance(exception, ValidationError):
+            reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
+        else:
+            reason += " - **An unknown error occurred.**\n"
+        return reason
 
     @staticmethod
     def _format_plain_reason(exception: BaseException) -> str:
-        """Format exception as plain text."""
-        exception_type = type(exception).__name__
-        exception_message = str(exception)
-        traceback_str = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+        """Format the error reason without markdown."""
+        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
+            reason = f"{exception.body.get('message')}\n"
+        elif hasattr(exception, "_message"):
+            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"  # noqa: SLF001
+        elif hasattr(exception, "code"):
+            reason = f"Code: {exception.code}\n"
+        elif hasattr(exception, "args") and exception.args:
+            reason = f"{exception.args[0]}\n"
+        elif isinstance(exception, ValidationError):
+            reason = f"{exception!s}\n"
+        elif hasattr(exception, "detail"):
+            reason = f"{exception.detail}\n"
+        elif hasattr(exception, "message"):
+            reason = f"{exception.message}\n"
+        else:
+            reason = "An unknown error occurred.\n"
+        return reason
 
-        return f"{exception_type}: {exception_message}\n\nTraceback:\n{traceback_str}"
+    def __init__(
+        self,
+        exception: BaseException,
+        session_id: str | None = None,
+        source: Source | None = None,
+        trace_name: str | None = None,
+        flow_id: UUID | str | None = None,
+    ) -> None:
+        # This is done to avoid circular imports
+        if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
+            exception = exception.__cause__
+
+        plain_reason = self._format_plain_reason(exception)
+        markdown_reason = self._format_markdown_reason(exception)
+        # Get the sender ID
+        if trace_name:
+            match = re.search(r"\((.*?)\)", trace_name)
+            if match:
+                match.group(1)
+
+        super().__init__(
+            session_id=session_id,
+            sender=source.display_name if source else None,
+            sender_name=source.display_name if source else None,
+            text=plain_reason,
+            properties=Properties(
+                text_color="red",
+                background_color="red",
+                edited=False,
+                source=source,
+                icon="error",
+                allow_markdown=False,
+                targets=[],
+            ),
+            category="error",
+            error=True,
+            content_blocks=[
+                ContentBlock(
+                    title="Error",
+                    contents=[
+                        ErrorContent(
+                            type="error",
+                            component=source.display_name if source else None,
+                            field=str(exception.field) if hasattr(exception, "field") else None,
+                            reason=markdown_reason,
+                            solution=str(exception.solution) if hasattr(exception, "solution") else None,
+                            traceback=traceback.format_exc(),
+                        )
+                    ],
+                )
+            ],
+            flow_id=flow_id,
+        )
 
 
-Message.model_rebuild()
-
-__all__ = ["ContentBlock", "ErrorMessage", "Message"]
+__all__ = ["ContentBlock", "DefaultModel", "ErrorMessage", "Message", "MessageResponse"]
