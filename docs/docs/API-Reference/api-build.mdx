@@ -7,14 +7,14 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 :::important
-The `/build` endpoints are used by Langflow's frontend **Workspace** and **Playground** code.
+The `/build` endpoints are used by Langflow's frontend visual editor code.
 These endpoints are part of the internal Langflow codebase.
 
 Don't use these endpoints to run flows in applications that use your Langflow flows.
 To run flows in your apps, see [Flow trigger endpoints](/api-flows-run).
 :::
 
-The `/build` endpoints support Langflow's frontend code for building flows in the Langflow Workspace.
+The `/build` endpoints support Langflow's frontend code for building flows in the Langflow visual editor.
 You can use these endpoints to build vertices and flows, as well as execute flows with streaming event responses.
 You might need to use or understand these endpoints when contributing to the Langflow codebase.
 
@@ -105,7 +105,8 @@ curl -X GET \
 
 The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run starts and stops.
 Setting `stop_component_id` for a component triggers the same behavior as clicking the **Play** button on that component, where all dependent components leading up to that component are also run.
-For example, to stop flow execution at the OpenAI model component, run the following command:
+
+The following example stops flow execution at an **OpenAI** component:
 
 ```shell
 curl -X POST \
@@ -119,7 +120,7 @@ curl -X POST \
 ### Override flow parameters
 
 The `/build` endpoint also accepts inputs for `data` directly, instead of using the values stored in the Langflow database.
-This is useful for running flows without having to pass custom values through the UI.
+This is useful for running flows without having to pass custom values through the visual editor.
 
 ```shell
 curl -X POST \

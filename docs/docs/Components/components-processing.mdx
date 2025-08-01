@@ -5,13 +5,13 @@ slug: /components-processing
 
 import Icon from "@site/src/components/icon";
 
-Langflow's processing components process and transform data within a flow.
+Langflow's **Processing** components process and transform data within a flow.
 They have many uses, including:
 
 * Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
 * Extract content from larger chunks of data with a [**Parser** component](#parser).
 * Filter data with natural language with the [**Smart Function** component](#smart-function).
-* Save data to your local machine with the [**Save File** component](#save-file).
+* Save data to your local machine with the [**Save To File** component](#save-to-file).
 * Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
 
 ## Prompt Template
@@ -68,7 +68,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | HandleInput | Input parameter. Connect the 'Language Model' output from your LLM component here. Required. |
+| model | HandleInput | Input parameter. Connect the 'Language Model' output from a **Language Model** component. Required. |
 | system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
 | df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
 | column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
@@ -161,22 +161,22 @@ All operations act on an incoming `Data` object.
 | Remove Keys | `remove_keys_input` | Removes specified keys from the data. |
 | Rename Keys | `rename_keys_input` | Renames keys in the data. |
 
-## DataFrame operations
+## DataFrame Operations
 
-The **DataFrame** component performs operations on [`DataFrame`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
+The **DataFrame Operations** component performs operations on [`DataFrame`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
 
 To use the **DataFrame Operations** component in a flow, you must connect its **DataFrame** input port to the output port of a component that outputs `DataFrame`.
 All operations in the **DataFrame Operations** component require at least one `DataFrame` input.
 
 The following example fetches JSON data from an API. The **Smart Filter** component extracts and flattens the results into a tabular `DataFrame` that is then processed through the **DataFrame Operations** component.
 
-![A flow that ingests an API response, extracts it to a `DataFrame` with a Smart Filter component, and the processes it through a DataFrame Operations component](/img/component-dataframe-operations.png)
+![A flow that ingests an API response, extracts it to a DataFrame with a Smart Filter component, and the processes it through a DataFrame Operations component](/img/component-dataframe-operations.png)
 
 1. The **API Request** component retrieves data with only `source` and `result` fields.
 For this example, the desired data is nested within the `result` field.
-2. Connect a **Smart Filter** to the API request component, and a **Language model** to the **Smart Filter**. This example connects a **Groq** model component.
-3. In the **Groq** model component, add your **Groq** API key.
-4. To filter the data, in the **Smart filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+2. Connect a **Language Model** component to a **Smart Filter** component, and then connect the **Smart Filter** component to the **API Request** component. This example connects a **Groq** language model component.
+3. In the **Groq** component, add your Groq API key.
+4. To filter the data, in the **Smart Filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
 For this example, enter:
 ```
 I want to explode the result column out into a Data object
@@ -195,7 +195,7 @@ id | name             | company               | username        | email         
 2  | Michael Williams | XYZ Corp             | michael_williams| michael.williams@xyzcorp.com       | 456 Elm Ave       | 67890
 ```
 
-7. Add the **DataFrame Operations** component, and a **Chat Output** component to the flow.
+7. Add **DataFrame Operations** and **Chat Output** components to the flow.
 8. In the **DataFrame Operations** component, in the **Operation** field, select **Filter**.
 9. To apply a filter, in the **Column Name** field, enter a column to filter on. This example filters by `name`.
 10. Click **Playground**, and then click **Run Flow**.
@@ -269,9 +269,9 @@ To use the **LLM Router** component in a flow, do the following:
 3. Connect **Chat Input** and **Chat Output** components to the **LLM Router**.
 The flow looks like this:
 
-![LLM router component](/img/component-llm-router.png)
+![LLM Router component](/img/component-llm-router.png)
 
-4. In the LLM Router component, set your **Optimization** preference:
+4. In the **LLM Router** component, set your **Optimization** preference:
    - **Quality**: Prioritizes the highest quality response.
    - **Speed**: Prioritizes the fastest response time.
    - **Cost**: Prioritizes the most cost-effective option.
@@ -279,7 +279,7 @@ The flow looks like this:
 
 5. Run the flow.
 Your input is the task that the LLM router evaluates the models against, such as `Write a story about horses` or `How do I parse data objects out of JSON?`.
-6. In the LLM Router component, select the **Model Selection Decision** output to view the router's reasoning.
+6. In the **LLM Router** component, select the **Model Selection Decision** output to view the router's reasoning.
 
     ```text
     Model Selection Decision:
@@ -317,17 +317,17 @@ Your input is the task that the LLM router evaluates the models against, such as
 
 This component formats `DataFrame` or `Data` objects into text using templates, with an option to convert inputs directly to strings using `stringify`.
 
-To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
+To use this component, create variables for values in the `template` the same way you would in a [**Prompt Template** component](/components-prompts). For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
 
 To use the **Parser** component with a **Structured Output** component, do the following:
 
 1. Connect a **Structured Output** component's **DataFrame** output to the **Parser** component's **DataFrame** input.
 2. Connect the **File** component to the **Structured Output** component's **Message** input.
-3. Connect the **OpenAI** model component's **Language Model** output to the **Structured Output** component's **Language Model** input.
+3. Connect the **OpenAI** component's **Language Model** output to the **Structured Output** component's **Language Model** input.
 
 The flow looks like this:
 
-![A parser component connected to OpenAI and structured output](/img/component-parser.png)
+![A Parser component connected to OpenAI and Structured Output components](/img/component-parser.png)
 
 4. In the **Structured Output** component, click **Open Table**.
 This opens a pane for structuring your table.
@@ -335,7 +335,7 @@ The table contains the rows **Name**, **Description**, **Type**, and **Multiple*
 5. Create a table that maps to the data you're loading from the **File** loader.
 For example, to create a table for employees, you might have the rows `id`, `name`, and `email`, all of type `string`.
 6. In the **Template** field of the **Parser** component, enter a template for parsing the **Structured Output** component's DataFrame output into structured text.
-Create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component.
+Create variables for values in the `template` using curly braces.
 For example, to present a table of employees in Markdown:
 ```text
 # Employee Profile
@@ -380,10 +380,9 @@ This component allows you to execute Python code with imported packages.
 1. To use this component in a flow,in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
 At least one import is required.
 2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
-3. Optionally, enable **Tool Mode** and connect the interpreter to an **Agent** as a tool.
-For example, connect a **Python Interpreter** and a [Calculator](/components-helpers#calculator) as tools for an Agent, and test how it chooses different tools to solve math problems.
-The flow looks like this:
-![Python Interpreter and calculator connected to Agent](/img/component-python-interpreter.png)
+3. Optional: Enable **Tool Mode**, and then connect the **Python Interpreter** component to an **Agent** component as a tool.
+For example, connect a **Python Interpreter** component and a [**Calculator** component](/components-helpers#calculator) as tools for an **Agent** component, and then test how it chooses different tools to solve math problems.
+![Python Interpreter and Calculator components connected to an Agent component](/img/component-python-interpreter.png)
 4. Ask the agent an easier math question.
 The **Calculator** tool can add, subtract, multiple, divide, or perform exponentiation.
 The agent executes the `evaluate_expression` tool to correctly answer the question.
@@ -419,7 +418,7 @@ result = math.sqrt(df['squares'].mean())
 print(f"Square root of mean squares: {result}")
 ```
 
-The Agent correctly chooses the `run_python_repl` tool to solve the problem.
+The agent correctly chooses the `run_python_repl` tool to solve the problem.
 
 Result:
 ```text
@@ -437,7 +436,7 @@ Output:
 }
 ```
 
-If you don't include the package imports in the chat, the Agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the Python interpreter component in the **Global Imports** field.
+If you don't include the package imports in the chat, the agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the **Python Interpreter** component in the **Global Imports** field.
 
 ### Python Interpreter parameters
 
@@ -447,14 +446,14 @@ If you don't include the package imports in the chat, the Agent can still create
 | python_code | Code | Input parameter. The Python code to execute. Only modules specified in Global Imports can be used. |
 | results | Data | Output parameter. The output of the executed Python code, including any printed results or errors. |
 
-## Save file
+## Save to File
 
-This component saves [DataFrames, Data, or Messages](/data-types#data) to various file formats.
+This component saves `DataFrame`, `Data`, or `Message` [data types](/data-types) to various file formats.
 
 1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/data-types#data) to the **Save to File** component's input.
 The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
 
-![Two Save-to File components connected to a webhook](/img/component-save-to-file.png)
+![Two Save-to File components connected to a Webhook component](/img/component-save-to-file.png)
 
 2. In the **Save to File** component's **Input Type** field, select the expected input type.
 This example expects **Data** from the **Webhook**.
@@ -464,8 +463,8 @@ This example uses `.md` in one **Save to File** component, and `.xlsx` in anothe
 This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
 The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
 :::tip
-If you enter a format in the `file_path` that is not accepted, the component appends the proper format to the file.
-For example, if the selected `file_format` is `csv`, and you enter `file_path` as `./output/test.txt`, the file is saved as `./output/test.txt.csv` so the file is not corrupted.
+If the `file_format` and `file_path` extension don't align, the component appends the specified format to the file.
+For example, if the `file_format` is `csv`, and the `file_path` is `./output/test.txt`, then the file is saved as `./output/test.txt.csv` so the file isn't corrupted.
 :::
 5. Send a POST request to the **Webhook** containing your JSON data.
 Replace `YOUR_FLOW_ID` with your flow ID.
@@ -537,10 +536,10 @@ In Langflow version 1.5, this component was renamed from **Lambda Filter** to **
 
 This component uses an LLM to generate a function for filtering or transforming structured data.
 
-To use the **Smart function** component, you must connect it to a [Language Model](/components-models) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+To use the **Smart Function** component, you must connect it to a [**Language Model** component](/components-models), which the **Smart Filter** component uses to generate a function based on the natural language instructions in the **Instructions** field.
 
 This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
-The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
+The **Instructions** field in the **Smart Function** component specifies the task `extract emails`.
 The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
 
 ![Smart function connected to an LLM](/img/component-lambda-filter.png)
@@ -553,7 +552,7 @@ The connected LLM creates a filter based on the instructions, and successfully e
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | The structured data to filter or transform using a Lambda function. |
-| llm | Language Model | The connection port for a [Model](/components-models) component. |
+| llm | Language Model | The connection port for a **Language Model** component. |
 | filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
 | sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
 | max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
@@ -562,8 +561,8 @@ The connected LLM creates a filter based on the instructions, and successfully e
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed [Data object](/data-types#data). |
-| dataframe | DataFrame | The filtered data as a [DataFrame](/data-types#dataframe). |
+| filtered_data | Filtered Data | The filtered or transformed `Data` object. |
+| dataframe | DataFrame | The filtered data as a `DataFrame`. |
 
 </details>
 
@@ -578,7 +577,7 @@ The **DataFrame** output returns a structured data format, with additional `text
 1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/data-types#data) to the **Split Text** component's **Data** port.
 This example uses the **URL** component, which is fetching JSON placeholder data.
 
-![Split text component and chroma-db](/img/component-split-text.png)
+![Split Text and Chroma DB components](/img/component-split-text.png)
 
 2. In the **Split Text** component, define your data splitting parameters.
 
@@ -642,7 +641,7 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 ### Other text splitters
 
-- [LangChain text splitter components](/bundles-langchain#text-splitters)
+See [LangChain text splitter components](/bundles-langchain#text-splitters).
 
 ## Structured output
 
@@ -690,7 +689,7 @@ For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS
 
 ## Type convert
 
-This component converts data types between different formats. It can transform data between [Data](/data-types#data), [DataFrame](/data-types#dataframe), and [Message](/data-types#message) objects.
+This component converts data types between different formats. It can transform data between [`Data`](/data-types#data), [`DataFrame`](/data-types#dataframe), and [`Message`](/data-types#message) objects.
 
 * **Data**: A structured object that contains both text and metadata.
 ```json
@@ -723,19 +722,18 @@ Keys are columns, and each dictionary (a collection of key-value pairs) in the l
 
 To use this component in a flow, do the following:
 
-1. Add the **Web search** component to the **Basic Prompting** template. In the **Search Query** field, enter a query, such as `environmental news`.
-2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
-This example uses a **Prompt** component to give the chatbot context, so you must convert the **Web search** component's DataFrame output to a Message type.
-3. Connect a **Type Convert** component to convert the DataFrame to a Message.
+1. Add the **Web Search** component to the **Basic Prompting** template. In the **Search Query** field, enter a query, such as `environmental news`.
+2. Connect the **Web Search** component's output to a component that accepts the `DataFrame` input.
+This example uses a **Prompt Template** component to give the chatbot context, so you must convert the **Web Search** component's `DataFrame` output to a `Message` type.
+3. Connect a **Type Convert** component to convert the `DataFrame` to a `Message`.
 4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
-Your flow looks like this:
 
-![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+    ![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
 
 5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
 6. Click **Playground**, and then ask about `latest news`.
 
-The search results are returned to the Playground as a message.
+The search results are returned to the **Playground** as a message.
 
 Result:
 ```text
@@ -765,9 +763,9 @@ Ozone Pollution and Global Warming: A recent study highlights that ozone polluti
 
 </details>
 
-## Legacy processing components
+## Legacy Processing components
 
-The following processing components are legacy components.
+The following **Processing** components are legacy components.
 You can still use them in your flows, but they are no longer supported and can be removed in a future release.
 
 Replace these components with suggested alternatives as soon as possible.
@@ -844,7 +842,7 @@ This component extracts a specific key from a `Data` object and returns the valu
 <details>
 <summary>Data to DataFrame/Data to Message</summary>
 
-Replace these legacy components with newer processing components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
+Replace these legacy components with newer **Processing** components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
 
 These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
 

@@ -41,14 +41,14 @@ You must [start your Langflow server with authentication enabled](#start-a-langf
 
 ### Create a Langflow API key
 
-You can generate a Langflow API key with the UI or the CLI.
+You can generate a Langflow API key in your Langflow **Settings** or with the Langflow CLI.
 
-The UI-generated key is appropriate for most development use cases. The CLI-generated key is needed when your Langflow server is running in `--backend-only` mode.
+The CLI option is required if your Langflow server is running in `--backend-only` mode.
 
 <Tabs>
-<TabItem value="Langflow UI" label="Langflow UI" default>
+<TabItem value="settings" label="Langflow Settings" default>
 
-1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+1. In the Langflow header, click your profile icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click **Add New**.
 3. Name your key, and then click **Create API Key**.
 4. Copy the API key and store it securely.
@@ -56,7 +56,7 @@ The UI-generated key is appropriate for most development use cases. The CLI-gene
 </TabItem>
 <TabItem value="Langflow CLI" label="Langflow CLI">
 
-If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI because the frontend isn't running.
+If you're serving your flow with `--backend-only=true`, you can't create API keys in your Langflow **Settings** because the frontend isn't running.
 In this case, you must create API keys with the Langflow CLI.
 
 1. Recommended: [Start your Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
@@ -110,7 +110,7 @@ For more information about forming Langflow API requests, see [Get started with 
 
 To revoke and delete an API key, do the following:
 
-1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+1. In the Langflow header, click your profile icon, and then select **Settings**.
 2. Click **Langflow API Keys**.
 3. Select the keys you want to delete, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
@@ -118,13 +118,17 @@ This action immediately invalidates the key and prevents it from being used agai
 
 ## Component API keys
 
-Component API keys authorize access to external services that are called by components in your flows. These are not general application credentials, but specifically the API keys required by individual components to connect to services like model providers, databases, or third-party APIs.
+Component API keys authorize access to external services that are called by components in your flows, such as model providers, databases, or third-party APIs.
+These aren't Langflow API keys or general application credentials.
 
-Component API keys are added as global variables with the Langflow UI, or sourced from the `.env` file. When stored as global variables, use the **Credential** type for secure handling of sensitive information.
-
-Component API keys are created and managed within the service provider's platform. Deleting a global variable from Langflow does not delete or invalidate the actual API key in the service provider's system. You must delete or rotate component API keys directly within the service provider's interface or API. Langflow only stores the encrypted value of your keys; it does not have control over the actual credentials.
-
+In Langflow, you can store component API keys in global variables in your **Settings** or import them from your Langflow `.env` file.
+When creating global variables, use the **Credential** type for secure handling of sensitive information.
 For more information, see [Global variables](/configuration-global-variables).
+
+You create and manage component API keys within the service provider's platform.
+Langflow only stores the encrypted key value or a secure reference to a key stored elsewhere; it doesn't manage the actual credentials at the source.
+This means that deleting a global variable from Langflow doesn't delete or invalidate the actual API key in the service provider's system.
+You must delete or rotate component API keys directly using the service provider's interface or API.
 
 ## Authentication environment variables
 
@@ -134,13 +138,17 @@ You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/ma
 
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
-Langflow doesn't allow users to have simultaneous or shared access to flows in the Langflow UI.
+This variable controls whether authentication is required to access your Langflow server, including the visual editor and API:
 
-If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. The login form is required to access the Langflow UI, and Langflow API requests require a Langflow API key.
+* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor and use a Langflow API key for Langflow API requests.
 If `false`, you must also set [`LANGFLOW_SUPERUSER` and `LANGFLOW__SUPERUSER_PASSWORD`](#langflow-superuser).
 
-If `LANGFLOW_AUTO_LOGIN=True`, Langflow bypasses UI authentication.
-If you also disable user management (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment without password protection. If two users access the same flow, Langflow saves only the work of the most recent user.
+* If `LANGFLOW_AUTO_LOGIN=True`, Langflow bypasses authentication for the visual editor and API requests.
+All users can access the same environment without password protection.
+If you don't have user management enabled, all users are effectively superusers.
+
+Langflow doesn't allow users to simultaneously edit the same flow in real time.
+If two users edit the same flow, Langflow saves only the work of the most recent editor based on the state of that user's [workspace](/concepts-overview#workspace). Any changes made by the other user in the interim are overwritten.
 
 #### AUTO_LOGIN and API authentication in version 1.5 and later
 
@@ -238,7 +246,7 @@ To generate a secret encryption key for `LANGFLOW_SECRET_KEY`, do the following:
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE {#langflow-new-user-is-active}
 
-When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), a superuser must explicitly activate a new user's account before they can sign in to the Langflow UI.
+When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), a superuser must explicitly activate a new user's account before they can sign in to the visual editor.
 The superuser can also deactivate a user's account as needed.
 
 When `LANGFLOW_NEW_USER_IS_ACTIVE=True`, new user accounts are automatically activated.
@@ -247,6 +255,7 @@ When `LANGFLOW_NEW_USER_IS_ACTIVE=True`, new user accounts are automatically act
 LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
 
+Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
@@ -262,7 +271,7 @@ This involves disabling automatic login, setting superuser credentials, generati
 
 This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.
 
-With authentication enabled, all users must sign in to the Langflow UI with valid credentials, and API requests require authentication with a Langflow API key.
+With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
 Additionally, you must sign in as a superuser to manage users and [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.
 
 ### Start the Langflow server
@@ -324,7 +333,7 @@ Next, you can add users to your Langflow server to collaborate with others on fl
 
 2. Log in with the superuser credentials you set in your `.env` (`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`).
 
-3. To manage users on your server, navigate to `/admin`, such as `http://localhost:7860/admin`, click your user profile image, and then click **Admin Page**.
+3. To manage users on your server, navigate to `/admin`, such as `http://localhost:7860/admin`, click your profile icon, and then click **Admin Page**.
 
     As a superuser, you can add users, set permissions, reset passwords, and delete accounts.
 

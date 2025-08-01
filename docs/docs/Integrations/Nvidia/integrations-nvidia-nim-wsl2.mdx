@@ -6,7 +6,7 @@ slug: /integrations-nvidia-ingest-wsl2
 Connect Langflow with NVIDIA NIM on an RTX Windows system with [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install) installed.
 
 [NVIDIA NIM (NVIDIA Inference Microservices)](https://docs.nvidia.com/nim/index.html) provides containers to self-host GPU-accelerated inferencing microservices.
-In this example, you connect a model component in **Langflow** to a deployed `mistral-nemo-12b-instruct` NIM on an **RTX Windows system** with **WSL2**.
+In this example, you connect a Language Model component in Langflow to a deployed `mistral-nemo-12b-instruct` NIM on an **RTX Windows system** with **WSL2**.
 
 For more information on NVIDIA NIM, see the [NVIDIA documentation](https://docs.nvidia.com/nim/index.html).
 
@@ -23,11 +23,11 @@ For more information on NVIDIA NIM, see the [NVIDIA documentation](https://docs.
 
 ## Use the NVIDIA NIM in a flow
 
-To connect the NIM you've deployed with Langflow, add the **NVIDIA** model component to a flow.
+To connect the deployed NIM to Langflow, add the **NVIDIA** language model component to a flow:
 
-1. Create a [basic prompting flow](/get-started-quickstart).
+1. Create a flow based on the **Basic Prompting** template.
 2. Replace the **OpenAI** model component with the **NVIDIA** component.
 3. In the **NVIDIA** component's **Base URL** field, add the URL where your NIM is accessible. If you followed your model's [deployment instructions](https://build.nvidia.com/nv-mistralai/mistral-nemo-12b-instruct/deploy?environment=wsl2.md), the value is `http://localhost:8000/v1`.
 4. In the **NVIDIA** component's **NVIDIA API Key** field, add your NVIDIA API Key.
-5. Select your model from the **Model Name** dropdown.
+5. Select your model from the **Model Name** field.
 6. Open the **Playground** and chat with your **NIM** model.

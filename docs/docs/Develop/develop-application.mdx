@@ -8,12 +8,12 @@ Designing flows in the visual editor is only the first step in building an appli
 Once you have a functional flow, you can use that flow in a larger application, such as a website or mobile app.
 Because Langflow is both an IDE and a runtime, you can use Langflow to build and test your flows locally, and then package and serve your flows in a production environment.
 
-This guide introduces application development with Langflow from project setup through packaging and deployment.
+This guide introduces application development with Langflow from initial setup through packaging and deployment.
 This documentation doesn't explain how to write a complete application; it only describes how to include Langflow in the context of a larger application.
 
-## Project structure
+## Directory structure
 
-The following example describes the project directory structure for a minimal Langflow application:
+The following example describes the directory structure for a minimal Langflow application:
 
 ```text
 LANGFLOW-APPLICATION/
@@ -26,7 +26,7 @@ LANGFLOW-APPLICATION/
 ├── README.md
 ```
 
-This project directory contains the following:
+This directory contains the following:
 
 * [`docker.env`](#docker-env): This file is copied to the Docker image as a `.env` file in the container root.
 * [`Dockerfile`](#dockerfile): This file controls how your Langflow image is built.
@@ -34,7 +34,7 @@ This project directory contains the following:
 * `/langflow-config-dir`: This folder is referenced in the Dockerfile as the location for your Langflow deployment's configuration files, database, and logs.
 * `README.md`: This is a typical README file for your application's documentation.
 
-This is a minimal example of a Langflow application project directory.
+This is a minimal example of a Langflow application directory.
 Your application might have additional files and folders, such as a `/components` folder for custom components, or a `pyproject.toml` file for additional dependencies.
 
 ### Package management
@@ -93,15 +93,15 @@ When you package Langflow as a dependency of an application, you only want to in
 
     If you have chained flows (flows that trigger other flows), make sure you export _all_ necessary flows.
 
-2. Add the exported Langflow JSON files to the `/flows` folder in your project directory.
+2. Add the exported Langflow JSON files to the `/flows` folder in your application directory.
 
 ### Components
 
-The core components and bundles that you see in the Langflow visual editors are automatically included in the base Langflow Docker image.
+The core components and bundles that you see in the Langflow visual editor are automatically included in the base Langflow Docker image.
 
-If you have any [custom components](/components-custom-components) that you created for your application, you must include these components in your project directory:
+If you have any [custom components](/components-custom-components) that you created for your application, you must include these components in your application directory:
 
-1. Create a `/components` folder in your project directory.
+1. Create a `/components` folder in your application directory.
 2. Add your custom component files to the `/components` folder.
 3. Specify the path to `/components` in your `docker.env`.
 
@@ -151,9 +151,9 @@ In this example, `ENV LANGFLOW_LOG_ENV=container` sets the logging behavior for 
 ### Backend-only mode
 
 The `--backend-only` flag in `CMD` starts Langflow in backend-only mode, which provides programmatic access only.
-This is recommended when running Langflow as a dependency of an application where you don't need access to the Langflow UI.
+This is recommended when running Langflow as a dependency of an application where you don't need access to the visual editor.
 
-If you want to serve the visual editor _and_ the Langflow backend, omit `--backend-only`.
+If you want to serve the Langflow visual editor _and_ backend, then omit `--backend-only`.
 
 For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
@@ -193,7 +193,7 @@ For information about publishing your image on Docker Hub and running a Langflow
 
         The following example runs a simple LLM chat flow that responds to a chat input string.
         If necessary, modify the payload for your flow.
-        For example, if your flow doesn't have a **Chat input** component, you must modify the payload to provide the expected input for your flow.
+        For example, if your flow doesn't have a **Chat Input** component, you must modify the payload to provide the expected input for your flow.
 
         ```bash
         curl --request POST \
