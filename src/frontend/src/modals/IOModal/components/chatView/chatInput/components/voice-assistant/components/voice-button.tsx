@@ -20,7 +20,7 @@ const VoiceButton = ({ toggleRecording }: VoiceButtonProps) => {
             toggleRecording();
             setNewSessionCloseVoiceAssistant(false);
           }}
-          className="btn-playground-actions group"
+          className="group h-7 w-7 px-0 flex items-center justify-center"
           unstyled
           data-testid="voice-button"
         >
