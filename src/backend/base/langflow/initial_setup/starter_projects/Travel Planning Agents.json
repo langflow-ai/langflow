@@ -808,7 +808,7 @@
         "data": {
           "id": "note-j1Nu2",
           "node": {
-            "description": "# 📖 README\n\nThe travel planning system is a smart setup that uses several specialized \"agents\" to help plan incredible trips. Imagine each agent as a travel expert focusing on a part of your journey. Here's how it works:\n\n## Quickstart\n1. Add your **OpenAI API Key** to each Agent.\n2. Add your **Search API** key to the Search API component.\n2. Run the flow in the **Playground**.",
+            "description": "# 📖 README\n\nThe travel planning system is a smart setup that uses several specialized Agent components to help plan incredible trips. Imagine each agent as a travel expert focusing on a part of your journey. Here's how it works:\nEach agent has a role defined in the **Agent Instructions** and relevant **Tools** attached. The user submits a query through the **Chat Input**, and the three agents create a complete travel plan based on the user's query.\n\n## Quickstart\n1. Add your **OpenAI API Key** to each Agent.\n2. Add your **Search API** key to the Search API component.\n2. Run the flow in the **Playground**.",
             "display_name": "",
             "documentation": "",
             "template": {}
