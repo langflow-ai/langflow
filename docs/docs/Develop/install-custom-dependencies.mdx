@@ -3,7 +3,12 @@ title: Install custom dependencies
 slug: /install-custom-dependencies
 ---
 
-Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
+Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality. This guide covers how to add dependencies for different Langflow installations, including Langflow Desktop, Langflow OSS.
+
+The Langflow codebase uses two `pyproject.toml` files to manage dependencies, with one for `base` and one for `main`.
+
+* The `main` package, which is managed by the root level `pyproject.toml`, includes end-user features and main application code, such as Langchain and OpenAI.
+* The `base` package, which is managed at `src/backend/base/pyproject.toml`, includes core infrastructure such as the FastAPI web framework.
 
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
 
@@ -75,7 +80,6 @@ When contributing to the Langflow codebase, you might need to add dependencies t
 
 Langflow uses a workspace with two packages, each with different types of dependencies.
 
-The `main` package, which is managed by the root level `pyproject.toml`, includes end-user features and main application code, such as Langchain and OpenAI.
 To add a dependency to the `main` package, navigate to the project root and run:
 ```bash
 uv add matplotlib
@@ -83,7 +87,6 @@ uv add matplotlib
 
 Dependencies can be added to the `main` package as regular dependencies at `[project.dependencies]` or optional dependencies at `[project.optional-dependencies]`.
 
-The `base` package, which is managed at `src/backend/base/pyproject.toml`, includes core infrastructure such as the FastAPI web framework.
 To add a dependency to the `base` package, navigate to `src/backend/base` and run:
 ```bash
 cd src/backend/base && uv add matplotlib
