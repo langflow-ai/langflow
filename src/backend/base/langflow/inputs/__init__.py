@@ -1,4 +1,3 @@
-# Re-export inputs from lfx to complete the migration
 from lfx.inputs.inputs import (
     AuthInput,
     BoolInput,

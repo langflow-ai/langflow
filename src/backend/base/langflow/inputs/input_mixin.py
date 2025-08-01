@@ -1,4 +1,3 @@
-# Re-export all input mixins from lfx to complete the migration
 from lfx.inputs.input_mixin import (
     AuthMixin,
     BaseInputMixin,

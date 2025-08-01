@@ -8,7 +8,6 @@ from __future__ import annotations
 # Import the enhanced manager that extends lfx
 from langflow.services.enhanced_manager import NoFactoryRegisteredError, ServiceManager
 
-# Re-export the classes and exceptions for backward compatibility
 __all__ = ["NoFactoryRegisteredError", "ServiceManager"]
 
 

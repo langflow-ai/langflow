@@ -11,7 +11,6 @@ from lfx.schema.schema import (
     get_type,
 )
 
-# Re-export for backward compatibility
 __all__ = [
     "INPUT_FIELD_NAME",
     "ErrorLog",

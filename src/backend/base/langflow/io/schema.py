@@ -1,4 +1,3 @@
-# Re-export everything from lfx.io.schema for backward compatibility
 from lfx.io.schema import (
     create_input_schema,
     create_input_schema_from_dict,
