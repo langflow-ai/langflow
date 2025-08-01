@@ -44,6 +44,16 @@ class TestImportAttr:
         with pytest.raises(ImportError, match="not found"):
             import_mod("SomeComponent", "nonexistent_module", "langflow.components.openai")
 
+    def test_module_not_found_with_none_module_name(self):
+        """Test ModuleNotFoundError handling when module_name is None."""
+        with pytest.raises(AttributeError, match="has no attribute"):
+            import_mod("nonexistent_module", None, "langflow.components")
+
+    def test_module_not_found_with_module_special_name(self):
+        """Test ModuleNotFoundError handling when module_name is '__module__'."""
+        with pytest.raises(AttributeError, match="has no attribute"):
+            import_mod("nonexistent_module", "__module__", "langflow.components")
+
     def test_import_nonexistent_attribute(self):
         """Test error handling when attribute doesn't exist in module."""
         with pytest.raises(AttributeError):
