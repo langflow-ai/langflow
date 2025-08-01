@@ -422,10 +422,7 @@ class KBIngestionComponent(Component):
                 if col not in content_cols and col in row and pd.notna(row[col]):
                     # Convert to simple types for Chroma metadata
                     value = row[col]
-                    if isinstance(value, str | int | float | bool):
-                        data_dict[col] = str(value)
-                    else:
-                        data_dict[col] = str(value)  # Convert complex types to string
+                    data_dict[col] = str(value)  # Convert complex types to string
 
             # Hash the page_content for unique ID
             page_content_hash = hashlib.sha256(page_content.encode()).hexdigest()
