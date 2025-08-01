@@ -220,7 +220,7 @@ class Settings(BaseSettings):
     """The interval in ms at which Langflow will auto save flows."""
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""
-    max_file_size_upload: int = 100
+    max_file_size_upload: int = 1024
     """The maximum file size for the upload in MB."""
     deactivate_tracing: bool = False
     """If set to True, tracing will be deactivated."""
