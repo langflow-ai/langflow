@@ -9,9 +9,13 @@ from langchain_chroma import Chroma
 from loguru import logger
 from pydantic import BaseModel
 
+from langflow.services.deps import get_settings_service
+
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
-KNOWLEDGE_BASES_DIR = "~/.langflow/knowledge_bases"
+
+settings = get_settings_service().settings
+KNOWLEDGE_BASES_DIR = Path(settings.knowledge_bases_dir).expanduser()
 
 
 class KnowledgeBaseInfo(BaseModel):
@@ -32,7 +36,7 @@ class BulkDeleteRequest(BaseModel):
 
 def get_kb_root_path() -> Path:
     """Get the knowledge bases root path."""
-    return Path(KNOWLEDGE_BASES_DIR).expanduser()
+    return KNOWLEDGE_BASES_DIR
 
 
 def get_directory_size(path: Path) -> int:
