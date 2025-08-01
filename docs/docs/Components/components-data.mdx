@@ -8,13 +8,13 @@ import Icon from "@site/src/components/icon";
 You can use Langflow's **Data** components to bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
 
-* **Load files**: Import data from a file or directory with the [**File**](#file) and [**Directory**](#directory) components.
+* **Load files**: Import data from a file or directory with the [**File** component](#file) and [**Directory** component](#directory).
 
-* **Search the web**: Fetch data from the web with components like the [**News Search**](#news-search), [**RSS Reader**](#rss-reader), [**Web Search**](#web-search), and [**URL**](#url) components.
+* **Search the web**: Fetch data from the web with components like the [**News Search** component](#news-search), [**RSS Reader** component](#rss-reader), [**Web Search** component](#web-search), and [**URL** component](#url).
 
-* **Make API calls**: Use APIs to trigger flows or perform actions with the [**API Request**](#api-request) and [**Webhook**](#webhook) components.
+* **Make API calls**: Use APIs to trigger flows or perform actions with the [**API Request** component](#api-request) and [**Webhook** component](#webhook).
 
-* **Run SQL queries**: Query an SQL database with the [**SQL Database**](#sql-database) component.
+* **Run SQL queries**: Query an SQL database with the [**SQL Database** component](#sql-database).
 
 Each component runs different commands for retrieval, processing, and type checking.
 Some components are a minimal wrapper for a command that you provide, and others include built-in scripts to fetch and process data based on variable inputs.
@@ -27,15 +27,15 @@ This means that some similar components might produce different results.
 This can include basic operations, like saving a file in a specific format, or more complex tasks, like using a **Text Splitter** component to break down a large document into smaller chunks before generating embeddings for vector search.
 :::
 
-## Use data components in flows
+## Use Data components in flows
 
-Data components are used often in flows because they offer a versatile way to perform common, basic functions.
+**Data** components are used often in flows because they offer a versatile way to perform common, basic functions.
 
-You can use data components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
+You can use **Data** components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
 
-![An agentic flow with three data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
+![An agent flow with three Data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
 
-For examples of data components in flows, see the following:
+For examples of **Data** components in flows, see the following:
 
 * [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **File** component to load a file as context for a chatbot.
 The file and user input are both passed to the LLM so you can ask questions about the file you uploaded.
@@ -70,7 +70,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 |------|--------------|------|
 | mode | Mode | Input parameter. Set the mode to either **URL** or **curl**. |
 | urls | URL | Input parameter. Enter one or more comma-separated URLs for the request. |
-| curl | cURL | Input parameter. **curl mode** only. Enter a complete curl command. Other component parameters are populated from the command arguments. |
+| curl | curl | Input parameter. **curl mode** only. Enter a complete curl command. Other component parameters are populated from the command arguments. |
 | method | Method | Input parameter. The HTTP method to use. |
 | query_params | Query Parameters | Input parameter. The query parameters to append to the URL. |
 | body | Body | Input parameter. The body to send with POST, PATCH, and PUT requests as a dictionary. |
@@ -101,7 +101,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | max_concurrency    | IntInput         | Input parameter. The maximum concurrency for loading multiple files. |
 | load_hidden        | BoolInput        | Input parameter. If true, hidden files are loaded.                  |
 | recursive          | BoolInput        | Input parameter. If true, the search is recursive.                  |
-| silent_errors      | BoolInput        | Input parameter. If true, errors do not raise an exception.         |
+| silent_errors      | BoolInput        | Input parameter. If true, errors don't raise an exception.         |
 | use_multithreading | BoolInput        | Input parameter. If true, multithreading is used.                   |
 
 ## File
@@ -168,7 +168,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | silent_errors | Silent Errors | Input parameter. If true, errors in the component don't raise an exception. The default is false/disabled. |
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If true (default), the **Server File Path** (`file_path`) is deleted after processing. |
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If true/enabled (default), files with unsupported extensions are accepted but not processed. If false/disabled, the **File** component either can throw an error if an unsupported file type is provided. |
-| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file is not specified. |
+| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
 
 ### File output
@@ -195,7 +195,7 @@ The component's `clean_html` method parses the HTML content with the BeautifulSo
 For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or a provider-specific [bundle](/components-bundle-components).
 
 When used as a standard component in a flow, the **News Search** component must be connected to a component that accepts `DataFrame` input.
-You can connect the **News Search** component directly to a compatible component, or you can use a [processing component](/components-processing) to convert or extract data of a different type between components.
+You can connect the **News Search** component directly to a compatible component, or you can use a [**Processing** component](/components-processing) to convert or extract data of a different type between components.
 
 When used in **Tool Mode** with an **Agent** component, the **News Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **News Search** component based on the user's query, and it can process the `DataFrame` output directly.
@@ -221,7 +221,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 The **RSS Reader** component fetches and parses RSS feeds from any valid RSS feed URL, and then returns the feed content as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
 
 When used as a standard component in a flow, the **RSS Reader** component must be connected to a component that accepts `DataFrame` input.
-You can connect the **RSS Reader** component directly to a compatible component, or you can use a [processing component](/components-processing) to convert or extract data of a different type between components.
+You can connect the **RSS Reader** component directly to a compatible component, or you can use a [**Processing** component](/components-processing) to convert or extract data of a different type between components.
 
 When used in **Tool Mode** with an **Agent** component, the **RSS Reader** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **RSS Reader** component based on the user's query, and it can process the `DataFrame` output directly.
@@ -322,7 +322,7 @@ Instead, you only need to provide enough context for the agent to understand tha
 
 6. Connect the **SQL Database** component's **Toolset** output to the **Agent** component's **Tools** input.
 
-    ![SQL database connected to agent](/img/component-sql-database.png)
+    ![SQL Database component connected to an Agent component](/img/component-sql-database.png)
 
 7. Click **Playground**, and then ask the agent a question about the data in your database, such as `Which users are in my database?`
 
@@ -478,7 +478,7 @@ The **Webhook** component defines a webhook trigger that runs a flow when it rec
 
 ### Trigger the webhook
 
-When you add a **Webhook** component to your flow, a **Webhook cURL** tab is added to the flow's [**API Access** pane](/concepts-publish#api-access).
+When you add a **Webhook** component to your flow, a **Webhook curl** tab is added to the flow's [**API Access** pane](/concepts-publish#api-access).
 This tab automatically generates an HTTP POST request code snippet that you can use to trigger your flow through the **Webhook** component.
 For example:
 
@@ -497,20 +497,20 @@ For more information, see [Trigger flows with webhooks](/webhook).
 | Name | Display Name | Description |
 |------|--------------|-------------|
 | data | Payload | Input parameter. Receives a payload from external systems through HTTP POST requests. |
-| curl | cURL | Input parameter. The cURL command template for making requests to this webhook. |
+| curl | curl | Input parameter. The curl command template for making requests to this webhook. |
 | endpoint | Endpoint | Input parameter. The endpoint URL where this webhook receives requests. |
-| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [`Data`](/data-types#data) object if no input is provided. If the input is not valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow. |
+| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [`Data`](/data-types#data) object if no input is provided. If the input isn't valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow. |
 
-## Additional data components
+## Additional Data components
 
 Langflow's core components are meant to be generic and support a range of use cases.
-Core components are typically not limited to a single provider.
+Core components typically aren't limited to a single provider.
 
-If the core data components don't meet your needs, you can find provider-specific components in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+If the core **Data** components don't meet your needs, you can find provider-specific components in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
 
 For example, the [**DataStax** bundle](/bundles-datastax) includes components for CQL queries, and the [**Google** bundle](/bundles-google) includes components for Google Search APIs.
 
-## Legacy data components
+## Legacy Data components
 
 The **Load CSV** and **Load JSON** components are legacy components.
 You can still use them in your flows, but they are no longer maintained and can be removed in a future release.
