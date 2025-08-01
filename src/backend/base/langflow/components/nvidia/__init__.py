@@ -1,13 +1,28 @@
-import sys
+from __future__ import annotations
 
-from .nvidia import NVIDIAModelComponent
-from .nvidia_embedding import NVIDIAEmbeddingsComponent
-from .nvidia_ingest import NvidiaIngestComponent
-from .nvidia_rerank import NvidiaRerankComponent
+import sys
+from typing import TYPE_CHECKING, Any
+
+from langflow.components._importing import import_mod
+
+if TYPE_CHECKING:
+    from .nvidia import NVIDIAModelComponent
+    from .nvidia_embedding import NVIDIAEmbeddingsComponent
+    from .nvidia_ingest import NvidiaIngestComponent
+    from .nvidia_rerank import NvidiaRerankComponent
+
+    if sys.platform == "win32":
+        from .system_assist import NvidiaSystemAssistComponent
+
+_dynamic_imports = {
+    "NVIDIAModelComponent": "nvidia",
+    "NVIDIAEmbeddingsComponent": "nvidia_embedding",
+    "NvidiaIngestComponent": "nvidia_ingest",
+    "NvidiaRerankComponent": "nvidia_rerank",
+}
 
 if sys.platform == "win32":
-    from .system_assist import NvidiaSystemAssistComponent
-
+    _dynamic_imports["NvidiaSystemAssistComponent"] = "system_assist"
     __all__ = [
         "NVIDIAEmbeddingsComponent",
         "NVIDIAModelComponent",
@@ -16,4 +31,27 @@ if sys.platform == "win32":
         "NvidiaSystemAssistComponent",
     ]
 else:
-    __all__ = ["NVIDIAEmbeddingsComponent", "NVIDIAModelComponent", "NvidiaIngestComponent", "NvidiaRerankComponent"]
+    __all__ = [
+        "NVIDIAEmbeddingsComponent",
+        "NVIDIAModelComponent",
+        "NvidiaIngestComponent",
+        "NvidiaRerankComponent",
+    ]
+
+
+def __getattr__(attr_name: str) -> Any:
+    """Lazily import nvidia components on attribute access."""
+    if attr_name not in _dynamic_imports:
+        msg = f"module '{__name__}' has no attribute '{attr_name}'"
+        raise AttributeError(msg)
+    try:
+        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
+    except (ModuleNotFoundError, ImportError, AttributeError) as e:
+        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
+        raise AttributeError(msg) from e
+    globals()[attr_name] = result
+    return result
+
+
+def __dir__() -> list[str]:
+    return list(__all__)
