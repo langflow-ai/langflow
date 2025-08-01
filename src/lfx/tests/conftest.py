@@ -5,8 +5,26 @@ import pytest
 
 
 # Set up test data paths
-def pytest_configure():
-    """Configure pytest with data paths."""
+def pytest_configure(config):  # noqa: ARG001
+    """Configure pytest with data paths and check prerequisites."""
+    # Check if langflow is installed first - fail fast
+    try:
+        import langflow  # noqa: F401
+
+        pytest.exit(
+            "\n"
+            "ERROR: langflow is installed. These tests require langflow to NOT be installed.\n"
+            "Please run `uv sync` inside the lfx directory to create an isolated environment.\n"
+            "\n"
+            "The lfx tests are designed to run in isolation from langflow to ensure proper\n"
+            "packaging and dependency management.\n",
+            returncode=1,
+        )
+    except ImportError:
+        # Good, langflow is not installed
+        pass
+
+    # Set up test data paths
     data_path = Path(__file__).parent / "data"
     pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
     pytest.COMPLEX_EXAMPLE_PATH = data_path / "complex_example.json"
@@ -34,20 +52,6 @@ def pytest_collection_modifyitems(config, items):  # noqa: ARG001
             item.add_marker(pytest.mark.integration)
         elif "tests/slow/" in str(item.fspath):
             item.add_marker(pytest.mark.slow)
-
-
-@pytest.fixture(autouse=True)
-def check_langflow_is_not_installed():
-    # Check if langflow is installed. These tests can only run if langflow is not installed.
-    try:
-        import langflow  # noqa: F401
-    except ImportError:
-        yield
-    else:
-        pytest.fail(
-            "langflow is installed. These tests can only run if langflow is not installed."
-            "Make sure to run `uv sync` inside the lfx directory."
-        )
 
 
 @pytest.fixture
