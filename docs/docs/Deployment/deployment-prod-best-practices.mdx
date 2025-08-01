@@ -46,11 +46,13 @@ An external PostgreSQL database is recommended for production deployments to imp
 Your resource allocation and replication strategy must be able to support the PostgreSQL service and storage.
 For example, for a runtime (production) deployment, you might allocate 4Gi RAM, 2 CPU, and multiple replicas for high availability.
 
-Persistent storage is recommended.
+Recommended configurations include:
 
-For multi-instance deployments, set up a shared database to ensure that all instances can access the same data.
+* Persistent storage
+* High Availability (HA)
+* Shared databases for multi-instance deployments
 
-For more information, including multi-instance databases, see [Configure an external PostgreSQL database](/configuration-custom-database) and [Memory management options](/memory).
+For more information, see [Configure an external PostgreSQL database](/configuration-custom-database) and [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
 
 ### Use HPA for dynamic scaling
 
@@ -82,100 +84,37 @@ spec:
 
 ## Failure Points
 
-Langflow's reliability in production depends on mitigating key failure points, particularly around the database, file system, and instance availability.
+Langflow's reliability in production depends on mitigating key failure points, particularly around the database, file system, and instance availability:
 
-### Database failure
-
-* **Impact**: Disrupts flow retrieval, saving, user authentication, user management, project collection access, configuration updates, and log writing.
-* **Mitigation**: Use a replicated PostgreSQL setup with high availability and regular backups. Flows already loaded in memory may continue to function.
-
-### File system issues
-
-* **Impact**: Concurrency issues in file caching, such as `/app/data/.cache`, can cause IO errors in multi-instance setups.
-* **Mitigation**: Use a shared, POSIX-compliant file system or cloud storage. Avoid ramdisk solutions due to data loss on container shutdown.
-
-### Instance failures
-
-* **Impact**: A single instance failure can disrupt service if not replicated.
-* **Mitigation**: Deploy multiple replicas with Kubernetes to ensure availability. Use health checks to detect and replace failed pods.
-
-### Network and dependency failures
-
-* **Impact**: External APIs or services used in flows may fail, causing flow errors.
-* **Mitigation**: Implement retry logic and error handling in flows. Monitor network latency and dependency health.
+* **Database failures**: For information about database administration and stability in production deployments, see [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+* **File system failures**: Concurrency issues in file caching, such as `/app/data/.cache`, can cause IO errors in multi-instance setups.
+To avoid this, use a shared, POSIX-compliant file system or cloud storage.
+Use persistent volumes instead of ramdisk solutions that result in data loss on container shutdown.
+* **Instance failures**: Deploy multiple replicas to avoid service disruptions when a single instance fails. Use health checks to detect and replace failed pods.
+* **Network and dependency failures**: External APIs or services used in flows may fail, causing flow errors. Implement retry logic and error handling in flows or application code. Monitor network latency and dependency health.
 
 ## Monitoring recommendations
 
-Effective monitoring ensures Langflow operates reliably and performs well under varying loads.
+Effective monitoring ensures Langflow operates reliably and performs well under varying loads:
 
-### Database health
-
-* Monitor availability, query performance, and resource usage (CPU, memory, disk).
-* Use tools like pgAdmin or cloud-native monitoring for PostgreSQL.
-
-### Application logs
-
-* Collect and analyze logs for errors, warnings, and flow execution issues.
-* Centralize logs using tools like ELK Stack or Fluentd.
-
-### Resource usage
-
-* Track CPU, memory, and disk usage of Langflow instances.
-* Use Prometheus and Grafana for real-time monitoring in Kubernetes.
-
-### API performance
-
-* Monitor response times, error rates, and request throughput.
-* Set alerts for high latency or error spikes.
-
-### Observability tools
-
-* Integrate with LangSmith or LangFuse for detailed flow tracing and metrics.
-* Use these tools to debug flow performance and optimize execution.
-
-### Example monitoring setup
-
-* Deploy Prometheus for metrics collection.
-* Use Grafana dashboards to visualize resource usage and API performance.
-* Configure alerts for critical thresholds (e.g., 90% memory usage, 500ms API latency).
+* **Database monitoring**: Monitor database availability, query performance, and resource usage (CPU, memory, disk). Use tools like pgAdmin or cloud-native monitoring for PostgreSQL.
+* **Application logs**: Collect and analyze logs for errors, warnings, and flow execution issues. Centralize logs using tools like ELK Stack or Fluentd. You can also inspect [Langflow logs](/logging).
+* **Resource usage**: Track CPU, memory, and disk usage of Langflow instances. Use Prometheus and Grafana for real-time metrics collection and monitoring in Kubernetes.
+* **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
+* **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.
 
 ## Security implications
 
 Running Langflow in production requires robust security measures to protect the application, data, and users.
+Follow industry best practices and use secure Langflow configurations, such as the following:
 
-### Container security
-
-* Enable `readOnlyRootFilesystem: true` in runtime containers to prevent unauthorized modifications.
-* Only disable if necessary and with compensating controls.
-
-### Secrets management
-
-* Store sensitive data like API keys in Kubernetes secrets or external secret managers.
-* Avoid embedding secrets in flow JSON files.
-
-### Authentication and authorization
-
-* Implement strong authentication for the visual editor and API like OAuth or API tokens.
-* Enforce role-based access control to limit user permissions.
-
-### Data privacy
-
-* Ensure compliance with regulations like GDPR if handling personal data.
-* Encrypt sensitive data at rest and in transit.
-
-### Encryption
-
-* Use HTTPS for all communications to secure data in transit.
-* Configure TLS for PostgreSQL connections.
-
-### Additional security measures
-
-* Conduct regular security audits and apply software updates.
-* Restrict network access to Langflow services using firewalls or network policies.
-* Monitor for suspicious activity using intrusion detection systems.
+* **Container security**: Apply security best practices for containerized applications. For example, set `readOnlyRootFilesystem: true` in runtime (production) containers to prevent unauthorized modifications.
+* **Secrets management**: Store sensitive data like API keys in Kubernetes secrets or external secret managers.
+* **Authentication and authorization**: Start your Langflow server with authentication enabled. For more information, see [API keys and authentication](/api-keys-and-authentication).
+* **Encryption and privacy**: Follow industry best practices and legal requirements for data privacy and encryption of data in transit and at rest, including GDPR requirements, HTTPS communications over the public internet, and TLS for PostgreSQL connections.
+* **Security posture maintenance**: Conduct regular security audits and apply software updates, restrict network access with firewalls or network policies, and monitor for suspicious activity using intrusion detection systems.
 
 ## See also
 
 * [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)
 * [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts)
-* [Langflow database guide for enterprise DBAs](/enterprise-database-guide)
