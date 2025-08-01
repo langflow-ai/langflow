@@ -51,7 +51,7 @@ For more information about using embedding model components in flows, see [**Emb
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| API Key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models do not require an API key. |
+| API Key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models don't require an API key. |
 | API URL | API URL | Input parameter. The URL of the Hugging Face Inference API. |
 | Model Name | Model Name | Input parameter. The name of the model to use for embeddings. |
 
@@ -65,9 +65,9 @@ To connect the local Hugging Face model to the **Hugging Face Embeddings Inferen
 
 3. Replace the two **OpenAI Embeddings** components with **Hugging Face Embeddings Inference** components.
 
-    Make sure to reconnect the **Embedding Model** ports from each embedding model component to its corresponding **Astra DB** vector store component.
+    Make sure to reconnect the **Embedding Model** ports from each **Embeddings Inference** component to its corresponding **Astra DB** vector store component.
 
-4. Configure the **Astra DB** vector store components to connect to your Astra organization, or replace both **Astra DB** vector store components with other [vector store components](/components-vector-stores).
+4. Configure the **Astra DB** vector store components to connect to your Astra organization, or replace both **Astra DB** vector store components with other [**Vector Store** components](/components-vector-stores).
 
 5. Connect each **Hugging Face Embeddings Inference** component to your local inference model:
 

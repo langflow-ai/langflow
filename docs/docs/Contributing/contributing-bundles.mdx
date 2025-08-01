@@ -3,9 +3,11 @@ title: Contribute bundles
 slug: /contributing-bundles
 ---
 
-Follow these steps to add new component bundles to the Langflow sidebar.
+Bundles are groups of components that are related to a specific service provider.
 
-This example adds a new bundle named `DarthVader`.
+Follow these steps to add components to the **Bundles** section of the **Components** menu in the Langflow visual editor.
+
+Example adds a new bundle named `DarthVader`.
 
 ## Add the bundle to the backend folder
 
@@ -94,7 +96,7 @@ For example:
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
 ```
 
-8. To update the bundles sidebar, add the new icon to the `SIDEBAR_BUNDLES` array in `src > frontend > src > utils > styleUtils.ts`.
+8. To update the **Bundles** section in the **Components** menu, add the new icon to the `SIDEBAR_BUNDLES` array in `src > frontend > src > utils > styleUtils.ts`.
 You can view the [SIDEBAR_BUNDLES array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in the Langflow repository.\
 The `name` must point to the folder you created within the `src > backend > base > langflow > components` directory.
 For example:
@@ -124,4 +126,4 @@ class DarthVaderAPIComponent(LCToolComponent):
 1. To rebuild the backend and frontend, run `make install_frontend && make build_frontend && make install_backend && uv run langflow run --port 7860`.
 
 2. Refresh the frontend application.
-Your new bundle called `DarthVader` is available in the sidebar.
+Your new bundle called `DarthVader` is available in the **Components** menu in the visual editor.

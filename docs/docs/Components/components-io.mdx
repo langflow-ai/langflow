@@ -5,22 +5,22 @@ slug: /components-io
 
 import Icon from "@site/src/components/icon";
 
-Langflow's input and output components define where data enters and exits your flow, but they don't have identical functionality.
+Langflow's **Input and Output** components define where data enters and exits your flow, but they don't have identical functionality.
 
-Specifically, **Chat Input/Output** components are designed to facilitate conversational interactions where messages are exchanged in a cumulative dialog.
+Specifically, **Chat Input and Output** components are designed to facilitate conversational interactions where messages are exchanged in a cumulative dialogue.
 The data handled by these components includes the message text plus additional metadata like senders, session IDs, and timestamps.
 
-In contrast, **Text Input/Output** components are designed for simple string input and output that doesn't require the additional context and metadata associated with chat messages.
+In contrast, **Text Input and Output** components are designed for simple string input and output that doesn't require the additional context and metadata associated with chat messages.
 The data handled by these components is pared down to basic text strings.
 
-## Chat Input/Output {#chat-io}
+## Chat Input and Output {#chat-io}
 
 :::important
-**Chat Input/Output** components are required to chat with your flow in the **Playground**.
+**Chat Input and Output** components are required to chat with your flow in the **Playground**.
 For more information, see [Test flows in the Playground](/concepts-playground).
 :::
 
-**Chat Input/Output** components are designed to handle conversational interactions in Langflow.
+**Chat Input and Output** components are designed to handle conversational interactions in Langflow.
 
 ### Chat Input
 
@@ -105,20 +105,20 @@ For information about the resulting `Message` object, including input parameters
 |clean_data|Basic Clean Data| Input parameter. When enabled, [`DataFrame` input](/data-types#dataframe) is cleaned when converted to text. Cleaning removes empty rows, empty lines in cells, and multiple newlines.|
 |message|Message|Output parameter. The resulting chat `Message` object with all specified properties.|
 
-### Use Chat Input/Output components in a flow
+### Use Chat Input and Output components in a flow
 
 To use the **Chat Input** and **Chat Output** components in a flow, connect them to components that accept or emit [`Message` data](/data-types#message).
 
 For example, the following flow connects **Chat Input** and **Chat Output** to a **Language Model** component, creating a simple LLM-based chat flow.
 
-![Chat input and output components connected to an OpenAI model](/img/component-chat-io.png)
+![Chat Input and Output components connected to an OpenAI component](/img/component-chat-io.png)
 
 :::tip
-For detailed examples of **Chat Input/Output** components in flows, see the following:
+For detailed examples of **Chat Input and Output** components in flows, see the following:
 
 * [Langflow quickstart](/get-started-quickstart): Create and run a basic agent flow.
-* **Basic Prompting** template: Create an LLM-based chat flow that accepts chat input as well as a prompt with additional instructions for the LLM. Many other Langflow templates also use **Chat Input/Output** components.
-* [Connect applications to agents](/agent-tutorial): Explore more advanced concepts around agentic flows and prompting, including triggering agent flows from external applications.
+* **Basic Prompting** template: Create an LLM-based chat flow that accepts chat input as well as a prompt with additional instructions for the LLM. Many other Langflow templates also use **Chat Input and Output** components.
+* [Connect applications to agents](/agent-tutorial): Explore more advanced concepts around agent flows and prompting, including triggering agent flows from external applications.
 :::
 
 ### Send chat input with the Langflow API
@@ -158,19 +158,19 @@ curl --request POST \
 
 For more information, see [Trigger flows with the Langflow API](/concepts-publish).
 
-## Text Input/Output {#text-io}
+## Text Input and Output {#text-io}
 
 :::important
-**Text Input/Output** components aren't supported in the **Playground**.
+**Text Input and Output** components aren't supported in the **Playground**.
 Because the data isn't formatted as a chat message, the data doesn't appear in the **Playground**, and you can't chat with your flow in the **Playground**.
 
-If you want to chat with a flow in the **Playground**, you must use the [**Chat Input/Output** components](#chat-io).
+If you want to chat with a flow in the **Playground**, you must use the [**Chat Input and Output** components](#chat-io).
 :::
 
-**Text Input/Output** components are designed for flows that ingest or emit simple text strings.
+**Text Input and Output** components are designed for flows that ingest or emit simple text strings.
 These components don't support full conversational interactions.
 
-Passing chat-like metadata to a **Text Input/Output** component doesn't change the component's behavior; the result is still a simple text string.
+Passing chat-like metadata to a **Text Input and Output** component doesn't change the component's behavior; the result is still a simple text string.
 
 ### Text Input
 

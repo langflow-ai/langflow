@@ -10,6 +10,7 @@ import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
 import useAuthStore from "@/stores/authStore";
 import { setLocalStorage } from "@/utils/local-storage-util";
+import { getAuthCookie, setAuthCookie } from "@/utils/utils";
 import { useStoreStore } from "../stores/storeStore";
 import type { Users } from "../types/api";
 import type { AuthContextType } from "../types/contexts/auth";
@@ -31,11 +32,11 @@ export const AuthContext = createContext<AuthContextType>(initialValue);
 export function AuthProvider({ children }): React.ReactElement {
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
-    cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
+    getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN) ?? null,
   );
   const [userData, setUserData] = useState<Users | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(
-    cookies.get(LANGFLOW_API_TOKEN),
+    getAuthCookie(cookies, LANGFLOW_API_TOKEN),
   );
 
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
@@ -46,14 +47,14 @@ export function AuthProvider({ children }): React.ReactElement {
   const { mutate: mutateGetGlobalVariables } = useGetGlobalVariablesMutation();
 
   useEffect(() => {
-    const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+    const storedAccessToken = getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN);
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
     }
   }, []);
 
   useEffect(() => {
-    const apiKey = cookies.get(LANGFLOW_API_TOKEN);
+    const apiKey = getAuthCookie(cookies, LANGFLOW_API_TOKEN);
     if (apiKey) {
       setApiKey(apiKey);
     }
@@ -82,12 +83,12 @@ export function AuthProvider({ children }): React.ReactElement {
     autoLogin: string,
     refreshToken?: string,
   ) {
-    cookies.set(LANGFLOW_ACCESS_TOKEN, newAccessToken, { path: "/" });
-    cookies.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin, { path: "/" });
+    setAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN, newAccessToken);
+    setAuthCookie(cookies, LANGFLOW_AUTO_LOGIN_OPTION, autoLogin);
     setLocalStorage(LANGFLOW_ACCESS_TOKEN, newAccessToken);
 
     if (refreshToken) {
-      cookies.set(LANGFLOW_REFRESH_TOKEN, refreshToken, { path: "/" });
+      setAuthCookie(cookies, LANGFLOW_REFRESH_TOKEN, refreshToken);
     }
     setAccessToken(newAccessToken);
     setIsAuthenticated(true);
