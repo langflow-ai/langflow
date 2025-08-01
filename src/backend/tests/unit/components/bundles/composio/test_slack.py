@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from composio import Action
-from langflow.components.composio.slack_composio import ComposioSlackAPIComponent
-from langflow.schema.dataframe import DataFrame
 
+from lfx.components.composio.slack_composio import ComposioSlackAPIComponent
+from lfx.schema.dataframe import DataFrame
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 from .test_base import MockComposioToolSet
@@ -18,7 +18,7 @@ class MockAction:
 class TestSlackComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture(autouse=True)
     def mock_composio_toolset(self):
-        with patch("langflow.base.composio.composio_base.ComposioToolSet", MockComposioToolSet):
+        with patch("lfx.base.composio.composio_base.ComposioToolSet", MockComposioToolSet):
             yield
 
     @pytest.fixture

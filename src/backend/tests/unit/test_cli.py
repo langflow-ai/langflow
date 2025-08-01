@@ -4,7 +4,8 @@ import time
 
 import pytest
 from langflow.__main__ import app
-from langflow.services import deps
+
+from lfx.services import deps
 
 
 @pytest.fixture(scope="module")

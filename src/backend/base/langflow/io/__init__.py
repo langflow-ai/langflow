@@ -1,5 +1,5 @@
 # noqa: A005
-from langflow.inputs import (
+from lfx.io import (
     BoolInput,
     CodeInput,
     DataFrameInput,
@@ -28,7 +28,7 @@ from langflow.inputs import (
     TableInput,
     ToolsInput,
 )
-from langflow.template import Output
+from lfx.template import Output
 
 __all__ = [
     "BoolInput",

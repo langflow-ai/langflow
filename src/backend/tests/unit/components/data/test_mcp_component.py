@@ -1,10 +1,10 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.base.mcp import util
-from langflow.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
-from langflow.components.agents.mcp_component import MCPToolsComponent
 
+from lfx.base.mcp import util
+from lfx.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
+from lfx.components.agents.mcp_component import MCPToolsComponent
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 

@@ -17,10 +17,9 @@ from langflow.services.variable.kubernetes_secrets import KubernetesSecretManage
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel import Session
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.settings.service import SettingsService
 
 
 class KubernetesSecretService(VariableService, Service):
