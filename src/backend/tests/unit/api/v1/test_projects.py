@@ -169,3 +169,57 @@ async def test_create_and_read_project_cyrillic(client: AsyncClient, logged_in_h
 
     assert fetched["name"] == CYRILLIC_NAME
     assert fetched["description"] == CYRILLIC_DESC
+
+
+async def test_export_project(client: AsyncClient, logged_in_headers, basic_case):
+    """Test exporting a project with flows."""
+    # Create a project first
+    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = response.json()["id"]
+
+    # Create a flow in the project
+    flow_data = {
+        "name": "Test Flow",
+        "description": "Test flow description",
+        "data": {"nodes": [], "edges": [], "viewport": {}},
+        "folder_id": project_id,
+    }
+    flow_response = await client.post("api/v1/flows/", json=flow_data, headers=logged_in_headers)
+    assert flow_response.status_code == status.HTTP_201_CREATED
+
+    # Export the project
+    export_response = await client.get(f"api/v1/projects/export/{project_id}", headers=logged_in_headers)
+    assert export_response.status_code == status.HTTP_200_OK
+
+    # Check response headers
+    assert "application/json" in export_response.headers["content-type"]
+    assert "attachment" in export_response.headers["content-disposition"]
+
+    # Parse and validate export data
+    import orjson
+
+    export_data = orjson.loads(export_response.content)
+
+    assert export_data["version"] == "1.0"
+    assert export_data["export_type"] == "project"
+    assert "exported_at" in export_data
+    assert "project" in export_data
+    assert "flows" in export_data
+
+    # Validate project data
+    project_data = export_data["project"]
+    assert project_data["id"] == project_id
+    assert project_data["name"] == "New Project"
+
+    # Validate flows data
+    flows = export_data["flows"]
+    assert len(flows) == 1
+    assert flows[0]["name"] == "Test Flow"
+    assert flows[0]["description"] == "Test flow description"
+
+
+async def test_export_project_not_found(client: AsyncClient, logged_in_headers):
+    """Test exporting a non-existent project."""
+    fake_id = str(uuid4())
+    response = await client.get(f"api/v1/projects/export/{fake_id}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -219,6 +219,9 @@ class FlowMeta(BaseModel):
     relative_path: str = Field(..., description="Path of the flow JSON relative to the deployed folder")
     title: str = Field(..., description="Human-readable title (filename stem if unknown)")
     description: str | None = Field(None, description="Optional flow description")
+    mcp_enabled: bool = Field(default=False, description="Whether MCP is enabled for this flow")
+    action_name: str | None = Field(None, description="MCP action name")
+    action_description: str | None = Field(None, description="MCP action description")
 
 
 class RunRequest(BaseModel):

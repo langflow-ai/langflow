@@ -196,40 +196,128 @@ def serve_command(
             raise typer.Exit(1)
 
         if resolved_path.suffix == ".json":
-            graph = load_graph_from_path(resolved_path, resolved_path.suffix, verbose_print, verbose=verbose)
+            # First check if this is a project export
+            from lfx.cli.project_utils import (
+                create_flow_metadata_from_export,
+                extract_flows_from_export,
+                load_project_export,
+                prepare_graph_from_flow_data,
+            )
+
+            project_export = load_project_export(resolved_path)
+
+            if project_export:
+                # Handle project export
+                verbose_print(f"✓ Detected project export: {project_export.project.name}")
+                verbose_print(f"  Version: {project_export.version}")
+                verbose_print(f"  Flows: {len(project_export.flows)}")
+
+                # Extract all flows from the project
+                flow_list = extract_flows_from_export(project_export)
+
+                if not flow_list:
+                    verbose_print("Error: No valid flows found in project export")
+                    raise typer.Exit(1)
+
+                # Load all flows
+                graphs = {}
+                metas = {}
+
+                for flow_id, flow_data in flow_list:
+                    verbose_print(f"  Loading flow: {flow_data.get('name', flow_id)}")
+
+                    # Prepare graph data
+                    graph_data = prepare_graph_from_flow_data(flow_data)
+
+                    # Load the graph
+                    from lfx.graph import Graph
+
+                    graph = Graph.from_payload(graph_data)
+                    graph.flow_id = flow_id
+
+                    # Prepare the graph
+                    try:
+                        graph.prepare()
+
+                        # Validate global variables if requested
+                        if check_variables:
+                            from lfx.cli.validation import validate_global_variables_for_env
+
+                            validation_errors = validate_global_variables_for_env(graph)
+                            if validation_errors:
+                                verbose_print(f"✗ Global variable validation failed for flow {flow_data.get('name')}:")
+                                for error in validation_errors:
+                                    verbose_print(f"    - {error}")
+                                raise typer.Exit(1)
+                    except Exception as e:
+                        verbose_print(f"✗ Failed to prepare flow {flow_data.get('name')}: {e}")
+                        raise typer.Exit(1) from e
+
+                    graphs[flow_id] = graph
+
+                    # Create metadata
+                    meta_dict = create_flow_metadata_from_export(project_export, flow_id, flow_data)
+                    metas[flow_id] = FlowMeta(
+                        id=flow_id,
+                        relative_path=meta_dict["relative_path"],
+                        title=meta_dict["title"],
+                        description=meta_dict["description"],
+                        mcp_enabled=meta_dict.get("mcp_enabled", False),
+                        action_name=meta_dict.get("action_name"),
+                        action_description=meta_dict.get("action_description"),
+                    )
+
+                verbose_print(f"✓ Loaded {len(graphs)} flows from project export")
+
+                # Skip single-flow logic and jump to multi-flow serving
+                is_project = True
+                project_name = project_export.project.name
+                auth_settings = project_export.project.auth_settings
+
+            else:
+                # Regular single flow
+                graph = load_graph_from_path(resolved_path, resolved_path.suffix, verbose_print, verbose=verbose)
+                is_project = False
+                project_name = None
+                auth_settings = None
         elif resolved_path.suffix == ".py":
             verbose_print("Loading graph from Python script...")
             from lfx.cli.script_loader import load_graph_from_script
 
             graph = load_graph_from_script(resolved_path)
             verbose_print("✓ Graph loaded from Python script")
+            is_project = False
+            project_name = None
+            auth_settings = None
         else:
             err_msg = "Error: Only JSON flow files (.json) or Python scripts (.py) are supported. "
             err_msg += f"Got: {resolved_path.suffix}"
             verbose_print(err_msg)
             raise typer.Exit(1)
 
-        # Prepare the graph
-        verbose_print("Preparing graph for serving...")
-        try:
-            graph.prepare()
-            verbose_print("✓ Graph prepared successfully")
+        # Only prepare single graph if not a project
+        if not is_project:
+            # Prepare the graph
+            verbose_print("Preparing graph for serving...")
+            try:
+                graph.prepare()
+                verbose_print("✓ Graph prepared successfully")
 
-            # Validate global variables for environment compatibility
-            if check_variables:
-                from lfx.cli.validation import validate_global_variables_for_env
+                # Validate global variables for environment compatibility
+                if check_variables:
+                    from lfx.cli.validation import validate_global_variables_for_env
 
-                validation_errors = validate_global_variables_for_env(graph)
-                if validation_errors:
-                    verbose_print("✗ Global variable validation failed:")
-                    for error in validation_errors:
-                        verbose_print(f"  - {error}")
-                    raise typer.Exit(1)
-            else:
-                verbose_print("✓ Global variable validation skipped")
-        except Exception as e:
-            verbose_print(f"✗ Failed to prepare graph: {e}")
-            raise typer.Exit(1) from e
+                    validation_errors = validate_global_variables_for_env(graph)
+                    if validation_errors:
+                        verbose_print("✗ Global variable validation failed:")
+                        for error in validation_errors:
+                            verbose_print(f"  - {error}")
+                        raise typer.Exit(1)
+                else:
+                    verbose_print("✓ Global variable validation skipped")
+            except Exception as e:
+                verbose_print(f"✗ Failed to prepare graph: {e}")
+                raise typer.Exit(1) from e
 
         # Check if port is in use
         if is_port_in_use(port, host):
@@ -238,25 +326,30 @@ def serve_command(
                 verbose_print(f"Port {port} is in use, using port {available_port} instead")
             port = available_port
 
-        # Create single-flow metadata
-        flow_id = flow_id_from_path(resolved_path, resolved_path.parent)
-        graph.flow_id = flow_id  # annotate graph for reference
+        # Create metadata for single flow (skip if project)
+        if not is_project:
+            # Create single-flow metadata
+            flow_id = flow_id_from_path(resolved_path, resolved_path.parent)
+            graph.flow_id = flow_id  # annotate graph for reference
 
-        title = resolved_path.stem
-        description = None
+            title = resolved_path.stem
+            description = None
 
-        metas = {
-            flow_id: FlowMeta(
-                id=flow_id,
-                relative_path=str(resolved_path.name),
-                title=title,
-                description=description,
-            )
-        }
-        graphs = {flow_id: graph}
+            metas = {
+                flow_id: FlowMeta(
+                    id=flow_id,
+                    relative_path=str(resolved_path.name),
+                    title=title,
+                    description=description,
+                )
+            }
+            graphs = {flow_id: graph}
 
         source_display = "inline JSON" if flow_json else "stdin" if stdin else str(resolved_path)
-        verbose_print(f"✓ Prepared single flow '{title}' from {source_display} (id={flow_id})")
+        if is_project:
+            verbose_print(f"✓ Prepared project '{project_name}' with {len(graphs)} flows from {source_display}")
+        else:
+            verbose_print(f"✓ Prepared single flow '{title}' from {source_display} (id={flow_id})")
 
         # Create FastAPI app
         serve_app = create_multi_serve_app(
@@ -266,7 +359,10 @@ def serve_command(
             verbose_print=verbose_print,
         )
 
-        verbose_print("🚀 Starting single-flow server...")
+        if is_project:
+            verbose_print(f"🚀 Starting multi-flow server for project '{project_name}'...")
+        else:
+            verbose_print("🚀 Starting single-flow server...")
 
         protocol = "http"
         access_host = get_best_access_host(host)
@@ -274,8 +370,35 @@ def serve_command(
         masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
 
         console.print()
-        console.print(
-            Panel.fit(
+        if is_project:
+            # Build flow list for display
+            flow_list_display = "\n".join(
+                [
+                    f"  - [cyan]{meta.title}[/cyan]: {protocol}://{access_host}:{port}/flows/{fid}/run"
+                    for fid, meta in metas.items()
+                ]
+            )
+
+            panel_content = (
+                f"[bold green]🎯 Project '{project_name}' Served Successfully![/bold green]\n\n"
+                f"[bold]Source:[/bold] {source_display}\n"
+                f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
+                f"[bold]API Key:[/bold] {masked_key}\n\n"
+                f"[bold]Available Flows ({len(graphs)}):[/bold]\n{flow_list_display}\n\n"
+                f"[dim]List all flows:[/dim]\n"
+                f"[blue]GET {protocol}://{access_host}:{port}/flows[/blue]\n\n"
+                f"[dim]Execute a flow:[/dim]\n"
+                f"[blue]POST {protocol}://{access_host}:{port}/flows/{{flow_id}}/run[/blue]\n\n"
+                f"[dim]With headers:[/dim]\n"
+                f"[blue]x-api-key: {masked_key}[/blue]\n\n"
+                f"[dim]Request body:[/dim]\n"
+                f"[blue]{{'input_value': 'Your input message'}}[/blue]"
+            )
+
+            if auth_settings:
+                panel_content += f"\n\n[dim]Auth Type:[/dim] [yellow]{auth_settings.get('auth_type', 'none')}[/yellow]"
+        else:
+            panel_content = (
                 f"[bold green]🎯 Single Flow Served Successfully![/bold green]\n\n"
                 f"[bold]Source:[/bold] {source_display}\n"
                 f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
@@ -287,7 +410,12 @@ def serve_command(
                 f"[dim]Or query parameter:[/dim]\n"
                 f"[blue]?x-api-key={masked_key}[/blue]\n\n"
                 f"[dim]Request body:[/dim]\n"
-                f"[blue]{{'input_value': 'Your input message'}}[/blue]",
+                f"[blue]{{'input_value': 'Your input message'}}[/blue]"
+            )
+
+        console.print(
+            Panel.fit(
+                panel_content,
                 title="[bold blue]LFX Server[/bold blue]",
                 border_style="blue",
             )

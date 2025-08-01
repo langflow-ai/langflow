@@ -45,8 +45,8 @@ def check_langflow_is_not_installed():
         yield
     else:
         pytest.fail(
-            "langflow is installed. These tests can only run if langflow is not installed."
             "Make sure to run `uv sync` inside the lfx directory."
+            "langflow is installed. These tests can only run if langflow is not installed."
         )
 
 
