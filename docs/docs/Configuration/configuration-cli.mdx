@@ -230,7 +230,7 @@ langflow run [OPTIONS]
 | `--auto-saving` | `true` | Boolean | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving. |
 | `--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds. |
 | `--backend-only` | `false` (`--no-backend-only`) | Boolean | Only run Langflow's backend server (no frontend). |
-| `--cache` | `async` | Enum | Type of cache to use as one of `async`, `redis`, `memory`, or `disk`. |
+| `--cache` | `async` | String | Type of cache to use as one of `async`, `redis`, `memory`, or `disk`. |
 | `--components-path` | Not set | String | Path to the directory containing custom components. |
 | `--dev` | `false` (`--no-dev`) | Boolean | Run in development mode (may contain bugs). |
 | `--env-file` | Not set | String | Path to the `.env` file containing environment variables. |
@@ -238,7 +238,7 @@ langflow run [OPTIONS]
 | `--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. |
 | `--host` | `localhost` | String | The host on which the Langflow server will run. |
 | `--log-file` | `logs/langflow.log` | String | Set the path to the log file for Langflow. |
-| `--log-level` | `critical` | Enum | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
+| `--log-level` | `critical` | String | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
 | `--log-rotation` | Not set | String | Set the log rotation (Time/Size). |
 | `--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes. |
 | `--open-browser` | `false` | Boolean | Open the system web browser on startup. Use `--no-open-browser` to disable opening the system web browser on startup. |
