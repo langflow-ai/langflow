@@ -27,7 +27,7 @@ jobs:
         python-version: 3.12
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@v6
       with:
         version: "latest"
 
@@ -37,4 +37,4 @@ jobs:
 
     - name: Test all starter project templates
       run: |
-        uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v
+        uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
