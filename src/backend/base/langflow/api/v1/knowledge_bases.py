@@ -3,6 +3,7 @@ import shutil
 from http import HTTPStatus
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from langchain_chroma import Chroma
@@ -189,13 +190,16 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
     total_words = 0
     total_characters = 0
 
-    for col in text_columns:
-        if col not in df.columns:
-            continue
-
-        text_series = df[col].astype(str).fillna("")
-        total_characters += text_series.str.len().sum()
-        total_words += text_series.str.split().str.len().sum()
+    columns = [col for col in text_columns if col in df.columns]
+    for col in columns:
+        # Cache series, convert NaN to empty string only if needed
+        s = df[col]
+        needs_str = not (s.dtype == object and s.isna().sum() == 0)
+        if needs_str:
+            s = s.astype(str).fillna("")
+        words, chars = _count_words_and_characters(s)
+        total_words += words
+        total_characters += chars
 
     return int(total_words), int(total_characters)
 
@@ -435,3 +439,21 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, o
         raise HTTPException(status_code=500, detail=f"Error deleting knowledge bases: {e!s}") from e
     else:
         return result
+
+
+def _count_words_and_characters(series: pd.Series) -> tuple[int, int]:
+    # Efficiently count characters and words in one pass
+    arr = series.values
+    # For string columns, arr can be numpy array, otherwise it's object
+    if arr.dtype.kind in {"U", "S"}:  # unicode or bytes
+        total_characters = np.char.str_len(arr).sum()
+        # np.char.count counts substrings (here whitespace)
+        total_words = ((np.char.count(arr, " ") + 1) * (arr != "")).sum()
+    else:  # fallback: may have Python objects, so use Python code
+        total_characters = 0
+        total_words = 0
+        for val in arr:
+            sval = str(val) if val is not None else ""
+            total_characters += len(sval)
+            total_words += len(sval.split()) if sval else 0
+    return int(total_words), int(total_characters)
