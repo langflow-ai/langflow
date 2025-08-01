@@ -8,131 +8,77 @@ import TabItem from '@theme/TabItem';
 
 This guide provides best practices for deploying Langflow in production environments on Kubernetes.
 
-## Scaling resources
+## Resource requirements and scaling
 
-Langflow's resource requirements depend on whether you're deploying the IDE for development or the runtime for production flows.
+Langflow's minimum resource requirements vary by deployment type:
 
-This section describes strategies for scaling RAM, disk, instances, and users per instance.
+* **IDE (development)**: Deploy both the Langflow visual editor (frontend) and API (backend). Typically, this is used for development environments where developers use the visual editor to create and manage flows before packing and serving them through a production runtime deployment.
 
-### Resource requirements by deployment type
+    The frontend service requires a minimum of 512Mi RAM and 0.3 CPU per instance with 1 replica.
 
-* **IDE**: Deploy for developers using the UI. Requires frontend (512Mi RAM, 0.3 CPU) and backend (1Gi RAM, 0.5 CPU) services.
-* **Runtime**: Deploy for production flows. Headless, requiring 2Gi RAM and 1 CPU per instance, focused on API endpoints.
+    The backend service requires a minimum of 1Gi RAM and 0.5 CPU per instance with 1 replica.
 
-### Example resource configuration
+* **Runtime (production)**: Deploy the Langflow runtime for production flows, which is headless and focused on serving the Langflow API. This is used for production environments where flows are executed programmatically without the need for the visual editor.
 
-| Component | RAM Request | CPU Request | Replica Count | Notes |
-|-----------|-------------|-------------|---------------|-------|
-| IDE Backend | 1Gi | 0.5 | 1 | Scale replicas for more developers. |
-| IDE Frontend | 512Mi | 0.3 | 1 | Adjust based on UI load. |
-| Runtime | 2Gi | 1000m | 3 | Use HPA for dynamic scaling. |
-| PostgreSQL | 4Gi | 2 | 1+ | Use replication for high availability. |
+    Minimum requirements include 2Gi RAM and 1000m (1 CPU) per instance with 3 replicas.
 
-### RAM
+### Estimate, test, and adjust
 
- RAM usage in Langflow depends on flow complexity, the size of language models, and concurrent request volume. The runtime (for production flows) has a baseline requirement, while the IDE (for developers) requires additional resources for the frontend and backend.
+Start with the minimum recommended resources and replicas, then monitor and scale as needed based on your deployment's requirements and performance testing.
+Consider the following factors in your resource estimation and performance testing:
 
-#### Base requirements
+* Flow complexity.
+* Volume of concurrent users and requests.
 
-* **Runtime**: 2Gi per instance.
-* **IDE Backend**: 1Gi per instance.
-* **IDE Frontend**: 512Mi per instance.
+   For IDE (development) deployments, consider that frontend activity also pings the backend service, so you typically need to scale both the frontend and backend together.
 
-#### Factors affecting RAM usage:
+* Request payload content and size, particularly for file uploads in production deployments.
+* Storage requirements for cache, file management, and the Langflow database.
 
-* **Flow Complexity**: Flows with many nodes or large datasets (e.g., RAG pipelines) increase memory needs.
-* **Language Models**: Larger LLMs or embeddings loaded in-memory consume significant RAM.
-* **Concurrent Requests**: More simultaneous API calls or UI sessions require additional memory.
+    An [external PostgreSQL database](#use-an-external-postgresql-database) is recommended for production deployments.
 
-#### Scaling recommendations:
+* Infrastructure options that might require more resources, such as multi-core CPUs.
 
-* Start with 2Gi for runtime instances and 1.5Gi total (1Gi backend + 512Mi frontend) for IDE instances.
-* Monitor memory usage with tools like Prometheus to identify bottlenecks.
-* Adjust memory requests and limits in Kubernetes. For example:
+### Use an external PostgreSQL database
 
-    ```yaml
-    resources:
-      requests:
-        memory: "2Gi"
-        cpu: "1000m"
-      limits:
-        memory: "4Gi"
-        cpu: "2000m"
-    ```
+An external PostgreSQL database is recommended for production deployments to improve scalability and reliability as compared to the default SQLite database.
 
-* For intensive use (e.g., multi-core CPU setups), allocate 4Gi or more per instance.
+Your resource allocation and replication strategy must be able to support the PostgreSQL service and storage.
+For example, for a runtime (production) deployment, you might allocate 4Gi RAM, 2 CPU, and multiple replicas for high availability.
 
-### Disk
+Persistent storage is recommended.
 
-Disk storage is used for the SQLite or PostgreSQL database and file storage for large files, such as documents for RAG. The database stores flow configurations, user data, and settings, while files are managed on disk.
+For multi-instance deployments, set up a shared database to ensure that all instances can access the same data.
 
-#### Usage
+For more information, including multi-instance databases, see [Configure an external PostgreSQL database](/configuration-custom-database) and [Memory management options](/memory).
 
-* **Database**: Stores flow definitions, user profiles, and logs. Size depends on the number of flows and users.
-* **File Storage**: Large files are stored in directories like `/opt/langflow/data/` or `.cache/langflow/`.
+### Use HPA for dynamic scaling
 
-#### Scaling recomendations
+Load balancing and dynamic scaling are recommended for runtime (production) deployments.
 
-* Use an external PostgreSQL database for production to improve scalability and reliability.
-* Configure shared file storage such as NFS or cloud storage for multi-instance setups to ensure file access across replicas.
-* Estimate initial database size based on expected flows and users, such as 10GB for moderate use, and monitor growth.
-* Use Persistent Volumes in Kubernetes for database and file storage, with dynamic provisioning for scalability.
+For example, consider using Horizontal Pod Autoscaler (HPA) in Kubernetes to dynamically scale based on CPU or memory usage.
+The following example shows a Langflow HPA configuration with CPU-based scaling:
 
-### Instances
-
-Scaling instances involves adding more replicas to handle increased load, applicable to both IDE and runtime deployments. Horizontal scaling is preferred for production environments.
-
-#### Base configuration
-
-* **Runtime**: Default replica count of 3.
-* **IDE**: Default replica count of 1 for both backend and frontend.
-
-#### Scaling recommendations
-
-* Implement Horizontal Pod Autoscaler (HPA) in Kubernetes to dynamically adjust replicas based on CPU or memory usage. Example HPA configuration:
-
-    ```yaml
-    apiVersion: autoscaling/v2
-    kind: HorizontalPodAutoscaler
-    metadata:
-      name: langflow-runtime-hpa
-    spec:
-      scaleTargetRef:
-        apiVersion: apps/v1
-        kind: Deployment
-        name: langflow-runtime
-      minReplicas: 1
-      maxReplicas: 10
-      metrics:
-      - type: Resource
-        resource:
-          name: cpu
-          target:
-            type: Utilization
-            averageUtilization: 80
-    ```
-
-* For bursty workloads, such as 100,000s of tokens per second, ensure sufficient replicas to handle spikes.
-* Vertically scale by increasing CPU/memory requests for complex flows, but prioritize horizontal scaling for reliability.
-
-### Users per instance
-
-The number of users or requests per instance depends on whether you're supporting developers with the IDE or API clients with the runtime:
-
-* **IDE (Langflow UI)**:
-    * Each developer using the UI generates requests to the backend, requiring resources for session handling.
-    * Scale backend replicas based on concurrent developers (e.g., 1 replica per 10-20 developers, adjusted using load testing).
-
-* **Runtime (production flows)**:
-    * Users are typically API clients making requests to flow endpoints.
-    * Capacity depends on request rate and flow complexity. For example, a single instance with 2vCPUs and 2GB RAM can handle ~30 concurrent connections for simple flows.
-    * Perform load testing to determine the number of requests per instance and scale replicas accordingly.
-
-#### Scaling recommendations
-
-* Use load balancers to distribute requests across replicas.
-* Monitor API request rates and response times to adjust replica counts.
-* For IDE, ensure frontend and backend replicas are balanced to avoid bottlenecks.
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: langflow-runtime-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: langflow-runtime
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+```
 
 ## Failure Points
 
@@ -209,7 +155,7 @@ Running Langflow in production requires robust security measures to protect the 
 
 ### Authentication and authorization
 
-* Implement strong authentication for the IDE UI and runtime API like OAuth or API tokens.
+* Implement strong authentication for the visual editor and API like OAuth or API tokens.
 * Enforce role-based access control to limit user permissions.
 
 ### Data privacy
