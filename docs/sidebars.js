@@ -121,7 +121,7 @@ module.exports = {
             "Configuration/configuration-custom-database",
             {
               type: "doc",
-              id: "Deployment/deployment-enterprise-database",
+              id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },
           ],

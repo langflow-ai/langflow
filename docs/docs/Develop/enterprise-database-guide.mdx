@@ -1,6 +1,6 @@
 ---
 title: Langflow database guide for enterprise DBAs
-slug: /deployment-enterprise-database
+slug: /enterprise-database-guide
 ---
 
 import Tabs from '@theme/Tabs';
@@ -95,23 +95,23 @@ Langflow defaults to SQLite but supports PostgreSQL for production environments,
 5. Optional: Run migrations.
 
     Langflow uses SQLAlchemy and Alembic to manage its database schema.
-    
+
     When you first connect to PostgreSQL, Langflow automatically runs migrations to create the necessary tables.
-    
+
     To manually run migrations, use `langflow migration --no-test`.
-    
+
     To preview changes before applying them, use `langflow migration --test`.
 
 5. To verify the configuration, create any flow using the Langflow UI or API, and then query your database to confirm new tables and activity. The content of the flow doesn't matter; you only need to confirm that the flow is stored in your PostgreSQL database.
-    
+
     * Query the database container:
-    
+
         ```
         docker exec -it <postgres-container> psql -U langflow -d langflow
         ```
-    
+
     * Use SQL:
-    
+
         ```
         SELECT * FROM pg_stat_activity WHERE datname = 'langflow';
         ```
