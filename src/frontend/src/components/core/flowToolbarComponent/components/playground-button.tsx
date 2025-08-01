@@ -1,14 +1,12 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { useSidebar } from "@/components/ui/sidebar";
 import { PLAYGROUND_BUTTON_NAME } from "@/constants/constants";
-import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import { useCallback } from "react";
 
 interface PlaygroundButtonProps {
   hasIO: boolean;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  canvasOpen: boolean;
 }
 
 const PlayIcon = () => (
@@ -23,10 +21,10 @@ const ButtonLabel = () => (
   <span className="hidden md:block">{PLAYGROUND_BUTTON_NAME}</span>
 );
 
-const ActiveButton = () => (
+const ActiveButton = ({ onClick }: { onClick: (e: React.MouseEvent<HTMLDivElement> ) => void }) => (
   <div
     data-testid="playground-btn-flow-io"
-    className="playground-btn-flow-toolbar hover:bg-accent"
+    className="playground-btn-flow-toolbar hover:bg-accent cursor-pointer" role="button" onClick={onClick}
   >
     <PlayIcon />
     <ButtonLabel />
@@ -45,19 +43,17 @@ const DisabledButton = () => (
 
 const PlaygroundButton = ({
   hasIO,
-  open,
-  setOpen,
-  canvasOpen,
 }: PlaygroundButtonProps) => {
+  const { toggleSidebar } = useSidebar();
+
+  const handleClick = useCallback(
+    (_: React.MouseEvent<HTMLDivElement>) => {
+      toggleSidebar();
+    },
+    [toggleSidebar],
+  );
   return hasIO ? (
-    <CustomIOModal
-      open={open}
-      setOpen={setOpen}
-      disable={!hasIO}
-      canvasOpen={canvasOpen}
-    >
-      <ActiveButton />
-    </CustomIOModal>
+    <ActiveButton onClick={handleClick} />
   ) : (
     <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
       <div>
