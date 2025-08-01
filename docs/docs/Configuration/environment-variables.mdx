@@ -406,6 +406,36 @@ To make environment variables available to GUI apps on macOS, you need to use `l
     </plist>
     ```
 
+    To add multiple environmental variables to `dev.langflow.env.plist`, include them like this:
+
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>dev.langflow.env</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>launchctl</string>
+          <string>setenv</string>
+          <string>LANGFLOW_CONFIG_DIR</string>
+          <string>/Users/your_user/custom/config</string>
+          <string>launchctl</string>
+          <string>setenv</string>
+          <string>LANGFLOW_PORT</string>
+          <string>7860</string>
+          <string>launchctl</string>
+          <string>setenv</string>
+          <string>LANGFLOW_HOST</string>
+          <string>localhost</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+      </dict>
+    </plist>
+    ```
 4. Load the file with `launchctl`:
 
     ```bash
