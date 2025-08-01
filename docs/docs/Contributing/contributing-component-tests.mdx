@@ -9,11 +9,11 @@ This guide outlines how to structure and implement tests for application compone
 
 * The test file should follow the same directory structure as the component being tested, but should be placed in the corresponding unit tests folder.
 
-For example, if the file path for the component is `src/backend/base/langflow/components/prompts/`, then the test file should be located at `src/backend/tests/unit/components/prompts`.
+    For example, if the file path for the component is `src/backend/base/langflow/components/prompts/`, then the test file should be located at `src/backend/tests/unit/components/prompts`.
 
 * The test file name should use snake case and follow the pattern `test_<file_name>.py`.
 
-For example, if the file to be tested is `PromptComponent.py`, then the test file should be named `test_prompt_component.py`.
+    For example, if the file to be tested is `PromptComponent.py`, then the test file should be named `test_prompt_component.py`.
 
 ## File structure
 
@@ -36,33 +36,33 @@ These base classes enforce mandatory methods that the component test classes mus
 
 * `component_class:` Returns the class of the component to be tested. For example:
 
-```python
-@pytest.fixture
-def component_class(self):
-    return PromptComponent
-```
+    ```python
+    @pytest.fixture
+    def component_class(self):
+        return PromptComponent
+    ```
 
 * `default_kwargs:` Returns a dictionary with the default arguments required to instantiate the component. For example:
 
-```python
-@pytest.fixture
-def default_kwargs(self):
-    return {"template": "Hello {name}!", "name": "John", "_session_id": "123"}
-```
+    ```python
+    @pytest.fixture
+    def default_kwargs(self):
+        return {"template": "Hello {name}!", "name": "John", "_session_id": "123"}
+    ```
 
 * `file_names_mapping:` Returns a list of dictionaries representing the relationship between `version`, `module`, and `file_name` that the tested component has had over time. This can be left empty if it is an unreleased component. For example:
 
-```python
-@pytest.fixture
-def file_names_mapping(self):
-    return [
-        {"version": "1.0.15", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.16", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.17", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.18", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
-    ]
-```
+    ```python
+    @pytest.fixture
+    def file_names_mapping(self):
+        return [
+            {"version": "1.0.15", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.16", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.17", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.18", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
+        ]
+    ```
 
 ## Testing component functionalities
 
@@ -78,37 +78,37 @@ Once the basic structure of the test file is defined, implement test methods for
 
 1. **Arrange**: Prepare the data.
 
-It is **recommended** to use the fixtures defined in the basic structure, but not mandatory.
+    It is recommended, but not mandatory, that you use the fixtures defined in the basic structure.
 
-```python
-def test_post_code_processing(self, component_class, default_kwargs):
-    component = component_class(**default_kwargs)
-```
+    ```python
+    def test_post_code_processing(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
+    ```
 
 2. **Act**: Execute the component.
 
-Call the `.to_frontend_node()` method of the component prepared during the **Arrange** step.
+    Call the `.to_frontend_node()` method of the component prepared during the **Arrange** step.
 
-```python
-def test_post_code_processing(self, component_class, default_kwargs):
-    component = component_class(**default_kwargs)
+    ```python
+    def test_post_code_processing(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
 
-    frontend_node = component.to_frontend_node()
-```
+        frontend_node = component.to_frontend_node()
+    ```
 
 3. **Assert**: Verify the result.
 
-After executing the `.to_frontend_node()` method, the resulting data is available for verification in the dictionary `frontend_node["data"]["node"]`. Assertions should be clear and cover the expected outcomes.
+    After executing the `.to_frontend_node()` method, the resulting data is available for verification in the dictionary `frontend_node["data"]["node"]`. Assertions should be clear and cover the expected outcomes.
 
-```python
-def test_post_code_processing(self, component_class, default_kwargs):
-    component = component_class(**default_kwargs)
+    ```python
+    def test_post_code_processing(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
 
-    frontend_node = component.to_frontend_node()
+        frontend_node = component.to_frontend_node()
 
-    node_data = frontend_node["data"]["node"]
-    assert node_data["template"]["template"]["value"] == "Hello {name}!"
-    assert "name" in node_data["custom_fields"]["template"]
-    assert "name" in node_data["template"]
-    assert node_data["template"]["name"]["value"] == "John"
-```
+        node_data = frontend_node["data"]["node"]
+        assert node_data["template"]["template"]["value"] == "Hello {name}!"
+        assert "name" in node_data["custom_fields"]["template"]
+        assert "name" in node_data["template"]
+        assert node_data["template"]["name"]["value"] == "John"
+    ```

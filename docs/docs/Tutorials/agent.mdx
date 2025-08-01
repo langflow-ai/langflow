@@ -7,9 +7,9 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial shows you how to connect a JavaScript application to a Langflow [agent](/agents).
+This tutorial shows you how to connect a JavaScript application to a [Langflow agent](/agents).
 
-With the agent connected, your application can use any connected tools to retrieve more contextual and timely data without changing any application code. The tools are selected by the agent's internal LLM to solve problems and answer questions.
+With an agent, your application can use any connected tools to retrieve more contextual and timely data without changing any application code. The tools are selected by the agent's internal LLM to solve problems and answer questions.
 
 ## Prerequisites
 
@@ -20,22 +20,23 @@ With the agent connected, your application can use any connected tools to retrie
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
-## Create an agentic flow
+## Create an agent flow
 
-The following steps modify the **Simple Agent** template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for an **Agent** component.
-The **Directory** component loads all files of a given type from a target directory on your local machine, and the **Web search** component performs a DuckDuckGo search.
+The following steps modify the **Simple Agent** template to connect a [**Directory** component](/components-data#directory) and a [**Web Search** component](/components-data#web-search) as tools for an **Agent** component.
+The **Directory** component loads all files of a given type from a target directory on your local machine, and the **Web Search** component performs a DuckDuckGo search.
 When connected to an **Agent** component as tools, the agent has the option to use these components when handling requests.
 
 1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
-2. Remove the **URL** and **Calculator** tools, and  then drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components into your workspace.
+2. Remove the **URL** and **Calculator** tools, and then add **Directory** and **Web Search** components to your flow.
 3. In the **Directory** component's **Path** field, enter the directory path and file types that you want to make available to the **Agent** component.
 
-    In this tutorial,  the agent needs access to a record of customer purchases, so the directory name is `customer_orders` and the file type is `.csv`. Later in this tutorial, the agent will be prompted to find `email` values in the customer data.
+    In this tutorial, the agent needs access to a record of customer purchases, so the directory name is `customer_orders` and the file type is `.csv`. Later in this tutorial, the agent will be prompted to find `email` values in the customer data.
 
     You can adapt the tutorial to suit your data, or, to follow along with the tutorial, you can download [`customer-orders.csv`](/files/customer_orders/customer_orders.csv) and save it in a `customer_orders` folder on your local machine.
-4. In the [component header menu](/concepts-components#component-menus) for the **Directory** and **Web search** components, enable **Tool Mode** so you can use the components with an agent.
 
-5. For both tool components, connect the **Toolset** port to the Agent component's **Tools** port.
+4. In the **Directory** and **Web Search** [components' header menus](/concepts-components#component-menus), enable **Tool Mode** so you can use the components with an agent.
+
+5. Connect the **Directory** and **Web Search** components' **Toolset** ports to the **Agent** component's **Tools** port.
 6. In the **Agent** component, enter your OpenAI API key.
 
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
@@ -45,21 +46,21 @@ When connected to an **Agent** component as tools, the agent has the option to u
     Given the example prompt, the LLM would respond with recommendations and web links for items based on previous orders in `customer_orders.csv`.
 
     The **Playground** prints the agent's chain of thought as it selects tools to use and interacts with functionality provided by those tools.
-    For example, the agent can use the **Directory** component's `as_dataframe` tool to retrieve a [DataFrame](/data-types#dataframe), and the **Web search** component's `perform_search` tool to find links to related items.
+    For example, the agent can use the **Directory** component's `as_dataframe` tool to retrieve a [DataFrame](/data-types#dataframe), and the **Web Search** component's `perform_search` tool to find links to related items.
 
 ## Add a Prompt Template component to the flow
 
-In this example, the application sends a customer's email address to the Langflow agent. The agent compares the customer's previous orders within the Directory component, searches the web for used versions of those items, and returns three results.
+In this example, the application sends a customer's email address to the Langflow agent. The agent compares the customer's previous orders within the **Directory** component, searches the web for used versions of those items, and returns three results.
 
-1. To include the email address as a value in your flow, add a [**Prompt Template**](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
+1. To include the email address as a value in your flow, add a [**Prompt Template** component](/components-prompts) to your flow between the **Chat Input** and **Agent** components.
 2. In the **Prompt Template** component's **Template** field, enter `Recommend 3 used items for {email}, based on previous orders.`
 Adding the `{email}` value in curly braces creates a new input in the **Prompt Template** component, and the component connected to the `{email}` port is supplying the value for that variable.
 This creates a point for the user's email to enter the flow from your request.
 If you aren't using the `customer_orders.csv` example file, modify the input to search for a value in your dataset.
 
-    At this point your flow has six components. The **Chat Input** is connected to the **Prompt Template** component's **email** port. Then, the **Prompt Template** output is connected to the **Agent** component's **System Message** port. The **Directory** and **Web Search** components are connected to the **Agent** component's **Tools** port. Finally, the **Agent** component's output is connected to the **Chat Output** component, which returns the final response to the application.
+    At this point your flow has six components. The **Chat Input** component is connected to the **Prompt Template** component's **email** input port. Then, the **Prompt Template** component's output is connected to the **Agent** component's **System Message** input port. The **Directory** and **Web Search** components are connected to the **Agent** component's **Tools** port. Finally, the **Agent** component's output is connected to the **Chat Output** component, which returns the final response to the application.
 
-    ![An agent component connected to web search and directory components](/img/tutorial-agent-with-directory.png)
+    ![An Agent component connected to Web Search and Directory components as tools](/img/tutorial-agent-with-directory.png)
 
 ## Send requests to your flow from a JavaScript application
 

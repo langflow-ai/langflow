@@ -9,20 +9,20 @@ Components are the building blocks of your flows.
 Like classes in an application, each component is designed for a specific use case or integration.
 
 :::tip
-Langflow provides keyboard shortcuts for the **Workspace**.
+Langflow provides keyboard shortcuts for the workspace.
 
 In the Langflow header, click your profile icon, select **Settings**, and then click **Shortcuts** to view the available shortcuts.
 :::
 
 ## Add a component to a flow {#component-menus}
 
-To add a component to a flow, drag the component from the **Components** menu to the [**Workspace**](/concepts-overview).
+To add a component to a flow, drag the component from the **Components** menu to the [workspace](/concepts-overview).
 
-The **Components** menu is organized by component type, and some components are hidden by default:
+The **Components** menu is organized by component type or provider, and some components are hidden by default.
 
-* **Beta components**: These are Langflow's core components. They are grouped by purpose, such as **Inputs** or **Data**. Be aware that these components are in beta and not suitable for production workloads.
-* **Legacy components**: You can still use these components, but they are no longer supported. Legacy components are hidden by default; click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
-* **Bundles**: These components support specific integrations, and they are grouped by provider.
+* **Core**: The categories near the top of the **Components** menu are Langflow's core components. They are grouped by purpose, such as **Inputs and Outputs** or **Data**. **Beta** components are newly released and still in development.
+* **Bundles**: These components support specific third-party integrations, and they are grouped by provider.
+* **Legacy**: You can still use these components, but they are no longer supported. Legacy components are hidden by default; click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
 
 ### Configure a component
 
@@ -32,7 +32,7 @@ Each component has inputs, outputs, parameters, and controls related to the comp
 By default, components show only required and common options.
 To access additional settings and controls, including meta settings, use the component's header menu.
 
-To access a component's header menu, click the component in your **Workspace**.
+To access a component's header menu, click the component in your workspace.
 
 ![Agent component](/img/agent-component.png)
 
@@ -47,7 +47,7 @@ For all other options, including **Delete** and **Duplicate** controls, click <I
 
 ### Rename a component
 
-To modify a component's name or description, click the component in the **Workspace**, and then click <Icon name="PencilLine" aria-hidden="true"/> **Edit**.
+To modify a component's name or description, click the component in the workspace, and then click <Icon name="PencilLine" aria-hidden="true"/> **Edit**.
 Component descriptions accept Markdown syntax.
 
 ### Run a component
@@ -55,7 +55,7 @@ Component descriptions accept Markdown syntax.
 To run a single component, click <Icon name="Play" aria-label="Play button" /> **Run component**.
 A **Last Run** value indicates that the component ran successfully.
 
-Running a single component is different from running an entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The `VertexBuildResult` data is passed to the `build_and_run` method that calls the component's `build` method and runs it. Unlike running an entire flow, running a single component doesn't automatically execute its upstream dependencies.
+Running a single component is different from running an entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the visual editor (the `inputs_dict` parameter). The `VertexBuildResult` data is passed to the `build_and_run` method that calls the component's `build` method and runs it. Unlike running an entire flow, running a single component doesn't automatically execute its upstream dependencies.
 
 ### Inspect component output and logs
 
@@ -72,7 +72,7 @@ Use the freeze option if you expect consistent output from a component _and all 
 Freezing a component prevents that component and all upstream components from re-running, and it preserves the last output state for those components.
 Any future flow runs use the preserved output.
 
-To freeze a component, click the component in the **Workspace** to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Freeze**.
+To freeze a component, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Freeze**.
 
 ## Component ports
 
@@ -83,7 +83,7 @@ Ports either accept input or produce output of a specific data type.
 You can infer the data type from the field the port is attached to or from the [port's color](#port-colors).
 For example, the **System Message** field accepts [message data](/data-types#message), as illustrated by the blue port icon: <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} />.
 
-![Prompt component with multiple inputs](/img/prompt-component.png)
+![Prompt Template component with multiple inputs](/img/prompt-component.png)
 
 When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.
 For information about the programmatic representation of each data type, see [Langflow data types](/data-types).
@@ -99,20 +99,23 @@ For information about the programmatic representation of each data type, see [La
 ### Dynamic ports
 
 Some components have ports that are dynamically added or removed.
-For example, the **Prompt** component accepts inputs within curly braces, and new ports are opened when a value within curly braces is detected in the **Template** field.
+For example, the **Prompt Template** component accepts inputs within curly braces, and new ports are opened when a value within curly braces is detected in the **Template** field.
 
-![Prompt component with multiple inputs](/img/prompt-component-with-multiple-inputs.png)
+![Prompt Template component with multiple inputs](/img/prompt-component-with-multiple-inputs.png)
 
 ### Output type selection
 
-Some components include dropdown menus to select the type of output sent to the next component.
+All components produce output that is either sent to another component in the flow or returned as the final flow result.
 
-For example, the **Language Model** component includes **Model Response** or **Language Model** outputs.
-The **Model Response** output sends a [Message](/data-types#message) output on to another Message port.
-The **Language Model** output can be connected to components like [Structured output](/components-processing#structured-output) to use the LLM to power the component's reasoning.
+Some components can produce multiple types of output:
 
-In the component code, `group_outputs` is set to `False` by default, which forces the outputs into the same dropdown menu, and only allows one output to be selected.
-When `group_outputs=True`, outputs are displayed individually.
+* If the component emits all types at once, the component has multiple output ports in the visual editor. In component code, this is represented by `group_outputs=True`
+
+* If the component emits only one type, you must select the output type by clicking the output label near the output port, and then selecting the desired output type. In component code, this is represented by `group_outputs=False` or omitting the `group_outputs` parameter.
+
+For example, the **Language Model** component can output _either_ a **Model Response** or **Language Model**.
+The **Model Response** output produces [`Message`](/data-types#message) data that can be passed to another component's `Message` port.
+The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/components-processing#structured-output), that uses the attached LLM to power the receiving component's reasoning.
 
 ![Output type selection in the Language Model component](/img/select-output.png)
 
@@ -136,12 +139,12 @@ The following table lists the component data types and their corresponding port 
 
 ## Component code
 
-You can edit components in the visual editor and in code. When editing a flow, select a component, and then click <Icon name="Code" aria-hidden="true"/> **Code** to see and edit the component's underlying Python code.
+You can edit components in the [workspace](/concepts-overview#workspace) and in code. When editing a flow, select a component, and then click <Icon name="Code" aria-hidden="true"/> **Code** to see and edit the component's underlying Python code.
 
 All components have underlying code that determines how you configure them and what actions they can perform.
 In the context of creating and running flows, component code does the following:
 
-* Determines what configuration options to show in the Langflow UI.
+* Determines what configuration options to show in the visual editor.
 * Validates inputs based on the component's defined input types.
 * Processes data using the configured parameters, methods, and functions.
 * Passes results to the next component in the flow.
@@ -149,9 +152,9 @@ In the context of creating and running flows, component code does the following:
 All components inherit from a base `Component` class that defines the component's interface and behavior.
 For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [`LCTextSplitterComponent`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
 
-Each component's code includes definitions for inputs and outputs, which are represented in the **Workspace** as [component ports](/concepts-components#component-ports).
+Each component's code includes definitions for inputs and outputs, which are represented in the workspace as [component ports](#component-ports).
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
-These values determine the component settings, such as display names and tooltips in the Langflow UI.
+These values determine the component settings, such as display names and tooltips in the visual editor.
 
 ```python
     inputs = [
@@ -216,7 +219,7 @@ In other words, an individual instance of a component retains the version number
 
 ### Update component versions
 
-When editing a flow in the **Workspace**, Langflow notifies you if a component's workspace version is behind the database version so you can update the component's workspace version:
+When editing a flow in the workspace, Langflow notifies you if a component's workspace version is behind the database version so you can update the component's workspace version:
 
 * **Update ready**: This notification means the component update contains no breaking changes.
 * **Update available**: This notification means the component update might contain breaking changes.
@@ -236,7 +239,7 @@ Components are updated to the latest available version, based on the version of 
 
 ## Group components
 
-Multiple components can be grouped into a single component for reuse. This is useful for organizing large flows by combining related components together, such as a RAG **Agent** component and an associated vector database component.
+Multiple components can be grouped into a single component for reuse. This is useful for organizing large flows by combining related components together, such as a RAG **Agent** component and it's associated **Embeddings Model** and **Vector Store** components.
 
 1. Hold <kbd>Shift</kbd>, and then click and drag to highlight all components you want to merge. Components must be completely within the selection area to be merged.
 
@@ -246,6 +249,6 @@ Multiple components can be grouped into a single component for reuse. This is us
 
 Grouped components are configured and managed as a single component, including the component name, code, and settings.
 
-To ungroup the components, click the component in the **Workspace** to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Ungroup**.
+To ungroup the components, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Ungroup**.
 
-If you want to reuse this grouping in other flows, click the component in the **Workspace** to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Save** to save the component to the **Components** menu.
+If you want to reuse this grouping in other flows, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Save** to save the component to the **Components** menu.

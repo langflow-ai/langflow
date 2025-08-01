@@ -237,11 +237,10 @@ The `/v2/files` endpoint can't send image files to flows.
 To send image files to your flows through the API, see [Upload image files (v1)](#upload-image-files-v1).
 :::
 
-Send a file to your flow for analysis using the [File](/components-data#file) component and the API.
-Your flow must contain a [File](/components-data#file) component to receive the file.
+This endpoint uploads files to your Langflow server's file management system.
+To use an uploaded file in a flow, send the file path to a flow with a [**File** component](/components-data#file).
 
-The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more information, see [Supported environment variables](/environment-variables#supported-variables).
+The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
 1. To send a file to your flow with the API, POST the file to the `/api/v2/files` endpoint.
 
@@ -269,11 +268,10 @@ For more information, see [Supported environment variables](/environment-variabl
     }
     ```
 
-2. To use this file in your flow, add a [File](/components-data#file) component to load a file into the flow.
-3. To load the file into your flow, send it to the **File** component.
+2. To use this file in your flow, add a **File** component to your flow.
+This component loads files into flows from your local machine or Langflow file management.
 
-    To retrieve the **File** component's full name with the UUID attached, call the [Read flow](/api-flows#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
-    In this example, the file uploaded to `/v2/files` is included with the `/v1/run` POST request.
+3. Run the flow, passing the `path` to the `File` component in the `tweaks` object:
 
     ```text
     curl --request POST \
@@ -294,13 +292,9 @@ For more information, see [Supported environment variables](/environment-variabl
     }'
     ```
 
-    <details>
-    <summary>Result</summary>
+    To get the `File` component's ID, call the [Read flow](/api-flows#read-flow) endpoint or inspect the component in the visual editor.
 
-    ```text
-    "text":"This document provides important safety information and instructions for selecting, installing, and operating Briggs & Stratton engines. It includes warnings and guidelines to prevent injury, fire, or damage, such as choosing the correct engine model, proper installation procedures, safe fuel handling, and correct engine operation. The document emphasizes following all safety precautions and using authorized parts to ensure safe and effective engine use."
-    ```
-    </details>
+    If the file path is valid, the flow runs successfully.
 
 ### List files (v2)
 

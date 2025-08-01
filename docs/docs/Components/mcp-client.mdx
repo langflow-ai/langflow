@@ -9,13 +9,13 @@ import Icon from "@site/src/components/icon";
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
 
-This page describes how to use Langflow as an MCP client with the [MCP Tools](#use-the-mcp-tools-component) component and the [MCP servers](#manage-connected-mcp-servers) page in **Settings**.
+This page describes how to use Langflow as an MCP client with the [**MCP Tools** component](#use-the-mcp-tools-component) and connected [MCP servers](#manage-connected-mcp-servers).
 
 For information about using Langflow as an MCP server, see [Use Langflow as an MCP server](/mcp-server).
 
 ## Use the MCP tools component
 
-The **MCP Tools** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for [Langflow agents](/agents).
+The **MCP Tools** component connects to an MCP server so that a [Langflow agent](/agents) can use the server's tools when responding to user queries.
 
 This component has two modes, depending on the type of server you want to access:
 
@@ -43,7 +43,7 @@ This component has two modes, depending on the type of server you want to access
 3. To use environment variables in your server command, enter each variable in the **Env** fields as you would define them in a script, such as `VARIABLE=value`.
 
     :::important
-    Langflow passes environment variables from the `.env` file to MCP, but it doesn't pass global variables declared in the Langflow UI.
+    Langflow passes environment variables from the `.env` file to MCP, but it doesn't pass global variables declared in your Langflow **Settings**.
     To define an MCP server environment variable as a global variable, add it to Langflow's `.env` file at startup.
     For more information, see [global variables](/configuration-global-variables).
     :::
@@ -54,16 +54,17 @@ This component has two modes, depending on the type of server you want to access
 
     At this point, the **MCP Tools** component is serving a tool, but nothing is using the tool. The next steps explain how to make the tool available to an [**Agent** component](/components-agents) so that the agent can use the tool in its responses.
 
-5. In the [component menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
+5. In the [component's header menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
 
 6. Connect the **MCP Tools** component's **Toolset** port to an **Agent** component's **Tools** port.
 
-    If not already present in your flow, make sure you also attach **Chat input** and **Chat output** components to the **Agent** component.
+    If not already present in your flow, make sure you also attach **Chat Input** and **Chat Output** components to the **Agent** component.
 
-    ![MCP tools component in stdio mode](/img/component-mcp-stdio.png)
+    ![MCP Tools component in STDIO mode](/img/component-mcp-stdio.png)
 
-7.  Test your flow to make sure the MCP server is connected and the selected tool is used by the agent: Click **Playground**, and then enter a prompt that uses the tool you connected through the **MCP Tools** component.
-For example, if you use `mcp-server-fetch` with the `fetch` tool, you could ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch`, and then returns the response.
+7.  Test your flow to make sure the MCP server is connected and the selected tool is used by the agent. Open the **Playground**, and then enter a prompt that uses the tool you connected through the **MCP Tools** component.
+
+    For example, if you use `mcp-server-fetch` with the `fetch` tool, you could ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch`, and then returns the response.
 
 8. If you want the agent to be able to use more tools, repeat these steps to add more tools components with different servers or tools.
 
@@ -77,11 +78,15 @@ To leverage flows-as-tools, use the **MCP Tools** component in **Server-Sent Eve
 1. Add an **MCP Tools** component to your flow, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and then select **SSE** mode.
 2. In the **MCP SSE URL** field, modify the default address to point at your Langflow server's SSE endpoint. The default value for other Langflow installations is `http://localhost:7860/api/v1/mcp/sse`.
 In SSE mode, all flows available from the targeted server are treated as tools.
-3. In the [component menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
-4. Connect the **MCP Tools** component's **Toolset** port to an **Agent** component's **Tools** port. If not already present in your flow, make sure you also attach **Chat input** and **Chat output** components to the **Agent** component.
-![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
-5. Test your flow to make sure the agent uses your flows to respond to queries: Click **Playground**, and then enter a prompt that uses a flow that you connected through the **MCP Tools** component.
-6. If you want the agent to be able to use more flows, repeat these steps to add more **MCP Tools** components with different servers or tools selected.
+3. In the [component's header menu](/concepts-components#component-menus), enable **Tool Mode** so you can use the component with an agent.
+4. Connect the **MCP Tools** component's **Toolset** port to an **Agent** component's **Tools** port.
+5. If not already present in your flow, make sure you also attach **Chat Input** and **Chat Output** components to the **Agent** component.
+
+    ![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
+
+6. Test your flow to make sure the agent uses your flows to respond to queries. Open the **Playground**, and then enter a prompt that uses a flow that you connected through the **MCP Tools** component.
+
+7. If you want the agent to be able to use more tools, repeat these steps to add more tools components with different servers or tools.
 
 ## MCP Tools parameters
 
@@ -93,13 +98,13 @@ In SSE mode, all flows available from the targeted server are treated as tools.
 
 ## Manage connected MCP servers
 
-The **Settings > MCP Servers** page manages the MCP servers connected to the Langflow client.
+To manage MCP servers connected to your Langflow client, go to **Settings**, and then click **MCP Servers**.
 
-To add a new MCP server, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server** to open the configuration pane, and follow the steps in [Use the MCP Tools component](#use-the-mcp-tools-component).
+To add a new MCP server, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and then follow the steps in [Use the MCP Tools component](#use-the-mcp-tools-component) to configure the connection.
 
-Click <Icon name="Ellipsis" aria-hidden="true"/> **More** to configure or delete the MCP server.
+Click <Icon name="Ellipsis" aria-hidden="true"/> **More** to edit or delete an MCP server.
 
 ## See also
 
 - [Use Langflow as an MCP server](/mcp-server)
-- [Use a DataStax Astra DB MCP server with the MCP tools component](/mcp-component-astra)
+- [Use a DataStax Astra DB MCP server with the MCP Tools component](/mcp-component-astra)

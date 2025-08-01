@@ -38,28 +38,29 @@ To learn more about content extraction with Docling, see the video tutorial [Doc
 
 This example demonstrates how to use Docling components to split a PDF in a flow:
 
-1. Connect a **Docling** and an **ExportDoclingDocument** component to a [**Split Text**](/components-processing#split-text) component.
-    The **Docling** component loads the document, and the **ExportDoclingDocument** component converts the DoclingDocument into the format you select. This example converts the document to Markdown, with images represented as placeholders.
+1. Connect a **Docling** and an **Export DoclingDocument** component to a [**Split Text** component](/components-processing#split-text).
+
+    The **Docling** component loads the document, and the **Export DoclingDocument** component converts the `DoclingDocument` into the format you select. This example converts the document to Markdown, with images represented as placeholders.
     The **Split Text** component will split the Markdown into chunks for the vector database to store in the next part of the flow.
-2. Connect a [**Chroma DB**](/components-vector-stores#chroma-db) component to the **Split text** component's **Chunks** output.
-3. Connect an [**Embedding Model**](/components-embedding-models) to Chroma's **Embedding** port, and a **Chat Output** component to view the extracted [DataFrame](/data-types#dataframe).
-4. Add your OpenAI API key to the Embedding Model.
 
-The flow looks like this:
+2. Connect a [**Chroma DB** vector store component](/components-vector-stores#chroma-db) to the **Split Text** component's **Chunks** output.
+3. Connect an [**Embedding Model** component](/components-embedding-models) to the **Chroma DB** component's **Embedding** port and a **Chat Output** component to view the extracted [`DataFrame`](/data-types#dataframe).
+4. Add your OpenAI API key to the **Embedding Model** component.
 
-![Docling and ExportDoclingDocument extracting and splitting text to vector database](./integrations-docling-split-text.png)
+    ![Docling and ExportDoclingDocument extracting and splitting text to vector database](./integrations-docling-split-text.png)
 
 5. Add a file to the **Docling** component.
 6. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+
     The chunked document is loaded as vectors into your vector database.
 
 ## Docling components
 
-The following sections describe the purpose and configuration options for each component in the Docling bundle.
+The following sections describe the purpose and configuration options for each component in the **Docling** bundle.
 
-### Docling
+### Docling language model
 
-The **Docling** component ingest documents, and then uses Docling to process them by running the Docling models locally.
+The **Docling** language model component ingest documents, and then uses Docling to process them by running the Docling models locally.
 
 It outputs `files`, which is the processed files with `DoclingDocument` data.
 
@@ -104,7 +105,7 @@ It outputs the chunked documents as a [`DataFrame`](/data-types#dataframe).
 | hf_model_name | String | Model name of the tokenizer to use with the HybridChunker when Hugging Face is chosen. |
 | openai_model_name | String | Model name of the tokenizer to use with the HybridChunker when OpenAI is chosen. |
 | max_tokens | Integer | Maximum number of tokens for the HybridChunker. |
-| doc_key | String | The key to use for the DoclingDocument column. |
+| doc_key | String | The key to use for the `DoclingDocument` column. |
 
 ### Export DoclingDocument
 
@@ -121,4 +122,4 @@ It can output the exported data as either [`Data`](/data-types#data) or [`DataFr
 | image_mode | String | Specify how images are exported in the output (placeholder, embedded). |
 | md_image_placeholder | String | Specify the image placeholder for markdown exports. |
 | md_page_break_placeholder | String | Add this placeholder between pages in the markdown output. |
-| doc_key | String | The key to use for the DoclingDocument column. |
+| doc_key | String | The key to use for the `DoclingDocument` column. |

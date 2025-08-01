@@ -36,11 +36,11 @@ The following tables are stored in `langflow.db`:
 
 • **ApiKey**: Manages API authentication keys for Langflow users. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
 
-• **Project**: Provides a structure for flow storage. For more information, see [Projects](/concepts-flows#projects).
+• **Project**: Provides a structure for flow storage. For more information, see [Manage flows in projects](/concepts-flows#projects).
 
 • **Variables**: Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
-• **VertexBuild**: Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the Playground](/concepts-playground).
+• **VertexBuild**: Tracks the build status of individual nodes within flows. For more information, see [Test flows in the Playground](/concepts-playground).
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
@@ -79,7 +79,7 @@ LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
 LANGFLOW_CACHE_TYPE=Async
 ```
 
-Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
+Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache aren't supported.
 The default behavior is suitable for most use cases.
 
 For other options, see the `LANGFLOW_CACHE_TYPE` [environment variable](/environment-variables).

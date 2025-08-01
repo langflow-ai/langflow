@@ -7,9 +7,9 @@ import Icon from "@site/src/components/icon";
 
 [Cleanlab](https://www.cleanlab.ai/) adds automation and trust to every data point going in and every prediction coming out of AI and RAG solutions.
 
-Use the Cleanlab components to integrate Cleanlab Evaluations with Langflow and unlock trustworthy Agentic, RAG, and LLM pipelines with Cleanlab's evaluation and remediation suite.
+Use the Cleanlab components to integrate Cleanlab Evaluations with Langflow and unlock trustworthy agentic, RAG, and LLM pipelines with Cleanlab's evaluation and remediation suite.
 
-You can use these components to quantify the trustworthiness of any LLM response with a score between `0` and `1`, and explain why a response may be good or bad. For RAG/Agentic pipelines with context, you can evaluate context sufficiency, groundedness, helpfulness, and query clarity with quantitative scores. Additionally, you can remediate low-trust responses with warnings or fallback answers.
+You can use these components to quantify the trustworthiness of any LLM response with a score between `0` and `1`, and explain why a response may be good or bad. For RAG or agent pipelines with context, you can evaluate context sufficiency, groundedness, helpfulness, and query clarity with quantitative scores. Additionally, you can remediate low-trust responses with warnings or fallback answers.
 
 Authentication is required with a Cleanlab API key.
 
@@ -28,7 +28,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | prompt                  | Message    | Input parameter. The user-facing input to the LLM.  |
 | response                | Message    | Input parameter. The model's response to evaluate.    |
 | cleanlab_api_key        | Secret     | Input parameter. Your Cleanlab API key.  |
-| cleanlab_evaluation_model | Dropdown   | Input parameter. Evaluation model used by Cleanlab, such as GPT-4 or Claude. This does not need to be the same model that generated the response. |
+| cleanlab_evaluation_model | Dropdown   | Input parameter. Evaluation model used by Cleanlab, such as GPT-4 or Claude. This doesn't need to be the same model that generated the response. |
 | quality_preset          | Dropdown   | Input parameter. Tradeoff between evaluation speed and accuracy. |
 
 ### Cleanlab Evaluator outputs
@@ -75,7 +75,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | Name                        | Type       | Description |
 |-----------------------------|------------|------------|
 | cleanlab_api_key           | Secret     | Input parameter. Your Cleanlab API key.    |
-| cleanlab_evaluation_model  | Dropdown   | Input parameter. The evaluation model used by Cleanlab, such as GPT-4, or Claude. This does not need to be the same model that generated the response. |
+| cleanlab_evaluation_model  | Dropdown   | Input parameter. The evaluation model used by Cleanlab, such as GPT-4, or Claude. This doesn't need to be the same model that generated the response. |
 | quality_preset             | Dropdown   | Input parameter. The tradeoff between evaluation speed and accuracy.  |
 | context                    | Message    | Input parameter. The retrieved context from your RAG system.   |
 | query                      | Message    | Input parameter. The original user query.   |
@@ -99,41 +99,46 @@ The **Cleanlab RAG Evaluator** component has the following output options:
 
 ## Example Cleanlab flows
 
-The following example flows show how to use the **CleanlabEvaluator** and **CleanlabRemediator** components to evaluate and remediate responses from any LLM, and how to use the `CleanlabRAGEvaluator` component to evaluate RAG pipeline outputs.
+The following example flows show how to use the **Cleanlab Evaluator** and **Cleanlab Remediator** components to evaluate and remediate responses from any LLM, and how to use the **Cleanlab RAG Evaluator** component to evaluate RAG pipeline outputs.
 
 ### Evaluate and remediate responses from an LLM
 
 :::tip
-You can [download the Evaluate and Remediate flow](./eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance to follow along.
+You can to follow along.
 :::
 
-This flow evaluates and remediates the trustworthiness of a response from any LLM using the **CleanlabEvaluator** and **CleanlabRemediator** components.
+This flow evaluates and remediates the trustworthiness of a response from any LLM using the **Cleanlab Evaluator** and **Cleanlab Remediator** components.
+
+You can [download the Evaluate and Remediate flow](./eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance.
+Or, you can build the flow from scratch by connecting the following components:
+
+* Connect the `Message` output from any **Language Model** or **Agent** component to the **Response** input of the **Cleanlab Evaluator** component.
+* Connect a **Prompt Template** component to **Cleanlab Evaluator** component's **Prompt** input.
+<!-- Components missing -->
 
 ![Evaluate response trustworthiness](./eval_response.png)
 
-Connect the `Message` output from any LLM component to the `response` input of the **CleanlabEvaluator** component, and then connect the Prompt component to its `prompt` input.
+When you run the flow, the **Cleanlab Evaluator** component returns a trust score and explanation from the flow.
 
-The **CleanlabEvaluator** component returns a trust score and explanation from the flow.
+The **Cleanlab Remediator** component uses this trust score to determine whether to output the original response, warn about it, or replace it with a fallback answer.
 
-The **CleanlabRemediator** component uses this trust score to determine whether to output the original response, warn about it, or replace it with a fallback answer.
+This example shows a response that was determined to be untrustworthy (a score of `.09`) and flagged with a warning by the **Cleanlab Remediator** component.
 
-This example shows a response that was determined to be untrustworthy (a score of `.09`) and flagged with a warning by the **CleanlabRemediator** component.
+![Cleanlab Remediator Example](./cleanlab_remediator_example.png)
 
-![CleanlabRemediator Example](./cleanlab_remediator_example.png)
+To hide untrustworthy responses, configure the **Cleanlab Remediator** component to replace the response with a fallback message.
 
-To hide untrustworthy responses, configure the **CleanlabRemediator** component to replace the response with a fallback message.
-
-![CleanlabRemediator Example](./cleanlab_remediator_example_fallback.png)
+![Cleanlab Remediator Example](./cleanlab_remediator_example_fallback.png)
 
 ### Evaluate RAG pipeline
 
-As an example, create a flow based on the **Vector Store RAG** template, and then add the **CleanlabRAGEvaluator** component to evaluate the flow's context, query, and response.
-Connect the **context**, **query**, and **response** outputs from the other components in the RAG flow to the **CleanlabRAGEvaluator** component.
+As an example, create a flow based on the **Vector Store RAG** template, and then add the **Cleanlab RAG Evaluator** component to evaluate the flow's context, query, and response.
+Connect the **context**, **query**, and **response** outputs from the other components in the RAG flow to the **Cleanlab RAG Evaluator** component.
 
 ![Evaluate RAG pipeline](./eval_rag.png)
 
-Here is an example of the `Evaluation Summary` output from the **CleanlabRAGEvaluator** component:
+Here is an example of the `Evaluation Summary` output from the **Cleanlab RAG Evaluator** component:
 
 ![Evaluate RAG pipeline](./eval_summary_rag.png)
 
-The `Evaluation Summary` includes the query, context, response, and all evaluation results. In this example, the `Context Sufficiency` and `Response Groundedness` scores are low (a score of `0.002`) because the context doesn't contain information about the query, and the response is not grounded in the context.
+The `Evaluation Summary` includes the query, context, response, and all evaluation results. In this example, the `Context Sufficiency` and `Response Groundedness` scores are low (a score of `0.002`) because the context doesn't contain information about the query, and the response isn't grounded in the context.

@@ -29,26 +29,26 @@ For more information, see [BigQuery access control with IAM](https://cloud.googl
 5. Click **Add Key**, and then click **Create new key**.
 6. Under **Key type**, select **JSON**, and then click **Create**.
 A JSON private key file is downloaded to your machine.
-Now that you have a service account and a JSON private key, you need to configure the credentials in the Langflow BigQuery component.
+Now that you have a service account and a JSON private key, you need to configure the credentials in the Langflow **BigQuery** component.
 
 ## Configure credentials in the Langflow component
 
 With your service account configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.
 
-1. Create a new project in Langflow.
-2. From the **Components** menu, drag and drop the BigQuery component to your workspace.
-3. In the BigQuery component's **Upload Service Account JSON** field, click **Select file**.
+1. Create a new flow in Langflow.
+2. In the **Components** menu, find the **BigQuery** component, and then add it to your flow.
+3. In the **BigQuery** component's **Upload Service Account JSON** field, click **Select file**.
 4. In the **My Files** pane, select **Click or drag files here**.
 Your file browser opens.
 5. In your file browser, select the service account JSON file, and then click **Open**.
 6. In the **My Files** pane, select your service account JSON file, and then click **Select files**.
-The BigQuery component can now query your datasets and tables using your service account JSON file.
+The **BigQuery** component can now query your datasets and tables using your service account JSON file.
 
 ## Query a BigQuery dataset
 
 With your component credentials configured, query your BigQuery datasets and tables to confirm connectivity.
 
-1. Connect **Chat Input** and **Chat Output** components to the BigQuery component.
+1. Connect **Chat Input** and **Chat Output** components to the **BigQuery** component.
 
     ![BigQuery component connected to chat input and output](/img/google/integrations-bigquery.png)
 

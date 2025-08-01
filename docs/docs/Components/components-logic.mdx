@@ -5,7 +5,7 @@ slug: /components-logic
 
 import Icon from "@site/src/components/icon";
 
-Langflow's logic components provide functionalities for routing, conditional processing, and flow management.
+Langflow's **Logic** components provide functionalities for routing, conditional processing, and flow management.
 
 ## If-Else (conditional router) {#if-else}
 
@@ -143,7 +143,7 @@ After processing all rows, the **Loop** component loads the aggregated list of s
 ![Loop CSV parser](/img/component-loop-csv.png)
 
 :::tip
-For more examples of the **Loop** component, try the **Research Translation Loop** template in Langflow, or follow this video tutorial for creating a flow with a loop and agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
+For more examples of the **Loop** component, try the **Research Translation Loop** template in Langflow, or see the video tutorial [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
 :::
 
 </details>
@@ -161,7 +161,7 @@ The notification data can then be passed to other components in the flow, such a
 
 The **Run Flow** component runs another Langflow flow as a subprocess of the current flow.
 
-You can use this component to chain flows together, run flows conditionally, and attach flows to [**Agent** component](/components-agents) as [tools for the agent](/agents-tools) to run as needed.
+You can use this component to chain flows together, run flows conditionally, and attach flows to [**Agent** components](/components-agents) as [tools for agents](/agents-tools) to run as needed.
 
 When used with an agent, the `name` and `description` metadata that the agent uses to register the tool are created automatically.
 
@@ -180,9 +180,9 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | dynamic inputs    | Various  | Input parameter. Additional inputs are generated based on the selected flow. |
 | run_outputs  | A `List` of types (`Data`, `Message`, or `DataFrame`)  | Output parameter. All outputs are generated from running the flow.  |
 
-## Legacy logic components
+## Legacy Logic components
 
-The following logic components are legacy components.
+The following **Logic** components are legacy components.
 You can still use them in your flows, but they are no longer supported and can be removed in a future release.
 
 Replace these components with suggested alternatives as soon as possible.

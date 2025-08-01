@@ -7,14 +7,14 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Helper components provide utility functions to help manage data and perform simple tasks in your flow.
+**Helper** components provide utility functions to help manage data and perform simple tasks in your flow.
 
 ## Calculator
 
-The Calculator component performs basic arithmetic operations on mathematical expressions.
+The **Calculator** component performs basic arithmetic operations on mathematical expressions.
 It supports addition, subtraction, multiplication, division, and exponentiation operations.
 
-For an example of using this component in a flow, see the [Python interpreter](/components-processing#python-interpreter) component.
+For an example of using this component in a flow, see the [**Python Interpreter** component](/components-processing#python-interpreter).
 
 ### Calculator parameters
 
@@ -25,7 +25,7 @@ For an example of using this component in a flow, see the [Python interpreter](/
 
 ## Current Date
 
-The Current Date component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
+The **Current Date** component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
 
 ### Current Date parameters
 
@@ -111,7 +111,7 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 To store and retrieve chat memory from a dedicated, external chat memory database, use the **Message History** component _and_ a provider-specific chat memory component.
 
-Available provider-specific chat memory components include [**Cassandra Chat Memory** component](/bundles-datastax#cassandra-chat-memory), [**Mem0 Chat Memory**](/bundles-mem0), and [**Redis Chat Memory** component](/bundles-redis).
+Available provider-specific chat memory components include [**Cassandra Chat Memory** component](/bundles-datastax#cassandra-chat-memory), [**Mem0 Chat Memory** component](/bundles-mem0), and [**Redis Chat Memory** component](/bundles-redis).
 For all provider-specific chat memory components, see [Bundles](/components-bundle-components).
 
 The following steps explain how to create a flow that stores and retrieves chat memory from Redis chat memory:
@@ -191,7 +191,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | messages | Message | Output parameter. The retrieved memories as `Message` objects, including `messages_text` containing retrieved chat message text. This is the typical output format used to pass memories _as chat messages_ to another component. |
 | dataframe | DataFrame | Output parameter. A `DataFrame` containing the message data. Useful for cases where you need to retrieve memories in a tabular format rather than as chat messages. |
 
-## Legacy helper components
+## Legacy Helper components
 
 The following components are legacy components.
 You can use these components in your flows, but they are no longer maintained and may be removed in a future release.
@@ -238,7 +238,7 @@ The components you need depend on the data types and complexity of the parsing t
 The **Output Parser** component transforms the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
 The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
 
-Parsing components only provide formatting instructions and parsing functionality.
+**Parsing** components only provide formatting instructions and parsing functionality.
 _They don't include prompts._
 You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.
 

@@ -51,26 +51,26 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 
-![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
+![Simple Agent template](/img/quickstart-simple-agent-flow.png)
 
-The Simple Agent flow consists of an [Agent component](/agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-helpers#calculator), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
+The **Simple Agent** template consists of an [**Agent** component](/agents) connected to [**Chat Input** and **Chat Output** components](/components-io), a [**Calculator** component](/components-helpers#calculator), and a [**URL** component](/components-data#url). When you run this flow, you submit a query to the agent through the **Chat Input** component, the agent uses the **Calculator** and **URL** tools to generate a response, and then returns the response through the **Chat Output** component.
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 
-2. In the **Agent** component's settings, in the **OpenAI API Key** field, enter your OpenAI API key directly or click the <Icon name="Globe" aria-hidden="true"/> **Globe** to create a [global variable](/configuration-global-variables).
+2. In the **Agent** component, enter your OpenAI API key directly or click the <Icon name="Globe" aria-hidden="true"/> **Globe** to create a [global variable](/configuration-global-variables).
 
     This guide uses an OpenAI model for demonstration purposes. If you want to use a different provider, change the **Model Provider** and **Model Name** fields, and then provide credentials for your selected provider.
 
 3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
-4. To test the Calculator tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
-To help you test and evaluate your flows, the Playground shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
-In this case, a math question causes the agent to select the Calculator tool and use an action like `evaluate_expression`.
+4. To test the **Calculator** tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
+To help you test and evaluate your flows, the **Playground** shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
+In this case, a math question causes the agent to select the **Calculator** tool and use an action like `evaluate_expression`.
 
 ![Playground with Agent tool](/img/quickstart-simple-agent-playground.png)
 
-5. To test the URL tool, ask the agent about current events.
-For this request, the agent selects the URL tool's `fetch_content` action, and then returns a summary of current news headlines.
+5. To test the **URL** tool, ask the agent about current events.
+For this request, the agent selects the **URL** tool's `fetch_content` action, and then returns a summary of current news headlines.
 
 6. When you are done testing the flow, click <Icon name="X" aria-hidden="true"/>**Close**.
 
@@ -93,7 +93,7 @@ For example, you can use the `/run` endpoint to run a flow and get the result.
 
 Langflow provides code snippets to help you get started with the Langflow API.
 
-1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
+1. When editing a flow, click **Share**, and then click **API access**.
 
     The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
     The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
@@ -361,10 +361,10 @@ In a production application, you probably want to select parts of this response 
 
 ### Extract data from the response
 
-The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the Agent's previous answer.
+The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the agent's previous answer.
 
 1. Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
-This script runs a question-and-answer chat in your terminal and stores the Agent's previous answer so you can compare them.
+This script runs a question-and-answer chat in your terminal and stores the agent's previous answer so you can compare them.
 
     <Tabs>
     <TabItem value="Python" label="Python" default>
@@ -514,7 +514,7 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
     </TabItem>
     </Tabs>
 
-2. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
+2. To view the agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
 
 ### Use tweaks to apply temporary overrides to a flow run
 
@@ -528,7 +528,7 @@ To assist with formatting, you can define tweaks in Langflow's **Input Schema** 
 
 1. To open the **Input Schema** pane, from the **API access** pane, click **Input Schema**.
 2. In the **Input Schema** pane, select the parameter you want to modify in your next request.
-Enabling parameters in the **Input Schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
+Enabling parameters in the **Input Schema** pane doesn't permanently change the listed parameters. It only adds them to the sample code snippets.
 3. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
 Langflow updates the `tweaks` object in the code snippets based on your input parameters, and includes default values to guide you.
 Use the updated code snippets in your script to run your flow with your overrides.

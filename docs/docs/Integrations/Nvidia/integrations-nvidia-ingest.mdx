@@ -3,12 +3,13 @@ title:  Integrate NVIDIA Retriever Extraction with Langflow
 slug: /integrations-nvidia-ingest
 ---
 
-The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
+import Icon from "@site/src/components/icon";
 
+The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
 
 The `nv-ingest` service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation. The extractor service's High Resolution mode uses the `nemoretriever-parse` extraction method for better quality extraction from scanned PDF documents. This feature is only available for PDF files.
 
-The **NVIDIA Retriever Extraction** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/data-types#data) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
+The **NVIDIA Retriever Extraction** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [`Data`](/data-types#data) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](#parameters).
 
 :::tip
 NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extraction.
@@ -36,31 +37,27 @@ NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extrac
 
 ## Use the NVIDIA Retriever Extraction component in a flow
 
-The **NVIDIA Retriever Extraction** component accepts **Message** inputs and outputs **Data**. The component calls an NVIDIA Ingest microservice's endpoint to ingest a local file and extract the text.
+The **NVIDIA Retriever Extraction** component accepts `Message` inputs, and then outputs `Data`. The component calls an NVIDIA Ingest microservice's endpoint to ingest a local file and extract the text.
 
-To use the NVIDIA Retriever Extraction component in your flow, follow these steps:
-1. In the component library, click the **NVIDIA Retriever Extraction** component, and then drag it onto the canvas.
+To use the **NVIDIA Retriever Extraction** component in your flow, follow these steps:
+
+1. Add the **NVIDIA Retriever Extraction** component to your flow.
 2. In the **Base URL** field, enter the URL of the NVIDIA Ingest endpoint.
-Optionally, add the endpoint URL as a **Global variable**:
-    1. Click **Settings**, and then click **Global Variables**.
-    2. Click **Add New**.
-    3. Name your variable. Paste your endpoint in the **Value** field.
-    4. In the **Apply To Fields** field, select the field you want to globally apply this variable to. In this case, select **NVIDIA Base URL**.
-    5. Click **Save Variable**.
-3. Click the **Select files** button to select which file you want to ingest.
-4. Select which text type to extract from the file.
-The component supports text, charts, tables, images, and infographics.
-Optionally, for PDF files, enable High Resolution mode for better quality extraction from scanned documents.
-5. Select whether to split the text into chunks.
-Modify the splitting parameters in the component's **Configuration** tab.
-6. Click **Run** to ingest the file.
-7. To confirm the component is ingesting the file, open the **Logs** pane to view the output of the flow.
-8. To store the processed data in a vector database, add an **AstraDB Vector** component to your flow, and connect the **NVIDIA Retriever Extraction** component to the **AstraDB Vector** component with a **Data** output.
+You can also store the URL as a [global variable](/configuration-global-variables) to reuse it in multiple components and flows.
+3. Click **Select Files** to select a file to ingest.
+4. Select which text type to extract from the file: text, charts, tables, images, or infographics.
+5. Optional: For PDF files, enable **High Resolution Mode** for better quality extraction from scanned documents.
+6. Select whether to split the text into chunks.
 
-![NVIDIA Retriever Extraction component flow](nvidia-component-ingest-astra.png)
+    You can modify the splitting parameters and other hidden settings through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
-9. Run the flow.
-Inspect your Astra DB vector database to view the processed data.
+7. Click **Run component** to ingest the file, and then open the **Logs** pane to confirm the component ingested the file.
+8. To store the processed data in a vector database, add a **Vector Store** component to your flow, and then connect the **NVIDIA Retriever Extraction** component's `Data` output to the **Vector Store** component's input.
+
+    When you run the flow with a **Vector Store** component, the processed data is stored in the vector database.
+    You can query your database to retrieve the uploaded data.
+
+    ![NVIDIA Retriever Extraction component flow](nvidia-component-ingest-astra.png)
 
 ## NVIDIA Retriever Extraction component parameters {#parameters}
 
@@ -93,7 +90,7 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 
 ### Outputs
 
-The **NVIDIA Retriever Extraction** component outputs a list of [Data](/data-types#data) objects where each object contains:
+The **NVIDIA Retriever Extraction** component outputs a list of [`Data`](/data-types#data) objects where each object contains:
 - `text`: The extracted content.
   - For text documents: The extracted text content.
   - For tables and charts: The extracted table/chart content.

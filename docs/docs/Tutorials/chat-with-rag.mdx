@@ -26,8 +26,8 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 
     This template has two flows.
 
-    The **Load Data Flow** at the bottom of the workspace populates a vector store with data from a file.
-    This data is used to respond to queries submitted to the **Retriever Flow**, which is at the top of the workspace.
+    The **Load Data Flow** populates a vector store with data from a file.
+    This data is used to respond to queries submitted to the **Retriever Flow**.
 
     Specifically, the **Load Data Flow** ingests data from a local file, splits the data into chunks, loads and indexes the data in your vector database, and then computes embeddings for the chunks. The embeddings are also stored with the loaded data. This flow only needs to run when you need to load data into your vector database.
 
@@ -37,7 +37,7 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 
 2. Add your **OpenAI** API key to both **OpenAI Embeddings** components.
 
-3. Optional: Replace both **Astra DB** vector store components with a **Chrome DB** or another [vector store component](/components-vector-stores) of your choice.
+3. Optional: Replace both **Astra DB** vector store components with a **Chroma DB** or another [**Vector Store** component](/components-vector-stores) of your choice.
 This tutorial uses Chroma DB.
 
     The **Load Data Flow** should have **File**, **Split Text**, **Embedding Model**, vector store (such as **Chroma DB**), and **Chat Output** components:
@@ -53,19 +53,19 @@ This tutorial uses Chroma DB.
 
 ## Load data and generate embeddings
 
-To load data and generate embeddings, you can use the Langflow UI or the `/v2/files` endpoint.
+To load data and generate embeddings, you can use the visual editor or the `/v2/files` endpoint.
 
-The Langflow UI option is simpler, but it is only recommended for scenarios where the user who created the flow is the same user who loads data into the database.
+The visual editor option is simpler, but it is only recommended for scenarios where the user who created the flow is the same user who loads data into the database.
 
 In situations where many users load data or you need to load data programmatically, use the Langflow API option.
 
 <Tabs>
-<TabItem value="UI" label="Langflow UI" default>
+<TabItem value="visual" label="Visual editor" default>
 
-1. In your RAG chatbot flow, click the **File component**, and then click **File**.
+1. In your RAG chatbot flow, click the **File** component, and then click **File**.
 2. Select the local file you want to upload, and then click **Open**.
     The file is loaded to your Langflow server.
-3. To load the data into your vector store, click the vector store component, and then click <Icon name="Play" aria-hidden="true" /> **Run component** to run the selected component and all prior dependent components.
+3. To load the data into your vector store, click the **Vector Store** component, and then click <Icon name="Play" aria-hidden="true" /> **Run component** to run the selected component and all prior dependent components.
 
 </TabItem>
 <TabItem value="API" label="Langflow API">

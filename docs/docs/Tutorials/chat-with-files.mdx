@@ -53,12 +53,11 @@ To do this, edit the **Template** field, and then replace the default prompt wit
 5. Add a [**File** component](/components-data#file) to the flow, and then connect the **Raw Content** output port to the **Prompt Template** component's **file** input port.
 To connect ports, click and drag from one port to the other.
 
-    You can add files directly to the file component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
+    You can add files directly to the **File** component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
 
-    At this point your flow has five components. The Chat Input and File components are connected to the **Prompt Template** component's input ports. Then, the **Prompt Template** component's output port is connected to the Language Model component's input port. Finally, the Language Model component's output port is connected to the Chat Output component, which returns the final response to the user.
+    At this point your flow has five components. The **Chat Input** and **File** components are connected to the **Prompt Template** component's input ports. Then, the **Prompt Template** component's output port is connected to the **Language Model** component's input port. Finally, the **Language Model** component's output port is connected to the **Chat Output** component, which returns the final response to the user.
 
     ![File loader chat flow](/img/tutorial-chat-file-loader.png)
-
 
 ## Send requests to your flow from a Python application
 
@@ -78,7 +77,7 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
 
     * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
     * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
-    * `FILE_COMPONENT_ID`: The UUID of the File component in your flow, such as `File-KZP68`. To find the component ID, open your flow in Langflow, click the File component, and then click **Controls**.
+    * `FILE_COMPONENT_ID`: The UUID of the **File** component in your flow, such as `File-KZP68`. To find the component ID, open your flow in Langflow, click the **File** component, and then click **Controls**. The component ID is at the top of the **Controls** pane.
     * `CHAT_INPUT`: The message you want to send to the Chat Input of your flow, such as `Evaluate this resume for a job opening in my Marketing department.`
     * `FILE_NAME` and `FILE_PATH`: The name and path to the local file that you want to send to your flow.
     * `LANGFLOW_API_KEY`: A valid [Langflow API key](/api-keys-and-authentication).
@@ -145,7 +144,7 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
     The first request uploads a file, such as `fake-resume.txt`, to your Langflow server at the `/v2/files` endpoint. This request returns a file path that can be referenced in subsequent Langflow requests, such as `02791d46-812f-4988-ab1c-7c430214f8d5/fake-resume.txt`
 
     The second request sends a chat message to the Langflow flow at the `/v1/run/` endpoint.
-    The `tweaks` parameter includes the path to the uploaded file as the variable `uploaded_path`, and sends this file directly to the File component.
+    The `tweaks` parameter includes the path to the uploaded file as the variable `uploaded_path`, and sends this file directly to the **File** component.
 
 3. Save and run the script to send the requests and test the flow.
 
@@ -193,8 +192,8 @@ To continue building on this tutorial, try these next steps.
 
 To process multiple files in a single flow run, add a separate **File** component for each file you want to ingest. Then, modify your script to upload each file, retrieve each returned file path, and then pass a unique file path to each **File** component ID.
 
-For example, you can modify `tweaks` to accept multiple file components.
-The following code is just an example; it is not working code:
+For example, you can modify `tweaks` to accept multiple **File** components.
+The following code is just an example; it isn't working code:
 
 ```python
 ## set multiple file paths
@@ -216,14 +215,14 @@ You can also use a [**Directory** component](/components-data#directory) to load
 
 ### Upload external files at runtime
 
-To upload files from another machine that is not your local environment, your Langflow server must first be accessible over the internet. Then, authenticated users can upload files to your public Langflow server's `/v2/files/` endpoint, as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
+To upload files from another machine that isn't your local environment, your Langflow server must first be accessible over the internet. Then, authenticated users can upload files to your public Langflow server's `/v2/files/` endpoint, as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
 
 ### Preload files outside the chat session
 
 You can use the **File** component to load files anywhere in a flow, not just in a chat session.
 
-In the visual editor, you can preload files to the file component by selecting them from your local machine or [Langflow file management](/concepts-file-management).
+In the visual editor, you can preload files to the **File** component by selecting them from your local machine or [Langflow file management](/concepts-file-management).
 
 For example, you can preload an instructions file for a prompt template, or you can preload a vector store with documents that you want to query in a Retrieval Augmented Generation (RAG) flow.
 
-For more information about the **File** component and other data loading components, see [Data components](/components-data).
+For more information about the **File** component and other data loading components, see [**Data** components](/components-data).

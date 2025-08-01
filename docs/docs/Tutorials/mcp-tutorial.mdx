@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial shows you how to connect MCP tools to your applications using Langflow's [**MCP Tools**](/mcp-client) component.
+This tutorial shows you how to connect MCP servers to your applications using Langflow's [**MCP Tools** component](/mcp-client).
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) helps agents integrate with LLMs through _MCP clients_ and _MCP servers_.
 Specifically, MCP servers host tools that agents (MCP clients) use to complete specialized tasks.
@@ -31,7 +31,7 @@ In this tutorial, you will use the Langflow **MCP Tools** component to connect m
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
-## Create an agentic flow
+## Create an agent flow
 
 1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 
@@ -79,7 +79,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     * Langflow Docker image: Install the server inside the Docker container.
     * Langflow Desktop or system-wide Langflow OSS: Install the server globally or in the same user environment where you run Langflow.
 
-2. In your **Simple agent** flow, remove the **URL** and **Calculator** tools, and then add the [**MCP Tools**](/mcp-client) component to your workspace.
+2. In your **Simple Agent** flow, remove the **URL** and **Calculator** tools, and then add an [**MCP Tools**](/mcp-client) component.
 
 3. Click the **MCP Tools** component, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
 
@@ -139,7 +139,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
     * The **MCP Tools** component with the weather MCP server is connected to the **Agent** component's **Tools** port. The agent may not use this server for every request; the agent only uses this connection if it decides the server can help respond to the prompt.
     * The **Agent** component's **Output** port is connected to the **Chat Output** component, which returns the final response to the user or application.
 
-    ![An agent component connected to an MCP weather server](/img/tutorial-mcp-weather.png)
+    ![An Agent component connected to an MCP weather server](/img/tutorial-mcp-weather.png)
 
 7. To test the weather MCP server, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
 
@@ -198,7 +198,7 @@ To add the Toolkip MCP server to your flow, do the following:
 
     Your flow now has an additional **MCP Tools** component for a total of five components.
 
-    ![An agent component connected to MCP weather and geolocation servers](/img/tutorial-mcp-geolocation.png)
+    ![An Agent component connected to MCP weather and geolocation servers](/img/tutorial-mcp-geolocation.png)
 
 ## Create a Python application that connects to Langflow
 

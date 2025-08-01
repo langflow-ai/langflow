@@ -5,7 +5,7 @@ slug: /agents
 
 import Icon from "@site/src/components/icon";
 
-Langflow's [**Agent** component](/components-agents) is critical for building agentic flows.
+Langflow's [**Agent** component](/components-agents) is critical for building agent flows.
 This component provides everything you need to create an agent, including multiple Large Language Model (LLM) providers, tool calling, and custom instructions.
 It simplifies agent configuration so you can focus on application development.
 
@@ -30,11 +30,11 @@ The `Tool` object's description tells the agent what the tool can do so that it 
 
 ## Use the Agent component in a flow
 
-The following steps explain how to create an agentic flow in Langflow from a blank flow.
-For a prebuilt example, use the **Simple Agent** template or try the [Langflow quickstart](/get-started-quickstart).
+The following steps explain how to create an agent flow in Langflow from a blank flow.
+For a prebuilt example, use the **Simple Agent** template or the [Langflow quickstart](/get-started-quickstart).
 
 1. Click **New Flow**, and then click **Blank Flow**.
-2. Add an **Agent** component to the **Workspace**.
+2. Add an **Agent** component to your flow.
 3. Enter a valid OpenAI API key.
 
     The default model for the **Agent** component is an OpenAI model.
@@ -84,7 +84,7 @@ For a prebuilt example, use the **Simple Agent** template or try the [Langflow q
     To help you debug and test your flows, the **Playground** displays the agent's tool calls, the provided input, and the raw output the agent received before generating the summary.
     With the given example, the agent should call the **News Search** component's `search_news` action.
 
-You've successfully created a basic agentic flow that uses some generic tools.
+You've successfully created a basic agent flow that uses some generic tools.
 
 To continue building on this tutorial, try connecting other tool components or [use Langflow as an MCP client](/mcp-client) to support more complex and specialized tasks.
 

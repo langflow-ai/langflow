@@ -5,20 +5,20 @@ slug: /components-models
 
 import Icon from "@site/src/components/icon";
 
-Language model components in Langflow generate text using a specified Large Language Model (LLM).
+**Language Model** components in Langflow generate text using a specified Large Language Model (LLM).
 
-Langflow includes a core **Language Model** component that has built-in support for many LLMs, as well as an interface to connect any [additional language model component](#additional-language-model-components).
+Langflow includes a **Language Model** core component that has built-in support for many LLMs, as well as an interface to connect any [additional **Language Model** component](#additional-language-model-components).
 The built-in LLMs are appropriate for most text-based language model use cases in Langflow.
 
-## Use language model components in a flow
+## Use Language Model components in a flow
 
-Use language model components anywhere you would use an LLM in a flow.
+Use **Language Model** components anywhere you would use an LLM in a flow.
 
 These components accept inputs like chat messages, files, and instructions in order to generate a text response.
-The flow must include [**Chat Input/Output** component](/components-io#chat-io) to allow chat-based interactions with the LLM.
+The flow must include [**Chat Input and Output** components](/components-io#chat-io) to allow chat-based interactions with the LLM.
 However, you can also use the **Language Model** component for actions that don't emit chat output directly, such as the **Smart Function** component.
 
-The following example uses the core **Language Model** component and a built-in LLM to create a chatbot flow similar to the **Basic Prompting** template.
+The following example uses the **Language Model** core component and a built-in LLM to create a chatbot flow similar to the **Basic Prompting** template.
 The example focuses on using the built-in models, but it also indicates where you can integrate another model.
 
 1. Add the **Language Model** component to your flow.
@@ -29,7 +29,7 @@ The example focuses on using the built-in models, but it also indicates where yo
 
     If you want to use a different provider, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 
-    If you want to use provider or model that isn't built-in to the **Language Model** component, see [Additional language model components](#additional-language-model-components) to learn how to connect a **Custom** model provider to the **Language Model** component.
+    If you want to use provider or model that isn't built-in to the **Language Model** core component, see [Additional Language Model components](#additional-language-model-components) to learn how to connect a **Custom** model provider to the **Language Model** component.
     Then, you can continue following these steps to build your flow.
 
 3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, and then click **Close**.
@@ -118,13 +118,13 @@ This is a specific data type that is only required by certain components, such a
     With this configuration, the **Language Model** component is meant to support an action completed by another component, rather than producing a text response for a standard chat-based interaction.
     For an example, the **Smart Function** component uses an LLM to create a function from natural language input.
 
-## Additional language model components
+## Additional Language Model components
 
-If your provider or model isn't supported by the core **Language Model** component, additional single-provider language model components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+If your provider or model isn't supported by the **Language Model** core component, additional single-provider **Language Model** components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
 
 You can use bundled components directly in your flows or you can connect them to other components that accept a [`LanguageModel`](/data-types#languagemodel) input, such as the **Language Model** and **Agent** components.
 
-For example, to connect bundled components to the core **Language Model** component, do the following:
+For example, to connect bundled components to the **Language Model** core component, do the following:
 
 1. In the **Language Model** component, set **Model Provider** to **Custom**.
 

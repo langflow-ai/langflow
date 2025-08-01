@@ -7,21 +7,44 @@ import Icon from "@site/src/components/icon";
 
 Configure tools connected to agents to extend their capabilities.
 
-## Edit a tool component's actions
+## Edit a tool's actions {#edit-a-tools-actions}
 
-To edit a tool's actions, in the tool component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify its `name`, `description`, or `enabled` metadata.
-These fields help connected agents understand how to use the action, without having to modify the agent's prompt instructions.
+When you set any component to **Tool Mode** or **Tool** output, an agent can use the actions (functions) provided by that component.
+Available actions are listed in the tool component's **Actions** list.
 
-For example, the [URL](/components-data#url) component has two actions available when **Tool Mode** is enabled:
+You can change each action's labels, descriptions, and availability to help the agent understand how to use the tool and prevent it from using irrelevant or undesired actions.
 
-| Tool Name | Description | Enabled |
-|-----------|-------------|---------|
-| `fetch_content` | Fetch content from web pages recursively | true |
-| `fetch_content_as_message` | Fetch web content formatted as messages | true |
+:::tip
+If an agent seems to be using a tool incorrectly, try editing the action metadata to clarify the tool's purpose and disable unnecessary actions.
 
-A Langflow Agent has a clear idea of each tool's capabilities based on the `name` and `description` metadata. The `enabled` boolean controls the tool's availability to the agent. If you think an agent is using a tool incorrectly, edit a tool's `description` metadata to help the agent better understand the tool.
+You can also try using a **Prompt Template** component to pass additional instructions or examples to the agent.
+:::
 
-Tool names and descriptions can be edited, but the default tool identifiers cannot be changed. If you want to change the tool identifier, create a custom component.
+To view and edit a tool's actions, click <Icon name="Settings2" aria-hidden="true"/> **Edit Tool Actions** on the tool component.
+
+The following information is provided for each action:
+
+* **Enabled**: A checkbox that determines whether the action is available to the agent.
+If checked, the action is enabled.
+If unchecked, the action is disabled.
+
+* **Name**: A human-readable string name for the action, such as `Fetch Content`. This cannot be changed.
+
+* **Description**: A human-readable description of the action's purpose, such as `Fetch content from web pages recursively`.
+
+    To edit this value, double-click the action's row to open the edit pane.
+    Changes are saved automatically when you click out of the field or close the dialog.
+
+* **Slug**: An encoded name for the action, usually the same as the name but in snake case, such as `fetch_content`.
+
+    To edit this value, double-click the action's row to open the edit pane.
+    Changes are saved automatically when you click out of the field or close the dialog.
+
+To edit the **Description** or **Slug**, double-click anywhere on the action's row to open the edit pane.
+Note that the **Name** field on the edit page maps to the **Slug** column.
+Changes are saved automatically when you click out of a field or close the dialog.
+
+Optionally, you can provide fixed values for an action's inputs. Typically you want to leave these blank so the agent can provide its own values. You might use a fixed value if you're trying to debug an agent's behavior or your use case requires a fixed input for an action.
 
 ## Use an agent as a tool
 
@@ -33,9 +56,9 @@ To try this for yourself, add an additional agent to the **Simple Agent** templa
 2. Add a second **Agent** component to the flow.
 3. Add your **OpenAI API Key** to both **Agent** components.
 4. In the second **Agent** component, change the model to `gpt-4.1`, and then enable **Tool Mode**.
-5. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to set tool names and descriptions that help the primary agent understand how to use those tools.
+5. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tool Actions** to [edit the tool's actions](#edit-a-tools-actions).
 
-    For this example, change the tool name to `Agent-gpt-41` and set the description to `Use the gpt-4.1 model for complex problem solving`.
+    For this example, change the action **Slug** to `Agent-gpt-41` and set the description to `Use the gpt-4.1 model for complex problem solving`.
     This lets the primary agent know that this tool uses the `gpt-4.1` model, which could be helpful for tasks requiring a larger context window, such as large scrape and search tasks.
 
     As another example, you could attach several specialized models to a primary agent, such as agents that are trained on certain tasks or domains, and then the primary agent would call each specialized agent as needed to respond to queries.
@@ -50,7 +73,7 @@ To try this for yourself, add an additional agent to the **Simple Agent** templa
 
 An agent can use [custom components](/components-custom-components) as tools.
 
-1. To add a custom component to the agent flow, click **New Custom Component**.
+1. To add a custom component to an agent flow, click **New Custom Component** in the **Components** menu.
 
 2. Enter Python code into the **Code** pane to create the custom component.
 
@@ -115,8 +138,8 @@ An agent can use [custom components](/components-custom-components) as tools.
     ```
     </details>
 
-3. To use the custom component as a tool, click **Tool Mode**.
-4. Connect the custom component's tool output to the agent's tools input.
+3. Enable **Tool Mode** in the custom component.
+4. Connect the custom component's tool output to the **Agent** component's **Tools** input.
 5. Open the <Icon name="Play" aria-hidden="true" /> **Playground** and instruct the agent, `Use the text analyzer on this text: "Agents really are thinking machines!"`
 
     Based on your instruction, the agent should call the `analyze_text` action and return the result.
@@ -148,7 +171,7 @@ Langflow supports **Tool Mode** for the following data types:
 * `MultilineInput`
 * `DropdownInput`
 
-For example, the [components as tools](#components-as-tools) example above adds `tool_mode=True` to the `MessageTextInput` input so the custom component can be used as a tool.
+For example, the example code in [Use custom components as tools](#components-as-tools) included `tool_mode=True` to the `MessageTextInput` input so the custom component could be used as a tool:
 
 ```python
 inputs = [
@@ -164,20 +187,19 @@ inputs = [
 
 ## Use flows as tools
 
-An agent can use flows that are saved in your workspace as tools with the [Run flow](/components-logic#run-flow) component.
+An agent can use your other flows as tools with the [**Run Flow** component](/components-logic#run-flow).
 
-1. To add a **Run flow** component, click and drag a **Run flow** component to your workspace.
+1. Add a **Run Flow** component to your flow.
 2. Select the flow you want the agent to use as a tool.
-3. Enable **Tool Mode** in the component.
-The **Run flow** component displays your flow as an available action.
-4. Connect the **Run flow** component's tool output to the agent's tools input.
-5. Ask the agent, `What tools are you using to answer my questions?`
-Your flow should be visible in the response as a tool.
-6. Ask the agent to specifically use the connected tool to answer your question.
+3. Enable **Tool Mode**.
+The selected flow becomes an [action](#edit-a-tools-actions) in the **Run Flow** component.
+4. Connect the **Run Flow** component's **Tool** output to the **Agent** component's **Tools** input.
+5. Open the **Playground**, and then ask the agent, `What tools are you using to answer my questions?`
+Your flow should be visible in the response as an available tool.
+6. Ask the agent a question that specifically uses the connected flow as a tool.
 The connected flow returns an answer based on your question.
-For example, a Basic Prompting flow connected as a tool returns a different result depending upon its LLM and prompt instructions.
 
-![Run Flow as tool connected to an agent](/img/agent-example-run-flow-as-tool.png)
+![Run Flow component connected to an Agent component as a tool](/img/agent-example-run-flow-as-tool.png)
 
 ## See also
 
