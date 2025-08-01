@@ -36,7 +36,7 @@ Langflow CLI options override the values of [environment variables](/environment
 For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable, and you run the CLI with `--port 7880`, then Langflow sets the port to `7880` because the CLI option overrides the environment variable.
 
 This also applies to Boolean environment variables.
-For example, if your set `LANGFLOW_REMOVE_API_KEYS=True` in your `.env` file, then you can change this to `False` by running the CLI with `--no-remove-api-keys`.
+For example, if you set `LANGFLOW_REMOVE_API_KEYS=True` in your `.env` file, then you can change this to `False` by running the CLI with `--no-remove-api-keys`.
 
 ## Langflow CLI options
 
@@ -58,19 +58,19 @@ They have a true (enabled) and false (disabled) form:
 * Enabled (true): `--option`
 * Disabled (false): `--no-option`
 
-For example, `--remove-api-keys` is equivalent to setting `LANGFLOW_REMOVE_API_KEYS=True` as an [environment variable](/environment-variables).
+For example, `--remove-api-keys` is equivalent to setting `LANGFLOW_REMOVE_API_KEYS=True` in `.env`:
 
 ```bash
 uv run langflow run --remove-api-keys
 ```
 
-In contrast, `--no-remove-api-keys` is equivalent to `LANGFLOW_REMOVE_API_KEYS=False` as an [environment variable](/environment-variables).
+In contrast, `--no-remove-api-keys` is equivalent to `LANGFLOW_REMOVE_API_KEYS=False` in `.env`:
 
 ```bash
 uv run langflow run --no-remove-api-keys
 ```
 
-### Default options
+### Universal options
 
 The following options are available for all Langflow CLI commands:
 
@@ -81,7 +81,7 @@ The following options are available for all Langflow CLI commands:
 
 ## CLI commands
 
-The following sections describe the available CLI commands and any non-default options available for each command.
+The following sections describe the available CLI commands and any additional options (beyond the [universal options](#universal-options)) available for each command.
 
 ### langflow
 
@@ -108,7 +108,7 @@ langflow
 
 Create a Langflow API key.
 
-The logged-in user must be a superuser to create API keys with the CLI.
+You must be a superuser to create API keys with the CLI.
 
 For more information, see [Langflow API keys](/api-keys-and-authentication#langflow-api-keys).
 
@@ -133,19 +133,17 @@ langflow api-key
 
 | Option | Default | Type | Description |
 |--------|---------|--------|-------------|
-| `--log-level` | `error` | String | Set the logging level. |
+| `--log-level` | `error` | String | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
 
 ### langflow copy-db
 
 Copy the Langflow database files from the cache directory to the current Langflow installation directory, which is the directory containing `__main__.py`.
 You can find the copy target directory by running `which langflow`.
 
-The files copied are:
+The following files are copied if they exist in the cache directory:
 
-* `langflow.db` - The main Langflow database, stored in the user cache directory.
-* `langflow-pre.db` - The pre-release database, if it exists.
-
-If these files don't exist in the cache directory, then nothing is copied.
+* `langflow.db`: The main Langflow database, stored in the user cache directory
+* `langflow-pre.db`: The pre-release database, if it exists
 
 <Tabs groupId="Invocation">
   <TabItem value="uv (recommended)" label="uv (recommended)" default>
@@ -170,11 +168,15 @@ Manages database schema migrations for Langflow using [Alembic](https://alembic.
 
 The `migration` command has two modes:
 
-* Test mode checks if migrations can be applied safely without actually running the migrations.
-This is the default mode, and should be run before running `--fix`.
+* **Test mode (`--test`)**: Checks if migrations can be applied safely without actually running the migrations.
+	This is the default mode if not set.
 
-* Fix mode actually applies the migrations to update your database schema.
-This is a destructive operation that can potentially delete data, so run `langflow migration --test` before running `--fix`.
+* **Fix mode (`--fix`)**: Applies the migrations to update your database schema.
+
+:::danger
+`langflow migration --fix` is a destructive operation that can delete data.
+Always run `--test` before running `--fix`.
+:::
 
 <Tabs groupId="Invocation">
   <TabItem value="uv (recommended)" label="uv (recommended)" default>
@@ -284,6 +286,6 @@ langflow superuser [OPTIONS]
 |--------|---------|--------|-------------|
 | `--username` | Required | String | Specify the name for the superuser. |
 | `--password` | Required | String | Specify the password for the superuser. |
-| `--log-level` | `error` | String | Set the logging level. |
+| `--log-level` | `error` | String | Set the logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
 
 For more information, see [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](/api-keys-and-authentication#langflow-superuser).
