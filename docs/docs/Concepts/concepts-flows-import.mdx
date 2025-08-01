@@ -9,18 +9,22 @@ You can export flows to transfer them between Langflow instances, share them wit
 
 ## Export a flow
 
-There are three ways to export a flow:
+There are three ways to export flows:
 
-* From the **Projects** page, find the flow you want to export, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Export**.
-* When editing a flow, click **Share**, and then click **Export**.
-* Use the Langflow API [`/flows/download`](/api-flows#export-flows) endpoint.
+* **Export from projects**: On the [**Projects** page](/concepts-flows#projects), find the flow you want to export, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Export**. To export all flows in a project, click <Icon name="Ellipsis" aria-hidden="true" /> **Options** on the **Projects** list, and then select **Download**.
 
-An exported flow is downloaded to your local machine as a JSON file named `FLOW_NAME.json`.
+* **Export by sharing**: When editing a flow, click **Share**, and then click **Export**.
+
+* **Export with the Langflow API**: To export one flow, use the [`/flows/download`](/api-flows#export-flows) endpoint. 
+To export all flows in a project, use the [`/projects/download`](/api-projects#export-a-project) endpoint.
+
+Exported flows are downloaded to your local machine as JSON files named `FLOW_NAME.json`.
+If you export an entire project, the JSON files are packaged in a zip archive.
 For more information, see [Langflow JSON file contents](#langflow-json-file-contents).
 
 ### Save with my API keys
 
-When exporting from the Langflow UI, you can select **Save with my API keys** to export the flow _and_ any defined API key variables.
+When exporting from the **Projects** page or **Share** menu, you can select **Save with my API keys** to export the flow _and_ any defined API key variables.
 Non-API key variables are included in the export regardless of the **Save with my API keys** setting.
 
 :::warning
@@ -32,23 +36,14 @@ If your key is stored in a Langflow global variable, **Save with my API keys** e
 When you or another user import the flow to another Langflow instance, that instance must have Langflow global variables with the same names and valid values in order to run the flow successfully.
 If any variables are missing or invalid, those variables must be created or edited after importing the flow.
 
-### Export all flows
-
-If you want to export all flows within a project, do either of the following:
-
-* Go to the **Projects** page, find the project you want to export, click <Icon name="Ellipsis" aria-hidden="true" /> **Options**, and then select **Download**.
-* Use the Langflow API [`/projects/download`](/api-projects#export-a-project) endpoint.
-
-The project's flows are downloaded as JSON files in a zip archive.
-
 ## Import a flow
 
 You can import Langflow JSON files from your local machine in the following ways:
 
-* From the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
-* Drag and drop Langflow JSON files from your file explorer into your Langflow window to import a flow from any Langflow page.
-* Use the Langflow API [`/flows/upload/`](/api-flows#import-flows) endpoint to upload one JSON file.
-* Use the Langflow API [`/projects/upload`](/api-projects#import-a-project) endpoint to upload a Langflow project zip file.
+* **Import to projects**: On the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**, and then select the Langflow JSON file to import.
+* **Import anywhere**: Drag and drop Langflow JSON files from your file explorer into your Langflow window to import a flow from any Langflow page.
+* **Import with the Langflow API**: To import one Langflow JSON file, use the [`/flows/upload/`](/api-flows#import-flows) endpoint.
+To import a zip archive of Langflow JSON files, use the [`/projects/upload`](/api-projects#import-a-project) endpoint.
 
 ### Run an imported flow
 
@@ -149,39 +144,42 @@ The `OpenAIModel` component accepts the `Message` type at the `input_value` fiel
 
 Additional information about the flow is stored in the root `data` object.
 
-* Metadata and project information including the name, description, and `last_tested_version` of the flow.
-```json
-{
-  "name": "Basic Prompting",
-  "description": "Perform basic prompting with an OpenAI model.",
-  "tags": ["chatbots"],
-  "id": "1511c230-d446-43a7-bfc3-539e69ce05b8",
-  "last_tested_version": "1.0.19.post2",
-  "gradient": "2",
-  "icon": "Braces"
-}
-```
+* Metadata and project information including the name, description, and `last_tested_version` of the flow:
 
-* Visual information about the flow defining the initial position of the flow in the workspace.
-```json
-"viewport": {
-  "x": -37.61270157375441,
-  "y": -155.91266341888854,
-  "zoom": 0.7575251406952855
-}
-```
+    ```json
+    {
+      "name": "Basic Prompting",
+      "description": "Perform basic prompting with an OpenAI model.",
+      "tags": ["chatbots"],
+      "id": "1511c230-d446-43a7-bfc3-539e69ce05b8",
+      "last_tested_version": "1.0.19.post2",
+      "gradient": "2",
+      "icon": "Braces"
+    }
+    ```
+
+* Visual information about the flow defining the initial position of the flow in the workspace:
+
+    ```json
+    "viewport": {
+      "x": -37.61270157375441,
+      "y": -155.91266341888854,
+      "zoom": 0.7575251406952855
+    }
+    ```
 
 * Notes are comments that help you understand the flow within the workspace.
 They may contain links, code snippets, and other information.
 Notes are written in Markdown and stored as `node` objects.
-```json
-{
-  "id": "undefined-kVLkG",
-  "node": {
-    "description": "## 📖 README\nPerform basic prompting with an OpenAI model.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- Open the **Playground** to chat with your bot.\n..."
-  }
-}
-```
+
+    ```json
+    {
+      "id": "undefined-kVLkG",
+      "node": {
+        "description": "## 📖 README\nPerform basic prompting with an OpenAI model.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- Open the **Playground** to chat with your bot.\n..."
+      }
+    }
+    ```
 
 ## See also
 
