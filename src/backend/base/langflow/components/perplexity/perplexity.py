@@ -31,9 +31,7 @@ class PerplexityComponent(LCModelComponent):
             ],
             value="llama-3.1-sonar-small-128k-online",
         ),
-        IntInput(
-            name="max_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."
-        ),
+        IntInput(name="max_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."),
         SecretStrInput(
             name="api_key",
             display_name="Perplexity API Key",
