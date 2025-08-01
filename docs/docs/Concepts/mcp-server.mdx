@@ -26,7 +26,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
 :::important MCP flow requirements
-A flow must contain a [**Chat Output**](/components-io#chat-output) component to be used as a tool by MCP clients.
+A flow must contain a [**Chat Output** component](/components-io#chat-output) to be used as a tool by MCP clients.
 :::
 
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as tools that MCP clients can use to generate responses.
@@ -48,7 +48,7 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 
 3. In the **MCP Server Tools** window, select the flows that you want exposed as tools.
 
-    ![MCP server tools](/img/mcp-server-tools.png)
+    ![MCP Server Tools](/img/mcp-server-tools.png)
 
 4. Recommended: Edit the **Tool Name** and **Tool Description** to help MCP clients determine which actions your flows provide and when to use those actions:
 
@@ -105,7 +105,7 @@ However, you can connect any [MCP-compatible client](https://modelcontextprotoco
 
 :::important
 Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-If this is not the case, use the **JSON** option to configure the MCP server.
+If this isn't the case, use the **JSON** option to configure the MCP server.
 :::
 
 1. Install [Cursor](https://docs.cursor.com/get-started/installation).
@@ -246,7 +246,7 @@ The default address is `http://localhost:6274`.
 
 ## Troubleshooting MCP server
 
-If Claude for Desktop is not using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file.
+If Claude for Desktop isn't using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file.
 
 1. To find your UVX path, run `which uvx`.
 

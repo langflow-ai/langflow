@@ -28,8 +28,8 @@ Langflow can be deployed on cloud deployments like **AWS EKS, Google GKE, or Azu
 
 A typical Langflow deployment includes:
 
-* **Langflow API and UI**: The Langflow service is the core component of the Langflow platform. It provides a RESTful API for executing flows.
-* **Kubernetes cluster**: The Kubernetes cluster provides a platform for deploying and managing the Langflow service and its supporting components.
+* **Langflow API and visual editor**: The Langflow service is the core part of the Langflow platform. It provides a RESTful API for executing flows.
+* **Kubernetes cluster**: The Kubernetes cluster provides a platform for deploying and managing the Langflow service and supporting services.
 * **Persistent storage**: Persistent storage is used to store the Langflow service's data, such as models and training data.
 * **Ingress controller**: The ingress controller provides a single entry point for traffic to the Langflow service.
 * **Load balancer**: Balances traffic across multiple Langflow replicas.
@@ -53,7 +53,7 @@ This separation is designed to enhance security, optimize resource allocation, a
 * **Security**
   * **Isolation**: By separating the development and production environments, you can better isolate different phases of the application lifecycle. This isolation minimizes the risk of development-related issues impacting the production environments.
   * **Access control**: Different security policies and access controls can be applied to each environment. Developers may require broader access in the IDE for testing and debugging, while the runtime environment can be locked down with stricter security measures.
-  * **Reduced attack surface**: The runtime environment is configured to include only essential components, reducing the attack surface and potential vulnerabilities.
+  * **Reduced attack surface**: The runtime environment is configured to include only essential parts, reducing the attack surface and potential vulnerabilities.
 * **Resource allocation**
   * **Optimized resource usage and cost efficiency**: By separating the two environments, you can allocate resources more effectively. Each flow can be deployed independently, providing fine-grained resource control.
   * **Scalability**: The runtime environment can be scaled independently based on application load and performance requirements, without affecting the development environment.
