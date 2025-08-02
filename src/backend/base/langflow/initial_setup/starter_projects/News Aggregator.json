@@ -206,6 +206,23 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "ce845cc47ae8",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "httpx",
+                    "version": "0.27.2"
+                  },
+                  {
+                    "name": "loguru",
+                    "version": "0.7.3"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 3
+              },
               "module": "langflow.components.agentql.agentql_api.AgentQL"
             },
             "minimized": false,
@@ -562,6 +579,15 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "192913db3453",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 1
+              },
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -904,6 +930,23 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "6f74e04e39d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.115.13"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 3
+              },
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1209,6 +1252,27 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "6f244023207e",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "pandas",
+                    "version": "2.2.3"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.115.13"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "module": "langflow.components.processing.save_file.SaveToFileComponent"
             },
             "minimized": false,
