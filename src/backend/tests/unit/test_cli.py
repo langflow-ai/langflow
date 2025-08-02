@@ -4,9 +4,9 @@ import time
 from unittest.mock import patch
 
 import pytest
-from langflow.__main__ import app, _create_superuser
-from langflow.services import deps
 import typer
+from langflow.__main__ import _create_superuser, app
+from langflow.services import deps
 
 
 @pytest.fixture(scope="module")
@@ -75,11 +75,11 @@ class TestSuperuserCommand:
             mock_auth_settings = type("MockAuthSettings", (), {"AUTO_LOGIN": False, "ENABLE_SUPERUSER_CLI": True})()
             mock_settings.return_value.auth_settings = mock_auth_settings
             mock_settings2.return_value.auth_settings = mock_auth_settings
-            
+
             # Try to create a superuser without auth - should fail
             with pytest.raises(typer.Exit) as exc_info:
                 await _create_superuser("newuser", "newpass", None)
-            
+
             assert exc_info.value.exit_code == 1
 
     @pytest.mark.asyncio
@@ -94,11 +94,11 @@ class TestSuperuserCommand:
             mock_auth_settings = type("MockAuthSettings", (), {"AUTO_LOGIN": True, "ENABLE_SUPERUSER_CLI": True})()
             mock_settings.return_value.auth_settings = mock_auth_settings
             mock_settings2.return_value.auth_settings = mock_auth_settings
-            
+
             # Try to create a superuser - should fail
             with pytest.raises(typer.Exit) as exc_info:
                 await _create_superuser("newuser", "newpass", None)
-            
+
             assert exc_info.value.exit_code == 1
 
     @pytest.mark.asyncio
@@ -115,7 +115,7 @@ class TestSuperuserCommand:
             # Try to create a superuser - should fail
             with pytest.raises(typer.Exit) as exc_info:
                 await _create_superuser("admin", "password", None)
-            
+
             assert exc_info.value.exit_code == 1
 
     @pytest.mark.skip(reason="Skip -- default superuser is created by initialize_services() function")
@@ -139,9 +139,9 @@ class TestSuperuserCommand:
             mock_auth_settings = type("MockAuthSettings", (), {"AUTO_LOGIN": False, "ENABLE_SUPERUSER_CLI": True})()
             mock_settings.return_value.auth_settings = mock_auth_settings
             mock_settings2.return_value.auth_settings = mock_auth_settings
-            
+
             # Try to create a superuser with invalid token - should fail
             with pytest.raises(typer.Exit) as exc_info:
                 await _create_superuser("newuser", "newpass", "invalid-token")
-            
+
             assert exc_info.value.exit_code == 1
