@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.a0c27da5.js" defer="defer"></script>
-<script src="/assets/js/main.b26e5fa1.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.0e93b55e.js" defer="defer"></script>
+<script src="/assets/js/main.6e50f663.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -148,7 +148,7 @@ The component will have only one output port where the user can select the prefe
 <p>This behavior is controlled by the <code>group_outputs</code> parameter:</p>
 <ul>
 <li>
-<p><strong><code>group_outputs=False</code> (default)</strong>: When a component has more than one output and <code>group_outputs</code> is <code>False</code> or not set, the outputs are grouped in the visual editor, and the user must select one.</p>
+<p><strong><code>group_outputs=False</code> (default)</strong>: When a component has more than one output and <code>group_outputs</code> is false or not set, the outputs are grouped in the visual editor, and the user must select one.</p>
 <p>Use this option when the component is expected to return only one type of output when used in a flow.</p>
 </li>
 <li>
@@ -191,9 +191,9 @@ For example, to add a component to the <strong>Helpers</strong> category, place 
 <li><strong><code>display_name</code></strong>: The label shown to users in the visual editor.</li>
 <li><strong><code>info</code></strong> <em>(optional)</em>: A tooltip or short description.</li>
 <li><strong><code>value</code></strong> <em>(optional)</em>: The default value.</li>
-<li><strong><code>advanced</code></strong> <em>(optional)</em>: If <code>True</code>, moves the field into the &quot;Advanced&quot; section.</li>
-<li><strong><code>required</code></strong> <em>(optional)</em>: If <code>True</code>, forces the user to provide a value.</li>
-<li><strong><code>is_list</code></strong> <em>(optional)</em>: If <code>True</code>, allows multiple values.</li>
+<li><strong><code>advanced</code></strong> <em>(optional)</em>: If true, moves the field into the &quot;Advanced&quot; section.</li>
+<li><strong><code>required</code></strong> <em>(optional)</em>: If true, forces the user to provide a value.</li>
+<li><strong><code>is_list</code></strong> <em>(optional)</em>: If true, allows multiple values.</li>
 <li><strong><code>input_types</code></strong> <em>(optional)</em>: Restricts allowed connection types (e.g., <code>[&quot;Data&quot;]</code>, <code>[&quot;LanguageModel&quot;]</code>).</li>
 </ul>
 <p>Here are the most commonly used input classes and their typical usage.</p>
@@ -202,9 +202,9 @@ For example, to add a component to the <strong>Helpers</strong> category, place 
 <li><strong><code>StrInput</code></strong> creates a single-line text field.</li>
 <li><strong><code>MultilineInput</code></strong> creates a multi-line text area.</li>
 </ul>
-<p><strong>Numeric and Boolean Inputs</strong>: Ensures users can only enter valid numeric or boolean data.</p>
+<p><strong>Numeric and Boolean Inputs</strong>: Ensures users can only enter valid numeric or Boolean data.</p>
 <ul>
-<li><strong><code>BoolInput</code></strong>, <strong><code>IntInput</code></strong>, and <strong><code>FloatInput</code></strong> provide fields for boolean, integer, and float values, ensuring type consistency.</li>
+<li><strong><code>BoolInput</code></strong>, <strong><code>IntInput</code></strong>, and <strong><code>FloatInput</code></strong> provide fields for Boolean, integer, and float values, ensuring type consistency.</li>
 </ul>
 <p><strong>Dropdowns</strong>: For selecting from predefined options, useful for modes or levels.</p>
 <ul>
@@ -229,7 +229,7 @@ For example, to add a component to the <strong>Helpers</strong> category, place 
 <li><strong><code>FileInput</code></strong></li>
 </ul>
 <p><strong>Lists</strong>: Set <code>is_list=True</code> to accept multiple values, ideal for batch or grouped operations.</p>
-<p>This example defines three inputs: a text field (<code>StrInput</code>), a boolean toggle (<code>BoolInput</code>), and a dropdown selection (<code>DropdownInput</code>).</p>
+<p>This example defines three inputs: a text field (<code>StrInput</code>), a Boolean toggle (<code>BoolInput</code>), and a dropdown selection (<code>DropdownInput</code>).</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>from langflow.io import StrInput, BoolInput, DropdownInput</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>inputs = [</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    StrInput(name=&quot;title&quot;, display_name=&quot;Title&quot;),</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    BoolInput(name=&quot;enabled&quot;, display_name=&quot;Enabled&quot;, value=True),</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    DropdownInput(name=&quot;mode&quot;, display_name=&quot;Mode&quot;, options=[&quot;Fast&quot;, &quot;Safe&quot;, &quot;Experimental&quot;], value=&quot;Safe&quot;)</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>]</span></div></div><br></code></div></div>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="outputs">Outputs<a href="#outputs" class="hash-link" aria-label="Direct link to Outputs" title="Direct link to Outputs">​</a></h3>
 <p>Outputs are defined in a class-level <code>outputs</code> list. When Langflow renders a component, each output becomes a connector point in the visual editor. When you connect something to an output, Langflow automatically calls the corresponding method and passes the returned object to the next component.</p>

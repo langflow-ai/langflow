@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.a0c27da5.js" defer="defer"></script>
-<script src="/assets/js/main.b26e5fa1.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.0e93b55e.js" defer="defer"></script>
+<script src="/assets/js/main.6e50f663.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -169,10 +169,8 @@ Make sure to expose your environment variables to Langflow in a manner that best
 <p>Global variables that you add from the environment always have the <strong>Credential</strong> type.</p>
 </li>
 </ul></div></div>
-<p>If you want to explicitly prevent Langflow from sourcing global variables from the environment, set <code>LANGFLOW_STORE_ENVIRONMENT_VARIABLES</code> to <code>false</code> in your <code>.env</code> file:</p>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_STORE_ENVIRONMENT_VARIABLES=false</span></div></div><br></code></div></div>
-<p>If you want to automatically set fallback values for your global variables from environment variables, set the <code>LANGFLOW_FALLBACK_FROM_ENV_VAR</code> environment variable to <code>true</code> in your <code>.env</code> file. When this feature is enabled, if a global variable isn&#x27;t found, Langflow attempts to use an environment variable with the same name as a backup.</p>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_FALLBACK_FROM_ENV_VAR=true</span></div></div><br></code></div></div>
+<p>If you want to explicitly prevent Langflow from sourcing global variables from the environment, set <code>LANGFLOW_STORE_ENVIRONMENT_VARIABLES=False</code> in your <code>.env</code> file.</p>
+<p>If you want to automatically set fallback values for your global variables from environment variables, set <code>LANGFLOW_FALLBACK_FROM_ENV_VAR=True</code> in your <code>.env</code> file. When this setting is enabled, if a global variable isn&#x27;t found, Langflow attempts to use an environment variable with the same name as a backup.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="default-environment-variables">Default environment variables<a href="#default-environment-variables" class="hash-link" aria-label="Direct link to Default environment variables" title="Direct link to Default environment variables">​</a></h2>
 <p>Langflow automatically detects and converts some environment variables into global variables of the type <strong>Credential</strong>, which are applied to the specific fields in components that require them. Currently, the following variables are supported:</p>
 <ul>
