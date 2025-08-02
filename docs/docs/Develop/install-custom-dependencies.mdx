@@ -3,12 +3,12 @@ title: Install custom dependencies
 slug: /install-custom-dependencies
 ---
 
-Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality. This guide covers how to add dependencies for different Langflow installations, including Langflow Desktop, Langflow OSS.
+Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality. This guide covers how to add dependencies for different Langflow installations, including Langflow Desktop and Langflow OSS.
 
-The Langflow codebase uses two `pyproject.toml` files to manage dependencies, with one for `base` and one for `main`.
+The Langflow codebase uses two `pyproject.toml` files to manage dependencies, with one for `base` and one for `main`:
 
-* The `main` package, which is managed by the root level `pyproject.toml`, includes end-user features and main application code, such as Langchain and OpenAI.
-* The `base` package, which is managed at `src/backend/base/pyproject.toml`, includes core infrastructure such as the FastAPI web framework.
+* The `main` package is managed by the root level `pyproject.toml`, and it includes end-user features and main application code, such as Langchain and OpenAI.
+* The `base` package is managed at `src/backend/base/pyproject.toml`, and it includes core infrastructure, such as the FastAPI web framework.
 
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
 
@@ -80,7 +80,9 @@ When contributing to the Langflow codebase, you might need to add dependencies t
 
 Langflow uses a workspace with two packages, each with different types of dependencies.
 
-To add a dependency to the `main` package, navigate to the project root and run:
+To add a dependency to the `main` package, run `uv add DEPENDENCY` from the project root.
+For example:
+
 ```bash
 uv add matplotlib
 ```
@@ -89,12 +91,12 @@ Dependencies can be added to the `main` package as regular dependencies at `[pro
 
 To add a dependency to the `base` package, navigate to `src/backend/base` and run:
 ```bash
-cd src/backend/base && uv add matplotlib
+cd src/backend/base && uv add DEPENDENCY
 ```
 
 To add a development dependency for testing, linting, or debugging, navigate to `src/backend/base` and run:
 ```bash
-cd src/backend/base && uv add --group dev matplotlib
+cd src/backend/base && uv add --group dev DEPENDENCY
 ```
 
 Dependencies can be added to the `base` package as regular dependencies at `[project.dependencies]`, development dependencies at `[dependency-groups.dev]`, or optional dependencies at `[project.optional-dependencies]`.
@@ -121,7 +123,7 @@ dependencies = [
 ]
 ```
 
-* Or as an optional dependency in the main package:
+Or as an optional dependency in the main package:
 
 ```
 [project.optional-dependencies]
@@ -130,7 +132,7 @@ plotting = [
 ]
 ```
 
-* Or as a development dependency in the base package:
+Or as a development dependency in the base package:
 
 ```
 [dependency-groups]
