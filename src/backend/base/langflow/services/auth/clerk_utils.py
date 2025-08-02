@@ -21,7 +21,7 @@ auth_header_ctx: ContextVar[dict | None] = ContextVar("auth_header_ctx", default
 _jwks_cache: dict[str, dict[str, Any]] = {}
 
 # APIs that require Clerk token decoding in middleware
-PROTECTED_PATHS = ["/api/v1/users/","/api/v1/login"]
+PROTECTED_PATHS = ["/api/v1/users/", "/api/v1/login", "/api/v1/create_organisation"]
 
 
 async def _get_jwks(issuer: str) -> dict[str, Any]:
@@ -90,6 +90,7 @@ async def process_new_user_with_clerk(_user: UserCreate, new_user: User):
             raise HTTPException(status_code=401, detail="Missing Clerk UUID")
         new_user.id = UUID(clerk_uuid)
         logger.info(f"[process_new_user_with_clerk] Assigned Clerk UUID {new_user.id} to new user object")
+
 
 async def get_user_from_clerk_payload(token: str, db: AsyncSession) -> User:
     """Retrieve the current user using the payload from ``verify_clerk_token``."""
@@ -163,10 +164,7 @@ async def clerk_token_middleware(request: Request, call_next):
                 ctx_token = auth_header_ctx.set(payload)
             except Exception as exc:  # noqa: BLE001
                 logger.warning(f"Failed to verify Clerk token: {exc}")
-                return JSONResponse(
-                    status_code=HTTP_401_UNAUTHORIZED,
-                    content={"detail": "Invalid Clerk token"}
-                )
+                return JSONResponse(status_code=HTTP_401_UNAUTHORIZED, content={"detail": "Invalid Clerk token"})
 
     try:
         return await call_next(request)
