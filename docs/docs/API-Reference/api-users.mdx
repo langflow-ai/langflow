@@ -8,14 +8,11 @@ import TabItem from '@theme/TabItem';
 
 Use the `/users` endpoint to manage user accounts in Langflow.
 
-The `user_id` value is specifically for Langflow's user system, which is stored in the Langflow database and managed at the `/users` API endpoint.
-The `user_id` primary key in the Langflow database is mapped to the `id` value in the API.
-
 ## Add user
 
-Create a new user account with a username and password.
+Create a new user account with a given username and password.
 
-This creates a new UUID for the user's `id`, which is mapped to `user_id` in the Langflow database.
+Requires authentication as a superuser if the Langflow server has authentication enabled.
 
 ```bash
 curl -X POST \
@@ -27,6 +24,10 @@ curl -X POST \
     "password": "securepassword123"
   }'
 ```
+
+The request returns an object describing the new user.
+The user's UUID is stored in `user_id` in the Langflow database, and returned as `id` in the `/users` API response.
+This `user_id` key is specifically for Langflow user management.
 
 <details>
 <summary>Result</summary>
@@ -54,7 +55,7 @@ curl -X POST \
 
 ## Get current user
 
-Retrieve information about the currently authenticated user.
+Retrieve information about the authenticated user.
 
 ```bash
 curl -X GET \
@@ -85,7 +86,8 @@ curl -X GET \
 ## List all users
 
 Get a paginated list of all users in the system.
-Only superusers can use this endpoint (`is_superuser: true`).
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
 
 ```bash
 curl -X GET \
@@ -160,7 +162,9 @@ curl -X GET \
 
 Modify an existing user's information with a PATCH request.
 
-This example makes the user `10c1c6a2-ab8a-4748-8700-0e4832fd5ce8` an active superuser.
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+This example activates the specified user's account and makes them a superuser:
 
 ```bash
 curl -X PATCH \
@@ -199,9 +203,9 @@ curl -X PATCH \
 
 ## Reset password
 
-Change a user's password to a new secure value.
+Change the specified user's password to a new secure value.
 
-You can't change another user's password.
+Requires authentication as the target user.
 
 ```bash
 curl -X PATCH \
@@ -241,7 +245,7 @@ curl -X PATCH \
 
 Remove a user account from the system.
 
-Only superusers can use this endpoint (`is_superuser: true`).
+Requires authentication as a superuser if the Langflow server has authentication enabled.
 
 ```bash
 curl -X DELETE \

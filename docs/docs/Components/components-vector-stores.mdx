@@ -61,10 +61,10 @@ This component implements an [Astra DB Serverless vector store](https://docs.dat
 | search_type | Search Type | The search type to use. The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
 | search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
 | advanced_search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
-| autodetect_collection | Autodetect Collection | A boolean flag to determine whether to autodetect the collection. |
+| autodetect_collection | Autodetect Collection | Boolean flag to determine whether to autodetect the collection. |
 | content_field | Content Field | A field to use as the text content field for the vector store. |
 | deletion_field | Deletion Based On Field | When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new data is loaded. |
-| ignore_invalid_documents | Ignore Invalid Documents | A boolean flag to determine whether to ignore invalid documents at runtime. |
+| ignore_invalid_documents | Ignore Invalid Documents | Boolean flag to determine whether to ignore invalid documents at runtime. |
 | astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | An optional dictionary of additional parameters for the AstraDBVectorStore. |
 
 **Outputs**
@@ -309,7 +309,7 @@ Your input is converted to vector data and compared to the stored vectors in a v
 | allow_duplicates              | Boolean       | Allow duplicate documents in the vector store.    |
 | search_type                   | String        | The type of search to perform: "Similarity" or "MMR". |
 | number_of_results             | Integer       | The number of results to return from the search. Default: `10`. |
-| limit                         | Integer       | The limit of the number of records to compare when `Allow Duplicates` is `False`. |
+| limit                         | Integer       | The limit of the number of records to compare when `Allow Duplicates` is false. |
 
 **Outputs**
 
@@ -542,7 +542,7 @@ The component adds a user-friendly interface with two modes (Ingest and Retrieve
 
 Local DB includes **Ingest** and **Retrieve** modes.
 
-The **Ingest** mode works similarly to [ChromaDB](#chroma-db), and persists your database to the Langflow cache directory. The Langflow cache directory location is specified in `LANGFLOW_CONFIG_DIR`. For more information, see [Environment variables](/environment-variables).
+The **Ingest** mode works similarly to [ChromaDB](#chroma-db), and persists your database to the Langflow cache directory. The Langflow cache directory location is specified in the `LANGFLOW_CONFIG_DIR` environment variable. For more information, see [Flow storage and logs](/concepts-flows#flow-storage-and-logs).
 
 The **Retrieve** mode can query your **Chroma DB** collections.
 

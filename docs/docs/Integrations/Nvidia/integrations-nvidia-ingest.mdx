@@ -71,22 +71,22 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 |------|--------------|------|
 | base_url | NVIDIA Ingestion URL | The URL of the NVIDIA Ingestion API. |
 | path | Path | File path to process. |
-| extract_text | Extract Text | Extract text from documents. Default: `True`. |
-| extract_charts | Extract Charts | Extract text from charts. Default: `False`. |
-| extract_tables | Extract Tables | Extract text from tables. Default: `True`. |
-| extract_images | Extract Images | Extract images from document. Default: `True`. |
-| extract_infographics | Extract Infographics | Extract infographics from document. Default: `False`. |
+| extract_text | Extract Text | Extract text from documents. Default: true. |
+| extract_charts | Extract Charts | Extract text from charts. Default: false. |
+| extract_tables | Extract Tables | Extract text from tables. Default: true. |
+| extract_images | Extract Images | Extract images from document. Default: true. |
+| extract_infographics | Extract Infographics | Extract infographics from document. Default: false. |
 | text_depth | Text Depth | The level at which text is extracted. Options: 'document', 'page', 'block', 'line', 'span'. Default: `page`. |
-| split_text | Split Text | Split text into smaller chunks. Default: `True`. |
+| split_text | Split Text | Split text into smaller chunks. Default: true. |
 | chunk_size | Chunk Size | The number of tokens per chunk. Default: `500`. |
 | chunk_overlap | Chunk Overlap | Number of tokens to overlap from previous chunk. Default: `150`. |
-| filter_images | Filter Images | Filter images (see advanced options for filtering criteria). Default: `False`. |
+| filter_images | Filter Images | Filter images (see advanced options for filtering criteria). Default: false. |
 | min_image_size | Minimum Image Size Filter | Minimum image width/length in pixels. Default: `128`. |
 | min_aspect_ratio | Minimum Aspect Ratio Filter | Minimum allowed aspect ratio (width / height). Default: `0.2`. |
 | max_aspect_ratio | Maximum Aspect Ratio Filter | Maximum allowed aspect ratio (width / height). Default: `5.0`. |
-| dedup_images | Deduplicate Images | Filter duplicated images. Default: `True`. |
-| caption_images | Caption Images | Generate captions for images using the NVIDIA captioning model. Default: `True`. |
-| high_resolution | High Resolution (PDF only) | Process PDF in high-resolution mode for better quality extraction from scanned PDF. Default: `False`. |
+| dedup_images | Deduplicate Images | Filter duplicated images. Default: true. |
+| caption_images | Caption Images | Generate captions for images using the NVIDIA captioning model. Default: true. |
+| high_resolution | High Resolution (PDF only) | Process PDF in high-resolution mode for better quality extraction from scanned PDF. Default: false. |
 
 ### Outputs
 

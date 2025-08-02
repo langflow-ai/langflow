@@ -156,17 +156,9 @@ When adding global variables from the environment, the following limitations app
 - Global variables that you add from the environment always have the **Credential** type.
 :::
 
-If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file:
+If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES=False` in your `.env` file.
 
-```text
-LANGFLOW_STORE_ENVIRONMENT_VARIABLES=false
-```
-
-If you want to automatically set fallback values for your global variables from environment variables, set the `LANGFLOW_FALLBACK_FROM_ENV_VAR` environment variable to `true` in your `.env` file. When this feature is enabled, if a global variable isn't found, Langflow attempts to use an environment variable with the same name as a backup.
-
-```text
-LANGFLOW_FALLBACK_FROM_ENV_VAR=true
-```
+If you want to automatically set fallback values for your global variables from environment variables, set `LANGFLOW_FALLBACK_FROM_ENV_VAR=True` in your `.env` file. When this setting is enabled, if a global variable isn't found, Langflow attempts to use an environment variable with the same name as a backup.
 
 ## Default environment variables
 
