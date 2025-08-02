@@ -3,6 +3,7 @@ import warnings
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 
 from .calculator import CalculatorToolComponent
+from .currency_convertor import CurrencyConverterComponent
 from .google_search_api import GoogleSearchAPIComponent
 from .google_serper_api import GoogleSerperAPIComponent
 from .python_code_structured_tool import PythonCodeStructuredTool
@@ -21,6 +22,7 @@ __all__ = [
     "AstraDBCQLToolComponent",
     "AstraDBToolComponent",
     "CalculatorToolComponent",
+    "CurrencyConverterComponent",
     "DuckDuckGoSearchComponent",
     "ExaSearchToolkit",
     "GleanSearchAPIComponent",
