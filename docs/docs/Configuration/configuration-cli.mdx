@@ -37,7 +37,7 @@ Langflow CLI options override the values of [environment variables](/environment
 For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable, and you run the CLI with `--port 7880`, then Langflow sets the port to `7880` because the CLI option overrides the environment variable.
 
 This also applies to Boolean environment variables.
-For example, if you set `LANGFLOW_REMOVE_API_KEYS=True` in your `.env` file, then you can change this to `False` by running the CLI with `--no-remove-api-keys`.
+For example, if you set `LANGFLOW_REMOVE_API_KEYS=True` in your `.env` file, then you can change it to `False` by running the CLI with `--no-remove-api-keys`.
 
 ## Langflow CLI options
 
@@ -179,7 +179,7 @@ langflow copy-db
 
 ### langflow migration
 
-Manages database schema migrations for Langflow using [Alembic](https://alembic.sqlalchemy.org/en/latest/), a database migration tool for SQLAlchemy.
+Manages Langflow database schema changes using [Alembic](https://alembic.sqlalchemy.org/en/latest/), a database migration tool for SQLAlchemy.
 
 The `migration` command has two modes:
 
