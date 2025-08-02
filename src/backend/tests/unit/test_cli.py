@@ -64,7 +64,7 @@ class TestSuperuserCommand:
     """Deterministic tests for the superuser CLI command."""
 
     @pytest.mark.asyncio
-    async def test_additional_superuser_requires_auth_production(self, client, active_super_user):
+    async def test_additional_superuser_requires_auth_production(self, client, active_super_user):  # noqa: ARG002
         """Test additional superuser creation requires authentication in production."""
         # We already have active_super_user from the fixture, so we're not in first setup
         with (
@@ -83,7 +83,7 @@ class TestSuperuserCommand:
             assert exc_info.value.exit_code == 1
 
     @pytest.mark.asyncio
-    async def test_additional_superuser_blocked_in_auto_login_mode(self, client, active_super_user):
+    async def test_additional_superuser_blocked_in_auto_login_mode(self, client, active_super_user):  # noqa: ARG002
         """Test additional superuser creation blocked when AUTO_LOGIN=true."""
         # We already have active_super_user from the fixture, so we're not in first setup
         with (
@@ -102,7 +102,7 @@ class TestSuperuserCommand:
             assert exc_info.value.exit_code == 1
 
     @pytest.mark.asyncio
-    async def test_cli_disabled_blocks_creation(self, client):
+    async def test_cli_disabled_blocks_creation(self, client):  # noqa: ARG002
         """Test ENABLE_SUPERUSER_CLI=false blocks superuser creation."""
         with (
             patch("langflow.services.deps.get_settings_service") as mock_settings,
@@ -120,13 +120,13 @@ class TestSuperuserCommand:
 
     @pytest.mark.skip(reason="Skip -- default superuser is created by initialize_services() function")
     @pytest.mark.asyncio
-    async def test_auto_login_forces_default_credentials(self, client):
+    async def test_auto_login_forces_default_credentials(self, client):  # noqa: ARG002
         """Test AUTO_LOGIN=true forces default credentials."""
         # Since client fixture already creates default user, we need to test in a clean DB scenario
         # But that's why this test is skipped - the behavior is already handled by initialize_services
 
     @pytest.mark.asyncio
-    async def test_failed_auth_token_validation(self, client, active_super_user):
+    async def test_failed_auth_token_validation(self, client, active_super_user):  # noqa: ARG002
         """Test failed superuser creation with invalid auth token."""
         # We already have active_super_user from the fixture, so we're not in first setup
         with (
