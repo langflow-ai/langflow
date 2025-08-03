@@ -24,7 +24,7 @@ from langflow.services.store.utils import (
 )
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar

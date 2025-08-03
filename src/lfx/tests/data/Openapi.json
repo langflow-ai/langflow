@@ -1,0 +1,445 @@
+{
+    "description": "",
+    "name": "openapi",
+    "id": "1",
+    "data": {
+        "nodes": [
+            {
+                "width": 384,
+                "height": 311,
+                "id": "dndnode_19",
+                "type": "genericNode",
+                "position": {
+                    "x": -207.85635949789724,
+                    "y": -105.73915116823618
+                },
+                "data": {
+                    "type": "JsonToolkit",
+                    "node": {
+                        "template": {
+                            "spec": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "password": false,
+                                "name": "spec",
+                                "type": "JsonSpec",
+                                "list": false
+                            },
+                            "_type": "JsonToolkit"
+                        },
+                        "description": "Toolkit for interacting with a JSON spec.",
+                        "base_classes": [
+                            "BaseToolkit"
+                        ]
+                    },
+                    "id": "dndnode_19",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": -207.85635949789724,
+                    "y": -105.73915116823618
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 351,
+                "id": "dndnode_32",
+                "type": "genericNode",
+                "position": {
+                    "x": 745.308873444751,
+                    "y": -37.007911201107675
+                },
+                "data": {
+                    "type": "OpenAPIToolkit",
+                    "node": {
+                        "template": {
+                            "json_agent": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "password": false,
+                                "name": "json_agent",
+                                "type": "AgentExecutor",
+                                "list": false
+                            },
+                            "requests_wrapper": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "password": false,
+                                "name": "requests_wrapper",
+                                "type": "TextRequestsWrapper",
+                                "list": false
+                            },
+                            "_type": "OpenAPIToolkit"
+                        },
+                        "description": "Toolkit for interacting with a OpenAPI api.",
+                        "base_classes": [
+                            "BaseToolkit"
+                        ]
+                    },
+                    "id": "dndnode_32",
+                    "value": null
+                },
+                "selected": false,
+                "positionAbsolute": {
+                    "x": 745.308873444751,
+                    "y": -37.007911201107675
+                },
+                "dragging": false
+            },
+            {
+                "width": 384,
+                "height": 351,
+                "id": "dndnode_33",
+                "type": "genericNode",
+                "position": {
+                    "x": 281.30887344475104,
+                    "y": 2.9920887988923255
+                },
+                "data": {
+                    "type": "JsonAgent",
+                    "node": {
+                        "template": {
+                            "toolkit": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "password": false,
+                                "name": "toolkit",
+                                "type": "BaseToolkit",
+                                "list": false
+                            },
+                            "llm": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "password": false,
+                                "name": "llm",
+                                "type": "BaseLanguageModel",
+                                "list": false
+                            },
+                            "_type": "JsonAgent"
+                        },
+                        "description": "Construct a json agent from an LLM and tools.",
+                        "base_classes": [
+                            "AgentExecutor"
+                        ]
+                    },
+                    "id": "dndnode_33",
+                    "value": null
+                },
+                "selected": false,
+                "dragging": false,
+                "positionAbsolute": {
+                    "x": 281.30887344475104,
+                    "y": 2.9920887988923255
+                }
+            },
+            {
+                "width": 384,
+                "height": 349,
+                "id": "dndnode_34",
+                "type": "genericNode",
+                "position": {
+                    "x": 301.30887344475104,
+                    "y": 532.9920887988924
+                },
+                "data": {
+                    "type": "TextRequestsWrapper",
+                    "node": {
+                        "template": {
+                            "headers": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": true,
+                                "value": "{'Authorization':\n            'Bearer <token>'}",
+                                "password": false,
+                                "name": "headers",
+                                "type": "code",
+                                "list": false
+                            },
+                            "aiosession": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "password": false,
+                                "name": "aiosession",
+                                "type": "ClientSession",
+                                "list": false
+                            },
+                            "_type": "TextRequestsWrapper"
+                        },
+                        "description": "Lightweight wrapper around requests library.",
+                        "base_classes": [
+                            "TextRequestsWrapper"
+                        ]
+                    },
+                    "id": "dndnode_34",
+                    "value": null
+                },
+                "positionAbsolute": {
+                    "x": 301.30887344475104,
+                    "y": 532.9920887988924
+                }
+            },
+            {
+                "width": 384,
+                "height": 407,
+                "id": "dndnode_35",
+                "type": "genericNode",
+                "position": {
+                    "x": -754.691126555249,
+                    "y": -37.00791120110762
+                },
+                "data": {
+                    "type": "JsonSpec",
+                    "node": {
+                        "template": {
+                            "path": {
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "value": "api-with-examples.yaml",
+                                "suffixes": [
+                                    ".json",
+                                    ".yaml",
+                                    ".yml"
+                                ],
+                                "password": false,
+                                "name": "path",
+                                "type": "file",
+                                "list": false,
+                                "fileTypes": [
+                                    "json",
+                                    "yaml",
+                                    "yml"
+                                ],
+                                "file_path": "api-with-examples.yaml"
+                            },
+                            "max_value_length": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "value": "4000",
+                                "password": false,
+                                "name": "max_value_length",
+                                "type": "int",
+                                "list": false
+                            },
+                            "_type": "JsonSpec"
+                        },
+                        "description": "",
+                        "base_classes": [
+                            "Tool",
+                            "JsonSpec"
+                        ]
+                    },
+                    "id": "dndnode_35",
+                    "value": null
+                },
+                "selected": false,
+                "dragging": false,
+                "positionAbsolute": {
+                    "x": -754.691126555249,
+                    "y": -37.00791120110762
+                }
+            },
+            {
+                "width": 384,
+                "height": 563,
+                "id": "dndnode_36",
+                "type": "genericNode",
+                "position": {
+                    "x": -310.69112655524896,
+                    "y": 514.9920887988924
+                },
+                "data": {
+                    "type": "ChatOpenAI",
+                    "node": {
+                        "template": {
+                            "cache": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "password": false,
+                                "name": "cache",
+                                "type": "bool",
+                                "list": false
+                            },
+                            "verbose": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "value": false,
+                                "password": false,
+                                "name": "verbose",
+                                "type": "bool",
+                                "list": false
+                            },
+                            "client": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "password": false,
+                                "name": "client",
+                                "type": "Any",
+                                "list": false
+                            },
+                            "model_name": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "value": "gpt-3.5-turbo",
+                                "password": false,
+                                "name": "model_name",
+                                "type": "str",
+                                "list": false
+                            },
+                            "model_kwargs": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "password": false,
+                                "name": "model_kwargs",
+                                "type": "code",
+                                "list": false
+                            },
+                            "openai_api_key": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "multiline": false,
+                                "password": false,
+                                "name": "openai_api_key",
+                                "type": "str",
+                                "list": false,
+                                "value": "sk-"
+                            },
+                            "max_retries": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "value": 6,
+                                "password": false,
+                                "name": "max_retries",
+                                "type": "int",
+                                "list": false
+                            },
+                            "prefix_messages": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "password": false,
+                                "name": "prefix_messages",
+                                "type": "Any",
+                                "list": true
+                            },
+                            "streaming": {
+                                "required": false,
+                                "placeholder": "",
+                                "show": false,
+                                "multiline": false,
+                                "value": false,
+                                "password": false,
+                                "name": "streaming",
+                                "type": "bool",
+                                "list": false
+                            },
+                            "_type": "ChatOpenAI"
+                        },
+                        "description": "Wrapper around OpenAI Chat large language models.To use, you should have the ``openai`` python package installed, and theenvironment variable ``OPENAI_API_KEY`` set with your API key.Any parameters that are valid to be passed to the openai.create call can be passedin, even if not explicitly saved on this class.",
+                        "base_classes": [
+                            "BaseLanguageModel",
+                            "BaseLLM"
+                        ]
+                    },
+                    "id": "dndnode_36",
+                    "value": null
+                },
+                "selected": false,
+                "dragging": false,
+                "positionAbsolute": {
+                    "x": -310.69112655524896,
+                    "y": 514.9920887988924
+                }
+            }
+        ],
+        "edges": [
+            {
+                "source": "dndnode_19",
+                "sourceHandle": "JsonToolkit|dndnode_19|BaseToolkit",
+                "target": "dndnode_33",
+                "targetHandle": "BaseToolkit|toolkit|dndnode_33",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_19JsonToolkit|dndnode_19|BaseToolkit-dndnode_33BaseToolkit|toolkit|dndnode_33",
+                "selected": false
+            },
+            {
+                "source": "dndnode_33",
+                "sourceHandle": "JsonAgent|dndnode_33|AgentExecutor",
+                "target": "dndnode_32",
+                "targetHandle": "AgentExecutor|json_agent|dndnode_32",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_33JsonAgent|dndnode_33|AgentExecutor-dndnode_32AgentExecutor|json_agent|dndnode_32",
+                "selected": false
+            },
+            {
+                "source": "dndnode_34",
+                "sourceHandle": "TextRequestsWrapper|dndnode_34|TextRequestsWrapper",
+                "target": "dndnode_32",
+                "targetHandle": "TextRequestsWrapper|requests_wrapper|dndnode_32",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_34RequestsWrapper|dndnode_34|TextRequestsWrapper-dndnode_32RequestsWrapper|requests_wrapper|dndnode_32",
+                "selected": false
+            },
+            {
+                "source": "dndnode_35",
+                "sourceHandle": "JsonSpec|dndnode_35|Tool|JsonSpec",
+                "target": "dndnode_19",
+                "targetHandle": "JsonSpec|spec|dndnode_19",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_35JsonSpec|dndnode_35|Tool|JsonSpec-dndnode_19JsonSpec|spec|dndnode_19",
+                "selected": false
+            },
+            {
+                "source": "dndnode_36",
+                "sourceHandle": "ChatOpenAI|dndnode_36|BaseLanguageModel|BaseLLM",
+                "target": "dndnode_33",
+                "targetHandle": "BaseLanguageModel|llm|dndnode_33",
+                "className": "animate-pulse",
+                "id": "reactflow__edge-dndnode_36OpenAIChat|dndnode_36|BaseLanguageModel|BaseLLM-dndnode_33BaseLanguageModel|llm|dndnode_33"
+            }
+        ],
+        "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+        }
+    },
+    "chat": [
+        {
+            "message": "test",
+            "isSend": true
+        }
+    ]
+}

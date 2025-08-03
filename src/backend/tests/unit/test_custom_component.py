@@ -5,10 +5,11 @@ from textwrap import dedent
 
 import pytest
 from langchain_core.documents import Document
-from langflow.custom import Component, CustomComponent
-from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
-from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
-from langflow.custom.utils import build_custom_component_template
+
+from lfx.custom import Component, CustomComponent
+from lfx.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
+from lfx.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
+from lfx.custom.utils import build_custom_component_template
 
 
 @pytest.fixture
@@ -21,7 +22,7 @@ def code_component_with_multiple_outputs():
 code_default = """
 from langflow.custom import CustomComponent
 
-from langflow.field_typing import BaseLanguageModel
+from lfx.field_typing import BaseLanguageModel
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain_core.documents import Document
@@ -416,7 +417,7 @@ def test_custom_component_multiple_outputs(code_component_with_multiple_outputs)
 def test_custom_component_subclass_from_lctoolcomponent():
     # Import LCToolComponent and create a subclass
     code = dedent("""
-    from langflow.base.langchain_utilities.model import LCToolComponent
+    from lfx.base.langchain_utilities.model import LCToolComponent
     from langchain_core.tools import Tool
     class MyComponent(LCToolComponent):
         name: str = "MyComponent"
