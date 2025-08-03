@@ -49,7 +49,7 @@ class MessageStoreComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Stored Messages", name="stored_messages", method="store_message", hidden=True),
+        Output(display_name="Stored Messages", name="stored_messages", method="store_message"),
     ]
 
     async def store_message(self) -> Message:
