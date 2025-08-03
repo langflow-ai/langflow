@@ -1,3 +1,5 @@
+import { SentenceTransformerIcon } from "./SentenceTransformers";
+
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
@@ -243,6 +245,10 @@ export const lazyIconsMapping = {
     })),
   Searx: () =>
     import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
+  SentenceTransformers: () =>
+    import("@/icons/SentenceTransformers").then((mod) => ({
+      default: mod.SentenceTransformersIcon,
+    })),
   SerpSearch: () =>
     import("@/icons/SerpSearch").then((mod) => ({
       default: mod.SerpSearchIcon,
