@@ -5,6 +5,7 @@ from .id_generator import IDGeneratorComponent
 from .memory import MemoryComponent
 from .output_parser import OutputParserComponent
 from .store_message import MessageStoreComponent
+from .text_merger import TextMergerComponent
 
 __all__ = [
     "CalculatorComponent",
@@ -14,4 +15,5 @@ __all__ = [
     "MemoryComponent",
     "MessageStoreComponent",
     "OutputParserComponent",
+    "TextMergerComponent",
 ]
