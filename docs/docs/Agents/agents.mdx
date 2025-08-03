@@ -5,12 +5,12 @@ slug: /agents
 
 import Icon from "@site/src/components/icon";
 
-Langflow's [**Agent** component](/components-agents) is critical for building agentic flows.
+Langflow's [**Agent** component](/components-agents) is critical for building agent flows.
 This component provides everything you need to create an agent, including multiple Large Language Model (LLM) providers, tool calling, and custom instructions.
 It simplifies agent configuration so you can focus on application development.
 
 <details>
-<summary>How agents work</summary>
+<summary>How do agents work?</summary>
 
 Agents extend LLMs by integrating _tools_, which are functions that provide additional context and enable autonomous task execution.
 These integrations make agents more specialized and powerful than standalone LLMs.
@@ -30,11 +30,11 @@ The `Tool` object's description tells the agent what the tool can do so that it 
 
 ## Use the Agent component in a flow
 
-The following steps explain how to create an agentic flow in Langflow from a blank flow.
-For a prebuilt example, use the [**Simple Agent** template](/simple-agent) or try the [Langflow quickstart](/get-started-quickstart).
+The following steps explain how to create an agent flow in Langflow from a blank flow.
+For a prebuilt example, use the **Simple Agent** template or the [Langflow quickstart](/get-started-quickstart).
 
 1. Click **New Flow**, and then click **Blank Flow**.
-2. Add an **Agent** component to the **Workspace**.
+2. Add an **Agent** component to your flow.
 3. Enter a valid OpenAI API key.
 
     The default model for the **Agent** component is an OpenAI model.
@@ -84,7 +84,7 @@ For a prebuilt example, use the [**Simple Agent** template](/simple-agent) or tr
     To help you debug and test your flows, the **Playground** displays the agent's tool calls, the provided input, and the raw output the agent received before generating the summary.
     With the given example, the agent should call the **News Search** component's `search_news` action.
 
-You've successfully created a basic agentic flow that uses some generic tools.
+You've successfully created a basic agent flow that uses some generic tools.
 
 To continue building on this tutorial, try connecting other tool components or [use Langflow as an MCP client](/mcp-client) to support more complex and specialized tasks.
 
@@ -96,7 +96,7 @@ You can configure the **Agent** component to use your preferred provider and mod
 
 :::tip
 Many optional **Agent** component input parameters are hidden by default in the visual editor.
-You can view and toggle all parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+You can access all component parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 :::
 
 ### Provider and model
@@ -115,7 +115,7 @@ For example, to use the default OpenAI model, you must provide a valid OpenAI AP
 
 You can enter the key directly, but it is recommended that you follow industry best practices for storing and referencing API keys.
 For example, you can use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables) or [environment variables](/environment-variables).
-For more information, see [Add component API keys to Langflow](/configuration-api-keys#add-component-api-keys-to-langflow).
+For more information, see [Add component API keys to Langflow](/api-keys-and-authentication#component-api-keys).
 
 If you select **Custom** as the model provider, authentication is handled in the incoming **Language Model** component.
 
@@ -154,17 +154,16 @@ For more information, see [Store chat memory](/memory#store-chat-memory) and [**
 
 ### Additional parameters
 
-Many optional **Agent** component input parameters are hidden by default in the visual editor.
-You can view and toggle all parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
-
 With the **Agent** component, the available parameters can change depending on the selected provider and model.
 For example, some models support additional modes, arguments, or features like chat memory and temperature.
 
 Some additional input parameters include the following:
 
-* **Current Date** (`add_current_date_tool`): When enabled (`true`), this setting adds a tool to the agent that can retrieve the current date.
-* **Handle Parse Errors** (`handle_parsing_errors`): When enabled (`true`), this setting allows the agent to fix errors, like typos, when analyzing user input.
-* **Verbose** (`verbose`): When enabled (`true`), this setting records detailed logging output for debugging and analysis.
+* **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
+* **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
+* **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
+
+To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 ## Agent component output
 
@@ -172,3 +171,8 @@ The **Agent** component outputs a **Response** (`response`) that is [`Message` d
 
 Typically, this is passed to a **Chat Output** component to return the response in a human-readable format.
 It can also be passed to other components if you need to process the response further before, or in addition to, returning it to the user.
+
+## See also
+
+* [**Agent** and **MCP Tools** components](/components-agents)
+* [Configure tools for agents](/agents-tools)

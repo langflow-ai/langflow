@@ -1,59 +1,121 @@
 ---
-title: Langflow architecture and best practices on Kubernetes
+title: Best practices for Langflow on Kubernetes
 slug: /deployment-prod-best-practices
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+This guide provides best practices for deploying Langflow in production environments on Kubernetes.
 
-Langflow can be deployed in two distinct environments.
+## Resources and scaling
 
-* [**Langflow IDE**](/deployment-kubernetes-dev): The **Langflow IDE** includes the frontend for visual development of your flow. The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE image. The Langflow IDE can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-dev).
-* [**Langflow runtime**](/deployment-kubernetes-prod): The **Langflow runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the processes necessary to serve your flow, with PostgreSQL as the database for improved scalability. Use the Langflow **runtime** to deploy your flows if you don't require the frontend for visual development. The Langflow runtime can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-prod).
+Langflow's minimum resource requirements vary by deployment type:
 
-:::tip
-You can start Langflow in headless mode with the [LANGFLOW_BACKEND_ONLY](/environment-variables#LANGFLOW_BACKEND_ONLY) environment variable.
-:::
+* **IDE (development)**: Deploy both the Langflow visual editor (frontend) and API (backend). Typically, this is used for development environments where developers use the visual editor to create and manage flows before packaging and serving them through a production runtime deployment.
 
-Deploying on Kubernetes offers the following advantages:
+    The frontend service requires a minimum of 512Mi RAM and 0.3 CPU per instance with 1 replica.
 
-* **Scalability**: Kubernetes allows you to scale the Langflow service to meet the demands of your workload.
-* **Availability and resilience**: Kubernetes provides built-in resilience features, such as automatic failover and self-healing, to ensure that the Langflow service is always available.
-* **Security**: Kubernetes provides security features, such as role-based access control and network isolation, to protect the Langflow service and its data.
-* **Portability**: Kubernetes is a portable platform, which means that you can deploy the Langflow service to any Kubernetes cluster, on-premises or in the cloud.
+    The backend service requires a minimum of 1Gi RAM and 0.5 CPU per instance with 1 replica.
 
-Langflow can be deployed on cloud deployments like **AWS EKS, Google GKE, or Azure AKS**. For more information about deploying Langflow on AWS EKS, Google GKE, or Azure AKS, see the [Langflow Helm charts repository](https://github.com/langflow-ai/langflow-helm-charts).
+* **Runtime (production)**: Deploy the Langflow runtime for production flows, which is headless (backend only) service focused on serving the Langflow API. This is used for production environments where flows are executed programmatically without the need for the visual editor.
 
-## Langflow deployment
+    Minimum requirements include 2Gi RAM and 1000m (1 CPU) per instance with 3 replicas.
 
-A typical Langflow deployment includes:
+For more information about Langflow deployment types, see [Langflow architecture on Kubernetes](/deployment-architecture).
 
-* **Langflow API and UI**: The Langflow service is the core component of the Langflow platform. It provides a RESTful API for executing flows.
-* **Kubernetes cluster**: The Kubernetes cluster provides a platform for deploying and managing the Langflow service and its supporting components.
-* **Persistent storage**: Persistent storage is used to store the Langflow service's data, such as models and training data.
-* **Ingress controller**: The ingress controller provides a single entry point for traffic to the Langflow service.
-* **Load balancer**: Balances traffic across multiple Langflow replicas.
-* **Vector database**: If you are using Langflow for RAG, you can integrate with the vector database in Astra Serverless.
+### Estimate, test, and adjust
 
-![Langflow reference architecture on Kubernetes](/img/langflow-reference-architecture.png)
+Start with the minimum recommended resources and replicas, then monitor and scale as needed based on your deployment's requirements and performance testing.
+Consider the following factors in your resource estimation and performance testing:
 
-## Environment isolation
+* Flow complexity.
+* Volume of concurrent users and requests.
 
-It is recommended to deploy and run two separate environments for Langflow, with one environment reserved for development use and another for production use.
+   For IDE (development) deployments, consider that frontend activity also pings the backend service, so you typically need to scale both the frontend and backend together.
 
-![Langflow environments](/img/langflow-env.png)
+* Request payload content and size, particularly for file uploads in production deployments.
+* Storage requirements for cache, file management, and the Langflow database.
 
-* **The Langflow development environment** must include the Integrated Development Environment (IDE) for the full experience of Langflow, optimized for prototyping and testing new flows.
-* **The Langflow production environment** executes the flow logic in production and enables Langflow flows as standalone services.
+    An [external PostgreSQL database](#use-an-external-postgresql-database) is recommended for production deployments.
 
-## Why is it important to have separate deployments?
+* Infrastructure options that might require more resources, such as multi-core CPUs.
 
-This separation is designed to enhance security, optimize resource allocation, and streamline management.
+### Use an external PostgreSQL database
 
-* **Security**
-  * **Isolation**: By separating the development and production environments, you can better isolate different phases of the application lifecycle. This isolation minimizes the risk of development-related issues impacting the production environments.
-  * **Access control**: Different security policies and access controls can be applied to each environment. Developers may require broader access in the IDE for testing and debugging, while the runtime environment can be locked down with stricter security measures.
-  * **Reduced attack surface**: The runtime environment is configured to include only essential components, reducing the attack surface and potential vulnerabilities.
-* **Resource allocation**
-  * **Optimized resource usage and cost efficiency**: By separating the two environments, you can allocate resources more effectively. Each flow can be deployed independently, providing fine-grained resource control.
-  * **Scalability**: The runtime environment can be scaled independently based on application load and performance requirements, without affecting the development environment.
+An external PostgreSQL database is recommended for production deployments to improve scalability and reliability as compared to the default SQLite database.
+
+Your resource allocation and replication strategy must be able to support the PostgreSQL service and storage.
+For example, for a runtime (production) deployment, you might allocate 4Gi RAM, 2 CPU, and multiple replicas for high availability.
+Tune PostgreSQL parameters, such as `work_mem` and `shared_buffers`, as needed based on resource requirements and usage metrics.
+
+Recommended configurations include:
+
+* Persistent storage to prevent data loss on container shutdown
+* High Availability (HA) or Active-Active for automatic failover, scaling, and load balancing
+* Shared databases for multi-instance deployments
+* Shared storage, such as NFS or cloud storage, for multi-instance deployments to access large files stored on disk, such as in `/opt/langflow/data/`.
+
+For more information, see [Configure an external PostgreSQL database](/configuration-custom-database) and [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+
+### Use HPA for dynamic scaling
+
+Load balancing and dynamic scaling are recommended for runtime (production) deployments.
+
+For example, consider using Horizontal Pod Autoscaler (HPA) in Kubernetes to dynamically scale based on CPU or memory usage.
+The following example shows a Langflow HPA configuration with CPU-based scaling:
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: langflow-runtime-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: langflow-runtime
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+```
+
+## Failure points
+
+Langflow's reliability in production depends on mitigating key failure points, particularly around the database, file system, and instance availability:
+
+* **Database failures**: See [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+* **File system failures**: Concurrency issues in file caching, such as `/app/data/.cache`, can cause IO errors in multi-instance setups.
+To avoid this, use a shared, POSIX-compliant file system or cloud storage.
+Use persistent volumes instead of ramdisk solutions that result in data loss on container shutdown.
+* **Instance failures**: Deploy multiple replicas to avoid service disruptions when a single instance fails. Use health checks to detect and replace failed pods.
+* **Network and dependency failures**: External APIs or services used in flows may fail, causing flow errors. Implement retry logic and error handling in flows or application code. Monitor network latency and dependency health.
+
+## Monitoring
+
+Effective monitoring ensures Langflow operates reliably and performs well under varying loads:
+
+* **Database monitoring**: See [Langflow database guide for enterprise DBAs](/enterprise-database-guide).
+* **Application logs**: Collect and analyze logs for errors, warnings, and flow execution issues. Centralize logs using tools like ELK Stack or Fluentd. You can also inspect [Langflow logs](/logging).
+* **Resource usage**: Track CPU, memory, and disk usage of Langflow instances. Use Prometheus and Grafana for real-time metrics collection and monitoring in Kubernetes.
+* **API performance**: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.
+* **Observability tools**: Integrate with [LangWatch](/integrations-langwatch) or [Opik](/integrations-opik) for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.
+
+## Security
+
+Running Langflow in production requires robust security measures to protect the application, data, and users.
+Follow industry best practices and use secure Langflow configurations, such as the following:
+
+* **Container security**: Apply security best practices for containerized applications. For example, set `readOnlyRootFilesystem: true` in runtime (production) containers to prevent unauthorized modifications. Restrict access to files and codebases containing sensitive data and configuration files that shouldn't be exposed to unauthorized users.
+* **Secrets management**: Store sensitive data like API keys and PostgreSQL credentials in Kubernetes secrets or external secrets managers like HashiCorp Vault.
+* **Authentication, authorization, and access control**: Start your Langflow server with authentication enabled, as explained in [API keys and authentication](/api-keys-and-authentication). Restrict network and resource access with firewalls, network policies, network security groups, or VPCs. For example, restrict PostgreSQL database access to Langflow instances.
+* **Encryption and privacy**: Follow industry best practices and legal requirements for data privacy and encryption of data in transit and at rest, including GDPR requirements, HTTPS, TLS, and SSL. For example, configure PostgreSQL with valid SSL certificates and append `?sslmode=require` or `?sslmode=verify-full` to the connection string to enable SSL for database connections.
+* **Security posture maintenance**: Conduct regular security audits, keep current with software updates, and monitor for suspicious activity using intrusion detection systems.
+
+## See also
+
+* [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)
+* [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts)

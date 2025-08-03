@@ -19,14 +19,14 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 * A [Langflow project](/concepts-flows#projects) with at least one flow.
 
-* Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
+* Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer if you want to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
 * [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok) and an [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) if you want to [deploy a public Langflow server](/deployment-public-server).
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
 :::important MCP flow requirements
-A flow must contain a [**Chat Output**](/components-io#chat-output) component to be used as a tool by MCP clients.
+A flow must contain a [**Chat Output** component](/components-io#chat-output) to be used as a tool by MCP clients.
 :::
 
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as tools that MCP clients can use to generate responses.
@@ -38,7 +38,7 @@ The following steps explain how to limit the exposed flows and, optionally, rena
 1. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
 Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Share > MCP Server**.
 
-    The **Auto install** and **JSON** tabs display options for connecting MCP clients to the the project's MCP server.
+    The **Auto install** and **JSON** tabs display options for connecting MCP clients to the project's MCP server.
 
     The **Flows/Tools** section lists the flows that are currently being served as tools.
 
@@ -48,7 +48,7 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 
 3. In the **MCP Server Tools** window, select the flows that you want exposed as tools.
 
-    ![MCP server tools](/img/mcp-server-tools.png)
+    ![MCP Server Tools](/img/mcp-server-tools.png)
 
 4. Recommended: Edit the **Tool Name** and **Tool Description** to help MCP clients determine which actions your flows provide and when to use those actions:
 
@@ -71,7 +71,7 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 
     It's helpful to think of the names and descriptions as function names and code comments, using clear statements describing the problems your flows solve.
 
-    For example, assume you have a [Document Q&A flow](/document-qa) that uses an LLM to chat about resumes, and you give the flow the following name and description:
+    For example, assume you create a flow based on the **Document Q&A** template that uses an LLM to chat about resumes, and then you give the flow the following name and description:
 
     - **Tool Name**: `document_qa_for_resume`
 
@@ -105,7 +105,7 @@ However, you can connect any [MCP-compatible client](https://modelcontextprotoco
 
 :::important
 Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-In this is not the case, configure the client with the code in the **JSON** tab.
+If this isn't the case, use the **JSON** option to configure the MCP server.
 :::
 
 1. Install [Cursor](https://docs.cursor.com/get-started/installation).
@@ -143,10 +143,8 @@ For example:
 
     If you have [deployed a public Langflow server](/deployment-public-server), the address is automatically included.
 
-    :::important
-    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
+    If your Langflow server requires authentication, you must include your Langflow API key in the configuration.
     For more information, see [MCP server authentication and environment variables](#authentication).
-    :::
 
 5. Save and close the `mcp.json` file in Cursor.
 The newly added MCP server will appear in the **MCP Servers** section.
@@ -160,7 +158,8 @@ For more information, see the [Cursor's MCP documentation](https://docs.cursor.c
 
 ### MCP server authentication and environment variables {#authentication}
 
-If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/configuration-api-keys) in your MCP client configuration.
+You must provide a Langflow API key in your MCP client configuration if your [Langflow server has authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+
 When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
 
 ```json
@@ -185,7 +184,7 @@ Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
 
 ![MCP server tab showing Generate API key button](/img/mcp-server-api-key.png)
 
-To include environment variables with your MCP server command, include them like this:
+To include other environment variables with your MCP server command, use the `env` object with key-value pairs of environment variables:
 
 ```json
 {
@@ -203,8 +202,6 @@ To include environment variables with your MCP server command, include them like
   }
 }
 ```
-
-Replace `KEY` and `VALUE` with the environment variable name and value you want to include.
 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
 ### Deploy your MCP server externally {#deploy-your-server-externally}
@@ -249,7 +246,7 @@ The default address is `http://localhost:6274`.
 
 ## Troubleshooting MCP server
 
-If Claude for Desktop is not using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file.
+If Claude for Desktop isn't using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file.
 
 1. To find your UVX path, run `which uvx`.
 

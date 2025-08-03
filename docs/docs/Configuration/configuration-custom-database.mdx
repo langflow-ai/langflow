@@ -2,6 +2,7 @@
 title: Configure an external PostgreSQL database
 slug: /configuration-custom-database
 ---
+
 Langflow's default database is [SQLite](https://www.sqlite.org/docs.html), but you can configure Langflow to use PostgreSQL instead.
 
 This guide walks you through setting up an external database for Langflow by replacing the default SQLite connection string `sqlite:///./langflow.db` with PostgreSQL, both in local and containerized environments.
@@ -12,8 +13,7 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
 
 ## Prerequisites
 
-- [Install and start Langflow](/get-started-installation)
-- Create a [PostgreSQL](https://www.pgadmin.org/download/) database
+- A [PostgreSQL](https://www.pgadmin.org/download/) database
 
 ## Connect Langflow to a local PostgreSQL database
 
@@ -158,3 +158,9 @@ Your container name may vary.
 Since each Langflow instance runs in its own container on the Docker network, using different incoming IP addresses confirms that both instances are actively connected to the PostgreSQL database.
 
 7. To quit psql, type `quit`.
+
+## See also
+
+* [Langflow database guide for enterprise DBAs](/enterprise-database-guide)
+* [Memory management options](/memory)
+* [Logs](/logging)
