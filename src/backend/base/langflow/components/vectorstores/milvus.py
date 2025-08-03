@@ -41,7 +41,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="vector_field", display_name="Vector Field Name", value="vector"),
         DropdownInput(
             name="consistency_level",
-            display_name="Consistencey Level",
+            display_name="Consistency Level",
             options=["Bounded", "Session", "Strong", "Eventual"],
             value="Session",
             advanced=True,
