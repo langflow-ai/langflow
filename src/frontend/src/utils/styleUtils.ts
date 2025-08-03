@@ -419,6 +419,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   HuggingFaceEmbeddings: "HuggingFace",
   HuggingFaceHub: "HuggingFace",
   IFixitLoader: "IFixIt",
+  LinkupIcon: "Linkup",
   ListFlows: "Group",
   MistralAI: "Mistral",
   MongoDBAtlasVectorSearch: "MongoDB",
