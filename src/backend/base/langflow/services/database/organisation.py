@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from collections import OrderedDict
 from pathlib import Path
@@ -11,21 +12,47 @@ from sqlmodel import SQLModel
 from langflow.logging.logger import logger
 from langflow.services.auth.clerk_utils import auth_header_ctx
 from langflow.services.database.service import DatabaseService
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.utils import setup_superuser
 
 
 class OrganizationService:
     _MAX_CACHE_SIZE = 128
-    _known_orgs: OrderedDict[str, None] = OrderedDict()
+    _db_service_cache: OrderedDict[str, DatabaseService] = OrderedDict()
+    _cleanup_tasks: list[asyncio.Task] = []
 
     @classmethod
-    def _remember_org(cls, org_id: str) -> None:
-        cls._known_orgs.pop(org_id, None)
-        cls._known_orgs[org_id] = None
-        if len(cls._known_orgs) > cls._MAX_CACHE_SIZE:
-            cls._known_orgs.popitem(last=False)
+    def _remember_org(cls, org_id: str, service: DatabaseService) -> None:
+        cls._db_service_cache.pop(org_id, None)
+        cls._db_service_cache[org_id] = service
+        if len(cls._db_service_cache) > cls._MAX_CACHE_SIZE:
+            _, old_service = cls._db_service_cache.popitem(last=False)
+            cls._cleanup_tasks.append(asyncio.create_task(old_service.teardown()))
+
+    @classmethod
+    def get_db_service_for_request(cls) -> DatabaseService:
+        """Return a DatabaseService for the organisation in the auth context."""
+        payload: dict | None = auth_header_ctx.get()
+        org_id = payload.get("org_id") if payload else None
+        if not org_id:
+            msg = "Missing organisation id"
+            raise RuntimeError(msg)
+
+        service = cls._db_service_cache.get(org_id)
+        if service:
+            cls._db_service_cache.move_to_end(org_id)
+            return service
+
+        settings_service = get_settings_service()
+        base_url = settings_service.settings.database_url
+        new_url = cls._build_database_url_for_org(base_url, org_id)
+        new_settings = settings_service.settings.model_copy()
+        new_settings.database_url = new_url
+        new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
+        service = DatabaseService(new_settings_service)
+        cls._remember_org(org_id, service)
+        return service
 
     @staticmethod
     def _build_database_url_for_org(base_url: str, org_id: str) -> str:
@@ -51,6 +78,11 @@ class OrganizationService:
 
     async def create_database_and_tables_other_initializations_with_org(self) -> None:
         """Create and initialise a database for the organisation from auth context."""
+        settings_service = get_settings_service()
+        if not settings_service.auth_settings.CLERK_AUTH_ENABLED:
+            msg = "Clerk authentication disabled"
+            raise RuntimeError(msg)
+
         payload: dict | None = auth_header_ctx.get()
         if not payload:
             msg = "Missing Clerk payload"
@@ -60,16 +92,14 @@ class OrganizationService:
             msg = "Missing organisation id"
             raise RuntimeError(msg)
 
-        if org_id in self._known_orgs:
+        if org_id in self._db_service_cache:
             logger.debug("Organisation database already initialised (cached)")
-            self._remember_org(org_id)
+            self._remember_org(org_id, self._db_service_cache[org_id])
             return
 
-        db_service = get_db_service()
-        base_url = db_service.database_url
+        base_url = settings_service.settings.database_url
         new_url = self._build_database_url_for_org(base_url, org_id)
 
-        settings_service = get_settings_service()
         new_settings = settings_service.settings.model_copy()
         new_settings.database_url = new_url
         new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
@@ -78,7 +108,7 @@ class OrganizationService:
         try:
             if await self._organisation_db_exists(new_db_service):
                 logger.debug("Organisation database already initialised")
-                self._remember_org(org_id)
+                self._remember_org(org_id, new_db_service)
                 return
             if new_db_service.settings_service.settings.database_connection_retry:
                 await new_db_service.create_db_and_tables_with_retry()
@@ -90,18 +120,18 @@ class OrganizationService:
 
             async with new_db_service.with_session() as session:
                 await setup_superuser(new_settings_service, session)
-            self._remember_org(org_id)
+            self._remember_org(org_id, new_db_service)
         except Exception as exc:
             logger.exception("Failed to initialise organisation database")
-            await self._cleanup_failed_initialization(new_db_service, new_url)
+            await self._cleanup_failed_initialization(org_id, new_db_service, new_url)
+            await new_db_service.teardown()
             msg = "Failed to initialise organisation database"
             raise RuntimeError(msg) from exc
-        finally:
-            await new_db_service.teardown()
 
-    @staticmethod
-    async def _cleanup_failed_initialization(db_service: DatabaseService, database_url: str) -> None:
+    @classmethod
+    async def _cleanup_failed_initialization(cls, org_id: str, db_service: DatabaseService, database_url: str) -> None:
         """Attempt to clean up any artefacts from a failed organisation setup."""
+        cls._db_service_cache.pop(org_id, None)
         try:
             async with db_service.with_session() as session, session.bind.connect() as conn:
                 await conn.run_sync(SQLModel.metadata.drop_all)

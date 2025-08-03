@@ -137,6 +137,11 @@ def get_db_service() -> DatabaseService:
         The DatabaseService instance.
 
     """
+    from langflow.services.database.organisation import OrganizationService
+
+    if get_settings_service().auth_settings.CLERK_AUTH_ENABLED:
+        return OrganizationService.get_db_service_for_request()
+
     from langflow.services.database.factory import DatabaseServiceFactory
 
     return get_service(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())
