@@ -2,6 +2,7 @@ from .character import CharacterTextSplitterComponent
 from .conversation import ConversationChainComponent
 from .csv_agent import CSVAgentComponent
 from .fake_embeddings import FakeEmbeddingsComponent
+from .gliner_link_extractor import GLiNERLinkExtractorComponent
 from .html_link_extractor import HtmlLinkExtractorComponent
 from .json_agent import JsonAgentComponent
 from .langchain_hub import LangChainHubPromptComponent
