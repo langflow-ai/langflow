@@ -72,8 +72,8 @@ This endpoint builds and executes a flow, returning a job ID that can be used to
 
     </details>
 
-The `/build/$FLOW_ID/events` endpoint accepts an optional `stream` query parameter that defaults to `true`.
-To disable streaming and get all events at once, set `stream` to `false`.
+The `/build/$FLOW_ID/events` endpoint has a `stream` query parameter that defaults to true.
+To disable streaming and get all events at once, set `?stream=false`.
 
 ```shell
 curl -X GET \
@@ -99,12 +99,12 @@ curl -X GET \
 | files | array[string] | Optional. List of file paths to use. |
 | start_component_id | string | Optional. ID of the component where the execution should start. Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents) |
 | stop_component_id | string | Optional. ID of the component where the execution should stop. Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents).|
-| log_builds | boolean | Optional. Control build logging. Default: `true`. |
+| log_builds | Boolean | Whether to record build logs. Default: Enabled (true). |
 
 ### Set start and stop points
 
 The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run starts and stops.
-Setting `stop_component_id` for a component triggers the same behavior as clicking the **Play** button on that component, where all dependent components leading up to that component are also run.
+Setting `stop_component_id` for a component triggers the same behavior as clicking **Run component** on that component in the visual editor: The specified component and all dependent components leading up to that component will run.
 
 The following example stops flow execution at an **OpenAI** component:
 
