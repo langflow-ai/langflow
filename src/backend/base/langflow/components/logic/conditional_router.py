@@ -175,7 +175,7 @@ class ConditionalRouterComponent(Component):
                 )
                 if case_sensitive_input:
                     build_config["case_sensitive"] = case_sensitive_input.to_dict()
-            
+
             # Hide match_text for blank operators
             if field_value in ["is blank", "is not blank"]:
                 build_config.pop("match_text", None)
