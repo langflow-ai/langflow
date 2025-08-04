@@ -1,4 +1,5 @@
 import pytest
+import os
 from unittest.mock import patch, MagicMock
 from langflow.base.composio.composio_base import ComposioBaseComponent
 from tests.base import ComponentTestBaseWithClient, VersionComponentMapping, DID_NOT_EXIST
@@ -14,9 +15,14 @@ class TestComposioIntegration(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def default_kwargs(self):
+        # Load API key from environment variable
+        api_key = os.getenv("COMPOSIO_API_KEY")
+        if not api_key:
+            pytest.skip("COMPOSIO_API_KEY environment variable not set")
+        
         return {
             "entity_id": "default",
-            "api_key": "ak__p_ZUVH1qXvL4YudJ5PF",
+            "api_key": api_key,
             "app_name": "GMAIL",
             "action_button": "disabled",
         }
@@ -81,9 +87,13 @@ class TestComposioIntegration(ComponentTestBaseWithClient):
             print(f"App: {app_name}")
             
             # Setup component
+            api_key = os.getenv("COMPOSIO_API_KEY")
+            if not api_key:
+                pytest.skip("COMPOSIO_API_KEY environment variable not set")
+                
             default_kwargs = {
                 "entity_id": "default",
-                "api_key": "ak__p_ZUVH1qXvL4YudJ5PF",
+                "api_key": api_key,
                 "app_name": app_name,
                 "action_button": "disabled",
             }
@@ -215,7 +225,12 @@ class TestComposioIntegration(ComponentTestBaseWithClient):
         if created_connection_id or created_auth_config_id:
             try:
                 # Use the same API key for cleanup
-                composio = Composio(api_key="ak__p_ZUVH1qXvL4YudJ5PF")
+                api_key = os.getenv("COMPOSIO_API_KEY")
+                if not api_key:
+                    print("Warning: COMPOSIO_API_KEY not set, skipping cleanup")
+                    return
+                    
+                composio = Composio(api_key=api_key)
                 
                 # Delete the connection and auth config created during testing
                 # Connected Account
