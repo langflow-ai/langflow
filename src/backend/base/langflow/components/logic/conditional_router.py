@@ -37,6 +37,8 @@ class ConditionalRouterComponent(Component):
                 "less than or equal",
                 "greater than",
                 "greater than or equal",
+                "is blank",
+                "is not blank",
             ],
             info="The operator to apply for comparing the texts.",
             value="equals",
@@ -93,7 +95,7 @@ class ConditionalRouterComponent(Component):
         self.__iteration_updated = False
 
     def evaluate_condition(self, input_text: str, match_text: str, operator: str, *, case_sensitive: bool) -> bool:
-        if not case_sensitive and operator != "regex":
+        if not case_sensitive and operator not in ["regex", "is blank", "is not blank"]:
             input_text = input_text.lower()
             match_text = match_text.lower()
 
@@ -112,6 +114,10 @@ class ConditionalRouterComponent(Component):
                 return bool(re.match(match_text, input_text))
             except re.error:
                 return False  # Return False if the regex is invalid
+        if operator == "is blank":
+            return not input_text or input_text.strip() == ""
+        if operator == "is not blank":
+            return bool(input_text and input_text.strip() != "")
         if operator in ["less than", "less than or equal", "greater than", "greater than or equal"]:
             try:
                 input_num = float(input_text)
@@ -160,7 +166,8 @@ class ConditionalRouterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "operator":
-            if field_value == "regex":
+            # Hide case_sensitive for regex and blank operators
+            if field_value in ["regex", "is blank", "is not blank"]:
                 build_config.pop("case_sensitive", None)
             elif "case_sensitive" not in build_config:
                 case_sensitive_input = next(
@@ -168,4 +175,14 @@ class ConditionalRouterComponent(Component):
                 )
                 if case_sensitive_input:
                     build_config["case_sensitive"] = case_sensitive_input.to_dict()
+            
+            # Hide match_text for blank operators
+            if field_value in ["is blank", "is not blank"]:
+                build_config.pop("match_text", None)
+            elif "match_text" not in build_config:
+                match_text_input = next(
+                    (input_field for input_field in self.inputs if input_field.name == "match_text"), None
+                )
+                if match_text_input:
+                    build_config["match_text"] = match_text_input.to_dict()
         return build_config
