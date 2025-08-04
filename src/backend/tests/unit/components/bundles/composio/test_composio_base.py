@@ -6,7 +6,7 @@ from tests.base import ComponentTestBaseWithClient, VersionComponentMapping, DID
 from composio import Composio
 
 
-class TestComposioIntegration(ComponentTestBaseWithClient):
+class TestComposioComponentAuth(ComponentTestBaseWithClient):
     """Integration test for ComposioBaseComponent using real API calls."""
 
     @pytest.fixture
@@ -15,7 +15,11 @@ class TestComposioIntegration(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def default_kwargs(self):
-        # Load API key from environment variable
+        # Load API key from environment variable(Set your .env file in the root dir)
+        # Ensure Composio API key is configured
+        # Requires an existing connection for Gmail
+        # Make sure there is no existing connection for GitHub
+
         api_key = os.getenv("COMPOSIO_API_KEY")
         if not api_key:
             pytest.skip("COMPOSIO_API_KEY environment variable not set")
