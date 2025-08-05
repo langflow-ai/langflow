@@ -76,7 +76,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | body | Body | Input parameter. The body to send with POST, PATCH, and PUT requests as a dictionary. |
 | headers | Headers | Input parameter. The headers to send with the request as a dictionary. |
 | timeout | Timeout | Input parameter. The timeout to use for the request. |
-| follow_redirects | Follow Redirects | Input parameter. Whether to follow http redirects. Default: Enabled/true |
+| follow_redirects | Follow Redirects | Input parameter. Whether to follow HTTP redirects. The default is enabled (true). If disabled (false), HTTP redirects aren't followed. |
 | save_to_file | Save to File | Input parameter. Whether to save the API response to a temporary file. Default: Disabled/false |
 | include_httpx_metadata | Include HTTPx Metadata | Input parameter. Whether to include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. Default: Disabled/false |
 
@@ -167,7 +167,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | separator | Separator | Input parameter. The separator to use between multiple outputs in `Message` format. |
 | silent_errors | Silent Errors | Input parameter. If true, errors in the component don't raise an exception. The default is false/disabled. |
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If true (default), the **Server File Path** (`file_path`) is deleted after processing. |
-| ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If true/enabled (default), files with unsupported extensions are accepted but not processed. If false/disabled, the **File** component either can throw an error if an unsupported file type is provided. |
+| ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (true), files with unsupported extensions are accepted but not processed. If disabled (false), the **File** component either can throw an error if an unsupported file type is provided. The default is true. |
 | ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
 
@@ -351,8 +351,8 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 |------|--------------|------|
 | database_url | Database URL | Input parameter. The SQLAlchemy-compatible database connection URL. |
 | query | SQL Query | Input parameter. The SQL query to execute, which can be entered directly, passed in from another component, or, in **Tool Mode**, automatically provided by an **Agent** component. |
-| include_columns | Include Columns | Input parameter. If enabled, includes column names in the result. The default is enabled (`true`). |
-| add_error | Add Error | Input parameter. If enabled, adds any error messages to the result, if any are returned. The default is disabled (`false`). |
+| include_columns | Include Columns | Input parameter. Whether to include column names in the result. The default is enabled (true). |
+| add_error | Add Error | Input parameter. If enabled, adds any error messages to the result, if any are returned. The default is disabled (false). |
 | run_sql_query | Result Table | Output parameter. The query results as a [`DataFrame`](/data-types#dataframe). |
 
 ## URL
