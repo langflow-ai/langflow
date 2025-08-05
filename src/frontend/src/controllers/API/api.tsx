@@ -98,6 +98,7 @@ function ApiInterceptor() {
         if (!isAuthenticationError) {
           return Promise.reject(error);
         }
+        return Promise.reject(error);
       },
     );
 

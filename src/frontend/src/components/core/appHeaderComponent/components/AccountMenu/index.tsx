@@ -6,7 +6,7 @@ import {
   GITHUB_URL,
   TWITTER_URL,
 } from "@/constants/constants";
-import { useLogout } from "@/controllers/API/queries/auth";
+import { useLogout } from "@/clerk/auth";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";

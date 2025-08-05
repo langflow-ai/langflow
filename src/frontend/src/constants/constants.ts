@@ -1027,8 +1027,7 @@ export const POLLING_MESSAGES = {
 export const BUILD_POLLING_INTERVAL = 25;
 
 export const IS_AUTO_LOGIN =
-  !process?.env?.LANGFLOW_AUTO_LOGIN ||
-  String(process?.env?.LANGFLOW_AUTO_LOGIN)?.toLowerCase() !== "false";
+  (import.meta.env.VITE_AUTO_LOGIN).toLowerCase() !== "false";
 
 export const AUTO_LOGIN_RETRY_DELAY = 2000;
 export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;

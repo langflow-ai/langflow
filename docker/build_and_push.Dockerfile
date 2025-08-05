@@ -44,8 +44,17 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY ./src /app/src
 
+ARG VITE_AUTO_LOGIN=true
+ENV VITE_AUTO_LOGIN=$VITE_AUTO_LOGIN
+    
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
+
+ARG VITE_CLERK_AUTH_ENABLED=false
+ARG VITE_CLERK_PUBLISHABLE_KEY=""
+ENV VITE_CLERK_AUTH_ENABLED=$VITE_CLERK_AUTH_ENABLED
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 RUN --mount=type=cache,target=/root/.npm \
     npm ci \
     && npm run build \
