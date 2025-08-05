@@ -19,7 +19,7 @@ def _fetch_evaluators(url: str) -> dict[str, Any]:
     except httpx.RequestError as e:
         logger.error(f"Error fetching evaluators: {e}")
         return {}
-    except Exception as e:
+    except (httpx.HTTPStatusError, ValueError, KeyError) as e:
         logger.error(f"Unexpected error fetching evaluators: {e}")
         return {}
 
