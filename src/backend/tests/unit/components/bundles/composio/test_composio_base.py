@@ -1,9 +1,17 @@
-import pytest
+import asyncio
+import logging
 import os
-from unittest.mock import patch, MagicMock
-from langflow.base.composio.composio_base import ComposioBaseComponent
-from tests.base import ComponentTestBaseWithClient, VersionComponentMapping, DID_NOT_EXIST
+from contextlib import suppress
+from unittest.mock import patch
+
+import pytest
 from composio import Composio
+from langflow.base.composio.composio_base import ComposioBaseComponent
+
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithClient, VersionComponentMapping
+
+# Set up logging for the test
+logger = logging.getLogger(__name__)
 
 
 class TestComposioComponentAuth(ComponentTestBaseWithClient):
@@ -15,15 +23,12 @@ class TestComposioComponentAuth(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def default_kwargs(self):
-        # Load API key from environment variable(Set your .env file in the root dir)
-        # Ensure Composio API key is configured
-        # Requires an existing connection for Gmail
-        # Make sure there is no existing connection for GitHub
-
+        # Get API key from environment - make sure to set COMPOSIO_API_KEY in your .env file
+        # This test requires an existing Gmail connection and no existing GitHub connection
         api_key = os.getenv("COMPOSIO_API_KEY")
         if not api_key:
             pytest.skip("COMPOSIO_API_KEY environment variable not set")
-        
+
         return {
             "entity_id": "default",
             "api_key": api_key,
@@ -34,28 +39,15 @@ class TestComposioComponentAuth(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            VersionComponentMapping(
-                version="1.1.1",
-                module="base.composio",
-                file_name=DID_NOT_EXIST
-            ),
-            VersionComponentMapping(
-                version="1.1.0",
-                module="base.composio",
-                file_name=DID_NOT_EXIST
-            ),
-            VersionComponentMapping(
-                version="1.0.19",
-                module="base.composio",
-                file_name=DID_NOT_EXIST
-            ),
+            VersionComponentMapping(version="1.1.1", module="base.composio", file_name=DID_NOT_EXIST),
+            VersionComponentMapping(version="1.1.0", module="base.composio", file_name=DID_NOT_EXIST),
+            VersionComponentMapping(version="1.0.19", module="base.composio", file_name=DID_NOT_EXIST),
         ]
 
     @pytest.mark.asyncio
     async def test_composio_integration_real_api_calls(self):
-        """
-        Integration test that mimics composio_base.py flow with real API calls.
-        
+        """Integration test that mimics composio_base.py flow with real API calls.
+
         Flow:
         1. Validate API Key (real API call)
         2. Check for existing connections (real API call)
@@ -63,207 +55,160 @@ class TestComposioComponentAuth(ComponentTestBaseWithClient):
         3b. If no connection -> Initiate real OAuth flow (GITHUB scenario)
         4. Mock final status check (since real OAuth completion isn't possible)
         """
-        
-        # Variables for cleanup
+        # Track resources created during testing for cleanup
         created_connection_id = None
         created_auth_config_id = None
-        
-        # 2 test cases using single API key with different apps
+
+        # Test both scenarios: existing connection (Gmail) and new connection (GitHub)
         test_cases = [
-            {
-                "app_name": "GMAIL",
-                "description": "Existing connection scenario (GMAIL)",
-                "expected_has_connection": True  
-            },
-            {
-                "app_name": "GITHUB",
-                "description": "Fresh account scenario (GITHUB)",
-                "expected_has_connection": False 
-            }
+            {"app_name": "GMAIL", "expected_has_connection": True},
+            {"app_name": "GITHUB", "expected_has_connection": False},
         ]
-        
+
         for test_case in test_cases:
             app_name = test_case["app_name"]
-            description = test_case["description"]
             expected_has_connection = test_case["expected_has_connection"]
-            
-            print(f"\n=== Testing: {description} ===")
-            print(f"App: {app_name}")
-            
-            # Setup component
+
+            logger.info("Testing %s integration - expecting connection: %s", app_name, expected_has_connection)
+
+            # Set up component with API key
             api_key = os.getenv("COMPOSIO_API_KEY")
             if not api_key:
                 pytest.skip("COMPOSIO_API_KEY environment variable not set")
-                
+
             default_kwargs = {
                 "entity_id": "default",
                 "api_key": api_key,
                 "app_name": app_name,
                 "action_button": "disabled",
             }
-            
+
             component = await self.component_setup(ComposioBaseComponent, default_kwargs)
-            
+
             # Step 1: Validate API Key
-            print("Step 1: Validating API Key...")
+            logger.info("Validating API key...")
             wrapper = component._build_wrapper()
             assert wrapper is not None, "API Key validation failed"
-            print("API Key validation successful")
-            
+            logger.info("API key validation successful")
+
             # Step 2: Check for existing connections
-            print("Step 2: Checking for existing connections...")
+            logger.info("Checking for existing connections...")
             active_connection = component._find_active_connection_for_app(app_name)
-            
+
             if expected_has_connection:
-                # If Connection found
+                # Scenario: Connection already exists (Gmail)
                 assert active_connection is not None, "Expected to find existing connection"
                 connection_id, status = active_connection
-                print(f"Found existing connection: {connection_id} with status: {status}")
-                print("Step 3a: Success - using existing connection")
-                
-                # Step 4: Monitor the specific connection ID for stability and detect disconnection/removal
-                print(f"Step 4: Monitoring connection {connection_id} for stability...")
-                import time
-                
-                start_time = time.time()
+                logger.info("Found existing connection: %s with status: %s", connection_id, status)
+
+                # Step 4: Monitor connection stability
+                logger.info("Monitoring connection %s for stability...", connection_id)
+                start_time = asyncio.get_event_loop().time()
                 max_wait_time = 5  # 5 seconds max
                 check_interval = 1  # Check every 1 second
-                connection_lost = False
-                
-                while time.time() - start_time < max_wait_time:
-                    # Check the specific connection ID that was found
+
+                while asyncio.get_event_loop().time() - start_time < max_wait_time:
                     try:
                         # Query the connection status using the Composio API
                         connection_status = wrapper.connected_accounts.get(connection_id)
                         current_status = connection_status.status if connection_status else None
-                        
+
                         if current_status == "ACTIVE":
-                            print(f"Connection {connection_id} is still ACTIVE")
+                            logger.debug("Connection %s is still ACTIVE", connection_id)
                         elif current_status == "INITIATED":
-                            print(f"Connection {connection_id} is INITIATED, waiting for activation...")
+                            logger.debug("Connection %s is INITIATED, waiting for activation...", connection_id)
                         elif current_status == "DISCONNECTED":
-                            print(f"Connection {connection_id} has been DISCONNECTED!")
-                            connection_lost = True
+                            logger.warning("Connection %s has been DISCONNECTED!", connection_id)
                             break
                         elif current_status is None:
-                            print(f"Connection {connection_id} no longer exists (removed)!")
-                            connection_lost = True
+                            logger.warning("Connection %s no longer exists (removed)!", connection_id)
                             break
                         else:
-                            print(f"Connection {connection_id} status: {current_status}")
-                            
-                    except Exception as e:
-                        print(f"Error checking connection {connection_id}: {e}")
-                        connection_lost = True
+                            logger.debug("Connection %s status: %s", connection_id, current_status)
+
+                    except Exception:
+                        logger.exception("Error checking connection %s", connection_id)
                         break
-                    
-                    time.sleep(check_interval)
-                
-                if not connection_lost:
-                    print(f"Connection {connection_id} remained stable during monitoring period")
-                else:
-                    print(f"Connection {connection_id} was lost or removed during monitoring")
-                
-                # Step 5: Execute tool with existing connection
-                print("Step 5: Executing tool with existing connection...")
-                try:
+
+                    await asyncio.sleep(check_interval)
+
+                # Step 5: Test tool execution with existing connection
+                logger.info("Testing tool execution with existing connection...")
+                with suppress(Exception):
                     # Execute GMAIL_FETCH_EMAILS tool to verify connection works
-                    result = wrapper.tools.execute(
-                        slug="GMAIL_FETCH_EMAILS",
-                        arguments={},
-                        user_id="default"
-                    )
-                    
+                    result = wrapper.tools.execute(slug="GMAIL_FETCH_EMAILS", arguments={}, user_id="default")
+
                     if isinstance(result, dict) and "successful" in result:
                         if result["successful"]:
-                            print("Tool execution successful")
+                            logger.info("Tool execution successful")
                         else:
                             error_msg = result.get("error", "Tool execution failed")
-                            print(f"Tool execution failed: {error_msg}")
+                            logger.error("Tool execution failed: %s", error_msg)
                     else:
-                        print("Tool execution successful")
-                        
-                except Exception as e:
-                    print(f"Tool execution error: {e}")
-                
+                        logger.info("Tool execution successful")
+
             else:
-                # If No connection found
+                # Scenario: No existing connection (GitHub)
                 assert active_connection is None, "Expected no existing connection"
-                print("No existing connection found")
-                print("Step 3b: Initiating OAuth flow...")
-                
+                logger.info("No existing connection found, initiating OAuth flow...")
+
                 # Mock the connection status check since we can't complete OAuth in tests
-                with patch.object(component, '_check_connection_status_by_id') as mock_status_check:
+                with patch.object(component, "_check_connection_status_by_id") as mock_status_check:
                     mock_status_check.return_value = "ACTIVE"  # Mock successful completion
-                    
+
                     # Initiate OAuth connection
                     redirect_url, connection_id = component._initiate_connection(app_name)
-                    
+
                     assert redirect_url is not None, "Expected redirect URL from OAuth initiation"
                     assert connection_id is not None, "Expected connection ID from OAuth initiation"
-                    print(f"OAuth initiated - Redirect URL: {redirect_url}")
-                    print(f"Connection ID: {connection_id}")
-                    
+                    logger.info("OAuth initiated - Redirect URL: %s", redirect_url)
+                    logger.info("Connection ID: %s", connection_id)
+
                     # Store connection ID for cleanup
                     created_connection_id = connection_id
-                    
+
                     # Get the auth config ID for cleanup
-                    try:
+                    with suppress(Exception):
                         auth_configs = wrapper.auth_configs.list()
                         if auth_configs.items:
                             created_auth_config_id = auth_configs.items[0].id
-                            print(f"Auth config ID: {created_auth_config_id}")
-                    except Exception as e:
-                        print(f"Could not get auth config ID: {e}")
-                    
+                            logger.info("Auth config ID: %s", created_auth_config_id)
+
                     # Verify the mocked connection status
                     status = component._check_connection_status_by_id(connection_id)
                     assert status == "ACTIVE", "Expected ACTIVE status (mocked)"
-                    print(f"Connection status: {status} (mocked)")
+                    logger.info("Connection status: %s (mocked)", status)
                     mock_status_check.assert_called_once_with(connection_id)
-            
-            print(f"{description} completed successfully\n")
 
-        # Cleanup: Delete the test resources to ensure repeatability
-        print("\n=== Cleanup: Deleting test resources ===")
+            logger.info("%s integration test completed successfully", app_name)
+
+        # Cleanup: Delete test resources to ensure repeatability
+        logger.info("Cleaning up test resources...")
         if created_connection_id or created_auth_config_id:
-            try:
+            with suppress(Exception):
                 # Use the same API key for cleanup
                 api_key = os.getenv("COMPOSIO_API_KEY")
                 if not api_key:
-                    print("Warning: COMPOSIO_API_KEY not set, skipping cleanup")
+                    logger.warning("COMPOSIO_API_KEY not set, skipping cleanup")
                     return
-                    
+
                 composio = Composio(api_key=api_key)
-                
+
                 # Delete the connection and auth config created during testing
-                # Connected Account
                 if created_connection_id:
-                    try:
-                        del_conn = composio.connected_accounts.delete(created_connection_id)
-                        print(f"Connection deleted: {created_connection_id} - {del_conn}")
-                    except Exception as e:
-                        print(f"Connection deletion failed: {e}")
-                else:
-                    print("No connection to delete")
-                
-                # Auth config
+                    with suppress(Exception):
+                        composio.connected_accounts.delete(created_connection_id)
+                        logger.info("Connection deleted: %s", created_connection_id)
+
                 if created_auth_config_id:
-                    try:
-                        del_auth = composio.auth_configs.delete(created_auth_config_id)
-                        print(f"Auth config deleted: {created_auth_config_id} - {del_auth}")
-                    except Exception as e:
-                        print(f"Auth config deletion failed: {e}")
-                else:
-                    print("No auth config to delete")
-                    
-            except Exception as e:
-                print(f"Cleanup failed: {e}")
+                    with suppress(Exception):
+                        composio.auth_configs.delete(created_auth_config_id)
+                        logger.info("Auth config deleted: %s", created_auth_config_id)
         else:
-            print("No resources were created during this test run")
-        
-        print("Cleanup completed\n")
+            logger.info("No resources were created during this test run")
+
+        logger.info("Cleanup completed")
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])
