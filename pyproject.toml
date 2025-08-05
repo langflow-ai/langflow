@@ -230,6 +230,7 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2"
+    "elevenlabs = "==2.7.0" #Use Stable version as 2.8.1 is broken 
 ]
 
 [project.scripts]
