@@ -1,8 +1,8 @@
 from langchain.chains import LLMMathChain
 
 from langflow.base.chains.model import LCChainComponent
-from langflow.field_typing import Message
 from langflow.inputs.inputs import HandleInput, MultilineInput
+from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
 

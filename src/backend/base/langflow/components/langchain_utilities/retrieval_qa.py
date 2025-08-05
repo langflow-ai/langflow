@@ -1,8 +1,10 @@
+from typing import cast
+
 from langchain.chains import RetrievalQA
 
 from langflow.base.chains.model import LCChainComponent
-from langflow.field_typing import Message
 from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MultilineInput
+from langflow.schema.message import Message
 
 
 class RetrievalQAComponent(LCChainComponent):
@@ -78,4 +80,4 @@ class RetrievalQAComponent(LCChainComponent):
             result_str = f"{result_str}\n{references_str}"
         # put the entire result to debug history, query and content
         self.status = {**result, "source_documents": source_docs, "output": result_str}
-        return result_str
+        return cast("Message", result_str)
