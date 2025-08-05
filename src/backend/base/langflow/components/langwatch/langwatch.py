@@ -24,12 +24,8 @@ from langflow.schema.dotdict import dotdict
 
 class LangWatchComponent(Component):
     display_name: str = "LangWatch Evaluator"
-    description: str = (
-        "Evaluates various aspects of language models using LangWatch's evaluation endpoints."
-    )
-    documentation: str = (
-        "https://docs.langwatch.ai/langevals/documentation/introduction"
-    )
+    description: str = "Evaluates various aspects of language models using LangWatch's evaluation endpoints."
+    documentation: str = "https://docs.langwatch.ai/langevals/documentation/introduction"
     icon: str = "Langwatch"
     name: str = "LangWatchEvaluator"
 
@@ -103,22 +99,16 @@ class LangWatchComponent(Component):
         url = f"{endpoint}/api/evaluations/list"
         return get_fresh_evaluators(url)
 
-    def update_build_config(
-        self, build_config: dotdict, field_value: Any, field_name: str | None = None
-    ) -> dotdict:
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         try:
-            logger.info(
-                f"Updating build config. Field name: {field_name}, Field value: {field_value}"
-            )
+            logger.info(f"Updating build config. Field name: {field_name}, Field value: {field_value}")
 
             if field_name is None or field_name == "evaluator_name":
                 # Check if this is a refresh request (field_value is None and we have refresh_button enabled)
                 is_refresh_request = (
                     field_value is None
                     and field_name == "evaluator_name"
-                    and build_config.get("evaluator_name", {}).get(
-                        "refresh_button", False
-                    )
+                    and build_config.get("evaluator_name", {}).get("refresh_button", False)
                 )
 
                 endpoint = os.getenv("LANGWATCH_ENDPOINT", "https://app.langwatch.ai")
@@ -155,18 +145,12 @@ class LangWatchComponent(Component):
                     "timeout",
                 ]
 
-                if (
-                    field_value
-                    and field_value in self.evaluators
-                    and self.current_evaluator != field_value
-                ):
+                if field_value and field_value in self.evaluators and self.current_evaluator != field_value:
                     self.current_evaluator = field_value
                     evaluator = self.evaluators[field_value]
 
                     # Clear previous dynamic inputs
-                    keys_to_remove = [
-                        key for key in build_config if key not in default_keys
-                    ]
+                    keys_to_remove = [key for key in build_config if key not in default_keys]
                     for key in keys_to_remove:
                         del build_config[key]
 
@@ -186,9 +170,7 @@ class LangWatchComponent(Component):
                         build_config[name] = input_config.to_dict()
 
                     # Update required fields
-                    required_fields = {"api_key", "evaluator_name"}.union(
-                        evaluator.get("requiredFields", [])
-                    )
+                    required_fields = {"api_key", "evaluator_name"}.union(evaluator.get("requiredFields", []))
                     for key in build_config:
                         if isinstance(build_config[key], dict):
                             build_config[key]["required"] = key in required_fields
@@ -196,9 +178,7 @@ class LangWatchComponent(Component):
                 # Validate presence of default keys
                 missing_keys = [key for key in default_keys if key not in build_config]
                 if missing_keys:
-                    logger.warning(
-                        f"Missing required keys in build_config: {missing_keys}"
-                    )
+                    logger.warning(f"Missing required keys in build_config: {missing_keys}")
                     # Add missing keys with default values
                     for key in missing_keys:
                         build_config[key] = {"value": None, "type": "str"}
@@ -218,8 +198,7 @@ class LangWatchComponent(Component):
 
             input_fields = [
                 field
-                for field in evaluator.get("requiredFields", [])
-                + evaluator.get("optionalFields", [])
+                for field in evaluator.get("requiredFields", []) + evaluator.get("optionalFields", [])
                 if field not in {"input", "output"}
             ]
 
@@ -230,19 +209,13 @@ class LangWatchComponent(Component):
                     "required": field in evaluator.get("requiredFields", []),
                 }
                 if field == "contexts":
-                    dynamic_inputs[field] = MultilineInput(
-                        **input_params, multiline=True
-                    )
+                    dynamic_inputs[field] = MultilineInput(**input_params, multiline=True)
                 else:
                     dynamic_inputs[field] = MessageTextInput(**input_params)
 
             settings = evaluator.get("settings", {})
             for setting_name, setting_config in settings.items():
-                schema = (
-                    evaluator.get("settings_json_schema", {})
-                    .get("properties", {})
-                    .get(setting_name, {})
-                )
+                schema = evaluator.get("settings_json_schema", {}).get("properties", {}).get(setting_name, {})
 
                 input_params = {
                     "name": setting_name,
@@ -253,34 +226,22 @@ class LangWatchComponent(Component):
 
                 if schema.get("type") == "object":
                     input_type = NestedDictInput
-                    input_params["value"] = schema.get(
-                        "default", setting_config.get("default", {})
-                    )
+                    input_params["value"] = schema.get("default", setting_config.get("default", {}))
                 elif schema.get("type") == "boolean":
                     input_type = BoolInput
-                    input_params["value"] = schema.get(
-                        "default", setting_config.get("default", False)
-                    )
+                    input_params["value"] = schema.get("default", setting_config.get("default", False))
                 elif schema.get("type") == "number":
-                    is_float = isinstance(
-                        schema.get("default", setting_config.get("default")), float
-                    )
+                    is_float = isinstance(schema.get("default", setting_config.get("default")), float)
                     input_type = FloatInput if is_float else IntInput
-                    input_params["value"] = schema.get(
-                        "default", setting_config.get("default", 0)
-                    )
+                    input_params["value"] = schema.get("default", setting_config.get("default", 0))
                 elif "enum" in schema:
                     input_type = DropdownInput
                     input_params["options"] = schema["enum"]
-                    input_params["value"] = schema.get(
-                        "default", setting_config.get("default")
-                    )
+                    input_params["value"] = schema.get("default", setting_config.get("default"))
                 else:
                     input_type = MessageTextInput
                     default_value = schema.get("default", setting_config.get("default"))
-                    input_params["value"] = (
-                        str(default_value) if default_value is not None else ""
-                    )
+                    input_params["value"] = str(default_value) if default_value is not None else ""
 
                 dynamic_inputs[setting_name] = input_type(**input_params)
 
@@ -304,22 +265,16 @@ class LangWatchComponent(Component):
         if not evaluator_name:
             if self.evaluators:
                 evaluator_name = next(iter(self.evaluators))
-                logger.info(
-                    f"No evaluator was selected. Using default: {evaluator_name}"
-                )
+                logger.info(f"No evaluator was selected. Using default: {evaluator_name}")
             else:
                 return Data(
-                    data={
-                        "error": "No evaluator selected and no evaluators available. Please choose an evaluator."
-                    }
+                    data={"error": "No evaluator selected and no evaluators available. Please choose an evaluator."}
                 )
 
         try:
             evaluator = self.evaluators.get(evaluator_name)
             if not evaluator:
-                return Data(
-                    data={"error": f"Selected evaluator '{evaluator_name}' not found."}
-                )
+                return Data(data={"error": f"Selected evaluator '{evaluator_name}' not found."})
 
             logger.info(f"Evaluating with evaluator: {evaluator_name}")
 
@@ -353,9 +308,7 @@ class LangWatchComponent(Component):
             result = response.json()
 
             formatted_result = json.dumps(result, indent=2)
-            self.status = (
-                f"Evaluation completed successfully. Result:\n{formatted_result}"
-            )
+            self.status = f"Evaluation completed successfully. Result:\n{formatted_result}"
             return Data(data=result)
 
         except (httpx.RequestError, KeyError, AttributeError, ValueError) as e:
