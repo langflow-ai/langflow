@@ -130,7 +130,9 @@ unit_tests: ## run unit tests
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
 	uv run pytest src/backend/tests/unit \
-	--ignore=src/backend/tests/integration $$EXTRA_ARGS \
+	--ignore=src/backend/tests/integration \
+	--ignore=src/backend/tests/unit/template \
+	$$EXTRA_ARGS \
 	--instafail -ra -m 'not api_key_required' \
 	--durations-path src/backend/tests/.test_durations \
 	--splitting-algorithm least_duration $(args)
@@ -162,6 +164,14 @@ tests: ## run unit, integration, coverage tests
 	make coverage
 
 ######################
+# TEMPLATE TESTING
+######################
+
+template_tests: ## run all starter project template tests
+	@echo 'Running Starter Project Template Tests...'
+	@uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
+
+######################
 # CODE QUALITY
 ######################
 
@@ -176,6 +186,10 @@ format_backend: ## backend code formatters
 	@uv run ruff format . --config pyproject.toml
 
 format: format_backend format_frontend ## run code formatters
+
+format_frontend_check: ## run biome check without formatting
+	@echo 'Running Biome check on frontend...'
+	@cd src/frontend && npx @biomejs/biome check
 
 unsafe_fix:
 	@uv run ruff check . --fix --unsafe-fixes

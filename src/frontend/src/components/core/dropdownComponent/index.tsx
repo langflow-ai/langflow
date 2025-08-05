@@ -1,18 +1,18 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { cloneDeep } from "lodash";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { DropDownComponent } from "../../../types/components";
+import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
   filterNullOptions,
@@ -35,7 +35,7 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../ui/popover";
-import { BaseInputProps } from "../parameterRenderComponent/types";
+import type { BaseInputProps } from "../parameterRenderComponent/types";
 
 export default function Dropdown({
   disabled,
@@ -89,7 +89,7 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const placeholderName = name
+  const _placeholderName = name
     ? formatPlaceholderName(name)
     : "Choose an option...";
   const { firstWord } = formatName(name);

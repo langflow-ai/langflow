@@ -147,7 +147,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -453,7 +456,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -730,7 +736,7 @@
         "data": {
           "id": "note-hLqzd",
           "node": {
-            "description": "# Memory Chatbot\n\nThis flow extends the basic prompting flow with a Message history component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quickstart\n\n1. In the **Language Model** component, add your OpenAI API Key.\n\n2. Open the **Playground**. Tell the chat your name.\n\n3. Start a new chat session in the Playground, and ask, `what is my name`. The Prompt component will still remember your name, because it's connected to the Message History component.\n\n",
+            "description": "This flow extends the **Basic Prompting** template by adding a **Message History** component that can retrieve up to 100 previous chat messages as context for the current conversation.\n\n## Quickstart\n1. In the **Language Model** component, add your OpenAI API key, or select a different provider and model.\n2. Open the **Playground**, and then tell the LLM your name.\n3. Start a new chat session in the Playground, and then ask, `what is my name`. The LLM is able to retrieve your name from the stored chat history.\n\n## About the Message History component\nThe **Language Model** and **Agent** components have built-in chat memory that is enabled by default and functionally the same as the **Message History** component.\nOnly use the **Message History** component when you want to store or retrieve chat memory from an external chat memory database, or when you need to retrieve chat memory outside of the current session context, such as in a non-chat flow or by supplying memories from other chats to a different session. For more information, see [Store chat memory](https://docs.langflow.org/memory#store-chat-memory).",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -791,7 +797,10 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "name": "",
             "output_types": [],
             "outputs": [
@@ -949,7 +958,10 @@
             "key": "Memory",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "5ca89b168f3f",
+              "module": "langflow.components.helpers.memory.MemoryComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

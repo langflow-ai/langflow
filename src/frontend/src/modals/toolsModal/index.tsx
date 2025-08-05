@@ -1,9 +1,9 @@
+import type { AgGridReact } from "ag-grid-react";
+import { cloneDeep } from "lodash";
+import { type ForwardedRef, forwardRef, useEffect, useState } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { ForwardedRef, forwardRef, useEffect, useState } from "react";
 import BaseModal from "../baseModal";
 import ToolsTable from "./components/toolsTable";
 
@@ -73,18 +73,20 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
           </div>
         </BaseModal.Header>
         <BaseModal.Content overflowHidden className="flex flex-col p-0">
-          <div className="flex h-full">
-            <SidebarProvider width="20rem" defaultOpen={false}>
-              <ToolsTable
-                rows={rows}
-                isAction={isAction}
-                placeholder={placeholder}
-                data={data}
-                setData={setData}
-                open={open}
-                handleOnNewValue={handleOnNewValue}
-              />
-            </SidebarProvider>
+          <div className="flex flex-col w-full h-full">
+            <div className="flex h-full">
+              <SidebarProvider width="20rem" defaultOpen={false}>
+                <ToolsTable
+                  rows={rows}
+                  isAction={isAction}
+                  placeholder={placeholder}
+                  data={data}
+                  setData={setData}
+                  open={open}
+                  handleOnNewValue={handleOnNewValue}
+                />
+              </SidebarProvider>
+            </div>
           </div>
         </BaseModal.Content>
       </BaseModal>

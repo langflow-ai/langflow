@@ -126,6 +126,10 @@ class Settings(BaseSettings):
     - echo: Enable SQL query logging (development only)
     """
 
+    use_noop_database: bool = False
+    """If True, disables all database operations and uses a no-op session.
+    Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
+
     # cache configuration
     cache_type: Literal["async", "redis", "memory", "disk"] = "async"
     """The cache type can be 'async' or 'redis'."""
@@ -216,7 +220,7 @@ class Settings(BaseSettings):
     """The interval in ms at which Langflow will auto save flows."""
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""
-    max_file_size_upload: int = 100
+    max_file_size_upload: int = 1024
     """The maximum file size for the upload in MB."""
     deactivate_tracing: bool = False
     """If set to True, tracing will be deactivated."""
@@ -267,6 +271,13 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    @field_validator("use_noop_database", mode="before")
+    @classmethod
+    def set_use_noop_database(cls, value):
+        if value:
+            logger.info("Running with NOOP database session. All DB operations are disabled.")
+        return value
 
     @field_validator("event_delivery", mode="before")
     @classmethod

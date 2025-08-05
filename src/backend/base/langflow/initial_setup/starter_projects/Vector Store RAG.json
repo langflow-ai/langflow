@@ -319,7 +319,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -459,7 +462,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "What is the document is about?"
+                "value": "What is this document about?"
               },
               "sender": {
                 "advanced": true,
@@ -612,7 +615,10 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "name": "",
             "output_types": [],
             "outputs": [
@@ -787,7 +793,10 @@
             "icon": "scissors-line-dashed",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "dbf2e9d2319d",
+              "module": "langflow.components.processing.split_text.SplitTextComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1009,7 +1018,7 @@
         "data": {
           "id": "note-zTYux",
           "node": {
-            "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
+            "description": "Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector database with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector database.\nFor example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\nThis template has two sub-flows. One flow loads data into your vector store, and the other is the user-driven chat flow that compares a new query against the existing content in your vector database.\n\n## Quickstart\n1. Add your OpenAI API key to the **Language Model** component and the two **Embeddings** components.\n2. Add an Astra application token to the **Astra DB** vector store components, or replace these components with other vector store components available in the **Components** menu.\n**💡 Store your credentials as Langflow global variables 🌐 to simplify token management and reuse in your flows.**\n\n## Run the flows\n1. Load your data into a vector database with the 📚 **Load Data** flow. Select a file to upload in the **File** component, and then click **Play** ▶️ on the **Astra DB** component to run the **Load Data** flow.\n2. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\nOnly the run the **Load Data** flow when you need to populate your vector database with baseline content, such as product data.\nThe **Retriever** flow is the user-facing chat flow. This flow generates an embedding from chat input, runs a similarity search against the vector database to retrieve relevant content, and then passes the original query and the retrieved content to the LLM, which produces the chat response sent to the user.\n\n## Next steps\nExperiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "Read Me",
             "documentation": "",
             "template": {
@@ -1073,7 +1082,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1387,7 +1399,10 @@
             "icon": "OpenAI",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "2691dee277c9",
+              "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1920,7 +1935,10 @@
             "icon": "OpenAI",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "2691dee277c9",
+              "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -2690,7 +2708,10 @@
             "frozen": false,
             "icon": "AstraDB",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "38a337e89ff4",
+              "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -3463,7 +3484,10 @@
             "frozen": false,
             "icon": "AstraDB",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "38a337e89ff4",
+              "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
