@@ -1,5 +1,6 @@
 const SvgPineconeLogo = (props) => {
-  const color = props.isDark ? "#fff" : "#000";
+  const { isDark, ...restProps } = props;
+  const color = isDark ? '#fff' : '#000';
 
   return (
     <svg
@@ -8,7 +9,7 @@ const SvgPineconeLogo = (props) => {
       height="1em"
       fill="none"
       viewBox="0 0 32 35"
-      {...props}
+      {...restProps}
     >
       <path
         fill={color}
