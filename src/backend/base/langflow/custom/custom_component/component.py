@@ -1020,7 +1020,7 @@ class Component(CustomComponent):
 
     def get_trace_as_metadata(self):
         return {
-            input_.name: input_.value
+            input_.name: getattr(self, input_.name, input_.value)
             for input_ in self.inputs
             if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata
         }
