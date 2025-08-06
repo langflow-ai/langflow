@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.package_installation.model import PackageInstallation
     from langflow.services.database.models.variable.model import Variable
 
 
@@ -48,6 +49,10 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     )
     optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)
+    )
+    package_installations: list["PackageInstallation"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
     )
 
 
