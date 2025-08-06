@@ -2,9 +2,9 @@ const SvgWatsonxAI = (props) => {
   const { isDark, ...restProps } = props;
   return (
     <svg
-      fill={isDark ? '#ffffff' : '#0A0A0A'}
+      fill={isDark ? "#ffffff" : "#0A0A0A"}
       fillRule="evenodd"
-      style={{ flex: 'none', lineHeight: 1 }}
+      style={{ flex: "none", lineHeight: 1 }}
       viewBox="0 0 32 32"
       width="1em"
       height="1em"

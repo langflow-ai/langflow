@@ -1,11 +1,10 @@
-
 const SvgMcpIcon = (props) => {
-   const {isDark,...restProps} = props;
+  const { isDark, ...restProps } = props;
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 16 16"
-      fill={isDark ? 'white' : 'black'}
+      fill={isDark ? "white" : "black"}
       {...restProps}
     >
       <g clip-path="url(#clip0_93_974)">
@@ -14,11 +13,7 @@ const SvgMcpIcon = (props) => {
       </g>
       <defs>
         <clipPath id="clip0_93_974">
-          <rect
-            width="16"
-            height="16"
-            fill="white"
-          />
+          <rect width="16" height="16" fill="white" />
         </clipPath>
       </defs>
     </svg>

@@ -12,7 +12,7 @@ const DeepSeekSVG = (props) => {
     >
       <g
         transform="translate(0.000000,225.000000) scale(0.100000,-0.100000)"
-        fill={isDark ? '#1f3a94' : '#4c6cfc'}
+        fill={isDark ? "#1f3a94" : "#4c6cfc"}
         stroke="none"
       >
         <path
