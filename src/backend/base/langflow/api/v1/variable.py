@@ -6,7 +6,7 @@ from sqlalchemy.exc import NoResultFound
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, VALID_CATEGORIES
 from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
@@ -60,6 +60,38 @@ async def read_variables(
         raise TypeError(msg)
     try:
         return await variable_service.get_all(user_id=current_user.id, session=session)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/category/{category}", response_model=list[VariableRead], status_code=200)
+async def read_variables_by_category(
+    *,
+    session: DbSession,
+    category: str,
+    current_user: CurrentActiveUser,
+):
+    """Read all variables for a specific category."""
+    variable_service = get_variable_service()
+    if not isinstance(variable_service, DatabaseVariableService):
+        msg = "Variable service is not an instance of DatabaseVariableService"
+        raise TypeError(msg)
+
+    normalized_category = category.lower()
+    category_mapping = {cat.lower(): cat for cat in VALID_CATEGORIES}
+
+    if normalized_category not in category_mapping:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid category. Must be one of: {', '.join(VALID_CATEGORIES)}",
+        )
+
+    correct_category = category_mapping[normalized_category]
+
+    try:
+        return await variable_service.get_by_category(
+            user_id=current_user.id, category=correct_category, session=session
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
