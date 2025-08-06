@@ -4,7 +4,7 @@ from .cassandra import CassandraVectorStoreComponent
 from .cassandra_graph import CassandraGraphVectorStoreComponent
 from .chroma import ChromaVectorStoreComponent
 from .clickhouse import ClickhouseVectorStoreComponent
-from .couchbase import CouchbaseVectorStoreComponent
+from .couchbase import CouchbaseSearchVectorStoreComponent
 from .elasticsearch import ElasticsearchVectorStoreComponent
 from .faiss import FaissVectorStoreComponent
 from .graph_rag import GraphRAGComponent
@@ -30,7 +30,7 @@ __all__ = [
     "CassandraVectorStoreComponent",
     "ChromaVectorStoreComponent",
     "ClickhouseVectorStoreComponent",
-    "CouchbaseVectorStoreComponent",
+    "CouchbaseSearchVectorStoreComponent",
     "ElasticsearchVectorStoreComponent",
     "FaissVectorStoreComponent",
     "GraphRAGComponent",

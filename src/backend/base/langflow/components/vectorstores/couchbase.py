@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from langflow.inputs.inputs import NestedDictInput, BoolInput
 from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -8,7 +9,7 @@ from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema.data import Data
 
 
-class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
+class CouchbaseSearchVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Couchbase"
     description = "Couchbase Vector Store with search capabilities"
     name = "Couchbase"
@@ -25,6 +26,19 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
         *LCVectorStoreComponent.inputs,
+        BoolInput(
+            name="enable_hybrid_search",
+            display_name="Enable Hybrid Search",
+            info="Flag to enable hybrid search with custom search options.",
+            value=False,
+            advanced=True,
+        ),
+        NestedDictInput(
+            name="search_options",
+            display_name="Hybrid Search Filter",
+            info="Optional dictionary of filters to apply to the search query. Make sure to enable Hybrid search flag",
+            advanced=True,
+        ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -91,11 +105,17 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
-            docs = vector_store.similarity_search(
-                query=self.search_query,
-                k=self.number_of_results,
-            )
-
+            if self.enable_hybrid_search and self.search_options:
+                docs = vector_store.similarity_search(
+                    query=self.search_query,
+                    search_options = self.search_options,
+                    k=self.number_of_results,
+                )
+            else:
+                docs = vector_store.similarity_search(
+                    query=self.search_query,
+                    k=self.number_of_results,
+                )
             data = docs_to_data(docs)
             self.status = data
             return data
