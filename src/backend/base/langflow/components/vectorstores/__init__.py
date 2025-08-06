@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from .cassandra_graph import CassandraGraphVectorStoreComponent
     from .chroma import ChromaVectorStoreComponent
     from .clickhouse import ClickhouseVectorStoreComponent
-    from .couchbase import CouchbaseVectorStoreComponent
+    from .couchbase import CouchbaseSearchVectorStoreComponent
     from .elasticsearch import ElasticsearchVectorStoreComponent
     from .faiss import FaissVectorStoreComponent
     from .graph_rag import GraphRAGComponent
@@ -37,7 +37,7 @@ _dynamic_imports = {
     "CassandraGraphVectorStoreComponent": "cassandra_graph",
     "ChromaVectorStoreComponent": "chroma",
     "ClickhouseVectorStoreComponent": "clickhouse",
-    "CouchbaseVectorStoreComponent": "couchbase",
+    "CouchbaseSearchVectorStoreComponent": "couchbase",
     "ElasticsearchVectorStoreComponent": "elasticsearch",
     "FaissVectorStoreComponent": "faiss",
     "GraphRAGComponent": "graph_rag",
@@ -64,7 +64,7 @@ __all__ = [
     "CassandraVectorStoreComponent",
     "ChromaVectorStoreComponent",
     "ClickhouseVectorStoreComponent",
-    "CouchbaseVectorStoreComponent",
+    "CouchbaseSearchVectorStoreComponent",
     "ElasticsearchVectorStoreComponent",
     "FaissVectorStoreComponent",
     "GraphRAGComponent",

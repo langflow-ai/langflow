@@ -4384,6 +4384,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-couchbase"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "couchbase" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/58/0c/cc985e930f98930fbe20dcd578d634e5f4df751b8a6be934307b1d1849c7/langchain_couchbase-0.4.0.tar.gz", hash = "sha256:ef73334b7426235152b90deda9d351a2a716fe26d05b3f178a67f083be76659e", size = 18298, upload-time = "2025-06-24T16:18:11.499Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ac/0c/c0b539c4628e06599a728f1ee03440aaa99a6b2d5679bde0abf3e563984b/langchain_couchbase-0.4.0-py3-none-any.whl", hash = "sha256:647d97b4dab2c129af6f51bd8825daafefc7c02fad792542c0678efb69823196", size = 24730, upload-time = "2025-06-24T16:18:10.561Z" },
+]
+
+[[package]]
 name = "langchain-elasticsearch"
 version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4734,6 +4747,7 @@ dependencies = [
     { name = "langchain-chroma" },
     { name = "langchain-cohere" },
     { name = "langchain-community" },
+    { name = "langchain-couchbase" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
@@ -4931,6 +4945,7 @@ requires-dist = [
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.21" },
+    { name = "langchain-couchbase", specifier = "==0.4.0" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },
