@@ -11,24 +11,28 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = (env, argv) => {
   const isDev = env === "development";
-  const isServe = argv.mode === "production" && process.argv.includes('serve');
+  const isServe = argv.mode === "production" && process.argv.includes("serve");
 
   return {
     mode: isDev ? "development" : "production",
     entry: "./src/MFEEntry.tsx",
-    
+
     // Add caching for faster rebuilds
-    cache: isDev ? {
-      type: 'memory',
-    } : false,
-    
+    cache: isDev
+      ? {
+          type: "memory",
+        }
+      : false,
+
     // Optimize for development
-    optimization: isDev ? {
-      removeAvailableModules: false,
-      removeEmptyChunks: false,
-      splitChunks: false,
-    } : {},
-    
+    optimization: isDev
+      ? {
+          removeAvailableModules: false,
+          removeEmptyChunks: false,
+          splitChunks: false,
+        }
+      : {},
+
     output: {
       publicPath: "auto",
       // publicPath: "http://localhost:3030/",
@@ -37,14 +41,16 @@ module.exports = (env, argv) => {
       chunkFilename: "[name].js",
       clean: true,
     },
-    
+
     // Add watch options for better file watching
-    watchOptions: isDev ? {
-      aggregateTimeout: 300,
-      poll: false,
-      ignored: /node_modules/,
-    } : {},
-    
+    watchOptions: isDev
+      ? {
+          aggregateTimeout: 300,
+          poll: false,
+          ignored: /node_modules/,
+        }
+      : {},
+
     performance: {
       hints: false, // Disable performance warnings
     },
@@ -79,20 +85,17 @@ module.exports = (env, argv) => {
         {
           test: /\.s?css$/,
           use: [
-            "style-loader", 
-            "css-loader", 
+            "style-loader",
+            "css-loader",
             {
               loader: "postcss-loader",
               options: {
                 postcssOptions: {
-                  plugins: [
-                    require('tailwindcss'),
-                    require('autoprefixer'),
-                  ],
+                  plugins: [require("tailwindcss"), require("autoprefixer")],
                 },
               },
             },
-            "sass-loader"
+            "sass-loader",
           ],
         },
         {
@@ -133,30 +136,34 @@ module.exports = (env, argv) => {
         filename: "remoteEntry.js",
         exposes: {
           "./LangflowApp": "./src/MFEEntry.tsx",
+          // "./CustomDashboardWrapperPage":
+          //   "./src/customization/components/custom-DashboardWrapperPage",
+          // "./FlowPage": "./src/pages/FlowPage",
+          // "./ViewPage": "./src/pages/ViewPage",
         },
         shared: {
-          react: { 
-            singleton: true, 
-            eager: true, 
+          react: {
+            singleton: true,
+            eager: true,
             requiredVersion: false,
             // Add HMR support for React
-            ...(isDev && { version: false })
+            ...(isDev && { version: false }),
           },
-          "react-dom": { 
-            singleton: true, 
-            eager: true, 
+          "react-dom": {
+            singleton: true,
+            eager: true,
             requiredVersion: false,
-            // Add HMR support for React DOM  
-            ...(isDev && { version: false })
+            // Add HMR support for React DOM
+            ...(isDev && { version: false }),
           },
         },
         // Add development optimizations
         ...(isDev && {
           library: {
             type: "var",
-            name: "langflow"
-          }
-        })
+            name: "langflow",
+          },
+        }),
       }),
       new webpack.ProvidePlugin({
         process: "process/browser",
@@ -192,8 +199,10 @@ module.exports = (env, argv) => {
       // Add headers for better HMR
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-        "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
+        "Access-Control-Allow-Methods":
+          "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers":
+          "X-Requested-With, content-type, Authorization",
       },
       proxy: [
         {
