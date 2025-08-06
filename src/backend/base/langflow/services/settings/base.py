@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
     (i.e. in the package directory)."""
 
+    knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
+    """The directory to store knowledge bases."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None

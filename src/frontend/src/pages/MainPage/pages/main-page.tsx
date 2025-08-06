@@ -69,7 +69,7 @@ export default function CollectionPage(): JSX.Element {
               setOpenDeleteFolderModal(true);
             }}
             handleFilesClick={() => {
-              navigate("files");
+              navigate("assets");
             }}
           />
         )}

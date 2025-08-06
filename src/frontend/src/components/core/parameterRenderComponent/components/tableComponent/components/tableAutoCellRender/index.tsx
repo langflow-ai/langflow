@@ -18,6 +18,7 @@ export default function TableAutoCellRender({
   colDef,
   formatter,
   api,
+  ...props
 }: CustomCellRender) {
   function getCellType() {
     let format: string = formatter ? formatter : typeof value;
@@ -92,7 +93,12 @@ export default function TableAutoCellRender({
             }}
             editNode={true}
             id={"toggle" + colDef?.colId + uniqueId()}
-            disabled={false}
+            disabled={
+              colDef?.cellRendererParams?.isSingleToggleColumn &&
+              colDef?.cellRendererParams?.checkSingleToggleEditable
+                ? !colDef.cellRendererParams.checkSingleToggleEditable(props)
+                : false
+            }
           />
         ) : (
           <Badge
