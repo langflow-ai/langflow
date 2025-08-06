@@ -10,11 +10,11 @@ if TYPE_CHECKING:
     from .gmail_composio import ComposioGmailAPIComponent
     from .googlecalendar_composio import ComposioGoogleCalendarAPIComponent
     from .googlemeet_composio import ComposioGooglemeetAPIComponent
-    from .outlook_composio import ComposioOutlookAPIComponent
-    from .slack_composio import ComposioSlackAPIComponent
     from .googletasks_composio import ComposioGoogleTasksAPIComponent
     from .linear_composio import ComposioLinearAPIComponent
+    from .outlook_composio import ComposioOutlookAPIComponent
     from .reddit_composio import ComposioRedditAPIComponent
+    from .slack_composio import ComposioSlackAPIComponent
     from .slackbot_composio import ComposioSlackbotAPIComponent
     from .supabase_composio import ComposioSupabaseAPIComponent
     from .todoist_composio import ComposioTodoistAPIComponent
@@ -53,6 +53,7 @@ __all__ = [
     "ComposioTodoistAPIComponent",
     "ComposioYoutubeAPIComponent",
 ]
+
 
 def __getattr__(attr_name: str) -> Any:
     """Lazily import composio components on attribute access."""
