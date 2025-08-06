@@ -177,6 +177,11 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-ssl",
+          label: "SSL"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -243,6 +248,7 @@ module.exports = {
               id: "Deployment/deployment-render",
               label: "Render"
             },
+
           ]
         },
       ],
