@@ -145,6 +145,31 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "233d7ef687d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "apify_client",
+                    "version": "1.11.0"
+                  },
+                  {
+                    "name": "langchain_community",
+                    "version": "0.3.21"
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.66"
+                  },
+                  {
+                    "name": "pydantic",
+                    "version": "2.10.6"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 5
+              },
               "module": "langflow.components.apify.apify_actor.ApifyActorsComponent"
             },
             "minimized": false,
@@ -351,6 +376,31 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "233d7ef687d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "apify_client",
+                    "version": "1.11.0"
+                  },
+                  {
+                    "name": "langchain_community",
+                    "version": "0.3.21"
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.66"
+                  },
+                  {
+                    "name": "pydantic",
+                    "version": "2.10.6"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 5
+              },
               "module": "langflow.components.apify.apify_actor.ApifyActorsComponent"
             },
             "minimized": false,
@@ -644,6 +694,15 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "192913db3453",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 1
+              },
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -959,6 +1018,23 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "6f74e04e39d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.115.13"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 3
+              },
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
