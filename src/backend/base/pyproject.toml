@@ -186,7 +186,7 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
     # Rules that are TODOs
     "ANN", # Missing type annotations
     "D1", # Missing docstrings

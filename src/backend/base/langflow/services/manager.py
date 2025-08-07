@@ -4,8 +4,7 @@ import importlib
 import inspect
 from typing import TYPE_CHECKING
 
-from loguru import logger
-
+from langflow.logging.logger import logger
 from langflow.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:

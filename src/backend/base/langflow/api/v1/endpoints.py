@@ -11,7 +11,6 @@ import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
-from loguru import logger
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
@@ -41,6 +40,7 @@ from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
+from langflow.logging.logger import logger
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user

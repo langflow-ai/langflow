@@ -1,10 +1,9 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo, available_timezones
 
-from loguru import logger
-
 from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, Output
+from langflow.logging.logger import logger
 from langflow.schema.message import Message
 
 

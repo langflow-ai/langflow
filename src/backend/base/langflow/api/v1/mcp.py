@@ -4,7 +4,6 @@ import pydantic
 from anyio import BrokenResourceError
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
-from loguru import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -18,6 +17,7 @@ from langflow.api.v1.mcp_utils import (
     handle_mcp_errors,
     handle_read_resource,
 )
+from langflow.logging.logger import logger
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])

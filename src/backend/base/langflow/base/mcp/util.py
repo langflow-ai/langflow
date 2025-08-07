@@ -13,12 +13,12 @@ import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
-from loguru import logger
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
+from langflow.logging.logger import logger
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service
 

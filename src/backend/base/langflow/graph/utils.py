@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import pandas as pd
-from loguru import logger
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize

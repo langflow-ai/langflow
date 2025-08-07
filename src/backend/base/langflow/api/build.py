@@ -6,7 +6,6 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
-from loguru import logger
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -20,16 +19,12 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
-from langflow.api.v1.schemas import (
-    FlowDataRequest,
-    InputValueRequest,
-    ResultDataResponse,
-    VertexBuildResponse,
-)
+from langflow.api.v1.schemas import FlowDataRequest, InputValueRequest, ResultDataResponse, VertexBuildResponse
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
+from langflow.logging.logger import logger
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow

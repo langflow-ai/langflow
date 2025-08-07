@@ -4,12 +4,11 @@ from pathlib import Path
 
 from aiofile import async_open
 from dotenv import dotenv_values
-from loguru import logger
 
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.load.utils import replace_tweaks_with_env
-from langflow.logging.logger import configure
+from langflow.logging.logger import configure, logger
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import update_settings

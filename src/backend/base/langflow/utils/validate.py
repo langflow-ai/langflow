@@ -6,10 +6,10 @@ from types import FunctionType
 from typing import Optional, Union
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
-from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
+from langflow.logging.logger import logger
 
 
 def add_type_ignores() -> None:

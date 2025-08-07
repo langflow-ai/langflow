@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
-from loguru import logger
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
+from langflow.logging.logger import logger
 from langflow.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
@@ -144,7 +144,7 @@ class BatchRunComponent(Component):
                 user_texts = df[col_name].astype(str).tolist()
             else:
                 user_texts = [
-                    self._format_row_as_toml(cast(dict[str, Any], row)) for row in df.to_dict(orient="records")
+                    self._format_row_as_toml(cast("dict[str, Any]", row)) for row in df.to_dict(orient="records")
                 ]
 
             total_rows = len(user_texts)
@@ -185,7 +185,7 @@ class BatchRunComponent(Component):
             ):
                 response_text = response[1].content if hasattr(response[1], "content") else str(response[1])
                 row = self._create_base_row(
-                    cast(dict[str, Any], original_row), model_response=response_text, batch_index=idx
+                    cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
                 )
                 self._add_metadata(row, success=True, system_msg=system_msg)
                 rows.append(row)
@@ -200,6 +200,6 @@ class BatchRunComponent(Component):
         except (KeyError, AttributeError) as e:
             # Handle data structure and attribute access errors
             logger.error(f"Data processing error: {e!s}")
-            error_row = self._create_base_row({col: "" for col in df.columns}, model_response="", batch_index=-1)
+            error_row = self._create_base_row(dict.fromkeys(df.columns, ""), model_response="", batch_index=-1)
             self._add_metadata(error_row, success=False, error=str(e))
             return DataFrame([error_row])

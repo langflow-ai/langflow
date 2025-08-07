@@ -12,7 +12,6 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
-from loguru import logger
 from mcp import types
 from sqlmodel import select
 
@@ -21,6 +20,7 @@ from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from langflow.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from langflow.helpers.flow import json_schema_from_flow
+from langflow.logging.logger import logger
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow
 from langflow.services.database.models.user.model import User

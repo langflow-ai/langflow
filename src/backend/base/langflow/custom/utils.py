@@ -11,7 +11,6 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
 from pydantic import BaseModel
 
 from langflow.custom.custom_component.component import Component
@@ -25,6 +24,7 @@ from langflow.custom.eval import eval_custom_component_code
 from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode

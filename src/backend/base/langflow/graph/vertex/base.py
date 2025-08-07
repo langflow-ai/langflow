@@ -8,14 +8,13 @@ from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.graph.vertex.param_handler import ParameterHandler
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
+from langflow.logging.logger import logger
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
 from langflow.schema.message import Message

@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from astra_assistants.astra_assistants_manager import AssistantManager
 from langchain_core.agents import AgentFinish
-from loguru import logger
 
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.astra_assistants.util import (
@@ -15,6 +14,7 @@ from langflow.base.astra_assistants.util import (
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs.inputs import DropdownInput, FileInput, HandleInput, MultilineInput
+from langflow.logging.logger import logger
 from langflow.memory import delete_message
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.message import Message

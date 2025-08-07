@@ -6,23 +6,10 @@ import traceback
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Body,
-    Depends,
-    HTTPException,
-    Request,
-    status,
-)
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from loguru import logger
 
-from langflow.api.build import (
-    cancel_flow_build,
-    get_flow_events_response,
-    start_flow_build,
-)
+from langflow.api.build import cancel_flow_build, get_flow_events_response, start_flow_build
 from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -48,6 +35,7 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
+from langflow.logging.logger import logger
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService

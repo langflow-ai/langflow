@@ -2,7 +2,6 @@ import time
 from collections.abc import Callable
 
 import socketio
-from loguru import logger
 from sqlmodel import select
 
 from langflow.api.utils import format_elapsed_time
@@ -11,6 +10,7 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.graph.utils import layered_topological_sort
 from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
+from langflow.logging.logger import logger
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_session
 
