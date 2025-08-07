@@ -855,7 +855,7 @@ class BrightDataStructuredDataEnhancedComponent(Component):
             msg = "URL is required"
             raise ValueError(msg)
         
-        if not url.startswith(('http://', 'https://')):
+        if not url.startswith(('https://')):
             url = 'https://' + url
 
         self.url = url

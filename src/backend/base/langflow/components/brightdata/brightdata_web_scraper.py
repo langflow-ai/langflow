@@ -85,7 +85,7 @@ class BrightDataWebScraperComponent(Component):
                 )
             
             # Validate URL format
-            if not url.startswith(('http://', 'https://')):
+            if not url.startswith(('https://')):
                 url = 'https://' + url
             
             headers = {
