@@ -112,8 +112,6 @@ dependencies = [
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
-    "pylint>=3.3.4",
-    "ruff>=0.9.7",
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
     "ibm-watsonx-ai>=1.3.1",
@@ -135,7 +133,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.9.7,<0.10",
+    "ruff>=0.12.7",
     "httpx>=0.27.0",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
@@ -297,7 +295,7 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
     # Rules that are TODOs
     "ANN",
 ]
