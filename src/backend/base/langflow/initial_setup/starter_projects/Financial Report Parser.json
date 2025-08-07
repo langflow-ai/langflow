@@ -149,7 +149,10 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -461,7 +464,10 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -774,7 +780,7 @@
         "data": {
           "id": "note-2715s",
           "node": {
-            "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the Language model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **Language Model** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Parser** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
+            "description": "This template extracts key financial metrics from a given financial report text. The extracted data is structured and formatted for chat consumption.\n\n## Quickstart\n\n1. Add your OpenAI API key to the **Language Model** component, or select a different provider and model.\n2. Open the **Playground** to start the chat and run the flow.\nFor this example, the **Chat Input** component is pre-loaded with a sample financial report. The **Language Model** component identifies and retrieves the gross profit, EBITDA, net income, and operating expenses information from the financial report. Then, the **Structured Output** component formats extracted data into a structured format for better readability and further processing. Finally, the **Parser** component converts extracted data into a messages to be returned to the user.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1286,7 +1292,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ad2a6f4552c0",
+              "module": "langflow.components.processing.structured_output.StructuredOutputComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
