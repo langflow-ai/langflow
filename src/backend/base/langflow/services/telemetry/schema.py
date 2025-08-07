@@ -6,10 +6,12 @@ class RunPayload(BaseModel):
     run_seconds: int = Field(serialization_alias="runSeconds")
     run_success: bool = Field(serialization_alias="runSuccess")
     run_error_message: str = Field("", serialization_alias="runErrorMessage")
+    client_type: str | None = Field(default=None, serialization_alias="clientType")
 
 
 class ShutdownPayload(BaseModel):
     time_running: int = Field(serialization_alias="timeRunning")
+    client_type: str | None = Field(default=None, serialization_alias="clientType")
 
 
 class VersionPayload(BaseModel):
@@ -21,7 +23,7 @@ class VersionPayload(BaseModel):
     auto_login: bool = Field(serialization_alias="autoLogin")
     cache_type: str = Field(serialization_alias="cacheType")
     backend_only: bool = Field(serialization_alias="backendOnly")
-    desktop: bool = False
+    client_type: str | None = Field(default=None, serialization_alias="clientType")
 
 
 class PlaygroundPayload(BaseModel):
@@ -29,6 +31,7 @@ class PlaygroundPayload(BaseModel):
     playground_component_count: int | None = Field(None, serialization_alias="playgroundComponentCount")
     playground_success: bool = Field(serialization_alias="playgroundSuccess")
     playground_error_message: str = Field("", serialization_alias="playgroundErrorMessage")
+    client_type: str | None = Field(default=None, serialization_alias="clientType")
 
 
 class ComponentPayload(BaseModel):
@@ -36,3 +39,4 @@ class ComponentPayload(BaseModel):
     component_seconds: int = Field(serialization_alias="componentSeconds")
     component_success: bool = Field(serialization_alias="componentSuccess")
     component_error_message: str | None = Field(serialization_alias="componentErrorMessage")
+    client_type: str | None = Field(default=None, serialization_alias="clientType")
