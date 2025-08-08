@@ -1,0 +1,33 @@
+---
+title: Glean
+slug: /bundles-glean
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Glean** bundle.
+
+## Glean Search API
+
+This component allows you to call the Glean Search API.
+
+It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
+
+### Glean Search API parameters
+
+Some **Glean Search API** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| glean_api_url | String | Input parameter. The URL of the Glean API. |
+| glean_access_token | SecretString | Input parameter. An access token for Glean API authentication. |
+| query | String | Input parameter. The search query input. |
+| page_size | Integer | Input parameter. The number of results per page. Default: 10. |
+| request_options | Dict | Input parameter. Additional options for the API request. |
+
+## See also
+
+* [**Web Search** component](/components-data#web-search)

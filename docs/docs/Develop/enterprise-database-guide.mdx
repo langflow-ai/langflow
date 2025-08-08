@@ -1,0 +1,288 @@
+---
+title: Langflow database guide for enterprise DBAs
+slug: /enterprise-database-guide
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The Langflow database stores data that is essential for more Langflow operations, including startup, flow execution, user interactions, and administrative tasks.
+The database supports both frontend (visual editor) and backend (API) operations, making its availability critical to Langflow's stability and functionality.
+For details about the database schema, see [Memory management options](/memory).
+
+This guide is designed for enterprise database administrators (DBAs) and operators responsible for deploying and managing Langflow in production environments.
+It explains how to configure Langflow to use PostgreSQL, including high availability (HA) and active-active configurations, as well as best practices for monitoring, maintenance, and security.
+
+## Configure Langflow with PostgreSQL
+
+Langflow's default database is SQLite.
+However, PostgreSQL is recommended for production deployments due to its scalability, performance, and robustness.
+
+The following steps explain how to configure Langflow to use PostgreSQL for a standalone or containerized deployment.
+For more information, see [Configure an external PostgreSQL database](/configuration-custom-database).
+
+1. Set up PostgreSQL:
+
+   1. Deploy a PostgreSQL instance (version 12 or higher recommended) using a local server, Docker, or a managed cloud service.
+   2. Create a database for Langflow.
+   3. Create a PostgreSQL user with appropriate, minimal permissions to manage and write to the database, such as CREATE, SELECT, INSERT, UPDATE, DELETE on your Langflow tables.
+
+2. Obtain the connection string in the format `postgresql://user:password@host:port/dbname`, such as`postgresql://langflow:securepassword@postgres:5432/langflow`.
+
+    For High Availability, use the virtual IP or proxy hostname instead of the direct database host.
+    For more information, see [High Availability for PostgreSQL](#high-availability-for-postgresql).
+
+3. Configure Langflow with the `.env` or `docker-compose.yml` files.
+
+    <Tabs groupId="environment">
+    <TabItem value=".env" label=".env" default>
+
+    1. Create a `.env` file in the `langflow` directory:
+
+        ```shell
+        touch .env
+        ```
+
+    2. Add the connection string to the `.env` file:
+
+        ```text
+        LANGFLOW_DATABASE_URL="postgresql://langflow:securepassword@postgres:5432/langflow"
+        ```
+
+    For more environment variables, see the `.env.example` file in the Langflow repository.
+
+    </TabItem>
+    <TabItem value="docker-compose.yml" label="docker-compose.yml">
+
+    Use the sample `docker-compose.yml` from the Langflow Repository.
+    You can use the default values or customize them as needed.
+
+    ```yaml
+    version: '3'
+    services:
+      langflow:
+        image: langflowai/langflow:latest
+        ports:
+          - "7860:7860"
+        environment:
+          - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+      postgres:
+        image: postgres:16
+        ports:
+          - "5432:5432"
+        environment:
+          - POSTGRES_USER=langflow
+          - POSTGRES_PASSWORD=langflow
+          - POSTGRES_DB=langflow
+        volumes:
+          - langflow-postgres:/var/lib/postgresql/data
+    volumes:
+      - langflow-postgres:
+    ```
+
+    </TabItem>
+    </Tabs>
+
+
+4. Start Langflow with your PostgreSQL connection:
+
+    <Tabs groupId="environment">
+      <TabItem value=".env" label=".env" default>
+
+      ```shell
+      uv run langflow run --env-file .env
+      ```
+
+      </TabItem>
+      <TabItem value="docker-compose.yml" label="docker-compose.yml">
+
+      Navigate to the directory containing `docker-compose.yml`, and then run `docker-compose up`.
+
+      </TabItem>
+    </Tabs>
+
+5. Optional: Run migrations.
+
+    Langflow uses migrations to manage its database schema.
+    When you first connect to PostgreSQL, Langflow automatically runs migrations to create the necessary tables.
+
+    Direct schema modification can cause conflicts with Langflow's built-in schema management.
+    If you need to update the schema, you can manually run migrations with the Langflow CLI:
+
+    1. Run `langflow migration` to preview the changes.
+
+    2. Review the changes to ensure that it's safe to proceed with the migration.
+
+    3. Run `langflow migration --fix` to run the migration and permanently apply the changes.
+
+        This is a destructive operation that can delete data.
+        For more information, see [`langflow migration`](/configuration-cli#langflow-migration).
+
+6. To verify the configuration, create any flow using the Langflow visual editor or API, and then query your database to confirm the tables and activity are recorded there. The content of the flow doesn't matter; you only need to confirm that the flow is stored in your PostgreSQL database.
+You can query the database in two ways:
+
+    * Query the database container:
+
+        ```
+        docker exec -it <postgres-container> psql -U langflow -d langflow
+        ```
+
+    * Use SQL:
+
+        ```
+        SELECT * FROM pg_stat_activity WHERE datname = 'langflow';
+        ```
+
+### High Availability for PostgreSQL {#high-availability-for-postgresql}
+
+To further improve performance, reliability, and scalability, use a High Availability (HA) or Active-Active HA PostgreSQL configuration.
+This is recommended for production deployments to minimize downtime and ensure continuous operations if your database server fails, especially when multiple Langflow instances rely on the same database.
+
+<Tabs>
+<TabItem value="HA" label="High Availability (HA)" default>
+
+1. Set up streaming replication:
+
+    1. Configure one primary database for writes.
+    2. Configure one or more replicas for reads and failover.
+
+        Select either synchronous or asynchronous replication based on your latency and consistency requirements.
+
+2. Implement automatic failover using one of the following options:
+
+    * Use an HA orchestrator, distributed configuration store, and traffic router, such as [Patroni](https://patroni.readthedocs.io/en/latest/), etcd or [Consul](https://developer.hashicorp.com/consul), and [HAProxy](https://www.haproxy.org/).
+    * Use [Pgpool-II](https://www.pgpool.net/docs/46/en/html/index.html) alone or add supporting services for more robust HA support.
+    * Use managed services that provide built-in HA with automatic failover, such as AWS RDS or Google Cloud SQL.
+
+3. Update your PostgreSQL connection string to point to the HA setup.
+If you have a multi-instance deployment, make sure all of your Langflow instances connect to the same HA PostgreSQL database.
+
+    The connection string you use depends on your HA configuration and services.
+
+    * Use a virtual IP or DNS name that resolves to the current primary database, such as `postgresql://langflow:securepassword@db-proxy:5432/langflow?sslmode=require`.
+    * Use the provided endpoint for a managed service, such as `langflow.cluster-xyz.us-east-1.rds.amazonaws.com`.
+
+4. Optional: Implement load balancing for read-heavy workloads:
+
+    1. Use a connection pooler like [PgBouncer](https://www.pgbouncer.org/) to distribute read queries across replicas.
+    2. Configure Langflow to use a single connection string pointing to the primary PostgreSQL database or proxy.
+
+</TabItem>
+<TabItem value="AA" label="Active-Active HA">
+
+To implement Active-Active HA, you must deploy multiple Langflow instances, use load balancing to distribute traffic across the instances, and ensure all instances connect to the same HA PostgreSQL database:
+
+1. Deploy multiple Langflow instances using Kubernetes or Docker Swarm.
+
+    You must configure your instances to use a shared PostgreSQL database.
+    For more information, see [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
+
+2. Set up streaming replication:
+
+    1. Configure one primary database for writes.
+    2. Configure one or more replicas for reads and failover.
+
+        Select either synchronous or asynchronous replication based on your latency and consistency requirements.
+
+3. Implement automatic failover using one of the following options:
+
+    * Use an HA orchestrator, distributed configuration store, and traffic router, such as [Patroni](https://patroni.readthedocs.io/en/latest/), etcd or [Consul](https://developer.hashicorp.com/consul), and [HAProxy](https://www.haproxy.org/).
+    * Use [Pgpool-II](https://www.pgpool.net/docs/46/en/html/index.html) alone or add supporting services for more robust HA support.
+    * Use managed services that provide built-in HA with automatic failover, such as AWS RDS or Google Cloud SQL.
+
+4. Update your PostgreSQL connection string to point to the HA setup.
+Make sure all of your Langflow instances connect to the same HA PostgreSQL database.
+
+    The connection string you use depends on your HA configuration and services:
+
+    * Use a virtual IP or DNS name that resolves to the current primary database, such as `postgresql://langflow:securepassword@db-proxy:5432/langflow?sslmode=require`.
+    * Use the provided endpoint for a managed service, such as `langflow.cluster-xyz.us-east-1.rds.amazonaws.com`.
+
+5. Use a load balancer to distribute requests across your instances.
+
+The following example configuration is for a production deployment that has three `langflow-runtime` replicas, uses the Kubernetes load balancer service to distribute traffic to healthy pods, and uses the HA PostgreSQL database connection string.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langflow-runtime
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: langflow-runtime
+  template:
+    metadata:
+      labels:
+        app: langflow-runtime
+    spec:
+      containers:
+      - name: langflow
+        image: langflowai/langflow:latest
+        ports:
+        - containerPort: 7860
+        env:
+        - name: LANGFLOW_DATABASE_URL
+          value: "postgresql://langflow:securepassword@db-proxy:5432/langflow?sslmode=require"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langflow-runtime
+spec:
+  selector:
+    app: langflow-runtime
+  ports:
+  - port: 80
+    targetPort: 7860
+  type: LoadBalancer
+```
+
+</TabItem>
+</Tabs>
+
+After implementing HA or Active-Active HA, monitor failover events and ensure replicas are in sync.
+Langflow, through [SQLAlchemy](https://docs.sqlalchemy.org/en/20/), supports reconnection attempts if `LANGFLOW_DATABASE_CONNECTION_RETRY=True`, ensures recovery after failover, and reduces disruption once the database is back online.
+
+Although PostgreSQL handles concurrent connections well, you must still monitor for contention, deadlocks, or other performance degradation during high load.
+
+## Impact of database failure
+
+If the PostgreSQL database becomes unavailable, the following Langflow functions will fail:
+
+* **Flow Retrieval**: Cannot load new or existing flows from the database.
+* **Flow Saving**: Unable to save new flows or updates to existing flows.
+* **User Authentication**: Login and user management functions fail.
+* **Project Collection Access**: Cannot access or share community/custom project collections.
+* **Configuration Retrieval**: Unable to load application settings.
+* **Configuration Updates**: Changes to settings cannot be saved.
+* **Execution Log Access**: Cannot retrieve historical flow execution logs.
+* **Log Writing**: New execution or system activity logs cannot be recorded.
+* **Multi-User Collaboration**: Sharing flows or projects across users fails.
+* **API Flow Loading**: API requests to load new flows (non-cached) fail.
+
+Flows already loaded in memory may continue to function with cached configurations.
+However, any operation requiring database access fails until the database is restored.
+For example, a cached flow might run, but it won't record logs or message history to the database.
+
+To minimize the possibility and impact of database failure, use [HA configurations](#high-availability-for-postgresql) and record backups regularly.
+For example, you can use `pg_dump` to create logical backups or set up continuous archiving with write-ahead logs (WAL) for point-in-time recovery.
+Test restoration procedures regularly to ensure your team understands how to execute them in a disaster recovery scenario.
+
+## Database monitoring
+
+Monitor your PostgreSQL database to ensure optimal performance and reliability:
+
+* Use tools like pgAdmin, Prometheus with PostgreSQL exporter, or cloud-based monitoring for PostgreSQL.
+* Track performance metrics such as CPU, memory, and disk I/O usage.
+* Monitor replica health, availability, lag, and synchronization.
+For example, use `pg_stat_activity` to monitor connection counts and contention.
+* Set up alerts and notifications for high latency, failover events, or replication issues.
+* Enable PostgreSQL logging, such as `log_connections` and `log_statements`, to track access and changes.
+
+## See also
+
+* [Configure an external PostgreSQL database](/configuration-custom-database)
+* [Langflow architecture on Kubernetes](/deployment-architecture)
+* [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)
