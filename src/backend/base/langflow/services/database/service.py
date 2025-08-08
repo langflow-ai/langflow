@@ -157,7 +157,7 @@ class DatabaseService(Service):
                 "timeout": settings.db_connect_timeout,
             }
         # For PostgreSQL, set the timezone to UTC
-        if settings.database_url and settings.database_url.startswith("postgresql"):
+        if settings.database_url and settings.database_url.startswith(("postgresql", "postgres")):
             return {"options": "-c timezone=utc"}
         return {}
 
