@@ -20,13 +20,7 @@ class PerplexityComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=[
-                  "sonar",
-                  "sonar-pro",
-                  "sonar-reasoning",
-                  "sonar-reasoning-pro",
-                  "sonar-deep-research"
-            ],
+            options=["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro", "sonar-deep-research"],
             value="sonar",
         ),
         IntInput(
