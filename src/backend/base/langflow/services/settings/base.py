@@ -272,6 +272,9 @@ class Settings(BaseSettings):
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
 
+    server_api_document_enabled: bool = True
+    """If set to False, Langflow will not enable the API documentation."""
+
     @field_validator("use_noop_database", mode="before")
     @classmethod
     def set_use_noop_database(cls, value):
