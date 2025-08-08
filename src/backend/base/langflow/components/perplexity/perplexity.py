@@ -20,19 +20,11 @@ class PerplexityComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=[
-                "sonar",
-                "sonar-pro",
-                "sonar-reasoning",
-                "sonar-reasoning-pro",
-                "sonar-deep-research"
-            ],
+            options=["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro", "sonar-deep-research"],
             value="sonar",
         ),
         IntInput(
-            name="max_output_tokens",
-            display_name="Max Output Tokens",
-            info="The maximum number of tokens to generate."
+            name="max_output_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."
         ),
         SecretStrInput(
             name="api_key",
@@ -42,10 +34,7 @@ class PerplexityComponent(LCModelComponent):
             required=True,
         ),
         SliderInput(
-            name="temperature",
-            display_name="Temperature",
-            value=0.75,
-            range_spec=RangeSpec(min=0, max=2, step=0.05)
+            name="temperature", display_name="Temperature", value=0.75, range_spec=RangeSpec(min=0, max=2, step=0.05)
         ),
         FloatInput(
             name="top_p",
@@ -57,7 +46,7 @@ class PerplexityComponent(LCModelComponent):
             name="n",
             display_name="N",
             info="Number of chat completions to generate for each prompt. "
-                 "Note that the API may not return the full n completions if duplicates are generated.",
+            "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
         IntInput(
