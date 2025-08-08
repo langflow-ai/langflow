@@ -90,7 +90,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
+            "description": "Given a search prompt, it will return search results using ScrapeGraph's search functionality.",
             "display_name": "ScrapeGraphSearchApi",
             "documentation": "https://docs.scrapegraphai.com/introduction",
             "edited": false,
@@ -103,7 +103,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "cdea312e9de9",
+              "code_hash": "99b8b89dc4ca",
               "module": "langflow.components.scrapegraph.scrapegraph_search_api.ScrapeGraphSearchApi"
             },
             "minimized": false,
@@ -163,7 +163,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom.custom_component.component import Component\nfrom langflow.io import (\n    MessageTextInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema.data import Data\n\n\nclass ScrapeGraphSearchApi(Component):\n    display_name: str = \"ScrapeGraphSearchApi\"\n    description: str = \"\"\"ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper\"\"\"\n    name = \"ScrapeGraphSearchApi\"\n\n    documentation: str = \"https://docs.scrapegraphai.com/introduction\"\n    icon = \"ScrapeGraph\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"ScrapeGraph API Key\",\n            required=True,\n            password=True,\n            info=\"The API key to use ScrapeGraph API.\",\n        ),\n        MessageTextInput(\n            name=\"user_prompt\",\n            display_name=\"Search Prompt\",\n            tool_mode=True,\n            info=\"The search prompt to use.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"search\"),\n    ]\n\n    def search(self) -> list[Data]:\n        try:\n            from scrapegraph_py import Client\n            from scrapegraph_py.logger import sgai_logger\n        except ImportError as e:\n            msg = \"Could not import scrapegraph-py package. Please install it with `pip install scrapegraph-py`.\"\n            raise ImportError(msg) from e\n\n        # Set logging level\n        sgai_logger.set_logging(level=\"INFO\")\n\n        # Initialize the client with API key\n        sgai_client = Client(api_key=self.api_key)\n\n        try:\n            # SearchScraper request\n            response = sgai_client.searchscraper(\n                user_prompt=self.user_prompt,\n            )\n\n            # Close the client\n            sgai_client.close()\n\n            return Data(data=response)\n        except Exception:\n            sgai_client.close()\n            raise\n"
+                "value": "from langflow.custom.custom_component.component import Component\nfrom langflow.io import (\n    MessageTextInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema.data import Data\n\n\nclass ScrapeGraphSearchApi(Component):\n    display_name: str = \"ScrapeGraph Search API\"\n    description: str = \"Given a search prompt, it will return search results using ScrapeGraph's search functionality.\"\n    name = \"ScrapeGraphSearchApi\"\n\n    documentation: str = \"https://docs.scrapegraphai.com/services/searchscraper\"\n    icon = \"ScrapeGraph\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"ScrapeGraph API Key\",\n            required=True,\n            password=True,\n            info=\"The API key to use ScrapeGraph API.\",\n        ),\n        MessageTextInput(\n            name=\"user_prompt\",\n            display_name=\"Search Prompt\",\n            tool_mode=True,\n            info=\"The search prompt to use.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"search\"),\n    ]\n\n    def search(self) -> list[Data]:\n        try:\n            from scrapegraph_py import Client\n            from scrapegraph_py.logger import sgai_logger\n        except ImportError as e:\n            msg = \"Could not import scrapegraph-py package. Please install it with `pip install scrapegraph-py`.\"\n            raise ImportError(msg) from e\n\n        # Set logging level\n        sgai_logger.set_logging(level=\"INFO\")\n\n        # Initialize the client with API key\n        sgai_client = Client(api_key=self.api_key)\n\n        try:\n            # SearchScraper request\n            response = sgai_client.searchscraper(\n                user_prompt=self.user_prompt,\n            )\n\n            # Close the client\n            sgai_client.close()\n\n            return Data(data=response)\n        except Exception:\n            sgai_client.close()\n            raise\n"
               },
               "tools_metadata": {
                 "_input_type": "ToolsInput",

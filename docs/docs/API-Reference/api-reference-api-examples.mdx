@@ -11,8 +11,8 @@ You can use the Langflow API for programmatic interactions with Langflow, such a
 * Create and edit flows, including file management for flows.
 * Develop applications that use your flows.
 * Develop custom components.
-* Build Langflow as a dependency of a larger project.
-* Contribute to the overall Langflow project.
+* Build Langflow as a dependency of a larger application, codebase, or service.
+* Contribute to the overall Langflow codebase.
 
 To view and test all available endpoints, you can access the Langflow API's OpenAPI specification at your Langflow deployment's `/docs` endpoint, such as `http://localhost:7860/docs`.
 
@@ -26,7 +26,7 @@ The quickstart demonstrates how to get automatically generated code snippets for
 
 While individual options vary by endpoint, all Langflow API requests share some commonalities, like a URL, method, parameters, and authentication.
 
-As an example of a Langflow API request, the following curl command calls the `/v1/run` endpoint, and it passes a runtime override (`tweaks`) to the flow's Chat Output component:
+As an example of a Langflow API request, the following curl command calls the `/v1/run` endpoint, and it passes a runtime override (`tweaks`) to the flow's **Chat Output** component:
 
 ```bash
 curl --request POST \
@@ -59,11 +59,8 @@ You can configure the Langflow port number in the `LANGFLOW_PORT` [environment v
 
 ### Authentication
 
-In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
-The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
-
-To authenticate a Langflow API request, provide a Langflow API key in either an `x-api-key` header or query parameter.
-For more information, see [API keys](/configuration-api-keys).
+In Langflow versions 1.5 and later, most API endpoints require authentication with a Langflow API key in either an `x-api-key` header or query parameter.
+For more information, see [API keys and authentication](/api-keys-and-authentication).
 
 As with any API, follow industry best practices for storing and referencing sensitive credentials.
 For example, you can [set environment variables](#set-environment-variables) for your API keys, and then reference those environment variables in your API requests.
@@ -117,7 +114,7 @@ curl --request POST \
 }'
 ```
 
-Commonly used values in Langflow API requests include your [Langflow server URL](#base-url), [Langflow API keys](/configuration-api-keys), flow IDs, and [project IDs](/api-projects#read-projects).
+Commonly used values in Langflow API requests include your [Langflow server URL](#base-url), [Langflow API keys](#authentication), flow IDs, and [project IDs](/api-projects#read-projects).
 
 You can retrieve flow IDs from the [**API access** pane](/concepts-publish#api-access), in a flow's URL, and with [`GET /flows`](/api-flows#read-flows).
 
@@ -138,6 +135,7 @@ curl -X GET \
 
 <details>
 <summary>Result</summary>
+
 ```text
 {
     "version": "1.1.1",
@@ -145,6 +143,7 @@ curl -X GET \
     "package": "Langflow"
 }
 ```
+
 </details>
 
 ### Get configuration
@@ -160,6 +159,7 @@ curl -X GET \
 
 <details>
 <summary>Result</summary>
+
 ```json
 {
   "feature_flags": {
@@ -172,6 +172,7 @@ curl -X GET \
   "max_file_size_upload": 100
 }
 ```
+
 </details>
 
 ### Get all components

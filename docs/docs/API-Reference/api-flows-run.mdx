@@ -20,7 +20,7 @@ For more information, see [Generate API code snippets](/concepts-publish#generat
 Execute a specified flow by ID or name.
 Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
-The following example runs a [Basic Prompting](/basic-prompting) flow with flow parameters passed in the request body.
+The following example runs the **Basic Prompting** template flow with flow parameters passed in the request body.
 This flow requires a chat input string (`input_value`), and uses default values for all other parameters.
 
 ```bash
@@ -41,7 +41,7 @@ curl -X POST \
 The response from `/v1/run/$FLOW_ID` includes metadata, inputs, and outputs for the run.
 
 <details>
-  <summary>Result</summary>
+<summary>Result</summary>
 
 The following example illustrates a response from a Basic Prompting flow:
 
@@ -102,7 +102,7 @@ curl -X POST \
 LLM chat responses are streamed back as `token` events, culminating in a final `end` event that closes the connection.
 
 <details>
-  <summary>Result</summary>
+<summary>Result</summary>
 
 The following example is truncated to illustrate a series of `token` events as well as the final `end` event that closes the LLM's token streaming response:
 
@@ -127,6 +127,7 @@ The following example is truncated to illustrate a series of `token` events as w
 
 {"event": "end", "data": {"result": {"session_id": "chat-123", "message": "Sure! Have you ever heard of the phenomenon known as \"bioluminescence\"?..."}}}
 ```
+
 </details>
 
 ### Run endpoint headers
@@ -139,12 +140,10 @@ The following example is truncated to illustrate a series of `token` events as w
 
 ### Run endpoint parameters
 
-<!-- TODO: Can there be other parameters depending on the components in the flow? -->
-
 | Parameter | Type | Info |
 |-----------|------|------|
 | flow_id | UUID/string | Required. Part of URL: `/run/$FLOW_ID` |
-| stream | boolean | Optional. Query parameter: `/run/$FLOW_ID?stream=true` |
+| stream | Boolean | Optional. Query parameter: `/run/$FLOW_ID?stream=true` |
 | input_value | string | Optional. JSON body field. Main input text/prompt. Default: `null` |
 | input_type | string | Optional. JSON body field. Input type ("chat" or "text"). Default: `"chat"` |
 | output_type | string | Optional. JSON body field. Output type ("chat", "any", "debug"). Default: `"chat"` |
@@ -179,7 +178,8 @@ curl -X POST \
 Use the `/webhook` endpoint to start a flow by sending an HTTP `POST` request.
 
 :::tip
-After you add a **Webhook** component to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook cURL** tab to get an automatically generated `POST /webhook` request for your flow.
+After you add a [**Webhook** component](/components-data#webhook) to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook curl** tab to get an automatically generated `POST /webhook` request for your flow.
+For more information, see [Trigger flows with webhooks](/webhook).
 :::
 
 ```bash
@@ -192,15 +192,15 @@ curl -X POST \
 
 <details>
 <summary>Result</summary>
+
 ```json
 {
   "message": "Task started in the background",
   "status": "in progress"
 }
 ```
-</details>
 
-For more information, see [Webhook component](/components-data#webhook) and [Trigger flows with webhooks](/webhook).
+</details>
 
 ## Deprecated flow trigger endpoints
 
