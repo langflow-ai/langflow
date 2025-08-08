@@ -79,6 +79,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             raise ImportError(msg) from e
         try:
             import boto3
+            from botocore.config import Config
         except ImportError as e:
             msg = "boto3 is not installed. Please install it with `pip install boto3`."
             raise ImportError(msg) from e
@@ -99,6 +100,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
         if self.region_name:
             client_params["region_name"] = self.region_name
 
+        client_params["config"] = Config(user_agent_extra="x-client-framework:langflow")
         boto3_client = session.client("bedrock-runtime", **client_params)
         return BedrockEmbeddings(
             credentials_profile_name=self.credentials_profile_name,
