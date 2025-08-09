@@ -1071,8 +1071,8 @@ class MCPStdioClient:
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
-        # Attempt best-effort remote session termination first
-        await self._terminate_remote_session()
+        # For stdio transport, there is no remote session to terminate explicitly
+        # The session cleanup happens when the background task is cancelled
 
         # Clean up local session using the session manager
         if self._session_context:
@@ -1379,6 +1379,22 @@ class MCPSseClient:
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
         logger.error(msg)
         raise ValueError(msg)
+
+    async def disconnect(self):
+        """Properly close the connection and clean up resources."""
+        # Attempt best-effort remote session termination first
+        await self._terminate_remote_session()
+
+        # Clean up local session using the session manager
+        if self._session_context:
+            session_manager = self._get_session_manager()
+            await session_manager._cleanup_session(self._session_context)
+
+        # Reset local state
+        self.session = None
+        self._connection_params = None
+        self._connected = False
+        self._session_context = None
 
     async def __aenter__(self):
         return self
