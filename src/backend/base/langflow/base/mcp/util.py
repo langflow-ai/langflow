@@ -804,6 +804,15 @@ class MCPSessionManager:
 
         session_info = sessions[session_id]
         try:
+            # First try to properly close the session if it exists
+            if "session" in session_info:
+                session = session_info["session"]
+                if hasattr(session, "close"):
+                    try:
+                        await session.close()
+                    except Exception as e:  # noqa: BLE001
+                        logger.debug(f"Error closing session {session_id}: {e}")
+
             # Cancel the background task which will properly close the session
             if "task" in session_info:
                 task = session_info["task"]
@@ -853,6 +862,10 @@ class MCPSessionManager:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
+
+        # Give a bit more time for subprocess transports to clean up
+        # This helps prevent the BaseSubprocessTransport.__del__ warnings
+        await asyncio.sleep(0.5)
 
     async def _cleanup_session(self, context_id: str):
         """Backward-compat cleanup by context_id.

@@ -44,12 +44,17 @@ def process_tracker():
 
     yield process, initial_count
 
+    # Give some extra time for cleanup to complete before checking for leftover processes
+    import time
+
+    time.sleep(1)
+
     # Cleanup any remaining child processes
     try:
         for child in process.children(recursive=True):
             try:
                 child.terminate()
-                child.wait(timeout=3)
+                child.wait(timeout=5)  # Increased timeout for cleanup
             except (psutil.NoSuchProcess, psutil.TimeoutExpired):
                 with contextlib.suppress(psutil.NoSuchProcess):
                     child.kill()
