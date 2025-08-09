@@ -6,10 +6,10 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 import orjson
-from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
+from langflow.logging.logger import logger
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.services.deps import get_tracing_service, session_scope
@@ -124,19 +124,19 @@ async def update_params_with_load_from_db_fields(
             except ValueError as e:
                 if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
                     raise
-                logger.debug(str(e))
+                await logger.adebug(str(e))
                 key = None
 
             if fallback_to_env_vars and key is None:
                 key = os.getenv(params[field])
                 if key:
-                    logger.info(f"Using environment variable {params[field]} for {field}")
+                    await logger.ainfo(f"Using environment variable {params[field]} for {field}")
                 else:
-                    logger.error(f"Environment variable {params[field]} is not set.")
+                    await logger.aerror(f"Environment variable {params[field]} is not set.")
 
             params[field] = key if key is not None else None
             if key is None:
-                logger.warning(f"Could not get value for {field}. Setting it to None.")
+                await logger.awarning(f"Could not get value for {field}. Setting it to None.")
 
         return params
 

@@ -3,7 +3,6 @@ import os
 from typing import Any
 
 import httpx
-from loguru import logger
 
 from langflow.base.langwatch.utils import get_cached_evaluators
 from langflow.custom.custom_component.component import Component
@@ -18,6 +17,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 

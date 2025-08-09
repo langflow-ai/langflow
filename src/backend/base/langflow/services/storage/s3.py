@@ -1,6 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
-from loguru import logger
+
+from langflow.logging.logger import logger
 
 from .service import StorageService
 

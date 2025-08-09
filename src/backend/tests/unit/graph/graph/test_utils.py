@@ -462,7 +462,7 @@ class TestFindCycleVertices:
         assert sorted(result) == sorted(expected_output)
 
     @pytest.mark.parametrize("_", range(5))
-    def test_handle_two_inputs_in_cycle(self, _):  # noqa: PT019
+    def test_handle_two_inputs_in_cycle(self, _):
         edges = [
             ("chat_input", "router"),
             ("chat_input", "concatenate"),

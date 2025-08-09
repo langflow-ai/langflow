@@ -4,9 +4,9 @@ import asyncio
 import os
 from typing import TYPE_CHECKING
 
-from loguru import logger
 from typing_extensions import override
 
+from langflow.logging.logger import logger
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead

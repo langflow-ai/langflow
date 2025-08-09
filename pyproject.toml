@@ -112,8 +112,6 @@ dependencies = [
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
-    "pylint>=3.3.4",
-    "ruff>=0.9.7",
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
     "ibm-watsonx-ai>=1.3.1",
@@ -126,6 +124,7 @@ dependencies = [
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
+    "structlog>=25.4.0",
 ]
 
 [dependency-groups]
@@ -134,7 +133,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.9.7,<0.10",
+    "ruff>=0.12.7",
     "httpx>=0.27.0",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
@@ -296,7 +295,8 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
+    "D10", # Missing docstrings
     # Rules that are TODOs
     "ANN",
 ]
@@ -306,6 +306,7 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",

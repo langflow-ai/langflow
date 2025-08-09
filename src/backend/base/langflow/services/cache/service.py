@@ -6,9 +6,9 @@ from collections import OrderedDict
 from typing import Generic, Union
 
 import dill
-from loguru import logger
 from typing_extensions import override
 
+from langflow.logging.logger import logger
 from langflow.services.cache.base import (
     AsyncBaseCacheService,
     AsyncLockType,

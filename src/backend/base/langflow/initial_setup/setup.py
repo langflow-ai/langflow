@@ -19,7 +19,6 @@ import orjson
 import sqlalchemy as sa
 from aiofile import async_open
 from emoji import demojize, purely_emoji
-from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
@@ -33,6 +32,7 @@ from langflow.base.constants import (
     SKIPPED_FIELD_ATTRIBUTES,
 )
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
+from langflow.logging.logger import logger
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
