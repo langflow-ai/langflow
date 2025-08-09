@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.graph.graph.base import Graph
     from langflow.graph.schema import RunOutputs
-    from langflow.services.event_manager import EventManager
+    from langflow.events.event_manager import EventManager
 
 
 class Result(BaseModel):
