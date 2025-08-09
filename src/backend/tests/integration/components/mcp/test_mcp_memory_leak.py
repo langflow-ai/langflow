@@ -53,7 +53,7 @@ def process_tracker():
             except (psutil.NoSuchProcess, psutil.TimeoutExpired):
                 with contextlib.suppress(psutil.NoSuchProcess):
                     child.kill()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception("Error cleaning up child processes: %s", e)
 
 
