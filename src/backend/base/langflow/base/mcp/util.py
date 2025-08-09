@@ -569,6 +569,7 @@ class MCPSessionManager:
                 "ClosedResourceError" in str(type(e))
                 or "Connection closed" in error_str
                 or "Connection lost" in error_str
+                or "Connection failed" in error_str
                 or "Transport closed" in error_str
                 or "Stream closed" in error_str
             ):
