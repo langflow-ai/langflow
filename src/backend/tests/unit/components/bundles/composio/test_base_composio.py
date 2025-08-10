@@ -14,6 +14,8 @@ from tests.base import DID_NOT_EXIST, ComponentTestBaseWithClient, VersionCompon
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.api_key_required
+@pytest.mark.no_blockbuster
 class TestComposioComponentAuth(ComponentTestBaseWithClient):
     """Integration test for ComposioBaseComponent using real API calls."""
 
