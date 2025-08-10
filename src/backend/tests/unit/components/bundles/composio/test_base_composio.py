@@ -21,6 +21,7 @@ class TestComposioComponentAuth(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def component_class(self):
+        """Provide the component class under test."""
         return ComposioBaseComponent
 
     @pytest.fixture
