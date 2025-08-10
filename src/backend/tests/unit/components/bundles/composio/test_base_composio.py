@@ -41,6 +41,7 @@ class TestComposioComponentAuth(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def file_names_mapping(self):
+        """Provide version component mappings for backward compatibility testing."""
         return [
             VersionComponentMapping(version="1.1.1", module="base.composio", file_name=DID_NOT_EXIST),
             VersionComponentMapping(version="1.1.0", module="base.composio", file_name=DID_NOT_EXIST),
