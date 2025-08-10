@@ -14,12 +14,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("nvidia");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .hover()
       .then(async () => {
         // Wait for the API request to complete after clicking the add button

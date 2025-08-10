@@ -1,10 +1,10 @@
-import { useDarkStore } from "@/stores/darkStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
   oneLight,
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { useDarkStore } from "@/stores/darkStore";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import getWidgetCode from "../apiModal/utils/get-widget-code";
@@ -57,7 +57,7 @@ export default function EmbedModal({
   return (
     <BaseModal open={open} setOpen={setOpen} size="retangular">
       <BaseModal.Header>
-        <div className="flex items-center gap-2 text-[16px] font-semibold">
+        <div className="flex items-center gap-2 text-base font-semibold">
           <IconComponent name="Columns2" className="icon-size" />
           Embed into site
         </div>

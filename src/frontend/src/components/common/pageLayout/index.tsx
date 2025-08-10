@@ -1,3 +1,4 @@
+import type { To } from "react-router-dom";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { Button } from "../../ui/button";
@@ -17,7 +18,7 @@ export default function PageLayout({
   children: React.ReactNode;
   button?: React.ReactNode;
   betaIcon?: boolean;
-  backTo?: string;
+  backTo?: To;
 }) {
   const navigate = useCustomNavigate();
 
@@ -35,6 +36,7 @@ export default function PageLayout({
                     onClick={() => {
                       navigate(backTo);
                     }}
+                    data-testid="back_page_button"
                   >
                     <ForwardedIconComponent
                       name="ChevronLeft"

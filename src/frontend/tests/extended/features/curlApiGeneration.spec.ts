@@ -11,7 +11,7 @@ test(
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();
-    await page.getByRole("tab", { name: "cURL" }).click();
+    await page.getByTestId("api_tab_curl").click();
     await page.getByTestId("icon-Copy").last().click();
     const handle = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),

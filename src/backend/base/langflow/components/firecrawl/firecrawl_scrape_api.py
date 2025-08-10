@@ -1,4 +1,4 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     DataInput,
     IntInput,
@@ -6,12 +6,12 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class FirecrawlScrapeApi(Component):
-    display_name: str = "FirecrawlScrapeApi"
-    description: str = "Firecrawl Scrape API."
+    display_name: str = "Firecrawl Scrape API"
+    description: str = "Scrapes a URL and returns the results."
     name = "FirecrawlScrapeApi"
 
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/scrape"

@@ -4,7 +4,7 @@ from langchain_community.graph_vectorstores import CassandraGraphVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.inputs import DictInput, FloatInput
+from langflow.inputs.inputs import DictInput, FloatInput
 from langflow.io import (
     DropdownInput,
     HandleInput,
@@ -12,7 +12,7 @@ from langflow.io import (
     MessageTextInput,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
@@ -25,28 +25,28 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         MessageTextInput(
             name="database_ref",
             display_name="Contact Points / Astra Database ID",
-            info="Contact points for the database (or AstraDB database ID)",
+            info="Contact points for the database (or Astra DB database ID)",
             required=True,
         ),
         MessageTextInput(
-            name="username", display_name="Username", info="Username for the database (leave empty for AstraDB)."
+            name="username", display_name="Username", info="Username for the database (leave empty for Astra DB)."
         ),
         SecretStrInput(
             name="token",
-            display_name="Password / AstraDB Token",
-            info="User password for the database (or AstraDB token).",
+            display_name="Password / Astra DB Token",
+            info="User password for the database (or Astra DB token).",
             required=True,
         ),
         MessageTextInput(
             name="keyspace",
             display_name="Keyspace",
-            info="Table Keyspace (or AstraDB namespace).",
+            info="Table Keyspace (or Astra DB namespace).",
             required=True,
         ),
         MessageTextInput(
             name="table_name",
             display_name="Table Name",
-            info="The name of the table (or AstraDB collection) where vectors will be stored.",
+            info="The name of the table (or Astra DB collection) where vectors will be stored.",
             required=True,
         ),
         DropdownInput(

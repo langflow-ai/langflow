@@ -5,7 +5,6 @@
   "private": false,
   "scripts": {
     "clear-docs": "rimraf ./docs/",
-    "pull": "yarn clear-docs && yarn dlx @sillsdev/docu-notion -n $NOTION_TOKEN -r $NOTION_DOCS_ROOT_PAGE_ID",
     "start": "docusaurus start",
     "build": "docusaurus build",
     "deploy": "docusaurus deploy",
@@ -13,10 +12,10 @@
   },
   "dependencies": {
     "@code-hike/mdx": "^0.9.0",
-    "@docusaurus/core": "3.7.0",
-    "@docusaurus/plugin-client-redirects": "^3.7.0",
-    "@docusaurus/plugin-google-tag-manager": "^3.7.0",
-    "@docusaurus/preset-classic": "3.7.0",
+    "@docusaurus/core": "3.8.1",
+    "@docusaurus/plugin-client-redirects": "^3.8.1",
+    "@docusaurus/plugin-google-tag-manager": "^3.8.1",
+    "@docusaurus/preset-classic": "3.8.1",
     "@easyops-cn/docusaurus-search-local": "^0.45.0",
     "@mdx-js/react": "^3.0.1",
     "@mendable/search": "^0.0.206",
@@ -25,9 +24,9 @@
     "docusaurus-node-polyfills": "^1.0.0",
     "docusaurus-plugin-image-zoom": "^2.0.0",
     "docusaurus-plugin-openapi": "^0.7.6",
-    "docusaurus-plugin-openapi-docs": "^4.3.1",
+    "docusaurus-plugin-openapi-docs": "^4.4.0",
     "docusaurus-preset-openapi": "^0.7.6",
-    "docusaurus-theme-openapi-docs": "^4.3.1",
+    "docusaurus-theme-openapi-docs": "^4.4.0",
     "lucide-react": "^0.460.0",
     "prism-react-renderer": "^1.3.5",
     "react": "^18.2.0",
@@ -37,9 +36,8 @@
     "tailwindcss": "^3.4.4"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.7.0",
+    "@docusaurus/module-type-aliases": "^3.8.1",
     "@tsconfig/docusaurus": "^2.0.3",
-    "cross-var": "^1.1.0",
     "typescript": "^5.2.2"
   },
   "browserslist": {

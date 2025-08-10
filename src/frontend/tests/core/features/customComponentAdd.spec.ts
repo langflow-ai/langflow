@@ -25,7 +25,7 @@ test(
     });
 
     await expect(page.getByTestId("code-button-modal")).toHaveClass(
-      /!bg-accent-pink/,
+      /animate-pulse-pink/,
     );
 
     await page.getByTestId("code-button-modal").last().click();
@@ -66,7 +66,7 @@ class CustomComponent(Component):
     await page.getByText("Check & Save").last().click();
 
     await expect(page.getByTestId("code-button-modal")).not.toHaveClass(
-      /!bg-accent-pink/,
+      /animate-pulse-pink/,
       { timeout: 3000 },
     );
   },

@@ -4,8 +4,8 @@ import orjson
 from astrapy.admin import parse_api_endpoint
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.helpers import docs_to_data
-from langflow.inputs import (
+from langflow.helpers.data import docs_to_data
+from langflow.inputs.inputs import (
     BoolInput,
     DictInput,
     DropdownInput,
@@ -15,7 +15,7 @@ from langflow.inputs import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):

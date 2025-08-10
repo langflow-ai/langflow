@@ -1,9 +1,9 @@
+import { useMemo } from "react";
 import { getNodeInputColors } from "@/CustomNodes/helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "@/CustomNodes/helpers/get-node-input-colors-name";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import { useMemo } from "react";
 import NodeInputField from "../NodeInputField";
 
 const RenderInputParameters = ({
@@ -27,6 +27,17 @@ const RenderInputParameters = ({
         ),
       );
   }, [data.node?.template, data.node?.field_order, isToolMode]);
+
+  const shownTemplateFields = useMemo(() => {
+    return templateFields.filter((templateField) => {
+      const template = data.node?.template[templateField];
+      return (
+        template?.show &&
+        !template?.advanced &&
+        !(template?.tool_mode && isToolMode)
+      );
+    });
+  }, [templateFields, data.node?.template, isToolMode]);
 
   const memoizedColors = useMemo(() => {
     const colorMap = new Map();
@@ -74,20 +85,19 @@ const RenderInputParameters = ({
     return keyMap;
   }, [templateFields, data.id, data.node?.template]);
 
-  const renderInputParameter = templateFields.map(
-    (templateField: string, idx) => {
+  const renderInputParameter = shownTemplateFields.map(
+    (templateField: string, idx: number) => {
       const template = data.node?.template[templateField];
-
-      if (!template?.show || template?.advanced) {
-        return null;
-      }
 
       const memoizedColor = memoizedColors.get(templateField);
       const memoizedKey = memoizedKeys.get(templateField);
 
       return (
         <NodeInputField
-          lastInput={!(shownOutputs.length > 0 || showHiddenOutputs)}
+          lastInput={
+            !(shownOutputs.length > 0 || showHiddenOutputs) &&
+            idx === shownTemplateFields.length - 1
+          }
           key={memoizedKey}
           data={data}
           colors={memoizedColor.colors}

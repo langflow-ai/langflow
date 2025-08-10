@@ -10,7 +10,7 @@ from langchain_core.tools import Tool
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import (
+from langflow.inputs.inputs import (
     ConnectionInput,
     MessageTextInput,
     SecretStrInput,

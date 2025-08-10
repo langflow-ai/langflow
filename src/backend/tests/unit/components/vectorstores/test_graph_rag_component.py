@@ -159,6 +159,6 @@ class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
 
         # Ensures all the k-start_k documents returned via traversal have the same metadata as the
         # ones returned via the similarity search
-        assert list({doc.data["type"] for doc in results if doc.data["_depth"] == 0}) == list(
-            {doc.data["type"] for doc in results if doc.data["_depth"] >= 1}
-        )
+        assert {doc.data["type"] for doc in results if doc.data["_depth"] == 0} == {
+            doc.data["type"] for doc in results if doc.data["_depth"] >= 1
+        }

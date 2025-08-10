@@ -2,8 +2,6 @@ const SvgLangChainIcon = (props) => (
   <svg
     viewBox="0 0 81 41"
     fill="none"
-    height="200"
-    width="400"
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >

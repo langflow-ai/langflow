@@ -1,8 +1,7 @@
-import { Button } from "@/components/ui/button";
 import { memo } from "react";
-
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ShortcutDisplay from "../shortcutDisplay";
 
@@ -31,7 +30,7 @@ export const ToolbarButton = memo(
         data-testid={dataTestId}
       >
         <ForwardedIconComponent name={icon} className="h-4 w-4" />
-        {label && <span className="text-[13px] font-medium">{label}</span>}
+        {label && <span className="text-mmd font-medium">{label}</span>}
       </Button>
     </ShadTooltip>
   ),

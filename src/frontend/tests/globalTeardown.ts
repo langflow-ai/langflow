@@ -5,12 +5,12 @@ import path from "path";
 
 export default async () => {
   try {
-    console.log("Removing the temp database");
+    console.warn("Removing the temp database");
     // Check if the file exists in the path
     // this file is in src/frontend/tests/globalTeardown.ts
     // temp is in src/frontend/temp
     const tempDbPath = path.join(__dirname, "..", "temp");
-    console.log("tempDbPath", tempDbPath);
+    console.warn("tempDbPath", tempDbPath);
 
     // Check if the directory exists before attempting to remove it
     if (fs.existsSync(tempDbPath)) {
@@ -19,14 +19,14 @@ export default async () => {
 
       // Check if the file is removed
       if (!fs.existsSync(tempDbPath)) {
-        console.log("Successfully removed the temp database");
+        console.warn("Successfully removed the temp database");
       } else {
         console.error(
           "Error: temp database still exists after removal attempt",
         );
       }
     } else {
-      console.log("Temp database directory does not exist, skipping removal");
+      console.warn("Temp database directory does not exist, skipping removal");
     }
   } catch (error) {
     console.error("Error while removing the temp database:", error);

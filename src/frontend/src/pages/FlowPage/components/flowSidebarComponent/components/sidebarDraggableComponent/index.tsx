@@ -1,9 +1,9 @@
+import { type DragEventHandler, forwardRef, useRef, useState } from "react";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
-import { useAddComponent } from "@/hooks/useAddComponent";
-import { DragEventHandler, forwardRef, useRef, useState } from "react";
+import { useAddComponent } from "@/hooks/use-add-component";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../../components/common/genericIconComponent";
@@ -16,7 +16,7 @@ import {
 } from "../../../../../../components/ui/select-custom";
 import { useDarkStore } from "../../../../../../stores/darkStore";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
-import { APIClassType } from "../../../../../../types/api";
+import type { APIClassType } from "../../../../../../types/api";
 import {
   createFlowComponent,
   downloadNode,
@@ -78,7 +78,7 @@ export const SidebarDraggableComponent = forwardRef(
 
     function handleSelectChange(value: string) {
       switch (value) {
-        case "download":
+        case "download": {
           const type = removeCountFromString(itemName);
           downloadNode(
             createFlowComponent(
@@ -87,10 +87,12 @@ export const SidebarDraggableComponent = forwardRef(
             ),
           );
           break;
-        case "delete":
+        }
+        case "delete": {
           const flowId = flows?.find((f) => f.name === display_name);
           if (flowId) deleteFlow({ id: flowId.id });
           break;
+        }
       }
     }
 

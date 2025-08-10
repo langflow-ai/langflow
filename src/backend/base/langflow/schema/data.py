@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import copy
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -11,7 +13,11 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
-from langflow.utils.image import create_data_url
+from langflow.utils.image import create_image_content_dict
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
+    from langflow.schema.message import Message
 
 
 class Data(BaseModel):
@@ -81,7 +87,7 @@ class Data(BaseModel):
         return new_text
 
     @classmethod
-    def from_document(cls, document: Document) -> "Data":
+    def from_document(cls, document: Document) -> Data:
         """Converts a Document to a Data.
 
         Args:
@@ -95,7 +101,7 @@ class Data(BaseModel):
         return cls(data=data, text_key="text")
 
     @classmethod
-    def from_lc_message(cls, message: BaseMessage) -> "Data":
+    def from_lc_message(cls, message: BaseMessage) -> Data:
         """Converts a BaseMessage to a Data.
 
         Args:
@@ -108,7 +114,7 @@ class Data(BaseModel):
         data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
-    def __add__(self, other: "Data") -> "Data":
+    def __add__(self, other: Data) -> Data:
         """Combines the data of two data by attempting to add values for overlapping keys.
 
         Combines the data of two data by attempting to add values for overlapping keys
@@ -163,10 +169,12 @@ class Data(BaseModel):
         files = self.data.get("files", [])
         if sender == MESSAGE_SENDER_USER:
             if files:
-                contents = [{"type": "text", "text": text}]
-                for file_path in files:
-                    image_url = create_data_url(file_path)
-                    contents.append({"type": "image_url", "image_url": {"url": image_url}})
+                from langflow.schema.image import get_file_paths
+
+                resolved_file_paths = get_file_paths(files)
+                contents = [create_image_content_dict(file_path) for file_path in resolved_file_paths]
+                # add to the beginning of the list
+                contents.insert(0, {"type": "text", "text": text})
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
@@ -235,7 +243,7 @@ class Data(BaseModel):
     def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
-    def filter_data(self, filter_str: str) -> "Data":
+    def filter_data(self, filter_str: str) -> Data:
         """Filters the data dictionary based on the filter string.
 
         Args:
@@ -247,6 +255,26 @@ class Data(BaseModel):
         from langflow.template.utils import apply_json_filter
 
         return apply_json_filter(self.data, filter_str)
+
+    def to_message(self) -> Message:
+        from langflow.schema.message import Message  # Local import to avoid circular import
+
+        if self.text_key in self.data:
+            return Message(text=self.get_text())
+        return Message(text=str(self.data))
+
+    def to_dataframe(self) -> DataFrame:
+        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
+
+        data_dict = self.data
+        # If data contains only one key and the value is a list of dictionaries, convert to DataFrame
+        if (
+            len(data_dict) == 1
+            and isinstance(next(iter(data_dict.values())), list)
+            and all(isinstance(item, dict) for item in next(iter(data_dict.values())))
+        ):
+            return DataFrame(data=next(iter(data_dict.values())))
+        return DataFrame(data=[self])
 
 
 def custom_serializer(obj):
