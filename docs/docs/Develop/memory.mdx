@@ -26,21 +26,21 @@ For more information, see [Configure external memory](#configure-external-memory
 
 The following tables are stored in `langflow.db`:
 
-• **User**: Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
+• **User**: Stores user account information including credentials, permissions, profiles, and user management settings. For more information, see [API keys and authentication](/api-keys-and-authentication).
 
-• **Flow**: Contains flow configurations. For more information, see [Build flows](/concepts-flows).
+• **Flow**: Contains flow definitions, including nodes, edges, and components, stored as JSON or database records. For more information, see [Build flows](/concepts-flows).
 
 • **Message**: Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message) and [Store chat memory](#store-chat-memory).
 
 • **Transaction**: Records execution history and results of flow runs. This information is used for [logging](/logging).
 
-• **ApiKey**: Manages API authentication keys for users. For more information, see [API keys](/configuration-api-keys).
+• **ApiKey**: Manages Langflow API authentication keys. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
 
-• **Project**: Provides a structure for flow storage. For more information, see [Projects](/concepts-flows#projects).
+• **Project**: Provides a structure for flow storage, including single-user projects and shared projects accessed by multiple users. For more information, see [Manage flows in projects](/concepts-flows#projects).
 
 • **Variables**: Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
-• **VertexBuild**: Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the Playground](/concepts-playground).
+• **VertexBuild**: Tracks the build status of individual nodes within flows. For more information, see [Test flows in the Playground](/concepts-playground).
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
@@ -79,8 +79,10 @@ LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
 LANGFLOW_CACHE_TYPE=Async
 ```
 
-Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
+Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache aren't supported.
 The default behavior is suitable for most use cases.
+
+For other options, see the `LANGFLOW_CACHE_TYPE` [environment variable](/environment-variables).
 
 ## Store chat memory
 

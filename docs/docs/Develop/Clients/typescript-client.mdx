@@ -58,7 +58,7 @@ pnpm add @datastax/langflow-client
 
     Replace `BASE_URL` and `API_KEY` with values from your deployment.
     The default Langflow base URL is `http://localhost:7860`.
-    To create an API key, see [API keys](/configuration-api-keys).
+    To create an API key, see [API keys and authentication](/api-keys-and-authentication).
 
 ## Langflow TypeScript client quickstart
 
@@ -128,7 +128,7 @@ This example builds on the quickstart with additional features for interacting w
 
     Tweaks change values within components for all calls to your flow.
 
-    This example tweaks the Open-AI model component to enforce using the `gpt-4o-mini` model:
+    This example tweaks the **OpenAI** component to enforce using the `gpt-4o-mini` model:
 
     ```tsx
     const tweaks = { model_name: "gpt-4o-mini" };
@@ -268,7 +268,7 @@ Replace `baseUrl` and `flowId` with values from your deployment.
 To retrieve [Langflow logs](/logging), you must enable log retrieval on your Langflow server by including the following values in your server's `.env` file:
 
 ```text
-LANGFLOW_ENABLE_LOG_RETRIEVAL=true
+LANGFLOW_ENABLE_LOG_RETRIEVAL=True
 LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
 LANGFLOW_LOG_LEVEL=DEBUG
 ```

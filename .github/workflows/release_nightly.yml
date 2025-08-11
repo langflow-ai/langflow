@@ -58,14 +58,15 @@ env:
   PYTHON_VERSION: "3.13"
 
 jobs:
-  release-nightly-base:
-    name: Release Langflow Nightly Base
+  build-nightly-base:
+    name: Build Langflow Nightly Base
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     outputs:
       version: ${{ steps.verify.outputs.version }}
+      skipped: ${{ steps.verify.outputs.skipped }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
@@ -126,22 +127,17 @@ jobs:
             echo "Server terminated successfully"
           fi
 
-      - name: Publish to PyPI
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          make publish base=true
+      # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dist-base
+          name: dist-nightly-base
           path: src/backend/base/dist
 
-  release-nightly-main:
-    name: Release Langflow Nightly Main
-    needs: [release-nightly-base]
+  build-nightly-main:
+    name: Build Langflow Nightly Main
+    needs: [build-nightly-base]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.verify.outputs.version }}
@@ -181,6 +177,7 @@ jobs:
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
       - name: Wait for PyPI Propagation
+        if: needs.build-nightly-base.outputs.skipped == 'false'
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of base
 
       - name: Build project for distribution
@@ -202,22 +199,76 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
+
+      # PyPI publishing moved to after cross-platform testing
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-nightly-main
+          path: dist
+
+  test-cross-platform:
+    name: Test Cross-Platform Installation
+    needs: [build-nightly-base, build-nightly-main]
+    uses: ./.github/workflows/cross-platform-test.yml
+    with:
+      base-artifact-name: "dist-nightly-base"
+      main-artifact-name: "dist-nightly-main"
+
+  publish-nightly-base:
+    name: Publish Langflow Base Nightly to PyPI
+    needs: [build-nightly-base, test-cross-platform]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download base artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-nightly-base
+          path: src/backend/base/dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish base to PyPI
+        if: needs.build-nightly-base.outputs.skipped == 'false'
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish base=true
+
+  publish-nightly-main:
+    name: Publish Langflow Main Nightly to PyPI
+    needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download main artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-nightly-main
+          path: dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish main=true
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-main
-          path: dist
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: always() && ${{ inputs.build_docker_base == 'true' }}
-    needs: [release-nightly-base, release-nightly-main]
+    needs: [build-nightly-base, build-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
       release_type: nightly-base
@@ -228,7 +279,7 @@ jobs:
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: always() && ${{ inputs.build_docker_main == 'true' }}
-    needs: [release-nightly-main, call_docker_build_base]
+    needs: [build-nightly-main, call_docker_build_base]
     uses: ./.github/workflows/docker-build.yml
     with:
       release_type: nightly-main
@@ -239,7 +290,7 @@ jobs:
   # call_docker_build_main_all:
   #   name: Call Docker Build Workflow for langflow-all
   #   if: always() && ${{ inputs.build_docker_main == 'true' }}
-  #   needs: [release-nightly-main]
+  #   needs: [build-nightly-main]
   #   uses: ./.github/workflows/docker-build.yml
   #   with:
   #     release_type: nightly-main-all
@@ -249,7 +300,7 @@ jobs:
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: always() && ${{ inputs.build_docker_ep == 'true' }}
-    needs: [release-nightly-main, call_docker_build_main]
+    needs: [build-nightly-main, call_docker_build_main]
     uses: ./.github/workflows/docker-build.yml
     with:
       release_type: main-ep
