@@ -6,6 +6,7 @@ import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/
 import useAlertStore from "@/stores/alertStore";
 import { type ColumnField, FormatterType } from "@/types/utils/functions";
 import "moment-timezone";
+import { Cookies } from "react-cookie";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -536,7 +537,9 @@ export function brokenEdgeMessage({
     field: string;
   };
 }) {
-  return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
+  return `${source.nodeDisplayName}${
+    source.outputDisplayName ? " | " + source.outputDisplayName : ""
+  } -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
@@ -823,7 +826,8 @@ export interface CookieOptions {
   maxAge?: number;
   expires?: Date;
   secure?: boolean;
-  sameSite?: "Strict" | "Lax" | "None";
+  sameSite?: "strict" | "lax" | "none";
+  httpOnly?: boolean;
 }
 
 /**
@@ -992,3 +996,29 @@ export function prepareSessionIdForAPI(session_id: string): string {
   const formatted = sessionIdFormatted(session_id);
   return encodeSessionId(formatted);
 }
+
+export const stripReleaseStageFromVersion = (version: string): string => {
+  const releaseStageKeywords = ["a", "b", "rc", "dev", "post"];
+  for (const keyword of releaseStageKeywords) {
+    if (version.includes(keyword)) {
+      return version.split(keyword)[0].slice(0, -1);
+    }
+  }
+  return version;
+};
+
+export const getAuthCookie = (cookies: Cookies, tokenName: string) => {
+  return cookies.get(tokenName);
+};
+
+export const setAuthCookie = (
+  cookies: Cookies,
+  tokenName: string,
+  value: string,
+) => {
+  cookies.set(tokenName, value, {
+    path: "/",
+    secure: true,
+    sameSite: "strict",
+  });
+};
