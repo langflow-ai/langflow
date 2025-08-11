@@ -126,6 +126,7 @@ dependencies = [
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
+    "tox>=4.27.0",
 ]
 
 [dependency-groups]
