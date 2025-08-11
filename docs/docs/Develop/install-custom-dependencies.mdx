@@ -3,7 +3,12 @@ title: Install custom dependencies
 slug: /install-custom-dependencies
 ---
 
-Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
+Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality. This guide covers how to add dependencies for different Langflow installations, including Langflow Desktop and Langflow OSS.
+
+The Langflow codebase uses two `pyproject.toml` files to manage dependencies, with one for `base` and one for `main`:
+
+* The `main` package is managed by the root level `pyproject.toml`, and it includes end-user features and main application code, such as Langchain and OpenAI.
+* The `base` package is managed at `src/backend/base/pyproject.toml`, and it includes core infrastructure, such as the FastAPI web framework.
 
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
 
@@ -12,7 +17,7 @@ To add dependencies to Langflow Desktop, add an entry for the package to the app
     * On macOS, the file is located at `/Users/USER/.langflow/data/requirements.txt`.
     * On Windows, the file is located at `C:\Users\USER\AppData\Roaming\com.Langflow\data\requirements.txt`.
 
-Add the dependency and version to `requirements.txt` on separate lines in the format `PACKAGE==VERSION`, such as `docling==2.40.0`.
+Add each dependency to `requirements.txt` on its own line in the format `DEPENDENCY==VERSION`, such as `docling==2.40.0`.
 
 Restart Langflow Desktop to install the dependencies.
 
@@ -25,14 +30,14 @@ To install your own custom dependencies in your Langflow environment, add them w
 If you're working within a cloned Langflow repository, add dependencies with `uv add` because there is already a `pyproject.toml` file for uv to reference:
 
 ```bash
-uv add langflow DEPENDENCY
+uv add DEPENDENCY
 ```
 
 ### Install optional dependency groups
 
 Langflow OSS provides optional dependency groups that extend its functionality.
 
-These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L191) file under `[project.optional-dependencies]`.
+These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L194) file under `[project.optional-dependencies]`.
 
 Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter the following command:
 
@@ -43,7 +48,7 @@ uv pip install "langflow[postgresql]"
 To install multiple extras, use commas to separate each dependency group:
 
 ```bash
-uv pip install "langflow[deploy,local,postgresql]"
+uv pip install "langflow[local,postgresql]"
 ```
 
 ### Use a virtual environment to test custom dependencies
@@ -61,45 +66,55 @@ source YOUR_LANGFLOW_VENV/bin/activate
 uv pip install langflow matplotlib
 ```
 
-If you're working within a cloned Langflow repository, add dependencies with `uv add` to reference the existing `pyproject.toml` file:
+If you're working within a cloned Langflow repository, add dependencies with `uv add` to reference the existing `pyproject.toml` files:
 
 ```bash
-uv add langflow matplotlib
+uv add matplotlib
 ```
+
+The `uv add` commands automatically update the `uv.lock` file in the appropriate location.
 
 ## Add dependencies to the Langflow codebase
 
 When contributing to the Langflow codebase, you might need to add dependencies to Langflow.
 
-Langflow uses a workspace with two packages:
+Langflow uses a workspace with two packages, each with different types of dependencies.
 
-* The `main` package (root level): For end-user features and main application code
-* The `base` package (in `src/backend/base`): For core functionality and shared code
+To add a dependency to the `main` package, run `uv add DEPENDENCY` from the project root.
+For example:
 
-Dependencies can be added in different groups:
-
-* Regular dependencies: Core functionality needed to run the package
-* Development dependencies: Tools for testing, linting, or debugging are added in the `[dependency-groups.dev]` section
-* Optional dependencies: Features that users can optionally install are added in the`[project.optional-dependencies]`
-
-There are three ways to add a package using make commands:
-
-* Add to main package dependencies (for end-user features):
 ```bash
+uv add matplotlib
+```
+
+Dependencies can be added to the `main` package as regular dependencies at `[project.dependencies]` or optional dependencies at `[project.optional-dependencies]`.
+
+To add a dependency to the `base` package, navigate to `src/backend/base` and run:
+```bash
+cd src/backend/base && uv add DEPENDENCY
+```
+
+To add a development dependency for testing, linting, or debugging, navigate to `src/backend/base` and run:
+```bash
+cd src/backend/base && uv add --group dev DEPENDENCY
+```
+
+Dependencies can be added to the `base` package as regular dependencies at `[project.dependencies]`, development dependencies at `[dependency-groups.dev]`, or optional dependencies at `[project.optional-dependencies]`.
+
+You can optionally use `make add` instead of `uv add`:
+
+```bash
+# Equivalent to: uv add matplotlib
 make add main="matplotlib"
-```
 
-* Add to development tools (for testing, linting, debugging):
-```bash
+# Equivalent to: cd src/backend/base && uv add --group dev matplotlib
 make add devel="matplotlib"
-```
 
-* Add to base package dependencies (for core functionality):
-```bash
+# Equivalent to: cd src/backend/base && uv add matplotlib
 make add base="matplotlib"
 ```
 
-You can also add these dependencies manually to the `pyproject.toml` file:
+Alternatively, you can add these dependencies manually to the appropriate `pyproject.toml` file:
 
 ```
 [project]
@@ -108,7 +123,7 @@ dependencies = [
 ]
 ```
 
-* Or as an optional dependency:
+Or as an optional dependency in the main package:
 
 ```
 [project.optional-dependencies]
@@ -117,4 +132,17 @@ plotting = [
 ]
 ```
 
-The `make` commands add the dependency with `uv add` and update the `uv.lock` file in the appropriate location.
+Or as a development dependency in the base package:
+
+```
+[dependency-groups]
+dev = [
+    "matplotlib>=3.8.0",
+]
+```
+
+## See also
+
+* [Containerize a Langflow application](/develop-application)
+* [Create custom Python components](/components-custom-components)
+* [**Docling** bundle](/integrations-docling)
