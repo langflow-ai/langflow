@@ -71,12 +71,7 @@ module.exports = {
           type: "doc",
           id: "Concepts/concepts-flows-import",
           label: "Import and export flows"
-        },
-        {
-          type: "doc",
-          id: "Concepts/knowledge",
-          label: "Create and retrieve knowledge"
-        },
+        }
       ],
     },
     {
@@ -112,6 +107,11 @@ module.exports = {
               type: "doc",
               id: "Concepts/concepts-file-management",
               label: "Manage files"
+            },
+            {
+              type: "doc",
+              id: "Concepts/knowledge",
+              label: "Create and retrieve knowledge"
             },
             {
               type: "doc",
