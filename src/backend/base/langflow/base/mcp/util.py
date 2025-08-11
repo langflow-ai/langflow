@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import inspect
 import os
 import platform
 import re
@@ -807,11 +808,34 @@ class MCPSessionManager:
             # First try to properly close the session if it exists
             if "session" in session_info:
                 session = session_info["session"]
-                if hasattr(session, "close"):
+
+                # Try async close first (aclose method)
+                if hasattr(session, "aclose"):
                     try:
-                        await session.close()
+                        await session.aclose()
+                        logger.debug("Successfully closed session %s using aclose()", session_id)
                     except Exception as e:  # noqa: BLE001
-                        logger.debug(f"Error closing session {session_id}: {e}")
+                        logger.debug("Error closing session %s with aclose(): %s", session_id, e)
+
+                # If no aclose, try regular close method
+                elif hasattr(session, "close"):
+                    try:
+                        # Check if close() is awaitable using inspection
+                        if inspect.iscoroutinefunction(session.close):
+                            # It's an async method
+                            await session.close()
+                            logger.debug("Successfully closed session %s using async close()", session_id)
+                        else:
+                            # Try calling it and check if result is awaitable
+                            close_result = session.close()
+                            if inspect.isawaitable(close_result):
+                                await close_result
+                                logger.debug("Successfully closed session %s using awaitable close()", session_id)
+                            else:
+                                # It's a synchronous close
+                                logger.debug("Successfully closed session %s using sync close()", session_id)
+                    except Exception as e:  # noqa: BLE001
+                        logger.debug("Error closing session %s with close(): %s", session_id, e)
 
             # Cancel the background task which will properly close the session
             if "task" in session_info:
