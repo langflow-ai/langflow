@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
   const apiRoutes = API_ROUTES || ["^/api/v1/", "^/api/v2/", "/health"];
 
   const target =
-    env.VITE_PROXY_TARGET || PROXY_TARGET || "http://127.0.0.1:7860";
+    env.VITE_PROXY_TARGET || PROXY_TARGET || "http://localhost:7860";
 
   const port = Number(env.VITE_PORT) || PORT || 3000;
 
@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       "process.env.BACKEND_URL": JSON.stringify(
-        envLangflow.BACKEND_URL ?? "http://127.0.0.1:7860",
+        envLangflow.BACKEND_URL ?? "http://localhost:7860",
       ),
       "process.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
         envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60,
@@ -52,6 +52,9 @@ export default defineConfig(({ mode }) => {
       "process.env.CI": JSON.stringify(envLangflow.CI ?? false),
       "process.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
+      ),
+      "process.env.LANGFLOW_FEATURE_MCP_COMPOSER": JSON.stringify(
+        envLangflow.LANGFLOW_FEATURE_MCP_COMPOSER ?? "false",
       ),
     },
     plugins: [react(), svgr(), tsconfigPaths()],

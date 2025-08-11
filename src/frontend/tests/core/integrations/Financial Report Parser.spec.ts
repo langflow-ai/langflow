@@ -34,13 +34,6 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
-    //* TODO: Remove these 3 steps once the template is updated *//
-    await page.getByTestId("dropdown-output-openaimodel").click();
-
-    await page
-      .getByTestId("dropdown-item-output-openaimodel-language model")
-      .click();
-
     await page.getByTestId("tab_1_stringify").click();
 
     await page.getByTestId("playground-btn-flow-io").click();
@@ -56,8 +49,8 @@ withEventDeliveryModes(
         timeout: 180000,
         state: "hidden",
       });
-    } catch (error) {
-      console.log("Timeout error");
+    } catch (_error) {
+      console.error("Timeout error");
       test.skip(true, "Timeout error");
     }
 

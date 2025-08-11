@@ -1,15 +1,15 @@
+import { memo } from "react";
+
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
 import {
   Disclosure,
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
-
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { Button } from "@/components/ui/button";
 import { SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
-import { memo } from "react";
-import { SidebarHeaderComponentProps } from "../../types";
+import type { SidebarHeaderComponentProps } from "../../types";
 import FeatureToggles from "../featureTogglesComponent";
 import { SearchInput } from "../searchInput";
 import { SidebarFilterComponent } from "../sidebarFilterComponent";
@@ -39,7 +39,9 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
           <SidebarTrigger className="text-muted-foreground">
             <ForwardedIconComponent name="PanelLeftClose" />
           </SidebarTrigger>
-          <h3 className="flex-1 text-sm font-semibold">Components</h3>
+          <h3 className="flex-1 cursor-default text-sm font-semibold">
+            Components
+          </h3>
           <DisclosureTrigger>
             <div>
               <ShadTooltip content="Component settings" styleClasses="z-50">

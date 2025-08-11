@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -56,7 +55,7 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-i/o",
+      "disclosure-input / output",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
@@ -75,10 +74,10 @@ test(
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesMem0 Chat Memory",
+      "mem0Mem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
-      "langchain_utilitiesCharacterTextSplitter",
+      "langchain_utilitiesCharacter Text Splitter",
     ];
 
     await Promise.all(
@@ -101,23 +100,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = [
-      "languagemodelsAIML",
-      "languagemodelsAnthropic",
-      "languagemodelsAzure OpenAI",
-      "languagemodelsCohere",
-      "languagemodelsGoogle Generative AI",
-      "languagemodelsGroq",
-      "languagemodelsHuggingFace",
-      "languagemodelsLM Studio",
-      "languagemodelsMaritalk",
-      "languagemodelsMistralAI",
-      "languagemodelsNVIDIA",
-      "languagemodelsOllama",
-      "languagemodelsOpenAI",
-      "languagemodelsPerplexity",
-      "languagemodelsQianfan",
-      "languagemodelsSambaNova",
-      "languagemodelsVertex AI",
+      "cohereCohere Language Models",
+      "groqGroq",
+      "lmstudioLM Studio",
+      "maritalkMariTalk",
+      "mistralMistralAI",
+      "perplexityPerplexity",
+      "baiduQianfan",
+      "sambanovaSambaNova",
+      "xaixAI",
     ];
 
     await Promise.all(

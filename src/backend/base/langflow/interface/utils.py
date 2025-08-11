@@ -1,9 +1,9 @@
 import base64
 import json
 import os
-import re
 from io import BytesIO
 from pathlib import Path
+from string import Formatter
 
 import yaml
 from langchain_core.language_models import BaseLanguageModel
@@ -60,31 +60,25 @@ def try_setting_streaming_options(langchain_object):
 
 
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
-    variables = []
-    remaining_text = prompt
+    """Extract variable names from a prompt string using Python's built-in string formatter.
 
-    # Pattern to match single {var} and double {{var}} braces.
-    pattern = r"\{\{(.*?)\}\}|\{([^{}]+)\}"
+    Uses the same convention as Python's .format() method:
+    - Single braces {name} are variable placeholders
+    - Double braces {{name}} are escape sequences that render as literal {name}
+    """
+    formatter = Formatter()
+    variables: list[str] = []
+    seen: set[str] = set()
 
-    while True:
-        match = re.search(pattern, remaining_text)
-        if not match:
-            break
+    # Use local bindings for micro-optimization
+    variables_append = variables.append
+    seen_add = seen.add
+    seen_contains = seen.__contains__
 
-        # Extract the variable name from either the single or double brace match.
-        # If match found in double braces, re-add single braces for JSON strings.
-        variable_name = "{{" + match.group(1) + "}}" if match.group(1) else match.group(2)
-        if variable_name is not None:
-            # This means there is a match
-            # but there is nothing inside the braces
-            variables.append(variable_name)
-
-        # Remove the matched text from the remaining_text
-        start, end = match.span()
-        remaining_text = remaining_text[:start] + remaining_text[end:]
-
-        # Proceed to the next match until no more matches are found
-        # No need to compare remaining "{}" instances because we are re-adding braces for JSON compatibility
+    for _, field_name, _, _ in formatter.parse(prompt):
+        if field_name and not seen_contains(field_name):
+            variables_append(field_name)
+            seen_add(field_name)
 
     return variables
 

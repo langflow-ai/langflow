@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { PORT } from "./src/customization/config-constants";
+
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -103,7 +104,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "uv run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860 --loop asyncio",
+        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
@@ -118,7 +119,7 @@ export default defineConfig({
       command: "npm start",
       port: PORT || 3000,
       env: {
-        VITE_PROXY_TARGET: "http://127.0.0.1:7860",
+        VITE_PROXY_TARGET: "http://localhost:7860",
       },
     },
   ],

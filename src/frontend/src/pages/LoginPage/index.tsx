@@ -1,8 +1,8 @@
+import * as Form from "@radix-ui/react-form";
+import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
-import * as Form from "@radix-ui/react-form";
-import { useContext, useState } from "react";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -10,8 +10,8 @@ import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
-import { LoginType } from "../../types/api";
-import {
+import type { LoginType } from "../../types/api";
+import type {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../types/components";
@@ -59,7 +59,7 @@ export default function LoginPage(): JSX.Element {
           return;
         }
         signIn();
-        const data = Object.fromEntries(new FormData(event.currentTarget));
+        const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
       className="h-screen w-full"

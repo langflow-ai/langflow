@@ -1,4 +1,4 @@
-from langflow.components.languagemodels.huggingface import DEFAULT_MODEL, HuggingFaceEndpointsComponent
+from langflow.components.huggingface.huggingface import DEFAULT_MODEL, HuggingFaceEndpointsComponent
 from langflow.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 

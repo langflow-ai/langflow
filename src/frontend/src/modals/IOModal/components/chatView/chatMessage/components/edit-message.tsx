@@ -1,9 +1,10 @@
-import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
-import { cn } from "@/utils/utils";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
+import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
+import { preprocessChatMessage } from "@/utils/markdownUtils";
+import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 
 type MarkdownFieldProps = {
@@ -14,14 +15,6 @@ type MarkdownFieldProps = {
   isAudioMessage?: boolean;
 };
 
-// Function to replace <think> tags with a placeholder before markdown processing
-const preprocessChatMessage = (text: string): string => {
-  // Replace <think> tags with `<span class="think-tag">think:</span>`
-  return text
-    .replace(/<think>/g, "`<think>`")
-    .replace(/<\/think>/g, "`</think>`");
-};
-
 export const MarkdownField = ({
   chat,
   isEmpty,
@@ -29,7 +22,7 @@ export const MarkdownField = ({
   editedFlag,
   isAudioMessage,
 }: MarkdownFieldProps) => {
-  // Process the chat message to handle <think> tags
+  // Process the chat message to handle <think> tags and clean up tables
   const processedChatMessage = preprocessChatMessage(chatMessage);
 
   return (
@@ -39,7 +32,7 @@ export const MarkdownField = ({
         linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
-          "markdown prose flex w-fit max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
+          "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
           isEmpty ? "text-muted-foreground" : "text-primary",
         )}
         components={{

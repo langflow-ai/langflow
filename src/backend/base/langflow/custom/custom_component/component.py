@@ -24,8 +24,11 @@ from langflow.base.tools.constants import (
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
-from langflow.graph.state.model import create_state_model
-from langflow.graph.utils import has_chat_output
+
+# Lazy import to avoid circular dependency
+# from langflow.graph.state.model import create_state_model
+# Lazy import to avoid circular dependency
+# from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -160,6 +163,22 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
 
+    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
+        source_dict = {}
+        if id_:
+            source_dict["id"] = id_
+        if display_name:
+            source_dict["display_name"] = display_name
+        if source:
+            # Handle case where source is a ChatOpenAI and other models objects
+            if hasattr(source, "model_name"):
+                source_dict["source"] = source.model_name
+            elif hasattr(source, "model"):
+                source_dict["source"] = str(source.model)
+            else:
+                source_dict["source"] = str(source)
+        return Source(**source_dict)
+
     def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
         """Get the source vertex ID for an incoming edge that targets a specific parameter.
 
@@ -215,7 +234,7 @@ class Component(CustomComponent):
         """
         return {
             "_user_id": self.user_id,
-            "_session_id": self.session_id,
+            "_session_id": self.graph.session_id,
             "_tracing_service": self._tracing_service,
         }
 
@@ -282,6 +301,9 @@ class Component(CustomComponent):
         fields = {}
         for output in self._outputs_map.values():
             fields[output.name] = getattr(self, output.method)
+        # Lazy import to avoid circular dependency
+        from langflow.graph.state.model import create_state_model
+
         self._state_model = create_state_model(model_name=model_name, **fields)
         return self._state_model
 
@@ -644,6 +666,11 @@ class Component(CustomComponent):
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value) -> None:
+        # Special handling for Loop components: check if we're setting a loop-enabled output
+        if self._is_loop_connection(key, value):
+            self._process_loop_connection(key, value)
+            return
+
         input_ = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
         if isinstance(value, Component):
@@ -660,6 +687,69 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, input_)
         else:
             self._set_parameter_or_attribute(key, value)
+
+    def _is_loop_connection(self, key: str, value) -> bool:
+        """Check if this is a loop feedback connection.
+
+        A loop connection occurs when:
+        1. The key matches an output name of this component
+        2. That output has allows_loop=True
+        3. The value is a callable method from another component
+        """
+        # Check if key matches a loop-enabled output
+        if key not in self._outputs_map:
+            return False
+
+        output = self._outputs_map[key]
+        if not getattr(output, "allows_loop", False):
+            return False
+
+        # Check if value is a callable method from a Component
+        return callable(value) and self._inherits_from_component(value)
+
+    def _process_loop_connection(self, key: str, value) -> None:
+        """Process a loop feedback connection.
+
+        Creates a special edge that connects the source component's output
+        to this Loop component's loop-enabled output (not an input).
+        """
+        try:
+            self._method_is_valid_output(value)
+        except ValueError as e:
+            msg = f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
+            raise ValueError(msg) from e
+
+        source_component = value.__self__
+        self._components.append(source_component)
+        source_output = source_component.get_output_by_method(value)
+        target_output = self._outputs_map[key]
+
+        # Create special loop feedback edge
+        self._add_loop_edge(source_component, source_output, target_output)
+
+    def _add_loop_edge(self, source_component, source_output, target_output) -> None:
+        """Add a special loop feedback edge that targets an output instead of an input."""
+        self._edges.append(
+            {
+                "source": source_component._id,
+                "target": self._id,
+                "data": {
+                    "sourceHandle": {
+                        "dataType": source_component.name or source_component.__class__.__name__,
+                        "id": source_component._id,
+                        "name": source_output.name,
+                        "output_types": source_output.types,
+                    },
+                    "targetHandle": {
+                        # Special loop edge structure - targets an output, not an input
+                        "dataType": self.name or self.__class__.__name__,
+                        "id": self._id,
+                        "name": target_output.name,
+                        "output_types": target_output.types,
+                    },
+                },
+            }
+        )
 
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
@@ -810,7 +900,9 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
-        return_type = get_type_hints(method)["return"]
+        return_type = get_type_hints(method).get("return")
+        if return_type is None:
+            return []
         extracted_return_types = self._extract_return_type(return_type)
         return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
 
@@ -873,6 +965,11 @@ class Component(CustomComponent):
 
     def _validate_inputs(self, params: dict) -> None:
         # Params keys are the `name` attribute of the Input objects
+        """Validates and assigns input values from the provided parameters dictionary.
+
+        For each parameter matching a defined input, sets the input's value and updates the parameter
+        dictionary with the validated value.
+        """
         for key, value in params.copy().items():
             if key not in self._inputs:
                 continue
@@ -883,10 +980,16 @@ class Component(CustomComponent):
             params[input_.name] = input_.value
 
     def set_attributes(self, params: dict) -> None:
+        """Sets component attributes from the given parameters, preventing conflicts with reserved attribute names.
+
+        Raises:
+            ValueError: If a parameter name matches a reserved attribute not managed in _attributes and its
+            value differs from the current attribute value.
+        """
         self._validate_inputs(params)
         attributes = {}
         for key, value in params.items():
-            if key in self.__dict__ and value != getattr(self, key):
+            if key in self.__dict__ and key not in self._attributes and value != getattr(self, key):
                 msg = (
                     f"{self.__class__.__name__} defines an input parameter named '{key}' "
                     f"that is a reserved word and cannot be used."
@@ -1267,7 +1370,20 @@ class Component(CustomComponent):
         }
 
     async def _build_tools_metadata_input(self):
-        tools = await self._get_tools()
+        try:
+            from langflow.io import ToolsInput
+        except ImportError as e:
+            msg = "Failed to import ToolsInput from langflow.io"
+            raise ImportError(msg) from e
+        placeholder = None
+        tools = []
+        try:
+            tools = await self._get_tools()
+            placeholder = "Loading actions..." if len(tools) == 0 else ""
+        except (TimeoutError, asyncio.TimeoutError):
+            placeholder = "Timeout loading actions"
+        except (ConnectionError, OSError, ValueError):
+            placeholder = "Error loading actions"
         # Always use the latest tool data
         tool_data = [self._build_tool_data(tool) for tool in tools]
         # print(tool_data)
@@ -1295,14 +1411,9 @@ class Component(CustomComponent):
                     item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
             self.tools_metadata = tool_data
 
-        try:
-            from langflow.io import ToolsInput
-        except ImportError as e:
-            msg = "Failed to import ToolsInput from langflow.io"
-            raise ImportError(msg) from e
-
         return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
+            placeholder=placeholder,
             display_name="Actions",
             info=TOOLS_METADATA_INFO,
             value=tool_data,
@@ -1343,12 +1454,18 @@ class Component(CustomComponent):
                 )
             )
 
+    def is_connected_to_chat_output(self) -> bool:
+        # Lazy import to avoid circular dependency
+        from langflow.graph.utils import has_chat_output
+
+        return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
-            and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+            and not self.is_connected_to_chat_output()
             and not isinstance(message, ErrorMessage)
         )
 

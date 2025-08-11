@@ -28,6 +28,8 @@ def convert_to_data(v: DataFrame | Data | Message | dict) -> Data:
     """
     if isinstance(v, dict):
         return Data(v)
+    if isinstance(v, Message):
+        return v.to_data()
     return v if isinstance(v, Data) else v.to_data()
 
 
@@ -48,6 +50,7 @@ def convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:
 class TypeConverterComponent(Component):
     display_name = "Type Convert"
     description = "Convert between different types (Message, Data, DataFrame)"
+    documentation: str = "https://docs.langflow.org/components-processing#type-convert"
     icon = "repeat"
 
     inputs = [
@@ -118,7 +121,9 @@ class TypeConverterComponent(Component):
         if isinstance(input_value, str):
             input_value = Message(text=input_value)
 
-        return convert_to_message(input_value)
+        result = convert_to_message(input_value)
+        self.status = result
+        return result
 
     def convert_to_data(self) -> Data:
         """Convert input to Data type."""
@@ -128,7 +133,9 @@ class TypeConverterComponent(Component):
         if isinstance(input_value, str):
             input_value = Message(text=input_value)
 
-        return convert_to_data(input_value)
+        result = convert_to_data(input_value)
+        self.status = result
+        return result
 
     def convert_to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
@@ -138,4 +145,6 @@ class TypeConverterComponent(Component):
         if isinstance(input_value, str):
             input_value = Message(text=input_value)
 
-        return convert_to_dataframe(input_value)
+        result = convert_to_dataframe(input_value)
+        self.status = result
+        return result

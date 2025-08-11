@@ -113,7 +113,7 @@ class LocalStorageService(StorageService):
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for local
 
-    async def get_file_size(self, flow_id: str, file_name: str) -> None:
+    async def get_file_size(self, flow_id: str, file_name: str):
         """Get the size of a file in the local storage."""
         # Get the file size from the file path
         file_path = self.data_dir / flow_id / file_name

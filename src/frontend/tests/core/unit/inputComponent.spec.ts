@@ -30,7 +30,7 @@ test(
       .getByTestId("popover-anchor-input-collection_name")
       .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-    let value = await page
+    const value = await page
       .getByTestId("popover-anchor-input-collection_name")
       .inputValue();
 
@@ -104,7 +104,7 @@ test(
         .isChecked(),
     ).toBeFalsy();
 
-    let valueEditNode = await page
+    const valueEditNode = await page
       .getByTestId("popover-anchor-input-collection_name-edit")
       .inputValue();
 
@@ -129,7 +129,7 @@ test(
 
       await page.getByText("Close").last().click();
 
-      let value = await page
+      const value = await page
         .getByTestId("popover-anchor-input-collection_name")
         .inputValue();
 
