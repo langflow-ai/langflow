@@ -5,7 +5,7 @@ slug: /components-logic
 
 import Icon from "@site/src/components/icon";
 
-Langflow's logic components provide functionalities for routing, conditional processing, and flow management.
+Langflow's **Logic** components provide functionalities for routing, conditional processing, and flow management.
 
 ## If-Else (conditional router) {#if-else}
 
@@ -53,7 +53,7 @@ The following example uses the **If-Else** component to check incoming chat mess
 
     3. Connect the **If-Else** component's **True** output port to the **Language Model** component's **Input** port.
 
-    4. In the **Prompt Template** component, enter a prompt to instruct the model in the event of the `true` condition, such as `Send a message that a new warning, caution, or urgent message was received`.
+    4. In the **Prompt Template** component, enter instructions for the model when the evaluation is true, such as `Send a message that a new warning, caution, or urgent message was received`.
 
     5. Connect the **Prompt Template** component to the **Language Model** component's **System Message** port.
 
@@ -62,8 +62,7 @@ The following example uses the **If-Else** component to check incoming chat mess
 4. Repeat the same process with another set of **Language Model**, **Prompt Template**, and **Chat Output** components for the **False** outcome.
 
     Connect the **If-Else** component's **False** output port to the second **Language Model** component's **Input** port.
-
-    Be sure to configure the second **Prompt Template** component to instruct the model in the event of the `false` condition, such as `Send a message that a new low-priority message was received`.
+    In the second **Prompt Template**, enter instructions for the model when the evaluation is false, such as `Send a message that a new low-priority message was received`.
 
 5. To test the flow, open the **Playground**, and then send the flow some messages with and without your regex strings.
 The chat output should reflect the instructions in your prompts based on the regex evaluation.
@@ -88,7 +87,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | input_text     | String   | Input parameter. The primary text input for the operation. |
 | match_text     | String   | Input parameter. The text to compare against. |
 | operator       | Dropdown | Input parameter. The operator used to compare texts. Options include `equals`, `not equals`, `contains`, `starts with`, `ends with`, and `regex`. The default is `equals`. |
-| case_sensitive | Boolean  | Input parameter. When set to true, the comparison is case sensitive. The default is false. This setting doesn't apply to regex comparisons. |
+| case_sensitive | Boolean  | Input parameter. When true, the comparison is case sensitive. The default is false. This setting doesn't apply to regex comparisons. |
 | message        | Message  | Input parameter. The message to pass through either route. |
 | max_iterations | Integer  | Input parameter. The maximum number of iterations allowed for the conditional router. The default is 10. |
 | default_route  | Dropdown | Input parameter. The route to take when max iterations are reached. Options include `true_result` or `false_result`. The default is `false_result`. |
@@ -143,7 +142,7 @@ After processing all rows, the **Loop** component loads the aggregated list of s
 ![Loop CSV parser](/img/component-loop-csv.png)
 
 :::tip
-For more examples of the **Loop** component, try the **Research Translation Loop** template in Langflow, or follow this video tutorial for creating a flow with a loop and agentic RAG: [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
+For more examples of the **Loop** component, try the **Research Translation Loop** template in Langflow, or see the video tutorial [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
 :::
 
 </details>
@@ -161,7 +160,7 @@ The notification data can then be passed to other components in the flow, such a
 
 The **Run Flow** component runs another Langflow flow as a subprocess of the current flow.
 
-You can use this component to chain flows together, run flows conditionally, and attach flows to [**Agent** component](/components-agents) as [tools for the agent](/agents-tools) to run as needed.
+You can use this component to chain flows together, run flows conditionally, and attach flows to [**Agent** components](/components-agents) as [tools for agents](/agents-tools) to run as needed.
 
 When used with an agent, the `name` and `description` metadata that the agent uses to register the tool are created automatically.
 
@@ -180,9 +179,9 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | dynamic inputs    | Various  | Input parameter. Additional inputs are generated based on the selected flow. |
 | run_outputs  | A `List` of types (`Data`, `Message`, or `DataFrame`)  | Output parameter. All outputs are generated from running the flow.  |
 
-## Legacy logic components
+## Legacy Logic components
 
-The following logic components are legacy components.
+The following **Logic** components are legacy components.
 You can still use them in your flows, but they are no longer supported and can be removed in a future release.
 
 Replace these components with suggested alternatives as soon as possible.
