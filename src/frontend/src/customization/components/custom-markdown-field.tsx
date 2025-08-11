@@ -6,6 +6,7 @@ type CustomMarkdownFieldProps = {
   isEmpty: boolean;
   chatMessage: string;
   editedFlag: React.ReactNode;
+  onChatInteraction?: (action: string, data?: any) => void;
 };
 export const CustomMarkdownField = ({
   isAudioMessage,
@@ -13,6 +14,7 @@ export const CustomMarkdownField = ({
   isEmpty,
   chatMessage,
   editedFlag,
+  onChatInteraction,
 }: CustomMarkdownFieldProps) => {
   return (
     <>
@@ -22,6 +24,7 @@ export const CustomMarkdownField = ({
         isEmpty={isEmpty}
         chatMessage={chatMessage}
         editedFlag={editedFlag}
+        onChatInteraction={onChatInteraction}
       />
     </>
   );

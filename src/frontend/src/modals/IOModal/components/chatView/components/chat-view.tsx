@@ -33,7 +33,8 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.chat.session === nextProps.chat.session &&
     prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
     prevProps.chat.properties === nextProps.chat.properties &&
-    prevProps.lastMessage === nextProps.lastMessage
+    prevProps.lastMessage === nextProps.lastMessage &&
+    prevProps.onSendMessage === nextProps.onSendMessage
   );
 });
 
@@ -277,6 +278,23 @@ export default function ChatView({
                   updateChat={updateChat}
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}
+                  onSendMessage={async (message: string, files?: string[]) => {
+                    // Store the current chat value to restore it later
+                    const currentChatValue =
+                      useUtilityStore.getState().chatValueStore;
+                    // Set the new message as the chat value
+                    useUtilityStore.getState().setChatValueStore(message);
+                    try {
+                      await sendMessage({ repeat: 1, files });
+                    } finally {
+                      // Restore the original chat value or clear it if it was the generated message
+                      useUtilityStore
+                        .getState()
+                        .setChatValueStore(
+                          currentChatValue === message ? "" : currentChatValue,
+                        );
+                    }
+                  }}
                 />
               ))}
               {chatHistory?.length > 0 && (

@@ -2,10 +2,15 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
+import {
+  GenerativeUIRenderer,
+  isGenerativeUIContent,
+} from "@/components/generativeUI/GenerativeUIRenderer";
 import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
+import "@/components/generativeUI/generative-ui.css";
 
 type MarkdownFieldProps = {
   chat: any;
@@ -13,6 +18,7 @@ type MarkdownFieldProps = {
   chatMessage: string;
   editedFlag: React.ReactNode;
   isAudioMessage?: boolean;
+  onChatInteraction?: (action: string, data?: any) => void;
 };
 
 export const MarkdownField = ({
@@ -21,9 +27,46 @@ export const MarkdownField = ({
   chatMessage,
   editedFlag,
   isAudioMessage,
+  onChatInteraction,
 }: MarkdownFieldProps) => {
   // Process the chat message to handle <think> tags and clean up tables
   const processedChatMessage = preprocessChatMessage(chatMessage);
+
+  // Check if the content should be rendered as generative UI
+  const isGenerativeUI = isGenerativeUIContent(processedChatMessage);
+
+  // Handle chat interactions
+  const handleChatInteraction = (action: string, data?: any) => {
+    console.log("Chat interaction:", action, data);
+
+    // Handle different types of interactions
+    if (action === "button-click") {
+      // You could trigger a new chat message or action here
+      onChatInteraction?.(action, data);
+    } else if (action === "form-submit") {
+      // Handle form submissions
+      onChatInteraction?.(action, data);
+    } else if (action === "navigate") {
+      // Handle navigation
+      onChatInteraction?.(action, data);
+    } else {
+      // Generic interaction handling
+      onChatInteraction?.(action, data);
+    }
+  };
+
+  if (isGenerativeUI) {
+    return (
+      <div className="w-full items-baseline gap-2">
+        <GenerativeUIRenderer
+          content={processedChatMessage}
+          onInteraction={handleChatInteraction}
+          className="generative-ui-chat-content"
+        />
+        {editedFlag}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full items-baseline gap-2">

@@ -639,6 +639,7 @@ export type chatMessagePropsType = {
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  onSendMessage?: (message: string, files?: string[]) => Promise<void>;
 };
 
 export type genericModalPropsType = {

@@ -1,0 +1,310 @@
+/* Generative UI Styles */
+.generative-ui-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+.generative-ui-html-container,
+.generative-ui-react-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Interactive elements styling */
+.generative-ui-container button:not(.btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition-property:
+    color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  height: 2.5rem;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem;
+}
+
+.generative-ui-container button:not(.btn):focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.generative-ui-container button:not(.btn):disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Form elements */
+.generative-ui-container input[type="text"],
+.generative-ui-container input[type="email"],
+.generative-ui-container input[type="password"],
+.generative-ui-container input[type="number"],
+.generative-ui-container textarea,
+.generative-ui-container select {
+  display: flex;
+  height: 2.5rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  border-width: 1px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.generative-ui-container textarea {
+  min-height: 5rem;
+  resize: none;
+}
+
+.generative-ui-container label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* Card-like containers */
+.generative-ui-container .card {
+  border-radius: 0.5rem;
+  border-width: 1px;
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.generative-ui-container .card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-bottom: 1.5rem;
+}
+
+.generative-ui-container .card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.generative-ui-container .card-description {
+  font-size: 0.875rem;
+}
+
+.generative-ui-container .card-content {
+  padding-top: 0;
+}
+
+.generative-ui-container .card-footer {
+  display: flex;
+  align-items: center;
+  padding-top: 1.5rem;
+}
+
+/* Alert/notification styles */
+.generative-ui-container .alert {
+  position: relative;
+  width: 100%;
+  border-radius: 0.5rem;
+  border-width: 1px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.generative-ui-container .alert-info {
+  border-color: rgb(147 197 253);
+  background-color: rgb(239 246 255);
+  color: rgb(30 64 175);
+}
+
+.generative-ui-container .alert-success {
+  border-color: rgb(134 239 172);
+  background-color: rgb(240 253 244);
+  color: rgb(22 101 52);
+}
+
+.generative-ui-container .alert-warning {
+  border-color: rgb(253 224 71);
+  background-color: rgb(254 252 232);
+  color: rgb(133 77 14);
+}
+
+.generative-ui-container .alert-error {
+  border-color: rgb(252 165 165);
+  background-color: rgb(254 242 242);
+  color: rgb(153 27 27);
+}
+
+/* List styles */
+.generative-ui-container ul:not(.markdown ul) {
+  list-style-type: disc;
+  list-style-position: inside;
+  margin: 0.5rem 0;
+}
+
+.generative-ui-container ul:not(.markdown ul) li {
+  margin: 0.25rem 0;
+}
+
+.generative-ui-container ol:not(.markdown ol) {
+  list-style-type: decimal;
+  list-style-position: inside;
+  margin: 0.5rem 0;
+}
+
+.generative-ui-container ol:not(.markdown ol) li {
+  margin: 0.25rem 0;
+}
+
+/* Table styles */
+.generative-ui-container table:not(.markdown table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.generative-ui-container table:not(.markdown table) th,
+.generative-ui-container table:not(.markdown table) td {
+  border-width: 1px;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+/* Grid layouts */
+.generative-ui-container .grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.generative-ui-container .grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.generative-ui-container .grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.generative-ui-container .grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.generative-ui-container .grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Flexbox utilities */
+.generative-ui-container .flex {
+  display: flex;
+}
+
+.generative-ui-container .flex-col {
+  flex-direction: column;
+}
+
+.generative-ui-container .items-center {
+  align-items: center;
+}
+
+.generative-ui-container .justify-center {
+  justify-content: center;
+}
+
+.generative-ui-container .justify-between {
+  justify-content: space-between;
+}
+
+.generative-ui-container .gap-2 {
+  gap: 0.5rem;
+}
+
+.generative-ui-container .gap-4 {
+  gap: 1rem;
+}
+
+/* Spacing utilities */
+.generative-ui-container .p-4 {
+  padding: 1rem;
+}
+
+.generative-ui-container .px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.generative-ui-container .py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.generative-ui-container .mt-2 {
+  margin-top: 0.5rem;
+}
+
+.generative-ui-container .mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.generative-ui-container .my-2 {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.generative-ui-container .mt-4 {
+  margin-top: 1rem;
+}
+
+.generative-ui-container .mb-4 {
+  margin-bottom: 1rem;
+}
+
+.generative-ui-container .my-4 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Interactive hover states */
+.generative-ui-container .interactive-element {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.generative-ui-container .interactive-element:hover {
+  transform: scale(1.05);
+}
+
+/* Loading states */
+.generative-ui-container .loading {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .generative-ui-container .grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .generative-ui-container .grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .generative-ui-container .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

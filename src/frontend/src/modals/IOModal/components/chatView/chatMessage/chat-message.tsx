@@ -28,6 +28,7 @@ export default function ChatMessage({
   updateChat,
   closeChat,
   playgroundPage,
+  onSendMessage,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -48,6 +49,57 @@ export default function ChatMessage({
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
   const isAudioMessage = chat.category === "audio";
+
+  // Handle chat interactions from generative UI
+  const handleChatInteraction = async (action: string, data?: any) => {
+    console.log("Chat interaction in chat message:", action, data);
+
+    try {
+      if (action === "button-click" && typeof data === "string") {
+        // Send the button text as a new message
+        if (onSendMessage) {
+          await onSendMessage(data);
+        } else {
+          console.log("No onSendMessage handler provided, button click:", data);
+        }
+      } else if (action === "form-submit" && typeof data === "object") {
+        // Handle form submission by creating a message with form data
+        const formMessage = Object.entries(data)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join("\n");
+
+        if (onSendMessage) {
+          await onSendMessage(formMessage);
+        } else {
+          console.log(
+            "No onSendMessage handler provided, form submit:",
+            formMessage,
+          );
+        }
+      } else if (
+        action === "navigate" &&
+        typeof data === "object" &&
+        data.href
+      ) {
+        // Handle navigation - for now just log, you could implement routing
+        console.log("Navigation requested:", data.href);
+
+        // For internal navigation, you might send the href as a message
+        if (onSendMessage && !data.href.startsWith("http")) {
+          await onSendMessage(`Navigate to: ${data.href}`);
+        }
+      } else {
+        // Generic interaction handling - send the action and data as a message
+        if (onSendMessage && typeof data === "string") {
+          await onSendMessage(data);
+        } else {
+          console.log("Unhandled interaction:", action, data);
+        }
+      }
+    } catch (error) {
+      console.error("Error handling chat interaction:", error);
+    }
+  };
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
@@ -365,6 +417,7 @@ export default function ChatMessage({
                                 isEmpty={isEmpty}
                                 chatMessage={chatMessage}
                                 editedFlag={editedFlag}
+                                onChatInteraction={handleChatInteraction}
                               />
                             )}
                           </div>
