@@ -17,3 +17,4 @@ export const ENABLE_MCP = true;
 export const ENABLE_MCP_NOTICE = false;
 export const ENABLE_MCP_COMPOSER =
   process.env.LANGFLOW_FEATURE_MCP_COMPOSER === "true";
+export const ENABLE_NEW_SIDEBAR = false;

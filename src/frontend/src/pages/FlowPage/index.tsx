@@ -3,6 +3,7 @@ import { useBlocker, useParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -160,7 +161,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
+            <SidebarProvider
+              width="17.5rem"
+              defaultOpen={!isMobile}
+              segmentedSidebar={ENABLE_NEW_SIDEBAR}
+            >
               {!view && <FlowSidebarComponent isLoading={isLoading} />}
               <main className="flex w-full overflow-hidden">
                 <div className="h-full w-full">

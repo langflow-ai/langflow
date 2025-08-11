@@ -5,7 +5,8 @@ import CanvasControls, {
   CustomControlButton,
 } from "@/components/core/canvasControlsComponent";
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
 
 export const MemoizedBackground = memo(() => (
@@ -47,17 +48,21 @@ export const MemoizedCanvasControls = memo(
   ),
 );
 
-export const MemoizedSidebarTrigger = memo(() => (
-  <Panel
-    className={cn(
-      "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-      "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
-    )}
-    position="top-left"
-  >
-    <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
-      <ForwardedIconComponent name="PanelRightClose" className="h-4 w-4" />
-      <span className="text-foreground">Components</span>
-    </SidebarTrigger>
-  </Panel>
-));
+export const MemoizedSidebarTrigger = memo(() => {
+  if (ENABLE_NEW_SIDEBAR) return;
+
+  return (
+    <Panel
+      className={cn(
+        "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+        "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
+      )}
+      position="top-left"
+    >
+      <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
+        <ForwardedIconComponent name="PanelRightClose" className="h-4 w-4" />
+        <span className="text-foreground">Components</span>
+      </SidebarTrigger>
+    </Panel>
+  );
+});

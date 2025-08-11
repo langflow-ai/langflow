@@ -33,7 +33,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   data,
 }: SidebarHeaderComponentProps) {
   return (
-    <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
+    <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1 group-data-[collapsible=icon]:hidden">
       <Disclosure open={showConfig} onOpenChange={setShowConfig}>
         <div className="flex w-full items-center gap-2">
           <SidebarTrigger className="text-muted-foreground">

@@ -7,9 +7,12 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarInset,
+  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
+import { ENABLE_API, ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
@@ -19,6 +22,7 @@ import {
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
+import { cn } from "@/utils/utils";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -29,6 +33,7 @@ import NoResultsMessage from "./components/emptySearchComponent";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
+import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
@@ -287,87 +292,105 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     [dataFilter],
   );
 
+  const { activeSection } = useSidebar();
+
   return (
     <Sidebar
-      collapsible="offcanvas"
+      collapsible={ENABLE_NEW_SIDEBAR ? "icon" : "offcanvas"}
       data-testid="shad-sidebar"
       className="noflow select-none"
     >
-      <SidebarHeaderComponent
-        showConfig={showConfig}
-        setShowConfig={setShowConfig}
-        showBeta={showBeta}
-        setShowBeta={setShowBeta}
-        showLegacy={showLegacy}
-        setShowLegacy={setShowLegacy}
-        searchInputRef={searchInputRef}
-        isInputFocused={isInputFocused}
-        search={search}
-        handleInputFocus={handleInputFocus}
-        handleInputBlur={handleInputBlur}
-        handleInputChange={handleInputChange}
-        filterType={filterType}
-        setFilterEdge={setFilterEdge}
-        setFilterData={setFilterData}
-        data={data}
-      />
+      <div className="flex h-full">
+        {ENABLE_NEW_SIDEBAR && <SidebarSegmentedNav />}
+        <div
+          className={cn(
+            "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
+            ENABLE_NEW_SIDEBAR && "sidebar-segmented",
+          )}
+        >
+          <SidebarHeaderComponent
+            showConfig={showConfig}
+            setShowConfig={setShowConfig}
+            showBeta={showBeta}
+            setShowBeta={setShowBeta}
+            showLegacy={showLegacy}
+            setShowLegacy={setShowLegacy}
+            searchInputRef={searchInputRef}
+            isInputFocused={isInputFocused}
+            search={search}
+            handleInputFocus={handleInputFocus}
+            handleInputBlur={handleInputBlur}
+            handleInputChange={handleInputChange}
+            filterType={filterType}
+            setFilterEdge={setFilterEdge}
+            setFilterData={setFilterData}
+            data={data}
+          />
 
-      <SidebarContent>
-        {isLoading ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1 p-3">
-              <SkeletonGroup count={13} className="my-0.5 h-7" />
-            </div>
-            <div className="h-8" />
-            <div className="flex flex-col gap-1 px-3 pt-2">
-              <SkeletonGroup count={21} className="my-0.5 h-7" />
-            </div>
-          </div>
-        ) : (
-          <>
-            {hasResults ? (
+          <SidebarContent
+            segmentedSidebar={ENABLE_NEW_SIDEBAR}
+            className="flex-1 group-data-[collapsible=icon]:hidden"
+          >
+            {isLoading ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1 p-3">
+                  <SkeletonGroup count={13} className="my-0.5 h-7" />
+                </div>
+                <div className="h-8" />
+                <div className="flex flex-col gap-1 px-3 pt-2">
+                  <SkeletonGroup count={21} className="my-0.5 h-7" />
+                </div>
+              </div>
+            ) : (
               <>
-                <CategoryGroup
-                  dataFilter={dataFilter}
-                  sortedCategories={sortedCategories}
-                  CATEGORIES={CATEGORIES}
-                  openCategories={openCategories}
-                  setOpenCategories={setOpenCategories}
-                  search={search}
-                  nodeColors={nodeColors}
-                  onDragStart={onDragStart}
-                  sensitiveSort={sensitiveSort}
-                />
+                {hasResults ? (
+                  <>
+                    {activeSection === "components" && (
+                      <CategoryGroup
+                        dataFilter={dataFilter}
+                        sortedCategories={sortedCategories}
+                        CATEGORIES={CATEGORIES}
+                        openCategories={openCategories}
+                        setOpenCategories={setOpenCategories}
+                        search={search}
+                        nodeColors={nodeColors}
+                        onDragStart={onDragStart}
+                        sensitiveSort={sensitiveSort}
+                      />
+                    )}
 
-                {hasBundleItems && (
-                  <MemoizedSidebarGroup
-                    BUNDLES={BUNDLES}
-                    search={search}
-                    sortedCategories={sortedCategories}
-                    dataFilter={dataFilter}
-                    nodeColors={nodeColors}
-                    onDragStart={onDragStart}
-                    sensitiveSort={sensitiveSort}
-                    openCategories={openCategories}
-                    setOpenCategories={setOpenCategories}
-                    handleKeyDownInput={handleKeyDownInput}
-                  />
+                    {hasBundleItems && activeSection === "bundles" && (
+                      <MemoizedSidebarGroup
+                        BUNDLES={BUNDLES}
+                        search={search}
+                        sortedCategories={sortedCategories}
+                        dataFilter={dataFilter}
+                        nodeColors={nodeColors}
+                        onDragStart={onDragStart}
+                        sensitiveSort={sensitiveSort}
+                        openCategories={openCategories}
+                        setOpenCategories={setOpenCategories}
+                        handleKeyDownInput={handleKeyDownInput}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <NoResultsMessage onClearSearch={handleClearSearch} />
                 )}
               </>
-            ) : (
-              <NoResultsMessage onClearSearch={handleClearSearch} />
             )}
-          </>
-        )}
-      </SidebarContent>
-      <SidebarFooter className="border-t p-4 py-3">
-        <SidebarMenuButtons
-          hasStore={hasStore}
-          customComponent={customComponent}
-          addComponent={addComponent}
-          isLoading={isLoading}
-        />
-      </SidebarFooter>
+          </SidebarContent>
+
+          <SidebarFooter className="border-t p-4 py-3 group-data-[collapsible=icon]:hidden">
+            <SidebarMenuButtons
+              hasStore={hasStore}
+              customComponent={customComponent}
+              addComponent={addComponent}
+              isLoading={isLoading}
+            />
+          </SidebarFooter>
+        </div>
+      </div>
     </Sidebar>
   );
 }
