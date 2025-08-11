@@ -187,6 +187,61 @@ The output of the **File** component depends on the number and type of files loa
 
 - **Multiple files**: Produces a **Files** [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
 
+## Knowledge Base Ingest
+
+The **Knowledge Base Ingest** component creates or appends to a [Langflow Knowledge Base](/knowledge) from a DataFrame.
+This enables you to build a vector store from tabular data, configure which columns are vectorized, and manage embedding models and API keys.
+
+For more information, see the [Knowledge Base documentation](/knowledge).
+
+### Knowledge Base Ingest parameters
+
+Most **Knowledge Base Ingest** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name             | Display Name                  | Info                                                                                  |
+|------------------|------------------------------|---------------------------------------------------------------------------------------|
+| knowledge_base   | Knowledge                     | Select or create a knowledge base to ingest data into.                                |
+| input_df         | Data                          | The DataFrame containing your data that is already chunked or processed.                       |
+| column_config    | Column Configuration          | Configure which columns are vectorized and which are used as unique identifiers. Default: `text`.     |
+| chunk_size       | Chunk Size                    | Batch size for processing embeddings. Default: `1000`.                                   |
+| api_key          | Embedding Provider API Key    | API key for the embedding provider. Supports OpenAI, HuggingFace, or Cohere.                     |
+| allow_duplicates | Allow Duplicates              | Allow duplicate rows in the knowledge base. Default: `false`.                            |
+
+### Knowledge Base Ingest output
+
+Returns a [`Data`](/data-types#data) object containing metadata about the ingestion, including:
+
+* Knowledge base name and path
+* Number of rows ingested
+* Column configuration summary
+* Timestamp
+
+## Knowledge Base Retrieval
+
+The **Knowledge Base Retrieval** component retrieves data and performs searches on a [Langflow Knowledge Base](/knowledge). Use this component to query your ingested knowledge bases, perform semantic search, and return relevant results as a DataFrame.
+
+For more information, see the [Knowledge Base documentation](/knowledge).
+
+### Knowledge Base Retrieval parameters
+
+Most **Knowledge Base Retrieval** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name             | Display Name                  | Info                                                                                  |
+|------------------|------------------------------|---------------------------------------------------------------------------------------|
+| knowledge_base   | Knowledge                     | Select the knowledge base to retrieve data from.                                      |
+| api_key          | Embedding Provider API Key    | API key for the embedding provider. Overrides the stored key if provided.             |
+| search_query     | Search Query                  | Optional search query to filter knowledge base data using semantic similarity.         |
+| top_k            | Top K Results                 | Number of top results to return from the knowledge base. Default: `5`.                |
+| include_metadata | Include Metadata              | Whether to include all metadata and embeddings in the output. Default: `true`.        |
+
+### Knowledge Base Retrieval output
+
+Returns a [`DataFrame`](/data-types#dataframe) containing the top matching results from the selected knowledge base.  
+If **Include Metadata** is enabled, each row includes all metadata, embeddings, and content.  
+If disabled, only the content is returned.
+
 ## News Search
 
 The **News Search** component searches Google News through RSS, and then returns clean article data as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.

@@ -8,7 +8,8 @@ import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
 A knowledge base is a repository of vector embeddings created from your data that agents can reference to answer domain-specific questions.
-Knowledge bases are distinct from vector store components because the vector data is stored locally, and can be re-used without requiring re-ingestion of the data in every flow.
+Knowledge bases are distinct from vector database components.
+Knowledge bases store vector data locally, and each knowledge base can be re-used in new flows without requiring re-ingestion of the data in every flow.
 You create a new knowledge base with the [**Create Knowledge**](/components-data#create-knowledge) component, and then retrieve knowledge using the [**Retrieve Knowledge**](/components-data#retrieve-knowledge) component.
 
 For example, you could create a knowledge base with customer sales data from a specific month.
