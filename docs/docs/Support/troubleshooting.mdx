@@ -144,18 +144,14 @@ The following error can occur during Langflow upgrades when the new version can'
 > Something went wrong running migrations. Please, run 'langflow migration --fix'
 ```
 
-To resolve this error, clear the cache by deleting the contents of the Langflow cache folder.
+To resolve this error, clear the cache by deleting the contents of your Langflow cache folder.
+The filepath depends on your operating system, installation type, and configuration options.
+For more information and default filepaths, see [Memory management options](/memory#flow-storage-and-logs).
 
 :::important
 Clearing the cache erases your settings.
 If you want to retain your settings files, create a backup of those files before clearing the cache folder.
 :::
-
-The cache folder location depends on your OS:
-
-- **Linux**: `home/<username>/.cache/langflow/`
-- **WSL2 on Windows**: `home/<username>/.cache/langflow/`
-- **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
 ## Langflow uninstall issues
 
