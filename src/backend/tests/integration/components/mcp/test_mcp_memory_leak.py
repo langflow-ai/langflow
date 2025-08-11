@@ -44,15 +44,30 @@ def process_tracker():
 
     yield process, initial_count
 
-    # Cleanup any remaining child processes
+    # Give some time for cleanup to complete before checking for leftover processes
+    # Collect child processes that we expect to wait for
     try:
-        for child in process.children(recursive=True):
-            try:
-                child.terminate()
-                child.wait(timeout=3)
-            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
-                with contextlib.suppress(psutil.NoSuchProcess):
-                    child.kill()
+        child_processes = process.children(recursive=True)
+        if child_processes:
+            # Wait up to 1 second for processes to exit naturally
+            gone, alive = psutil.wait_procs(child_processes, timeout=1)
+
+            # Log processes that exited naturally
+            if gone:
+                logger.debug("Processes that exited naturally: %s", [p.pid for p in gone])
+
+            # Handle processes that are still alive after waiting
+            if alive:
+                logger.debug("Processes still alive after 1s wait: %s", [p.pid for p in alive])
+                # Try to terminate remaining processes
+                for child in alive:
+                    try:
+                        child.terminate()
+                        child.wait(timeout=5)  # Increased timeout for cleanup
+                    except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                        with contextlib.suppress(psutil.NoSuchProcess):
+                            child.kill()
+
     except Exception as e:
         logger.exception("Error cleaning up child processes: %s", e)
 

@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import inspect
 import os
 import platform
 import re
@@ -804,6 +805,38 @@ class MCPSessionManager:
 
         session_info = sessions[session_id]
         try:
+            # First try to properly close the session if it exists
+            if "session" in session_info:
+                session = session_info["session"]
+
+                # Try async close first (aclose method)
+                if hasattr(session, "aclose"):
+                    try:
+                        await session.aclose()
+                        logger.debug("Successfully closed session %s using aclose()", session_id)
+                    except Exception as e:  # noqa: BLE001
+                        logger.debug("Error closing session %s with aclose(): %s", session_id, e)
+
+                # If no aclose, try regular close method
+                elif hasattr(session, "close"):
+                    try:
+                        # Check if close() is awaitable using inspection
+                        if inspect.iscoroutinefunction(session.close):
+                            # It's an async method
+                            await session.close()
+                            logger.debug("Successfully closed session %s using async close()", session_id)
+                        else:
+                            # Try calling it and check if result is awaitable
+                            close_result = session.close()
+                            if inspect.isawaitable(close_result):
+                                await close_result
+                                logger.debug("Successfully closed session %s using awaitable close()", session_id)
+                            else:
+                                # It's a synchronous close
+                                logger.debug("Successfully closed session %s using sync close()", session_id)
+                    except Exception as e:  # noqa: BLE001
+                        logger.debug("Error closing session %s with close(): %s", session_id, e)
+
             # Cancel the background task which will properly close the session
             if "task" in session_info:
                 task = session_info["task"]
@@ -853,6 +886,10 @@ class MCPSessionManager:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
+
+        # Give a bit more time for subprocess transports to clean up
+        # This helps prevent the BaseSubprocessTransport.__del__ warnings
+        await asyncio.sleep(0.5)
 
     async def _cleanup_session(self, context_id: str):
         """Backward-compat cleanup by context_id.
