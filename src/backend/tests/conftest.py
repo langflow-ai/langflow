@@ -206,7 +206,7 @@ def session_fixture():
     try:
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
-            yield session  # a Session fecha aqui
+            yield session
     finally:
         SQLModel.metadata.drop_all(engine)
         engine.dispose()
