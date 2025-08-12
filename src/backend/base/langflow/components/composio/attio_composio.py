@@ -8,4 +8,4 @@ class ComposioAttioAPIComponent(ComposioBaseComponent):
     app_name = "attio"
 
     def set_default_tools(self):
-        """Set the default tools for Attio component.""" 
+        """Set the default tools for Attio component."""

@@ -8,4 +8,4 @@ class ComposioAirtableAPIComponent(ComposioBaseComponent):
     app_name = "airtable"
 
     def set_default_tools(self):
-        """Set the default tools for Airtable component.""" 
+        """Set the default tools for Airtable component."""

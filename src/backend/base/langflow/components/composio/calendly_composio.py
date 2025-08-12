@@ -8,4 +8,4 @@ class ComposioCalendlyAPIComponent(ComposioBaseComponent):
     app_name = "calendly"
 
     def set_default_tools(self):
-        """Set the default tools for Calendly component.""" 
+        """Set the default tools for Calendly component."""

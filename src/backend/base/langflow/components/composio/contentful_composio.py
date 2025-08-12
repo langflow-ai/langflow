@@ -8,4 +8,4 @@ class ComposioContentfulAPIComponent(ComposioBaseComponent):
     app_name = "contentful"
 
     def set_default_tools(self):
-        """Set the default tools for Contentful component.""" 
+        """Set the default tools for Contentful component."""

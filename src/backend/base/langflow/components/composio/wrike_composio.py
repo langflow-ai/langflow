@@ -8,4 +8,4 @@ class ComposioWrikeAPIComponent(ComposioBaseComponent):
     app_name = "wrike"
 
     def set_default_tools(self):
-        """Set the default tools for Wrike component.""" 
+        """Set the default tools for Wrike component."""
