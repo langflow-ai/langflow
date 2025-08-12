@@ -23,6 +23,7 @@ import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
 import { ChatScrollAnchor } from "./chat-scroll-anchor";
+import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 
 const TIME_TO_DISABLE_SCROLL = 2000;
 
@@ -238,6 +239,8 @@ export default function ChatView({
 		setLastMessageContent(currentMessageContent);
 	}, [chatHistory, isLlmResponding, lastMessageContent]);
 
+	const { open } = useSimpleSidebar();
+
 	return (
 		<div
 			className={cn(
@@ -267,7 +270,7 @@ export default function ChatView({
 									playgroundPage={playgroundPage}
 								/>
 							))}
-							{chatHistory?.length > 0 && (
+							{chatHistory?.length > 0 && open && (
 								<ChatScrollAnchor
 									trackVisibility={chatHistory?.[chatHistory.length - 1]}
 									canScroll={canScroll}
