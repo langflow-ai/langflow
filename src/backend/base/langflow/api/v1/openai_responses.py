@@ -455,7 +455,8 @@ async def create_response(
 
             variables[var_name] = header_value
             logger.debug(
-                f"Found global variable: {var_name} = {header_value} (converted to uppercase from header: {header_name})"
+                f"Found global variable: {var_name} = {header_value} "
+                f"(converted to uppercase from header: {header_name})"
             )
 
     logger.debug(f"Extracted global variables from headers: {list(variables.keys())}")
