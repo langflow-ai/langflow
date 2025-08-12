@@ -244,6 +244,7 @@ async def run_flow_generator(
         api_key_user (User | None): Optional authenticated user running the flow
         event_manager (EventManager): Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
+        context (dict | None): Optional context to pass to the flow
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution

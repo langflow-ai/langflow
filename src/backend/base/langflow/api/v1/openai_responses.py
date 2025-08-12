@@ -9,9 +9,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
+from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.schema.content_types import ToolContent
 from langflow.schema.openai_responses_schemas import (
     OpenAIErrorResponse,
     OpenAIResponsesRequest,
@@ -24,9 +26,6 @@ from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
-
-from ...schema.content_types import ToolContent
-from .endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 
 router = APIRouter(tags=["OpenAI Responses API"])
 
@@ -216,7 +215,7 @@ async def run_flow_for_openai_responses(
                                                             )
 
                                                             if include_results:
-                                                                # Format with detailed results - preserve original structure
+                                                                # Format with detailed results
                                                                 tool_done_event = {
                                                                     "type": "response.output_item.done",
                                                                     "item": {
@@ -238,7 +237,7 @@ async def run_flow_for_openai_responses(
                                                                         "id": tool_id,
                                                                         "type": "function_call",  # Match OpenAI format
                                                                         "status": "completed",
-                                                                        "arguments": arguments_str,  # Include final args
+                                                                        "arguments": arguments_str,
                                                                         "call_id": call_id,
                                                                         "name": tool_name,
                                                                     },
@@ -346,15 +345,15 @@ async def run_flow_for_openai_responses(
 
                         if hasattr(component_output, "results") and component_output.results:
                             for blocks in component_output.results.get("message", {}).content_blocks:
-                                for content in blocks.contents:
-                                    if isinstance(content, ToolContent):
-                                        tool_calls.append(
-                                            {
-                                                "name": content.name,
-                                                "input": content.tool_input,
-                                                "output": content.output,
-                                            }
-                                        )
+                                tool_calls.extend(
+                                    {
+                                        "name": content.name,
+                                        "input": content.tool_input,
+                                        "output": content.output,
+                                    }
+                                    for content in blocks.contents
+                                    if isinstance(content, ToolContent)
+                                )
                     if output_text:
                         break
             if output_text:
@@ -428,6 +427,7 @@ async def create_response(
         request: OpenAI Responses API request with model (flow_id) and input
         background_tasks: FastAPI background task manager
         api_key_user: Authenticated user from API key
+        http_request: The incoming HTTP request
 
     Returns:
         OpenAI-compatible response or streaming response
