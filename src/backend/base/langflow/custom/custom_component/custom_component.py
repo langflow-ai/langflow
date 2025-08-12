@@ -422,16 +422,16 @@ class CustomComponent(BaseComponent):
         if hasattr(self, "_user_id") and not self.user_id:
             msg = f"User id is not set for {self.__class__.__name__}"
             raise ValueError(msg)
-            
+
         # Check graph context for request-level variable overrides first
-        if hasattr(self, 'graph') and self.graph and hasattr(self.graph, 'context'):
+        if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
             context = self.graph.context
-            if context and 'request_variables' in context:
-                request_variables = context['request_variables']
+            if context and "request_variables" in context:
+                request_variables = context["request_variables"]
                 if name in request_variables:
                     logger.debug(f"Found context override for variable '{name}': {request_variables[name]}")
                     return request_variables[name]
-        
+
         variable_service = get_variable_service()  # Get service instance
         # Retrieve and decrypt the variable by name for the current user
         if isinstance(self.user_id, str):
