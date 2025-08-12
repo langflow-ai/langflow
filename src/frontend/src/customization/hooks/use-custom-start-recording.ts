@@ -1,5 +1,5 @@
+import { useStartRecording } from "@/components/core/playgroundComponent/components/chatView/chatInput/components/voice-assistant/hooks/use-start-recording";
 import type { MutableRefObject } from "react";
-import { useStartRecording } from "@/modals/IOModal/components/chatView/chatInput/components/voice-assistant/hooks/use-start-recording";
 
 export const customUseStartRecording = (
   audioContextRef: React.MutableRefObject<AudioContext | null>,
@@ -12,7 +12,7 @@ export const customUseStartRecording = (
   audioQueueRef: MutableRefObject<AudioBuffer[]>,
   workletCode: string,
   processorRef: MutableRefObject<AudioWorkletNode | null>,
-  setStatus: (status: string) => void,
+  setStatus: (status: string) => void
 ) => {
   return useStartRecording(
     audioContextRef,
@@ -25,7 +25,7 @@ export const customUseStartRecording = (
     audioQueueRef,
     workletCode,
     processorRef,
-    setStatus,
+    setStatus
   );
 };
 

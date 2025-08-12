@@ -1,4 +1,4 @@
-import { useStartConversation } from "@/modals/IOModal/components/chatView/chatInput/components/voice-assistant/hooks/use-start-conversation";
+import { useStartConversation } from "@/components/core/playgroundComponent/components/chatView/chatInput/components/voice-assistant/hooks/use-start-conversation";
 
 export const customUseStartConversation = (
   flowId: string,
@@ -7,7 +7,7 @@ export const customUseStartConversation = (
   startRecording: () => void,
   handleWebSocketMessage: (event: MessageEvent) => void,
   stopRecording: () => void,
-  currentSessionId: string,
+  currentSessionId: string
 ) => {
   return useStartConversation(
     flowId,
@@ -16,7 +16,7 @@ export const customUseStartConversation = (
     startRecording,
     handleWebSocketMessage,
     stopRecording,
-    currentSessionId,
+    currentSessionId
   );
 };
 
