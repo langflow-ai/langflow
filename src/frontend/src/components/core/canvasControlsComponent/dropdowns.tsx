@@ -1,0 +1,217 @@
+import IconComponent, { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { cn, getOS } from "@/utils/utils";
+import React from "react";
+
+type DropdownControlButtonProps = {
+  tooltipText?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  testId?: string;
+  label?: string;
+  shortcut?: string;
+  iconName?: string;
+};
+
+const getModifierKey = (): string => {
+  const os = getOS();
+  return os === "macos" ? "⌘" : "Ctrl";
+};
+
+const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
+  tooltipText,
+  onClick = () => {},
+  disabled,
+  testId,
+  label = "",
+  shortcut = "",
+  iconName,
+}) => (
+  <Button
+    data-testid={testId}
+    className={cn(
+      "group flex items-center justify-center !py-1.5 !px-3 hover:bg-accent h-full rounded-none",
+      disabled && "cursor-not-allowed opacity-50",
+    )}
+    onClick={onClick}
+    variant="ghost"
+    disabled={disabled}
+    title={tooltipText || ""}
+  >
+    {iconName && <ForwardedIconComponent name={iconName} className="text-muted-foreground group-hover:text-primary mr-1" />}
+    <div className="flex flex-row items-center justify-between w-full h-full">
+      <span className="text-muted-foreground text-sm mr-2 group-hover:text-primary">{label}</span>
+      <div className="flex flex-row items-center justify-center gap-1 text-sm text-placeholder-foreground">
+        {shortcut && (
+          <>
+            <span className="mr-1">{getModifierKey()}</span>
+            <span>{shortcut}</span>
+          </>
+        )}
+      </div>
+    </div>
+  </Button>
+);
+
+const formatZoomPercentage = (zoom: number): string =>
+  `${Math.round(zoom * 100)}%`;
+
+export type CanvasControlsDropdownProps = {
+  zoom: number;
+  minZoomReached: boolean;
+  maxZoomReached: boolean;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  onFitView: () => void;
+  shortcuts: {
+    ZOOM_IN: { key: string };
+    ZOOM_OUT: { key: string };
+    RESET_ZOOM: { key: string };
+    FIT_VIEW: { key: string };
+  };
+};
+
+export const CanvasControlsDropdown: React.FC<CanvasControlsDropdownProps> = ({
+  zoom,
+  minZoomReached,
+  maxZoomReached,
+  isOpen,
+  onOpenChange,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+  onFitView,
+  shortcuts,
+}) => (
+  <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
+    <DropdownMenuTrigger asChild>
+      <Button
+        data-testid="canvas_controls_dropdown"
+        className="group rounded !p-0"
+        title="Canvas Controls"
+      >
+        <ShadTooltip content="Canvas Controls" side="top" align="end">
+          <div className="rounded py-2.5 px-1 flex items-center justify-center">
+            <div className="text-sm text-primary pr-2">
+              {formatZoomPercentage(zoom)}
+            </div>
+            <IconComponent
+              name={isOpen ? "ChevronDown" : "ChevronUp"}
+              aria-hidden="true"
+              className="text-primary group-hover:text-primary !h-5 !w-5"
+            />
+          </div>
+        </ShadTooltip>
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent
+      side="top"
+      align="end"
+      className="flex flex-col w-full"
+    >
+      <DropdownControlButton
+        tooltipText="Zoom In"
+        onClick={onZoomIn}
+        disabled={maxZoomReached}
+        testId="zoom_in_dropdown"
+        label="Zoom In"
+        shortcut={shortcuts.ZOOM_IN.key}
+      />
+      <DropdownControlButton
+        tooltipText="Zoom Out"
+        onClick={onZoomOut}
+        disabled={minZoomReached}
+        testId="zoom_out_dropdown"
+        label="Zoom Out"
+        shortcut={shortcuts.ZOOM_OUT.key}
+      />
+      <Separator />
+      <DropdownControlButton
+        tooltipText="Reset zoom to 100%"
+        onClick={onResetZoom}
+        testId="reset_zoom_dropdown"
+        label="Zoom To 100%"
+        shortcut={shortcuts.RESET_ZOOM.key}
+      />
+      <DropdownControlButton
+        tooltipText="Fit view to show all nodes"
+        onClick={onFitView}
+        testId="fit_view_dropdown"
+        label="Zoom To Fit"
+        shortcut={shortcuts.FIT_VIEW.key}
+      />
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
+export type HelpDropdownProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelectAction?: (action: "mock1" | "mock2" | "mock3") => void;
+};
+
+export const HelpDropdown: React.FC<HelpDropdownProps> = ({
+  isOpen,
+  onOpenChange,
+  onSelectAction,
+}) => (
+  <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="group rounded flex items-center justify-center mr-1"
+        title="Help"
+      >
+        <IconComponent
+          name="Circle-Help"
+          aria-hidden="true"
+          className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+        />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent
+      side="top"
+      align="end"
+      className="flex flex-col w-full"
+    >
+      <DropdownControlButton
+        iconName="book-open"
+        testId="canvas_controls_dropdown_docs"
+        label="Docs"
+      />
+      <DropdownControlButton
+        iconName="keyboard"
+        testId="canvas_controls_dropdown_shortcuts"
+        label="Shortcuts"
+      />
+      <DropdownControlButton
+        iconName="bug"
+        testId="canvas_controls_dropdown_report_a_bug"
+        label="Report a bug"
+      />
+      <Separator />
+      <DropdownControlButton
+        iconName="download"
+        testId="canvas_controls_dropdown_get_langflow_desktop"
+        label="Get Langflow Desktop"
+      />
+       <DropdownControlButton
+        iconName="cog"
+        testId="canvas_controls_dropdown_enable_smart_guides"
+        label="Enable smart guides"
+        
+      />
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
