@@ -57,7 +57,6 @@ export default function ChatInput({
 		}
 	}, [showAudioInput]);
 
-	useFocusOnUnlock(isBuilding, inputRef);
 	useAutoResizeTextArea(chatValue, inputRef);
 
 	const { mutate } = usePostUploadFile();

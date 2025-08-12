@@ -35,12 +35,6 @@ const TextAreaWrapper = ({
 	const additionalClassNames =
 		"form-input block w-full border-0 custom-scroll focus:border-0 rounded-none shadow-none focus:ring-0 p-2 sm:text-sm !bg-transparent resize-none outline-none";
 
-	useEffect(() => {
-		if (!isBuilding && !noInput) {
-			inputRef.current?.focus();
-		}
-	}, [isBuilding, noInput]);
-
 	return (
 		<Textarea
 			data-testid="input-chat-playground"
@@ -51,6 +45,7 @@ const TextAreaWrapper = ({
 				}
 			}}
 			rows={1}
+			ref={inputRef}
 			disabled={isBuilding || noInput}
 			style={{
 				resize: "none",

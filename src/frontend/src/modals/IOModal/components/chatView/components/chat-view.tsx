@@ -122,13 +122,6 @@ export default function ChatView({
 
 	const ref = useRef<HTMLDivElement | null>(null);
 
-	useEffect(() => {
-		if (ref.current) {
-			ref.current.focus();
-		}
-		// trigger focus on chat when new session is set
-	}, [focusChat]);
-
 	function updateChat(chat: ChatMessageType, message: string) {
 		chat.message = message;
 		if (chat.componentId)
