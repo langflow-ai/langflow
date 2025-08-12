@@ -6,8 +6,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { DATASTAX_DOCS_URL, DESKTOP_URL, DOCS_URL } from "@/constants/constants";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { cn, getOS } from "@/utils/utils";
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 type DropdownControlButtonProps = {
   tooltipText?: string;
@@ -163,7 +166,10 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
   isOpen,
   onOpenChange,
   onSelectAction,
-}) => (
+}) => {
+  const navigate = useNavigate();
+  
+  return (
   <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
     <DropdownMenuTrigger asChild>
       <Button
@@ -189,29 +195,39 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
         iconName="book-open"
         testId="canvas_controls_dropdown_docs"
         label="Docs"
+        onClick={() => {
+          window.open(ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL, "_blank");
+        }}
       />
       <DropdownControlButton
         iconName="keyboard"
         testId="canvas_controls_dropdown_shortcuts"
         label="Shortcuts"
+        onClick={() => {
+          navigate("/settings/shortcuts");
+        }}
       />
-      <DropdownControlButton
+      {/* <DropdownControlButton
         iconName="bug"
         testId="canvas_controls_dropdown_report_a_bug"
         label="Report a bug"
-      />
+      /> */}
       <Separator />
       <DropdownControlButton
         iconName="download"
         testId="canvas_controls_dropdown_get_langflow_desktop"
         label="Get Langflow Desktop"
+        onClick={() => {
+          window.open(DESKTOP_URL, "_blank");
+        }}
       />
-       <DropdownControlButton
+       {/* <DropdownControlButton
         iconName="cog"
         testId="canvas_controls_dropdown_enable_smart_guides"
         label="Enable smart guides"
         
-      />
+      /> */}
     </DropdownMenuContent>
   </DropdownMenu>
 );
+};
