@@ -1,15 +1,15 @@
-import { Separator } from "@/components/ui/separator";
-import useFlowStore from "@/stores/flowStore";
 import {
   Panel,
+  type ReactFlowState,
   useReactFlow,
   useStore,
   useStoreApi,
-  type ReactFlowState,
 } from "@xyflow/react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { shallow } from "zustand/shallow";
+import { Separator } from "@/components/ui/separator";
+import useFlowStore from "@/stores/flowStore";
 import { CanvasControlsDropdown, HelpDropdown } from "./dropdowns";
 
 const KEYBOARD_SHORTCUTS = {
@@ -38,7 +38,6 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
-
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
