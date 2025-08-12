@@ -48,21 +48,6 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Flow templates",
-          items: [
-            'Templates/basic-prompting',
-            'Templates/simple-agent',
-            'Templates/blog-writer',
-            'Templates/document-qa',
-            'Templates/memory-chatbot',
-            'Templates/vector-store-rag',
-            'Templates/financial-report-parser',
-            'Templates/sequential-agent',
-            'Templates/travel-planning-agent',
-          ],
-        },
-        {
-          type: "category",
           label: "Run flows",
           items: [
             {
@@ -110,13 +95,8 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        {
-          type: "doc",
-          id: "Develop/install-custom-dependencies",
-          label: "Install custom dependencies"
-        },
-        "Configuration/configuration-api-keys",
-        "Configuration/configuration-authentication",
+        "Configuration/api-keys-and-authentication",
+        "Develop/install-custom-dependencies",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         {
@@ -139,6 +119,11 @@ module.exports = {
               label: "Use Session IDs"
             },
             "Configuration/configuration-custom-database",
+            {
+              type: "doc",
+              id: "Develop/enterprise-database-guide",
+              label: "Database guide for enterprise administrators"
+            },
           ],
         },
         {
@@ -146,11 +131,17 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
-            "Integrations/Arize/integrations-arize",
-            "Integrations/integrations-langfuse",
-            "Integrations/integrations-langsmith",
-            "Integrations/integrations-langwatch",
-            "Integrations/integrations-opik",
+            {
+              type: "category",
+              label: "Monitoring",
+              items: [
+                "Integrations/Arize/integrations-arize",
+                "Integrations/integrations-langfuse",
+                "Integrations/integrations-langsmith",
+                "Integrations/integrations-langwatch",
+                "Integrations/integrations-opik",
+              ],
+            },
             "Contributing/contributing-telemetry",
           ],
         },
@@ -206,8 +197,13 @@ module.exports = {
               items: [
                 {
                   type: "doc",
+                  id: "Deployment/deployment-architecture",
+                  label: "Deployment architecture"
+                },
+                {
+                  type: "doc",
                   id: "Deployment/deployment-prod-best-practices",
-                  label: "Langflow architecture and best practices"
+                  label: "Best practices"
                 },
                 {
                   type: "doc",
@@ -218,9 +214,15 @@ module.exports = {
                   type: "doc",
                   id: "Deployment/deployment-kubernetes-prod",
                   label: "Deploy in production"
-                }
+                },
               ]
             },
+          ],
+        },
+        {
+          type: "category",
+          label: "Cloud platforms",
+          items: [
             {
               type: "doc",
               id: "Deployment/deployment-gcp",
@@ -241,7 +243,7 @@ module.exports = {
               id: "Deployment/deployment-render",
               label: "Render"
             },
-          ],
+          ]
         },
       ],
     },
