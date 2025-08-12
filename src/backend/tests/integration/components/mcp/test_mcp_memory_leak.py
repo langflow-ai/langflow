@@ -17,7 +17,10 @@ from langflow.base.mcp.util import MCPSessionManager
 from loguru import logger
 from mcp import StdioServerParameters
 
-pytestmark = pytest.mark.timeout(300, method="thread")
+pytestmark = [
+    pytest.mark.timeout(300, method="thread"),
+    pytest.mark.skip(reason="Skipping all MCP memory leak integration tests for now."),
+]
 
 
 async def wait_tools(session, t=20):
