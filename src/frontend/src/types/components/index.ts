@@ -1,6 +1,6 @@
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import type { ReactElement, ReactNode } from "react";
-import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { InputOutput } from "../../constants/enums";
 import type {
   APIClassType,
@@ -9,13 +9,13 @@ import type {
   OutputFieldProxyType,
 } from "../api";
 import type { ChatMessageType } from "../chat";
-import type { sourceHandleType, targetHandleType } from "./../flow/index";
 import type {
   AllNodeType,
   FlowStyleType,
   FlowType,
   NodeDataType,
 } from "../flow/index";
+import type { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -190,7 +190,7 @@ export type FloatComponentType = {
   onChange: (
     value: string | number,
     dbValue?: boolean,
-    skipSnapshot?: boolean,
+    skipSnapshot?: boolean
   ) => void;
   rangeSpec: RangeSpecType;
   editNode?: boolean;
@@ -535,7 +535,7 @@ export type ChatInputType = {
   isDragging: boolean;
   files: FilePreviewType[];
   setFiles: (
-    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
   ) => void;
   inputRef: {
     current: any;
@@ -635,7 +635,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
@@ -712,6 +712,10 @@ export type queryModalPropsType = {
 export type newFlowModalPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
+};
+
+export type PlaygroundModalPropsType = {
+  playgroundPage?: boolean;
 };
 
 export type IOModalPropsType = {
@@ -829,7 +833,6 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
-  sidebarOpen: boolean;
   sendMessage: ({
     repeat,
     files,
@@ -839,7 +842,6 @@ export type chatViewProps = {
   }) => Promise<void>;
   visibleSession?: string;
   focusChat?: string;
-  closeChat?: () => void;
   playgroundPage?: boolean;
 };
 
