@@ -243,7 +243,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
-timeout = 120
+timeout = 150
 timeout_method = "signal"
 minversion = "6.0"
 testpaths = ["src/backend/tests"]

@@ -1,10 +1,10 @@
 from datetime import timedelta
 
-from langflow.inputs.inputs import NestedDictInput, BoolInput
 from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
+from langflow.inputs.inputs import BoolInput, NestedDictInput
 from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema.data import Data
 
@@ -108,7 +108,7 @@ class CouchbaseSearchVectorStoreComponent(LCVectorStoreComponent):
             if self.enable_hybrid_search and self.search_options:
                 docs = vector_store.similarity_search(
                     query=self.search_query,
-                    search_options = self.search_options,
+                    search_options=self.search_options,
                     k=self.number_of_results,
                 )
             else:
