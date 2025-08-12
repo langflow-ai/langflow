@@ -1,28 +1,3 @@
-import '@testing-library/jest-dom';
-
-// Minimal polyfills for tests that may rely on these browser APIs
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(global as any).ResizeObserver = class {
-  observe = () => {};
-  unobserve = () => {};
-  disconnect = () => {};
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(global as any).IntersectionObserver = class {
-  root = null;
-  rootMargin = '';
-  thresholds = [] as number[];
-  disconnect = () => {};
-  observe = () => {};
-  takeRecords = () => [] as IntersectionObserverEntry[];
-  unobserve = () => {};
-};
-
-// Window.open mock to assert external navigation without actually opening a window
-// Always mock as a Jest fn so tests can use mockClear/mock assertions
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).open = jest.fn();
 // Jest setup file for testing environment
 import "@testing-library/jest-dom";
 
