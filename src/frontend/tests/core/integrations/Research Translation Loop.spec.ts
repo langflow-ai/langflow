@@ -10,8 +10,8 @@ withEventDeliveryModes(
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
