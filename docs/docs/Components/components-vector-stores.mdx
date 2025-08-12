@@ -110,15 +110,18 @@ The following **Astra DB** component parameters are used for hybrid search:
 
 To use hybrid search through the **Astra DB** component, do the following:
 
-1. Create a flow based on the **Hybrid Search RAG** template.
-2. In the **OpenAI** component, add your OpenAI API key.
-3. In the **Astra DB** vector store component, add your **Astra DB Application Token**.
-4. In the **Database** field, select your database.
-5. In the **Collection** field, select or create a collection with hybrid search capabilities enabled.
-6. In the **Playground**, enter a question about your data, such as `What are the features of my data?`
+1. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
+2. In the **Language Model** components, add your OpenAI API key.
+3. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
+4. Configure the **Astra DB** vector store component:
 
-    Your query is sent to the **OpenAI** and **Astra DB** components.
-    The **OpenAI** component contains a prompt for creating the lexical query from your input:
+    1. Enter your Astra DB application token.
+    2. In the **Database** field, select your database.
+    3. In the **Collection** field, select or create a collection with hybrid search capabilities enabled.
+
+5. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
+
+6. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
 
     ```text
     You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
@@ -128,22 +131,35 @@ To use hybrid search through the **Astra DB** component, do the following:
     Avoid common keywords associated with the user's subject matter.
     ```
 
-7. To view the keywords and questions the **OpenAI** component generates from your collection, in the **OpenAI** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output**.
+7. Click **Finish Editing**, and then click **Close** to save your changes to the component.
 
-    ```
-    1. Keywords: features, data, attributes, characteristics
-    2. Question: What characteristics can be identified in my data?
-    ```
+8. Open the **Playground**, and then enter a natural language question that you would ask about your database.
 
-8. To view the [DataFrame](/data-types#dataframe) generated from the **OpenAI** component's response, in the **Structured Output** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
+    In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
 
-    The DataFrame is passed to a **Parser** component, which parses the contents of the **Keywords** column into a string.
+    * The input sent directly to the **Astra DB** component's **Search Query** port is used as a string for similarity search.
+    An embedding is generated from the query string using the collection's Astra DB vectorize integration.
 
-    This string of comma-separated words is passed to the **Lexical Terms** port of the **Astra DB** component.
-    Note that the **Search Query** port of the **Astra DB** component is connected to the **Chat Input** component.
-    The search query is vectorized, and both the **Search Query** and **Lexical Terms** content are sent to the reranker at the `find_and_rerank` endpoint.
-    The reranker compares the vector search results against the string of terms from the lexical search.
-    The highest-ranked results of your hybrid search are returned to the **Playground**.
+    * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract comma-separated `keywords` used for the lexical search portion of the hybrid search.
+
+    The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
+    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
+    Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
+
+9. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
+This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
+
+    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
+    The following example is based on the aforementioned instructions for keyword extraction:
+
+        ```
+        1. Keywords: features, data, attributes, characteristics
+        2. Question: What characteristics can be identified in my data?
+        ```
+
+    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
+
+    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
 
 </details>
 

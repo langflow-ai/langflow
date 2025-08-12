@@ -4,6 +4,8 @@ slug: /components-processing
 ---
 
 import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Langflow's **Processing** components process and transform data within a flow.
 They have many uses, including:
@@ -21,8 +23,7 @@ See [Prompt Template](/components-prompts).
 ## Batch Run
 
 The **Batch Run** component runs a language model over _each row of one text column_ in a [`DataFrame`](/data-types#dataframe), and then returns a new `DataFrame` with the original text and an LLM response.
-
-The response contains the following columns:
+The output contains the following columns:
 
 * `text_input`: The original text from the input `DataFrame`
 * `model_response`: The model's response for each input
@@ -31,7 +32,7 @@ The response contains the following columns:
 
 ### Use the Batch Run component in a flow
 
-If you pass this output to a [**Parser** component](/components-processing#parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
+If you pass the **Batch Run** output to a [**Parser** component](/components-processing#parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
 This is demonstrated in the following example.
 
 ![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
@@ -94,7 +95,6 @@ For this example, select the **Select Keys** operation to extract specific user 
 
 4. Connect a **Chat Output** component.
 
-
     ![A flow with Webhook, Data Operations, and Chat Output components](/img/component-data-operations-select-key.png)
 
 5. To test the flow, send the following request to your flow's webhook endpoint, and then open the **Playground** to see the resulting output from processing the payload.
@@ -146,7 +146,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | rename_keys_input | Rename Keys | Input parameter. A list of keys to rename in the data. |
 | data_output | Data | Output parameter. The resulting Data object after the operation. |
 
-### Data Operations operations
+#### Data Operations operations
 
 Options for the `operations` input parameter are as follows.
 All operations act on an incoming `Data` object.
@@ -313,7 +313,7 @@ Your input is the task that the LLM router evaluates the models against, such as
 
 </details>
 
-## Parser
+## Parser {#parser}
 
 This component formats `DataFrame` or `Data` objects into text using templates, with an option to convert inputs directly to strings using `stringify`.
 
@@ -634,8 +634,8 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| chunks | Chunks | A list of split text chunks as [Data](/data-types#data) objects. |
-| dataframe | DataFrame | A list of split text chunks as [DataFrame](/data-types#dataframe) objects. |
+| chunks | Chunks | A list of split text chunks as [`Data`](/data-types#data) objects. |
+| dataframe | DataFrame | A list of split text chunks as [`DataFrame`](/data-types#dataframe) objects. |
 
 </details>
 
@@ -643,125 +643,246 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 See [LangChain text splitter components](/bundles-langchain#text-splitters).
 
-## Structured output
+## Structured Output
 
-This component transforms LLM responses into structured data formats.
+The **Structured Output** component uses an LLM to transform any input into structured data (`Data` or `DataFrame`) using natural language formatting instructions and an output schema definition.
+For example, you can extract specific details from documents, like email messages or scientific papers.
 
-In this example from the **Financial Support Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
+### Use the Structured Output component in a flow
 
-![Structured output example](/img/component-structured-output.png)
+To use the **Structured Output** component in a flow, do the following:
 
-The connected LLM model is prompted by the **Structured Output** component's `Format Instructions` parameter to extract structured output from the unstructured text. `Format Instructions` is utilized as the system prompt for the **Structured Output** component.
+1. Provide an **Input Message**, which is the source material from which you want to extract structured data.
+This can come from practically any component, but it is typically a **Chat Input**, **File**, or other component that provides some unstructured or semi-structured input.
 
-In the **Structured Output** component, click the **Open table** button to view the `Output Schema` table.
-The `Output Schema` parameter defines the structure and data types for the model's output using a table with the following fields:
+    :::tip
+    Not all source material has to become structured output.
+    The power of the **Structured Output** component is that you can specify the information you want to extract, even if that data isn't explicitly labeled or an exact keyword match.
+    Then, the LLM can use your instructions to analyze the source material, extract the relevant data, and format it according to your specifications.
+    Any irrelevant source material isn't included in the structured output.
+    :::
 
-* **Name**: The name of the output field.
-* **Description**: The purpose of the output field.
-* **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
-* **Multiple (deprecated)**: Always true to allow multiple output values for a single field.
+2. Define **Format Instructions** and an **Output Schema** to specify the data to extract from the source material and how to structure it in the final `Data` or `DataFrame` output.
 
-The **Parse DataFrame** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
+    The instructions are a prompt that tell the LLM what data to extract, how to format it, how to handle exceptions, and any other instructions relevant to preparing the structured data.
 
-For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}` presents the extracted values in the **Playground** as `EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion`.
+    The schema is a table that defines the fields (keys) and data types to organize the data extracted by the LLM into a structured `Data` or `DataFrame` object.
+    For more information, see [Output Schema options](#output-schema-options)
+
+3. Attach a [**Language Model** component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
+
+    The **Language Model** component uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
+    The output schema is applied to the model's response to produce the final `Data` or `DataFrame` structured object.
+
+4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as other **Processing** components like the **Parser** or **Data Operations** components.
+
+![A basic flow with Structured Output, Language Model, Type Convert, and Chat Input and Output components.](/img/component-structured-output.png)
 
 <details>
-<summary>Parameters</summary>
+<summary>Structured Output example: Financial Report Parser template</summary>
 
-**Inputs**
+The **Financial Report Parser** template provides an example of how the **Structured Output** component can be used to extract structured data from unstructured text.
 
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use to generate the structured output. |
-| input_value | String | The input message to the language model. |
-| system_prompt | String | The instructions to the language model for formatting the output. |
-| schema_name | String | The name for the output data schema. |
-| output_schema | Table | The structure and data types for the model's output. |
-| multiple | Boolean | [Deprecated] Always true. |
+The template's **Structured Output** component has the following configuration:
 
-**Outputs**
+* The **Input Message** comes from a **Chat Input** component that is preloaded with quotes from sample financial reports
 
-| Name | Type | Description |
-|------|------|-------------|
-| structured_output | Data | The structured output is a Data object based on the defined schema. |
+* The **Format Instructions** are as follows:
+
+    ```text
+    You are an AI that extracts structured JSON objects from unstructured text.
+    Use a predefined schema with expected types (str, int, float, bool, dict).
+    Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all.
+    Fill missing or ambiguous values with defaults: null for missing values.
+    Remove exact duplicates but keep variations that have different field values.
+    Always return valid JSON in the expected format, never throw errors.
+    If multiple objects can be extracted, return them all in the structured format.
+    ```
+
+* The **Output Schema** includes keys for `EBITDA`, `NET_INCOME`, and `GROSS_PROFIT`.
+
+The structured `Data` object is passed to a **Parser** component that produces a text string by mapping the schema keys to variables in the parsing template:
+
+```text
+EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}
+```
+
+When printed to the **Playground**, the resulting `Message` replaces the variables with the actual values extracted by the **Structured Output** component. For example:
+
+```text
+EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion
+```
 
 </details>
 
-## Type convert
+### Structured Output parameters
 
-This component converts data types between different formats. It can transform data between [`Data`](/data-types#data), [`DataFrame`](/data-types#dataframe), and [`Message`](/data-types#message) objects.
+Some **Structured Output** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
-* **Data**: A structured object that contains both text and metadata.
+| Name | Type | Description |
+|------|------|-------------|
+| Language Model (`llm`) | `LanguageModel` | Input parameter. The [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component that defines the LLM to use to analyze, extract, and prepare the structured output. |
+| Input Message (`input_value`) | String | Input parameter. The input message containing source material for extraction. |
+| Format Instructions (`system_prompt`) | String | Input parameter. The instructions to the language model for extracting and formatting the output. |
+| Schema Name (`schema_name`) | String | Input parameter. An optional title for the **Output Schema**. |
+| Output Schema (`output_schema`)| Table | Input parameter. A table describing the schema of the desired structured output, ultimately determining the content of the `Data` or `DataFrame` output. See [Output Schema options](#output-schema-options). |
+| Structured Output (`structured_output`) | `Data` or `DataFrame` | Output parameter. The final structured output produced by the component. Near the component's output port, you can select the output data type as either **Structured Output Data** or **Structured Output DataFrame**. The specific content and structure of the output depends on the input parameters. |
+
+#### Output Schema options {#output-schema-options}
+
+After the LLM extracts the relevant data from the **Input Message** and **Format Instructions**, the data is organized according to the **Output Schema**.
+
+The schema is a table that defines the fields (keys) and data types for the final `Data` or `DataFrame` output from the **Structured Output** component.
+
+The default schema is a single `field` string.
+
+To add a key to the schema, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**, and then edit each column to define the schema:
+
+* **Name**: The name of the output field. Typically a specific key for which you want to extract a value.
+
+    You can reference these keys as variables in downstream components, such as a **Parser** component's template.
+    For example, the schema key `NET_INCOME` could be referenced by the variable `{NET_INCOME}`.
+
+* **Description**: An optional metadata description of the field's contents and purpose.
+
+* **Type**: The data type of the value stored in the field.
+Supported types are `str` (default), `int`, `float`, `bool`, and `dict`.
+
+* **As List**: Enable this setting if you want the field to contain a list of values rather than a single value.
+
+For simple schemas, you might only extract a few `string` or `int` fields.
+For more complex schemas with lists and dictionaries, it might help to refer to the `Data` and `DataFrame` structures and attributes, as described in [Langflow data types](/data-types).
+You can also emit a rough `Data` or `DataFrame`, and then use downstream components for further refinement, such as a **Data Operations** component.
+
+## Type Convert
+
+The **Type Convert** component converts data from one type to another.
+It supports `Data`, `DataFrame`, and `Message` data types.
+
+<Tabs>
+<TabItem value="data" label="Data" default>
+
+A `Data` object is a structured object that contains a primary `text` key and other key-value pairs:
+
+```json
+"data": {
+  "text": "User Profile",
+  "name": "Charlie Lastname",
+  "age": 28,
+  "email": "charlie.lastname@example.com"
+},
+```
+
+The larger context associated with a component's `data` dictionary also identifies which key is the primary `text_key`, and it can provide an optional default value if the primary key isn't specified.
+For example:
+
 ```json
 {
-  "text": "User Profile",
+  "text_key": "text",
   "data": {
-    "name": "John Smith",
-    "age": 30,
-    "email": "john@example.com"
-  }
+    "text": "User Profile",
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  "default_value": ""
 }
 ```
-* **DataFrame**: A tabular data structure with rows and columns.
-Keys are columns, and each dictionary (a collection of key-value pairs) in the list is a row.
+
+</TabItem>
+<TabItem value="dataframe" label="DataFrame">
+
+A `DataFrame` is an array that represents a tabular data structure with rows and columns.
+
+It consists of a list (array) of dictionary objects, where each dictionary represents a row.
+Each key in the dictionaries corresponds to a column name.
+For example, the following `DataFrame` contains two rows with columns for `name`, `age`, and `email`:
+
 ```json
 [
   {
-    "name": "John Smith",
-    "age": 30,
-    "email": "john@example.com"
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
   },
   {
-    "name": "Jane Doe",
+    "name": "Bobby Othername",
     "age": 25,
-    "email": "jane@example.com"
+    "email": "bobby.othername@example.com"
   }
 ]
 ```
-* **Message**: A string, such as`"Name: John Smith, Age: 30, Email: john@example.com"`.
 
-To use this component in a flow, do the following:
+</TabItem>
+<TabItem value="message" label="Message">
 
-1. Add the **Web Search** component to the **Basic Prompting** template. In the **Search Query** field, enter a query, such as `environmental news`.
-2. Connect the **Web Search** component's output to a component that accepts the `DataFrame` input.
-This example uses a **Prompt Template** component to give the chatbot context, so you must convert the **Web Search** component's `DataFrame` output to a `Message` type.
-3. Connect a **Type Convert** component to convert the `DataFrame` to a `Message`.
-4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
+A `Message` is primarily for passing a `text` string, such as`"Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"`.
+However, the entire `Message` object can include metadata about the message, particularly when used as chat input or output.
 
-    ![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+</TabItem>
+</Tabs>
 
-5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
-6. Click **Playground**, and then ask about `latest news`.
+For more information, see [Langflow data types](/data-types).
 
-The search results are returned to the **Playground** as a message.
+### Use the Type Convert component in a flow
 
-Result:
-```text
-Latest news
-AI
-gpt-4o-mini
-Here are some of the latest news articles related to the environment:
-Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
-...
-```
+The **Type Convert** component is typically used to transform data into a format required by a downstream component.
+For example, if a component outputs a `Message`, but the following component requires `Data`, then you can use the **Type Convert** component to reformat the `Message` as `Data` before passing it to the downstream component.
 
-<details>
-<summary>Parameters</summary>
+The following example uses the **Type Convert** component to convert the `DataFrame` output from a **Web Search** component into `Message` data that is passed as text input for an LLM:
 
-**Inputs**
+1. Create a flow based on the **Basic prompting** template.
+
+2. Add a **Web Search** component to the flow, and then enter a search query, such as `environmental news`.
+
+3. In the **Prompt Template** component, replace the contents of the **Template** field with the following text:
+
+    ```text
+    Answer the user's question using the {context}
+    ```
+
+    The curly braces define a [prompt variable](/components-prompts#define-variables-in-prompts) that becomes an input field on the **Prompt Template** component.
+    In this example, you will use the **context** field to pass the search results into the template, as explained in the next steps.
+
+3. Add a **Type Convert** component to the flow, and then set the **Output Type** to **Message**.
+
+    Because the **Web Search** component's `DataFrame` output is incompatible with the **context** variable's `Message` input, you must use the **Type Convert** component to change the `DataFrame` to a `Message` in order to pass the search results to the **Prompt Template** component.
+
+4. Connect the additional components to the rest of the flow:
+
+    * Connect the **Web Search** component's output to the **Type Convert** component's input.
+    * Connect the **Type Convert** component's output to the **Prompt Template** component's **context** input.
+
+    ![Convert web search output to text input](/img/component-type-convert-and-web-search.png)
+
+5. In the **Language Model** component, add your OpenAI API key.
+
+    If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+6. Click **Playground**, and then ask something relevant to your search query, such as `latest news` or `what's the latest research on the environment?`.
+
+    <details>
+    <summary>Result</summary>
+
+    The LLM uses the search results context, your chat message, and it's built-in training data to respond to your question.
+    For example:
+
+    ```text
+    Here are some of the latest news articles related to the environment:
+    Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+    ...
+    ```
+
+    </details>
+
+### Type Convert parameters
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_data | Input Data | The data to convert. Accepts Data, DataFrame, or Message objects. |
-| output_type | Output Type | The desired output type. Options: Data, DataFrame, or Message. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output | Output | The converted data in the specified format. |
-
-</details>
+| input_data | Input Data | Input parameter. The data to convert. Accepts `Data`, `DataFrame`, or `Message` input. |
+| output_type | Output Type | Input parameter. The desired output type, as one of **Data**, **DataFrame** or **Message**. |
+| output | Output | Output parameter. The converted data in the specified format. The output port changes depending on the selected **Output Type**. |
 
 ## Legacy Processing components
 
