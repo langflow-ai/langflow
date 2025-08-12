@@ -209,13 +209,5 @@ class TraceloopTracer(BaseTracer):
         if not self.ready:
             return None
 
-        try:
-            from traceloop.sdk.instruments.langchain import TraceloopLangChainCallbackHandler
-
-            return TraceloopLangChainCallbackHandler()
-        except ImportError:
-            logger.warning("Traceloop LangChain callback handler not available")
-            return None
-
 
 # Made with Bob
