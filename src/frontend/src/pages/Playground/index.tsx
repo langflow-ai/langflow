@@ -93,7 +93,7 @@ export default function PlaygroundPage() {
 
 	return (
 		<div className="flex h-full w-full flex-col items-center justify-center align-middle">
-			{currentSavedFlow && <PlaygroundComponent />}
+			{currentSavedFlow && <PlaygroundComponent playgroundPage />}
 		</div>
 	);
 }

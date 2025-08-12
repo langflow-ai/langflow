@@ -15,10 +15,6 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import LangflowLogoColor from "@/assets/LangflowLogoColor.svg?react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { ChatViewWrapper } from "@/components/core/playgroundComponent/components/chat-view-wrapper";
-import { createNewSessionName } from "@/components/core/playgroundComponent/components/chatView/chatInput/components/voice-assistant/helpers/create-new-session-name";
-import { SelectedViewField } from "@/components/core/playgroundComponent/components/selected-view-field";
-import { SidebarOpenView } from "@/components/core/playgroundComponent/components/sidebar-open-view";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
@@ -27,6 +23,9 @@ import { getNumberFromString, cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { PlaygroundModalPropsType } from "@/types/components";
+import { createNewSessionName } from "./components/chatView/chatInput/components/voice-assistant/helpers/create-new-session-name";
+import { ChatViewWrapper } from "./components/chat-view-wrapper";
+import { SidebarOpenView } from "./components/sidebar-open-view";
 
 export function PlaygroundComponent({
 	playgroundPage,
@@ -307,90 +306,63 @@ export function PlaygroundComponent({
 
 	return (
 		<div className="flex w-full h-full">
-			<div
-				className={cn(
-					"flex h-full flex-shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
-				)}
-			>
+			{playgroundPage && (
 				<div
 					className={cn(
-						"relative flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas",
-						playgroundPage ? "pt-[15px]" : "pt-3.5",
+						"flex h-full flex-shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
 					)}
 				>
-					<div className="flex items-center justify-between gap-2 pb-8 align-middle">
-						<div className="flex items-center gap-2">
-							<div
-								className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}
-							>
-								<ForwardedIconComponent
-									name={flowIcon ?? "Workflow"}
-									className="h-3.5 w-3.5"
-								/>
-							</div>
-							<div className="truncate font-semibold">{PlaygroundTitle}</div>
-						</div>
-					</div>
-					{!sessionsLoading && (
-						<SidebarOpenView
-							sessions={sessions}
-							setSelectedViewField={setSelectedViewField}
-							setvisibleSession={setvisibleSession}
-							handleDeleteSession={handleDeleteSession}
-							visibleSession={visibleSession}
-							selectedViewField={selectedViewField}
-							playgroundPage={!!playgroundPage}
-							setActiveSession={setActiveSession}
-						/>
-					)}
-					{showPublishOptions && (
-						<div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
-							<div className="flex items-center justify-between px-2">
-								<div className="text-sm">Theme</div>
-								<ThemeButtons />
-							</div>
-							<Button
-								onClick={LangflowButtonClick}
-								variant="primary"
-								className="w-full !rounded-xl shadow-lg"
-							>
-								<LangflowLogoColor />
-								<div className="text-sm">Built with Langflow</div>
-							</Button>
-						</div>
-					)}
-				</div>
-			</div>
-			{showPublishOptions && (
-				<div className="absolute bottom-6 left-4 hidden transition-all md:block">
-					<ShadTooltip
-						styleClasses="z-50"
-						side="right"
-						content="Built with Langflow"
+					<div
+						className={cn(
+							"relative flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas",
+							playgroundPage ? "pt-[15px]" : "pt-3.5",
+						)}
 					>
-						<Button
-							variant="primary"
-							className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
-							onClick={LangflowButtonClick}
-						>
-							<LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
-						</Button>
-					</ShadTooltip>
+						<div className="flex items-center justify-between gap-2 pb-8 align-middle">
+							<div className="flex items-center gap-2">
+								<div
+									className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}
+								>
+									<ForwardedIconComponent
+										name={flowIcon ?? "Workflow"}
+										className="h-3.5 w-3.5"
+									/>
+								</div>
+								<div className="truncate font-semibold">{PlaygroundTitle}</div>
+							</div>
+						</div>
+						{!sessionsLoading && (
+							<SidebarOpenView
+								sessions={sessions}
+								setSelectedViewField={setSelectedViewField}
+								setvisibleSession={setvisibleSession}
+								handleDeleteSession={handleDeleteSession}
+								visibleSession={visibleSession}
+								selectedViewField={selectedViewField}
+								playgroundPage={!!playgroundPage}
+								setActiveSession={setActiveSession}
+							/>
+						)}
+						{showPublishOptions && (
+							<div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
+								<div className="flex items-center justify-between px-2">
+									<div className="text-sm">Theme</div>
+									<ThemeButtons />
+								</div>
+								<Button
+									onClick={LangflowButtonClick}
+									variant="primary"
+									className="w-full !rounded-xl shadow-lg"
+								>
+									<LangflowLogoColor />
+									<div className="text-sm">Built with Langflow</div>
+								</Button>
+							</div>
+						)}
+					</div>
 				</div>
 			)}
 			<div className="flex h-full min-w-96 flex-grow bg-background">
-				{selectedViewField && !sessionsLoading && (
-					<SelectedViewField
-						selectedViewField={selectedViewField}
-						setSelectedViewField={setSelectedViewField}
-						haveChat={haveChat}
-						inputs={filteredInputs}
-						outputs={filteredOutputs}
-						sessions={sessions}
-						currentFlowId={currentFlowId}
-						nodes={filteredNodes}
-					/>
-				)}
 				<ChatViewWrapper
 					selectedViewField={selectedViewField}
 					visibleSession={visibleSession}
