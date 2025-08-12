@@ -358,10 +358,6 @@ export const lazyIconsMapping = {
     import("@/icons/TwelveLabs").then((mod) => ({
       default: mod.TwelveLabsIcon,
     })),
-  TwitterX: () =>
-    import("@/icons/twitter").then((mod) => ({
-      default: mod.TwitterIcon,
-    })),
   Unstructured: () =>
     import("@/icons/Unstructured").then((mod) => ({
       default: mod.UnstructuredIcon,

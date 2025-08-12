@@ -20,7 +20,6 @@ from .contentful_composio import ComposioContentfulAPIComponent
 from .discord_composio import ComposioDiscordAPIComponent
 from .figma_composio import ComposioFigmaAPIComponent
 from .miro_composio import ComposioMiroAPIComponent
-from .twitter_composio import ComposioTwitterAPIComponent
 from .wrike_composio import ComposioWrikeAPIComponent
 
 
@@ -47,6 +46,5 @@ __all__ = [
     "ComposioDiscordAPIComponent",
     "ComposioFigmaAPIComponent",
     "ComposioMiroAPIComponent",
-    "ComposioTwitterAPIComponent",
     "ComposioWrikeAPIComponent",
 ]
