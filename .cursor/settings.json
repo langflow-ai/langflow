@@ -1,4 +1,3 @@
 {
-  "biome.configurationPath": "src/frontend/biome.json",
-  "biome.enabled": true
+  "biome.configurationPath": "src/frontend/biome.json"
 }
