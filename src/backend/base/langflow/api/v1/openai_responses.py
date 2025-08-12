@@ -5,7 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
@@ -45,6 +45,7 @@ async def run_flow_for_openai_responses(
     api_key_user: UserRead,
     *,
     stream: bool = False,
+    variables: dict[str, str] | None = None,
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
     # Check if flow has chat input
@@ -56,14 +57,25 @@ async def run_flow_for_openai_responses(
     # If no previous_response_id, create a new session_id
     session_id = request.previous_response_id or str(uuid.uuid4())
 
+    # Store header variables in context for global variable override
+    context = {}
+    if variables:
+        context["request_variables"] = variables
+        logger.debug(f"Added request variables to context: {variables}")
+
     # Convert OpenAI request to SimplifiedAPIRequest
+    # Note: We're moving away from tweaks to a context-based approach
     simplified_request = SimplifiedAPIRequest(
         input_value=request.input,
         input_type="chat",  # Use chat input type for better compatibility
         output_type="chat",  # Use chat output type for better compatibility
-        tweaks={},
+        tweaks={},  # Empty tweaks, using context instead
         session_id=session_id,
     )
+    
+    # Context will be passed separately to simple_run_flow
+    
+    logger.debug(f"SimplifiedAPIRequest created with context: {context}")
 
     # Use session_id as response_id for OpenAI compatibility
     response_id = session_id
@@ -84,6 +96,7 @@ async def run_flow_for_openai_responses(
                     api_key_user=api_key_user,
                     event_manager=event_manager,
                     client_consumed_queue=asyncio_queue_client_consumed,
+                    context=context,
                 )
             )
 
@@ -303,6 +316,7 @@ async def run_flow_for_openai_responses(
         input_request=simplified_request,
         stream=False,
         api_key_user=api_key_user,
+        context=context,
     )
 
     # Extract output text and tool calls from result
@@ -399,6 +413,7 @@ async def create_response(
     request: OpenAIResponsesRequest,
     background_tasks: BackgroundTasks,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    http_request: Request,
 ) -> OpenAIResponsesResponse | StreamingResponse | OpenAIErrorResponse:
     """Create a response using OpenAI Responses API format.
 
@@ -418,6 +433,27 @@ async def create_response(
     """
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
+
+    # Extract global variables from X-LANGFLOW-GLOBAL-VAR-* headers
+    variables = {}
+    header_prefix = "x-langflow-global-var-"
+    
+    logger.debug(f"All headers received: {list(http_request.headers.keys())}")
+    logger.debug(f"Looking for headers starting with: {header_prefix}")
+    
+    for header_name, header_value in http_request.headers.items():
+        header_lower = header_name.lower()
+        logger.debug(f"Checking header: '{header_lower}' (original: '{header_name}')")
+        if header_lower.startswith(header_prefix):
+            # Extract variable name from header (remove prefix) and convert to uppercase
+            var_name_lower = header_lower[len(header_prefix):]
+            var_name = var_name_lower.upper()  # Default to uppercase
+            
+            variables[var_name] = header_value
+            logger.debug(f"Found global variable: {var_name} = {header_value} (converted to uppercase from header: {header_name})")
+    
+    logger.debug(f"Extracted global variables from headers: {list(variables.keys())}")
+    logger.debug(f"Variables dict: {variables}")
 
     # Validate tools parameter - error out if tools are provided
     if request.tools is not None:
@@ -449,6 +485,7 @@ async def create_response(
             request=request,
             api_key_user=api_key_user,
             stream=request.stream,
+            variables=variables,
         )
 
         # Log telemetry for successful completion
