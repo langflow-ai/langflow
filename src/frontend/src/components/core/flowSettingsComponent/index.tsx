@@ -1,12 +1,12 @@
-import * as Form from "@radix-ui/react-form";
-import { cloneDeep } from "lodash";
-import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
+import * as Form from "@radix-ui/react-form";
+import { cloneDeep } from "lodash";
+import { useEffect, useRef, useState } from "react";
 import EditFlowSettings from "../editFlowSettingsComponent";
 
 export default function FlowSettingsComponent({
@@ -28,6 +28,7 @@ export default function FlowSettingsComponent({
   const flow = flowData ?? currentFlow;
   const [name, setName] = useState(flow?.name ?? "");
   const [description, setDescription] = useState(flow?.description ?? "");
+  const [locked, setLocked] = useState<boolean>(flow?.locked ?? false);
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
@@ -36,6 +37,7 @@ export default function FlowSettingsComponent({
   useEffect(() => {
     setName(flow?.name ?? "");
     setDescription(flow?.description ?? "");
+    setLocked(flow?.locked ?? false);
   }, [flow?.name, flow?.description, flow?.endpoint_name, open]);
 
   function handleSubmit(event?: React.FormEvent<HTMLFormElement>): void {
@@ -45,6 +47,7 @@ export default function FlowSettingsComponent({
     const newFlow = cloneDeep(flow);
     newFlow.name = name;
     newFlow.description = description;
+    newFlow.locked = locked;
 
     if (autoSaving) {
       saveFlow(newFlow)
@@ -82,13 +85,14 @@ export default function FlowSettingsComponent({
   useEffect(() => {
     if (
       (!nameLists.includes(name) && flow?.name !== name) ||
-      flow?.description !== description
+      flow?.description !== description ||
+      flow?.locked !== locked
     ) {
       setDisableSave(false);
     } else {
       setDisableSave(true);
     }
-  }, [nameLists, flow, description, name]);
+  }, [nameLists, flow, description, name, locked]);
   return (
     <Form.Root onSubmit={handleSubmit} ref={formRef}>
       <div className="flex flex-col gap-4">
@@ -100,6 +104,8 @@ export default function FlowSettingsComponent({
             setName={setName}
             setDescription={setDescription}
             submitForm={submitForm}
+            locked={locked}
+            setLocked={setLocked}
           />
         </div>
         <div className="flex justify-end gap-2">

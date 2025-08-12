@@ -114,6 +114,7 @@ export const EditFlowSettings: React.FC<
               onDoubleClickCapture={handleFocus}
               data-testid="input-flow-name"
               autoFocus
+              disabled={locked}
             />
           </Form.Control>
         ) : (
@@ -154,6 +155,7 @@ export const EditFlowSettings: React.FC<
               maxLength={descriptionMaxLength}
               onDoubleClickCapture={handleFocus}
               onKeyDown={handleDescriptionKeyDown}
+              disabled={locked}
             />
           </Form.Control>
         ) : (
