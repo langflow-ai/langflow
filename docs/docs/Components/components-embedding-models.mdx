@@ -5,27 +5,27 @@ slug: /components-embedding-models
 
 import Icon from "@site/src/components/icon";
 
-Embedding model components in Langflow generate text embeddings using a specified Large Language Model (LLM).
+**Embedding Model** components in Langflow generate text embeddings using a specified Large Language Model (LLM).
 
-Langflow includes a core **Embedding Model** component that has built-in support for some LLMs.
-Alternatively, you can use any [additional embedding model component](#additional-embedding-model-components) in place of the core **Embedding Model** component.
+Langflow includes an **Embedding Model** core component that has built-in support for some LLMs.
+Alternatively, you can use any [additional **Embedding Model** component](#additional-embedding-model-components) in place of the core **Embedding Model** component.
 
 The built-in LLMs are appropriate for most text-based embedding model use cases in Langflow.
 
-## Use embedding model components in a flow
+## Use Embedding Model components in a flow
 
-Use embedding model components anywhere you need to generate embeddings in a flow.
+Use **Embedding Model** components anywhere you need to generate embeddings in a flow.
 
-This example shows how to use an embedding model component in a flow to create a semantic search system.
-This flow loads a text file, splits the text into chunks, generates embeddings for each chunk, and then loads the chunks and embeddings into a vector store. The input and output components allow a user to query the vector store through a chat interface.
+This example shows how to use an **Embedding Model** component in a flow to create a semantic search system.
+This flow loads a text file, splits the text into chunks, generates embeddings for each chunk, and then loads the chunks and embeddings into a vector store. The **Input and Output** components allow a user to query the vector store through a chat interface.
 
 ![A semantic search flow that uses Embedding Model, File, Split Text, Chroma DB, Chat Input, and Chat Output components](/img/component-embedding-models-add-chat.png)
 
 :::tip
-This example uses the core **Embedding Model** component.
+This example uses the **Embedding Model** core component.
 
-To use another model, you can replace the core **Embedding Model** component with any [additional embedding model component](#additional-embedding-model-components) in these steps.
-However, your component might have slightly different parameters than the core **Embedding Model** component.
+To use another model, you can replace the **Embedding Model** core component with any [additional **Embedding Model** component](#additional-embedding-model-components) in these steps.
+However, your component might have different parameters than the **Embedding Model** core component.
 :::
 
 1. Create a flow, add a **File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
@@ -34,7 +34,7 @@ However, your component might have slightly different parameters than the core *
 
     By default, the **Embedding Model** component uses an OpenAI model.
     If you want to use a different model, edit the **Model Name**, and **API Key** fields accordingly.
-    Or, see [Additional embedding model components](#additional-embedding-model-components) for other embedding model components that you can use in place of the core **Embedding Model** component.
+    Or, see [Additional Embedding Model components](#additional-embedding-model-components) for other components that you can use in place of the **Embedding Model** core component.
 
     You can enter component API keys directly or use Langflow global variables to reference your API keys.
 
@@ -50,7 +50,7 @@ This component stores the generated embeddings so they can be used for similarit
     * Connect the **Split Text** component's **Chunks** output to the **Vector Store** component's **Ingest Data** input.
     * Connect the **Embedding Model** component's **Embeddings** output to the **Vector Store** component's **Embedding** input.
 
-6. To query the vector store, add [**Chat Input/Output** components](/components-io#chat-io):
+6. To query the vector store, add [**Chat Input and Output** components](/components-io#chat-io):
 
     * Connect the **Chat Input** component to the **Vector Store** component's **Search Query** input.
     * Connect the **Vector Store** component's **Search Results** output to the **Chat Output** component.
@@ -76,9 +76,9 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | model_kwargs | Model Kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
 | embeddings | Embeddings | Embeddings | Output parameter. An instance for generating embeddings using the selected provider. |
 
-## Additional embedding model components
+## Additional Embedding Model components
 
-If your provider or model isn't supported by the core **Embedding Model** component, additional single-provider embedding model components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+If your provider or model isn't supported by the **Embedding Model** core component, additional single-provider **Embedding Model** components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
 
 ## Legacy embedding components
 
