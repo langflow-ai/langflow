@@ -1,4 +1,8 @@
-import IconComponent, { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -6,11 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { DATASTAX_DOCS_URL, DESKTOP_URL, DOCS_URL } from "@/constants/constants";
+import {
+  DATASTAX_DOCS_URL,
+  DESKTOP_URL,
+  DOCS_URL,
+} from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { cn, getOS } from "@/utils/utils";
-import React from "react";
-import { useNavigate } from "react-router-dom";
 
 type DropdownControlButtonProps = {
   tooltipText?: string;
@@ -47,9 +53,16 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
     disabled={disabled}
     title={tooltipText || ""}
   >
-    {iconName && <ForwardedIconComponent name={iconName} className="text-muted-foreground group-hover:text-primary" />}
+    {iconName && (
+      <ForwardedIconComponent
+        name={iconName}
+        className="text-muted-foreground group-hover:text-primary"
+      />
+    )}
     <div className="flex flex-row items-center justify-between w-full h-full">
-      <span className="text-muted-foreground text-sm mr-2 group-hover:text-primary">{label}</span>
+      <span className="text-muted-foreground text-sm mr-2 group-hover:text-primary">
+        {label}
+      </span>
       <div className="flex flex-row items-center justify-center gap-1 text-sm text-placeholder-foreground">
         {shortcut && (
           <>
@@ -104,16 +117,16 @@ export const CanvasControlsDropdown: React.FC<CanvasControlsDropdownProps> = ({
         unstyled
         title="Canvas Controls"
       >
-          <div className="flex items-center justify-center ">
-            <div className="text-sm text-primary pr-1">
-              {formatZoomPercentage(zoom)}
-            </div>
-            <IconComponent
-              name={isOpen ? "ChevronDown" : "ChevronUp"}
-              aria-hidden="true"
-              className="text-primary group-hover:text-primary !h-5 !w-5"
-            />
+        <div className="flex items-center justify-center ">
+          <div className="text-sm text-primary pr-1">
+            {formatZoomPercentage(zoom)}
           </div>
+          <IconComponent
+            name={isOpen ? "ChevronDown" : "ChevronUp"}
+            aria-hidden="true"
+            className="text-primary group-hover:text-primary !h-5 !w-5"
+          />
+        </div>
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent
@@ -168,66 +181,68 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
   onSelectAction,
 }) => {
   const navigate = useNavigate();
-  
+
   return (
-  <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
-    <DropdownMenuTrigger asChild>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="group flex items-center justify-center px-2 rounded-none"
-        title="Help"
-     
+    <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="group flex items-center justify-center px-2 rounded-none"
+          title="Help"
+        >
+          <IconComponent
+            name="Circle-Help"
+            aria-hidden="true"
+            className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+          />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="top"
+        align="end"
+        className="flex flex-col w-full"
       >
-        <IconComponent
-          name="Circle-Help"
-          aria-hidden="true"
-          className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+        <DropdownControlButton
+          iconName="book-open"
+          testId="canvas_controls_dropdown_docs"
+          label="Docs"
+          onClick={() => {
+            window.open(
+              ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL,
+              "_blank",
+            );
+          }}
         />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent
-      side="top"
-      align="end"
-      className="flex flex-col w-full"
-    >
-      <DropdownControlButton
-        iconName="book-open"
-        testId="canvas_controls_dropdown_docs"
-        label="Docs"
-        onClick={() => {
-          window.open(ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL, "_blank");
-        }}
-      />
-      <DropdownControlButton
-        iconName="keyboard"
-        testId="canvas_controls_dropdown_shortcuts"
-        label="Shortcuts"
-        onClick={() => {
-          navigate("/settings/shortcuts");
-        }}
-      />
-      {/* <DropdownControlButton
+        <DropdownControlButton
+          iconName="keyboard"
+          testId="canvas_controls_dropdown_shortcuts"
+          label="Shortcuts"
+          onClick={() => {
+            navigate("/settings/shortcuts");
+          }}
+        />
+        {/* <DropdownControlButton
         iconName="bug"
         testId="canvas_controls_dropdown_report_a_bug"
         label="Report a bug"
       /> */}
-      <Separator />
-      <DropdownControlButton
-        iconName="download"
-        testId="canvas_controls_dropdown_get_langflow_desktop"
-        label="Get Langflow Desktop"
-        onClick={() => {
-          window.open(DESKTOP_URL, "_blank");
-        }}
-      />
-       {/* <DropdownControlButton
+        <Separator />
+        <DropdownControlButton
+          iconName="download"
+          testId="canvas_controls_dropdown_get_langflow_desktop"
+          label="Get Langflow Desktop"
+          onClick={() => {
+            window.open(DESKTOP_URL, "_blank");
+          }}
+        />
+        {/* <DropdownControlButton
         iconName="cog"
         testId="canvas_controls_dropdown_enable_smart_guides"
         label="Enable smart guides"
         
       /> */}
-    </DropdownMenuContent>
-  </DropdownMenu>
-);
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 };
