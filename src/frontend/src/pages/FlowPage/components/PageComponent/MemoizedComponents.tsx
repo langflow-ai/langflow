@@ -1,5 +1,3 @@
-import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
 import {
   default as ForwardedIconComponent,
   default as IconComponent,
@@ -9,6 +7,8 @@ import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
+import { Background, Panel } from "@xyflow/react";
+import { memo } from "react";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -34,7 +34,7 @@ export const MemoizedCanvasControls = memo(
       <Button
         variant="ghost"
         size="icon"
-        className="group rounded flex items-center justify-center ml-1"
+        className="group flex items-center justify-center px-2 rounded-none"
         title="Add sticky note"
         onClick={(e) => {
           e.stopPropagation();

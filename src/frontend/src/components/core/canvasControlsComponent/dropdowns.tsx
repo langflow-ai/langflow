@@ -1,5 +1,4 @@
 import IconComponent, { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,7 +36,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
   <Button
     data-testid={testId}
     className={cn(
-      "group flex items-center justify-center !py-1.5 !px-3 hover:bg-accent h-full rounded-none",
+      "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none",
       disabled && "cursor-not-allowed opacity-50",
     )}
     onClick={onClick}
@@ -45,7 +44,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
     disabled={disabled}
     title={tooltipText || ""}
   >
-    {iconName && <ForwardedIconComponent name={iconName} className="text-muted-foreground group-hover:text-primary mr-1" />}
+    {iconName && <ForwardedIconComponent name={iconName} className="text-muted-foreground group-hover:text-primary" />}
     <div className="flex flex-row items-center justify-between w-full h-full">
       <span className="text-muted-foreground text-sm mr-2 group-hover:text-primary">{label}</span>
       <div className="flex flex-row items-center justify-center gap-1 text-sm text-placeholder-foreground">
@@ -96,13 +95,14 @@ export const CanvasControlsDropdown: React.FC<CanvasControlsDropdownProps> = ({
   <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
     <DropdownMenuTrigger asChild>
       <Button
+        variant="ghost"
         data-testid="canvas_controls_dropdown"
-        className="group rounded !p-0"
+        className="group rounded-none px-2 py-2 hover:bg-muted"
+        unstyled
         title="Canvas Controls"
       >
-        <ShadTooltip content="Canvas Controls" side="top" align="end">
-          <div className="rounded py-2.5 px-1 flex items-center justify-center">
-            <div className="text-sm text-primary pr-2">
+          <div className="flex items-center justify-center ">
+            <div className="text-sm text-primary pr-1">
               {formatZoomPercentage(zoom)}
             </div>
             <IconComponent
@@ -111,7 +111,6 @@ export const CanvasControlsDropdown: React.FC<CanvasControlsDropdownProps> = ({
               className="text-primary group-hover:text-primary !h-5 !w-5"
             />
           </div>
-        </ShadTooltip>
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent
@@ -170,8 +169,9 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
       <Button
         variant="ghost"
         size="icon"
-        className="group rounded flex items-center justify-center mr-1"
+        className="group flex items-center justify-center px-2 rounded-none"
         title="Help"
+     
       >
         <IconComponent
           name="Circle-Help"
