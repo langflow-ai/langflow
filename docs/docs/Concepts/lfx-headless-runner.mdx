@@ -1,0 +1,134 @@
+---
+title: Run flows with Langflow Executor (LFX)
+slug: /lfx-headless-runner
+---
+
+The Langflow Executor (LFX) is a command-line tool that serves and runs flows statelessly from [flow JSON files](/concepts-flows-import) with minimal dependencies.
+
+Flows are run without the flow builder UI or database, and any flow dependencies are automatically added to complete the run.
+The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
+
+LFX includes two commands for executing flows.
+
+* [`lfx serve`](#serve): This command starts a FastAPI server with your flow available at `/flows/{flow_id}/run`.
+The actual value for `flow_id` is displayed when the server starts.
+* [`lfx run`](#run): This command executes a flow with input text and returns the results to `stdout`.
+
+## Prerequisites
+
+- [Python](https://www.python.org/downloads/release/python-3100/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- A [flow JSON file](/concepts-flows)
+
+## Install LFX
+
+LFX is included with the [Langflow installation](/get-started-installation) in the`langflow/src/lfx` directory, or can be installed as a [PyPI package](https://pypi.org/project/lfx/).
+
+If you already have the Langflow OSS package installed, you don't need to install any additional dependencies.
+To use LFX commands, change directory to `langflow/src/lfx` and run the `uv run lfx` commands from there.
+For example:
+
+```
+cd langflow/src/lfx
+uv run lfx serve my_flow.json
+```
+
+### LFX Python package
+
+To install LFX globally as a standalone [PyPI package](https://pypi.org/project/lfx/):
+
+```
+uv pip install lfx
+```
+
+To run LFX with `uvx` without installing the package locally:
+
+```
+uvx lfx run my_flow.json "message"
+```
+
+## Serve a flow with `lfx serve` {#serve}
+
+To serve your flow as a REST API endpoint, set your `LANGFLOW_API_KEY` and run the flow JSON.
+If you're running Langflow from source, remember to first change directory to `langflow/src/lfx` and run the `uv run lfx` commands from there.
+
+1. Export your API key.
+    ```
+    export LANGFLOW_API_KEY="sk..."
+    ```
+2. Start the server.
+    ```
+    uv run lfx serve simple_chat.json --host 0.0.0.0 --port 8000
+    ```
+
+3. The startup process returns a `flow_id` value.
+Copy the value to use in the test API call in the next step.
+    ```
+    Flow ID: af9edd65-6393-58e2-9ae5-d5f012e714f4
+    ```
+4. Test the server with an API call to the `/flows/flow_id/run` endpoint:
+    ```
+    curl -X POST http://localhost:8000/flows/FLOW_ID/run \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: LANGFLOW_API_KEY" \
+      -d '{"input_value": "Hello, world!"}'
+    ```
+
+    If your exported flow includes [global variables](/configuration-global-variables), such as an Open AI API key, you need to create a variable in your `.env` file with the same name, and add your value to the `.env` file.
+    
+    ```env
+    OPENAI_API_KEY="sk..."
+    ```
+    
+    Start LFX with the path to your `.env` file:
+    
+    ```
+    uv run lfx serve --env-file .env
+    ```
+
+### LFX serve options
+
+**Table: Command-line options for `lfx serve`**
+| Option                                 | Description                                                                                   |
+|-----------------------------------------|-----------------------------------------------------------------------------------------------|
+| `--host`, `-h`                         | Host to bind server. Default: `127.0.0.1`.                                                  |
+| `--port`, `-p`                         | Port to bind server. Default:`8000`.                                                         |
+| `--verbose`, `-v`                      | Display diagnostic output.                                                                        |
+| `--env-file`                           | The path to the `.env` file.                                                                           |
+| `--log-level`                          | Set logging level. Options are `debug`, `info`, `warning`, `error`, or `critical`.                           |
+| `--check-variables`/`--no-check-variables` | Check global variables for environment compatibility. Default: `check`.
+
+## Run a flow with `lfx run` {#run}
+
+The `lfx run` command runs a flow from a JSON file without serving it, and the output is sent to `stdout`.
+Input to `lfx run` can be a path to the JSON file, inline JSON passed with `--input-value`, or read from `stdin`.
+
+To run the flow from a JSON file with an input message, run:
+    ```
+    uv run lfx run my_flow.json "your input message"
+    ```
+
+If the flow expects structured input, pass it as a JSON string.
+You can provide the input as a positional argument or with the `--input-value` flag.
+The `--input-value` flag is especially useful for structured input, as it avoids ambiguity.
+    ```
+    uv run lfx run my_flow.json --input-value '{"question": "What is the weather in Paris?", "context": "weather"}'
+    ```
+
+To run a flow from `stdin` and extract the `result` field from the output, run the `lfx run` command with additional options:
+    ```
+    cat my_flow.json | uv run lfx run --stdin --format json | jq '.result'
+    ```
+
+### LFX run options
+
+**Table: Command-line options for `lfx run`**
+
+| Option                                         | Description                                                                                      |
+|------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `--format`, `-f`                               | Output format (`json`, `text`, `message`, `result`). Default: `json`                             |
+| `--verbose`                                    | Show diagnostic output                                                                           |
+| `--input-value`                                | Input value to pass to the graph (alternative to positional argument)                            |
+| `--flow-json`                                  | Inline JSON flow content as a string                                                             |
+| `--stdin`                                      | Read JSON flow from stdin                                                                        |
+| `--check-variables`/`--no-check-variables`     | Check global variables for environment

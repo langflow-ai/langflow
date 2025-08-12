@@ -60,6 +60,11 @@ module.exports = {
               id: "Develop/webhook",
               label: "Trigger flows with webhooks"
             },
+            {
+              type: "doc",
+              id: "Concepts/lfx-headless-runner",
+              label: "Run flows with Langflow Executor (LFX)"
+            },
           ],
         },
         {
