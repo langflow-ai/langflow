@@ -51,7 +51,7 @@ class TraceloopTracer(BaseTracer):
         self.session_id = session_id
 
         api_key = os.getenv("TRACELOOP_API_KEY")
-        if not api_key:
+        if not api_key or not api_key.strip():
             logger.warning("TRACELOOP_API_KEY not set. Traceloop tracing will not be enabled.")
             self._ready = False
             return
@@ -184,7 +184,7 @@ class TraceloopTracer(BaseTracer):
         if not model_name:
             logger.warning(f"model_name not found in metadata for trace {self.trace_name}")
         if not agent_llm:
-            logger.warning(f"provider not found in metadata for trace {self.trace_name}")
+            logger.warning(f"agent_llm not found in metadata for trace {self.trace_name}")
         with self._tracer.start_as_current_span("workflow.end") as span:
             span.set_attributes(
                 {
