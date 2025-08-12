@@ -11,7 +11,7 @@ from langflow.schema.data import Data
 
 class CouchbaseSearchVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Couchbase"
-    description = "Couchbase Vector Store with search capabilities"
+    description = "Couchbase Search Vector Store with search capabilities"
     name = "Couchbase"
     icon = "Couchbase"
 
