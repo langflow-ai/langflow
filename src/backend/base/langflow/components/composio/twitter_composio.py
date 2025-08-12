@@ -3,7 +3,7 @@ from langflow.base.composio.composio_base import ComposioBaseComponent
 
 class ComposioTwitterAPIComponent(ComposioBaseComponent):
     display_name: str = "Twitter"
-    icon = "Twitter"
+    icon = "TwitterX"
     documentation: str = "https://docs.composio.dev"
     app_name = "twitter"
 
