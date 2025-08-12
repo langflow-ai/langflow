@@ -5,6 +5,8 @@ export const lazyIconsMapping = {
     import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
   Airbyte: () =>
     import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
+  Airtable: () =>
+    import("@/icons/airtable").then((mod) => ({ default: mod.AirtableIcon })),
   Anthropic: () =>
     import("@/icons/Anthropic").then((mod) => ({ default: mod.AnthropicIcon })),
   Apify: () =>
@@ -23,6 +25,8 @@ export const lazyIconsMapping = {
     import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
   Athena: () =>
     import("@/icons/athena").then((mod) => ({ default: mod.AthenaIcon })),
+  Attio: () =>
+    import("@/icons/attio").then((mod) => ({ default: mod.AttioIcon })),
   AWS: () => import("@/icons/AWS").then((mod) => ({ default: mod.AWSIcon })),
   AWSInverted: () =>
     import("@/icons/AWSInverted").then((mod) => ({
@@ -31,6 +35,43 @@ export const lazyIconsMapping = {
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
+  Asana: () =>
+    import("@/icons/asana").then((mod) => ({ default: mod.AsanaIcon })),
+  MicrosoftTeams: () =>
+    import("@/icons/microsoftTeams").then((mod) => ({
+      default: mod.Microsoft_TeamsIcon,
+    })),
+  Discord: () =>
+    import("@/icons/discord").then((mod) => ({
+      default: mod.DiscordIcon,
+    })),
+  Salesforce: () =>
+    import("@/icons/salesforce").then((mod) => ({
+      default: mod.SalesforceIcon,
+    })),
+  Shopify: () =>
+    import("@/icons/shopify").then((mod) => ({ default: mod.ShopifyIcon })),
+  Googledocs: () =>
+    import("@/icons/googledocs").then((mod) => ({
+      default: mod.GoogledocsIcon,
+    })),
+  GoogleDrive: () =>
+    import("@/icons/google_drive").then((mod) => ({
+      default: mod.Google_DriveIcon,
+    })),
+  Calendly: () =>
+    import("@/icons/calendly").then((mod) => ({
+      default: mod.CalendlyIcon,
+    })),
+  Docusign: () =>
+    import("@/icons/docusign").then((mod) => ({
+      default: mod.DocusignIcon,
+    })),
+  Intercom: () =>
+    import("@/icons/intercom").then((mod) => ({
+      default: mod.IntercomIcon,
+    })),
+  
   BotMessageSquareIcon: () =>
     import("@/icons/BotMessageSquare").then((mod) => ({
       default: mod.BotMessageSquareIcon,
@@ -58,6 +99,10 @@ export const lazyIconsMapping = {
   Confluence: () =>
     import("@/icons/Confluence").then((mod) => ({
       default: mod.ConfluenceIcon,
+    })),
+  Contentful: () =>
+    import("@/icons/contentful").then((mod) => ({
+      default: mod.ContentfulIcon,
     })),
   Couchbase: () =>
     import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
@@ -90,6 +135,8 @@ export const lazyIconsMapping = {
     })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
+  Figma: () =>
+    import("@/icons/figma").then((mod) => ({ default: mod.FigmaIcon })),
   FreezeAll: () =>
     import("@/icons/freezeAll").then((mod) => ({ default: mod.freezeAllIcon })),
   GitBook: () =>
@@ -102,9 +149,21 @@ export const lazyIconsMapping = {
     import("@/icons/globe-ok").then((mod) => ({ default: mod.GlobeOkIcon })),
   Google: () =>
     import("@/icons/Google").then((mod) => ({ default: mod.GoogleIcon })),
-  GoogleDrive: () =>
-    import("@/icons/GoogleDrive").then((mod) => ({
-      default: mod.GoogleDriveIcon,
+  GoogleAnalytics: () =>
+    import("@/icons/google_analytics").then((mod) => ({
+      default: mod.Google_AnalyticsIcon,
+    })),
+  Googlemeet: () =>
+    import("@/icons/googlemeet").then((mod) => ({
+      default: mod.GooglemeetIcon,
+    })),
+  GoogleTasks: () =>
+    import("@/icons/GoogleTasks").then((mod) => ({
+      default: mod.GoogleTasksIcon,
+    })),
+  Googlesheets: () =>
+    import("@/icons/googlesheets").then((mod) => ({
+      default: mod.GooglesheetsIcon,    
     })),
   GoogleGenerativeAI: () =>
     import("@/icons/GoogleGenerativeAI").then((mod) => ({
@@ -121,6 +180,18 @@ export const lazyIconsMapping = {
   GradientInfinity: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientInfinity,
+    })),
+  Googlemaps: () =>
+    import("@/icons/googlemaps").then((mod) => ({
+      default: mod.GooglemapsIcon,
+    })),
+  Todoist: () =>
+    import("@/icons/todoist").then((mod) => ({
+      default: mod.TodoistIcon,
+    })),
+  Zoom: () =>
+    import("@/icons/zoom").then((mod) => ({
+      default: mod.ZoomIcon,
     })),
   GradientUngroup: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
@@ -144,6 +215,8 @@ export const lazyIconsMapping = {
     import("@/icons/HomeAssistant").then((mod) => ({
       default: mod.HomeAssistantIcon,
     })),
+  Hubspot: () =>
+    import("@/icons/hubspot").then((mod) => ({ default: mod.HubspotIcon })),
   HuggingFace: () =>
     import("@/icons/HuggingFace").then((mod) => ({
       default: mod.HuggingFaceIcon,
@@ -158,6 +231,10 @@ export const lazyIconsMapping = {
     import("@/icons/JigsawStack").then((mod) => ({
       default: mod.JigsawStackIcon,
     })),
+  Klaviyo: () =>
+    import("@/icons/klaviyo").then((mod) => ({ default: mod.KlaviyoIcon })),
+  Linear: () =>
+    import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>
     import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
   Langwatch: () =>
@@ -169,6 +246,8 @@ export const lazyIconsMapping = {
   Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),
   Mem0: () => import("@/icons/Mem0").then((mod) => ({ default: mod.Mem0 })),
   Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
+  Miro: () =>
+    import("@/icons/miro").then((mod) => ({ default: mod.MiroIcon })),
   Midjourney: () =>
     import("@/icons/Midjorney").then((mod) => ({
       default: mod.MidjourneyIcon,
@@ -195,6 +274,8 @@ export const lazyIconsMapping = {
     import("@/icons/Olivya").then((mod) => ({ default: mod.OlivyaIcon })),
   Ollama: () =>
     import("@/icons/Ollama").then((mod) => ({ default: mod.OllamaIcon })),
+  one_drive: () =>
+    import("@/icons/one_drive").then((mod) => ({ default: mod.One_DriveIcon })),
   OpenAI: () =>
     import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
   OpenRouter: () =>
@@ -221,6 +302,8 @@ export const lazyIconsMapping = {
     })),
   Redis: () =>
     import("@/icons/Redis").then((mod) => ({ default: mod.RedisIcon })),
+  Reddit: () =>
+    import("@/icons/reddit").then((mod) => ({ default: mod.RedditIcon })),
   SambaNova: () =>
     import("@/icons/SambaNova").then((mod) => ({ default: mod.SambaNovaIcon })),
   ScrapeGraph: () =>
@@ -303,6 +386,8 @@ export const lazyIconsMapping = {
     import("@/icons/Windsurf").then((mod) => ({ default: mod.WindsurfIcon })),
   Wolfram: () =>
     import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
+  Wrike: () =>
+    import("@/icons/wrike").then((mod) => ({ default: mod.WrikeIcon })),
   xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),
   YouTube: () =>
     import("@/icons/Youtube").then((mod) => ({ default: mod.YouTubeSvgIcon })),
