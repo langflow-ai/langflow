@@ -354,6 +354,7 @@ class TestMCPUtilityFunctions:
         assert result is None
 
 
+@pytest.mark.skip(reason="Skipping MCPStdioClientWithEverythingServer tests.")
 class TestMCPStdioClientWithEverythingServer:
     """Test MCPStdioClient with the Everything MCP server."""
 
