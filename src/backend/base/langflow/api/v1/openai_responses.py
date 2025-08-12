@@ -450,11 +450,13 @@ async def create_response(
         logger.debug(f"Checking header: '{header_lower}' (original: '{header_name}')")
         if header_lower.startswith(header_prefix):
             # Extract variable name from header (remove prefix) and convert to uppercase
-            var_name_lower = header_lower[len(header_prefix):]
+            var_name_lower = header_lower[len(header_prefix) :]
             var_name = var_name_lower.upper()  # Default to uppercase
 
             variables[var_name] = header_value
-            logger.debug(f"Found global variable: {var_name} = {header_value} (converted to uppercase from header: {header_name})")
+            logger.debug(
+                f"Found global variable: {var_name} = {header_value} (converted to uppercase from header: {header_name})"
+            )
 
     logger.debug(f"Extracted global variables from headers: {list(variables.keys())}")
     logger.debug(f"Variables dict: {variables}")
