@@ -55,13 +55,14 @@ class TraceloopTracer(BaseTracer):
             logger.warning("TRACELOOP_API_KEY not set. Traceloop tracing will not be enabled.")
             self._ready = False
             return
+        default_traceloop_endpoint = "https://api.traceloop.com"
         try:
             Traceloop.init(
                 instruments={Instruments.LANGCHAIN},
                 app_name=project_name,
                 disable_batch=True,
                 api_key=api_key,
-                api_endpoint=os.getenv("TRACELOOP_BASE_URL", "https://api.traceloop.com"),
+                api_endpoint=os.getenv("TRACELOOP_BASE_URL", default_traceloop_endpoint),
             )
             self._ready = True
             self._workflow = None
