@@ -19,7 +19,7 @@ const KnowledgeBaseEmptyState = () => {
 
   const handleCreateKnowledge = async () => {
     const knowledgeBasesExample = examples.find(
-      (example) => example.name === "Knowledge Bases",
+      (example) => example.name === "Create Knowledge",
     );
 
     if (knowledgeBasesExample && knowledgeBasesExample.data) {
