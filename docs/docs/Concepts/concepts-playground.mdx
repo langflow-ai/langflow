@@ -10,7 +10,7 @@ import Icon from "@site/src/components/icon";
 Langflow's **Playground** is a dynamic interface you can use to test your LLM-based flows in real-time.
 
 You can test how a flow responds to different inputs, review and modify memories, and monitor flow output and logic.
-For example, you can make sure agentic flows use the appropriate tools to respond to different inputs.
+For example, you can make sure agent flows use the appropriate tools to respond to different inputs.
 
 The **Playground** allows you to quickly iterate over your flow's logic and behavior, making it easier to prototype and refine your applications.
 
@@ -22,7 +22,7 @@ Then, if your flow has a [**Chat Input** component](/components-io), enter a pro
 :::tip
 If there is no message input field in the **Playground**, make sure your flow has a **Chat Input** component that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
 
-Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground**'s chat interface
+Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground** chat interface
 
 For flows that require another type of input, such as a webhook event, file upload, or text input, you can [use the Langflow API to trigger the flow](/api-flows-run), and then open the **Playground** to review the LLM activity for the flow run, if applicable.
 :::
@@ -38,13 +38,13 @@ The `build` function allows components to execute logic at runtime. For example,
 
 </details>
 
-### Review Agent logic
+### Review agent logic
 
 If your flow has an **Agent** component, the **Playground** prints the tools used by the agent and the output from each tool.
 This helps you monitor the agent's tool use and understand the logic behind the agent's responses.
 For example, the following agent used a connected `fetch_content` tool to perform a web search:
 
-![Playground window with agent response](/img/playground-with-agent.png)
+![Playground with agent response](/img/playground-with-agent.png)
 
 ### View chat history {#view-chat-history}
 
@@ -89,7 +89,7 @@ You can set custom session IDs in the visual editor and programmatically.
 <Tabs>
 <TabItem value="visual" label="Visual editor" default>
 
-In your [input and output components](/components-io), use the **Session ID** field:
+In your [**Input and Output** components](/components-io), use the **Session ID** field:
 
 1. Click the component where you want to set a custom session ID.
 2. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**.
@@ -150,7 +150,7 @@ The user can interact with the flow's chat input and output and view the results
 To share a flow's **Playground** with another user, do the following:
 
 1. In Langflow, open the flow you want share.
-2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
+2. In the [workspace](/concepts-overview#workspace), click **Share**, and then enable **Shareable Playground**.
 3. Click **Shareable Playground** again to open the **Playground** window.
 This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
 4. Send the URL to another user to give them access to the flow's **Playground**.
