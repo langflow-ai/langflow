@@ -21,6 +21,7 @@ The **Astra DB Chat Memory** component isn't recommended for most memory storage
 
 However, Langflow's **Agent** and **Language Model** components include built-in chat memory that is enabled by default.
 Your flows don't need an external database to store chat memory.
+For more information, see [Memory management options](/memory).
 :::
 
 For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
@@ -93,9 +94,9 @@ The values for **Collection Name**, **Astra DB Application Token**, and **Astra 
 | Tool Parameters  | Dict   | Input parameter. [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters) that become tools for an agent. These Filters _may_ be used in a search, if the agent selects them. See [Define tool-specific parameters](#define-tool-specific-parameters). |
 | Static Filters    | Dict   | Input parameter. Attribute-value pairs used to filter query results. Equivalent to [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters). **Static Filters** are included with _every_ query. Use **Static Filters** without semantic search to perform a regular filter search. |
 | Number of Results  | Int | Input parameter. The maximum number of documents to return.   |
-| Semantic Search | Boolean | Input parameter. Whether to run a similarity search by generating a vector embedding from the chat input and following the **Semantic Search Instruction**. Default: `False`. If `True`, you must attach an [**Embedding Model** component](/components-embedding-models) or have vectorize pre-enabled on your collection. |
-| Use Astra DB Vectorize | Boolean | Input parameter. Whether to use the Astra DB vectorize feature for embedding generation when running a semantic search. Default: `False`. If `True`, you must have vectorize pre-enabled on your collection. |
-| Embedding Model | Embedding | Input parameter. A port to attach an **Embedding Model** component to generate a vector from input text for semantic search. This can be used when **Semantic Search** is `True` with or without vectorize. Be sure to use a model that aligns with the dimensions of the embeddings already present in the collection. |
+| Semantic Search | Boolean | Input parameter. Whether to run a similarity search by generating a vector embedding from the chat input and following the **Semantic Search Instruction**. Default: false. If true, you must attach an [**Embedding Model** component](/components-embedding-models) or have vectorize pre-enabled on your collection. |
+| Use Astra DB Vectorize | Boolean | Input parameter. Whether to use the Astra DB vectorize feature for embedding generation when running a semantic search. Default: false. If true, you must have vectorize pre-enabled on your collection. |
+| Embedding Model | Embedding | Input parameter. A port to attach an **Embedding Model** component to generate a vector from input text for semantic search. This can be used when **Semantic Search** is true, with or without vectorize. Be sure to use a model that aligns with the dimensions of the embeddings already present in the collection. |
 | Semantic Search Instruction | String | Input parameter. The query to use for similarity search. Default: `"Find documents similar to the query."`. This instruction is used to guide the model in performing semantic search. |
 
 ### Define tool-specific parameters
@@ -124,9 +125,9 @@ For example, the following filter allows an LLM to filter by unique `customer_id
     * Name: `customer_id`
     * Attribute Name: Leave empty if the attribute matches the field name in the database.
     * Description: `"The unique identifier of the customer to filter by"`.
-    * Is Metadata: `False` unless the value stored in the metadata field.
-    * Is Mandatory: `True` to require this filter.
-    * Is Timestamp: For this example, select `False` because the value is an ID, not a timestamp.
+    * Is Metadata: Select **False** unless the value is stored in the metadata field.
+    * Is Mandatory: Set to **True** to make the filter required.
+    * Is Timestamp: For this example, select **False** because the value is an ID, not a timestamp.
     * Operator: `$eq` to look for an exact match.
 
 The following fields are available for each row in the **Tool Parameters** pane:
