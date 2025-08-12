@@ -4690,7 +4690,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.5.0.post1"
+version = "1.5.0.post2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofile" },
