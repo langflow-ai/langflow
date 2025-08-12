@@ -14,7 +14,7 @@ For example, the **Cassandra** vector store component can connect to self-manage
 
 Other types of storage, like traditional structured databases and chat memory, are handled through other components like the [**SQL Database** component](/components-data#sql-database) or the [**Message History** component](/components-helpers#message-history).
 
-## Use a Vector Store component in a flow
+## Use Vector Store components in a flow
 
 :::tip
 For a tutorial using **Vector Store** components in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
@@ -70,7 +70,7 @@ In the **File** component, select one or more files, and then click <Icon name="
 
     To view the raw search results, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** on the **Vector Store** component after running the **Retriever** subflow.
 
-## Hidden and conditional parameters
+### Hidden and conditional parameters
 
 You can inspect a **Vector Store** component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
 
@@ -83,42 +83,60 @@ However, all parameters are always listed in a [component's code](/concepts-comp
 
 For information about a specific component's parameters, see the provider's documentation and the component details.
 
+### Search results and vector store output {#output}
+
+Most **Vector Store** components produce `search_results` and `vector_store` output.
+
+* **`search_results`**: The vector search results in [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe) format.
+If both types are supported, you can set the format near the component's output port in the visual editor.
+
+    Some **Vector Store** components produce other output instead of or in addition to the `search_results`, depending on the component's purpose and available functions.
+    To explore output of specific components, see the component code, documentation, and visual editor.
+
+* **`vector_store`**: A provider-specific instance of a [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) that drives the underlying vector search functions.
+This output is not directly returned for use in the flow, but it is created by the component during the flow run to execute component functions that read and write to the vector store.
+
+    These instances are created because Langflow is based on LangChain.
+    They are provider-specific and configured according to the component's parameters.
+    For example, the **Redis** component creates an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/) based on the component's parameters, such as the connection string, index name, and schema.
+
+    Some LangChain classes don't expose all possible options as component parameters.
+    Depending on the provider, these options might use default values or allow modification through environment variables, if they are supported in Langflow.
+    For information about specific options, see the LangChain API reference and provider documentation.
+
 ## Apache Cassandra
 
 The **Cassandra** and **Cassandra Graph** components can be used with Cassandra clusters, including Astra DB.
 
+For more information about vector search in Apache Cassandra, see the [Cassandra documentation](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html).
+
 ### Cassandra
 
-This component connects to any Cassandra cluster, including Astra DB.
-
-This component creates a Cassandra vector store with search capabilities.
-For more information, see the [Cassandra documentation](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html).
+This component connects to any Cassandra cluster that supports vector search, including Astra DB.
 
 <details>
-<summary>Parameters</summary>
-
-**Inputs**
+<summary>Cassandra component parameters</summary>
 
 | Name | Type | Description |
 |------|------|-------------|
-| database_ref | String | Contact points for the database or Astra DB database ID. |
-| username | String | Username for the database (leave empty for Astra DB). |
-| token | SecretString | User password for the database or Astra DB token. |
-| keyspace | String | Table or keyspace. |
-| table_name | String | Name of the table or Astra DB collection. |
-| ttl_seconds | Integer | Time-to-live for added texts. |
-| batch_size | Integer | Number of data to process in a single batch. |
-| setup_mode | String | Configuration mode for setting up the Cassandra table. |
-| cluster_kwargs | Dict | Additional keyword arguments for the Cassandra cluster. |
-| search_query | String | Query for similarity search. |
-| ingest_data | Data | Data to be ingested into the vector store. |
-| embedding | Embeddings | Embedding function to use. |
-| number_of_results | Integer | Number of results to return in search. |
-| search_type | String | Type of search to perform. |
-| search_score_threshold | Float | Minimum similarity score for search results. |
-| search_filter | Dict | Metadata filters for search query. |
-| body_search | String | Document textual search terms. |
-| enable_body_search | Boolean | Flag to enable body search. |
+| database_ref | String | Input parameter. Contact points for the database or Astra DB database ID. |
+| username | String | Input parameter. Username for the database (leave empty for Astra DB). |
+| token | SecretString | Input parameter. User password for the database or Astra DB token. |
+| keyspace | String | Input parameter. Table or keyspace. |
+| table_name | String | Input parameter. Name of the table or Astra DB collection. |
+| ttl_seconds | Integer | Input parameter. Time-to-live for added texts. |
+| batch_size | Integer | Input parameter. Number of data to process in a single batch. |
+| setup_mode | String | Input parameter. Configuration mode for setting up the Cassandra table. |
+| cluster_kwargs | Dict | Input parameter. Additional keyword arguments for the Cassandra cluster. |
+| search_query | String | Input parameter. Query for similarity search. |
+| ingest_data | Data | Input parameter. Data to be ingested into the vector store. |
+| embedding | Embeddings | Input parameter. Embedding function to use. |
+| number_of_results | Integer | Input parameter. Number of results to return in search. |
+| search_type | String | Input parameter. Type of search to perform. |
+| search_score_threshold | Float | Input parameter. Minimum similarity score for search results. |
+| search_filter | Dict | Input parameter. Metadata filters for search query. |
+| body_search | String | Input parameter. Document textual search terms. |
+| enable_body_search | Boolean | Input parameter. Flag to enable body search. |
 
 **Outputs**
 
@@ -167,7 +185,11 @@ It supports any Cassandra cluster, including Astra DB.
 
 </details>
 
-## Chroma DB
+## Chroma
+
+The **Chroma DB** and **Local DB** components support Chroma vector stores, including in-memory instances with or without persistence.
+
+### Chroma DB
 
 The **Chroma DB** component creates an ephemeral, Chroma vector database with search capabilities that you can use for experimentation and vector storage.
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
@@ -224,6 +246,49 @@ Your input is converted to vector data and compared to the stored vectors in a v
 |----------------|---------------|--------------------------------|
 | vector_store   | Chroma        | The Chroma vector store instance.  |
 | search_results | List[Data]    | The results of the similarity search as a list of [Data](/data-types#data) objects.    |
+
+</details>
+
+### Local DB
+
+The **Local DB** component is Langflow's enhanced version of Chroma DB.
+
+The component adds a user-friendly interface with two modes (Ingest and Retrieve), automatic collection management, and built-in persistence in Langflow's cache directory.
+
+Local DB includes **Ingest** and **Retrieve** modes.
+
+The **Ingest** mode works similarly to [ChromaDB](#chroma-db), and persists your database to the Langflow cache directory. The Langflow cache directory location is specified in the `LANGFLOW_CONFIG_DIR` environment variable. For more information, see [Flow storage and logs](/concepts-flows#flow-storage-and-logs).
+
+The **Retrieve** mode can query your **Chroma DB** collections.
+
+![Local DB retrieving vectors](/img/component-local-db.png)
+
+For more information, see the [Chroma documentation](https://docs.trychroma.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| collection_name | String | The name of the Chroma collection. Default: "langflow". |
+| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `$DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, it uses your system's cache folder. |
+| existing_collections | String | Select a previously created collection to search through its stored data. |
+| embedding | Embeddings | The embedding function to use for the vector store. |
+| allow_duplicates | Boolean | If false, the component won't add documents that are already in the vector store. |
+| search_type | String | Type of search to perform: "Similarity" or "MMR". |
+| ingest_data | Data/DataFrame | Data to store. It is embedded and indexed for semantic search. |
+| search_query | String | Enter text to search for similar content in the selected collection. |
+| number_of_results | Integer | Number of results to return. Default: 10. |
+| limit | Integer | Limit the number of records to compare when Allow Duplicates is False. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| vector_store | Chroma | A local Chroma vector store instance configured with the specified parameters. |
+| search_results | List[Data](/data-types#data) | The results of the similarity search as a list of [Data](/data-types#data) objects.  |
 
 </details>
 
@@ -294,6 +359,7 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 | Name           | Type                   | Description                    |
 |----------------|------------------------|--------------------------------|
 | vector_store   | CouchbaseVectorStore    | A Couchbase vector store instance configured with the specified parameters. |
+| search_results | List[Data]             | The results of the vector search as a list of Data objects. |
 
 </details>
 
@@ -596,49 +662,6 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 |------|--------------|------|
 | vector_store | Vector Store | The FAISS vector store instance configured with the specified parameters. |
 | search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
-
-</details>
-
-## Local DB
-
-The **Local DB** component is Langflow's enhanced version of Chroma DB.
-
-The component adds a user-friendly interface with two modes (Ingest and Retrieve), automatic collection management, and built-in persistence in Langflow's cache directory.
-
-Local DB includes **Ingest** and **Retrieve** modes.
-
-The **Ingest** mode works similarly to [ChromaDB](#chroma-db), and persists your database to the Langflow cache directory. The Langflow cache directory location is specified in the `LANGFLOW_CONFIG_DIR` environment variable. For more information, see [Flow storage and logs](/concepts-flows#flow-storage-and-logs).
-
-The **Retrieve** mode can query your **Chroma DB** collections.
-
-![Local DB retrieving vectors](/img/component-local-db.png)
-
-For more information, see the [Chroma documentation](https://docs.trychroma.com/).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| collection_name | String | The name of the Chroma collection. Default: "langflow". |
-| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `$DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, it uses your system's cache folder. |
-| existing_collections | String | Select a previously created collection to search through its stored data. |
-| embedding | Embeddings | The embedding function to use for the vector store. |
-| allow_duplicates | Boolean | If false, the component won't add documents that are already in the vector store. |
-| search_type | String | Type of search to perform: "Similarity" or "MMR". |
-| ingest_data | Data/DataFrame | Data to store. It is embedded and indexed for semantic search. |
-| search_query | String | Enter text to search for similar content in the selected collection. |
-| number_of_results | Integer | Number of results to return. Default: 10. |
-| limit | Integer | Limit the number of records to compare when Allow Duplicates is False. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| vector_store | Chroma | A local Chroma vector store instance configured with the specified parameters. |
-| search_results | List[Data](/data-types#data) | The results of the similarity search as a list of [Data](/data-types#data) objects.  |
 
 </details>
 
