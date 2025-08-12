@@ -199,159 +199,159 @@ The remaining endpoints control the visual editor, projects and users, files, bu
 
 ### v1
 
-- **Base**
-  - GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
-  - GET `/v1/version`: Return Langflow version. See [Get version](/api-reference-api-examples#get-version).
-  - GET `/v1/config`: Return deployment configuration. See [Get configuration](/api-reference-api-examples#get-configuration).
-  - POST `/v1/run/{flow_id_or_name}`: Run a flow (optionally stream tokens with `?stream=true`). See [Run flow](/api-flows-run#run-flow).
-  - POST `/v1/webhook/{flow_id_or_name}`: Trigger a flow via webhook payload. See [Webhook run flow](/api-flows-run#webhook-run-flow).
-  - POST `/v1/run/advanced/{flow_id}`: Advanced run with explicit `inputs`, `outputs`, `tweaks`, and optional `session_id`.
-  - POST `/v1/custom_component`: Build a custom component from code and return its node.
-  - POST `/v1/custom_component/update`: Update an existing custom component’s build config and outputs.
-  - POST `/v1/predict/{flow_id}`: Deprecated; use `/v1/run/{flow_id}` instead. See [Deprecated flow trigger endpoints](/api-flows-run#deprecated-flow-trigger-endpoints).
-  - POST `/v1/process/{flow_id}`: Deprecated; use `/v1/run/{flow_id}` instead. See [Deprecated flow trigger endpoints](/api-flows-run#deprecated-flow-trigger-endpoints).
-  - GET `/v1/task/{task_id}`: Deprecated task status endpoint.
-  - POST `/v1/upload/{flow_id}`: Deprecated file upload; see [/api-files](/api-files).
+* **Base**
+  * GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
+  * GET `/v1/version`: Return Langflow version. See [Get version](/api-reference-api-examples#get-version).
+  * GET `/v1/config`: Return deployment configuration. See [Get configuration](/api-reference-api-examples#get-configuration).
+  * POST `/v1/run/{flow_id_or_name}`: Run a flow (optionally stream tokens with `?stream=true`). See [Run flow](/api-flows-run#run-flow).
+  * POST `/v1/webhook/{flow_id_or_name}`: Trigger a flow via webhook payload. See [Webhook run flow](/api-flows-run#webhook-run-flow).
+  * POST `/v1/run/advanced/{flow_id}`: Advanced run with explicit `inputs`, `outputs`, `tweaks`, and optional `session_id`.
+  * POST `/v1/custom_component`: Build a custom component from code and return its node.
+  * POST `/v1/custom_component/update`: Update an existing custom component’s build config and outputs.
+  * POST `/v1/predict/{flow_id}`: Deprecated; use `/v1/run/{flow_id}` instead. See [Deprecated flow trigger endpoints](/api-flows-run#deprecated-flow-trigger-endpoints).
+  * POST `/v1/process/{flow_id}`: Deprecated; use `/v1/run/{flow_id}` instead. See [Deprecated flow trigger endpoints](/api-flows-run#deprecated-flow-trigger-endpoints).
+  * GET `/v1/task/{task_id}`: Deprecated task status endpoint.
+  * POST `/v1/upload/{flow_id}`: Deprecated file upload; see [/api-files](/api-files).
 
-- **Build (internal editor support)**. See [Build endpoints](/api-build)
-  - POST `/v1/build/{flow_id}/flow`: Start a flow build and return a job ID.
-  - GET `/v1/build/{job_id}/events`: Stream or fetch build events.
-  - POST `/v1/build/{job_id}/cancel`: Cancel a build job.
-  - POST `/v1/build_public_tmp/{flow_id}/flow`: Build a public flow without auth.
-  - POST `/v1/build/{flow_id}/vertices` (deprecated): Get vertices order for a flow.
-  - POST `/v1/build/{flow_id}/vertices/{vertex_id}` (deprecated): Build a single vertex.
-  - GET `/v1/build/{flow_id}/{vertex_id}/stream` (deprecated): Stream a single vertex.
+* **Build (internal editor support)**. See [Build endpoints](/api-build)
+  * POST `/v1/build/{flow_id}/flow`: Start a flow build and return a job ID.
+  * GET `/v1/build/{job_id}/events`: Stream or fetch build events.
+  * POST `/v1/build/{job_id}/cancel`: Cancel a build job.
+  * POST `/v1/build_public_tmp/{flow_id}/flow`: Build a public flow without auth.
+  * POST `/v1/build/{flow_id}/vertices` (deprecated): Get vertices order for a flow.
+  * POST `/v1/build/{flow_id}/vertices/{vertex_id}` (deprecated): Build a single vertex.
+  * GET `/v1/build/{flow_id}/{vertex_id}/stream` (deprecated): Stream a single vertex.
 
-- **Flows**. See [Flow management endpoints](/api-flows)
-  - POST `/v1/flows/`: Create a flow.
-  - GET `/v1/flows/`: List flows (supports pagination and filters).
-  - GET `/v1/flows/{flow_id}`: Read a flow by ID.
-  - GET `/v1/flows/public_flow/{flow_id}`: Read a public flow by ID.
-  - PATCH `/v1/flows/{flow_id}`: Update a flow.
-  - DELETE `/v1/flows/{flow_id}`: Delete a flow.
-  - POST `/v1/flows/batch/`: Create multiple flows.
-  - POST `/v1/flows/upload/`: Import flows from a JSON file.
-  - DELETE `/v1/flows/`: Delete multiple flows by IDs.
-  - POST `/v1/flows/download/`: Export flows to a ZIP file.
-  - GET `/v1/flows/basic_examples/`: List basic example flows.
+* **Flows**. See [Flow management endpoints](/api-flows)
+  * POST `/v1/flows/`: Create a flow.
+  * GET `/v1/flows/`: List flows (supports pagination and filters).
+  * GET `/v1/flows/{flow_id}`: Read a flow by ID.
+  * GET `/v1/flows/public_flow/{flow_id}`: Read a public flow by ID.
+  * PATCH `/v1/flows/{flow_id}`: Update a flow.
+  * DELETE `/v1/flows/{flow_id}`: Delete a flow.
+  * POST `/v1/flows/batch/`: Create multiple flows.
+  * POST `/v1/flows/upload/`: Import flows from a JSON file.
+  * DELETE `/v1/flows/`: Delete multiple flows by IDs.
+  * POST `/v1/flows/download/`: Export flows to a ZIP file.
+  * GET `/v1/flows/basic_examples/`: List basic example flows.
 
-- **Projects**. See [Projects endpoints](/api-projects)
-  - POST `/v1/projects/`: Create a project.
-  - GET `/v1/projects/`: List projects.
-  - GET `/v1/projects/{project_id}`: Read a project (with paginated flows support).
-  - PATCH `/v1/projects/{project_id}`: Update project info and membership.
-  - DELETE `/v1/projects/{project_id}`: Delete a project.
-  - GET `/v1/projects/download/{project_id}`: Export all flows in a project as ZIP.
-  - POST `/v1/projects/upload/`: Import a project ZIP (creates project and flows).
+* **Projects**. See [Projects endpoints](/api-projects)
+  * POST `/v1/projects/`: Create a project.
+  * GET `/v1/projects/`: List projects.
+  * GET `/v1/projects/{project_id}`: Read a project (with paginated flows support).
+  * PATCH `/v1/projects/{project_id}`: Update project info and membership.
+  * DELETE `/v1/projects/{project_id}`: Delete a project.
+  * GET `/v1/projects/download/{project_id}`: Export all flows in a project as ZIP.
+  * POST `/v1/projects/upload/`: Import a project ZIP (creates project and flows).
 
-- **Files (v1)**. See [Files endpoints](/api-files#filesv1-endpoints)
-  - POST `/v1/files/upload/{flow_id}`: Upload a file to a specific flow.
-  - GET `/v1/files/download/{flow_id}/{file_name}`: Download a file from a flow.
-  - GET `/v1/files/images/{flow_id}/{file_name}`: Stream an image from a flow.
-  - GET `/v1/files/profile_pictures/{folder_name}/{file_name}`: Get a profile picture asset.
-  - GET `/v1/files/profile_pictures/list`: List available profile picture assets.
-  - GET `/v1/files/list/{flow_id}`: List files for a flow.
-  - DELETE `/v1/files/delete/{flow_id}/{file_name}`: Delete a file from a flow.
+* **Files (v1)**. See [Files endpoints](/api-files#filesv1-endpoints)
+  * POST `/v1/files/upload/{flow_id}`: Upload a file to a specific flow.
+  * GET `/v1/files/download/{flow_id}/{file_name}`: Download a file from a flow.
+  * GET `/v1/files/images/{flow_id}/{file_name}`: Stream an image from a flow.
+  * GET `/v1/files/profile_pictures/{folder_name}/{file_name}`: Get a profile picture asset.
+  * GET `/v1/files/profile_pictures/list`: List available profile picture assets.
+  * GET `/v1/files/list/{flow_id}`: List files for a flow.
+  * DELETE `/v1/files/delete/{flow_id}/{file_name}`: Delete a file from a flow.
 
-- **Users**. See [Users endpoints](/api-users)
-  - POST `/v1/users/`: Add a user (superuser required when auth enabled).
-  - GET `/v1/users/whoami`: Return the current authenticated user.
-  - GET `/v1/users/`: List all users (superuser required).
-  - PATCH `/v1/users/{user_id}`: Update a user (with role checks).
-  - PATCH `/v1/users/{user_id}/reset-password`: Reset own password.
-  - DELETE `/v1/users/{user_id}`: Delete a user (cannot delete yourself).
+* **Users**. See [Users endpoints](/api-users)
+  * POST `/v1/users/`: Add a user (superuser required when auth enabled).
+  * GET `/v1/users/whoami`: Return the current authenticated user.
+  * GET `/v1/users/`: List all users (superuser required).
+  * PATCH `/v1/users/{user_id}`: Update a user (with role checks).
+  * PATCH `/v1/users/{user_id}/reset-password`: Reset own password.
+  * DELETE `/v1/users/{user_id}`: Delete a user (cannot delete yourself).
 
-- **API keys**
-  - GET `/v1/api_key/`: List API keys for the current user. See [API keys and authentication](/api-keys-and-authentication).
-  - POST `/v1/api_key/`: Create a new API key.
-  - DELETE `/v1/api_key/{api_key_id}`: Delete an API key.
-  - POST `/v1/api_key/store`: Save an encrypted Store API key (cookie set).
+* **API keys**
+  * GET `/v1/api_key/`: List API keys for the current user. See [API keys and authentication](/api-keys-and-authentication).
+  * POST `/v1/api_key/`: Create a new API key.
+  * DELETE `/v1/api_key/{api_key_id}`: Delete an API key.
+  * POST `/v1/api_key/store`: Save an encrypted Store API key (cookie set).
 
-- **Auth (login)**
-  - POST `/v1/login`: Login and set tokens as cookies.
-  - GET `/v1/auto_login`: Auto-login (if enabled) and set tokens.
-  - POST `/v1/refresh`: Refresh tokens using refresh cookie.
-  - POST `/v1/logout`: Logout and clear cookies.
+* **Auth (login)**
+  * POST `/v1/login`: Login and set tokens as cookies.
+  * GET `/v1/auto_login`: Auto-login (if enabled) and set tokens.
+  * POST `/v1/refresh`: Refresh tokens using refresh cookie.
+  * POST `/v1/logout`: Logout and clear cookies.
 
-- **Variables**
-  - POST `/v1/variables/`: Create a variable (e.g., API keys) for the user.
-  - GET `/v1/variables/`: List variables for the user.
-  - PATCH `/v1/variables/{variable_id}`: Update a variable.
-  - DELETE `/v1/variables/{variable_id}`: Delete a variable.
+* **Variables**
+  * POST `/v1/variables/`: Create a variable (e.g., API keys) for the user.
+  * GET `/v1/variables/`: List variables for the user.
+  * PATCH `/v1/variables/{variable_id}`: Update a variable.
+  * DELETE `/v1/variables/{variable_id}`: Delete a variable.
 
-- **Monitor**. See [Monitor endpoints](/api-monitor)
-  - GET `/v1/monitor/builds`: Get vertex builds for a flow.
-  - DELETE `/v1/monitor/builds`: Delete vertex builds for a flow.
-  - GET `/v1/monitor/messages/sessions`: List message session IDs (auth required).
-  - GET `/v1/monitor/messages`: List messages with optional filters.
-  - DELETE `/v1/monitor/messages`: Delete messages by IDs (auth required).
-  - PUT `/v1/monitor/messages/{message_id}`: Update a message.
-  - PATCH `/v1/monitor/messages/session/{old_session_id}`: Change a session ID for all messages in that session.
-  - DELETE `/v1/monitor/messages/session/{session_id}`: Delete messages by session.
-  - GET `/v1/monitor/transactions`: List transactions for a flow (paginated).
+* **Monitor**. See [Monitor endpoints](/api-monitor)
+  * GET `/v1/monitor/builds`: Get vertex builds for a flow.
+  * DELETE `/v1/monitor/builds`: Delete vertex builds for a flow.
+  * GET `/v1/monitor/messages/sessions`: List message session IDs (auth required).
+  * GET `/v1/monitor/messages`: List messages with optional filters.
+  * DELETE `/v1/monitor/messages`: Delete messages by IDs (auth required).
+  * PUT `/v1/monitor/messages/{message_id}`: Update a message.
+  * PATCH `/v1/monitor/messages/session/{old_session_id}`: Change a session ID for all messages in that session.
+  * DELETE `/v1/monitor/messages/session/{session_id}`: Delete messages by session.
+  * GET `/v1/monitor/transactions`: List transactions for a flow (paginated).
 
-- **Store (Components Store)**
-  - GET `/v1/store/check/`: Return whether the Store feature is enabled.
-  - GET `/v1/store/check/api_key`: Check if a Store API key exists and is valid.
-  - POST `/v1/store/components/`: Share a component to the Store.
-  - PATCH `/v1/store/components/{component_id}`: Update a shared component.
-  - GET `/v1/store/components/`: List available Store components (filters supported).
-  - GET `/v1/store/components/{component_id}`: Download a component from the Store.
-  - GET `/v1/store/tags`: List Store tags.
-  - GET `/v1/store/users/likes`: List components liked by the current user.
-  - POST `/v1/store/users/likes/{component_id}`: Like a component.
+* **Store (Components Store)**
+  * GET `/v1/store/check/`: Return whether the Store feature is enabled.
+  * GET `/v1/store/check/api_key`: Check if a Store API key exists and is valid.
+  * POST `/v1/store/components/`: Share a component to the Store.
+  * PATCH `/v1/store/components/{component_id}`: Update a shared component.
+  * GET `/v1/store/components/`: List available Store components (filters supported).
+  * GET `/v1/store/components/{component_id}`: Download a component from the Store.
+  * GET `/v1/store/tags`: List Store tags.
+  * GET `/v1/store/users/likes`: List components liked by the current user.
+  * POST `/v1/store/users/likes/{component_id}`: Like a component.
 
-- **Starter projects**
-  - GET `/v1/starter-projects/`: Return a list of starter projects.
+* **Starter projects**
+  * GET `/v1/starter-projects/`: Return a list of starter projects.
 
-- **MCP (global)**
-  - HEAD `/v1/mcp/sse`: Health check for MCP SSE.
-  - GET `/v1/mcp/sse`: Open SSE stream for MCP server events.
-  - POST `/v1/mcp/`: Post messages to the MCP server.
+* **MCP (global)**
+  * HEAD `/v1/mcp/sse`: Health check for MCP SSE.
+  * GET `/v1/mcp/sse`: Open SSE stream for MCP server events.
+  * POST `/v1/mcp/`: Post messages to the MCP server.
 
-- **MCP (project-specific)**
-  - GET `/v1/mcp/project/{project_id}`: List MCP-enabled tools and project auth settings.
-  - HEAD `/v1/mcp/project/{project_id}/sse`: Health check for project SSE.
-  - GET `/v1/mcp/project/{project_id}/sse`: Open project-scoped MCP SSE.
-  - POST `/v1/mcp/project/{project_id}`: Post messages to project MCP server.
-  - POST `/v1/mcp/project/{project_id}/` (trailing slash): Same as above.
-  - PATCH `/v1/mcp/project/{project_id}`: Update MCP settings for flows and project auth settings.
-  - POST `/v1/mcp/project/{project_id}/install`: Install MCP client config for Cursor/Windsurf/Claude (local only).
-  - GET `/v1/mcp/project/{project_id}/installed`: Check which clients have MCP config installed.
+* **MCP (project-specific)**
+  * GET `/v1/mcp/project/{project_id}`: List MCP-enabled tools and project auth settings.
+  * HEAD `/v1/mcp/project/{project_id}/sse`: Health check for project SSE.
+  * GET `/v1/mcp/project/{project_id}/sse`: Open project-scoped MCP SSE.
+  * POST `/v1/mcp/project/{project_id}`: Post messages to project MCP server.
+  * POST `/v1/mcp/project/{project_id}/` (trailing slash): Same as above.
+  * PATCH `/v1/mcp/project/{project_id}`: Update MCP settings for flows and project auth settings.
+  * POST `/v1/mcp/project/{project_id}/install`: Install MCP client config for Cursor/Windsurf/Claude (local only).
+  * GET `/v1/mcp/project/{project_id}/installed`: Check which clients have MCP config installed.
 
-- **Voice**
-  - WS `/v1/voice/ws/flow_as_tool/{flow_id}`: Bi-directional voice session exposing the flow as a tool.
-  - WS `/v1/voice/ws/flow_as_tool/{flow_id}/{session_id}`: Same as above with explicit session ID.
-  - WS `/v1/voice/ws/flow_tts/{flow_id}`: Voice-to-text session that runs a flow and returns TTS.
-  - WS `/v1/voice/ws/flow_tts/{flow_id}/{session_id}`: Same as above with explicit session ID.
-  - GET `/v1/voice/elevenlabs/voice_ids`: List available ElevenLabs voice IDs for the user.
+* **Voice**
+  * WS `/v1/voice/ws/flow_as_tool/{flow_id}`: Bi-directional voice session exposing the flow as a tool.
+  * WS `/v1/voice/ws/flow_as_tool/{flow_id}/{session_id}`: Same as above with explicit session ID.
+  * WS `/v1/voice/ws/flow_tts/{flow_id}`: Voice-to-text session that runs a flow and returns TTS.
+  * WS `/v1/voice/ws/flow_tts/{flow_id}/{session_id}`: Same as above with explicit session ID.
+  * GET `/v1/voice/elevenlabs/voice_ids`: List available ElevenLabs voice IDs for the user.
 
-- **Validate**
-  - POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
-  - POST `/v1/validate/prompt`: Validate a prompt payload.
+* **Validate**
+  * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
+  * POST `/v1/validate/prompt`: Validate a prompt payload.
 
 ### v2
 
-- **Files (v2)**. See [Files endpoints](/api-files#filesv2-endpoints)
-  - POST `/v2/files` (alias `/v2/files/`): Upload a file owned by the current user.
-  - GET `/v2/files` (alias `/v2/files/`): List files owned by the current user.
-  - DELETE `/v2/files/batch/`: Delete multiple files by IDs.
-  - POST `/v2/files/batch/`: Download multiple files as a ZIP by IDs.
-  - GET `/v2/files/{file_id}`: Download a file by ID (or return raw content internally).
-  - PUT `/v2/files/{file_id}`: Edit a file name by ID.
-  - DELETE `/v2/files/{file_id}`: Delete a file by ID.
-  - DELETE `/v2/files` (alias `/v2/files/`): Delete all files for the current user.
+* **Files (v2)**. See [Files endpoints](/api-files#filesv2-endpoints)
+  * POST `/v2/files` (alias `/v2/files/`): Upload a file owned by the current user.
+  * GET `/v2/files` (alias `/v2/files/`): List files owned by the current user.
+  * DELETE `/v2/files/batch/`: Delete multiple files by IDs.
+  * POST `/v2/files/batch/`: Download multiple files as a ZIP by IDs.
+  * GET `/v2/files/{file_id}`: Download a file by ID (or return raw content internally).
+  * PUT `/v2/files/{file_id}`: Edit a file name by ID.
+  * DELETE `/v2/files/{file_id}`: Delete a file by ID.
+  * DELETE `/v2/files` (alias `/v2/files/`): Delete all files for the current user.
 
-- **MCP (v2 servers)**
-  - GET `/v2/mcp/servers`: List configured MCP servers (optionally include tool counts with `action_count=true`).
-  - GET `/v2/mcp/servers/{server_name}`: Get a specific server configuration.
-  - POST `/v2/mcp/servers/{server_name}`: Add a new server configuration.
-  - PATCH `/v2/mcp/servers/{server_name}`: Update an existing server configuration.
-  - DELETE `/v2/mcp/servers/{server_name}`: Delete a server configuration.
+* **MCP (v2 servers)**
+  * GET `/v2/mcp/servers`: List configured MCP servers (optionally include tool counts with `action_count=true`).
+  * GET `/v2/mcp/servers/{server_name}`: Get a specific server configuration.
+  * POST `/v2/mcp/servers/{server_name}`: Add a new server configuration.
+  * PATCH `/v2/mcp/servers/{server_name}`: Update an existing server configuration.
+  * DELETE `/v2/mcp/servers/{server_name}`: Delete a server configuration.
 
 ## Next steps
 
-- Use the Langflow API to [run a flow](/api-flows-run).
-- Use the Langflow API to [upload files](/api-files).
-- Use the Langflow API to [get flow logs](/api-logs).
-- Explore all endpoints in the [Langflow API specification](/api).
+* Use the Langflow API to [run a flow](/api-flows-run).
+* Use the Langflow API to [upload files](/api-files).
+* Use the Langflow API to [get flow logs](/api-logs).
+* Explore all endpoints in the [Langflow API specification](/api).
