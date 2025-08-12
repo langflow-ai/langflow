@@ -141,7 +141,7 @@ async def test_openai_responses_non_streaming(client: AsyncClient, created_api_k
         # Validate the response
         assert "id" in data
         assert "output" in data
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("Exception parsing response")
         pytest.fail(f"Failed to parse response: {exc}")
 

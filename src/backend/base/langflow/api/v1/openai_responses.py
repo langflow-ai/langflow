@@ -72,9 +72,9 @@ async def run_flow_for_openai_responses(
         tweaks={},  # Empty tweaks, using context instead
         session_id=session_id,
     )
-    
+
     # Context will be passed separately to simple_run_flow
-    
+
     logger.debug(f"SimplifiedAPIRequest created with context: {context}")
 
     # Use session_id as response_id for OpenAI compatibility
@@ -441,21 +441,23 @@ async def create_response(
     # Extract global variables from X-LANGFLOW-GLOBAL-VAR-* headers
     variables = {}
     header_prefix = "x-langflow-global-var-"
-    
+
     logger.debug(f"All headers received: {list(http_request.headers.keys())}")
     logger.debug(f"Looking for headers starting with: {header_prefix}")
-    
+
     for header_name, header_value in http_request.headers.items():
         header_lower = header_name.lower()
         logger.debug(f"Checking header: '{header_lower}' (original: '{header_name}')")
         if header_lower.startswith(header_prefix):
             # Extract variable name from header (remove prefix) and convert to uppercase
-            var_name_lower = header_lower[len(header_prefix):]
+            var_name_lower = header_lower[len(header_prefix) :]
             var_name = var_name_lower.upper()  # Default to uppercase
-            
+
             variables[var_name] = header_value
-            logger.debug(f"Found global variable: {var_name} = {header_value} (converted to uppercase from header: {header_name})")
-    
+            logger.debug(
+                f"Found global variable: {var_name} = {header_value} (converted to uppercase from header: {header_name})"
+            )
+
     logger.debug(f"Extracted global variables from headers: {list(variables.keys())}")
     logger.debug(f"Variables dict: {variables}")
 
