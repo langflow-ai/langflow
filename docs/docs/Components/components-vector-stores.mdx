@@ -61,14 +61,14 @@ In the **File** component, select one or more files, and then click <Icon name="
     The **Retriever** subflow generates an embedding from chat input, runs a vector search to retrieve similar content from your vector store, parses the search results into supplemental context for the LLM, and then uses the LLM to generate a natural language response to your query.
     The LLM uses the vector search results along with its internal training data and tools, such as basic web search and datetime information, to produce the response.
 
+    ![Retrieval from a vector store](/img/vector-store-retrieval.png)
+
     To avoid passing the entire block of raw search results to the LLM, the **Parser** component extracts `text` strings from the search results `Data` object, and then passes them to the **Prompt Template** component in `Message` format.
     From there, the strings and other template content are compiled into natural language instructions for the LLM.
 
     You can use other components for this transformation, such as the **Data Operations** component, depending on how you want to use the search results.
 
     To view the raw search results, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** on the **Vector Store** component after running the **Retriever** subflow.
-
-    ![Retrieval from a vector store](/img/vector-store-retrieval.png)
 
 ## Hidden and conditional parameters
 
@@ -77,175 +77,19 @@ You can inspect a **Vector Store** component's parameters to learn more about th
 Many input parameters for **Vector Store** components are hidden by default in the visual editor.
 You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in each [component's header menu](/concepts-components#component-menus).
 
-Some parameters are conditional, and they only become available after you set other parameters or select specific options for other parameters.
+Some parameters are conditional, and they are only available after you set other parameters or select specific options for other parameters.
 Conditional parameters may not be visible on the **Controls** pane until you set the required dependencies.
-However, all parameters are listed in the [component's code](/concepts-components#component-code).
+However, all parameters are always listed in a [component's code](/concepts-components#component-code).
 
-For information about a specific provider's parameters, see the provider's documentation and the component details.
+For information about a specific component's parameters, see the provider's documentation and the component details.
 
-## Astra DB
+## Apache Cassandra
 
-This component implements an [Astra DB Serverless vector store](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html) with search capabilities.
+The **Cassandra** and **Cassandra Graph** components can be used with Cassandra clusters, including Astra DB.
 
-<details>
-<summary>Parameters</summary>
+### Cassandra
 
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| token | Astra DB Application Token | An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. |
-| environment | Environment | The environment for the Astra DB API Endpoint. For example, `dev` or `prod`. |
-| database_name | Database | The name of the database that you want this component to connect to, or select **New Database** to create a new database. To create a new database, you must provide the database details, and then wait for the database to initialize. |
-| api_endpoint | Astra DB API Endpoint | The API endpoint for the Astra DB instance. This supersedes the database selection. |
-| collection_name | Collection | The name of the collection that you want to use with this flow, or click **New Collection** to create a new collection. |
-| keyspace | Keyspace | An optional keyspace within Astra DB to use for the collection. |
-| embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra vectorize. If the collection has a vectorize integration, **Astra Vectorize** can be selected automatically. |
-| embedding_model | Embedding Model | Specify the embedding model. Not required if the embedding choice is **Astra Vectorize** because the component automatically uses the integrated model. |
-| number_of_results | Number of Search Results | The number of search results to return. Default:`4`. |
-| search_type | Search Type | The search type to use. The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
-| search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
-| advanced_search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
-| autodetect_collection | Autodetect Collection | Boolean flag to determine whether to autodetect the collection. |
-| content_field | Content Field | A field to use as the text content field for the vector store. |
-| deletion_field | Deletion Based On Field | When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new data is loaded. |
-| ignore_invalid_documents | Ignore Invalid Documents | Boolean flag to determine whether to ignore invalid documents at runtime. |
-| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | An optional dictionary of additional parameters for the AstraDBVectorStore. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| vector_store | Vector Store | The Astra DB vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
-
-</details>
-
-### Generate embeddings
-
-The **Astra DB** component offers two methods for generating embeddings.
-
-* ***Embedding Model**: Use your own embedding model by connecting an [**Embedding Model** component](/components-embedding-models) in Langflow.
-
-* **Astra Vectorize**: Use Astra DB's built-in embedding generation service. When creating a new collection, choose the embeddings provider and models, including NVIDIA's `NV-Embed-QA` model hosted by DataStax.
-For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
-
-    :::important
-    With vectorize, the embedding model you choose when you create a collection cannot be changed later.
-    :::
-
-For an example of using the **Astra DB** component with an embedding model, see the **Vector Store RAG** template.
-
-### Hybrid search
-
-The **Astra DB** component includes Astra DB's [hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) feature through the Astra DB Data API.
-
-Hybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
-
-To use hybrid search through the **Astra DB** component, you must [create a collection with that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid).
-
-The following **Astra DB** component parameters are used for hybrid search:
-
-* **Search Query**: The query to use for vector search.
-* **Lexical Terms**: A comma-separated string of keywords, like `features, data, attributes, characteristics`.
-* **Reranker**: The re-ranker model to use for hybrid search, such as `nvidia/llama-3.2-nv.reranker`.
-
-<details>
-<summary>Hybrid search example</summary>
-
-To use hybrid search through the **Astra DB** component, do the following:
-
-1. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
-2. In the **Language Model** components, add your OpenAI API key.
-3. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
-4. Configure the **Astra DB** vector store component:
-
-    1. Enter your Astra DB application token.
-    2. In the **Database** field, select your database.
-    3. In the **Collection** field, select or create a collection with hybrid search capabilities enabled.
-
-5. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
-
-6. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
-
-    ```text
-    You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
-    You should convert the query into:
-    1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
-    2. A question to use as the basis for a QA embedding engine.
-    Avoid common keywords associated with the user's subject matter.
-    ```
-
-7. Click **Finish Editing**, and then click **Close** to save your changes to the component.
-
-8. Open the **Playground**, and then enter a natural language question that you would ask about your database.
-
-    In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
-
-    * The input sent directly to the **Astra DB** component's **Search Query** port is used as a string for similarity search.
-    An embedding is generated from the query string using the collection's Astra DB vectorize integration.
-
-    * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract comma-separated `keywords` used for the lexical search portion of the hybrid search.
-
-    The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
-    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
-    Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
-
-9. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
-This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
-
-    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
-    The following example is based on the aforementioned instructions for keyword extraction:
-
-        ```
-        1. Keywords: features, data, attributes, characteristics
-        2. Question: What characteristics can be identified in my data?
-        ```
-
-    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
-
-    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
-
-</details>
-
-## Astra DB Graph
-
-This component implements a vector store using Astra DB with graph capabilities.
-For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| collection_name | Collection Name | The name of the collection within Astra DB where the vectors are stored. Required. |
-| token | Astra DB Application Token | Authentication token for accessing Astra DB. Required. |
-| api_endpoint | API Endpoint | API endpoint URL for the Astra DB service. Required. |
-| search_input | Search Input | Query string for similarity search. |
-| ingest_data | Ingest Data | Data to be ingested into the vector store. |
-| keyspace | Keyspace | Optional keyspace within Astra DB to use for the collection. |
-| embedding | Embedding Model | Embedding model to use. |
-| metric | Metric | Distance metric for vector comparisons. The options are "cosine", "euclidean", "dot_product". |
-| setup_mode | Setup Mode | Configuration mode for setting up the vector store. The options are "Sync", "Async", "Off". |
-| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one. |
-| number_of_results | Number of Results | Number of results to return in similarity search. Default: 4. |
-| search_type | Search Type | Search type to use. The options are "Similarity", "Graph Traversal", "Hybrid". |
-| traversal_depth | Traversal Depth | Maximum depth for graph traversal searches. Default: 1. |
-| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results. |
-| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| vector_store | Vector Store | The Graph RAG vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
-
-</details>
-
-## Cassandra
+This component connects to any Cassandra cluster, including Astra DB.
 
 This component creates a Cassandra vector store with search capabilities.
 For more information, see the [Cassandra documentation](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html).
@@ -285,9 +129,11 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 
 </details>
 
-## Cassandra Graph
+### Cassandra Graph
 
 This component implements a Cassandra Graph vector store with search capabilities.
+
+It supports any Cassandra cluster, including Astra DB.
 
 <details>
 <summary>Parameters</summary>
@@ -451,6 +297,247 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 
 </details>
 
+## DataStax
+
+The following components support DataStax vector stores.
+
+### Astra DB
+
+This component implements an [Astra DB Serverless vector store](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html) with search capabilities.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| token | Astra DB Application Token | An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. |
+| environment | Environment | The environment for the Astra DB API Endpoint. For example, `dev` or `prod`. |
+| database_name | Database | The name of the database that you want this component to connect to, or select **New Database** to create a new database. To create a new database, you must provide the database details, and then wait for the database to initialize. |
+| api_endpoint | Astra DB API Endpoint | The API endpoint for the Astra DB instance. This supersedes the database selection. |
+| collection_name | Collection | The name of the collection that you want to use with this flow, or click **New Collection** to create a new collection. |
+| keyspace | Keyspace | An optional keyspace within Astra DB to use for the collection. |
+| embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra vectorize. If the collection has a vectorize integration, **Astra Vectorize** can be selected automatically. |
+| embedding_model | Embedding Model | Specify the embedding model. Not required if the embedding choice is **Astra Vectorize** because the component automatically uses the integrated model. |
+| number_of_results | Number of Search Results | The number of search results to return. Default:`4`. |
+| search_type | Search Type | The search type to use. The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
+| search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
+| advanced_search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
+| autodetect_collection | Autodetect Collection | Boolean flag to determine whether to autodetect the collection. |
+| content_field | Content Field | A field to use as the text content field for the vector store. |
+| deletion_field | Deletion Based On Field | When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new data is loaded. |
+| ignore_invalid_documents | Ignore Invalid Documents | Boolean flag to determine whether to ignore invalid documents at runtime. |
+| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | An optional dictionary of additional parameters for the AstraDBVectorStore. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | The Astra DB vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
+
+</details>
+
+#### Generate embeddings
+
+The **Astra DB** component offers two methods for generating embeddings.
+
+* ***Embedding Model**: Use your own embedding model by connecting an [**Embedding Model** component](/components-embedding-models) in Langflow.
+
+* **Astra Vectorize**: Use Astra DB's built-in embedding generation service. When creating a new collection, choose the embeddings provider and models, including NVIDIA's `NV-Embed-QA` model hosted by DataStax.
+For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+
+    :::important
+    With vectorize, the embedding model you choose when you create a collection cannot be changed later.
+    :::
+
+For an example of using the **Astra DB** component with an embedding model, see the **Vector Store RAG** template.
+
+#### Hybrid search
+
+The **Astra DB** component includes Astra DB's [hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) feature through the Astra DB Data API.
+
+Hybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
+
+To use hybrid search through the **Astra DB** component, you must [create a collection with that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid).
+
+The following **Astra DB** component parameters are used for hybrid search:
+
+* **Search Query**: The query to use for vector search.
+* **Lexical Terms**: A comma-separated string of keywords, like `features, data, attributes, characteristics`.
+* **Reranker**: The re-ranker model to use for hybrid search, such as `nvidia/llama-3.2-nv.reranker`.
+
+<details>
+<summary>Hybrid search example</summary>
+
+To use hybrid search through the **Astra DB** component, do the following:
+
+1. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
+2. In the **Language Model** components, add your OpenAI API key.
+3. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
+4. Configure the **Astra DB** vector store component:
+
+    1. Enter your Astra DB application token.
+    2. In the **Database** field, select your database.
+    3. In the **Collection** field, select or create a collection with hybrid search capabilities enabled.
+
+5. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
+
+6. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
+
+    ```text
+    You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
+    You should convert the query into:
+    1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
+    2. A question to use as the basis for a QA embedding engine.
+    Avoid common keywords associated with the user's subject matter.
+    ```
+
+7. Click **Finish Editing**, and then click **Close** to save your changes to the component.
+
+8. Open the **Playground**, and then enter a natural language question that you would ask about your database.
+
+    In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
+
+    * The input sent directly to the **Astra DB** component's **Search Query** port is used as a string for similarity search.
+    An embedding is generated from the query string using the collection's Astra DB vectorize integration.
+
+    * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract comma-separated `keywords` used for the lexical search portion of the hybrid search.
+
+    The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
+    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
+    Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
+
+9. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
+This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
+
+    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
+    The following example is based on the aforementioned instructions for keyword extraction:
+
+        ```
+        1. Keywords: features, data, attributes, characteristics
+        2. Question: What characteristics can be identified in my data?
+        ```
+
+    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
+
+    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
+
+</details>
+
+### Astra DB Graph
+
+This component implements a vector store using Astra DB with graph capabilities.
+For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| collection_name | Collection Name | The name of the collection within Astra DB where the vectors are stored. Required. |
+| token | Astra DB Application Token | Authentication token for accessing Astra DB. Required. |
+| api_endpoint | API Endpoint | API endpoint URL for the Astra DB service. Required. |
+| search_input | Search Input | Query string for similarity search. |
+| ingest_data | Ingest Data | Data to be ingested into the vector store. |
+| keyspace | Keyspace | Optional keyspace within Astra DB to use for the collection. |
+| embedding | Embedding Model | Embedding model to use. |
+| metric | Metric | Distance metric for vector comparisons. The options are "cosine", "euclidean", "dot_product". |
+| setup_mode | Setup Mode | Configuration mode for setting up the vector store. The options are "Sync", "Async", "Off". |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one. |
+| number_of_results | Number of Results | Number of results to return in similarity search. Default: 4. |
+| search_type | Search Type | Search type to use. The options are "Similarity", "Graph Traversal", "Hybrid". |
+| traversal_depth | Traversal Depth | Maximum depth for graph traversal searches. Default: 1. |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results. |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | The Graph RAG vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
+
+</details>
+
+### Graph RAG
+
+The **Graph RAG** component uses [DataStax Graph RAG](https://datastax.github.io/graph-rag/) for Graph RAG traversal and graph-based document retrieval in an Astra DB vector store.
+
+:::tip
+This component only works with the **Astra DB** vector store component because it uses a `VectorStore` port to connect to the database.
+Consider using the **Astra DB Graph** component instead.
+:::
+
+#### Graph RAG parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_model | Embedding Model | Input parameter. Specify the embedding model to use.
+Not required if the attached vector store has an [Astra DB vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
+| vector_store | Vector Store Connection | Input parameter. Connection to the vector store through a `VectorStore` port connected to a component that produces `VectorStore` output.|
+| edge_definition | Edge Definition | Input parameter. [Edge definition](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/) for the graph traversal. |
+| strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
+| search_query | Search Query | Input parameter. The query to search for in the vector store. |
+| graphrag_strategy_kwargs | Strategy Parameters | Input parameter. Optional dictionary of additional parameters for the [retrieval strategy](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
+| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`Data`](/data-types#data) objects or as a tabular [`DataFrame`](/data-types#dataframe). You can set the desired output type near the component's output port. |
+
+### Hyper-Converged Database (HCD)
+
+This component implements a vector store using HCD.
+
+To use the HCD vector store, add your deployment's collection name, username, password, and HCD Data API endpoint.
+The endpoint must be formatted like `http[s]://**DOMAIN_NAME** or **IP_ADDRESS**[:port]`, for example, `http://192.0.2.250:8181`.
+
+Replace **DOMAIN_NAME** or **IP_ADDRESS** with the domain name or IP address of your HCD Data API connection.
+
+To use the HCD vector store for embeddings ingestion, connect it to an embeddings model and a file loader.
+
+![HCD vector store embeddings ingestion](/img/component-hcd-example-flow.png)
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| collection_name | Collection Name | The name of the collection within HCD where the vectors will be stored. Required. |
+| username | HCD Username | Authentication username for accessing HCD. Default is "hcd-superuser". Required. |
+| password | HCD Password | Authentication password for accessing HCD. Required. |
+| api_endpoint | HCD API Endpoint | API endpoint URL for the HCD service. Required. |
+| search_input | Search Input | Query string for similarity search. |
+| ingest_data | Ingest Data | Data to be ingested into the vector store. |
+| namespace | Namespace | Optional namespace within HCD to use for the collection. Default is "default_namespace". |
+| ca_certificate | CA Certificate | Optional CA certificate for TLS connections to HCD. |
+| metric | Metric | Optional distance metric for vector comparisons. Options are "cosine", "dot_product", "euclidean". |
+| batch_size | Batch Size | Optional number of data to process in a single batch. |
+| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Optional concurrency level for bulk insert operations. |
+| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Optional concurrency level for bulk insert operations that overwrite existing data. |
+| bulk_delete_concurrency | Bulk Delete Concurrency | Optional concurrency level for bulk delete operations. |
+| setup_mode | Setup Mode | Configuration mode for setting up the vector store. Options are "Sync", "Async", "Off". Default is "Sync". |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one. |
+| metadata_indexing_include | Metadata Indexing Include | Optional list of metadata fields to include in the indexing. |
+| embedding | Embedding or Astra Vectorize | Allows either an embedding model or an Astra Vectorize configuration. |
+| metadata_indexing_exclude | Metadata Indexing Exclude | Optional list of metadata fields to exclude from the indexing. |
+| collection_indexing_policy | Collection Indexing Policy | Optional dictionary defining the indexing policy for the collection. |
+| number_of_results | Number of Results | Number of results to return in similarity search. Default is 4. |
+| search_type | Search Type | Search type to use. Options are "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)". Default is "Similarity". |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results. Default is 0. |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
+
+**Outputs**
+
+| Name          | Type         | Description                               |
+|---------------|--------------|-------------------------------------------|
+| vector_store  | HyperConvergedDatabaseVectorStore | The HCD vector store instance. |
+| search_results| List[Data]   | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
+
+</details>
+
 ## Elasticsearch
 
 This component creates an Elasticsearch vector store with search capabilities.
@@ -509,79 +596,6 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 |------|--------------|------|
 | vector_store | Vector Store | The FAISS vector store instance configured with the specified parameters. |
 | search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
-
-</details>
-
-
-## Graph RAG
-
-The **Graph RAG** component uses [DataStax Graph RAG](https://datastax.github.io/graph-rag/) for Graph RAG traversal, enabling graph-based document retrieval.
-
-This component must be used with a component that produces `VectorStore` output, specifically the **Astra DB** and **OpenSearch** vector store components.
-
-#### Graph RAG parameters
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embedding_model | Embedding Model | Input parameter. Specify the embedding model to use.
-Not required if the attached vector store has an [Astra DB vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
-| vector_store | Vector Store Connection | Input parameter. Connection to the vector store through a `VectorStore` port connected to a component that produces `VectorStore` output.|
-| edge_definition | Edge Definition | Input parameter. [Edge definition](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/) for the graph traversal. |
-| strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
-| search_query | Search Query | Input parameter. The query to search for in the vector store. |
-| graphrag_strategy_kwargs | Strategy Parameters | Input parameter. Optional dictionary of additional parameters for the [retrieval strategy](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
-| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`Data`](/data-types#data) objects or as a tabular [`DataFrame`](/data-types#dataframe). You can set the desired output type near the component's output port. |
-
-## Hyper-Converged Database (HCD)
-
-This component implements a vector store using HCD.
-
-To use the HCD vector store, add your deployment's collection name, username, password, and HCD Data API endpoint.
-The endpoint must be formatted like `http[s]://**DOMAIN_NAME** or **IP_ADDRESS**[:port]`, for example, `http://192.0.2.250:8181`.
-
-Replace **DOMAIN_NAME** or **IP_ADDRESS** with the domain name or IP address of your HCD Data API connection.
-
-To use the HCD vector store for embeddings ingestion, connect it to an embeddings model and a file loader.
-
-![HCD vector store embeddings ingestion](/img/component-hcd-example-flow.png)
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| collection_name | Collection Name | The name of the collection within HCD where the vectors will be stored. Required. |
-| username | HCD Username | Authentication username for accessing HCD. Default is "hcd-superuser". Required. |
-| password | HCD Password | Authentication password for accessing HCD. Required. |
-| api_endpoint | HCD API Endpoint | API endpoint URL for the HCD service. Required. |
-| search_input | Search Input | Query string for similarity search. |
-| ingest_data | Ingest Data | Data to be ingested into the vector store. |
-| namespace | Namespace | Optional namespace within HCD to use for the collection. Default is "default_namespace". |
-| ca_certificate | CA Certificate | Optional CA certificate for TLS connections to HCD. |
-| metric | Metric | Optional distance metric for vector comparisons. Options are "cosine", "dot_product", "euclidean". |
-| batch_size | Batch Size | Optional number of data to process in a single batch. |
-| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Optional concurrency level for bulk insert operations. |
-| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Optional concurrency level for bulk insert operations that overwrite existing data. |
-| bulk_delete_concurrency | Bulk Delete Concurrency | Optional concurrency level for bulk delete operations. |
-| setup_mode | Setup Mode | Configuration mode for setting up the vector store. Options are "Sync", "Async", "Off". Default is "Sync". |
-| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one. |
-| metadata_indexing_include | Metadata Indexing Include | Optional list of metadata fields to include in the indexing. |
-| embedding | Embedding or Astra Vectorize | Allows either an embedding model or an Astra Vectorize configuration. |
-| metadata_indexing_exclude | Metadata Indexing Exclude | Optional list of metadata fields to exclude from the indexing. |
-| collection_indexing_policy | Collection Indexing Policy | Optional dictionary defining the indexing policy for the collection. |
-| number_of_results | Number of Results | Number of results to return in similarity search. Default is 4. |
-| search_type | Search Type | Search type to use. Options are "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)". Default is "Similarity". |
-| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results. Default is 0. |
-| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
-
-**Outputs**
-
-| Name          | Type         | Description                               |
-|---------------|--------------|-------------------------------------------|
-| vector_store  | HyperConvergedDatabaseVectorStore | The HCD vector store instance. |
-| search_results| List[Data]   | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
 
 </details>
 
@@ -922,10 +936,14 @@ For more information, see the [Upstash documentation](https://upstash.com/docs/i
 
 </details>
 
-## Vectara
+## Vectara Platform
 
-This component creates a Vectara vector store with search capabilities.
+The **Vectara** and **Vectara RAG** components support Vectara vector store, search, and RAG functionality.
 For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
+
+### Vectara
+
+The **Vectara** component creates a Vectara vector store with search capabilities.
 
 <details>
 <summary>Parameters</summary>
@@ -951,7 +969,7 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 
 </details>
 
-## Vectara RAG
+### Vectara RAG
 
 This component enabled Vectara's full end-to-end RAG capabilities with reranking options.
 For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
