@@ -255,5 +255,11 @@ class TraceloopTracer(BaseTracer):
         if not self.ready:
             return None
 
-
-# Made with Bob
+    def __del__(self):
+        """Ensure proper cleanup of Traceloop resources."""
+        try:
+            if hasattr(self, "_tracer") and self._tracer and hasattr(self._tracer, "force_flush"):
+                # Flush pending traces with timeout
+                self._tracer.force_flush(timeout_millis=3000)
+        except (ValueError, RuntimeError, OSError) as e:
+            logger.warning(f"Error during Traceloop cleanup: {e}")
