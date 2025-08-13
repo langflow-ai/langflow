@@ -198,11 +198,18 @@ async def async_client() -> AsyncGenerator:
 
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-    SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    try:
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            yield session
+    finally:
+        SQLModel.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest.fixture

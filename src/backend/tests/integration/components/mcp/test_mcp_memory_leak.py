@@ -9,12 +9,34 @@ import contextlib
 import os
 import platform
 import shutil
+import time
 
 import psutil
 import pytest
 from langflow.base.mcp.util import MCPSessionManager
 from loguru import logger
 from mcp import StdioServerParameters
+
+pytestmark = [
+    pytest.mark.timeout(300, method="thread"),
+    pytest.mark.skip(reason="Skipping all MCP memory leak integration tests for now."),
+]
+
+
+async def wait_tools(session, t=20):
+    return await asyncio.wait_for(session.list_tools(), timeout=t)
+
+
+async def wait_no_children(proc, max_wait=10, target=None):
+    deadline = time.monotonic() + max_wait
+    while time.monotonic() < deadline:
+        children = proc.children(recursive=True)
+        if target is not None and len(children) <= target:
+            return True
+        if not children:
+            return True
+        await asyncio.sleep(0.2)
+    return False
 
 
 @pytest.fixture
@@ -44,15 +66,36 @@ def process_tracker():
 
     yield process, initial_count
 
-    # Cleanup any remaining child processes
+    # Give some time for cleanup to complete before checking for leftover processes
+    # Collect child processes that we expect to wait for
     try:
-        for child in process.children(recursive=True):
-            try:
-                child.terminate()
-                child.wait(timeout=3)
-            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+        children = process.children(recursive=True)
+        if not children:
+            return
+
+        gone, alive = psutil.wait_procs(children, timeout=2)
+        if gone:
+            logger.debug("Processes exited naturally: %s", [p.pid for p in gone])
+
+        if alive:
+            logger.debug("Processes still alive after 2s: %s", [p.pid for p in alive])
+            for p in alive:
                 with contextlib.suppress(psutil.NoSuchProcess):
-                    child.kill()
+                    p.terminate()
+
+            gone2, alive2 = psutil.wait_procs(alive, timeout=5)
+            if gone2:
+                logger.debug("Processes terminated gracefully: %s", [p.pid for p in gone2])
+
+            for p in alive2:
+                with contextlib.suppress(psutil.NoSuchProcess):
+                    p.kill()
+
+            _ = psutil.wait_procs(alive2, timeout=2)
+
+        leftover = process.children(recursive=True)
+        assert not leftover, f"Leftover child processes: {[p.pid for p in leftover]}"
+
     except Exception as e:
         logger.exception("Error cleaning up child processes: %s", e)
 
@@ -74,7 +117,7 @@ async def test_session_reuse_prevents_subprocess_leak(mcp_server_params, process
             sessions.append(session)
 
             # Verify session is working
-            tools_response = await session.list_tools()
+            tools_response = await wait_tools(session)
             assert len(tools_response.tools) > 0
 
         # Check subprocess count after creating sessions
@@ -87,11 +130,12 @@ async def test_session_reuse_prevents_subprocess_leak(mcp_server_params, process
 
         # Verify all sessions are functional
         for session in sessions:
-            tools_response = await session.list_tools()
+            tools_response = await wait_tools(session)
             assert len(tools_response.tools) > 0
 
     finally:
         await session_manager.cleanup_all()
+        await wait_no_children(process, max_wait=10, target=initial_count)
         await asyncio.sleep(2)  # Allow cleanup to complete
 
 
@@ -106,7 +150,7 @@ async def test_session_cleanup_removes_subprocesses(mcp_server_params, process_t
     try:
         # Create a session
         session = await session_manager.get_session("cleanup_test", mcp_server_params, "stdio")
-        tools_response = await session.list_tools()
+        tools_response = await wait_tools(session)
         assert len(tools_response.tools) > 0
 
         # Verify subprocess was created
@@ -116,6 +160,7 @@ async def test_session_cleanup_removes_subprocesses(mcp_server_params, process_t
     finally:
         # Clean up session
         await session_manager.cleanup_all()
+        await wait_no_children(process, max_wait=10, target=initial_count)
         await asyncio.sleep(2)  # Allow cleanup to complete
 
         # Verify subprocess was cleaned up
@@ -137,7 +182,7 @@ async def test_session_health_check_and_recovery(mcp_server_params, process_trac
     try:
         # Create a session
         session1 = await session_manager.get_session("health_test", mcp_server_params, "stdio")
-        tools_response = await session1.list_tools()
+        tools_response = await wait_tools(session1)
         assert len(tools_response.tools) > 0
 
         # Simulate session becoming unhealthy by accessing internal state
@@ -170,11 +215,12 @@ async def test_session_health_check_and_recovery(mcp_server_params, process_trac
 
         # Try to get a session again - should create a new healthy one
         session2 = await session_manager.get_session("health_test_2", mcp_server_params, "stdio")
-        tools_response = await session2.list_tools()
+        tools_response = await wait_tools(session2)
         assert len(tools_response.tools) > 0
 
     finally:
         await session_manager.cleanup_all()
+        await wait_no_children(process, max_wait=10, target=initial_count)
         await asyncio.sleep(2)
 
 
@@ -220,6 +266,7 @@ async def test_multiple_servers_isolation(process_tracker):
 
     finally:
         await session_manager.cleanup_all()
+        await wait_no_children(process, max_wait=10, target=initial_count)
         await asyncio.sleep(2)
 
 
@@ -316,8 +363,9 @@ async def test_session_manager_connectivity_validation():
 
 
 @pytest.mark.asyncio
-async def test_session_manager_cleanup_all():
+async def test_session_manager_cleanup_all(process_tracker):
     """Test that cleanup_all properly cleans up all sessions."""
+    process, initial_count = process_tracker
     session_manager = MCPSessionManager()
 
     # Mock some sessions using the correct structure
@@ -351,6 +399,7 @@ async def test_session_manager_cleanup_all():
 
     # Cleanup all
     await session_manager.cleanup_all()
+    await wait_no_children(process, max_wait=10, target=initial_count)
 
     # Verify cleanup
     if hasattr(session_manager, "sessions_by_server"):

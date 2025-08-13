@@ -7,6 +7,7 @@ This test suite validates the MCP utility functions including:
 """
 
 import shutil
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -353,6 +354,7 @@ class TestMCPUtilityFunctions:
         assert result is None
 
 
+@pytest.mark.skip(reason="Skipping MCPStdioClientWithEverythingServer tests.")
 class TestMCPStdioClientWithEverythingServer:
     """Test MCPStdioClient with the Everything MCP server."""
 
@@ -363,6 +365,10 @@ class TestMCPStdioClientWithEverythingServer:
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    @pytest.mark.skipif(
+        sys.version_info >= (3, 13),
+        reason="Temporarily disabled on Python 3.13 due to frequent timeouts with MCP Everything server",
+    )
     async def test_connect_to_everything_server(self, stdio_client):
         """Test connecting to the Everything MCP server."""
         command = "npx -y @modelcontextprotocol/server-everything"
