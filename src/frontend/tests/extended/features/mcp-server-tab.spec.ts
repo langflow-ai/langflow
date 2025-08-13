@@ -85,12 +85,37 @@ test(
           await page.waitForTimeout(1000);
         }
 
+        // Verify if the state is maintained
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+
+        await page.waitForTimeout(1000);
+
+        await page.reload();
+
+        // Navigate to MCP server tab
+        await page.getByTestId("mcp-btn").click({ timeout: 10000 });
+
+        // Verify MCP server tab is visible
+        await expect(page.getByTestId("mcp-server-title")).toBeVisible();
+        await expect(page.getByText("Flows/Tools")).toBeVisible();
+
+        // Click on Edit Tools button
+        await page.getByTestId("button_open_actions").click();
+        await page.waitForTimeout(500);
+
+        // Verify actions modal is open
+        await expect(page.getByText("MCP Server Tools")).toBeVisible();
+
         const isCheckedAgainAgain = await page
           .locator('input[data-ref="eInput"]')
           .first()
           .isChecked();
 
-        expect(isCheckedAgainAgain).toBeFalsy();
+        expect(isCheckedAgainAgain).toBeTruthy();
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+        await page.waitForTimeout(1000);
 
         // Select first action
         let element = page.locator('input[data-ref="eInput"]').last();
