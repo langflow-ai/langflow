@@ -224,7 +224,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             separator=" ",
             show=False,
             value="",
-            advanced=True,
         ),
         IntInput(
             name="number_of_results",
@@ -828,13 +827,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["search_method"]["options"] = ["Vector Search"]
             build_config["search_method"]["value"] = "Vector Search"
 
-        # Set reranker and lexical terms options based on search method
-        build_config["reranker"]["toggle_value"] = True
-        build_config["reranker"]["show"] = build_config["search_method"]["value"] == "Hybrid Search"
-        build_config["reranker"]["toggle_disable"] = build_config["search_method"]["value"] == "Hybrid Search"
-        if build_config["reranker"]["show"]:
-            build_config["search_type"]["value"] = "Similarity"
-
         return build_config
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
@@ -892,6 +884,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["lexical_terms"]["value"] = "" if is_vector_search else build_config["lexical_terms"]["value"]
 
             # Disable reranker disabling if hybrid search is selected
+            build_config["reranker"]["show"] = not is_vector_search
             build_config["reranker"]["toggle_disable"] = not is_vector_search
             build_config["reranker"]["toggle_value"] = True
             build_config["reranker"]["value"] = build_config["reranker"]["options"][0]
@@ -1077,8 +1070,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         lex_enabled = col_options.lexical and col_options.lexical.enabled
         user_hyb_enabled = build_config["search_method"]["value"] == "Hybrid Search"
 
-        # Show lexical terms if the collection is hybrid enabled
-        build_config["lexical_terms"]["show"] = hyb_enabled and lex_enabled and user_hyb_enabled
+        # Show the reranker option if hybrid search is enabled
+        build_config["reranker"]["show"] = hyb_enabled and user_hyb_enabled
+        build_config["reranker"]["toggle_value"] = hyb_enabled and user_hyb_enabled
+        build_config["reranker"]["toggle_disable"] = hyb_enabled and user_hyb_enabled
+
+        # If hybrid search is enabled, set the search type to "Similarity"
+        build_config["search_type"]["value"] = (
+            "Similarity" if hyb_enabled and user_hyb_enabled else build_config["search_type"]["value"]
+        )
+
+        # Show the lexical terms option if lexical search is enabled
+        build_config["lexical_terms"]["show"] = lex_enabled
 
         return build_config
 
