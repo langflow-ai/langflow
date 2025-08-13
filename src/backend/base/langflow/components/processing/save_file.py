@@ -13,6 +13,7 @@ from langflow.io import DropdownInput, HandleInput, SecretStrInput, StrInput
 from langflow.schema import Data, DataFrame, Message
 from langflow.services.auth.utils import create_user_longterm_token, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
 from langflow.template.field.base import Output
 
@@ -147,16 +148,22 @@ class SaveToFileComponent(Component):
             async for db in get_session():
                 # TODO: In 1.6, this may need to be removed or adjusted
                 # Try to get the super user token, if possible
+                current_user: User | None = None
                 if self.api_key:
                     current_user = await get_current_user(
-                        token=None,
+                        token="",
                         query_param=self.api_key,
-                        header_param=None,
+                        header_param="",
                         db=db,
                     )
                 else:
                     user_id, _ = await create_user_longterm_token(db)
                     current_user = await get_user_by_id(db, user_id)
+
+                # Fail if the user is not found
+                if not current_user:
+                    msg = "User not found. Please provide a valid API key or ensure the user exists."
+                    raise ValueError(msg)
 
                 await upload_user_file(
                     file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
