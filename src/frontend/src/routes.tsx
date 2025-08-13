@@ -26,6 +26,7 @@ import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
+import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
@@ -82,7 +83,17 @@ const router = createBrowserRouter(
                     element={<CustomNavigate replace to={"flows"} />}
                   />
                   {ENABLE_FILE_MANAGEMENT && (
-                    <Route path="files" element={<FilesPage />} />
+                    <Route path="assets">
+                      <Route
+                        index
+                        element={<CustomNavigate replace to="files" />}
+                      />
+                      <Route path="files" element={<FilesPage />} />
+                      <Route
+                        path="knowledge-bases"
+                        element={<KnowledgePage />}
+                      />
+                    </Route>
                   )}
                   <Route
                     path="flows/"
