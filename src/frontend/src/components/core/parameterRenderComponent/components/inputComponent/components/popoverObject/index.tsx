@@ -42,7 +42,7 @@ const CustomInputPopoverObject = ({
   showOptions,
 }) => {
   const [cursor, setCursor] = useState<number | null>(null);
-  
+
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
