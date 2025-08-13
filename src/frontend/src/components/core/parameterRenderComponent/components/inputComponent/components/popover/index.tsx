@@ -1,7 +1,7 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-import { uniqueId } from "lodash";
+
 import { X } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -189,11 +189,19 @@ const CustomInputPopover = ({
   hasRefreshButton,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
+
+  // Restore cursor position after value changes
+  useEffect(() => {
+    if (cursor !== null && refInput.current) {
+      refInput.current.setSelectionRange(cursor, cursor);
+    }
+  }, [cursor, value]);
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -270,7 +278,7 @@ const CustomInputPopover = ({
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
-              id={id + uniqueId()}
+              id={id}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
               onBlur={() => {
@@ -292,7 +300,10 @@ const CustomInputPopover = ({
                   ? ""
                   : placeholder
               }
-              onChange={(e) => onChange?.(e.target.value)}
+              onChange={(e) => {
+                setCursor(e.target.selectionStart);
+                onChange?.(e.target.value);
+              }}
               onKeyDown={(e) => {
                 handleKeyDown?.(e);
                 if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
