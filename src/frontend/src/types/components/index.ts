@@ -1,6 +1,6 @@
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import type { ReactElement, ReactNode } from "react";
-import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { InputOutput } from "../../constants/enums";
 import type {
   APIClassType,
@@ -9,13 +9,13 @@ import type {
   OutputFieldProxyType,
 } from "../api";
 import type { ChatMessageType } from "../chat";
-import type { sourceHandleType, targetHandleType } from "./../flow/index";
 import type {
   AllNodeType,
   FlowStyleType,
   FlowType,
   NodeDataType,
 } from "../flow/index";
+import type { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -51,6 +51,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
+  categorizedOptions?: Map<string, Set<string>>;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -190,7 +191,7 @@ export type FloatComponentType = {
   onChange: (
     value: string | number,
     dbValue?: boolean,
-    skipSnapshot?: boolean,
+    skipSnapshot?: boolean
   ) => void;
   rangeSpec: RangeSpecType;
   editNode?: boolean;
@@ -535,7 +536,7 @@ export type ChatInputType = {
   isDragging: boolean;
   files: FilePreviewType[];
   setFiles: (
-    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
   ) => void;
   inputRef: {
     current: any;
@@ -635,7 +636,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;

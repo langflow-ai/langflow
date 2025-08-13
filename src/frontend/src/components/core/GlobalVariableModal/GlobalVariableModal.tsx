@@ -53,6 +53,7 @@ export default function GlobalVariableModal({
   const { mutate: updateVariable } = usePatchGlobalVariables();
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
+  const [categorizedFields, setCategorizedFields] = useState<Map<string, Set<string>> | undefined>(undefined);
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
 
   useEffect(() => {
@@ -64,11 +65,29 @@ export default function GlobalVariableModal({
       setAvailableFields(
         sortByName(fields.concat(initialData?.default_fields ?? [])),
       );
+      
+      // Set categorized fields if available
+      const categorized = (componentFields as any).categorized;
+      if (categorized && categorized instanceof Map) {
+        // Filter out unavailable fields from categorized structure
+        const filteredCategorized = new Map<string, Set<string>>();
+        categorized.forEach((fieldSet: Set<string>, componentName: string) => {
+          const availableFieldsInComponent = Array.from(fieldSet).filter(
+            (field: string) => !Object.hasOwn(unavailableFields, field.trim())
+          );
+          if (availableFieldsInComponent.length > 0) {
+            filteredCategorized.set(componentName, new Set<string>(availableFieldsInComponent));
+          }
+        });
+        setCategorizedFields(filteredCategorized);
+      }
+      
       if (referenceField && fields.includes(referenceField)) {
         setFields([referenceField]);
       }
     } else {
       setAvailableFields(["System", "System Message", "System Prompt"]);
+      setCategorizedFields(undefined);
     }
   }, [globalVariables, componentFields, initialData]);
 
@@ -213,6 +232,7 @@ export default function GlobalVariableModal({
               id="apply-to-fields"
               popoverWidth="29rem"
               optionsPlaceholder="Fields"
+              categorizedOptions={categorizedFields}
             />
             <div className="text-xs text-muted-foreground">
               Selected fields will auto-apply the variable as a default value.

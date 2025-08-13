@@ -43,6 +43,7 @@ export default function InputComponent({
   commandWidth,
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
+  categorizedOptions,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -157,6 +158,7 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
+              categorizedOptions={categorizedOptions}
             />
           )}
         </>

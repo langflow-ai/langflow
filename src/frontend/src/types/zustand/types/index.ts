@@ -7,7 +7,9 @@ export type TypesStoreType = {
   setTemplates: (newState: {}) => void;
   data: APIDataType;
   setData: (newState: {}) => void;
-  ComponentFields: Set<string>;
-  setComponentFields: (fields: Set<string>) => void;
+  ComponentFields: Set<string> & { categorized?: Map<string, Set<string>> };
+  setComponentFields: (
+    fields: Set<string> & { categorized?: Map<string, Set<string>> }
+  ) => void;
   addComponentField: (field: string) => void;
 };

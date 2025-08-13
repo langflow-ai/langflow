@@ -187,9 +187,22 @@ const CustomInputPopover = ({
   commandWidth,
   blockAddNewGlobalVariable,
   hasRefreshButton,
+  categorizedOptions,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
+  
+  // Convert categorized options to a usable format
+  const groupedOptions = useMemo(() => {
+    if (categorizedOptions && categorizedOptions.size > 0) {
+      const groups = new Map<string, string[]>();
+      for (const [componentName, fields] of categorizedOptions) {
+        groups.set(componentName, Array.from(fields as Set<string>).sort());
+      }
+      return groups;
+    }
+    return null;
+  }, [categorizedOptions]);
 
   const PopoverContentInput = editNode
     ? PopoverContent
@@ -324,28 +337,56 @@ const CustomInputPopover = ({
         >
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
-            <CommandGroup>
-              {Array.from(memoizedOptions).map((option, id) => (
-                <CommandItem
-                  key={option + id}
-                  value={option}
-                  onSelect={handleOptionSelect}
-                  className="group"
-                >
-                  <CommandItemContent
-                    option={option}
-                    isSelected={
-                      selectedOption === option ||
-                      selectedOptions?.includes(option)
-                    }
-                    optionButton={optionButton}
-                    nodeStyle={nodeStyle}
-                    commandWidth={commandWidth}
-                  />
-                </CommandItem>
-              ))}
-              {optionsButton}
-            </CommandGroup>
+            {groupedOptions ? (
+              // Render categorized options
+              Array.from(groupedOptions.entries()).map(([componentName, fields]) => (
+                <CommandGroup key={componentName} heading={componentName}>
+                  {fields.map((option, id) => (
+                    <CommandItem
+                      key={option + id}
+                      value={option}
+                      onSelect={handleOptionSelect}
+                      className="group"
+                    >
+                      <CommandItemContent
+                        option={option}
+                        isSelected={
+                          selectedOption === option ||
+                          selectedOptions?.includes(option)
+                        }
+                        optionButton={optionButton}
+                        nodeStyle={nodeStyle}
+                        commandWidth={commandWidth}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))
+            ) : (
+              // Render flat options (backwards compatibility)
+              <CommandGroup>
+                {Array.from(memoizedOptions).map((option, id) => (
+                  <CommandItem
+                    key={option + id}
+                    value={option}
+                    onSelect={handleOptionSelect}
+                    className="group"
+                  >
+                    <CommandItemContent
+                      option={option}
+                      isSelected={
+                        selectedOption === option ||
+                        selectedOptions?.includes(option)
+                      }
+                      optionButton={optionButton}
+                      nodeStyle={nodeStyle}
+                      commandWidth={commandWidth}
+                    />
+                  </CommandItem>
+                ))}
+                {optionsButton}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContentInput>
