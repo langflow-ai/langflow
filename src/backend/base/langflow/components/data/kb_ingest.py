@@ -38,8 +38,8 @@ class KBIngestionComponent(Component):
     """Create or append to Langflow Knowledge from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------
-    display_name = "Create Knowledge"
-    description = "Create or append to Langflow Knowledge from a DataFrame."
+    display_name = "Knowledge Ingestion"
+    description = "Create or update knowledge in Langflow."
     icon = "database"
     name = "KBIngestion"
 
