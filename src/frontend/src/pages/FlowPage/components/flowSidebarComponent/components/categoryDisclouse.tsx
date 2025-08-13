@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { APIClassType } from "@/types/api";
-import SidebarItemsList from "../sidebarItemsList";
+import SidebarItemsList from "./sidebarItemsList";
 
 export const CategoryDisclosure = memo(function CategoryDisclosure({
   item,

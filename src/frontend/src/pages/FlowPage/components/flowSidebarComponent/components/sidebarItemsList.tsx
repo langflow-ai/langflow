@@ -3,10 +3,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
 import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
 import { removeCountFromString } from "@/utils/utils";
-import { disableItem } from "../../helpers/disable-item";
-import { getDisabledTooltip } from "../../helpers/get-disabled-tooltip";
-import type { UniqueInputsComponents } from "../../types";
-import SidebarDraggableComponent from "../sidebarDraggableComponent";
+import { disableItem } from "../helpers/disable-item";
+import { getDisabledTooltip } from "../helpers/get-disabled-tooltip";
+import type { UniqueInputsComponents } from "../types";
+import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
 const SidebarItemsList = ({
   item,
