@@ -1,25 +1,34 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+from fastapi_pagination import Params
 from loguru import logger
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.v1.flows import read_flows
 from langflow.api.v1.schemas import (
+    ChatCompletionChoice,
+    ChatCompletionResponse,
+    ChatMessageOpenAI,
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
     InputValueRequest,
+    OpenAIChatCompletionRequest,
+    OpenAIList,
+    OpenAIModel,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
@@ -135,6 +144,7 @@ async def simple_run_flow(
                     components=[],
                     input_value=input_request.input_value,
                     type=input_request.input_type,
+                    chat_history=input_request.chat_history,
                 )
             ]
         if input_request.output_component:
@@ -389,6 +399,220 @@ async def simplified_run_flow(
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
     return result
+
+
+@router.get("/models", response_model=OpenAIList)
+async def get_models(
+    session: DbSession,
+    current_user=Depends(get_current_active_user),
+    folder_id: UUID | None = None,
+):
+    """Fetch all flow models and convert them into the OpenAI-compatible model list.
+
+    This endpoint wraps around `read_flows()` with `get_all=True`, retrieves all flows
+    accessible to the current user (optionally filtering components and example flows),
+    and transforms them into `OpenAIModel` objects.
+
+    Args:
+        session (DbSession): Active database session.
+        current_user (User): The current authenticated user.
+        folder_id (UUID, optional): Filter by a specific folder.
+
+    Returns:
+        OpenAIList: A list of OpenAIModel objects with basic flow metadata.
+    """
+    page_or_list = await read_flows(
+        session=session,
+        current_user=current_user,
+        remove_example_flows=True,
+        components_only=False,
+        get_all=False,
+        folder_id=folder_id,
+        params=Params(page=1, size=100),
+        header_flows=False,
+    )
+    flows = getattr(page_or_list, "items", page_or_list)
+
+    models = []
+    for flow in flows:
+        ts = int(flow.updated_at.timestamp()) if getattr(flow, "updated_at", None) else 0
+        models.append(
+            OpenAIModel(
+                id=str(flow.id),
+                created=ts,
+                owned_by=getattr(current_user, "organization", "organization-owner"),
+                name=str(flow.name),
+            )
+        )
+    return OpenAIList(data=models)
+
+
+@router.post("/chat/completions", response_model=ChatCompletionResponse | None)
+async def openai_chat_completions(
+    *,
+    background_tasks: BackgroundTasks,
+    request_data: OpenAIChatCompletionRequest,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+):
+    # Lookup flow based on model string
+    flow = await get_flow_by_id_or_endpoint_name(request_data.model)
+    if flow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+    telemetry_service = get_telemetry_service()
+
+    # Convert OpenAI format
+    last_message_content = ""
+    if request_data.messages and isinstance(request_data.messages, list):
+        last_message_content = request_data.messages[-1].content
+
+    input_request = SimplifiedAPIRequest(
+        input_value=last_message_content,
+        input_type="chat",
+        output_type="chat",
+        tweaks=request_data.tweaks,
+        chat_history=request_data.messages,
+        session_id=str(uuid4()),
+    )
+
+    stream = request_data.stream or False
+    start_time = time.perf_counter()
+
+    if stream:
+        asyncio_queue = asyncio.Queue()
+        asyncio_queue_client_consumed = asyncio.Queue()
+        event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
+
+        main_task = asyncio.create_task(
+            run_flow_generator(
+                flow=flow,
+                input_request=input_request,
+                api_key_user=api_key_user,
+                event_manager=event_manager,
+                client_consumed_queue=asyncio_queue_client_consumed,
+            )
+        )
+
+        async def on_disconnect():
+            logger.debug("Client disconnected, cancelling flow")
+            main_task.cancel()
+
+        async def sse_generator():
+            run_id = str(uuid4())
+            prev_text = ""
+
+            # 2) stream content as add_message events arrive
+            while True:
+                key, raw_bytes, _ = await asyncio_queue.get()
+                payload = json.loads(raw_bytes)
+                ev_type = payload.get("event")
+
+                if ev_type == "add_message":
+                    full_text = payload["data"].get("text", "")
+                    if full_text == input_request.input_value:
+                        continue
+                    delta = full_text[len(prev_text) :]
+                    if delta:
+                        chunk = {
+                            "id": run_id,
+                            "object": "chat.completion.chunk",
+                            "created": int(time.time()),
+                            "model": request_data.model,
+                            "choices": [{"delta": {"content": delta}, "index": 0}],
+                        }
+                        yield f"data: {json.dumps(chunk)}\n\n"
+                        prev_text = full_text
+
+                    # acknowledge consumption
+                    await asyncio_queue_client_consumed.put(None)
+
+                elif ev_type == "end":
+                    # final finish_reason
+                    fin = {
+                        "id": run_id,
+                        "object": "chat.completion.chunk",
+                        "created": int(time.time()),
+                        "model": request_data.model,
+                        "choices": [{"delta": {}, "index": 0, "finish_reason": "stop"}],
+                    }
+                    yield f"data: {json.dumps(fin)}\n\n"
+                    yield "data: [DONE]\n\n"
+                    break
+
+            await main_task
+
+        return StreamingResponse(
+            sse_generator(),
+            media_type="text/event-stream",
+            background=on_disconnect,
+        )
+
+    try:
+        result = await simple_run_flow(
+            flow=flow,
+            input_request=input_request,
+            stream=False,
+            api_key_user=api_key_user,
+        )
+        end_time = time.perf_counter()
+
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(end_time - start_time),
+                run_success=True,
+                run_error_message="",
+            ),
+        )
+
+    except ValueError as exc:
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=str(exc),
+            ),
+        )
+        if "badly formed hexadecimal UUID string" in str(exc):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if "not found" in str(exc):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+
+    except InvalidChatInputError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    except Exception as exc:
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=str(exc),
+            ),
+        )
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+
+    # Return OpenAI-style response
+    reply_message = ChatMessageOpenAI(role="assistant", content=result.output if hasattr(result, "output") else "Done.")
+    content = "Done."
+    if result.outputs and len(result.outputs) > 0:
+        last_output = result.outputs[-1]
+        if hasattr(last_output, "data") and last_output.data:
+            content = str(last_output.data)
+
+    reply_message = ChatMessageOpenAI(role="assistant", content=content)
+
+    return ChatCompletionResponse(
+        id=str(uuid4()),
+        created=int(time.time()),
+        model=request_data.model,
+        choices=[ChatCompletionChoice(index=0, message=reply_message)],
+    )
 
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
