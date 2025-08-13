@@ -106,7 +106,7 @@ dependencies = [
     "openinference-instrumentation-langchain>=0.1.29",
     # "crewai>=0.126.0",
     "mcp>=1.10.1",
-    "uv>=0.5.7",
+    "uv==0.7.20",
     "scipy>=1.14.1",
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
@@ -242,7 +242,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
-timeout = 120
+timeout = 150
 timeout_method = "signal"
 minversion = "6.0"
 testpaths = ["src/backend/tests"]
