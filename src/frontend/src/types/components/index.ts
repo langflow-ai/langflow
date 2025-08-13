@@ -715,6 +715,7 @@ export type newFlowModalPropsType = {
 };
 
 export type PlaygroundModalPropsType = {
+  onClose?: () => void;
   playgroundPage?: boolean;
 };
 
