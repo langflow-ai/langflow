@@ -54,6 +54,13 @@ For more information about the **File** component and other data loading compone
 ### Load files at runtime
 
 You can use preloaded files in your flows, and you can load files at runtime, if your flow accepts file input.
+To enable file input in your flow, do the following:
+1. Add a [**File** component](/components-data#file) to your flow.
+2. In the **API access** pane, click **Input Schema** to add `tweaks` to the request payload in the flow's code snippets.
+3. In the **File** component's tweaks, enable the **Expose Input** toggle to expose the **Files** field as an API input.
+4. The **API access** pane's code snippet is automatically updated to include the tweak to the file component.
+Langflow will now accept files uploaded to the **File component**.
+
 For an example, see [Create a chatbot that can ingest files](/chat-with-files).
 
 ## Upload images
