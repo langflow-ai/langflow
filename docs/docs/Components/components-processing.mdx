@@ -13,7 +13,7 @@ They have many uses, including:
 * Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
 * Extract content from larger chunks of data with a [**Parser** component](#parser).
 * Filter data with natural language with the [**Smart Function** component](#smart-function).
-* Save data to your local machine with the [**Save To File** component](#save-to-file).
+* Save data to your local machine with the [**Save File** component](#save-file).
 * Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
 
 ## Prompt Template
@@ -129,8 +129,6 @@ For this example, select the **Select Keys** operation to extract specific user 
     ```
 
 ### Data Operations parameters
-
-<!-- updated in https://github.com/langflow-ai/langflow/pull/8838 -->
 
 Some **Data Operations** component input parameters are hidden by default in the visual editor.
 You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
@@ -448,19 +446,19 @@ If you don't include the package imports in the chat, the agent can still create
 | python_code | Code | Input parameter. The Python code to execute. Only modules specified in Global Imports can be used. |
 | results | Data | Output parameter. The output of the executed Python code, including any printed results or errors. |
 
-## Save to File
+## Save File
 
 This component saves `DataFrame`, `Data`, or `Message` [data types](/data-types) to various file formats.
 
-1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/data-types#data) to the **Save to File** component's input.
-The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
+1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/data-types#data) to the **Save File** component's input.
+The following example connects a **Webhook** component to two **Save File** components to demonstrate the different outputs.
 
-![Two Save-to File components connected to a Webhook component](/img/component-save-to-file.png)
+![Two Save File components connected to a Webhook component](/img/component-save-to-file.png)
 
-2. In the **Save to File** component's **Input Type** field, select the expected input type.
+2. In the **Save File** component's **Input Type** field, select the expected input type.
 This example expects **Data** from the **Webhook**.
 3. In the **File Format** field, select the file type for your saved file.
-This example uses `.md` in one **Save to File** component, and `.xlsx` in another.
+This example uses `.md` in one **Save File** component, and `.xlsx` in another.
 4. In the **File Path** field, enter the path for your saved file.
 This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
 The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
@@ -570,9 +568,10 @@ The connected LLM creates a filter based on the instructions, and successfully e
 
 ## Split Text
 
-This component splits text into chunks based on specified criteria. It's ideal for chunking data to be tokenized and embedded into vector databases.
+The **Split Text** component splits incoming text data into chunks based on parameters like chunk size and separator.
+It's ideal for chunking data to be tokenized and embedded into vector databases.
 
-The **Split Text** component outputs **Chunks** or **DataFrame**.
+The component accepts `Message`, `Data`, or `DataFrame`, and then outputs chunks as **Chunks** or **DataFrame**.
 The **Chunks** output returns a list of individual text chunks.
 The **DataFrame** output returns a structured data format, with additional `text` and `metadata` columns applied.
 
@@ -619,18 +618,19 @@ Second chunk: "elligence", "body": "Learn the basics of Artif"
 Third chunk:  "s of Artificial Intelligence and its applications"
 ```
 
-<details>
-<summary>Parameters</summary>
+### Split Text parameters
 
-**Inputs**
+Some **Split Text** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_inputs | Input Documents | The data to split. The component accepts [Data](/data-types#data) or [DataFrame](/data-types#dataframe) objects. |
+| data_inputs | Input | The data to split. The component accepts [Data](/data-types#data) or [DataFrame](/data-types#dataframe) objects. |
 | chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
 | chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
-| separator | Separator | The character to split on. Default: `newline`. |
+| separator | Separator | The character to split on. Default: `newline`. You can enter a separator string expression, or input a `Message` from another component. |
 | text_key | Text Key | The key to use for the text column. Default: `text`. |
+| keep_separator | Keep Separator | Select how to handle separators in output chunks. If False, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in place), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
 
 **Outputs**
 
@@ -638,8 +638,6 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 |------|--------------|------|
 | chunks | Chunks | A list of split text chunks as [`Data`](/data-types#data) objects. |
 | dataframe | DataFrame | A list of split text chunks as [`DataFrame`](/data-types#dataframe) objects. |
-
-</details>
 
 ### Other text splitters
 
