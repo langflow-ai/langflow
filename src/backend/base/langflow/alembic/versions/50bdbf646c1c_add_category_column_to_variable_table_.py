@@ -1,8 +1,8 @@
-"""Add category column to variable table.
+"""Add category column to variable table, to support models.
 
-Revision ID: 90e89a7db70f
-Revises: 66f72f04a1de
-Create Date: 2025-06-30 13:50:12.878778
+Revision ID: 50bdbf646c1c
+Revises: 3162e83e485f
+Create Date: 2025-08-13 13:36:47.517609
 
 """
 
@@ -13,8 +13,8 @@ import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "90e89a7db70f"
-down_revision: str | None = "66f72f04a1de"
+revision: str = "50bdbf646c1c"
+down_revision: str | None = "3162e83e485f"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
