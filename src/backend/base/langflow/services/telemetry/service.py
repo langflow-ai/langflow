@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
-from loguru import logger
 
+from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (

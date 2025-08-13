@@ -5,12 +5,12 @@ from typing import Any
 import requests
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
-from loguru import logger
 from pydantic.v1 import Field, create_model
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.io import Output
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 
 

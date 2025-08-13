@@ -4,13 +4,13 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from langchain.tools import StructuredTool
-from loguru import logger
 from markdown import markdown
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 MIN_ROWS_IN_TABLE = 3

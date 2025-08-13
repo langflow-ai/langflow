@@ -7,8 +7,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
+from langflow.logging.logger import logger
 from langflow.services.base import Service
 
 if TYPE_CHECKING:

@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING
 
 import httpx
-from loguru import logger
+
+from langflow.logging.logger import logger
 
 if TYPE_CHECKING:
     from langflow.services.store.schema import ListComponentResponse
