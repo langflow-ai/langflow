@@ -28,6 +28,12 @@ html[data-theme="dark"] {
   --ifm-background-surface-color: var(--ifm-color-black);
 }
 
+/* override the infima navbar docs/node_modules/infima/dist/css/default/default.css */
+.navbar {
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--ifm-toc-border-color);
+}
+
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
   margin-top: 0.5rem !important;
 }
