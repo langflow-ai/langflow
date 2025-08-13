@@ -59,10 +59,10 @@ export default function ToolsTable({
 
   const applyInitialSelection = () => {
     if (!agGrid.current?.api) return;
-    
+
     const initialData = cloneDeep(rows);
     const filter = initialData.filter((row) => row.status === true);
-    
+
     agGrid.current.api.forEachNode((node) => {
       if (
         filter.some(
