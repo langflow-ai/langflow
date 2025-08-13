@@ -37,6 +37,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Bundles",
     tooltip: "Bundles",
   },
+  {
+    id: "mcp",
+    icon: "Mcp",
+    label: "MCP",
+    tooltip: "MCP",
+  },
 ];
 
 export default function SidebarSegmentedNav() {

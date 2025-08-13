@@ -30,6 +30,7 @@ import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
@@ -294,6 +295,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const { activeSection } = useSidebar();
 
+  const showComponents =
+    (ENABLE_NEW_SIDEBAR && activeSection === "components") ||
+    !ENABLE_NEW_SIDEBAR;
+  const showBundles =
+    (hasBundleItems && ENABLE_NEW_SIDEBAR && activeSection === "bundles") ||
+    !ENABLE_NEW_SIDEBAR;
+  const showMcp = (ENABLE_API && activeSection === "mcp") || !ENABLE_API;
+
   return (
     <Sidebar
       collapsible={ENABLE_NEW_SIDEBAR ? "icon" : "offcanvas"}
@@ -345,7 +354,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               <>
                 {hasResults ? (
                   <>
-                    {activeSection === "components" && (
+                    {showComponents && (
                       <CategoryGroup
                         dataFilter={dataFilter}
                         sortedCategories={sortedCategories}
@@ -359,7 +368,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                       />
                     )}
 
-                    {hasBundleItems && activeSection === "bundles" && (
+                    {showBundles && (
                       <MemoizedSidebarGroup
                         BUNDLES={BUNDLES}
                         search={search}
@@ -371,6 +380,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         openCategories={openCategories}
                         setOpenCategories={setOpenCategories}
                         handleKeyDownInput={handleKeyDownInput}
+                      />
+                    )}
+                    {showMcp && (
+                      <McpSidebarGroup
+                        dataFilter={dataFilter}
+                        nodeColors={nodeColors}
+                        onDragStart={onDragStart}
+                        sensitiveSort={sensitiveSort}
                       />
                     )}
                   </>
