@@ -2,7 +2,7 @@ import { HeaderButton } from "./components/header-button";
 
 export function PlaygroundHeader({ onClose }: { onClose?: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-2 flex-1">
+    <div className="flex items-center justify-between gap-2 px-4 py-2">
       <div className="flex items-center gap-2">
         <div className="truncate text-sm font-medium text-secondary-foreground">
           Flow run{" "}
