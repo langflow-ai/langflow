@@ -15,7 +15,7 @@ You create a new knowledge base with the [**Create Knowledge**](/components-data
 For example, you could create a knowledge base with customer sales data from a specific month.
 Then, whenever you create flows that need customer data from this time period, add a [**Retrieve Knowledge**](/components-data#retrieve-knowledge) component to your flow to access the knowledge base.
 
-## Create knowledge using the knowledge base ingest component
+## Create knowledge using the Create Knowledge component
 
 To view your available Knowledge bases, click <Icon name="Books" aria-hidden="true"/> **Knowledge**.
 
@@ -24,45 +24,23 @@ You can also create new knowledge bases with the <Icon name="Add" aria-hidden="t
 2. In the **Knowledge Base** field, select an existing Knowledge Base, or select <Icon name="Add" aria-hidden="true"/> **New knowledge**.
 Complete the fields in the **Create new knowledge base** pane, and then click **Create**.
 
-    * **Knowledge Base Name**: The name of your knowledge base
+    * **Knowledge Base Name**: The name of your knowledge base.
     * **Model Name**: The embedding model for embedding your vector data.
     * **API Key**: The API key for your embedding model.
 
 On Mac, knowledge base files are stored at `home/.langflow/knowledge_bases`.
-The contents of a `/knowledge_base` folder are:
 
-    ```text
-    knowledge_base/
-      ├── schema.json
-      ├── source.parquet
-      └── vectors.py
-    ```
+To modify your knowledge base, click **Column Configuration**.
 
-### Ingest knowledge in a flow
+    * **Column Name**: The name of the column.
+    * **Vectorize**: Enable this setting to convert the column's contents to vector embeddings using the knowledge base's embedding model.
+    * **Identifier**: Enable this setting to make the selected column the identifier column for the row.
 
-This example uses the Ingest Knowledge component to store chunks of text retrieved with the [**URL** component](/components-data#url).
+To create a knowledge base in a flow, see the **Create Knowledge** template.
 
-1. Connect a [**URL** component](/components-data#url), a [**Split Text** component](/components-processing#split-text), and a [**Ingest Knowledge Base** component](/components-data#ingest-knowledge-base).
+## Use knowledge bases in a flow
 
-    * The **URL** component's **Extract Pages** port is connected to the **Split Text** component's **Input** port.
-    * The **Split Text** component's **Chunks** port is connected toi the **Ingest Knowledge** component's **Data** port.
-
-    {/*![A knowledge base ingestion flow](/img/knowledge-ingest.png) commented out until merged*/}
-
-2. To ingest the content into the knowledge base, in the [**Ingest Knowledge Base** component](/components-data#ingest-knowledge-base), click <Icon name="Play" aria-hidden="true" /> **Run Component**.
-3. Navigate to the **Knowledge Bases** page.
-Your new knowledge is available.
-
-## Use knowledge in a flow
-
-To use a knowledge base in a flow, include a [**Retrieve Knowledge Base** component](/components-data#retrieve-knowledge-base), and connect it to a component that accepts a DataFrame.
+To use a knowledge base in a flow, include a [**Retrieve Knowledge** component](/components-data#retrieve-knowledge), and connect it to a component that accepts a DataFrame.
 You can re-use knowledge bases whenever you need them, so you don't have to re-ingest vectors or load more files in each flow that uses your data.
 
-1. Connect a [**Chat Input** component](/components-io) to a **Knowledge Base Retrieval** component, and the KB Retrieval component's output to a [**Chat Output** component](/components-io).
-{/*![A knowledge base ingestion flow](/img/knowledge-ingest.png) commented out until merged*/}
-
-2. In the **Knowledge Base** field, select your knowledge base.
-If your knowledge base isn't available, click <Icon name="Refresh" aria-hidden="true"/> **Refreshe** to refresh the field.
-3. Open the **Playground**, and query your knowledge base.
-The chat returns similar search, including similarity scores.
-To modify the retrieval, toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).                          |
+To use a knowledge base in a flow, see the **Retrieve Knowledge** template.
