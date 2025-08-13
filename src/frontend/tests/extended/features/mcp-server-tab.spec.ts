@@ -34,7 +34,7 @@ test(
           '[data-testid="generic-node-title-arrangement"]',
           {
             timeout: 3000,
-          },
+          }
         );
 
         await page.getByTestId("generic-node-title-arrangement").click();
@@ -85,12 +85,37 @@ test(
           await page.waitForTimeout(1000);
         }
 
+        // Verify if the state is maintained
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+
+        await page.waitForTimeout(1000);
+
+        await page.reload();
+
+        // Navigate to MCP server tab
+        await page.getByTestId("mcp-btn").click({ timeout: 10000 });
+
+        // Verify MCP server tab is visible
+        await expect(page.getByTestId("mcp-server-title")).toBeVisible();
+        await expect(page.getByText("Flows/Tools")).toBeVisible();
+
+        // Click on Edit Tools button
+        await page.getByTestId("button_open_actions").click();
+        await page.waitForTimeout(500);
+
+        // Verify actions modal is open
+        await expect(page.getByText("MCP Server Tools")).toBeVisible();
+
         const isCheckedAgainAgain = await page
           .locator('input[data-ref="eInput"]')
           .first()
           .isChecked();
 
-        expect(isCheckedAgainAgain).toBeFalsy();
+        expect(isCheckedAgainAgain).toBeTruthy();
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+        await page.waitForTimeout(1000);
 
         // Select first action
         let element = page.locator('input[data-ref="eInput"]').last();
@@ -134,7 +159,7 @@ test(
         await page.waitForTimeout(1000);
 
         expect(
-          await page.locator('[data-testid="input_update_name"]').isVisible(),
+          await page.locator('[data-testid="input_update_name"]').isVisible()
         ).toBe(true);
 
         await page.getByTestId("input_update_name").fill("mcp test name");
@@ -174,7 +199,7 @@ test(
 
         // Extract the SSE URL from the configuration
         const sseUrlMatch = configJson?.match(
-          /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+          /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/
         );
         expect(sseUrlMatch).not.toBeNull();
         const _sseUrl = sseUrlMatch![1];
@@ -191,7 +216,7 @@ test(
         });
 
         const sseUrlMatchLinux = configJsonLinux?.match(
-          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/
         );
         expect(sseUrlMatchLinux).not.toBeNull();
 
@@ -199,7 +224,7 @@ test(
         await expect(page.getByText("setup guide")).toBeVisible();
         await expect(page.getByText("setup guide")).toHaveAttribute(
           "href",
-          "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions",
+          "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions"
         );
 
         await awaitBootstrapTest(page);
@@ -261,7 +286,7 @@ test(
           {
             timeout: 10000,
             state: "visible",
-          },
+          }
         );
 
         await page.getByTestId("dropdown_str_tool").click();
@@ -279,7 +304,7 @@ test(
         if (attempt === maxRetries) {
           console.error(
             `All ${maxRetries} attempts failed. Last error:`,
-            error,
+            error
           );
           throw error;
         }
@@ -288,5 +313,5 @@ test(
         await page.waitForTimeout(2000);
       }
     }
-  },
+  }
 );
