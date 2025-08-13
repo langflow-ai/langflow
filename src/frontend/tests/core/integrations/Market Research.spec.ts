@@ -41,16 +41,18 @@ withEventDeliveryModes(
       .nth(0)
       .fill(process.env.TAVILY_API_KEY ?? "");
 
+    await page
+      .getByTestId("handle-parser-shownode-data or dataframe-left")
+      .click();
+
+    await page.getByTestId("tab_1_stringify").click();
+
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 3,
     });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByText("No input message provided.", { exact: true })
       .last()

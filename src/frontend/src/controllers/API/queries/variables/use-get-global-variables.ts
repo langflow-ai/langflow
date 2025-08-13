@@ -1,9 +1,9 @@
+import type { UseQueryResult } from "@tanstack/react-query";
 import useAuthStore from "@/stores/authStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
-import { useQueryFunctionType } from "@/types/api";
-import { GlobalVariable } from "@/types/global_variables";
-import { UseQueryResult } from "@tanstack/react-query";
+import type { useQueryFunctionType } from "@/types/api";
+import type { GlobalVariable } from "@/types/global_variables";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -20,6 +20,9 @@ export const useGetGlobalVariables: useQueryFunctionType<
   const setUnavailableFields = useGlobalVariablesStore(
     (state) => state.setUnavailableFields,
   );
+  const setGlobalVariablesEntities = useGlobalVariablesStore(
+    (state) => state.setGlobalVariablesEntities,
+  );
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -28,6 +31,7 @@ export const useGetGlobalVariables: useQueryFunctionType<
     const res = await api.get(`${getURL("VARIABLES")}/`);
     setGlobalVariablesEntries(res.data.map((entry) => entry.name));
     setUnavailableFields(getUnavailableFields(res.data));
+    setGlobalVariablesEntities(res.data);
     return res.data;
   };
 

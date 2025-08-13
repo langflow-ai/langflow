@@ -207,14 +207,9 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             expiration_time (int, optional): Time in seconds after which a
                 cached item expires. Default is 1 hour.
         """
-        try:
-            from redis.asyncio import StrictRedis
-        except ImportError as exc:
-            msg = (
-                "RedisCache requires the redis-py package."
-                " Please install Langflow with the deploy extra: pip install langflow[deploy]"
-            )
-            raise ImportError(msg) from exc
+        # Redis is a main dependency, no need to import check
+        from redis.asyncio import StrictRedis
+
         logger.warning(
             "RedisCache is an experimental feature and may not work as expected."
             " Please report any issues to our GitHub repository."

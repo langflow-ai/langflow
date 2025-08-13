@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
+from functools import lru_cache
 from typing import Any, cast
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.services.deps import get_settings_service
 
 
 # Sentinel variable to signal a failed serialization.
@@ -25,8 +27,28 @@ class _UnserializableSentinel:
 UNSERIALIZABLE_SENTINEL = _UnserializableSentinel()
 
 
+@lru_cache(maxsize=1)
+def get_max_text_length() -> int:
+    """Return the maximum allowed text length for serialization from the current settings."""
+    return get_settings_service().settings.max_text_length
+
+
+@lru_cache(maxsize=1)
+def get_max_items_length() -> int:
+    """Return the maximum allowed number of items for serialization, as defined in the current settings."""
+    return get_settings_service().settings.max_items_length
+
+
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
-    """Truncate long strings with ellipsis if max_length provided."""
+    """Truncates a string to the specified maximum length, appending an ellipsis if truncation occurs.
+
+    Parameters:
+        obj (str): The string to be truncated.
+        max_length (int | None): The maximum allowed length of the string. If None, no truncation is performed.
+
+    Returns:
+        str: The original or truncated string, with an ellipsis appended if truncated.
+    """
     if max_length is None or len(obj) <= max_length:
         return obj
     return obj[:max_length] + "..."
@@ -140,18 +162,27 @@ def _is_numpy_type(obj: Any) -> bool:
 
 def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | None) -> Any:
     """Serialize numpy types."""
-    if np.issubdtype(obj.dtype, np.number) and hasattr(obj, "item"):
-        return obj.item()
-    if np.issubdtype(obj.dtype, np.bool_):
-        return bool(obj)
-    if np.issubdtype(obj.dtype, np.complexfloating):
-        return complex(cast("complex", obj))
-    if np.issubdtype(obj.dtype, np.str_):
-        return _serialize_str(str(obj), max_length, max_items)
-    if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
-        return _serialize_bytes(obj.tobytes(), max_length, max_items)
-    if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
-        return _serialize_instance(obj.item(), max_length, max_items)
+    try:
+        # For single-element arrays
+        if obj.size == 1 and hasattr(obj, "item"):
+            return obj.item()
+
+        # For multi-element arrays
+        if np.issubdtype(obj.dtype, np.number):
+            return obj.tolist()  # Convert to Python list
+        if np.issubdtype(obj.dtype, np.bool_):
+            return bool(obj)
+        if np.issubdtype(obj.dtype, np.complexfloating):
+            return complex(cast("complex", obj))
+        if np.issubdtype(obj.dtype, np.str_):
+            return _serialize_str(str(obj), max_length, max_items)
+        if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
+            return _serialize_bytes(obj.tobytes(), max_length, max_items)
+        if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
+            return _serialize_instance(obj.item(), max_length, max_items)
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Cannot serialize numpy array: {e!s}")
+        return UNSERIALIZABLE_SENTINEL
     return UNSERIALIZABLE_SENTINEL
 
 

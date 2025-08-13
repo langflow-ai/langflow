@@ -1,4 +1,4 @@
-import { APIClassType, APIDataType } from "../../api";
+import type { APIClassType, APIDataType } from "../../api";
 
 export type TypesStoreType = {
   types: { [char: string]: string };

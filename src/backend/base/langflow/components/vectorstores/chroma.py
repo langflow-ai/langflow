@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 from chromadb.config import Settings
 from langchain_chroma import Chroma
@@ -6,8 +7,11 @@ from typing_extensions import override
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
-from langflow.schema import Data, DataFrame
+from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
+from langflow.schema.data import Data
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
@@ -150,6 +154,14 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
         if documents and self.embedding is not None:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
-            vector_store.add_documents(documents)
+            # Filter complex metadata to prevent ChromaDB errors
+            try:
+                from langchain_community.vectorstores.utils import filter_complex_metadata
+
+                filtered_documents = filter_complex_metadata(documents)
+                vector_store.add_documents(filtered_documents)
+            except ImportError:
+                self.log("Warning: Could not import filter_complex_metadata. Adding documents without filtering.")
+                vector_store.add_documents(documents)
         else:
             self.log("No documents to add to the Vector Store.")

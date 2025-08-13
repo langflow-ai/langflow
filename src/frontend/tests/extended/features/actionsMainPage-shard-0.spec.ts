@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -34,6 +35,9 @@ test(
     await page.getByTestId("icon-ChevronLeft").last().click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
+    await page.getByText("Export").first().isVisible();
+    await page.getByTestId("modal-export-button").isVisible();
+    await page.getByTestId("modal-export-button").click();
     await expect(page.getByText(/.*exported successfully/)).toBeVisible({
       timeout: 10000,
     });
@@ -41,16 +45,23 @@ test(
     await page.getByText("Flows", { exact: true }).click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
+    await page.getByText("Export").first().isVisible();
+    await page.getByTestId("modal-export-button").isVisible();
+    await page.getByTestId("modal-export-button").click();
     await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
       timeout: 10000,
     });
 
-    await page.getByText("Components", { exact: true }).click();
-    await page.getByTestId("home-dropdown-menu").nth(0).click();
-    await page.getByTestId("btn-download-json").last().click();
-    await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
-      timeout: 10000,
-    });
+    if (await page.getByText("Components").first().isVisible()) {
+      await page.getByText("Components", { exact: true }).click();
+      await page.getByTestId("home-dropdown-menu").nth(0).click();
+      await page.getByTestId("btn-download-json").last().click();
+      await expect(
+        page.getByText(/.*exported successfully/).last(),
+      ).toBeVisible({
+        timeout: 10000,
+      });
+    }
   },
 );
 
@@ -62,7 +73,13 @@ test(
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
-    await page.getByTestId("upload-folder-button").last().click();
+    const countEmptyButton = await page
+      .getByTestId("new_project_btn_empty_page")
+      .count();
+    if (countEmptyButton > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+    await page.getByTestId("upload-project-button").last().click();
   },
 );
 

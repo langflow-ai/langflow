@@ -44,7 +44,7 @@ test(
     await page.getByTestId("edit-button-modal").last().click();
     await page.getByText("Close").last().click();
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     // Read the image file as a binary string
     const filePath = "tests/assets/chain.png";

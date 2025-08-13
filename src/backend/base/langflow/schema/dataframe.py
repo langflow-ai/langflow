@@ -5,6 +5,7 @@ from langchain_core.documents import Document
 from pandas import DataFrame as pandas_DataFrame
 
 from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 
 class DataFrame(pandas_DataFrame):
@@ -178,3 +179,28 @@ class DataFrame(pandas_DataFrame):
         if not isinstance(other, DataFrame | pd.DataFrame):  # Non-DataFrame case
             return False
         return super().__eq__(other)
+
+    def to_data(self) -> Data:
+        """Convert this DataFrame to a Data object.
+
+        Returns:
+            Data: A Data object containing the DataFrame records under 'results' key.
+        """
+        dict_list = self.to_dict(orient="records")
+        return Data(data={"results": dict_list})
+
+    def to_message(self) -> Message:
+        from langflow.schema.message import Message  # Local import to avoid circular import
+
+        # Process DataFrame similar to the _safe_convert method
+        # Remove empty rows
+        processed_df = self.dropna(how="all")
+        # Remove empty lines in each cell
+        processed_df = processed_df.replace(r"^\s*$", "", regex=True)
+        # Replace multiple newlines with a single newline
+        processed_df = processed_df.replace(r"\n+", "\n", regex=True)
+        # Replace pipe characters to avoid markdown table issues
+        processed_df = processed_df.replace(r"\|", r"\\|", regex=True)
+        processed_df = processed_df.map(lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x)
+        # Convert to markdown and wrap in a Message
+        return Message(text=processed_df.to_markdown(index=False))

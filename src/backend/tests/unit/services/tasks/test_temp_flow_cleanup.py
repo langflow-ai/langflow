@@ -94,16 +94,24 @@ async def test_cleanup_worker_start_stop():
 
 
 @pytest.mark.asyncio
-async def test_cleanup_worker_run_with_exception(caplog):
+async def test_cleanup_worker_run_with_exception(mocker):
     """Test CleanupWorker handles exceptions gracefully."""
+    # Mock the logger to capture log calls
+    mock_logger = mocker.patch("langflow.services.task.temp_flow_cleanup.logger")
+
     settings = get_settings_service().settings
     settings.public_flow_cleanup_interval = 601  # Minimum valid interval
     worker = CleanupWorker()
 
-    # Start worker and let it run briefly
+    # Start and immediately stop the worker
     await worker.start()
     await worker.stop()
 
-    # Check logs for expected messages
-    assert any("Started database cleanup worker" in record.message for record in caplog.records)
-    assert any("Stopping database cleanup worker" in record.message for record in caplog.records)
+    # Verify the worker was started and stopped properly
+    assert worker._task is None
+    assert worker._stop_event.is_set()
+
+    # Verify the expected log messages were called
+    mock_logger.debug.assert_any_call("Started database cleanup worker")
+    mock_logger.debug.assert_any_call("Stopping database cleanup worker...")
+    mock_logger.debug.assert_any_call("Database cleanup worker stopped")

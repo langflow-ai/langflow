@@ -1,4 +1,4 @@
-import { UniqueInputsComponents } from "../types";
+import type { UniqueInputsComponents } from "../types";
 
 export const disableItem = (
   SBItemName: string,

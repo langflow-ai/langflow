@@ -20,12 +20,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
 
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("inputsChat Input")
+      .getByTestId("input_outputChat Input")
       .hover({ timeout: 3000 })
       .then(async () => {
         await page
@@ -91,7 +91,7 @@ test(
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,
       });
-    } catch (error) {
+    } catch (_error) {
       await page.reload();
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,

@@ -8,7 +8,7 @@ from langchain_community.tools.json.tool import JsonSpec
 from langchain_community.utilities.requests import TextRequestsWrapper
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.inputs import BoolInput, FileInput, HandleInput
+from langflow.inputs.inputs import BoolInput, FileInput, HandleInput
 
 
 class OpenAPIAgentComponent(LCAgentComponent):

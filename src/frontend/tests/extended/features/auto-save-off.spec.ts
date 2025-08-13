@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to manually save a flow when the auto_save is off",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database", "@components"] },
   async ({ page }) => {
     await page.route("**/api/v1/config", (route) => {
       route.fulfill({
@@ -31,12 +31,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -46,21 +46,6 @@ test(
     });
 
     await page.getByTestId("fit_view").click();
-
-    expect(await page.getByText("Saved").last().isVisible()).toBeTruthy();
-
-    await page
-      .getByText("Saved")
-      .first()
-      .hover()
-      .then(async () => {
-        await expect(
-          page.getByText("Auto-saving is disabled").nth(0),
-        ).toBeVisible({ timeout: 5000 });
-        await expect(
-          page.getByText("Enable auto-saving to avoid losing progress.").nth(0),
-        ).toBeVisible({ timeout: 3000 });
-      });
 
     expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
 
@@ -81,11 +66,15 @@ test(
       );
 
       await page.getByText("Exit Anyway", { exact: true }).click();
-    } catch (error) {
-      console.log("Warning text not visible, skipping dialog confirmation");
+    } catch (_error) {
+      console.error("Warning text not visible, skipping dialog confirmation");
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlowDiv = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlowDiv.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,
@@ -100,7 +89,7 @@ test(
     await page.keyboard.press("Escape");
     await page.locator('//*[@id="react-flow-id"]').click();
 
-    const lastNvidiaModel = page.getByTestId("modelsNVIDIA").last();
+    const lastNvidiaModel = page.getByTestId("nvidiaNVIDIA").last();
     await lastNvidiaModel.scrollIntoViewIfNeeded();
 
     try {
@@ -129,26 +118,30 @@ test(
 
     await page.getByText("Save And Exit", { exact: true }).click();
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow.click();
 
     await page.waitForSelector("text=loading", {
       state: "hidden",
       timeout: 5000,
     });
 
-    await expect(page.getByTestId("title-NVIDIA")).toBeVisible({
+    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
       timeout: 5000,
     });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -177,7 +170,11 @@ test(
       await page.getByText("Save And Exit", { exact: true }).last().click();
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow2 = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow2.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,

@@ -1,6 +1,6 @@
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.helpers import docs_to_data
-from langflow.inputs import DictInput, FloatInput
+from langflow.helpers.data import docs_to_data
+from langflow.inputs.inputs import DictInput, FloatInput
 from langflow.io import (
     BoolInput,
     DropdownInput,
@@ -10,7 +10,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class HCDVectorStoreComponent(LCVectorStoreComponent):
@@ -194,16 +194,14 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
         if not isinstance(self.embedding, dict):
             embedding_dict = {"embedding": self.embedding}
         else:
-            from astrapy.info import CollectionVectorServiceOptions
+            from astrapy.info import VectorServiceOptions
 
             dict_options = self.embedding.get("collection_vector_service_options", {})
             dict_options["authentication"] = {
                 k: v for k, v in dict_options.get("authentication", {}).items() if k and v
             }
             dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
-            embedding_dict = {
-                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options)
-            }
+            embedding_dict = {"collection_vector_service_options": VectorServiceOptions.from_dict(dict_options)}
             collection_embedding_api_key = self.embedding.get("collection_embedding_api_key")
             if collection_embedding_api_key:
                 embedding_dict["collection_embedding_api_key"] = collection_embedding_api_key

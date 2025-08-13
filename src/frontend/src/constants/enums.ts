@@ -42,4 +42,5 @@ export enum IOOutputTypes {
 export enum EventDeliveryType {
   STREAMING = "streaming",
   POLLING = "polling",
+  DIRECT = "direct",
 }

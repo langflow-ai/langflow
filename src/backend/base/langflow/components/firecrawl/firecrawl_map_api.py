@@ -1,16 +1,16 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     BoolInput,
     MultilineInput,
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class FirecrawlMapApi(Component):
-    display_name: str = "FirecrawlMapApi"
-    description: str = "Firecrawl Map API."
+    display_name: str = "Firecrawl Map API"
+    description: str = "Maps a URL and returns the results."
     name = "FirecrawlMapApi"
 
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/map"

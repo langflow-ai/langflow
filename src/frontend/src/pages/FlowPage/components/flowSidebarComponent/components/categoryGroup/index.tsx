@@ -1,11 +1,11 @@
+import { memo, useState } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
-import { memo } from "react";
-import { CategoryGroupProps } from "../../types";
+import type { CategoryGroupProps } from "../../types";
 import { CategoryDisclosure } from "../categoryDisclouse";
 
 export const CategoryGroup = memo(function CategoryGroup({
@@ -16,7 +16,6 @@ export const CategoryGroup = memo(function CategoryGroup({
   setOpenCategories,
   search,
   nodeColors,
-  uniqueInputsComponents,
   onDragStart,
   sensitiveSort,
 }: CategoryGroupProps) {
@@ -67,7 +66,6 @@ export const CategoryGroup = memo(function CategoryGroup({
                   nodeColors={nodeColors}
                   onDragStart={onDragStart}
                   sensitiveSort={sensitiveSort}
-                  uniqueInputsComponents={uniqueInputsComponents}
                 />
               );
             })}

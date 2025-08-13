@@ -1,12 +1,12 @@
 import os
+import time
 from typing import Any
 
 import pytest
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
-from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 from langflow.components.vectorstores.mongodb_atlas import MongoVectorStoreComponent
 from langflow.schema.data import Data
-from pymongo.operations import SearchIndexModel
+from pymongo.collection import Collection
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -30,6 +30,13 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             "index_name": "test_index",
             "enable_mtls": False,
             "embedding": DeterministicFakeEmbedding(size=8),
+            "index_field": "embedding",
+            "filter_field": "text",
+            "number_dimensions": 8,
+            "similarity": "cosine",
+            "quantization": "scalar",
+            "insert_mode": "append",
+            "ingest_data": [Data(data={"text": "test data 1"}), Data(data={"text": "test data 2"})],
         }
 
     @pytest.fixture
@@ -41,42 +48,18 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             {"version": "1.1.1", "module": "vectorstores", "file_name": "mongodb_atlas"},
         ]
 
-    def __create_search_index(self, vector_store: MongoDBAtlasVectorSearch, default_kwargs: dict[str, Any]) -> None:
+    def __create_search_index(
+        self, component_class: type[MongoVectorStoreComponent], collection: Collection, default_kwargs: dict[str, Any]
+    ) -> None:
         """Create a vector search index if it doesn't exist."""
-        try:
-            index_definition = SearchIndexModel(
-                definition={
-                    "fields": [
-                        {
-                            "type": "vector",
-                            "path": "embedding",
-                            "numDimensions": 8,
-                            "similarity": "cosine",
-                            "quantization": "scalar",
-                        },
-                        {"type": "filter", "path": "text"},
-                    ]
-                },
-                name=default_kwargs["index_name"],
-                type="vectorSearch",
-            )
+        component_class().set(**default_kwargs).verify_search_index(collection)
 
-            vector_store._collection.create_search_index(index_definition)
-
-            # Wait for index to be ready
-            import time
-
-            time.sleep(40)  # Give some time for index to be ready
-
-            # Verify index was created
-            indexes = vector_store._collection.list_search_indexes()
-            index_names = [idx["name"] for idx in indexes]
-            assert default_kwargs["index_name"] in index_names
-
-        except Exception as e:
-            # Index might already exist, which is fine
-            if "AlreadyExists" not in str(e):
-                raise
+        # Verify index was created
+        indexes = collection.list_search_indexes()
+        index_names = {idx["name"]: idx["type"] for idx in indexes}
+        index_type = index_names.get(default_kwargs["index_name"])
+        assert default_kwargs["index_name"] in index_names
+        assert index_type == "vectorSearch"
 
     def test_create_db(self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]) -> None:
         """Test creating a MongoDB Atlas vector store."""
@@ -93,6 +76,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         """Test creating a collection with data."""
         test_texts = ["test data 1", "test data 2", "something completely different"]
         default_kwargs["ingest_data"] = [Data(data={"text": text}) for text in test_texts]
+        default_kwargs["insert_mode"] = "overwrite"
 
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
         vector_store = component.build_vector_store()
@@ -115,6 +99,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         ]
         default_kwargs["ingest_data"] = [Data(data={"text": text, "metadata": {}}) for text in test_data]
         default_kwargs["number_of_results"] = 2
+        default_kwargs["insert_mode"] = "overwrite"
 
         # Create and initialize the component
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
@@ -131,7 +116,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             assert isinstance(doc["embedding"], list)
             assert len(doc["embedding"]) == 8  # Should match our embedding size
 
-        self.__create_search_index(vector_store, default_kwargs)
+        self.__create_search_index(component_class, vector_store._collection, default_kwargs)
 
         # Verify index was created
         indexes = vector_store._collection.list_search_indexes()
@@ -141,6 +126,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         # Test similarity search through the component
         component.set(search_query="dog")
         results = component.search_documents()
+        time.sleep(5)  # wait the results come from API
 
         assert len(results) == 2, "Expected 2 results for 'lazy dog' query"
         # The most relevant results should be about dogs
@@ -168,8 +154,8 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         self, component_class: type[MongoVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test search with empty query."""
+        default_kwargs["insert_mode"] = "overwrite"
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
-        component.build_vector_store()
 
         # Test with empty search query
         component.set(search_query="")
@@ -191,7 +177,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
         vector_store = component.build_vector_store()
 
-        self.__create_search_index(vector_store, default_kwargs)
+        self.__create_search_index(component_class, vector_store._collection, default_kwargs)
 
         # Test search and verify metadata is preserved
         component.set(search_query="Document", number_of_results=2)

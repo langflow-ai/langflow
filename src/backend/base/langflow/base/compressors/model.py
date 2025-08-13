@@ -1,9 +1,9 @@
 from abc import abstractmethod
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import BaseDocumentCompressor
 from langflow.io import DataInput, IntInput, MultilineInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
 
