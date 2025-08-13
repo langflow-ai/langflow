@@ -2,7 +2,6 @@ import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
-from langflow.services.database.models.user.crud import get_user_by_id
 import orjson
 import pandas as pd
 from fastapi import UploadFile
@@ -13,6 +12,7 @@ from langflow.custom import Component
 from langflow.io import DropdownInput, HandleInput, SecretStrInput, StrInput
 from langflow.schema import Data, DataFrame, Message
 from langflow.services.auth.utils import create_user_longterm_token, get_current_user
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
 from langflow.template.field.base import Output
 
