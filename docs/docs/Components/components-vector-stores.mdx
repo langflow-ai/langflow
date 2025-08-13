@@ -20,30 +20,43 @@ Other types of storage, like traditional structured databases and chat memory, a
 For a tutorial using **Vector Store** components in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
 :::
 
-This example uses the **Vector Store RAG** template uses two subflows to load embeddings and content into a vector database, and then runs a vector search to retrieve relevant context based on a user's query:
+The following steps introduce the use of **Vector Store** components in a flow, including configuration details, how the components work when you run a flow, why you might need multiple **Vector Store** components in one flow, and useful supporting components, such as **Embedding Model** and **Parser** components.
 
 1. Create a flow with the **Vector Store RAG** template.
 
-2. Configure the two **Astra DB** components, or replace them with another pair of **Vector Store** components of your choice.
+    This template has two subflows.
+    The **Load Data** subflow loads embeddings and content into a vector database, and the **Retriever** subflow runs a vector search to retrieve relevant context based on a user's query.
+
+2. Configure the database connection for both [**Astra DB** components](#astra-db), or replace them with another pair of **Vector Store** components of your choice.
 
     Make sure the components connect to the same vector store, and that the component in the **Retriever** subflow is able to run a similarity search.
-    Depending on your vector store provider and configuration, you might need to provide a query statement, API request, or other search parameters.
+    For information about specific configuration parameters, see the section of this page for your chosen **Vector Store** component and [Hidden parameters](#hidden-parameters).
 
-3. To configure the embeddings model, do one of the following:
+3. To configure the embedding model, do one of the following:
 
-    * In the **OpenAI Embeddings** components, enter your OpenAI API key.
-    * Replace the **OpenAI Embeddings** components with another pair of [**Embedding Model** component](/components-embedding-models) of your choice.
-    * Remove the **OpenAI Embeddings** components if you are connecting to an Astra DB vector store with a vectorize integration.
-    In this case, the **Astra DB** components automatically use the vectorize integration to generate embeddings from the **Ingest Data** (in the **Load Data** subflow) and **Search Query** (in the **Retriever Flow** subflow).
+    * **Use an OpenAI model**: In both **OpenAI Embeddings** components, enter your OpenAI API key.
+    You can use the default model or select a different OpenAI embedding model.
+
+    * **Use another provider**: Replace the **OpenAI Embeddings** components with another pair of [**Embedding Model** component](/components-embedding-models) of your choice, and then configure the parameters and credentials accordingly.
+
+    * **Use Astra DB vectorize**: If you are using an Astra DB vector store that has a vectorize integration, you can remove both **OpenAI Embeddings** components.
+    If you do this, the vectorize integration automatically generates embeddings from the **Ingest Data** (in the **Load Data** subflow) and **Search Query** (in the **Retriever** subflow).
 
     :::tip
     If your vector store already contains embeddings, make sure your **Embedding Model** components use the same model as your previous embeddings.
     Mixing embedding models in the same vector store can produce inaccurate search results.
     :::
 
-4. In the **Language Model** component, enter your OpenAI API key, or select a different provider and model to use for the chat portion of the flow.
+4. Recommended: In the [**Split Text** component](/components-processing#split-text), optimize the chunking settings for your embedding model.
+For example, if your embedding model has a token limit of 512, then the **Chunk Size** parameter must not exceed that limit.
 
-5. Run the **Load Data** subflow to populate your vector store.
+    Additionally, because the **Retriever** flow passes the chat input directly to the **Vector Store** component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
+    For this example, you can enter a query that is within the limits; however, in a production environment, you might need to implement additional checks or preprocessing steps to ensure compliance.
+    For example, use additional components to prepare the chat input before running the vector search, or enforce chat input limits in your application code.
+
+5. In the **Language Model** component, enter your OpenAI API key, or select a different provider and model to use for the chat portion of the flow.
+
+6. Run the **Load Data** subflow to populate your vector store.
 In the **File** component, select one or more files, and then click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Vector Store** component in the **Load Data** subflow.
 
     The **Load Data** subflow loads files from your local machine, chunks them, generates embeddings for the chunks, and then stores the chunks and their embeddings in the vector database.
@@ -54,9 +67,9 @@ In the **File** component, select one or more files, and then click <Icon name="
     You can run the **Load Data** subflow as needed to preload or update the data in your vector store.
     Then, your chat interactions only use the components that are necessary for chat.
 
-    If your vector store already contains data, you don't need to run the **Load Data** subflow if you want to use your existing data for vector search.
+    If your vector store already contains data that you want to use for vector search, then you don't need to run the **Load Data** subflow.
 
-6. Open the **Playground** and start chatting to run the **Retriever** subflow.
+7. Open the **Playground** and start chatting to run the **Retriever** subflow.
 
     The **Retriever** subflow generates an embedding from chat input, runs a vector search to retrieve similar content from your vector store, parses the search results into supplemental context for the LLM, and then uses the LLM to generate a natural language response to your query.
     The LLM uses the vector search results along with its internal training data and tools, such as basic web search and datetime information, to produce the response.
@@ -70,7 +83,7 @@ In the **File** component, select one or more files, and then click <Icon name="
 
     To view the raw search results, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** on the **Vector Store** component after running the **Retriever** subflow.
 
-### Hidden and conditional parameters
+### Hidden parameters
 
 You can inspect a **Vector Store** component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
 
@@ -83,26 +96,38 @@ However, all parameters are always listed in a [component's code](/concepts-comp
 
 For information about a specific component's parameters, see the provider's documentation and the component details.
 
-### Search results and vector store output {#output}
+### Search results
 
-Most **Vector Store** components produce `search_results` and `vector_store` output.
+If you use a **Vector Store** component to query your vector store, it produces search results that you can pass to downstream components in your flow as a list of [`Data`](/data-types#data) objects or a tabular [`DataFrame`](/data-types#dataframe).
+You can set the format near the component's output port in the visual editor.
 
-* **`search_results`**: The vector search results in [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe) format.
-If both types are supported, you can set the format near the component's output port in the visual editor.
+The exception to this pattern is the **Vectara RAG** component, which outputs only an `answer` string in [`Message`](/data-types#message) format.
 
-    Some **Vector Store** components produce other output instead of or in addition to the `search_results`, depending on the component's purpose and available functions.
-    To explore output of specific components, see the component code, documentation, and visual editor.
+### Vector store instances
 
-* **`vector_store`**: A provider-specific instance of a [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) that drives the underlying vector search functions.
-This output is not directly returned for use in the flow, but it is created by the component during the flow run to execute component functions that read and write to the vector store.
+Because Langflow is based on LangChain, **Vector Store** components use an instance of [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) to drive the underlying vector search functions.
+In the component code, this is often instantiated as `vector_store`, but some components use a different name, such as the provider name.
 
-    These instances are created because Langflow is based on LangChain.
-    They are provider-specific and configured according to the component's parameters.
-    For example, the **Redis** component creates an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/) based on the component's parameters, such as the connection string, index name, and schema.
+For the **Cassandra Graph** and **Astra DB Graph** components, `vector_store` is an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html).
 
-    Some LangChain classes don't expose all possible options as component parameters.
-    Depending on the provider, these options might use default values or allow modification through environment variables, if they are supported in Langflow.
-    For information about specific options, see the LangChain API reference and provider documentation.
+These instances are provider-specific and configured according to the component's parameters.
+For example, the **Redis** component creates an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/) based on the component's parameters, such as the connection string, index name, and schema.
+
+Some LangChain classes don't expose all possible options as component parameters.
+Depending on the provider, these options might use default values or allow modification through environment variables, if they are supported in Langflow.
+For information about specific options, see the LangChain API reference and provider documentation.
+
+<details>
+<summary>Vector Store Connection ports</summary>
+
+The **Astra DB** and **OpenSearch** components have an additional **Vector Store Connection** output.
+This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
+
+The only non-legacy component that supports this input is the **Graph RAG** component, which was meant as a Graph RAG extension to the **Astra DB** component.
+Instead, you can use the **Astra DB Graph** component that includes both the vector store connection and Graph RAG functionality.
+OpenSearch instances support Graph traversal through built-in RAG functionality and plugins.
+
+</details>
 
 ## Apache Cassandra
 
@@ -524,27 +549,27 @@ For more information, see the [Astra DB Serverless documentation](https://docs.d
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | The Graph RAG vector store instance configured with the specified parameters. |
+| vector_store | Vector Store | An instance of AstraDBGraphVectorStore configured with the specified parameters. |
 | search_results | Search Results | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
 ### Graph RAG
 
-The **Graph RAG** component uses [DataStax Graph RAG](https://datastax.github.io/graph-rag/) for Graph RAG traversal and graph-based document retrieval in an Astra DB vector store.
+The **Graph RAG** component uses an instance of [`GraphRetriever`](https://datastax.github.io/graph-rag/reference/langchain_graph_retriever/) for Graph RAG traversal enabling graph-based document retrieval in an Astra DB vector store.
+For more information, see the [DataStax Graph RAG documentation](https://datastax.github.io/graph-rag/).
 
 :::tip
-This component only works with the **Astra DB** vector store component because it uses a `VectorStore` port to connect to the database.
-Consider using the **Astra DB Graph** component instead.
+This component was meant as a Graph RAG extension for the **Astra DB** vector store component.
+However, the **Astra DB Graph** component includes both the vector store connection and Graph RAG functionality.
 :::
 
 #### Graph RAG parameters
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| embedding_model | Embedding Model | Input parameter. Specify the embedding model to use.
-Not required if the attached vector store has an [Astra DB vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
-| vector_store | Vector Store Connection | Input parameter. Connection to the vector store through a `VectorStore` port connected to a component that produces `VectorStore` output.|
+| embedding_model | Embedding Model | Input parameter. Specify the embedding model to use. Not required if the connected vector store has an [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
+| vector_store | Vector Store Connection | Input parameter. A [`vector_store`](#vector-store-instances) instance inherited from an **Astra DB** component's **Vector Store Connection** output. |
 | edge_definition | Edge Definition | Input parameter. [Edge definition](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/) for the graph traversal. |
 | strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
 | search_query | Search Query | Input parameter. The query to search for in the vector store. |
@@ -599,7 +624,7 @@ To use the HCD vector store for embeddings ingestion, connect it to an embedding
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
-| vector_store  | HyperConvergedDatabaseVectorStore | The HCD vector store instance. |
+| vector_store  | AstraDBVectorStore | An instance of AstraDBVectorStore to use the Data API for vector search. |
 | search_results| List[Data]   | The results of the similarity search as a list of [Data](/data-types#data) objects.               |
 
 </details>
@@ -699,6 +724,7 @@ For more information, see the [Milvus documentation](https://milvus.io/docs).
 | Name           | Type                   | Description                    |
 |----------------|------------------------|--------------------------------|
 | vector_store   | Milvus                 | A Milvus vector store instance configured with the specified parameters. |
+| search_results | List[Data]             | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
 
@@ -997,6 +1023,9 @@ The **Vectara** component creates a Vectara vector store with search capabilitie
 This component enabled Vectara's full end-to-end RAG capabilities with reranking options.
 For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
 
+This component uses a `Vectara` vector store to execute the vector search and reranking functions.
+However, unlike other **Vector Store** components, this component's output is an **Answer** string in [`Message`](/data-types#message) format.
+
 ## Weaviate
 
 This component facilitates a Weaviate vector store setup, optimizing text and document indexing and retrieval.
@@ -1023,5 +1052,6 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | Name         | Type             | Description                   |
 |--------------|------------------|-------------------------------|
 | vector_store | WeaviateVectorStore | The Weaviate vector store instance. |
+| search_results | List[Data]      | The results of the similarity search as a list of [Data](/data-types#data) objects. |
 
 </details>
