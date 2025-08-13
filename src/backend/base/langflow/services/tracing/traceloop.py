@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import TYPE_CHECKING, Any
 
@@ -80,6 +81,69 @@ class TraceloopTracer(BaseTracer):
     def _start_workflow(self, inputs: dict[str, Any], metadata: dict[str, Any] | None = None):
         return {"trace_id": str(self.trace_id), "inputs": inputs, "metadata": metadata or {}}
 
+    def _add_trace_impl(
+        self,
+        trace_id: str,
+        trace_name: str,
+        trace_type: str,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        vertex: Vertex | None = None,
+    ) -> None:
+        """Internal implementation of adding a trace."""
+        if not self.ready:
+            return
+
+        # Start the workflow if it's not already started
+        if self._workflow is None:
+            self._workflow = self._start_workflow(
+                inputs,
+                {
+                    "project_name": self.project_name,
+                    "trace_type": trace_type,
+                    "user_id": self.user_id,
+                    "session_id": self.session_id,
+                    **(metadata or {}),
+                },
+            )
+
+        # Extract model_name and provider from metadata
+        model_name = (metadata or {}).get("model_name")
+        agent_llm = (metadata or {}).get("agent_llm")
+        if not model_name:
+            logger.warning(f"model_name not found in metadata for trace {trace_name}")
+        if not agent_llm:
+            logger.warning(f"agent_llm not found in metadata for trace {trace_name}")
+
+        # Add span for component start
+        span_name = f"component.{trace_name}"
+        with self._tracer.start_as_current_span(span_name) as span:
+            # Set attributes on the span using the passed parameters
+            span.set_attributes(
+                {
+                    "trace_id": trace_id,
+                    "trace_name": trace_name,
+                    "trace_type": trace_type,
+                    "inputs": str(inputs),
+                    "vertex_id": vertex.id if vertex else None,
+                }
+            )
+
+            # Add metadata attributes if available
+            if metadata:
+                span.set_attributes({"metadata": str(metadata)})
+
+            # Set model information if available
+            if model_name:
+                span.set_attributes({"model_name": model_name})
+            if agent_llm:
+                span.set_attributes({"agent_llm": agent_llm})
+
+        # Optionally, set as attributes on the workflow dict for later use
+        if self._workflow is not None:
+            self._workflow["model_name"] = model_name
+            self._workflow["agent_llm"] = agent_llm
+
     @override
     def add_trace(
         self,
@@ -100,34 +164,15 @@ class TraceloopTracer(BaseTracer):
             metadata: The metadata for the trace.
             vertex: The vertex associated with the trace.
         """
-        if not self.ready:
-            return
-
-        # Start the workflow if it's not already started
-        if self._workflow is None:
-            self._workflow = self._start_workflow(
-                inputs,
-                {
-                    "project_name": self.project_name,
-                    "trace_type": self.trace_type,
-                    "user_id": self.user_id,
-                    "session_id": self.session_id,
-                    **(metadata or {}),
-                },
+        try:
+            # Add timeout wrapper
+            asyncio.wait_for(
+                self._add_trace_impl(trace_id, trace_name, trace_type, inputs, metadata, vertex), timeout=5.0
             )
-
-        # Extract model_name and provider from metadata
-        model_name = (metadata or {}).get("model_name")
-        agent_llm = (metadata or {}).get("agent_llm")
-        if not model_name:
-            logger.warning(f"model_name not found in metadata for trace {trace_name}")
-        if not agent_llm:
-            logger.warning(f"agent_llm not found in metadata for trace {trace_name}")
-
-        # Optionally, set as attributes on the workflow dict for later use
-        if self._workflow is not None:
-            self._workflow["model_name"] = model_name
-            self._workflow["agent_llm"] = agent_llm
+        except asyncio.TimeoutError:
+            logger.warning(f"Traceloop trace addition timed out for {trace_id}")
+        except (ValueError, RuntimeError, OSError) as e:
+            logger.error(f"Traceloop trace failed: {e}")
 
     @override
     def end_trace(
