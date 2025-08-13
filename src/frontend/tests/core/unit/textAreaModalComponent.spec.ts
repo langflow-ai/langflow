@@ -41,7 +41,7 @@ test(
     await page
       .getByTestId("textarea_str_text")
       .fill(
-        "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!"
+        "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
       );
 
     // Test cursor position preservation
@@ -56,7 +56,7 @@ test(
       expect(false).toBeTruthy();
     }
     await textInput.fill(
-      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!"
+      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
     await page
@@ -87,5 +87,5 @@ test(
     if (valueTextArea != "test123123") {
       expect(false).toBeTruthy();
     }
-  }
+  },
 );
