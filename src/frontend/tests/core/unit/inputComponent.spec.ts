@@ -38,6 +38,19 @@ test(
       expect(false).toBeTruthy();
     }
 
+    // Test cursor position preservation
+    const input = page.getByTestId("popover-anchor-input-collection_name");
+    await input.click();
+    await input.press("Home"); // Move cursor to start
+    await input.press("ArrowRight"); // Move cursor to position 1
+    await input.press("ArrowRight"); // Move cursor to position 2
+    await input.pressSequentially("X", { delay: 100 }); // Type at position 2
+    const cursorValue = await input.inputValue();
+    if (!cursorValue.startsWith("coX")) {
+      expect(false).toBeTruthy();
+    }
+    await input.fill("collection_name_test_123123123!@#$&*(&%$@");
+
     await page.getByTestId("div-generic-node").click();
 
     await page.getByTestId("edit-button-modal").last().click();
