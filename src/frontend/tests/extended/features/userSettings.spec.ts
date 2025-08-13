@@ -30,7 +30,7 @@ test(
       timeout: 4000,
     });
     await page.getByText("Profile Gradient").isVisible();
-  }
+  },
 );
 
 test(
@@ -130,7 +130,7 @@ test(
     await page.locator(".ag-checkbox-input").first().click();
     await page.getByTestId("icon-Trash2").click();
     await page.getByText("No data available").isVisible();
-  }
+  },
 );
 
 test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
@@ -199,7 +199,7 @@ test(
     await page.waitForSelector("text=Api Key Copied!", { timeout: 30000 });
 
     await page.getByText(randomName).isVisible();
-  }
+  },
 );
 
 test(
@@ -243,5 +243,5 @@ test(
 
     // Verify we can see flow-specific elements
     await expect(page.getByTestId("sidebar-search-input")).toBeVisible();
-  }
+  },
 );
