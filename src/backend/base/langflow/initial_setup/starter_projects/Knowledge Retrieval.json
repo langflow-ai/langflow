@@ -23,9 +23,9 @@
         },
         "id": "xy-edge__TextInput-Z3rM3{œdataTypeœ:œTextInputœ,œidœ:œTextInput-Z3rM3œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-tGoBR{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-tGoBRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "TextInput-Z3rM3",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-Z3rM3œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-Z3rM3œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "KBRetrieval-tGoBR",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-tGoBRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-tGoBRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
@@ -51,9 +51,9 @@
         },
         "id": "xy-edge__KBRetrieval-tGoBR{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-tGoBRœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-tixOe{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tixOeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "KBRetrieval-tGoBR",
-        "sourceHandle": "{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-tGoBRœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-tGoBRœ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-tixOe",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tixOeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tixOeœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -543,8 +543,6 @@
                 "group_outputs": false,
                 "method": "get_chroma_kb_data",
                 "name": "chroma_kb_data",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -618,9 +616,7 @@
                 "dynamic": false,
                 "info": "Select the knowledge to load data from.",
                 "name": "knowledge_base",
-                "options": [
-                  "Potato"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,

@@ -27,9 +27,9 @@
         "id": "reactflow__edge-URLComponent-6JEUC{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-6JEUCœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-gvHe2{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-gvHe2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-6JEUC",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-6JEUCœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-6JEUCœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "SplitText-gvHe2",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-gvHe2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-gvHe2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "xy-edge__SplitText-gvHe2{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-gvHe2œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KBIngestion-jj5iW{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-jj5iWœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-gvHe2",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-gvHe2œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-gvHe2œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "KBIngestion-jj5iW",
-        "targetHandle": "{œfieldNameœ:œinput_dfœ,œidœ:œKBIngestion-jj5iWœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKBIngestion-jj5iWœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -715,8 +715,6 @@
                 "group_outputs": false,
                 "method": "build_kb_info",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1005,9 +1003,7 @@
                 "dynamic": false,
                 "info": "Select the knowledge to load data from.",
                 "name": "knowledge_base",
-                "options": [
-                  "Potato"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "refresh_button": true,
