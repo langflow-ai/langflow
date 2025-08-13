@@ -1,7 +1,7 @@
+import { Panel } from "@xyflow/react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import FlowLogsModal from "@/modals/flowLogsModal";
-import { Panel } from "@xyflow/react";
 
 const LogCanvasControls = () => {
   return (

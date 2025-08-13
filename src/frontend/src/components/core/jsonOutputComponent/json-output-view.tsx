@@ -1,6 +1,6 @@
+import type React from "react";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType } from "@/types/api";
-import React from "react";
+import type { APIClassType } from "@/types/api";
 import JsonEditor from "../jsonEditor";
 
 interface JsonOutputViewComponentProps {

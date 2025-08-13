@@ -2,6 +2,7 @@
 import ast
 import asyncio
 import contextlib
+import hashlib
 import inspect
 import re
 import traceback
@@ -30,6 +31,30 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 from langflow.type_extraction.type_extraction import extract_inner_type
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+
+
+def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:
+    """Generate a hash of the component source code.
+
+    Args:
+        source_code: The source code string
+        modname: The module name for context
+        class_name: The class name for context
+
+    Returns:
+        SHA256 hash of the source code
+
+    Raises:
+        ValueError: If source_code is empty or None
+        UnicodeEncodeError: If source_code cannot be encoded
+        TypeError: If source_code is not a string
+    """
+    if not source_code:
+        msg = f"Empty source code for {class_name} in {modname}"
+        raise ValueError(msg)
+
+    # Generate SHA256 hash of the source code
+    return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]  # First 12 chars for brevity
 
 
 class UpdateBuildConfigError(Exception):
@@ -398,8 +423,24 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
     return frontend_node
 
 
+def add_code_field_to_build_config(build_config: dict, raw_code: str):
+    build_config["code"] = Input(
+        dynamic=True,
+        required=True,
+        placeholder="",
+        multiline=True,
+        value=raw_code,
+        password=False,
+        name="code",
+        advanced=True,
+        field_type="code",
+        is_list=False,
+    ).model_dump()
+    return build_config
+
+
 def build_custom_component_template_from_inputs(
-    custom_component: Component | CustomComponent, user_id: str | UUID | None = None
+    custom_component: Component | CustomComponent, user_id: str | UUID | None = None, module_name: str | None = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
     """Builds a frontend node template from a custom component using its input-based configuration.
@@ -436,6 +477,13 @@ def build_custom_component_template_from_inputs(
     # ! This should be removed when we have a better way to handle this
     frontend_node.set_base_classes_from_outputs()
     reorder_fields(frontend_node, cc_instance._get_field_order())
+    if module_name:
+        frontend_node.metadata["module"] = module_name
+
+        # Generate code hash for cache invalidation and debugging
+        code_hash = _generate_code_hash(custom_component._code, module_name, ctype_name)
+        if code_hash:
+            frontend_node.metadata["code_hash"] = code_hash
 
     return frontend_node.to_dict(keep_name=False), cc_instance
 
@@ -443,6 +491,7 @@ def build_custom_component_template_from_inputs(
 def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
+    module_name: str | None = None,
 ) -> tuple[dict[str, Any], CustomComponent | Component]:
     """Builds a frontend node template and instance for a custom component.
 
@@ -474,7 +523,9 @@ def build_custom_component_template(
         )
     try:
         if "inputs" in custom_component.template_config:
-            return build_custom_component_template_from_inputs(custom_component, user_id=user_id)
+            return build_custom_component_template_from_inputs(
+                custom_component, user_id=user_id, module_name=module_name
+            )
         frontend_node = CustomComponentFrontendNode(**custom_component.template_config)
 
         field_config, custom_instance = run_build_config(
@@ -493,6 +544,14 @@ def build_custom_component_template(
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
+        if module_name:
+            frontend_node.metadata["module"] = module_name
+
+            # Generate code hash for cache invalidation and debugging
+            code_hash = _generate_code_hash(custom_component._code, module_name, custom_component.__class__.__name__)
+            if code_hash:
+                frontend_node.metadata["code_hash"] = code_hash
+
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
         if isinstance(exc, HTTPException):
@@ -509,6 +568,7 @@ def build_custom_component_template(
 def create_component_template(
     component: dict | None = None,
     component_extractor: Component | CustomComponent | None = None,
+    module_name: str | None = None,
 ):
     """Creates a component template and instance from either a component dictionary or an existing component extractor.
 
@@ -523,7 +583,9 @@ def create_component_template(
 
         component_extractor = Component(_code=component_code)
 
-    component_template, component_instance = build_custom_component_template(component_extractor)
+    component_template, component_instance = build_custom_component_template(
+        component_extractor, module_name=module_name
+    )
     if not component_template["output_types"] and component_output_types:
         component_template["output_types"] = component_output_types
 

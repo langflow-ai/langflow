@@ -1,5 +1,3 @@
-from crewai import Agent
-
 from langflow.base.agents.crewai.crew import convert_llm, convert_tools
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
@@ -22,6 +20,7 @@ class CrewAIAgentComponent(Component):
     description = "Represents an agent of CrewAI."
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
+    legacy = True
 
     inputs = [
         MultilineInput(name="role", display_name="Role", info="The role of the agent."),
@@ -80,7 +79,13 @@ class CrewAIAgentComponent(Component):
         Output(display_name="Agent", name="output", method="build_output"),
     ]
 
-    def build_output(self) -> Agent:
+    def build_output(self):
+        try:
+            from crewai import Agent
+        except ImportError as e:
+            msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
+            raise ImportError(msg) from e
+
         kwargs = self.kwargs or {}
 
         # Define the Agent

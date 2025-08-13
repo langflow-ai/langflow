@@ -1,14 +1,14 @@
+import { useUpdateNodeInternals } from "@xyflow/react";
+import { cloneDeep, debounce } from "lodash";
+import { useCallback, useMemo, useRef } from "react";
 import { DEBOUNCE_FIELD_LIST } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { AllNodeType } from "@/types/flow";
-import { useUpdateNodeInternals } from "@xyflow/react";
-import { cloneDeep, debounce } from "lodash";
-import { useCallback, useMemo, useRef } from "react";
+import type { APIClassType, InputFieldType } from "@/types/api";
+import type { AllNodeType } from "@/types/flow";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 const DEBOUNCE_TIME_1_SECOND = 1000;

@@ -1,7 +1,7 @@
 // src/constants/constants.ts
 
 import custom from "../customization/config-constants";
-import { languageMap } from "../types/components";
+import type { languageMap } from "../types/components";
 
 /**
  * invalid characters for flow name
@@ -558,7 +558,6 @@ export const NOUNS: string[] = [
 export const USER_PROJECTS_HEADER = "My Collection";
 
 export const DEFAULT_FOLDER = "Starter Project";
-export const DEFAULT_FOLDER_DEPRECATED = "My Projects";
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
@@ -735,6 +734,8 @@ export const INSERT_API_KEY = "Insert your Langflow API key.";
 export const INVALID_API_KEY = "Your API key is not valid. ";
 export const CREATE_API_KEY = `Don't have an API key? Sign up at`;
 export const STATUS_BUILD = "Build to validate status.";
+export const STATUS_MISSING_FIELDS_ERROR =
+  "Please fill all the required fields.";
 export const STATUS_INACTIVE = "Execution blocked";
 export const STATUS_BUILDING = "Building...";
 export const SAVED_HOVER = "Last saved: ";
@@ -760,7 +761,7 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "assemblyai",
   "LangWatch",
   "langwatch",
-  "Youtube",
+  "YouTube",
   "youtube",
 ];
 

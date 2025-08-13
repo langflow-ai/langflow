@@ -1,6 +1,6 @@
-import { useQueryFunctionType } from "@/types/api";
-import { MCPServerInfoType } from "@/types/mcp";
 import { useEffect } from "react";
+import type { useQueryFunctionType } from "@/types/api";
+import type { MCPServerInfoType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -29,8 +29,16 @@ export const useGetMCPServers: useQueryFunctionType<
       if (cachedData && Array.isArray(cachedData)) {
         const merged = data.map((server) => {
           const cached = cachedData.find((s) => s.name === server.name);
-          return cached && (cached.toolsCount !== null || cached.mode !== null)
-            ? { ...server, toolsCount: cached.toolsCount, mode: cached.mode }
+          return cached &&
+            (cached.toolsCount !== null ||
+              cached.mode !== null ||
+              cached.error !== null)
+            ? {
+                ...server,
+                toolsCount: cached.toolsCount,
+                mode: cached.mode,
+                error: cached.error,
+              }
             : server;
         });
         return merged;

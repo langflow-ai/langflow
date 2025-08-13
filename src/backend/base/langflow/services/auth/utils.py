@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
@@ -59,11 +60,11 @@ async def api_key_security(
                 if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                     logger.warning(AUTO_LOGIN_WARNING)
-                else:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=AUTO_LOGIN_ERROR,
-                    )
+                    return UserRead.model_validate(result, from_attributes=True)
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=AUTO_LOGIN_ERROR,
+                )
             result = await check_key(db, query_param or header_param)
 
         elif not query_param and not header_param:
@@ -72,19 +73,18 @@ async def api_key_security(
                 detail="An API key must be passed as query or header",
             )
 
-        elif query_param:
-            result = await check_key(db, query_param)
-
         else:
-            result = await check_key(db, header_param)
+            result = await check_key(db, query_param or header_param)
 
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid or missing API key",
             )
+
         if isinstance(result, User):
             return UserRead.model_validate(result, from_attributes=True)
+
     msg = "Invalid result type"
     raise ValueError(msg)
 
@@ -300,8 +300,17 @@ async def create_super_user(
         )
 
         db.add(super_user)
-        await db.commit()
-        await db.refresh(super_user)
+        try:
+            await db.commit()
+            await db.refresh(super_user)
+        except IntegrityError:
+            # Race condition - another worker created the user
+            await db.rollback()
+            super_user = await get_user_by_username(db, username)
+            if not super_user:
+                raise  # Re-raise if it's not a race condition
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error creating superuser.")
 
     return super_user
 

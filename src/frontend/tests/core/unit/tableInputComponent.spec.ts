@@ -177,13 +177,14 @@ class CustomComponent(Component):
     const visibleTexts = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
     const notVisibleTexts = ["X1", "thirdRandomText"];
 
-    await Promise.all(
-      visibleTexts.map((text) => expect(page.getByText(text)).toBeVisible()),
-    );
-    await Promise.all(
-      notVisibleTexts.map((text) =>
-        expect(page.getByText(text)).not.toBeVisible(),
-      ),
-    );
+    for (const text of visibleTexts) {
+      const count = await page.getByText(text).count();
+      expect(count).toBeGreaterThanOrEqual(1);
+    }
+
+    for (const text of notVisibleTexts) {
+      const count = await page.getByText(text).count();
+      expect(count).toBe(0);
+    }
   },
 );

@@ -147,11 +147,15 @@ def set_var_for_macos_issue() -> None:
 
 def wait_for_server_ready(host, port, protocol) -> None:
     """Wait for the server to become ready by polling the health endpoint."""
+    # Use localhost for health check when host is 0.0.0.0 (bind to all interfaces)
+    health_check_host = "localhost" if host == "0.0.0.0" else host  # noqa: S104
+
     status_code = 0
     while status_code != httpx.codes.OK:
         try:
             status_code = httpx.get(
-                f"{protocol}://{host}:{port}/health", verify=host not in ("127.0.0.1", "localhost")
+                f"{protocol}://{health_check_host}:{port}/health",
+                verify=health_check_host not in ("127.0.0.1", "localhost"),
             ).status_code
         except HTTPError:
             time.sleep(1)
@@ -184,6 +188,7 @@ def run(
         show_default=False,
     ),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
+    log_rotation: str | None = typer.Option(None, help="Log rotation(Time/Size).", show_default=False),
     cache: str | None = typer.Option(  # noqa: ARG001
         None,
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -259,7 +264,7 @@ def run(
     else:
         os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
 
-    configure(log_level=log_level, log_file=log_file)
+    configure(log_level=log_level, log_file=log_file, log_rotation=log_rotation)
 
     # Create progress indicator (show verbose timing if log level is DEBUG)
     verbose = log_level == "debug"

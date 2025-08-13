@@ -11,6 +11,7 @@ class EmbeddingSimilarityComponent(Component):
     display_name: str = "Embedding Similarity"
     description: str = "Compute selected form of similarity between two embedding vectors."
     icon = "equal"
+    legacy: bool = True
 
     inputs = [
         DataInput(
