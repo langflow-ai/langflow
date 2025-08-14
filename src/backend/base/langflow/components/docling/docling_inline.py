@@ -1,4 +1,7 @@
+from multiprocessing import Queue, get_context
+
 from langflow.base.data import BaseFileComponent
+from langflow.components.docling import docling_worker
 from langflow.inputs import DropdownInput
 from langflow.schema import Data
 
@@ -70,72 +73,27 @@ class DoclingInlineComponent(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-        try:
-            from docling.datamodel.base_models import ConversionStatus, InputFormat
-            from docling.datamodel.pipeline_options import (
-                OcrOptions,
-                PdfPipelineOptions,
-                VlmPipelineOptions,
-            )
-            from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
-            from docling.models.factories import get_ocr_factory
-            from docling.pipeline.vlm_pipeline import VlmPipeline
-        except ImportError as e:
-            msg = (
-                "Docling is not installed. Please install it with `uv pip install docling` or"
-                " `uv pip install langflow[docling]`."
-            )
-            raise ImportError(msg) from e
-
-        # Configure the standard PDF pipeline
-        def _get_standard_opts() -> PdfPipelineOptions:
-            pipeline_options = PdfPipelineOptions()
-            pipeline_options.do_ocr = self.ocr_engine != ""
-            if pipeline_options.do_ocr:
-                ocr_factory = get_ocr_factory(
-                    allow_external_plugins=False,
-                )
-
-                ocr_options: OcrOptions = ocr_factory.create_options(
-                    kind=self.ocr_engine,
-                )
-                pipeline_options.ocr_options = ocr_options
-            return pipeline_options
-
-        # Configure the VLM pipeline
-        def _get_vlm_opts() -> VlmPipelineOptions:
-            return VlmPipelineOptions()
-
-        # Configure the main format options and create the DocumentConverter()
-        def _get_converter() -> DocumentConverter:
-            if self.pipeline == "standard":
-                pdf_format_option = PdfFormatOption(
-                    pipeline_options=_get_standard_opts(),
-                )
-            elif self.pipeline == "vlm":
-                pdf_format_option = PdfFormatOption(pipeline_cls=VlmPipeline, pipeline_options=_get_vlm_opts())
-
-            format_options: dict[InputFormat, FormatOption] = {
-                InputFormat.PDF: pdf_format_option,
-                InputFormat.IMAGE: pdf_format_option,
-            }
-
-            return DocumentConverter(format_options=format_options)
-
         file_paths = [file.path for file in file_list if file.path]
 
         if not file_paths:
             self.log("No files to process.")
             return file_list
 
-        converter = _get_converter()
-        results = converter.convert_all(file_paths)
+        ctx = get_context("spawn")
+        queue: Queue = ctx.Queue()
+        proc = ctx.Process(
+            target=docling_worker,
+            args=(file_paths, queue, self.pipeline, self.ocr_engine),
+        )
 
-        processed_data: list[Data | None] = [
-            Data(data={"doc": res.document, "file_path": str(res.input.file)})
-            if res.status == ConversionStatus.SUCCESS
-            else None
-            for res in results
-        ]
+        proc.start()
+        result = queue.get()
+        proc.join()
+
+        # Check if there was an error in the worker
+        if isinstance(result, dict) and "error" in result:
+            raise ImportError(result["error"])
+
+        processed_data = [Data(data={"doc": r["document"], "file_path": r["file_path"]}) if r else None for r in result]
 
         return self.rollup_data(file_list, processed_data)
