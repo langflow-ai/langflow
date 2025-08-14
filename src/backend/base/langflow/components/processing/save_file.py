@@ -97,7 +97,7 @@ class SaveToFileComponent(Component):
         # Return the final file path and confirmation message
         final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path
 
-        return Message(text=f"{confirmation} at {final_path!s}")
+        return Message(text=f"{confirmation!s} at {final_path!s}")
 
     def _get_input_type(self) -> str:
         """Determine the input type based on the provided input."""
@@ -162,7 +162,7 @@ class SaveToFileComponent(Component):
         else:
             msg = f"Unsupported DataFrame format: {fmt}"
             raise ValueError(msg)
-        return f"DataFrame saved successfully as '{path}'"
+        return f"DataFrame saved successfully as '{path!s}'"
 
     def _save_data(self, data: Data, path: Path, fmt: str) -> str:
         """Save a Data object to the specified file format."""
@@ -179,7 +179,7 @@ class SaveToFileComponent(Component):
         else:
             msg = f"Unsupported Data format: {fmt}"
             raise ValueError(msg)
-        return f"Data saved successfully as '{path}'"
+        return f"Data saved successfully as '{path!s}'"
 
     async def _save_message(self, message: Message, path: Path, fmt: str) -> str:
         """Save a Message to the specified file format, handling async iterators."""
@@ -204,4 +204,4 @@ class SaveToFileComponent(Component):
         else:
             msg = f"Unsupported Message format: {fmt}"
             raise ValueError(msg)
-        return f"Message saved successfully as '{path}'"
+        return f"Message saved successfully as '{path!s}'"
