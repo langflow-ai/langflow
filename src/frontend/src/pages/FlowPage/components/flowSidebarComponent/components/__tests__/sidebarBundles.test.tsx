@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import React from "react";
 import { MemoizedSidebarGroup } from "../sidebarBundles";
 
 // Mock the UI components
@@ -416,14 +415,6 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
     });
 
     it("should handle undefined search and sortedCategories", () => {
-      const propsWithUndefined = {
-        ...defaultProps,
-        search: undefined as any,
-        sortedCategories: undefined as any,
-      };
-
-      // This will actually throw because the component expects valid arrays
-      // Let's test with empty arrays instead
       const propsWithEmpty = {
         ...defaultProps,
         search: "",

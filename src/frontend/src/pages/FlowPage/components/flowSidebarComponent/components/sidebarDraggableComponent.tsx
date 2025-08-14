@@ -159,7 +159,10 @@ export const SidebarDraggableComponent = forwardRef(
               />
               <div className="flex flex-1 items-center overflow-hidden">
                 <ShadTooltip content={display_name} styleClasses="z-50">
-                  <span className="truncate text-sm font-normal">
+                  <span
+                    data-testid="display-name"
+                    className="truncate text-sm font-normal"
+                  >
                     {display_name}
                   </span>
                 </ShadTooltip>

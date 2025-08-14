@@ -46,6 +46,7 @@ export const BundleItem = memo(
           <DisclosureTrigger className="group/collapsible">
             <SidebarMenuButton asChild>
               <div
+                role="button"
                 tabIndex={0}
                 onKeyDown={(e) => handleKeyDownInput(e, item.name)}
                 className="user-select-none flex cursor-pointer items-center gap-2"

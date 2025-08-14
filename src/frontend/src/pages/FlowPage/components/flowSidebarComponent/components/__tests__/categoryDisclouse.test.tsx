@@ -20,7 +20,7 @@ jest.mock("@/components/ui/disclosure", () => ({
     >
       {React.Children.map(children, (child, index) => {
         if (index === 0) {
-          return React.cloneElement(child, { onOpenChange, key: index });
+          return React.cloneElement(child, { onOpenChange });
         }
         return child;
       })}

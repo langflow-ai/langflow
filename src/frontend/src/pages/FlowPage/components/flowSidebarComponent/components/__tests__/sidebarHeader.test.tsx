@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
+import mockAPIData from "@/utils/testUtils/mockData/mockAPIData";
+import { SidebarHeaderComponentProps } from "../../types";
 import { SidebarHeaderComponent } from "../sidebarHeader";
 
 // Mock the UI components
@@ -128,7 +128,7 @@ describe("SidebarHeaderComponent", () => {
   const mockSetFilterData = jest.fn();
   const mockSearchInputRef = { current: null };
 
-  const defaultProps = {
+  const defaultProps: SidebarHeaderComponentProps = {
     showConfig: false,
     setShowConfig: mockSetShowConfig,
     showBeta: false,
@@ -141,7 +141,7 @@ describe("SidebarHeaderComponent", () => {
     handleInputFocus: mockHandleInputFocus,
     handleInputBlur: mockHandleInputBlur,
     handleInputChange: mockHandleInputChange,
-    filterType: null,
+    filterType: undefined,
     setFilterEdge: mockSetFilterEdge,
     setFilterData: mockSetFilterData,
     data: {},
@@ -340,7 +340,10 @@ describe("SidebarHeaderComponent", () => {
       const propsWithFilter = {
         ...defaultProps,
         filterType: {
-          source: true,
+          source: "test_source",
+          sourceHandle: undefined,
+          target: undefined,
+          targetHandle: undefined,
           type: "string",
           color: "blue",
         },
@@ -355,7 +358,10 @@ describe("SidebarHeaderComponent", () => {
       const propsWithInputFilter = {
         ...defaultProps,
         filterType: {
-          source: true,
+          source: "test_source",
+          sourceHandle: undefined,
+          target: undefined,
+          targetHandle: undefined,
           type: "string",
           color: "blue",
         },
@@ -373,7 +379,10 @@ describe("SidebarHeaderComponent", () => {
       const propsWithOutputFilter = {
         ...defaultProps,
         filterType: {
-          source: false,
+          source: "test_source",
+          sourceHandle: undefined,
+          target: undefined,
+          targetHandle: undefined,
           type: "number",
           color: "red",
         },
@@ -388,16 +397,17 @@ describe("SidebarHeaderComponent", () => {
     });
 
     it("should handle filter reset correctly", async () => {
-      const user = userEvent.setup();
-      const mockData = { test: "data" };
       const propsWithFilter = {
         ...defaultProps,
         filterType: {
-          source: true,
+          source: "test_source",
+          sourceHandle: undefined,
+          target: undefined,
+          targetHandle: undefined,
           type: "string",
           color: "blue",
         },
-        data: mockData,
+        data: mockAPIData,
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
@@ -564,7 +574,9 @@ describe("SidebarHeaderComponent", () => {
     });
 
     it("should handle null filterType gracefully", () => {
-      render(<SidebarHeaderComponent {...defaultProps} filterType={null} />);
+      render(
+        <SidebarHeaderComponent {...defaultProps} filterType={undefined} />,
+      );
 
       expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
     });
@@ -582,7 +594,10 @@ describe("SidebarHeaderComponent", () => {
 
     it("should handle complex filterType objects", () => {
       const complexFilterType = {
-        source: true,
+        source: "test_source",
+        sourceHandle: undefined,
+        target: undefined,
+        targetHandle: undefined,
         type: "List[str, int]",
         color: "custom-color",
         additionalProp: "ignored",
@@ -654,7 +669,10 @@ describe("SidebarHeaderComponent", () => {
         isInputFocused: true,
         search: "test search",
         filterType: {
-          source: true,
+          source: "test_source",
+          sourceHandle: undefined,
+          target: undefined,
+          targetHandle: undefined,
           type: "string",
           color: "blue",
         },
