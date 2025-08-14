@@ -71,7 +71,7 @@ class FileComponent(BaseFileComponent):
     description = "Loads content from files with optional advanced document processing and export using Docling."
     documentation: str = "https://docs.langflow.org/components-data#file"
     icon = "file-text"
-    name = "ile"
+    name = "File"
 
     # Docling supported formats from original component
     VALID_EXTENSIONS = [
@@ -243,7 +243,7 @@ class FileComponent(BaseFileComponent):
 
         return build_config
 
-    def update_outputs(self, frontend_node: dict[str, Any], field_name: str, field_value: Any) -> dict[str, Any]:
+    def update_outputs(self, frontend_node: dict[str, Any], field_name: str, field_value: Any) -> dict[str, Any]:  # noqa: ARG002
         """Dynamically show outputs based on the number of files and their types."""
         if field_name not in ["path", "advanced_mode"]:
             return frontend_node
