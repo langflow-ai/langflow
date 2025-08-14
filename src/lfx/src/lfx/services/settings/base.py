@@ -12,12 +12,7 @@ from aiofile import async_open
 from loguru import logger
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
-from pydantic_settings import (
-    BaseSettings,
-    EnvSettingsSource,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-)
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
 
 from lfx.constants import BASE_COMPONENTS_PATH
@@ -47,7 +42,7 @@ def is_list_of_any(field: FieldInfo) -> bool:
         return False
 
 
-class MyCustomSource(EnvSettingsSource):
+class CustomSource(EnvSettingsSource):
     @override
     def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:  # type: ignore[misc]
         # allow comma-separated list parsing
@@ -512,7 +507,7 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (MyCustomSource(settings_cls),)
+        return (CustomSource(settings_cls),)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
