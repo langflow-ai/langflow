@@ -115,9 +115,9 @@ class FileComponent(BaseFileComponent):
         ),
         DropdownInput(
             name="ocr_engine",
-            display_name="Ocr",
+            display_name="OCR Engine",
             info="OCR engine to use. Only available when pipeline is set to 'standard'.",
-            options=["", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
+            options=["", "easyocr"],
             value="",
             advanced=True,
         ),
@@ -165,14 +165,22 @@ class FileComponent(BaseFileComponent):
         *BaseFileComponent._base_outputs,
     ]
 
+    def _path_value(self, template) -> list[str]:
+        # Get current path value
+        return template.get("path", {}).get("file_path", [])
+
     def update_build_config(
-        self, build_config: dict[str, Any], field_value: Any, field_name: str | None = None
+        self, build_config: dict[str, Any], field_value: Any, field_name: str | None = None,
     ) -> dict[str, Any]:
         """Update build configuration to show/hide fields based on file count and advanced_mode."""
         if field_name == "path":
+            # Get current path value
+            path_value = self._path_value(build_config)
+            file_path = path_value[0] if len(path_value) > 0 else ""
+
             # Show/hide Advanced Parser based on file count (only for single files)
             file_count = len(field_value) if field_value else 0
-            if file_count == 1:
+            if file_count == 1 and not file_path.endswith((".csv", ".xlsx", ".parquet")):
                 build_config["advanced_mode"]["show"] = True
             else:
                 build_config["advanced_mode"]["show"] = False
@@ -211,14 +219,9 @@ class FileComponent(BaseFileComponent):
         if field_name not in ["path", "advanced_mode"]:
             return frontend_node
 
-        # Get current path value
-        if field_name == "path":
-            path_value = field_value
-        else:
-            # Get path from frontend_node when advanced_mode changes
-            path_value = frontend_node.get("template", {}).get("path", {}).get("file_path", [])
-
         # Add outputs based on the number of files in the path
+        template = frontend_node.get("template", {})
+        path_value = self._path_value(template)
         if len(path_value) == 0:
             return frontend_node
 
