@@ -512,20 +512,23 @@ class FileComponent(BaseFileComponent):
             clean_data = [processed_data]
 
             # This is where we've manually processed the data
-            if "exported_content" not in serialized_data:
-                clean_data = [
-                    Data(
-                        data={
-                            "file_path": file_path,
-                            **(
-                                item["element"]
-                                if "element" in item
-                                else {k: v for k, v in item.items() if k != "file_path"}
-                            ),
-                        }
-                    )
-                    for item in serialized_data["doc"]
-                ]
+            try:
+                if "exported_content" not in serialized_data:
+                    clean_data = [
+                        Data(
+                            data={
+                                "file_path": file_path,
+                                **(
+                                    item["element"]
+                                    if "element" in item
+                                    else {k: v for k, v in item.items() if k != "file_path"}
+                                ),
+                            }
+                        )
+                        for item in serialized_data["doc"]
+                    ]
+            except Exception as _:  # noqa: BLE001
+                raise ValueError(serialized_data) from None
 
             # Repeat file_list to match the number of processed data elements
             return self.rollup_data(file_list, clean_data)
@@ -553,7 +556,8 @@ class FileComponent(BaseFileComponent):
     def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
-        return self.load_files()
+        result = self.load_files()
+        return Message(text=str(result.text[0]))
 
     def _process_with_docling_and_export(self, file_path: str) -> Data:
         """Process a single file with Docling and export to the specified format."""
