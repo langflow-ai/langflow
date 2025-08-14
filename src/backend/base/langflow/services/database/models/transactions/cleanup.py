@@ -54,7 +54,8 @@ class TransactionCleanupTask:
                 if self._running:  # Check again after sleep
                     await self._cleanup_all_flows()
             except asyncio.CancelledError:
-                break
+                logger.debug("Periodic cleanup cancelled")
+                raise
             except Exception as e:  # noqa: BLE001
                 # Log error but don't stop the task - broad exception handling is intentional
                 logger.warning(f"Periodic cleanup encountered error (will retry): {e}")
