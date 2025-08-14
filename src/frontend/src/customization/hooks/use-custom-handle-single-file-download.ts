@@ -1,5 +1,5 @@
 import { useGetDownloadFileV2 } from "@/controllers/API/queries/file-management";
-import { FileType } from "@/types/file_management";
+import type { FileType } from "@/types/file_management";
 
 interface SingleFileDownloadParams {
   id: string;

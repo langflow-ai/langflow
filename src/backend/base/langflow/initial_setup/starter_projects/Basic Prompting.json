@@ -116,7 +116,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "192913db3453",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -402,7 +405,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -510,7 +516,7 @@
         "data": {
           "id": "undefined-qkI8p",
           "node": {
-            "description": "## 📖 README\n\nPerform basic prompting with a Language model component.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **Language Model** component.\n- Open the **Playground** to chat with your bot.\n\n#### Next steps:\nExperiment by changing the prompt and the Language model temperature to see how the bot's responses change.",
+            "description": "This template demonstrates a standard chat flow with additional instructions provided by a prompt. Prompts provide instructions and inputs for a Large Language Model (LLM) beyond the standard user-provided chat input. In this example, the prompt describes the LLM's role and persona.\n\n## Quick Start\n1. Add your **OpenAI API Key** to the **Language Model** component, or select a different provider and model.\n2. Open the **Playground** to start the chat and run the flow.\n\n## Next steps\nChange the prompt template, model, or model settings, such as **Temperature**, and then see how the responses change with these different inputs.\n💡 Some component settings are hidden by default; to view all settings click **Controls** in each component's header menu.\n💡 You can use curly braces to create variables in your template, such as `{variable}`. These can be populated from other components, with Langflow global variables, or at runtime.",
             "display_name": "Read Me",
             "documentation": "",
             "template": {
@@ -608,7 +614,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6f74e04e39d5",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {

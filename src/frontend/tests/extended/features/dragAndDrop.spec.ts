@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
+
 test(
   "user should be able to drag and drop an old collection without crashing the application",
-  { tag: ["@release"] },
+  { tag: ["@release", "@mainpage"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 

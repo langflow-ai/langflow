@@ -1,6 +1,6 @@
+import type { To } from "react-router-dom";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { To } from "react-router-dom";
 import { Button } from "../../ui/button";
 import { Separator } from "../../ui/separator";
 import ForwardedIconComponent from "../genericIconComponent";

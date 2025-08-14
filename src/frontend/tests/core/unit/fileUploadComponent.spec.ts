@@ -373,7 +373,7 @@ test(
 
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
-    const fileContent = fs.readFileSync(testFilePath);
+    const _fileContent = fs.readFileSync(testFilePath);
 
     await awaitBootstrapTest(page);
 
@@ -624,7 +624,7 @@ test(
     // Check if we're on the files page
     await page.waitForSelector('[data-testid="mainpage_title"]');
     const title = await page.getByTestId("mainpage_title");
-    expect(await title.textContent()).toContain("My Files");
+    expect(await title.textContent()).toContain("Files");
 
     // Upload the PNG file
     const fileChooserPromisePng = page.waitForEvent("filechooser");
@@ -696,7 +696,7 @@ test(
 
     // Open the file management modal
     await page.getByTestId("button_open_file_management").click();
-    console.log(pngFileName);
+    console.warn(pngFileName);
 
     // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${pngFileName}`)).toHaveClass(

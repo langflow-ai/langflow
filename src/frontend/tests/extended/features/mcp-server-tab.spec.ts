@@ -10,7 +10,7 @@ test(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`Attempt ${attempt} of ${maxRetries}`);
+        console.warn(`Attempt ${attempt} of ${maxRetries}`);
 
         await awaitBootstrapTest(page);
 
@@ -85,12 +85,37 @@ test(
           await page.waitForTimeout(1000);
         }
 
+        // Verify if the state is maintained
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+
+        await page.waitForTimeout(1000);
+
+        await page.reload();
+
+        // Navigate to MCP server tab
+        await page.getByTestId("mcp-btn").click({ timeout: 10000 });
+
+        // Verify MCP server tab is visible
+        await expect(page.getByTestId("mcp-server-title")).toBeVisible();
+        await expect(page.getByText("Flows/Tools")).toBeVisible();
+
+        // Click on Edit Tools button
+        await page.getByTestId("button_open_actions").click();
+        await page.waitForTimeout(500);
+
+        // Verify actions modal is open
+        await expect(page.getByText("MCP Server Tools")).toBeVisible();
+
         const isCheckedAgainAgain = await page
           .locator('input[data-ref="eInput"]')
           .first()
           .isChecked();
 
-        expect(isCheckedAgainAgain).toBeFalsy();
+        expect(isCheckedAgainAgain).toBeTruthy();
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+        await page.waitForTimeout(1000);
 
         // Select first action
         let element = page.locator('input[data-ref="eInput"]').last();
@@ -100,7 +125,7 @@ test(
 
         await page.waitForTimeout(500);
 
-        let count = 0;
+        const count = 0;
 
         while (
           elementText !==
@@ -177,7 +202,7 @@ test(
           /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
-        const sseUrl = sseUrlMatch![1];
+        const _sseUrl = sseUrlMatch![1];
 
         await page.getByText("macOS/Linux", { exact: true }).click();
 
@@ -229,7 +254,7 @@ test(
           await page.getByText("Add MCP Server", { exact: true }).click({
             timeout: 5000,
           });
-        } catch (error) {
+        } catch (_error) {
           await page
             .getByTestId("mcp-server-dropdown")
             .click({ timeout: 3000 });
@@ -271,14 +296,16 @@ test(
         expect(fetchOptionCount).toBeGreaterThan(0);
 
         // If we get here, the test passed
-        console.log(`Test passed on attempt ${attempt}`);
+        console.warn(`Test passed on attempt ${attempt}`);
         return;
       } catch (error) {
-        error = error as Error;
-        console.log(`Attempt ${attempt} failed:`, error);
+        console.error(`Attempt ${attempt} failed:`, error);
 
         if (attempt === maxRetries) {
-          console.log(`All ${maxRetries} attempts failed. Last error:`, error);
+          console.error(
+            `All ${maxRetries} attempts failed. Last error:`,
+            error,
+          );
           throw error;
         }
 

@@ -1,3 +1,8 @@
+import type { ColDef } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { cloneDeep } from "lodash";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
@@ -12,12 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function ToolsTable({
   rows,
@@ -57,25 +57,31 @@ export default function ToolsTable({
     setSelectedRows(filter);
   }, [rows, open]);
 
-  useEffect(() => {
+  const applyInitialSelection = () => {
+    if (!agGrid.current?.api) return;
+
     const initialData = cloneDeep(rows);
     const filter = initialData.filter((row) => row.status === true);
-    if (agGrid.current) {
-      agGrid.current?.api?.forEachNode((node) => {
-        if (
-          filter.some(
-            (row) =>
-              (row.display_name ?? row.name) ===
-              (node.data.display_name ?? node.data.name),
-          )
-        ) {
-          node.setSelected(true);
-        } else {
-          node.setSelected(false);
-        }
-      });
-    }
-  }, [agGrid.current]);
+
+    agGrid.current.api.forEachNode((node) => {
+      if (
+        filter.some(
+          (row) =>
+            (row.display_name ?? row.name) ===
+            (node.data.display_name ?? node.data.name),
+        )
+      ) {
+        node.setSelected(true);
+      } else {
+        node.setSelected(false);
+      }
+    });
+  };
+
+  // Apply initial selection when data changes and grid is ready
+  useEffect(() => {
+    applyInitialSelection();
+  }, [rows, data]);
 
   useEffect(() => {
     if (!open) {
@@ -251,6 +257,11 @@ export default function ToolsTable({
     setSidebarOpen(true);
   };
 
+  const handleGridReady = () => {
+    // Apply initial selection when grid is ready
+    applyInitialSelection();
+  };
+
   const rowName = useMemo(() => {
     return parseString(focusedRow?.display_name || focusedRow?.name || "", [
       "space_case",
@@ -284,6 +295,7 @@ export default function ToolsTable({
             tableOptions={tableOptions}
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
+            onGridReady={handleGridReady}
           />
         </div>
       </main>

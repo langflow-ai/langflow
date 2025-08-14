@@ -216,7 +216,10 @@ test(
     await page.getByTestId("fit_view").click();
     //---------------------------------- EDIT PROMPT
     await page.getByTestId("promptarea_prompt_template").first().click();
-    await page.getByTestId("modal-promptarea_prompt_template").first().fill(`
+    await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .first()
+      .fill(`
       {Condition}
   Answer with either TRUE or FALSE (and nothing else).
   TRUE Examples:
