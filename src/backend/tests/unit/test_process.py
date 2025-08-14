@@ -1,5 +1,6 @@
 from langflow.processing.process import process_tweaks
 from langflow.services.deps import get_session_service
+from langflow.services.utils import register_all_service_factories
 
 
 def test_no_tweaks():
@@ -263,6 +264,7 @@ def test_tweak_not_in_template():
 
 async def test_load_langchain_object_with_cached_session(basic_graph_data):
     # Provide a non-existent session_id
+    register_all_service_factories()
     session_service = get_session_service()
     session_id1 = "non-existent-session-id"
     graph1, artifacts1 = await session_service.load_session(session_id1, basic_graph_data)

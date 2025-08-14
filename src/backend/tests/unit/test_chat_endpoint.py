@@ -5,10 +5,10 @@ from uuid import UUID
 
 import pytest
 from httpx import codes
-from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
 from loguru import logger
 
+from lfx.memory import aget_messages
 from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
 
 

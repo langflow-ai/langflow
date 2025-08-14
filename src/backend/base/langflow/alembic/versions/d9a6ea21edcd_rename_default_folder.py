@@ -5,20 +5,17 @@ Revises: 66f72f04a1de
 Create Date: 2025-07-02 09:42:46.891585
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
-import sqlmodel
-from sqlalchemy.engine.reflection import Inspector
-from langflow.utils import migration
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'd9a6ea21edcd'
-down_revision: Union[str, None] = '66f72f04a1de'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "d9a6ea21edcd"
+down_revision: str | None = "66f72f04a1de"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

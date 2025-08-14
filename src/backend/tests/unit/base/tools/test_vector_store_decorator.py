@@ -1,8 +1,8 @@
 from typing import Any
 
 import pytest
-from langflow.components.vectorstores import AstraDBVectorStoreComponent
 
+from lfx.components.vectorstores import AstraDBVectorStoreComponent
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
