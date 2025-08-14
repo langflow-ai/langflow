@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.maritalk.maritalk import MaritalkModelComponent
+    from lfx.components.maritalk.maritalk import MaritalkModelComponent
 
 _dynamic_imports = {
     "MaritalkModelComponent": "maritalk",

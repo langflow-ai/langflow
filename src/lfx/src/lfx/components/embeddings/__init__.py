@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.embeddings.similarity import EmbeddingSimilarityComponent
-    from langflow.components.embeddings.text_embedder import TextEmbedderComponent
+    from lfx.components.embeddings.similarity import EmbeddingSimilarityComponent
+    from lfx.components.embeddings.text_embedder import TextEmbedderComponent
 
 _dynamic_imports = {
     "EmbeddingSimilarityComponent": "similarity",

@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.lmstudio.lmstudioembeddings import LMStudioEmbeddingsComponent
-    from langflow.components.lmstudio.lmstudiomodel import LMStudioModelComponent
+    from lfx.components.lmstudio.lmstudioembeddings import LMStudioEmbeddingsComponent
+    from lfx.components.lmstudio.lmstudiomodel import LMStudioModelComponent
 
 _dynamic_imports = {
     "LMStudioEmbeddingsComponent": "lmstudioembeddings",

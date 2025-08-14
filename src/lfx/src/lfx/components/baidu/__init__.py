@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.baidu.baidu_qianfan_chat import QianfanChatEndpoint
+    from lfx.components.baidu.baidu_qianfan_chat import QianfanChatEndpoint
 
 _dynamic_imports = {
     "QianfanChatEndpoint": "baidu_qianfan_chat",

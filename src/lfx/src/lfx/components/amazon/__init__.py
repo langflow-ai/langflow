@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.amazon.amazon_bedrock_embedding import AmazonBedrockEmbeddingsComponent
-    from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
-    from langflow.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
+    from lfx.components.amazon.amazon_bedrock_embedding import AmazonBedrockEmbeddingsComponent
+    from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+    from lfx.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
 
 _dynamic_imports = {
     "AmazonBedrockEmbeddingsComponent": "amazon_bedrock_embedding",

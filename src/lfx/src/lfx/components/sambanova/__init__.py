@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.sambanova.sambanova import SambaNovaComponent
+    from lfx.components.sambanova.sambanova import SambaNovaComponent
 
 _dynamic_imports = {
     "SambaNovaComponent": "sambanova",

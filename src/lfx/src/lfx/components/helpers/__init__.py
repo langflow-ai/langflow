@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.helpers.calculator_core import CalculatorComponent
-    from langflow.components.helpers.create_list import CreateListComponent
-    from langflow.components.helpers.current_date import CurrentDateComponent
-    from langflow.components.helpers.id_generator import IDGeneratorComponent
-    from langflow.components.helpers.memory import MemoryComponent
-    from langflow.components.helpers.output_parser import OutputParserComponent
-    from langflow.components.helpers.store_message import MessageStoreComponent
+    from lfx.components.helpers.calculator_core import CalculatorComponent
+    from lfx.components.helpers.create_list import CreateListComponent
+    from lfx.components.helpers.current_date import CurrentDateComponent
+    from lfx.components.helpers.id_generator import IDGeneratorComponent
+    from lfx.components.helpers.memory import MemoryComponent
+    from lfx.components.helpers.output_parser import OutputParserComponent
+    from lfx.components.helpers.store_message import MessageStoreComponent
 
 _dynamic_imports = {
     "CalculatorComponent": "calculator_core",

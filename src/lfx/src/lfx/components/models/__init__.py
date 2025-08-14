@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.models.embedding_model import EmbeddingModelComponent
-    from langflow.components.models.language_model import LanguageModelComponent
+    from lfx.components.models.embedding_model import EmbeddingModelComponent
+    from lfx.components.models.language_model import LanguageModelComponent
 
 _dynamic_imports = {
     "EmbeddingModelComponent": "embedding_model",

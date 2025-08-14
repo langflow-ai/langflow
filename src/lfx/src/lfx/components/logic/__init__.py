@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.logic.conditional_router import ConditionalRouterComponent
-    from langflow.components.logic.data_conditional_router import DataConditionalRouterComponent
-    from langflow.components.logic.flow_tool import FlowToolComponent
-    from langflow.components.logic.loop import LoopComponent
-    from langflow.components.logic.pass_message import PassMessageComponent
-    from langflow.components.logic.run_flow import RunFlowComponent
-    from langflow.components.logic.sub_flow import SubFlowComponent
+    from lfx.components.logic.conditional_router import ConditionalRouterComponent
+    from lfx.components.logic.data_conditional_router import DataConditionalRouterComponent
+    from lfx.components.logic.flow_tool import FlowToolComponent
+    from lfx.components.logic.loop import LoopComponent
+    from lfx.components.logic.pass_message import PassMessageComponent
+    from lfx.components.logic.run_flow import RunFlowComponent
+    from lfx.components.logic.sub_flow import SubFlowComponent
 
 _dynamic_imports = {
     "ConditionalRouterComponent": "conditional_router",

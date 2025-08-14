@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.anthropic.anthropic import AnthropicModelComponent
+    from lfx.components.anthropic.anthropic import AnthropicModelComponent
 
 _dynamic_imports = {
     "AnthropicModelComponent": "anthropic",

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.openrouter.openrouter import OpenRouterComponent
+    from lfx.components.openrouter.openrouter import OpenRouterComponent
 
 _dynamic_imports = {
     "OpenRouterComponent": "openrouter",

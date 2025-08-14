@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.input_output.chat import ChatInput
-    from langflow.components.input_output.chat_output import ChatOutput
-    from langflow.components.input_output.text import TextInputComponent
-    from langflow.components.input_output.text_output import TextOutputComponent
+    from lfx.components.input_output.chat import ChatInput
+    from lfx.components.input_output.chat_output import ChatOutput
+    from lfx.components.input_output.text import TextInputComponent
+    from lfx.components.input_output.text_output import TextOutputComponent
 
 _dynamic_imports = {
     "ChatInput": "chat",

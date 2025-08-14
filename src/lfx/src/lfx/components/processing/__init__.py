@@ -7,34 +7,34 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.processing.alter_metadata import AlterMetadataComponent
-    from langflow.components.processing.batch_run import BatchRunComponent
-    from langflow.components.processing.combine_text import CombineTextComponent
-    from langflow.components.processing.converter import TypeConverterComponent
-    from langflow.components.processing.create_data import CreateDataComponent
-    from langflow.components.processing.data_operations import DataOperationsComponent
-    from langflow.components.processing.data_to_dataframe import DataToDataFrameComponent
-    from langflow.components.processing.dataframe_operations import DataFrameOperationsComponent
-    from langflow.components.processing.extract_key import ExtractDataKeyComponent
-    from langflow.components.processing.filter_data import FilterDataComponent
-    from langflow.components.processing.filter_data_values import DataFilterComponent
-    from langflow.components.processing.json_cleaner import JSONCleaner
-    from langflow.components.processing.lambda_filter import LambdaFilterComponent
-    from langflow.components.processing.llm_router import LLMRouterComponent
-    from langflow.components.processing.merge_data import MergeDataComponent
-    from langflow.components.processing.message_to_data import MessageToDataComponent
-    from langflow.components.processing.parse_data import ParseDataComponent
-    from langflow.components.processing.parse_dataframe import ParseDataFrameComponent
-    from langflow.components.processing.parse_json_data import ParseJSONDataComponent
-    from langflow.components.processing.parser import ParserComponent
-    from langflow.components.processing.prompt import PromptComponent
-    from langflow.components.processing.python_repl_core import PythonREPLComponent
-    from langflow.components.processing.regex import RegexExtractorComponent
-    from langflow.components.processing.save_file import SaveToFileComponent
-    from langflow.components.processing.select_data import SelectDataComponent
-    from langflow.components.processing.split_text import SplitTextComponent
-    from langflow.components.processing.structured_output import StructuredOutputComponent
-    from langflow.components.processing.update_data import UpdateDataComponent
+    from lfx.components.processing.alter_metadata import AlterMetadataComponent
+    from lfx.components.processing.batch_run import BatchRunComponent
+    from lfx.components.processing.combine_text import CombineTextComponent
+    from lfx.components.processing.converter import TypeConverterComponent
+    from lfx.components.processing.create_data import CreateDataComponent
+    from lfx.components.processing.data_operations import DataOperationsComponent
+    from lfx.components.processing.data_to_dataframe import DataToDataFrameComponent
+    from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
+    from lfx.components.processing.extract_key import ExtractDataKeyComponent
+    from lfx.components.processing.filter_data import FilterDataComponent
+    from lfx.components.processing.filter_data_values import DataFilterComponent
+    from lfx.components.processing.json_cleaner import JSONCleaner
+    from lfx.components.processing.lambda_filter import LambdaFilterComponent
+    from lfx.components.processing.llm_router import LLMRouterComponent
+    from lfx.components.processing.merge_data import MergeDataComponent
+    from lfx.components.processing.message_to_data import MessageToDataComponent
+    from lfx.components.processing.parse_data import ParseDataComponent
+    from lfx.components.processing.parse_dataframe import ParseDataFrameComponent
+    from lfx.components.processing.parse_json_data import ParseJSONDataComponent
+    from lfx.components.processing.parser import ParserComponent
+    from lfx.components.processing.prompt import PromptComponent
+    from lfx.components.processing.python_repl_core import PythonREPLComponent
+    from lfx.components.processing.regex import RegexExtractorComponent
+    from lfx.components.processing.save_file import SaveToFileComponent
+    from lfx.components.processing.select_data import SelectDataComponent
+    from lfx.components.processing.split_text import SplitTextComponent
+    from lfx.components.processing.structured_output import StructuredOutputComponent
+    from lfx.components.processing.update_data import UpdateDataComponent
 
 _dynamic_imports = {
     "AlterMetadataComponent": "alter_metadata",

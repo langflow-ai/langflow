@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.aiml.aiml import AIMLModelComponent
-    from langflow.components.aiml.aiml_embeddings import AIMLEmbeddingsComponent
+    from lfx.components.aiml.aiml import AIMLModelComponent
+    from lfx.components.aiml.aiml_embeddings import AIMLEmbeddingsComponent
 
 _dynamic_imports = {
     "AIMLModelComponent": "aiml",

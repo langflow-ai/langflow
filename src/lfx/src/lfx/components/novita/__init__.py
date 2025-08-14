@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.novita.novita import NovitaModelComponent
+    from lfx.components.novita.novita import NovitaModelComponent
 
 _dynamic_imports = {
     "NovitaModelComponent": "novita",

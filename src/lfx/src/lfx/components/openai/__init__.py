@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.openai.openai import OpenAIEmbeddingsComponent
-    from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+    from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 
 _dynamic_imports = {
     "OpenAIEmbeddingsComponent": "openai",

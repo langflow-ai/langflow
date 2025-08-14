@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.ibm.watsonx import WatsonxAIComponent
-    from langflow.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
+    from lfx.components.ibm.watsonx import WatsonxAIComponent
+    from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
 _dynamic_imports = {
     "WatsonxAIComponent": "watsonx",

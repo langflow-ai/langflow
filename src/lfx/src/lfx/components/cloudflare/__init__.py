@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.cloudflare.cloudflare import CloudflareWorkersAIEmbeddingsComponent
+    from lfx.components.cloudflare.cloudflare import CloudflareWorkersAIEmbeddingsComponent
 
 _dynamic_imports = {
     "CloudflareWorkersAIEmbeddingsComponent": "cloudflare",

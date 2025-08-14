@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.xai.xai import XAIModelComponent
+    from lfx.components.xai.xai import XAIModelComponent
 
 _dynamic_imports = {
     "XAIModelComponent": "xai",
