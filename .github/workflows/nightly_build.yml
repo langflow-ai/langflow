@@ -25,7 +25,7 @@ jobs:
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: true
       - name: "Setup Environment"
@@ -95,7 +95,7 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
