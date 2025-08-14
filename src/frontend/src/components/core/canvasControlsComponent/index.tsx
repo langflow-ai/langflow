@@ -1,173 +1,140 @@
 import {
-  ControlButton,
   Panel,
   type ReactFlowState,
   useReactFlow,
   useStore,
   useStoreApi,
 } from "@xyflow/react";
-import { cloneDeep } from "lodash";
-import { useCallback, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { shallow } from "zustand/shallow";
-import IconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { cn } from "@/utils/utils";
+import { CanvasControlsDropdown, HelpDropdown } from "./dropdowns";
 
-type CustomControlButtonProps = {
-  iconName: string;
-  tooltipText: string;
-  onClick: () => void;
-  disabled?: boolean;
-  backgroundClasses?: string;
-  iconClasses?: string;
-  testId?: string;
-};
+const KEYBOARD_SHORTCUTS = {
+  ZOOM_IN: { key: "+", code: "Equal" },
+  ZOOM_OUT: { key: "-", code: "Minus" },
+  FIT_VIEW: { key: "1", code: "Digit1" },
+  RESET_ZOOM: { key: "0", code: "Digit0" },
+} as const;
 
-export const CustomControlButton = ({
-  iconName,
-  tooltipText,
-  onClick,
-  disabled,
-  backgroundClasses,
-  iconClasses,
-  testId,
-}: CustomControlButtonProps): JSX.Element => {
-  return (
-    <ControlButton
-      data-testid={testId}
-      className="group !h-8 !w-8 rounded !p-0"
-      onClick={onClick}
-      disabled={disabled}
-      title={testId?.replace(/_/g, " ")}
-    >
-      <ShadTooltip content={tooltipText} side="right">
-        <div className={cn("rounded p-2.5", backgroundClasses)}>
-          <IconComponent
-            name={iconName}
-            aria-hidden="true"
-            className={cn(
-              "scale-150 text-muted-foreground group-hover:text-primary",
-              iconClasses,
-            )}
-          />
-        </div>
-      </ShadTooltip>
-    </ControlButton>
-  );
-};
-
-const selector = (s: ReactFlowState) => ({
+const reactFlowSelector = (s: ReactFlowState) => ({
   isInteractive: s.nodesDraggable || s.nodesConnectable || s.elementsSelectable,
   minZoomReached: s.transform[2] <= s.minZoom,
   maxZoomReached: s.transform[2] >= s.maxZoom,
+  zoom: s.transform[2],
 });
 
-const CanvasControls = ({ children }) => {
-  const store = useStoreApi();
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
-  const { isInteractive, minZoomReached, maxZoomReached } = useStore(
-    selector,
+const CanvasControls = ({ children }: { children?: ReactNode }) => {
+  const reactFlowStoreApi = useStoreApi();
+  const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
+  const { minZoomReached, maxZoomReached, zoom } = useStore(
+    reactFlowSelector,
     shallow,
   );
-  const saveFlow = useSaveFlow();
-  const isLocked = useFlowStore(
+  const [isControlsMenuOpen, setIsControlsMenuOpen] = useState(false);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
-  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
-  const setHelperLineEnabled = useFlowStore(
-    (state) => state.setHelperLineEnabled,
-  );
-  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
   useEffect(() => {
-    store.setState({
-      nodesDraggable: !isLocked,
-      nodesConnectable: !isLocked,
-      elementsSelectable: !isLocked,
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+
+      if (!isModifierPressed) return;
+
+      switch (event.code) {
+        case KEYBOARD_SHORTCUTS.ZOOM_IN.code:
+          event.preventDefault();
+          if (!maxZoomReached) {
+            zoomIn();
+          }
+          break;
+        case KEYBOARD_SHORTCUTS.ZOOM_OUT.code:
+          event.preventDefault();
+          if (minZoomReached || zoom <= 0.6) {
+            zoomTo(1);
+          } else {
+            zoomOut();
+          }
+          break;
+        case KEYBOARD_SHORTCUTS.FIT_VIEW.code:
+          event.preventDefault();
+          fitView();
+          break;
+        case KEYBOARD_SHORTCUTS.RESET_ZOOM.code:
+          event.preventDefault();
+          zoomTo(1);
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached]);
+
+  useEffect(() => {
+    reactFlowStoreApi.setState({
+      nodesDraggable: !isFlowLocked,
+      nodesConnectable: !isFlowLocked,
+      elementsSelectable: !isFlowLocked,
     });
-  }, [isLocked]);
+  }, [isFlowLocked, reactFlowStoreApi]);
 
-  const handleSaveFlow = useCallback(() => {
-    const currentFlow = useFlowStore.getState().currentFlow;
-    if (!currentFlow) return;
-    const newFlow = cloneDeep(currentFlow);
-    newFlow.locked = isInteractive;
-    if (autoSaving) {
-      saveFlow(newFlow);
-    } else {
-      setCurrentFlow(newFlow);
-    }
-  }, [isInteractive, autoSaving, saveFlow, setCurrentFlow]);
+  const handleZoomIn = useCallback(() => {
+    zoomIn();
+    setIsControlsMenuOpen(false);
+  }, [zoomIn]);
 
-  const onToggleInteractivity = useCallback(() => {
-    store.setState({
-      nodesDraggable: !isInteractive,
-      nodesConnectable: !isInteractive,
-      elementsSelectable: !isInteractive,
-    });
-    handleSaveFlow();
-  }, [isInteractive, store, handleSaveFlow]);
+  const handleZoomOut = useCallback(() => {
+    zoomOut();
+    setIsControlsMenuOpen(false);
+  }, [zoomOut]);
 
-  const onToggleHelperLines = useCallback(() => {
-    setHelperLineEnabled(!helperLineEnabled);
-  }, [setHelperLineEnabled, helperLineEnabled]);
+  const handleFitView = useCallback(() => {
+    fitView();
+    setIsControlsMenuOpen(false);
+  }, [fitView]);
+
+  const handleResetZoom = useCallback(() => {
+    zoomTo(1);
+    setIsControlsMenuOpen(false);
+  }, [zoomTo]);
 
   return (
     <Panel
-      data-testid="canvas_controls"
-      className="react-flow__controls !left-auto !m-2 flex !flex-col gap-1.5 rounded-md border border-border bg-background fill-foreground stroke-foreground p-0.5 text-primary [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
-      position="bottom-left"
+      data-testid="main_canvas_controls"
+      className="react-flow__controls !left-auto !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
+      position="bottom-right"
     >
-      {/* Zoom In */}
-      <CustomControlButton
-        iconName="ZoomIn"
-        tooltipText="Zoom In"
-        onClick={zoomIn}
-        disabled={maxZoomReached}
-        testId="zoom_in"
-      />
-      {/* Zoom Out */}
-      <CustomControlButton
-        iconName="ZoomOut"
-        tooltipText="Zoom Out"
-        onClick={zoomOut}
-        disabled={minZoomReached}
-        testId="zoom_out"
-      />
-      {/* Zoom To Fit */}
-      <CustomControlButton
-        iconName="maximize"
-        tooltipText="Fit To Zoom"
-        onClick={fitView}
-        testId="fit_view"
-      />
       {children}
-      {/* Lock/Unlock */}
-      <CustomControlButton
-        iconName={isInteractive ? "LockOpen" : "Lock"}
-        tooltipText={isInteractive ? "Lock" : "Unlock"}
-        onClick={onToggleInteractivity}
-        backgroundClasses={isInteractive ? "" : "bg-destructive"}
-        iconClasses={
-          isInteractive ? "" : "text-primary-foreground dark:text-primary"
-        }
-        testId="lock_unlock"
+      {children && (
+        <span>
+          <Separator orientation="vertical" />
+        </span>
+      )}
+
+      <CanvasControlsDropdown
+        zoom={zoom}
+        minZoomReached={minZoomReached}
+        maxZoomReached={maxZoomReached}
+        isOpen={isControlsMenuOpen}
+        onOpenChange={setIsControlsMenuOpen}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onResetZoom={handleResetZoom}
+        onFitView={handleFitView}
+        shortcuts={KEYBOARD_SHORTCUTS}
       />
-      {/* Display Helper Lines */}
-      <CustomControlButton
-        iconName={helperLineEnabled ? "FoldHorizontal" : "UnfoldHorizontal"}
-        tooltipText={
-          helperLineEnabled ? "Hide Helper Lines" : "Show Helper Lines"
-        }
-        onClick={onToggleHelperLines}
-        backgroundClasses={cn(helperLineEnabled && "bg-muted")}
-        iconClasses={cn(helperLineEnabled && "text-muted-foreground")}
-        testId="helper_lines"
+      <span>
+        <Separator orientation="vertical" />
+      </span>
+      <HelpDropdown
+        isOpen={isHelpMenuOpen}
+        onOpenChange={setIsHelpMenuOpen}
+        onSelectAction={() => setIsHelpMenuOpen(false)}
       />
     </Panel>
   );

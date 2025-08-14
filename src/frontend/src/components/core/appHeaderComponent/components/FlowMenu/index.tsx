@@ -195,7 +195,6 @@ export const MenuBar = memo((): JSX.Element => {
         align="center"
         sideOffset={15}
       >
-        <span className="text-sm font-semibold">Flow Details</span>
         <FlowSettingsComponent
           close={() => setOpenSettings(false)}
           open={openSettings}
