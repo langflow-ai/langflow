@@ -604,7 +604,7 @@ async def experimental_run_flow(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     try:
-        task_result, session_id, transaction_queue = await run_graph_internal(
+        task_result, session_id, _ = await run_graph_internal(
             graph=graph,
             flow_id=flow_id_str,
             session_id=session_id,

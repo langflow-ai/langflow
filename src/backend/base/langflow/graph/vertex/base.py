@@ -516,7 +516,7 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
-    async def _log_transaction_async(
+    def _log_transaction(
         self,
         flow_id: str | UUID,
         source: Vertex,
@@ -555,13 +555,13 @@ class Vertex:
         flow_id = self.graph.flow_id
         if not self.built:
             if flow_id:
-                await self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
+                self._log_transaction(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
         result = self.built_result if self.use_result else self.built_object
         if flow_id:
-            await self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
+            self._log_transaction(str(flow_id), source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
