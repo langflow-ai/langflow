@@ -113,7 +113,7 @@ class TransactionCleanupTask:
         """Clean up transaction flows with timeout handling."""
         # Get unique flow IDs that have transactions
         stmt = select(TransactionTable.flow_id).distinct()
-        result = await session.exec(stmt)
+        result = (await session.exec(stmt)).all()
         flow_ids: list[UUID] = list(result)
 
         if not flow_ids:
@@ -154,7 +154,7 @@ class TransactionCleanupTask:
 
         # Get unique flow IDs that have vertex builds
         stmt = select(VertexBuildTable.flow_id).distinct()
-        result = await session.exec(stmt)
+        result = (await session.exec(stmt)).all()
         flow_ids: list[UUID] = list(result)
 
         if not flow_ids:
