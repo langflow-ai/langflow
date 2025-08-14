@@ -1,62 +1,66 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
+import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
+import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import useFlowStore from "@/stores/flowStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
+import { SessionRename } from "./session-rename";
 
 interface SessionItemProps {
   sessionId: string;
-  isSelected: boolean;
-  canDelete: boolean;
-  onSelect: (sessionId: string) => void;
-  onRename: (oldSessionId: string, newSessionId: string) => void;
-  onDelete: (sessionId: string) => void;
 }
 
-export const SessionItem = ({
-  sessionId,
-  isSelected,
-  canDelete,
-  onSelect,
-  onRename,
-  onDelete,
-}: SessionItemProps) => {
+export const SessionItem = ({ sessionId }: SessionItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { selectedSession, setSelectedSession, isPlayground } =
+    usePlaygroundStore();
+
+  const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
+
+  const { mutate: updateSessionName } = useUpdateSessionName({
+    flowId,
+    useLocalStorage: isPlayground,
+  });
+
+  const { mutate: deleteSession } = useDeleteSession({
+    flowId,
+    useLocalStorage: isPlayground,
+  });
 
   const handleEditStart = () => {
     setIsEditing(true);
-    setEditValue(sessionId);
   };
 
-  const handleEditSave = () => {
-    if (editValue.trim() && editValue !== sessionId) {
-      onRename(sessionId, editValue.trim());
-    }
+  const handleEditSave = (newSessionId: string) => {
+    updateSessionName({
+      oldSessionId: sessionId,
+      newSessionId,
+    });
     setIsEditing(false);
-    setEditValue("");
   };
 
   const handleEditCancel = () => {
     setIsEditing(false);
-    setEditValue("");
   };
 
   const handleDelete = () => {
-    onDelete(sessionId);
+    deleteSession({ sessionId });
+    // If deleting the selected session, select another one if available
+    if (selectedSession === sessionId) {
+      setSelectedSession(flowId);
+    }
   };
+
+  const isSelected = selectedSession === sessionId;
+
+  const canDelete = sessionId !== flowId;
 
   const handleSessionSelect = () => {
-    onSelect(sessionId);
+    setSelectedSession(sessionId);
   };
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
 
   return (
     <div
@@ -68,43 +72,11 @@ export const SessionItem = ({
     >
       <div className="flex-1 min-w-0">
         {isEditing ? (
-          <div className="flex items-center gap-2">
-            <Input
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === "Enter") {
-                  handleEditSave();
-                } else if (e.key === "Escape") {
-                  handleEditCancel();
-                }
-              }}
-              className="h-8 text-sm"
-            />
-            <Button
-              size="iconSm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEditSave();
-              }}
-            >
-              <ForwardedIconComponent name="Check" className="h-3 w-3" />
-            </Button>
-            <Button
-              size="iconSm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEditCancel();
-              }}
-            >
-              <ForwardedIconComponent name="X" className="h-3 w-3" />
-            </Button>
-          </div>
+          <SessionRename
+            sessionId={sessionId}
+            onSave={handleEditSave}
+            onCancel={handleEditCancel}
+          />
         ) : (
           <div className="flex items-center justify-between">
             <span className="text-sm truncate font-medium">{sessionId}</span>
