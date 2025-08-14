@@ -75,9 +75,35 @@ class FileComponent(BaseFileComponent):
 
     # Docling supported formats from original component
     VALID_EXTENSIONS = [
-        "adoc", "asciidoc", "asc", "bmp", "csv", "dotx", "dotm", "docm", "docx",
-        "htm", "html", "jpeg", "json", "md", "pdf", "png", "potx", "ppsx", "pptm",
-        "potm", "ppsm", "pptx", "tiff", "txt", "xls", "xlsx", "xhtml", "xml", "webp",
+        "adoc",
+        "asciidoc",
+        "asc",
+        "bmp",
+        "csv",
+        "dotx",
+        "dotm",
+        "docm",
+        "docx",
+        "htm",
+        "html",
+        "jpeg",
+        "json",
+        "md",
+        "pdf",
+        "png",
+        "potx",
+        "ppsx",
+        "pptm",
+        "potm",
+        "ppsm",
+        "pptx",
+        "tiff",
+        "txt",
+        "xls",
+        "xlsx",
+        "xhtml",
+        "xml",
+        "webp",
         *TEXT_FILE_TYPES,
     ]
 
@@ -170,7 +196,10 @@ class FileComponent(BaseFileComponent):
         return template.get("path", {}).get("file_path", [])
 
     def update_build_config(
-        self, build_config: dict[str, Any], field_value: Any, field_name: str | None = None,
+        self,
+        build_config: dict[str, Any],
+        field_value: Any,
+        field_name: str | None = None,
     ) -> dict[str, Any]:
         """Update build configuration to show/hide fields based on file count and advanced_mode."""
         if field_name == "path":
