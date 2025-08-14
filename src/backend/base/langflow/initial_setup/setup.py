@@ -4,6 +4,7 @@ import io
 import json
 import re
 import shutil
+import sys
 import zipfile
 from collections import defaultdict
 from copy import deepcopy
@@ -521,8 +522,12 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
     async for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            async with async_open(str(file), "r", encoding="utf-8") as f:
-                content = await f.read()
+            if sys.platform.startswith("win"):
+                # Windows-specific: avoid aiofile which can raise WinError 87 in some environments
+                content = await file.read_text(encoding="utf-8")
+            else:
+                async with async_open(str(file), "r", encoding="utf-8") as f:
+                    content = await f.read()
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
@@ -631,8 +636,12 @@ def get_project_data(project):
 
 async def update_project_file(project_path: anyio.Path, project: dict, updated_project_data) -> None:
     project["data"] = updated_project_data
-    async with async_open(str(project_path), "w", encoding="utf-8") as f:
-        await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
+    if sys.platform.startswith("win"):
+        # Windows-specific: avoid aiofile
+        await project_path.write_text(orjson.dumps(project, option=ORJSON_OPTIONS).decode(), encoding="utf-8")
+    else:
+        async with async_open(str(project_path), "w", encoding="utf-8") as f:
+            await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
     logger.debug(f"Updated starter project {project['name']} file")
 
 
