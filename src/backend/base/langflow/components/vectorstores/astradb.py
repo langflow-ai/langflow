@@ -166,7 +166,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Astra DB API Endpoint",
             info="The API Endpoint for the Astra DB instance. Supercedes database selection.",
             advanced=True,
-            required=True,
         ),
         DropdownInput(
             name="keyspace",
