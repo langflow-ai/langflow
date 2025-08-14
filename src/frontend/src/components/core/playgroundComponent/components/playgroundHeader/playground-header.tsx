@@ -1,4 +1,5 @@
 import { HeaderButton } from "./components/header-button";
+import { SessionManagerPopover } from "./components/session-manager-popover";
 
 export function PlaygroundHeader({ onClose }: { onClose?: () => void }) {
   return (
@@ -15,7 +16,9 @@ export function PlaygroundHeader({ onClose }: { onClose?: () => void }) {
       </div>
       <div className="flex items-center gap-1">
         <HeaderButton icon="Plus" onClick={() => {}} />
-        <HeaderButton icon="History" onClick={() => {}} />
+        <SessionManagerPopover>
+          <HeaderButton icon="History" />
+        </SessionManagerPopover>
         <HeaderButton icon="ExternalLink" onClick={() => {}} />
         <HeaderButton icon="MoreHorizontal" onClick={() => {}} />
         {onClose && <HeaderButton icon="X" onClick={onClose} />}
