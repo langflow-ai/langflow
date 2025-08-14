@@ -12,16 +12,15 @@ from typing import Any
 import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from loguru import logger
-
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
-from langflow.schema.dotdict import dotdict  # noqa: TC001
+from langflow.schema.dotdict import dotdict
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.deps import get_settings_service
+from loguru import logger
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]

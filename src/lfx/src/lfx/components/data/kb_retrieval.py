@@ -4,14 +4,13 @@ from typing import Any
 
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.deps import get_settings_service
+from loguru import logger
 
 settings = get_settings_service().settings
 knowledge_directory = settings.knowledge_bases_dir

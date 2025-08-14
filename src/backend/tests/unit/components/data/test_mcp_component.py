@@ -9,10 +9,10 @@ import shutil
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 from lfx.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient
 from lfx.components.agents.mcp_component import MCPToolsComponent
+from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
 class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
