@@ -7,22 +7,21 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
+from langflow.schema.dotdict import dotdict  # noqa: TC002
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.deps import get_settings_service
 from loguru import logger
 
-if TYPE_CHECKING:
-    from langflow.schema.dotdict import dotdict
+from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
