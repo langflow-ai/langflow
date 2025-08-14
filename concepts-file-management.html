@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.6d3cb48e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.16a1d68d.js" defer="defer"></script>
 <script src="/assets/js/main.6e50f663.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -93,7 +93,29 @@ If you need another file type, you must use a different component that supports 
 <p>For more information about the <strong>File</strong> component and other data loading components, see <a href="/components-data"><strong>Data</strong> components</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="load-files-at-runtime">Load files at runtime<a href="#load-files-at-runtime" class="hash-link" aria-label="Direct link to Load files at runtime" title="Direct link to Load files at runtime">​</a></h3>
 <p>You can use preloaded files in your flows, and you can load files at runtime, if your flow accepts file input.
-For an example, see <a href="/chat-with-files">Create a chatbot that can ingest files</a>.</p>
+To enable file input in your flow, do the following:</p>
+<ol>
+<li>
+<p>Add a <a href="/components-data#file"><strong>File</strong> component</a> to your flow.</p>
+</li>
+<li>
+<p>Click <strong>Share</strong>, select <strong>API access</strong>, and then click <strong>Input Schema</strong> to add <a href="/concepts-publish#input-schema"><code>tweaks</code></a> to the request payload in the flow&#x27;s automatically generated code snippets.</p>
+</li>
+<li>
+<p>Expand the <strong>File</strong> section, find the <strong>Files</strong> row, and then enable <strong>Expose Input</strong> to allow the parameter to be set at runtime through the Langflow API.</p>
+</li>
+<li>
+<p>Close the <strong>Input Schema</strong> pane to return to the <strong>API access</strong> pane.
+The payload in each code snippet now includes <code>tweaks</code>, your <strong>File</strong> component&#x27;s ID, and the <code>path</code> key that you enabled in <strong>Input Schema</strong>:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>&quot;tweaks&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    &quot;File-qYD5w&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>	    &quot;path&quot;: []</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>When you run this flow programmatically, your script must upload a file to Langflow file management, and then pass the returned <code>file_path</code> to the <code>path</code> tweak in the <code>/run</code> request:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>&quot;tweaks&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    &quot;FILE_COMPONENT_ID&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>        &quot;path&quot;: [ &quot;file_path&quot; ]</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
+<p>For a complete example see <a href="/chat-with-files">Create a chatbot that can ingest files</a> and <a href="/api-files">Files endpoints</a>.</p>
+<p>If you want to upload multiple files, you can pass multiple <code>file_path</code> values in the <code>path</code> array, such as <code>[ &quot;path1&quot;, &quot;path2&quot; ]</code>.</p>
+</li>
+</ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="upload-images">Upload images<a href="#upload-images" class="hash-link" aria-label="Direct link to Upload images" title="Direct link to Upload images">​</a></h2>
 <p>Langflow supports base64 images in the following formats:</p>
 <ul>
