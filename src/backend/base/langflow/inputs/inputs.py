@@ -668,8 +668,8 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
     temperature: float = 0.1
     max_tokens: int = 256
     limit: int = 1  # Only allow single selection
-    search_category: list[str] = Field(default=["OpenAI", "Anthropic"])
     providers: list[str] = Field(default=["OpenAI", "Anthropic"])
+    # TODO: Option to add fields related to API key.
 
     def __init__(self, **kwargs):
         """Initialize ModelInput with default options based on model_type."""
