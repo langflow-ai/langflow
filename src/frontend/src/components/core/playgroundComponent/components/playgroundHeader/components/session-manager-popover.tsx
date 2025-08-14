@@ -1,7 +1,5 @@
 import React from "react";
-import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
-import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShallow } from "zustand/react/shallow";
@@ -21,22 +19,11 @@ interface SessionManagerPopoverProps {
 export const SessionManagerPopover = ({
   children,
 }: SessionManagerPopoverProps) => {
-  const { selectedSession, setSelectedSession, isPlayground } =
-    usePlaygroundStore();
+  const { isPlayground } = usePlaygroundStore();
 
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
 
   const { data: sessions } = useGetSessionsFromFlowQuery({
-    flowId,
-    useLocalStorage: isPlayground,
-  });
-
-  const { mutate: updateSessionName } = useUpdateSessionName({
-    flowId,
-    useLocalStorage: isPlayground,
-  });
-
-  const { mutate: deleteSession } = useDeleteSession({
     flowId,
     useLocalStorage: isPlayground,
   });
@@ -46,29 +33,6 @@ export const SessionManagerPopover = ({
     setQuery,
     filteredItems: filteredSessions,
   } = useSearch(sessions || []);
-
-  const handleRename = (oldSessionId: string, newSessionId: string) => {
-    updateSessionName({
-      oldSessionId,
-      newSessionId,
-    });
-  };
-
-  const handleDelete = (sessionId: string) => {
-    if (!sessions) return;
-    deleteSession({ sessionId });
-    if (selectedSession === sessionId && sessions.length > 1) {
-      // Select another session if the current one is being deleted
-      const remainingSessions = sessions.filter((s) => s !== sessionId);
-      if (remainingSessions.length > 0) {
-        setSelectedSession(remainingSessions[0]);
-      }
-    }
-  };
-
-  const handleSessionSelect = (sessionId: string) => {
-    setSelectedSession(sessionId);
-  };
 
   return (
     <Popover>
@@ -93,15 +57,7 @@ export const SessionManagerPopover = ({
                 </div>
               ) : (
                 filteredSessions.map((sessionId) => (
-                  <SessionItem
-                    key={sessionId}
-                    sessionId={sessionId}
-                    isSelected={selectedSession === sessionId}
-                    canDelete={sessions.length > 1}
-                    onSelect={handleSessionSelect}
-                    onRename={handleRename}
-                    onDelete={handleDelete}
-                  />
+                  <SessionItem key={sessionId} sessionId={sessionId} />
                 ))
               )}
             </div>
