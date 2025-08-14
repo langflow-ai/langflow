@@ -379,9 +379,9 @@ describe("SidebarHeaderComponent", () => {
       const propsWithOutputFilter = {
         ...defaultProps,
         filterType: {
-          source: "test_source",
+          source: undefined,
           sourceHandle: undefined,
-          target: undefined,
+          target: "test_target",
           targetHandle: undefined,
           type: "number",
           color: "red",

@@ -116,6 +116,8 @@ test(
       .getByTestId("text_card_container")
       .count();
 
+    console.log("numberOfTemplates", numberOfTemplates);
+
     let numberOfOutdatedComponents = 0;
 
     for (let i = 0; i < numberOfTemplates; i++) {
