@@ -43,6 +43,36 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.6.0
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Increased max file upload size
+
+  Increased the default max file upload size from `100 MB` to `1024 MB`.
+
+- Knowledge bases
+
+  Knowledge bases create a local vector database of your data, and allow it to be re-used across flows, similar to using a File component.
+  The **Create knowledge** component ingests knowledge into a knowledge base. The **Retrieve knowledge** component is added to flows to access a knowledge base.
+  For more information, see Knowledge bases.
+
+- LFX engine
+
+  The LFX engine runs flows in headless mode with reduced dependencies and no local database.
+  This allows you to run flows with just a JSON file and a PyPI package, making it easier to integrate Langflow into CI/CD pipelines or scaling deplpoyments.
+  For more information, see Run flows with the Langflow Executor (LFX).
+
+- Additional Structured Output for Agent component
+
+  In addition to the `Message` output, the Agent component now includes a structured output.
+  This output parses JSON into a structured `Data` object to make it easier to work with the Agent's output downstream.
+
+### Deprecations
+
 ## 1.5.0
 
 Highlights of this release include the following changes.
