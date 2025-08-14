@@ -9,6 +9,7 @@ from langflow.api.v1 import (
     files_router,
     flows_router,
     folders_router,
+    knowledge_bases_router,
     login_router,
     mcp_projects_router,
     mcp_router,
@@ -48,6 +49,7 @@ router_v1.include_router(folders_router)
 router_v1.include_router(packages_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
+router_v1.include_router(knowledge_bases_router)
 router_v1.include_router(mcp_router)
 # Only include voice mode router if dependencies are available
 if VOICE_MODE_AVAILABLE and voice_mode_router is not None:

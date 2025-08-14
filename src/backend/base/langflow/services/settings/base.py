@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
     (i.e. in the package directory)."""
 
+    knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
+    """The directory to store knowledge bases."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -95,6 +98,22 @@ class Settings(BaseSettings):
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
+
+    # ---------------------------------------------------------------------
+    # MCP Session-manager tuning
+    # ---------------------------------------------------------------------
+    mcp_max_sessions_per_server: int = 10
+    """Maximum number of MCP sessions to keep per unique server (command/url).
+    Mirrors the default constant MAX_SESSIONS_PER_SERVER in util.py. Adjust to
+    control resource usage or concurrency per server."""
+
+    mcp_session_idle_timeout: int = 400  # seconds
+    """How long (in seconds) an MCP session can stay idle before the background
+    cleanup task disposes of it. Defaults to 5 minutes."""
+
+    mcp_session_cleanup_interval: int = 120  # seconds
+    """Frequency (in seconds) at which the background cleanup task wakes up to
+    reap idle sessions."""
 
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
@@ -220,7 +239,7 @@ class Settings(BaseSettings):
     """The interval in ms at which Langflow will auto save flows."""
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""
-    max_file_size_upload: int = 100
+    max_file_size_upload: int = 1024
     """The maximum file size for the upload in MB."""
     deactivate_tracing: bool = False
     """If set to True, tracing will be deactivated."""
