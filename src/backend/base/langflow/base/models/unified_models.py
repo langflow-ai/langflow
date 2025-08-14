@@ -37,40 +37,44 @@ def get_unified_models_detailed(
     if include_unsupported is None:
         include_unsupported = False
 
-    # Gather all models from imported *_MODELS_DETAILED lists
-    all_models: list[dict] = []
-    for models_detailed in MODELS_DETAILED:
-        all_models.extend(models_detailed)
+    # Gather all models from imported *_MODELS_DETAILED lists (flatten & filter in one pass)
+    provider_set = set(provider) if provider else None
+    meta_keys = set(("provider", "name"))
 
-    # Apply filters
     filtered_models: list[dict] = []
-    for md in all_models:
-        # Skip models flagged as not_supported unless explicitly included
-        if (not include_unsupported) and md.get("not_supported", False):
-            continue
+    for models_detailed in MODELS_DETAILED:
+        for md in models_detailed:
+            # Fastest exit if unsupported
+            if (not include_unsupported) and md.get("not_supported", False):
+                continue
+            if provider_set is not None and md.get("provider") not in provider_set:
+                continue
+            if model_name is not None and md.get("name") != model_name:
+                continue
+            if model_type is not None and md.get("model_type") != model_type:
+                continue
+            # Avoid function call & loop unless metadata_filters is nonempty
+            if metadata_filters:
+                for k, v in metadata_filters.items():
+                    if md.get(k) != v:
+                        break
+                else:
+                    filtered_models.append(md)
+                    continue
+                continue
+            filtered_models.append(md)
 
-        if provider and md.get("provider") not in provider:
-            continue
-        if model_name and md.get("name") != model_name:
-            continue
-        if model_type and md.get("model_type") != model_type:
-            continue
-        # Match arbitrary metadata key/value pairs
-        if any(md.get(k) != v for k, v in metadata_filters.items()):
-            continue
-
-        filtered_models.append(md)
-
-    # Group by provider
+    # Fast provider grouping with dict.setdefault, skip dict-comp for each model
     provider_map: dict[str, list[dict]] = {}
     for metadata in filtered_models:
         prov = metadata.get("provider", "Unknown")
-        provider_map.setdefault(prov, []).append(
+        entry = provider_map.setdefault(prov, [])
+        # Use dict comprehension with fixed set for slight speedup
+        entry.append(
             {
                 "model_name": metadata.get("name"),
-                "metadata": {k: v for k, v in metadata.items() if k not in ("provider", "name")},
+                "metadata": {k: v for k, v in metadata.items() if k not in meta_keys},
             }
         )
 
-    # Format as requested
     return [{"provider": prov, "models": models} for prov, models in provider_map.items()]
