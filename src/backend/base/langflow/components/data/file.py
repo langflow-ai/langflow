@@ -19,6 +19,7 @@ from langflow.io import (
 )
 from langflow.schema import DataFrame
 from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 
 class MockConversionStatus(Enum):
@@ -185,6 +186,13 @@ class FileComponent(BaseFileComponent):
             info="When multiple files are being processed, the number of files to process concurrently.",
             value=1,
         ),
+        BoolInput(
+            name="markdown",
+            display_name="Markdown Export",
+            info="Export processed documents to Markdown format. Only available when advanced mode is enabled.",
+            value=False,
+            show=False,
+        ),
     ]
 
     outputs = [
@@ -278,7 +286,7 @@ class FileComponent(BaseFileComponent):
                     Output(display_name="Structured Output", name="advanced", method="load_files_advanced"),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="Markdown", name="markdown", method="load_files_message"),
+                    Output(display_name="Markdown", name="markdown", method="load_files_markdown"),
                 )
                 frontend_node["outputs"].append(
                     Output(display_name="File Path", name="path", method="load_files_path"),
@@ -448,7 +456,10 @@ class FileComponent(BaseFileComponent):
         ]
         return any(file_path.lower().endswith(ext) for ext in docling_extensions)
 
-    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
+    def process_files(
+        self,
+        file_list: list[BaseFileComponent.BaseFile],
+    ) -> list[BaseFileComponent.BaseFile]:
         """Process files using standard parsing or Docling based on advanced_mode and file type."""
 
         def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
@@ -471,97 +482,70 @@ class FileComponent(BaseFileComponent):
         def process_file_docling(file_path: str, *, silent_errors: bool = False) -> Data | None:
             """Process a single file using Docling if compatible, otherwise standard processing."""
             # Try Docling first if file is compatible and advanced mode is enabled
-            if self.advanced_mode and self._is_docling_compatible(file_path):
-                try:
-                    return self._process_with_docling_and_export(file_path)
-                except Exception as e:  # noqa: BLE001
-                    self.log(f"Docling processing failed for {file_path}: {e}, falling back to standard processing")
-                    if not silent_errors:
-                        # Return error data instead of raising
-                        return Data(data={"error": f"Docling processing failed: {e}", "file_path": file_path})
+            try:
+                return self._process_with_docling_and_export(file_path)
+            except Exception as e:  # noqa: BLE001
+                self.log(f"Docling processing failed for {file_path}: {e}, falling back to standard processing")
+                if not silent_errors:
+                    # Return error data instead of raising
+                    return Data(data={"error": f"Docling processing failed: {e}", "file_path": file_path})
 
-            # Fallback to standard processing
-            return process_file_standard(file_path, silent_errors=silent_errors)
+            return None
 
         if not file_list:
             msg = "No files to process."
             raise ValueError(msg)
 
+        file_path = str(file_list[0].path)
+        if self.advanced_mode and self._is_docling_compatible(file_path):
+            processed_data = process_file_docling(file_path)
+            if not processed_data:
+                msg = f"Failed to process file with Docling: {file_path}"
+                raise ValueError(msg)
+
+            # Serialize processed data to match Data structure
+            serialized_data = processed_data.serialize_model()
+
+            # Now, if doc is nested, we need to unravel it
+            clean_data = [processed_data]
+
+            # This is where we've manually processed the data
+            if "exported_content" not in serialized_data:
+                clean_data = [
+                    Data(data={
+                        "file_path": file_path,
+                        **(item["element"] if "element" in item else {k: v for k, v in item.items() if k != "file_path"})
+                    })
+                    for item in serialized_data["doc"]
+                ]
+
+            # Repeat file_list to match the number of processed data elements
+            return self.rollup_data(file_list, clean_data)
+
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
         file_count = len(file_list)
 
-        parallel_processing_threshold = 2
-        if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:
-            if file_count > 1:
-                self.log(f"Processing {file_count} files sequentially.")
-            processed_data = [
-                process_file_docling(
-                    str(file.path),
-                    silent_errors=self.silent_errors,
-                )
-                for file in file_list
-            ]
-        else:
-            self.log(f"Starting parallel processing of {file_count} files with concurrency: {concurrency}.")
-            file_paths = [str(file.path) for file in file_list]
-            processed_data = parallel_load_data(
-                file_paths,
-                silent_errors=self.silent_errors,
-                load_function=process_file_docling,
-                max_concurrency=concurrency,
-            )
+        self.log(f"Starting parallel processing of {file_count} files with concurrency: {concurrency}.")
+        file_paths = [str(file.path) for file in file_list]
+        processed_data = parallel_load_data(
+            file_paths,
+            silent_errors=self.silent_errors,
+            load_function=process_file_standard,
+            max_concurrency=concurrency,
+        )
 
         return self.rollup_data(file_list, processed_data)
 
     def load_files_advanced(self) -> DataFrame:
+        """Load files using advanced Docling processing and export to an advanced format."""
+        # TODO: Update
+        self.markdown = False
+        return self.load_files()
+
+    def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
-        if not self.advanced_mode:
-            # Fallback to standard processing if advanced mode is disabled
-            return self.load_files()
-
-        try:
-            resolved_files = self.resolve_path()
-            processed_files = self.process_files(resolved_files)
-
-            # Extract exported content and create Data objects like Export Docling Document
-            results: list[Data] = []
-            for file_obj in processed_files:
-                if hasattr(file_obj, "data") and file_obj.data:
-                    file_data = file_obj.data.data if hasattr(file_obj.data, "data") else file_obj.data
-
-                    # Get exported content if available
-                    if isinstance(file_data, dict) and "exported_content" in file_data:
-                        # This file was processed with Docling
-                        exported_content = file_data["exported_content"]
-                        results.append(
-                            Data(
-                                text=exported_content,
-                                data={
-                                    "file_path": file_data.get("file_path", ""),
-                                    "export_format": file_data.get("export_format", "Markdown"),
-                                },
-                            )
-                        )
-                    else:
-                        # This file was processed with standard method, use its text content
-                        text_content = file_obj.data.text if hasattr(file_obj.data, "text") else str(file_data)
-                        results.append(
-                            Data(
-                                text=text_content,
-                                data={
-                                    "file_path": getattr(file_obj, "path", ""),
-                                    "export_format": "Standard",
-                                },
-                            )
-                        )
-
-            # Return DataFrame like Export Docling Document
-            return DataFrame(results)
-
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error in advanced processing: {e}")
-            # Fallback to standard processing on error
-            return self.load_files()
+        self.markdown = True
+        return self.load_files()
 
     def _process_with_docling_and_export(self, file_path: str) -> Data:
         """Process a single file with Docling and export to the specified format."""
@@ -599,23 +583,45 @@ class FileComponent(BaseFileComponent):
                 # If no status but has document, assume success
                 success = result.document is not None
 
-            if success:
+            if not success:
+                return Data(data={"error": "Docling conversion failed", "file_path": file_path})
+
+            if self.markdown:
+                self.log("Exporting document to Markdown format")
                 # Export the document to the specified format
                 exported_content = self._export_document(result.document, image_ref_mode)
 
                 return Data(
                     text=exported_content,
                     data={
-                        "doc": result.document,
                         "exported_content": exported_content,
                         "export_format": self.EXPORT_FORMAT,
-                        "file_path": file_path,
-                    },
+                        "file_path": file_path
+                    }
                 )
-            return Data(data={"error": "Docling conversion failed", "file_path": file_path})
+
+            return Data(
+                data={
+                    "doc": self.docling_to_dataframe_simple(result.document.export_to_dict()),
+                    "export_format": self.EXPORT_FORMAT,
+                    "file_path": file_path
+                }
+            )
 
         except Exception as e:  # noqa: BLE001
             return Data(data={"error": f"Docling processing error: {e!s}", "file_path": file_path})
+
+    def docling_to_dataframe_simple(self, doc):
+        """Extract all text elements into a simple DataFrame."""
+        return [
+            {
+                "page_no": text["prov"][0]["page_no"] if text["prov"] else None,
+                "label": text["label"],
+                "text": text["text"],
+                "level": text.get("level", None)  # for headers
+            }
+            for text in doc["texts"]
+        ]
 
     def _export_document(self, document: Any, image_ref_mode: type[Enum]) -> str:
         """Export document to Markdown format with placeholder images."""
