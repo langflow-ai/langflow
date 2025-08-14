@@ -25,7 +25,7 @@ export class Web extends Construct {
   readonly distribution;
   constructor(scope: Construct, id: string, props:WebProps) {
     super(scope, id)
-    
+
   const commonBucketProps: s3.BucketProps = {
     blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     encryption: s3.BucketEncryption.S3_MANAGED,
@@ -37,7 +37,7 @@ export class Web extends Construct {
 
   // CDKにて 静的WebサイトをホストするためのAmazon S3バケットを作成
   const websiteBucket = new s3.Bucket(this, 'LangflowWebsiteBucket', commonBucketProps);
-  
+
   const originAccessIdentity = new cloudfront.OriginAccessIdentity(
     this,
     'OriginAccessIdentity',
@@ -63,12 +63,12 @@ export class Web extends Construct {
   const s3SpaOrigin = new origins.S3Origin(websiteBucket);
   const ApiSpaOrigin = new origins.LoadBalancerV2Origin(props.alb,{
     protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY
-  });  
+  });
 
   const albBehaviorOptions = {
     origin: ApiSpaOrigin,
     allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-    
+
     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
     cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
     originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
@@ -126,7 +126,7 @@ export class Web extends Construct {
       // VITE_AXIOS_BASE_URL: `https://${this.distribution.domainName}`
     },
   });
-  
+
   // distribution から backendへのinbound 許可
   const alb_listen_port=80
   props.albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(alb_listen_port))
