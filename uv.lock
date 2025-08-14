@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
@@ -5240,6 +5240,7 @@ dependencies = [
     { name = "json-repair" },
     { name = "jsonquerylang" },
     { name = "langchain" },
+    { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-experimental" },
@@ -5374,6 +5375,7 @@ requires-dist = [
     { name = "json-repair", specifier = ">=0.30.3" },
     { name = "jsonquerylang", specifier = ">=1.1.1" },
     { name = "langchain", specifier = "~=0.3.21" },
+    { name = "langchain-chroma", specifier = ">=0.1.4" },
     { name = "langchain-community", specifier = "~=0.3.20" },
     { name = "langchain-core", specifier = "~=0.3.45" },
     { name = "langchain-experimental", specifier = ">=0.3.4,<1.0.0" },
