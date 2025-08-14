@@ -60,7 +60,7 @@ class DoclingImports:
         self.strategy = strategy
 
 
-class EnhancedFileV2Component(BaseFileComponent):
+class FileComponent(BaseFileComponent):
     """Enhanced file component v2 that combines standard file loading with optional Docling processing and export.
 
     This component supports all features of the standard File component, plus an advanced mode
