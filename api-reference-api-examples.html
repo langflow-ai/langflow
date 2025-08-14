@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.0e93b55e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.6d3cb48e.js" defer="defer"></script>
 <script src="/assets/js/main.6e50f663.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -107,13 +107,232 @@ For example:</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="get-all-components">Get all components<a href="#get-all-components" class="hash-link" aria-label="Direct link to Get all components" title="Direct link to Get all components">​</a></h3>
 <p>Returns a dictionary of all Langflow components:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>curl -X GET \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;$LANGFLOW_SERVER_URL/api/v1/all&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;accept: application/json&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;x-api-key: $LANGFLOW_API_KEY&quot;</span></div></div><br></code></div></div>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="available-endpoints">Available endpoints<a href="#available-endpoints" class="hash-link" aria-label="Direct link to Available endpoints" title="Direct link to Available endpoints">​</a></h2>
+<p>Because you can run Langflow as either an IDE (frontend and backend) or a runtime (headless, backend-only), it serves endpoints that support frontend and backend operations.
+Many endpoints are for orchestration between the frontend and backend, reading and writing to the Langflow database, or enabling frontend functionality, like the <strong>Playground</strong>.
+Unless you are contributing to the Langflow codebase, you won&#x27;t directly call most of the Langflow endpoints.</p>
+<p>For application development, the most commonly used endpoints are the <code>/run</code> and <code>/webhook</code> <a href="/api-flows-run">flow trigger endpoints</a>.
+For some use cases, you might use some other endpoints, such as the <code>/files</code> endpoints to use files in flows.</p>
+<p>To help you explore the available endpoints, the following lists are sorted by primary use case, although some endpoints might support multiple use cases.</p>
+<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Application development</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Custom components</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">MCP servers and clients</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Codebase development</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Deprecated</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><p>The following endpoints are useful for developing applications with Langflow and administering Langflow deployments with one or more users.
+You will most often use the flow trigger endpoints.
+Other endpoints are helpful for specific use cases, such as administration and flow management in runtime deployments that don&#x27;t have a visual editor.</p><ul>
+<li>
+<p><a href="/api-flows-run">Flow trigger endpoints</a>:</p>
+<ul>
+<li>POST <code>/v1/run/{flow_id_or_name}</code>: Run a flow.</li>
+<li>POST <code>/v1/run/advanced/{flow_id}</code>: Advanced run with explicit <code>inputs</code>, <code>outputs</code>, <code>tweaks</code>, and optional <code>session_id</code>.</li>
+<li>POST <code>/v1/webhook/{flow_id_or_name}</code>: Trigger a flow via webhook payload.</li>
+</ul>
+</li>
+<li>
+<p>Deployment details:</p>
+<ul>
+<li>GET <code>/v1/version</code>: Return Langflow version. See <a href="/api-reference-api-examples#get-version">Get version</a>.</li>
+<li>GET <code>/v1/config</code>: Return deployment configuration. See <a href="/api-reference-api-examples#get-configuration">Get configuration</a>.</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-projects">Projects endpoints</a>:</p>
+<ul>
+<li>POST <code>/v1/projects/</code>: Create a project.</li>
+<li>GET <code>/v1/projects/</code>: List projects.</li>
+<li>GET <code>/v1/projects/{project_id}</code>: Read a project (with paginated flows support).</li>
+<li>PATCH <code>/v1/projects/{project_id}</code>: Update project info and membership.</li>
+<li>DELETE <code>/v1/projects/{project_id}</code>: Delete a project.</li>
+<li>GET <code>/v1/projects/download/{project_id}</code>: Export all flows in a project as ZIP.</li>
+<li>POST <code>/v1/projects/upload/</code>: Import a project ZIP (creates project and flows).</li>
+<li>GET <code>/v1/starter-projects/</code>: Return a list of templates.</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-files">Files endpoints</a>:</p>
+<ul>
+<li>Files (v1)<!-- -->
+<ul>
+<li>POST <code>/v1/files/upload/{flow_id}</code>: Upload a file to a specific flow.</li>
+<li>GET <code>/v1/files/download/{flow_id}/{file_name}</code>: Download a file from a flow.</li>
+<li>GET <code>/v1/files/images/{flow_id}/{file_name}</code>: Stream an image from a flow.</li>
+<li>GET <code>/v1/files/profile_pictures/{folder_name}/{file_name}</code>: Get a profile picture asset.</li>
+<li>GET <code>/v1/files/profile_pictures/list</code>: List available profile picture assets.</li>
+<li>GET <code>/v1/files/list/{flow_id}</code>: List files for a flow.</li>
+<li>DELETE <code>/v1/files/delete/{flow_id}/{file_name}</code>: Delete a file from a flow.</li>
+</ul>
+</li>
+<li>Files (v2)<!-- -->
+<ul>
+<li>POST <code>/v2/files</code> (alias <code>/v2/files/</code>): Upload a file owned by the current user.</li>
+<li>GET <code>/v2/files</code> (alias <code>/v2/files/</code>): List files owned by the current user.</li>
+<li>DELETE <code>/v2/files/batch/</code>: Delete multiple files by IDs.</li>
+<li>POST <code>/v2/files/batch/</code>: Download multiple files as a ZIP by IDs.</li>
+<li>GET <code>/v2/files/{file_id}</code>: Download a file by ID (or return raw content internally).</li>
+<li>PUT <code>/v2/files/{file_id}</code>: Edit a file name by ID.</li>
+<li>DELETE <code>/v2/files/{file_id}</code>: Delete a file by ID.</li>
+<li>DELETE <code>/v2/files</code> (alias <code>/v2/files/</code>): Delete all files for the current user.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-keys-and-authentication">API keys and authentication</a>:</p>
+<ul>
+<li>GET <code>/v1/api_key/</code>: List API keys for the current user.</li>
+<li>POST <code>/v1/api_key/</code>: Create a new API key.</li>
+<li>DELETE <code>/v1/api_key/{api_key_id}</code>: Delete an API key.</li>
+<li>POST <code>/v1/api_key/store</code>: Save an encrypted Store API key (cookie set).</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-flows">Flow management endpoints</a>:</p>
+<ul>
+<li>POST <code>/v1/flows/</code>: Create a flow.</li>
+<li>GET <code>/v1/flows/</code>: List flows (supports pagination and filters).</li>
+<li>GET <code>/v1/flows/{flow_id}</code>: Read a flow by ID.</li>
+<li>GET <code>/v1/flows/public_flow/{flow_id}</code>: Read a public flow by ID.</li>
+<li>PATCH <code>/v1/flows/{flow_id}</code>: Update a flow.</li>
+<li>DELETE <code>/v1/flows/{flow_id}</code>: Delete a flow.</li>
+<li>POST <code>/v1/flows/batch/</code>: Create multiple flows.</li>
+<li>POST <code>/v1/flows/upload/</code>: Import flows from a JSON file.</li>
+<li>DELETE <code>/v1/flows/</code>: Delete multiple flows by IDs.</li>
+<li>POST <code>/v1/flows/download/</code>: Export flows to a ZIP file.</li>
+<li>GET <code>/v1/flows/basic_examples/</code>: List basic example flows.</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-users">Users endpoints</a>:</p>
+<ul>
+<li>POST <code>/v1/users/</code>: Add a user (superuser required when auth enabled).</li>
+<li>GET <code>/v1/users/whoami</code>: Return the current authenticated user.</li>
+<li>GET <code>/v1/users/</code>: List all users (superuser required).</li>
+<li>PATCH <code>/v1/users/{user_id}</code>: Update a user (with role checks).</li>
+<li>PATCH <code>/v1/users/{user_id}/reset-password</code>: Reset own password.</li>
+<li>DELETE <code>/v1/users/{user_id}</code>: Delete a user (cannot delete yourself).</li>
+</ul>
+</li>
+</ul></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:</p><ul>
+<li>
+<p>Develop custom components:</p>
+<ul>
+<li>GET <code>/v1/all</code>: Return all available Langflow component types. See <a href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
+<li>POST <code>/v1/custom_component</code>: Build a custom component from code and return its node.</li>
+<li>POST <code>/v1/custom_component/update</code>: Update an existing custom component&#x27;s build config and outputs.</li>
+<li>POST <code>/v1/validate/code</code>: Validate a Python code snippet for a custom component.</li>
+</ul>
+</li>
+<li>
+<p>Langflow Store:</p>
+<ul>
+<li>GET <code>/v1/store/check/</code>: Return whether the Store feature is enabled.</li>
+<li>GET <code>/v1/store/check/api_key</code>: Check if a Store API key exists and is valid.</li>
+<li>POST <code>/v1/store/components/</code>: Share a component to the Store.</li>
+<li>PATCH <code>/v1/store/components/{component_id}</code>: Update a shared component.</li>
+<li>GET <code>/v1/store/components/</code>: List available Store components (filters supported).</li>
+<li>GET <code>/v1/store/components/{component_id}</code>: Download a component from the Store.</li>
+<li>GET <code>/v1/store/tags</code>: List Store tags.</li>
+<li>GET <code>/v1/store/users/likes</code>: List components liked by the current user.</li>
+<li>POST <code>/v1/store/users/likes/{component_id}</code>: Like a component.</li>
+</ul>
+</li>
+</ul></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>The following endpoints are for managing Langflow MCP servers, both Langflow-hosted MCP servers and external MCP server connections:</p><ul>
+<li>
+<p><strong>MCP (global)</strong>:</p>
+<ul>
+<li>HEAD <code>/v1/mcp/sse</code>: Health check for MCP SSE.</li>
+<li>GET <code>/v1/mcp/sse</code>: Open SSE stream for MCP server events.</li>
+<li>POST <code>/v1/mcp/</code>: Post messages to the MCP server.</li>
+</ul>
+</li>
+<li>
+<p><strong>MCP (project-specific)</strong>:</p>
+<ul>
+<li>GET <code>/v1/mcp/project/{project_id}</code>: List MCP-enabled tools and project auth settings.</li>
+<li>HEAD <code>/v1/mcp/project/{project_id}/sse</code>: Health check for project SSE.</li>
+<li>GET <code>/v1/mcp/project/{project_id}/sse</code>: Open project-scoped MCP SSE.</li>
+<li>POST <code>/v1/mcp/project/{project_id}</code>: Post messages to project MCP server.</li>
+<li>POST <code>/v1/mcp/project/{project_id}/</code> (trailing slash): Same as above.</li>
+<li>PATCH <code>/v1/mcp/project/{project_id}</code>: Update MCP settings for flows and project auth settings.</li>
+<li>POST <code>/v1/mcp/project/{project_id}/install</code>: Install MCP client config for Cursor/Windsurf/Claude (local only).</li>
+<li>GET <code>/v1/mcp/project/{project_id}/installed</code>: Check which clients have MCP config installed.</li>
+</ul>
+</li>
+</ul></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>The following endpoints are most often used when contributing to the Langflow codebase, and you need to understand or call endpoints that support frontend-to-backend orchestration or other internal functionality.</p><ul>
+<li>
+<p>Base (metadata):</p>
+<ul>
+<li>GET <code>/v1/all</code>: Return all available Langflow component types. See <a href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
+<li>GET <code>/v1/version</code>: Return Langflow version. See <a href="/api-reference-api-examples#get-version">Get version</a>.</li>
+<li>GET <code>/v1/config</code>: Return deployment configuration. See <a href="/api-reference-api-examples#get-configuration">Get configuration</a>.</li>
+<li>GET <code>/v1/starter-projects/</code>: Return a list of templates.</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-build">Build endpoints</a> (internal editor support):</p>
+<ul>
+<li>POST <code>/v1/build/{flow_id}/flow</code>: Start a flow build and return a job ID.</li>
+<li>GET <code>/v1/build/{job_id}/events</code>: Stream or fetch build events.</li>
+<li>POST <code>/v1/build/{job_id}/cancel</code>: Cancel a build job.</li>
+<li>POST <code>/v1/build_public_tmp/{flow_id}/flow</code>: Build a public flow without auth.</li>
+<li>POST <code>/v1/validate/prompt</code>: Validate a prompt payload.</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-keys-and-authentication">API keys and authentication</a>:</p>
+<ul>
+<li>POST <code>/v1/login</code>: Login and set tokens as cookies.</li>
+<li>GET <code>/v1/auto_login</code>: Auto-login (if enabled) and set tokens.</li>
+<li>POST <code>/v1/refresh</code>: Refresh tokens using refresh cookie.</li>
+<li>POST <code>/v1/logout</code>: Logout and clear cookies.</li>
+</ul>
+</li>
+<li>
+<p><a href="/api-monitor">Monitor endpoints</a>:</p>
+<ul>
+<li>GET <code>/v1/monitor/builds</code>: Get vertex builds for a flow.</li>
+<li>DELETE <code>/v1/monitor/builds</code>: Delete vertex builds for a flow.</li>
+<li>GET <code>/v1/monitor/messages/sessions</code>: List message session IDs (auth required).</li>
+<li>GET <code>/v1/monitor/messages</code>: List messages with optional filters.</li>
+<li>DELETE <code>/v1/monitor/messages</code>: Delete messages by IDs (auth required).</li>
+<li>PUT <code>/v1/monitor/messages/{message_id}</code>: Update a message.</li>
+<li>PATCH <code>/v1/monitor/messages/session/{old_session_id}</code>: Change a session ID for all messages in that session.</li>
+<li>DELETE <code>/v1/monitor/messages/session/{session_id}</code>: Delete messages by session.</li>
+<li>GET <code>/v1/monitor/transactions</code>: List transactions for a flow (paginated).</li>
+</ul>
+</li>
+<li>
+<p>Variables:</p>
+<ul>
+<li>POST <code>/v1/variables/</code>: Create a variable, such as an API key, for the user.</li>
+<li>GET <code>/v1/variables/</code>: List variables for the user.</li>
+<li>PATCH <code>/v1/variables/{variable_id}</code>: Update a variable.</li>
+<li>DELETE <code>/v1/variables/{variable_id}</code>: Delete a variable.</li>
+</ul>
+</li>
+<li>
+<p><a href="/concepts-voice-mode">Use voice mode</a>:</p>
+<ul>
+<li>WS <code>/v1/voice/ws/flow_as_tool/{flow_id}</code>: Bi-directional voice session exposing the flow as a tool.</li>
+<li>WS <code>/v1/voice/ws/flow_as_tool/{flow_id}/{session_id}</code>: Same as above with explicit session ID.</li>
+<li>WS <code>/v1/voice/ws/flow_tts/{flow_id}</code>: Voice-to-text session that runs a flow and returns TTS.</li>
+<li>WS <code>/v1/voice/ws/flow_tts/{flow_id}/{session_id}</code>: Same as above with explicit session ID.</li>
+<li>GET <code>/v1/voice/elevenlabs/voice_ids</code>: List available ElevenLabs voice IDs for the user.</li>
+</ul>
+</li>
+</ul></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>The following endpoints are deprecated:</p><ul>
+<li>POST <code>/v1/predict/{flow_id}</code>: Use <a href="/api-flows-run"><code>/v1/run/{flow_id}</code></a> instead.</li>
+<li>POST <code>/v1/process/{flow_id}</code>: Use <a href="/api-flows-run"><code>/v1/run/{flow_id}</code></a> instead.</li>
+<li>GET <code>/v1/task/{task_id}</code>: Deprecated functionality.</li>
+<li>POST <code>/v1/upload/{flow_id}</code>: Use <a href="/api-files"><code>/files</code></a> instead.</li>
+<li>POST <code>/v1/build/{flow_id}/vertices</code>: Replaced by <a href="/api-monitor"><code>/monitor/builds</code></a>.</li>
+<li>POST <code>/v1/build/{flow_id}/vertices/{vertex_id}</code>: Replaced by <a href="/api-monitor"><code>/monitor/builds</code></a>.</li>
+<li>GET <code>/v1/build/{flow_id}/{vertex_id}/stream</code>: Replaced by <a href="/api-monitor"><code>/monitor/builds</code></a>.</li>
+</ul></div></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="next-steps">Next steps<a href="#next-steps" class="hash-link" aria-label="Direct link to Next steps" title="Direct link to Next steps">​</a></h2>
 <ul>
 <li>Use the Langflow API to <a href="/api-flows-run">run a flow</a>.</li>
 <li>Use the Langflow API to <a href="/api-files">upload files</a>.</li>
 <li>Use the Langflow API to <a href="/api-logs">get flow logs</a>.</li>
 <li>Explore all endpoints in the <a href="/api">Langflow API specification</a>.</li>
-</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/components-custom-components"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Create custom Python components</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/typescript-client"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Use the TypeScript client</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#form-langflow-api-requests" class="table-of-contents__link toc-highlight">Form Langflow API requests</a><ul><li><a href="#base-url" class="table-of-contents__link toc-highlight">Base URL</a></li><li><a href="#authentication" class="table-of-contents__link toc-highlight">Authentication</a></li><li><a href="#methods-paths-and-parameters" class="table-of-contents__link toc-highlight">Methods, paths, and parameters</a></li><li><a href="#api-versions" class="table-of-contents__link toc-highlight">API versions</a></li></ul></li><li><a href="#set-environment-variables" class="table-of-contents__link toc-highlight">Set environment variables</a></li><li><a href="#try-some-langflow-api-requests" class="table-of-contents__link toc-highlight">Try some Langflow API requests</a><ul><li><a href="#get-version" class="table-of-contents__link toc-highlight">Get version</a></li><li><a href="#get-configuration" class="table-of-contents__link toc-highlight">Get configuration</a></li><li><a href="#get-all-components" class="table-of-contents__link toc-highlight">Get all components</a></li></ul></li><li><a href="#next-steps" class="table-of-contents__link toc-highlight">Next steps</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/components-custom-components"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Create custom Python components</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/typescript-client"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Use the TypeScript client</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#form-langflow-api-requests" class="table-of-contents__link toc-highlight">Form Langflow API requests</a><ul><li><a href="#base-url" class="table-of-contents__link toc-highlight">Base URL</a></li><li><a href="#authentication" class="table-of-contents__link toc-highlight">Authentication</a></li><li><a href="#methods-paths-and-parameters" class="table-of-contents__link toc-highlight">Methods, paths, and parameters</a></li><li><a href="#api-versions" class="table-of-contents__link toc-highlight">API versions</a></li></ul></li><li><a href="#set-environment-variables" class="table-of-contents__link toc-highlight">Set environment variables</a></li><li><a href="#try-some-langflow-api-requests" class="table-of-contents__link toc-highlight">Try some Langflow API requests</a><ul><li><a href="#get-version" class="table-of-contents__link toc-highlight">Get version</a></li><li><a href="#get-configuration" class="table-of-contents__link toc-highlight">Get configuration</a></li><li><a href="#get-all-components" class="table-of-contents__link toc-highlight">Get all components</a></li></ul></li><li><a href="#available-endpoints" class="table-of-contents__link toc-highlight">Available endpoints</a></li><li><a href="#next-steps" class="table-of-contents__link toc-highlight">Next steps</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/img/lf-docs-light.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--light_NVdE" width="160" height="40"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--dark_xIcU" width="160" height="40"></div></div></div></footer><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>
