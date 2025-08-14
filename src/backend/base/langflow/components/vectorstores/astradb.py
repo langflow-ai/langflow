@@ -995,12 +995,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Get the api endpoint for the selected database
         index = build_config["database_name"]["options"].index(field_value)
-        build_config["api_endpoint"]["options"] = (
-            build_config["database_name"]["options_metadata"][index]["api_endpoints"]
-        )
-        build_config["api_endpoint"]["value"] = (
-            build_config["database_name"]["options_metadata"][index]["api_endpoints"][0]
-        )
+        build_config["api_endpoint"]["options"] = build_config["database_name"]["options_metadata"][index][
+            "api_endpoints"
+        ]
+        build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][index][
+            "api_endpoints"
+        ][0]
 
         # Get the org_id for the selected database
         org_id = build_config["database_name"]["options_metadata"][index]["org_id"]
