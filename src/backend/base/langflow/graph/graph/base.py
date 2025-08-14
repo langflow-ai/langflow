@@ -770,14 +770,12 @@ class Graph:
             self.increment_run_count()
         except Exception as exc:
             self._end_all_traces_async(error=exc)
-            # Flush any queued transactions even on error
-            await self.flush_transaction_logs()
+
             msg = f"Error running graph: {exc}"
             raise ValueError(msg) from exc
 
         self._end_all_traces_async()
-        # Flush all queued transactions after successful flow execution
-        await self.flush_transaction_logs()
+
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
@@ -983,6 +981,23 @@ class Graph:
         This avoids database contention during parallel vertex execution.
         """
         self._transaction_queue.append((flow_id, source, status, target, error))
+
+    def get_transaction_queue_for_background_flush(self) -> list[tuple[str | UUID, Vertex, str, Vertex | None, Any]]:
+        """Get queued transactions for background processing and clear the queue.
+
+        This method returns a copy of the transaction queue and clears it immediately,
+        allowing the flow execution to complete without waiting for database operations.
+        The returned queue can be processed as a FastAPI background task.
+
+        Returns:
+            List of transaction tuples ready for background flushing
+        """
+        if not self._transaction_queue:
+            return []
+
+        transactions_to_flush = self._transaction_queue.copy()
+        self._transaction_queue.clear()
+        return transactions_to_flush
 
     async def flush_transaction_logs(self) -> None:
         """Flush all queued transactions to the database in a single batch.

@@ -130,7 +130,7 @@ async def run_flow(graph: Graph, run_input: Any | None = None, session_id: str |
 
     flow_id = str(uuid.uuid4())
 
-    results, _ = await run_graph_internal(graph, flow_id, session_id=session_id, inputs=graph_run_inputs)
+    results, _, _ = await run_graph_internal(graph, flow_id, session_id=session_id, inputs=graph_run_inputs)
     outputs = {}
     for r in results:
         for out in r.outputs:
@@ -178,9 +178,11 @@ async def run_single_component(
     graph.prepare()
     graph_run_inputs = [InputValueRequest(input_value=run_input, type=input_type)] if run_input else []
 
-    _, _ = await run_graph_internal(
-        graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id]
-    )
+    (
+        _,
+        _,
+        _,
+    ) = await run_graph_internal(graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id])
     return graph.get_vertex(component_id).built_object
 
 

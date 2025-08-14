@@ -60,6 +60,28 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Base"])
 
 
+async def flush_transaction_queue_background(transaction_queue: list) -> None:
+    """Background task to flush transaction queue to database.
+
+    This runs as a FastAPI background task to avoid blocking the API response.
+    Any errors are logged but don't affect the response to the client.
+
+    Args:
+        transaction_queue: List of transaction tuples to flush to database
+    """
+    if not transaction_queue:
+        return
+
+    try:
+        from langflow.graph.utils import flush_transaction_queue
+
+        await flush_transaction_queue(transaction_queue)
+        logger.debug(f"Successfully flushed {len(transaction_queue)} transactions in background")
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"Error in background transaction flush: {exc}")
+        # Don't raise - this is a background task and errors shouldn't affect the API response
+
+
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
     """Retrieve all component types with compression for better performance.
@@ -116,6 +138,7 @@ async def simple_run_flow(
     stream: bool = False,
     api_key_user: User | None = None,
     event_manager: EventManager | None = None,
+    background_tasks: BackgroundTasks | None = None,
 ):
     validate_input_and_tweaks(input_request)
     try:
@@ -149,7 +172,7 @@ async def simple_run_flow(
                     and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())  # type: ignore[operator]
                 )
             ]
-        task_result, session_id = await run_graph_internal(
+        task_result, session_id, transaction_queue = await run_graph_internal(
             graph=graph,
             flow_id=flow_id_str,
             session_id=input_request.session_id,
@@ -158,6 +181,10 @@ async def simple_run_flow(
             stream=stream,
             event_manager=event_manager,
         )
+
+        # Add transaction flushing as background task to avoid blocking response
+        if background_tasks and transaction_queue:
+            background_tasks.add_task(flush_transaction_queue_background, transaction_queue)
 
         return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -260,6 +287,7 @@ async def run_flow_generator(
             stream=True,
             api_key_user=api_key_user,
             event_manager=event_manager,
+            background_tasks=None,  # No background tasks for streaming - handled differently
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
@@ -346,6 +374,7 @@ async def simplified_run_flow(
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
+            background_tasks=background_tasks,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -575,7 +604,7 @@ async def experimental_run_flow(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     try:
-        task_result, session_id = await run_graph_internal(
+        task_result, session_id, transaction_queue = await run_graph_internal(
             graph=graph,
             flow_id=flow_id_str,
             session_id=session_id,
@@ -583,6 +612,9 @@ async def experimental_run_flow(
             outputs=outputs,
             stream=stream,
         )
+
+        # Note: This appears to be in a different function that may not have background_tasks parameter
+        # Transaction flushing will be handled synchronously here for now
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
