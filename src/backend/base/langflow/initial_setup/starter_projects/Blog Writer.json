@@ -353,6 +353,15 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "efdcba3771af",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 1
+              },
               "module": "langflow.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -469,6 +478,23 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "6f74e04e39d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.115.13"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 3
+              },
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -792,6 +818,15 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "556209520650",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 1
+              },
               "module": "langflow.components.processing.parser.ParserComponent"
             },
             "minimized": false,
@@ -979,6 +1014,31 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "a81817a7f244",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "requests",
+                    "version": "2.32.4"
+                  },
+                  {
+                    "name": "bs4",
+                    "version": null
+                  },
+                  {
+                    "name": "langchain_community",
+                    "version": "0.3.21"
+                  },
+                  {
+                    "name": "loguru",
+                    "version": "0.7.3"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": "1.5.0.post1"
+                  }
+                ],
+                "total_dependencies": 5
+              },
               "module": "langflow.components.data.url.URLComponent"
             },
             "minimized": false,
