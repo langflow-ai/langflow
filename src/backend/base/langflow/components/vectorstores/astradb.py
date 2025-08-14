@@ -1078,18 +1078,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         lex_enabled = col_options.lexical and col_options.lexical.enabled
         user_hyb_enabled = build_config["search_method"]["value"] == "Hybrid Search"
 
-        # Show the reranker option if hybrid search is enabled
-        build_config["reranker"]["show"] = hyb_enabled and user_hyb_enabled
-        build_config["reranker"]["toggle_value"] = hyb_enabled and user_hyb_enabled
-        build_config["reranker"]["toggle_disable"] = hyb_enabled and user_hyb_enabled
+        # Reranker visible when both the collection supports it and the user selected Hybrid
+        hybrid_active = bool(hyb_enabled and user_hyb_enabled)
+        build_config["reranker"]["show"] = hybrid_active
+        build_config["reranker"]["toggle_value"] = hybrid_active
+        build_config["reranker"]["toggle_disable"] = False  # allow user to toggle if visible
 
-        # If hybrid search is enabled, set the search type to "Similarity"
-        build_config["search_type"]["value"] = (
-            "Similarity" if hyb_enabled and user_hyb_enabled else build_config["search_type"]["value"]
-        )
+        # If hybrid is active, lock search_type to "Similarity"
+        if hybrid_active:
+            build_config["search_type"]["value"] = "Similarity"
 
-        # Show the lexical terms option if lexical search is enabled
-        build_config["lexical_terms"]["show"] = lex_enabled
+        # Show the lexical terms option only if the collection enables lexical search
+        build_config["lexical_terms"]["show"] = bool(lex_enabled)
 
         return build_config
 
