@@ -19,7 +19,12 @@ from langflow.services.database.models.transactions.crud import (
     log_transactions_batch as crud_log_transactions_batch,
 )
 from langflow.services.database.models.transactions.model import TransactionBase
-from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
+from langflow.services.database.models.vertex_builds.crud import (
+    log_vertex_build as crud_log_vertex_build,
+)
+from langflow.services.database.models.vertex_builds.crud import (
+    log_vertex_builds_batch as crud_log_vertex_builds_batch,
+)
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
@@ -259,6 +264,83 @@ async def log_vertex_build(
             logger.debug(f"Logged vertex build: {inserted.build_id}")
     except Exception:  # noqa: BLE001
         logger.exception("Error logging vertex build")
+
+
+def prepare_vertex_build(
+    flow_id: str | UUID,
+    vertex_id: str,
+    *,
+    valid: bool,
+    params: Any,
+    data: ResultDataResponse | dict,
+    artifacts: dict | None = None,
+) -> VertexBuildBase | None:
+    """Prepare a vertex build object from parameters.
+
+    Converts parameters and data into a VertexBuildBase object suitable for database storage.
+    Handles serialization of complex types.
+
+    Args:
+        flow_id: The flow ID
+        vertex_id: The vertex ID
+        valid: Whether the build was valid
+        params: Build parameters
+        data: Result data
+        artifacts: Optional artifacts
+
+    Returns:
+        VertexBuildBase object ready for database insertion, or None if flow_id is invalid
+    """
+    try:
+        if isinstance(flow_id, str):
+            flow_id = UUID(flow_id)
+    except ValueError:
+        logger.warning(f"Invalid flow_id passed to prepare_vertex_build: {flow_id!r}")
+        return None
+
+    return VertexBuildBase(
+        flow_id=flow_id,
+        id=vertex_id,
+        valid=valid,
+        params=str(params) if params else None,
+        data=serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length()),
+        artifacts=serialize(artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
+    )
+
+
+async def flush_vertex_build_queue(
+    vertex_build_queue: list[tuple[str | UUID, str, bool, Any, ResultDataResponse | dict, dict | None]],
+) -> None:
+    """Flush a queue of vertex builds to the database in batch.
+
+    Takes a list of vertex build tuples and processes them all at once to avoid
+    database contention and deadlocks.
+
+    Args:
+        vertex_build_queue: List of tuples containing (flow_id, vertex_id, valid, params, data, artifacts)
+    """
+    if not vertex_build_queue:
+        return
+
+    if not get_settings_service().settings.vertex_builds_storage_enabled:
+        return
+
+    vertex_builds_to_log = []
+
+    for flow_id, vertex_id, valid, params, data, artifacts in vertex_build_queue:
+        vertex_build = prepare_vertex_build(
+            flow_id, vertex_id, valid=valid, params=params, data=data, artifacts=artifacts
+        )
+        if vertex_build:
+            vertex_builds_to_log.append(vertex_build)
+
+    if vertex_builds_to_log:
+        try:
+            async with session_getter(get_db_service()) as session:
+                await crud_log_vertex_builds_batch(session, vertex_builds_to_log)
+                logger.debug(f"Flushed {len(vertex_builds_to_log)} vertex builds to database")
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Error flushing vertex build queue: {exc!s}")
 
 
 def rewrite_file_path(file_path: str):
