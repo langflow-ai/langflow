@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
+from urllib.parse import urljoin, urlparse
 
 from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
@@ -32,6 +33,7 @@ class URLComponent(Component):
     - Use async loading for better performance
     - Extract either raw HTML or clean text
     - Configure request headers and timeouts
+    - Process HTML links to convert relative URLs to absolute URLs
     """
 
     display_name = "URL"
@@ -162,6 +164,14 @@ class URLComponent(Component):
             required=False,
             advanced=True,
         ),
+        BoolInput(
+            name="process_links",
+            display_name="Process Links",
+            info="If enabled and format is HTML, converts relative links to absolute URLs in the output.",
+            value=True,
+            required=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -202,6 +212,79 @@ class URLComponent(Component):
             raise ValueError(msg)
 
         return url
+
+    def _process_html_links(self, html_content: str, base_url: str) -> str:
+        """Process HTML content and convert relative links to absolute URLs.
+        
+        Args:
+            html_content: The raw HTML content
+            base_url: The base URL to resolve relative links against
+            
+        Returns:
+            str: HTML content with relative links converted to absolute URLs
+        """
+        if not html_content or not base_url:
+            return html_content
+            
+        try:
+            soup = BeautifulSoup(html_content, 'lxml')
+            
+            # Process various types of links and resources
+            for tag in soup.find_all(['a', 'img', 'link', 'script', 'iframe', 'form', 'video', 'audio', 'source', 'track']):
+                # Process href attributes
+                if tag.has_attr('href'):
+                    href = tag['href']
+                    if href and not href.startswith(('http://', 'https://', 'mailto:', 'tel:', '#', 'javascript:', 'data:')):
+                        absolute_url = urljoin(base_url, href)
+                        tag['href'] = absolute_url
+                
+                # Process src attributes
+                if tag.has_attr('src'):
+                    src = tag['src']
+                    if src and not src.startswith(('http://', 'https://', 'data:', '#', 'javascript:')):
+                        absolute_url = urljoin(base_url, src)
+                        tag['src'] = absolute_url
+                
+                # Process action attributes (for forms)
+                if tag.has_attr('action'):
+                    action = tag['action']
+                    if action and not action.startswith(('http://', 'https://')):
+                        absolute_url = urljoin(base_url, action)
+                        tag['action'] = absolute_url
+                
+                # Process data attributes that might contain URLs
+                for attr_name, attr_value in tag.attrs.items():
+                    if attr_name.startswith('data-') and isinstance(attr_value, str):
+                        if any(url_indicator in attr_value.lower() for url_indicator in ['http://', 'https://', '//']):
+                            # This might contain a URL, but be careful not to break data attributes
+                            continue
+                        elif (attr_value and not attr_value.startswith(('#', 'javascript:', 'data:')) and
+                              ('/' in attr_value or attr_value.endswith(('.html', '.htm', '.css', '.js', '.jpg', '.png', '.gif')))):
+                            # Check if it looks like a relative path
+                            absolute_url = urljoin(base_url, attr_value)
+                            tag[attr_name] = absolute_url
+            
+            # Process CSS content for url() references
+            for style_tag in soup.find_all('style'):
+                if style_tag.string:
+                    # Simple regex to find url() references in CSS
+                    import re
+                    css_content = style_tag.string
+                    url_pattern = r'url\([\'"]?([^\'"]+)[\'"]?\)'
+                    
+                    def replace_url(match):
+                        url = match.group(1)
+                        if url and not url.startswith(('http://', 'https://', 'data:', '#')):
+                            absolute_url = urljoin(base_url, url)
+                            return f'url("{absolute_url}")'
+                        return match.group(0)
+                    
+                    style_tag.string = re.sub(url_pattern, replace_url, css_content)
+            
+            return str(soup)
+        except (ValueError, AttributeError, TypeError) as e:
+            logger.warning(f"Error processing HTML links: {e}")
+            return html_content
 
     def _create_loader(self, url: str) -> RecursiveUrlLoader:
         """Creates a RecursiveUrlLoader instance with the configured settings.
@@ -247,6 +330,10 @@ class URLComponent(Component):
                 msg = "No valid URLs provided."
                 raise ValueError(msg)
 
+            # Validate that process_links is only used with HTML format
+            if self.process_links and self.format != "HTML":
+                logger.warning("process_links is only effective when format is set to 'HTML'")
+
             all_docs = []
             for url in urls:
                 logger.debug(f"Loading documents from {url}")
@@ -271,17 +358,23 @@ class URLComponent(Component):
                 raise ValueError(msg)
 
             # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
-            data = [
-                {
-                    "text": safe_convert(doc.page_content, clean_data=True),
-                    "url": doc.metadata.get("source", ""),
+            data = []
+            for doc in all_docs:
+                content = doc.page_content
+                source_url = doc.metadata.get("source", "")
+                
+                # Process HTML links if format is HTML and process_links is enabled
+                if self.format == "HTML" and self.process_links and source_url:
+                    content = self._process_html_links(content, source_url)
+                
+                data.append({
+                    "text": safe_convert(content, clean_data=True),
+                    "url": source_url,
                     "title": doc.metadata.get("title", ""),
                     "description": doc.metadata.get("description", ""),
                     "content_type": doc.metadata.get("content_type", ""),
                     "language": doc.metadata.get("language", ""),
-                }
-                for doc in all_docs
-            ]
+                })
         except Exception as e:
             error_msg = e.message if hasattr(e, "message") else e
             msg = f"Error loading documents: {error_msg!s}"
