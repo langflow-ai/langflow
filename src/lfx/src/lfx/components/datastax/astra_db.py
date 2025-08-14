@@ -1,7 +1,5 @@
 import os
 
-from astrapy.admin import parse_api_endpoint
-
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.field_typing.constants import Memory
 from lfx.inputs.inputs import MessageTextInput, SecretStrInput, StrInput
@@ -52,11 +50,19 @@ class AstraDBChatMemory(LCChatMemoryComponent):
     def build_message_history(self) -> Memory:
         try:
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
+
         except ImportError as e:
             msg = (
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
             )
+            raise ImportError(msg) from e
+
+        try:
+            from astrapy.admin import parse_api_endpoint
+
+        except ImportError as e:
+            msg = "Could not import astrapy package. "
             raise ImportError(msg) from e
 
         return AstraDBChatMessageHistory(
