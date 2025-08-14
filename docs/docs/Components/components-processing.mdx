@@ -448,196 +448,124 @@ If you don't include the package imports in the chat, the agent can still create
 
 ## Save File
 
-This component saves `DataFrame`, `Data`, or `Message` [data types](/data-types) to various file formats.
+The **Save File** component creates a file containing data produced by another component.
+Several file formats are supported, and you can store files in [Langflow storage](/memory) or the local file system.
 
-1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/data-types#data) to the **Save File** component's input.
-The following example connects a **Webhook** component to two **Save File** components to demonstrate the different outputs.
+To configure the **Save File** component and use it in a flow, do the following:
 
-![Two Save File components connected to a Webhook component](/img/component-save-to-file.png)
+1. Connect [`DataFrame`](/data-types#dataframe), [`Data`](/data-types#data), or [`Message`](/data-types#message) output from another component to the **Save File** component's **Input** port.
 
-2. In the **Save File** component's **Input Type** field, select the expected input type.
-This example expects **Data** from the **Webhook**.
-3. In the **File Format** field, select the file type for your saved file.
-This example uses `.md` in one **Save File** component, and `.xlsx` in another.
-4. In the **File Path** field, enter the path for your saved file.
-This example uses `./output/employees.xlsx` and `./output/employees.md` to save the files in a directory relative to where Langflow is running.
-The component accepts both relative and absolute paths, and creates any necessary directories if they don't exist.
-:::tip
-If the `file_format` and `file_path` extension don't align, the component appends the specified format to the file.
-For example, if the `file_format` is `csv`, and the `file_path` is `./output/test.txt`, then the file is saved as `./output/test.txt.csv` so the file isn't corrupted.
-:::
-5. Send a POST request to the **Webhook** containing your JSON data.
-Replace `YOUR_FLOW_ID` with your flow ID.
-This example uses the default Langflow server address.
-```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--H 'x-api-key: LANGFLOW_API_KEY' \
--d '{
-    "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
-    "Role": ["Developer", "Designer", "Manager"],
-    "Department": ["Engineering", "Design", "Management"]
-}'
-```
-6. In your local filesystem, open the `outputs` directory.
-You should see two files created from the data you've sent: one in `.xlsx` for structured spreadsheets, and one in Markdown.
-```text
-| Name         | Role      | Department   |
-|:-------------|:----------|:-------------|
-| Alex Cruz    | Developer | Engineering  |
-| Kalani Smith | Designer  | Design       |
-| Noam Johnson | Manager   | Management   |
-```
+    You can connect the same output to multiple **Save File** components if you want to create multiple files, save the data in different file formats, or save files to multiple locations.
 
-### File input format options
+2. In **File Name**, enter a file name and an optional path.
 
-For `DataFrame` and `Data` inputs, the component can create:
-  - `csv`
-  - `excel`
-  - `json`
-  - `markdown`
-  - `pdf`
+    The **File Name** parameter controls where the file is saved.
+    It can contain a file name or an entire file path:
 
-For `Message` inputs, the component can create:
-  - `txt`
-  - `json`
-  - `markdown`
-  - `pdf`
+    * **Default location**: If you only provide a file name, then the file is stored in `.langflow/data`.
 
-<details>
-<summary>Parameters</summary>
+    * **Subdirectory**: To store files in subdirectories, add the path to the **File Name** parameter.
+    For example, `subdirectory/my_file` creates `my_file` in `.langflow/data/subdirectory`.
+    If a given subdirectory doesn't already exist, Langflow automatically creates it.
 
-**Inputs**
+    * **Absolute or relative path**: To store files elsewhere in your `.langflow` installation or the local file system, provide the absolute or relative path to the desired location.
+    For example, `~/Desktop/my_file` saves `my_file` to the desktop.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_text | Input Text | The text to analyze and extract patterns from. |
-| pattern | Regex Pattern | The regular expression pattern to match in the text. |
-| input_type | Input Type | The type of input to save. |
-| df | DataFrame | The DataFrame to save. |
-| data | Data | The Data object to save. |
-| message | Message | The Message to save. |
-| file_format | File Format | The file format to save the input in. |
-| file_path | File Path | The full file path including filename and extension. |
+    Don't include an extension in the file name.
+    If you do, the extension is treated as part of the file name; it has no impact on the **File Format** parameter.
 
-**Outputs**
+3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, select the desired file format, and then click **Close**.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A list of extracted matches as Data objects. |
-| text | Message | The extracted matches formatted as a Message object. |
-| confirmation | Confirmation | The confirmation message after saving the file. |
+    The available **File Format** options depend on the input data type:
 
-</details>
+    * `DataFrame` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
+
+    * `Data` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
+
+    * `Message` can be saved to TXT, JSON (default), or Markdown.
+
+    :::important Overwrites allowed
+    If you have multiple **Save File** components, in one or more flows, with the same file name, path, and extension, the file contains the data from the most recent run only.
+    Langflow doesn't block overwrites if a matching file already exists.
+    To avoid unintended overwrites, use unique file names and paths.
+    :::
+
+4. To test the **Save File** component, click <Icon name="Play" aria-hidden="True" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to get the filepath where the file was saved.
+
+    The component's literal output is a `Message` containing the original data type, the file name and extension, and the absolute filepath to the file based on the **File Name** parameter.
+    For example:
+
+    ```text
+    DataFrame saved successfully as 'my_file.csv' at /Users/user.name/.langflow/data/my_file.csv
+    ```
+
+    If the **File Name** contains a subdirectory or other non-default path, this is reflected in the `Message` output.
+    For example, a CSV file with the file name `~/Desktop/my_file` could produce the following output:
+
+    ```text
+    DataFrame saved successfully as '/Users/user.name/Desktop/my_file.csv' at /Users/user.name/Desktop/my_file.csv
+    ```
+
+
+5. Optional: If you want to use the saved file in a flow, you must use an API call or another component to retrieve the file from the given filepath.
 
 ## Smart Function
 
 In Langflow version 1.5, this component was renamed from **Lambda Filter** to **Smart Function**.
 
-This component uses an LLM to generate a function for filtering or transforming structured data.
+The **Smart Function** component uses an LLM to generate a Lambda function to filter or transform structured data based on natural language instructions.
+You must connect this component to a [**Language Model** component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
+The LLM runs the function against the data input, and then outputs the results as [`Data`](/data-types#data).
 
-To use the **Smart Function** component, you must connect it to a [**Language Model** component](/components-models), which the **Smart Filter** component uses to generate a function based on the natural language instructions in the **Instructions** field.
+The following example uses the **API Request** endpoint to pass JSON data from the `https://jsonplaceholder.typicode.com/users` endpoint to the **Smart Function** component.
+Then, the **Smart Function** component passes the data and the instruction `extract emails` to the attached **Language Model** component.
+From there, the LLM generates a filter function that extracts email addresses from the JSON data, returning the filtered data as chat output.
 
-This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
-The **Instructions** field in the **Smart Function** component specifies the task `extract emails`.
-The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
+![A small flow using a Smart Function component to extract data from an API response.](/img/component-lambda-filter.png)
 
-![Smart function connected to an LLM](/img/component-lambda-filter.png)
+### Smart Function parameters
 
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The structured data to filter or transform using a Lambda function. |
-| llm | Language Model | The connection port for a **Language Model** component. |
-| filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
-| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
-| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
-
-**Outputs**
+Some **Smart Function** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed `Data` object. |
-| dataframe | DataFrame | The filtered data as a `DataFrame`. |
-
-</details>
+| data | Data | Input parameter. The structured data to filter or transform using a Lambda function. |
+| llm | Language Model | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component. |
+| filter_instruction | Instructions | Input parameter. The natural language instructions for how to filter or transform the data. The LLM uses these instructions to create a Lambda function. For example: `Filter the data to only include items where the 'status' is 'active'`. |
+| sample_size | Sample Size | Input parameter. For large datasets, the number of characters to sample from the dataset head and tail. Only applied if the dataset meets or exceeds `max_size`. Default: `1000`. |
+| max_size | Max Size | Input parameter. The number of characters for the dataset to be considered large, which triggers sampling by the `sample_size` value. Default: `30000`. |
 
 ## Split Text
 
-The **Split Text** component splits incoming text data into chunks based on parameters like chunk size and separator.
-It's ideal for chunking data to be tokenized and embedded into vector databases.
+The **Split Text** component splits data into chunks based on parameters like chunk size and separator.
+It is often used to chunk data to be tokenized and embedded into vector databases.
+For examples, see [Use Vector Store components in a flow](/components-vector-stores#use-vector-store-components-in-a-flow), [Use Embedding Model components in a flow](/components-embedding-models#use-embedding-model-components-in-a-flow), and [Create a Vector RAG chatbot](/chat-with-rag).
 
-The component accepts `Message`, `Data`, or `DataFrame`, and then outputs chunks as **Chunks** or **DataFrame**.
-The **Chunks** output returns a list of individual text chunks.
-The **DataFrame** output returns a structured data format, with additional `text` and `metadata` columns applied.
+![An embedding generation flow that uses a Split Text component to chunk data.](/img/component-split-text.png)
 
-1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/data-types#data) to the **Split Text** component's **Data** port.
-This example uses the **URL** component, which is fetching JSON placeholder data.
-
-![Split Text and Chroma DB components](/img/component-split-text.png)
-
-2. In the **Split Text** component, define your data splitting parameters.
-
-This example splits incoming JSON data at the separator `},`, so each chunk contains one JSON object.
-
-The order of precedence is **Separator**, then **Chunk Size**, and then **Chunk Overlap**.
-If any segment after separator splitting is longer than `chunk_size`, it is split again to fit within `chunk_size`.
-
-After `chunk_size`, **Chunk Overlap** is applied between chunks to maintain context.
-
-3. Connect a **Chat Output** component to the **Split Text** component's **DataFrame** output to view its output.
-4. Click **Playground**, and then click **Run Flow**.
-The output contains a table of JSON objects split at `},`.
-```text
-{
-"userId": 1,
-"id": 1,
-"title": "Introduction to Artificial Intelligence",
-"body": "Learn the basics of Artificial Intelligence and its applications in various industries.",
-"link": "https://example.com/article1",
-"comment_count": 8
-},
-{
-"userId": 2,
-"id": 2,
-"title": "Web Development with React",
-"body": "Build modern web applications using React.js and explore its powerful features.",
-"link": "https://example.com/article2",
-"comment_count": 12
-},
-```
-5. Clear the **Separator** field, and then run the flow again.
-Instead of JSON objects, the output contains 50-character lines of text with 10 characters of overlap.
-```text
-First chunk:  "title": "Introduction to Artificial Intelligence""
-Second chunk: "elligence", "body": "Learn the basics of Artif"
-Third chunk:  "s of Artificial Intelligence and its applications"
-```
+The component accepts `Message`, `Data`, or `DataFrame`, and then outputs either **Chunks** or **DataFrame**.
+The **Chunks** output returns a list of [`Data`](/data-types#data) objects containing individual text chunks.
+The **DataFrame** output returns the list of chunks as a structured [`DataFrame`](/data-types#dataframe) with additional `text` and `metadata` columns.
 
 ### Split Text parameters
+
+The **Split Text** component's parameters control how the text is split into chunks, specifically the `chunk_size`, `chunk_overlap`, and `separator` parameters.
+
+To test the chunking behavior, add a **Text Input** or **File** component with some sample data to chunk, click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Split Text** component, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the list of chunks and their metadata. The **text** column contains the actual text chunks created from your chunking settings.
+If the chunks aren't split as you expect, adjust the parameters, rerun the component, and then inspect the new output.
 
 Some **Split Text** component input parameters are hidden by default in the visual editor.
 You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_inputs | Input | The data to split. The component accepts [Data](/data-types#data) or [DataFrame](/data-types#dataframe) objects. |
-| chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
-| chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
-| separator | Separator | The character to split on. Default: `newline`. You can enter a separator string expression, or input a `Message` from another component. |
-| text_key | Text Key | The key to use for the text column. Default: `text`. |
-| keep_separator | Keep Separator | Select how to handle separators in output chunks. If False, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in place), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| chunks | Chunks | A list of split text chunks as [`Data`](/data-types#data) objects. |
-| dataframe | DataFrame | A list of split text chunks as [`DataFrame`](/data-types#dataframe) objects. |
+| data_inputs | Input | Input parameter. The data to split. Input must be in `Message`, `Data`, or `DataFrame` format. |
+| chunk_overlap | Chunk Overlap | Input parameter. The number of characters to overlap between chunks. This helps maintain context across chunks. When a separator is encountered, the overlap is applied at the point of the separator so that the subsequent chunk contains the last _n_ characters of the preceding chunk. Default: `200`. |
+| chunk_size | Chunk Size | Input parameter. The target length for each chunk after splitting. The data is first split by separator, and then chunks smaller than the `chunk_size` are merged up to this limit. However, if the initial separator split produces any chunks larger than the `chunk_size`, those chunks are neither further subdivided nor combined with any smaller chunks; these chunks will be output as-is even though they exceed the the `chunk_size`. Default: `1000`. |
+| separator | Separator | Input parameter. A string defining a character to split on, such as `\n` to split on new line characters, `\n\n` to split at paragraph breaks, or `},` to split at the end of JSON objects. You can directly provide the separator string, or pass a separator string from another component as `Message` input. |
+| text_key | Text Key | Input parameter. The key to use for the text column that is extracted from the input and then split. Default: `text`. |
+| keep_separator | Keep Separator | Input parameter. Select how to handle separators in output chunks. If False, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in chunks without preference for placement), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
 
 ### Other text splitters
 
