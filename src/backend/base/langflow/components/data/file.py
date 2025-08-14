@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langflow.base.data.base_file import BaseFileComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
@@ -17,9 +17,11 @@ from langflow.io import (
     Output,
     StrInput,
 )
-from langflow.schema import DataFrame
 from langflow.schema.data import Data
-from langflow.schema.message import Message
+
+if TYPE_CHECKING:
+    from langflow.schema import DataFrame
+    from langflow.schema.message import Message
 
 
 class MockConversionStatus(Enum):
