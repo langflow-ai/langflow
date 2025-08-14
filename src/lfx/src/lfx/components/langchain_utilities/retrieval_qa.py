@@ -1,3 +1,5 @@
+from typing import cast
+
 from langchain.chains import RetrievalQA
 
 from lfx.base.chains.model import LCChainComponent
@@ -78,4 +80,4 @@ class RetrievalQAComponent(LCChainComponent):
             result_str = f"{result_str}\n{references_str}"
         # put the entire result to debug history, query and content
         self.status = {**result, "source_documents": source_docs, "output": result_str}
-        return result_str
+        return cast("Message", result_str)
