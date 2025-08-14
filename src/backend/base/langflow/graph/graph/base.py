@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
+from uuid import UUID
 
 from loguru import logger
 
@@ -125,6 +126,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+        self._transaction_queue: list[tuple[str | UUID, Vertex, str, Vertex | None, Any]] = []
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -768,10 +770,14 @@ class Graph:
             self.increment_run_count()
         except Exception as exc:
             self._end_all_traces_async(error=exc)
+            # Flush any queued transactions even on error
+            await self.flush_transaction_logs()
             msg = f"Error running graph: {exc}"
             raise ValueError(msg) from exc
 
         self._end_all_traces_async()
+        # Flush all queued transactions after successful flow execution
+        await self.flush_transaction_logs()
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
@@ -963,6 +969,35 @@ class Graph:
 
     def increment_update_count(self) -> None:
         self._updates += 1
+
+    def queue_transaction(
+        self,
+        flow_id: str | UUID,
+        source: Vertex,
+        status: str,
+        target: Vertex | None = None,
+        error: Any = None,
+    ) -> None:
+        """Queue a transaction to be logged later in batch.
+
+        This avoids database contention during parallel vertex execution.
+        """
+        self._transaction_queue.append((flow_id, source, status, target, error))
+
+    async def flush_transaction_logs(self) -> None:
+        """Flush all queued transactions to the database in a single batch.
+
+        This method should be called after flow execution completes.
+        """
+        if not self._transaction_queue:
+            return
+
+        from langflow.graph.utils import flush_transaction_queue
+
+        try:
+            await flush_transaction_queue(self._transaction_queue)
+        finally:
+            self._transaction_queue.clear()
 
     def __getstate__(self):
         # Get all attributes that are useful in runs.
