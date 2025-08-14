@@ -512,10 +512,16 @@ class FileComponent(BaseFileComponent):
             # This is where we've manually processed the data
             if "exported_content" not in serialized_data:
                 clean_data = [
-                    Data(data={
-                        "file_path": file_path,
-                        **(item["element"] if "element" in item else {k: v for k, v in item.items() if k != "file_path"})
-                    })
+                    Data(
+                        data={
+                            "file_path": file_path,
+                            **(
+                                item["element"]
+                                if "element" in item
+                                else {k: v for k, v in item.items() if k != "file_path"}
+                            ),
+                        }
+                    )
                     for item in serialized_data["doc"]
                 ]
 
@@ -596,15 +602,15 @@ class FileComponent(BaseFileComponent):
                     data={
                         "exported_content": exported_content,
                         "export_format": self.EXPORT_FORMAT,
-                        "file_path": file_path
-                    }
+                        "file_path": file_path,
+                    },
                 )
 
             return Data(
                 data={
                     "doc": self.docling_to_dataframe_simple(result.document.export_to_dict()),
                     "export_format": self.EXPORT_FORMAT,
-                    "file_path": file_path
+                    "file_path": file_path,
                 }
             )
 
@@ -618,7 +624,7 @@ class FileComponent(BaseFileComponent):
                 "page_no": text["prov"][0]["page_no"] if text["prov"] else None,
                 "label": text["label"],
                 "text": text["text"],
-                "level": text.get("level", None)  # for headers
+                "level": text.get("level", None),  # for headers
             }
             for text in doc["texts"]
         ]
