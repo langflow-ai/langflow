@@ -669,6 +669,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
     max_tokens: int = 256
     limit: int = 1  # Only allow single selection
     search_category: list[str] = Field(default=["OpenAI", "Anthropic"])
+    providers: list[str] = Field(default=["OpenAI", "Anthropic"])
 
     def __init__(self, **kwargs):
         """Initialize ModelInput with default options based on model_type."""
@@ -680,43 +681,54 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
 
     def _get_language_model_options(self) -> list[dict[str, str]]:
         """Get language model options with Provider:ModelName format and icons."""
+        # Use only the providers specified in self.providers
+        # TODO: use api to gets models, ability to select providers.
         # OpenAI language models
-        from langflow.base.models.openai_constants import OPENAI_MODELS_DETAILED
+        from langflow.base.models.unified_models import get_unified_models_detailed
 
-        openai_options = [
-            {
-                "name": f"OpenAI:{model_meta['name']}",
-                "icon": model_meta.get("icon", "OpenAI"),
-                "category": "OpenAI",
-            }
-            for model_meta in OPENAI_MODELS_DETAILED
-            if not model_meta.get("not_supported", False)
-        ]
+        provider_models = get_unified_models_detailed(
+            provider=self.providers,
+            model_type="language",
+            include_unsupported=False,
+        )
 
-        # Anthropic language models
-        from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
-
-        anthropic_options = [
-            {
-                "name": f"Anthropic:{model_meta['name']}",
-                "icon": model_meta.get("icon", "Anthropic"),
-                "category": "Anthropic",
-            }
-            for model_meta in ANTHROPIC_MODELS_DETAILED
-            if not model_meta.get("deprecated", False)
-        ]
-
-        return openai_options + anthropic_options
+        # Flatten the provider->models mapping to a single list of model dicts
+        options: list[dict[str, str]] = []
+        for entry in provider_models:
+            provider_name = entry["provider"]
+            options.extend(
+                {
+                    "name": f"{provider_name}:{model['model_name']}",
+                    "icon": model.get("icon", provider_name),
+                    "category": provider_name,
+                }
+                for model in entry["models"]
+            )
+        return options
 
     def _get_embedding_model_options(self) -> list[dict[str, str]]:
         """Get embedding model options with Provider:ModelName format and icons."""
-        # OpenAI embedding models
-        openai_embed_models = [
-            "text-embedding-3-small",
-            "text-embedding-3-large",
-            "text-embedding-ada-002",
-        ]
-        return [{"name": f"OpenAI:{model}", "icon": "OpenAI"} for model in openai_embed_models]
+        # Use only the providers specified in self.providers
+        from langflow.base.models.unified_models import get_unified_models_detailed
+
+        provider_models = get_unified_models_detailed(
+            provider=self.providers,
+            model_type="embeddings",
+            include_unsupported=False,
+        )
+
+        options: list[dict[str, str]] = []
+        for entry in provider_models:
+            provider_name = entry["provider"]
+            options.extend(
+                {
+                    "name": f"{provider_name}:{model['model_name']}",
+                    "icon": model.get("icon", provider_name),
+                    "category": provider_name,
+                }
+                for model in entry["models"]
+            )
+        return options
 
     def _get_options_for_model_type(self, model_type: str) -> list[dict[str, str]]:
         """Get options based on model type."""

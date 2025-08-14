@@ -10,7 +10,7 @@ router = APIRouter(prefix="/models", tags=["Models"])
 @router.get("", status_code=200)
 async def list_models(
     *,
-    provider: str | None = None,
+    provider: list[str] | None = None,
     model_name: str | None = None,
     model_type: str | None = None,
     include_unsupported: bool = False,

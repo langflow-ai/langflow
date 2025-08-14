@@ -7,7 +7,7 @@ MODELS_DETAILED = [ANTHROPIC_MODELS_DETAILED, OPENAI_MODELS_DETAILED, GOOGLE_GEN
 
 
 def get_unified_models_detailed(
-    provider: str | None = None,
+    provider: list[str] | None = None,
     model_name: str | None = None,
     model_type: str | None = None,
     include_unsupported: bool | None = None,
@@ -17,8 +17,8 @@ def get_unified_models_detailed(
 
     Parameters
     ----------
-    provider : str | None
-        If given, only models from this provider are returned.
+    provider : list[str] | None
+        If given, only models from these providers are returned.
     model_name : str | None
         If given, only the model with this exact name is returned.
     model_type : str | None
@@ -49,7 +49,7 @@ def get_unified_models_detailed(
         if (not include_unsupported) and md.get("not_supported", False):
             continue
 
-        if provider and md.get("provider") != provider:
+        if provider and md.get("provider") not in provider:
             continue
         if model_name and md.get("name") != model_name:
             continue

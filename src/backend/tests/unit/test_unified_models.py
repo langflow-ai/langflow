@@ -23,7 +23,7 @@ def test_default_excludes_not_supported():
 
 
 def test_filter_by_provider():
-    result = get_unified_models_detailed(provider="Anthropic")
+    result = get_unified_models_detailed(provider=["Anthropic"])
     # Only one provider should be returned
     assert len(result) == 1
     assert result[0]["provider"] == "Anthropic"
