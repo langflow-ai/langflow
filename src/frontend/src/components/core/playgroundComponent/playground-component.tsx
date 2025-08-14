@@ -22,7 +22,6 @@ import { getNumberFromString, cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import type { PlaygroundModalPropsType } from "@/types/components";
 import { createNewSessionName } from "./components/chatView/chatInput/components/voice-assistant/helpers/create-new-session-name";
-import { SidebarOpenView } from "./components/sidebar-open-view";
 import ChatView from "./components/chatView/components/chat-view";
 import { PlaygroundHeader } from "./components/playgroundHeader/playground-header";
 
@@ -73,7 +72,10 @@ export function PlaygroundComponent({
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
 
-  const { mutate: deleteSessionFunction } = useDeleteSession();
+  const { mutate: deleteSessionFunction } = useDeleteSession({
+    flowId: currentFlowId,
+    useLocalStorage: playgroundPage,
+  });
 
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId
@@ -85,12 +87,13 @@ export function PlaygroundComponent({
     isLoading: sessionsLoading,
     refetch: refetchSessions,
   } = useGetSessionsFromFlowQuery({
-    id: currentFlowId,
+    flowId: currentFlowId,
+    useLocalStorage: playgroundPage,
   });
 
   useEffect(() => {
     if (sessionsFromDb && !sessionsLoading) {
-      const sessions = [...sessionsFromDb.sessions];
+      const sessions = [...(sessionsFromDb ?? [])];
       // Always include the currentFlowId as the default session if it's not already present
       if (!sessions.includes(currentFlowId)) {
         sessions.unshift(currentFlowId);
@@ -221,10 +224,8 @@ export function PlaygroundComponent({
       const handleRefetchAndSetSession = async () => {
         try {
           const result = await refetchSessions();
-          if (result.data?.sessions && result.data.sessions.length > 0) {
-            setvisibleSession(
-              result.data.sessions[result.data.sessions.length - 1]
-            );
+          if (result.data && result.data.length > 0) {
+            setvisibleSession(result.data[result.data.length - 1]);
           }
         } catch (error) {
           console.error("Error refetching sessions:", error);
