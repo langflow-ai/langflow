@@ -36,16 +36,16 @@ const SidebarItemsList = ({
             ? itemA.score - itemB.score
             : sensitiveSort(itemA.display_name, itemB.display_name);
         })
-        .map((SBItemName, idx) => {
+        .map((SBItemName) => {
           const currentItem = dataFilter[item.name][SBItemName];
 
           if (SBItemName === "ChatInput" || SBItemName === "Webhook") {
             return (
               <UniqueInputsDraggableComponent
+                key={SBItemName}
                 item={item}
                 currentItem={currentItem}
                 SBItemName={SBItemName}
-                idx={idx}
                 onDragStart={onDragStart}
                 nodeColors={nodeColors}
               />
@@ -55,7 +55,7 @@ const SidebarItemsList = ({
             <ShadTooltip
               content={currentItem.display_name}
               side="right"
-              key={idx}
+              key={SBItemName}
             >
               <SidebarDraggableComponent
                 sectionName={item.name}
@@ -71,7 +71,7 @@ const SidebarItemsList = ({
                 itemName={SBItemName}
                 error={!!currentItem.error}
                 display_name={currentItem.display_name}
-                official={currentItem.official === false ? false : true}
+                official={currentItem.official !== false}
                 beta={currentItem.beta ?? false}
                 legacy={currentItem.legacy ?? false}
                 disabled={false}
@@ -90,7 +90,6 @@ const UniqueInputsDraggableComponent = ({
   item,
   currentItem,
   SBItemName,
-  idx,
   onDragStart,
   nodeColors,
 }) => {
@@ -105,7 +104,11 @@ const UniqueInputsDraggableComponent = ({
   }, [chatInputAdded, webhookInputAdded]);
 
   return (
-    <ShadTooltip content={currentItem.display_name} side="right" key={idx}>
+    <ShadTooltip
+      content={currentItem.display_name}
+      side="right"
+      key={SBItemName}
+    >
       <SidebarDraggableComponent
         sectionName={item.name}
         apiClass={currentItem}
@@ -120,7 +123,7 @@ const UniqueInputsDraggableComponent = ({
         itemName={SBItemName}
         error={!!currentItem.error}
         display_name={currentItem.display_name}
-        official={currentItem.official === false ? false : true}
+        official={currentItem.official !== false}
         beta={currentItem.beta ?? false}
         legacy={currentItem.legacy ?? false}
         disabled={disableItem(SBItemName, uniqueInputsComponents)}
