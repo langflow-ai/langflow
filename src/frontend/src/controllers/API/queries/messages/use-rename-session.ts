@@ -1,31 +1,36 @@
-import type { UseMutationResult } from "@tanstack/react-query";
-import useFlowStore from "@/stores/flowStore";
 import type { useMutationFunctionType } from "@/types/api";
 import type { Message } from "@/types/messages";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface UpdateSessionParams {
-  old_session_id: string;
-  new_session_id: string;
+  oldSessionId: string;
+  newSessionId: string;
+}
+
+interface useUpdateSessionNameParams {
+  flowId?: string;
+  useLocalStorage?: boolean;
 }
 
 export const useUpdateSessionName: useMutationFunctionType<
-  undefined,
+  useUpdateSessionNameParams,
   UpdateSessionParams
-> = (options?) => {
+> = ({ flowId, useLocalStorage }, options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
   const updateSessionApi = async (data: UpdateSessionParams) => {
-    const isPlayground = useFlowStore.getState().playgroundPage;
-    const flowId = useFlowStore.getState().currentFlow?.id;
-    // if we are in playground we will edit the local storage instead of the API
-    if (isPlayground && flowId) {
+    if (!flowId) {
+      throw new Error("Flow ID is required");
+    }
+
+    if (useLocalStorage) {
       const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
       const messagesWithNewSessionId = messages.map((message: Message) => {
-        if (message.session_id === data.old_session_id) {
-          message.session_id = data.new_session_id;
+        if (message.session_id === data.oldSessionId) {
+          message.session_id = data.newSessionId;
         }
         return message;
       });
@@ -35,11 +40,11 @@ export const useUpdateSessionName: useMutationFunctionType<
       };
     } else {
       const result = await api.patch(
-        `${getURL("MESSAGES")}/session/${data.old_session_id}`,
+        `${getURL("MESSAGES")}/session/${data.oldSessionId}`,
         null,
         {
-          params: { new_session_id: data.new_session_id },
-        },
+          params: { new_session_id: data.newSessionId },
+        }
       );
       return result.data;
     }
@@ -50,7 +55,7 @@ export const useUpdateSessionName: useMutationFunctionType<
       ...options,
       onSettled: () => {
         queryClient.invalidateQueries({
-          queryKey: ["useGetSessionsFromFlowQuery"],
+          queryKey: ["useGetSessionsFromFlowQuery", { flowId }],
         });
       },
     });
