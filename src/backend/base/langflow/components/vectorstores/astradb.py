@@ -161,11 +161,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             dialog_inputs=asdict(NewDatabaseInput()),
             combobox=True,
         ),
-        StrInput(
+        DropdownInput(
             name="api_endpoint",
             display_name="Astra DB API Endpoint",
             info="The API Endpoint for the Astra DB instance. Supercedes database selection.",
-            show=False,
+            advanced=True,
+            required=True,
         ),
         DropdownInput(
             name="keyspace",
@@ -447,14 +448,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for db in db_list:
             try:
                 # Get the API endpoint for the database
-                api_endpoint = db.regions[0].api_endpoint
+                api_endpoints = [db_reg.api_endpoint for db_reg in db.regions]
 
                 # Get the number of collections
                 try:
                     # Get the number of collections in the database
                     num_collections = len(
                         client.get_database(
-                            api_endpoint,
+                            api_endpoints[0],
                             token=token,
                         ).list_collection_names()
                     )
@@ -465,7 +466,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
                 # Add the database to the dictionary
                 db_info_dict[db.name] = {
-                    "api_endpoint": api_endpoint,
+                    "api_endpoints": api_endpoints,
                     "keyspaces": db.keyspaces,
                     "collections": num_collections,
                     "status": db.status if db.status != "ACTIVE" else None,
@@ -508,7 +509,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return None
 
         # Otherwise, get the URL from the database list
-        return db.get("api_endpoint")
+        return db.get("api_endpoints")[0]
 
     def get_api_endpoint(self):
         return self.get_api_endpoint_static(
@@ -576,7 +577,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "name": name,
                     "status": info["status"],
                     "collections": info["collections"],
-                    "api_endpoint": info["api_endpoint"],
+                    "api_endpoints": info["api_endpoints"],
                     "keyspaces": info["keyspaces"],
                     "org_id": info["org_id"],
                 }
@@ -772,6 +773,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Reset selections if value not in options
         if database_config["value"] not in database_config["options"]:
             database_config["value"] = ""
+            build_config["api_endpoint"]["options"] = []
             build_config["api_endpoint"]["value"] = ""
             build_config["collection_name"]["show"] = False
 
@@ -785,6 +787,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Reset database configuration
         database_config = build_config["database_name"]
         database_config.update({"options": [], "options_metadata": [], "value": "", "show": False})
+        build_config["api_endpoint"]["options"] = []
         build_config["api_endpoint"]["value"] = ""
 
         # Reset collection configuration
@@ -919,7 +922,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             {
                 "status": "PENDING",
                 "collections": 0,
-                "api_endpoint": None,
+                "api_endpoints": [],
                 "keyspaces": [self.get_keyspace()],
                 "org_id": None,
             }
@@ -992,7 +995,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Get the api endpoint for the selected database
         index = build_config["database_name"]["options"].index(field_value)
-        build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][index]["api_endpoint"]
+        build_config["api_endpoint"]["options"] = (
+            build_config["database_name"]["options_metadata"][index]["api_endpoints"]
+        )
+        build_config["api_endpoint"]["value"] = (
+            build_config["database_name"]["options_metadata"][index]["api_endpoints"][0]
+        )
 
         # Get the org_id for the selected database
         org_id = build_config["database_name"]["options_metadata"][index]["org_id"]
