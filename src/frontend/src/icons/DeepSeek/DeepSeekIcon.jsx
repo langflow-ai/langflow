@@ -1,20 +1,22 @@
-const DeepSeekSVG = (props) => (
-  <svg
-    version="1.0"
-    xmlns="http://www.w3.org/2000/svg"
-    width="225.000000pt"
-    height="225.000000pt"
-    viewBox="0 0 225.000000 225.000000"
-    preserveAspectRatio="xMidYMid meet"
-    {...props}
-  >
-    <g
-      transform="translate(0.000000,225.000000) scale(0.100000,-0.100000)"
-      fill={props.isDark ? "#1f3a94" : "#4c6cfc"}
-      stroke="none"
+const DeepSeekSVG = (props) => {
+  const { isDark, ...restProps } = props;
+  return (
+    <svg
+      version="1.0"
+      xmlns="http://www.w3.org/2000/svg"
+      width="225.000000pt"
+      height="225.000000pt"
+      viewBox="0 0 225.000000 225.000000"
+      preserveAspectRatio="xMidYMid meet"
+      {...restProps}
     >
-      <path
-        d="M1527 1893 c-18 -39 -22 -66 -22 -143 0 -84 3 -102 29 -158 20 -43
+      <g
+        transform="translate(0.000000,225.000000) scale(0.100000,-0.100000)"
+        fill={isDark ? "#1f3a94" : "#4c6cfc"}
+        stroke="none"
+      >
+        <path
+          d="M1527 1893 c-18 -39 -22 -66 -22 -143 0 -84 3 -102 29 -158 20 -43
 47 -80 88 -118 58 -53 59 -56 53 -93 -3 -22 -13 -47 -20 -58 -25 -33 -110 23
 -266 174 -76 72 -162 148 -192 168 -90 60 -101 115 -35 177 35 32 40 41 28 49
 -27 18 -169 3 -250 -27 -71 -25 -86 -27 -255 -28 -169 -1 -185 -3 -258 -29
@@ -34,9 +36,10 @@ m943 -79 c50 -25 130 -115 166 -186 25 -50 27 -57 13 -71 -9 -8 -36 -18 -61
 -20 -36 -4 -53 -1 -81 17 -47 28 -56 47 -56 114 0 61 -24 96 -66 96 -35 0 -54
 10 -54 29 0 44 73 55 139 21z m-79 -105 c10 -12 10 -18 0 -30 -25 -30 -61 -7
 -46 30 3 8 12 15 19 15 8 0 20 -7 27 -15z"
-      />
-    </g>
-  </svg>
-);
+        />
+      </g>
+    </svg>
+  );
+};
 
 export default DeepSeekSVG;

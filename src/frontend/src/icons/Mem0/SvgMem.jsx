@@ -1,14 +1,16 @@
 export default function SvgMem0(props) {
+  const { isDark, ...restProps } = props;
+
   return (
     <svg
       viewBox="0 0 126 127"
       preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg"
-      {...props}
+      {...restProps}
     >
       <g
         transform="translate(0.000000,127.000000) scale(0.100000,-0.100000)"
-        fill={props.isDark ? "#ffffff" : "#000000"}
+        fill={isDark ? "#ffffff" : "#000000"}
         stroke="none"
       >
         <path d="M648 1248 c-26 -22 -29 -47 -8 -68 25 -25 42 -25 63 -2 22 24 21 45 -1 65 -22 20 -33 21 -54 5z" />
