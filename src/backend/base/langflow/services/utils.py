@@ -11,6 +11,7 @@ from sqlmodel import col, select
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
+from langflow.services.database.models.transactions.cleanup import start_transaction_cleanup, stop_transaction_cleanup
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
@@ -124,6 +125,10 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
 
 async def teardown_services() -> None:
     """Teardown all the services."""
+    # Stop periodic transaction cleanup task
+
+    await stop_transaction_cleanup()
+
     async with get_db_service().with_session() as session:
         await teardown_superuser(get_settings_service(), session)
 
@@ -236,3 +241,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     await clean_transactions(settings_service, session)
     await clean_vertex_builds(settings_service, session)
+
+    # Start periodic transaction cleanup task
+
+    await start_transaction_cleanup()
