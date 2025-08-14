@@ -24,9 +24,9 @@
         "id": "xy-edge__TextInput-WyJxO{œdataTypeœ:œTextInputœ,œidœ:œTextInput-WyJxOœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-zz3I0{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-zz3I0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-WyJxO",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-WyJxOœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-WyJxOœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "KBRetrieval-zz3I0",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-zz3I0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-zz3I0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "xy-edge__KBRetrieval-zz3I0{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-zz3I0œ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-N7nxz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N7nxzœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "KBRetrieval-zz3I0",
-        "sourceHandle": "{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-zz3I0œ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-zz3I0œ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-N7nxz",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N7nxzœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N7nxzœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -545,8 +545,6 @@
                 "group_outputs": false,
                 "method": "get_chroma_kb_data",
                 "name": "chroma_kb_data",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
