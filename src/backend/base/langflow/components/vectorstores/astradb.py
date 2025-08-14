@@ -509,7 +509,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return None
 
         # Otherwise, get the URL from the database list
-        return db.get("api_endpoints")[0]
+        endpoints = db.get("api_endpoints") or []
+        return endpoints[0] if endpoints else None
 
     def get_api_endpoint(self):
         return self.get_api_endpoint_static(
