@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from langflow.components._importing import import_mod
+from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from langflow.components.processing.alter_metadata import AlterMetadataComponent
@@ -84,6 +84,7 @@ __all__ = [
     "MergeDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
+    "ParseDataFrameComponent",
     "ParseJSONDataComponent",
     "ParserComponent",
     "PromptComponent",

@@ -12,7 +12,8 @@ This module tests the new langchain-style dynamic import system to ensure:
 from unittest.mock import patch
 
 import pytest
-from langflow.components._importing import import_mod
+
+from lfx.components._importing import import_mod
 
 
 class TestImportUtils:

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 
-from langflow.components._importing import import_mod
+from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .calculator import CalculatorToolComponent

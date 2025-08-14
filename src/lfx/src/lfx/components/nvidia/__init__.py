@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Any
 
-from langflow.components._importing import import_mod
+from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .nvidia import NVIDIAModelComponent
