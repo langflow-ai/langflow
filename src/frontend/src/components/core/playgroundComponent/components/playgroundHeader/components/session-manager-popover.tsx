@@ -1,5 +1,7 @@
 import React from "react";
+import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
+import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShallow } from "zustand/react/shallow";
@@ -28,11 +30,32 @@ export const SessionManagerPopover = ({
     useLocalStorage: isPlayground,
   });
 
+  const { mutate: updateSessionName } = useUpdateSessionName({
+    flowId,
+    useLocalStorage: isPlayground,
+  });
+
+  const { mutate: deleteSession } = useDeleteSession({
+    flowId,
+    useLocalStorage: isPlayground,
+  });
+
   const {
     query,
     setQuery,
     filteredItems: filteredSessions,
   } = useSearch(sessions || []);
+
+  const handleRename = (oldSessionId: string, newSessionId: string) => {
+    updateSessionName({
+      oldSessionId,
+      newSessionId,
+    });
+  };
+
+  const handleDelete = (sessionId: string) => {
+    deleteSession({ sessionId });
+  };
 
   return (
     <Popover>
@@ -57,7 +80,12 @@ export const SessionManagerPopover = ({
                 </div>
               ) : (
                 filteredSessions.map((sessionId) => (
-                  <SessionItem key={sessionId} sessionId={sessionId} />
+                  <SessionItem
+                    key={sessionId}
+                    sessionId={sessionId}
+                    onRename={handleRename}
+                    onDelete={handleDelete}
+                  />
                 ))
               )}
             </div>

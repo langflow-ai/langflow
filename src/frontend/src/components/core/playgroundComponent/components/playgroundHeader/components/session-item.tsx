@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
-import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShallow } from "zustand/react/shallow";
@@ -11,34 +9,26 @@ import { SessionRename } from "./session-rename";
 
 interface SessionItemProps {
   sessionId: string;
+  onRename: (oldSessionId: string, newSessionId: string) => void;
+  onDelete: (sessionId: string) => void;
 }
 
-export const SessionItem = ({ sessionId }: SessionItemProps) => {
+export const SessionItem = ({
+  sessionId,
+  onRename,
+  onDelete,
+}: SessionItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const { selectedSession, setSelectedSession, isPlayground } =
-    usePlaygroundStore();
+  const { selectedSession, setSelectedSession } = usePlaygroundStore();
 
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
-
-  const { mutate: updateSessionName } = useUpdateSessionName({
-    flowId,
-    useLocalStorage: isPlayground,
-  });
-
-  const { mutate: deleteSession } = useDeleteSession({
-    flowId,
-    useLocalStorage: isPlayground,
-  });
 
   const handleEditStart = () => {
     setIsEditing(true);
   };
 
   const handleEditSave = (newSessionId: string) => {
-    updateSessionName({
-      oldSessionId: sessionId,
-      newSessionId,
-    });
+    onRename(sessionId, newSessionId);
     setIsEditing(false);
   };
 
@@ -47,8 +37,7 @@ export const SessionItem = ({ sessionId }: SessionItemProps) => {
   };
 
   const handleDelete = () => {
-    deleteSession({ sessionId });
-    // If deleting the selected session, select another one if available
+    onDelete(sessionId);
     if (selectedSession === sessionId) {
       setSelectedSession(flowId);
     }
