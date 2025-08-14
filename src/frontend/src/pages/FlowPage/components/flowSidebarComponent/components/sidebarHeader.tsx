@@ -32,7 +32,6 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   setFilterData,
   data,
 }: SidebarHeaderComponentProps) {
-  console.log("data", data);
   return (
     <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
       <Disclosure open={showConfig} onOpenChange={setShowConfig}>
