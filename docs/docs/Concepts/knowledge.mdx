@@ -1,0 +1,46 @@
+---
+title: Knowledge creation and retrieval
+slug: /knowledge
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
+A knowledge base is a repository of vector embeddings created from your data that agents can reference to answer domain-specific questions.
+Knowledge bases are distinct from vector database components.
+Knowledge bases store vector data locally, and each knowledge base can be re-used in new flows without requiring re-ingestion of the data in every flow.
+You create a new knowledge base with the [**Create Knowledge**](/components-data#create-knowledge) component, and then retrieve knowledge using the [**Retrieve Knowledge**](/components-data#retrieve-knowledge) component.
+
+For example, you could create a knowledge base with customer sales data from a specific month.
+Then, whenever you create flows that need customer data from this time period, add a [**Retrieve Knowledge**](/components-data#retrieve-knowledge) component to your flow to access the knowledge base.
+
+## Create knowledge using the Create Knowledge component
+
+To view your available Knowledge bases, click <Icon name="Books" aria-hidden="true"/> **Knowledge**.
+
+1. To create a new knowledge base, click <Icon name="Add" aria-hidden="true"/> **Create Knowledge**.
+You can also create new knowledge bases with the <Icon name="Add" aria-hidden="true"/> **New Knowledge** option in the **Create Knowledge** component.
+2. In the **Knowledge Base** field, select an existing Knowledge Base, or select <Icon name="Add" aria-hidden="true"/> **New knowledge**.
+Complete the fields in the **Create new knowledge base** pane, and then click **Create**.
+
+    * **Knowledge Base Name**: The name of your knowledge base.
+    * **Model Name**: The embedding model for embedding your vector data.
+    * **API Key**: The API key for your embedding model.
+
+On Mac, knowledge base files are stored at `home/.langflow/knowledge_bases`.
+
+To modify your knowledge base, click **Column Configuration**.
+
+    * **Column Name**: The name of the column.
+    * **Vectorize**: Enable this setting to convert the column's contents to vector embeddings using the knowledge base's embedding model.
+    * **Identifier**: Enable this setting to make the selected column the identifier column for the row.
+
+To create a knowledge base in a flow, see the **Create Knowledge** template.
+
+## Use knowledge bases in a flow
+
+To use a knowledge base in a flow, include a [**Retrieve Knowledge** component](/components-data#retrieve-knowledge), and connect it to a component that accepts a DataFrame.
+You can re-use knowledge bases whenever you need them, so you don't have to re-ingest vectors or load more files in each flow that uses your data.
+
+To use a knowledge base in a flow, see the **Retrieve Knowledge** template.
