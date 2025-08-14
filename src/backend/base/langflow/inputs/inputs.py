@@ -698,7 +698,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             provider_name = entry["provider"]
             options.extend(
                 {
-                    "name": f"{provider_name}:{model['model_name']}",
+                    "name": f"{model['model_name']}",
                     "icon": model.get("icon", provider_name),
                     "category": provider_name,
                 }
@@ -722,7 +722,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             provider_name = entry["provider"]
             options.extend(
                 {
-                    "name": f"{provider_name}:{model['model_name']}",
+                    "name": f"{model['model_name']}",
                     "icon": model.get("icon", provider_name),
                     "category": provider_name,
                 }
