@@ -142,6 +142,7 @@ test(
       }
 
       await page.getByTestId("icon-ChevronLeft").click();
+      console.log("exampleName", exampleName);
       await page.waitForSelector('[data-testid="mainpage_title"]', {
         timeout: 5000,
       });
