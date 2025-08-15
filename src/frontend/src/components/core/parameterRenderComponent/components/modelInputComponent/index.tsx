@@ -7,7 +7,6 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -15,16 +14,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
-import {
-  cn
-} from "@/utils/utils";
+import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
-import React, { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
-import ShadTooltip from "../../../../common/shadTooltipComponent";
 import type { BaseInputProps } from "../../types";
+import InputGlobalComponent from "../inputGlobalComponent";
 
 export type ModelInputComponentType = {
   model_type: "language" | "embedding";
@@ -36,9 +34,10 @@ export type ModelInputComponentType = {
   search_category?: string[];
 };
 
-export type ModelInputProps = BaseInputProps<any> & ModelInputComponentType & {
-  children?: React.ReactNode;
-};
+export type ModelInputProps = BaseInputProps<any> &
+  ModelInputComponentType & {
+    children?: React.ReactNode;
+  };
 
 export default function ModelInputComponent({
   id,
@@ -59,32 +58,20 @@ export default function ModelInputComponent({
   const [open, setOpen] = useState(children ? true : false);
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [currentSelection, setCurrentSelection] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(() => options);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Initialize utilities and constants
-  const _placeholderName = placeholder || "Select a Model";
+  const [apiKey, setApiKey] = useState("");
+    const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData); 
+  const [enableProvider, setEnableProvider] = useState(false);
+
   const fuse = new Fuse(options, { keys: ["name", "category"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
 
-  // Parse the current value to extract provider
-  useEffect(() => {
-    if (Array.isArray(value) && value.length > 0) {
-      const modelOption = value[0];
-      if (typeof modelOption === "object" && modelOption?.name) {
-        const modelName = modelOption.name;
-        if (modelName && modelName.includes(":")) {
-          const [provider] = modelName.split(":");
-          setSelectedProvider(provider);
-        }
-      }
-    }
-  }, [value]);
-
-  // Group options by provider
   const groupedOptions = useMemo(() => {
     const groups: Record<string, typeof options> = {};
 
@@ -119,29 +106,26 @@ export default function ModelInputComponent({
     return sortedGroups;
   }, [options, search_category]);
 
-  // Extract current model selection - only showing the model name, not the provider
-  const currentSelection = useMemo(() => {
-    if (Array.isArray(value) && value.length > 0) {
-      const modelOption = value[0];
-      if (typeof modelOption === "object" && modelOption?.name) {
-        // Extract only the model name part (after the colon)
-        const fullName = modelOption.name;
-        return fullName.includes(":") ? fullName.split(":")[1] : fullName;
-      }
-    }
-    return "";
-  }, [value]);
-
   const handleModelSelect = (modelOption: string) => {
-    // Find the full option including icon and metadata
     const selectedOption = options.find((opt) => opt.name === modelOption);
-
+    setCurrentSelection(selectedOption?.name.includes(":") ? selectedOption?.name.split(":")[1] : selectedOption?.name);
     if (selectedOption) {
       handleOnNewValue({ value: [selectedOption] });
     } else {
-      // Fallback if not found
       handleOnNewValue({ value: [{ name: modelOption, icon: "" }] });
     }
+  };
+
+  const handleApiKeyChange = (newApiKey: string) => {
+    setApiKey(newApiKey);
+  };
+
+  const handleSendApiKey = () => {
+    // TODO: Wire up API call to save/send key to provider backend
+    // Keeping as a no-op for now per request
+    // eslint-disable-next-line no-console
+    console.log("Send API key clicked", { provider: selectedProvider, apiKey });
+    setSuccessData({ title: "Model API key saved successfully" });
   };
 
   const searchModelsByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -149,16 +133,13 @@ export default function ModelInputComponent({
     setCustomValue(value);
 
     if (!value) {
-      // If search is cleared, show all options
       setFilteredOptions(options);
       return;
     }
 
-    // Search existing options
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
-    
-    // Update filteredOptions with the search results
+
     setFilteredOptions(filtered);
   };
 
@@ -207,14 +188,12 @@ export default function ModelInputComponent({
             className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
-            {renderSelectedIcon()}
+            {currentSelection && renderSelectedIcon()}
             <span className="truncate">
               {disabled ? (
                 RECEIVING_INPUT_VALUE
               ) : (
-                <>
-                  {currentSelection || placeholder || "Select a Model"}
-                </>
+                <>{currentSelection || placeholder || "Select a Model"}</>
               )}
             </span>
           </span>
@@ -237,6 +216,37 @@ export default function ModelInputComponent({
     </div>
   );
 
+  // Render API key input and send button when a model is selected
+  const renderApiKeyInput = () => {
+    if (!currentSelection) return null;
+
+    return (
+      <div className="flex flex-col gap-4 mt-2">
+        <InputGlobalComponent
+          id={`${id}-api-key`}
+          display_name={`${selectedProvider || "Provider"} API Key`}
+          value={apiKey}
+          disabled={false}
+          editNode={false}
+          // The component expects handleOnNewValue signature; we only need value
+          handleOnNewValue={({ value }: any) => handleApiKeyChange(value)}
+          password={true}
+          load_from_db={false}
+          placeholder="Enter API key"
+        />
+        <Button
+          onClick={handleSendApiKey}
+          size="sm"
+          className="whitespace-nowrap"
+          data-testid="enable-provider-button"
+        >
+          {`Enable ${selectedProvider || "Provider"}`}
+        </Button>
+      </div>
+    );
+  };
+
+  // Render the search input
   const renderSearchInput = () => (
     <div className="flex items-center border-b px-2.5">
       <ForwardedIconComponent
@@ -253,39 +263,48 @@ export default function ModelInputComponent({
     </div>
   );
 
+  // Render the model options
   const renderModelOptions = () => (
-    <CommandList className="max-h-[300px] overflow-y-auto">
-      {groupedOptions.map(([category, categoryOptions]) => {
-        // Filter category options based on search
-        const visibleOptions = customValue 
-          ? categoryOptions.filter(option => 
-              filteredOptions.some(filtered => filtered.name === option.name))
-          : categoryOptions;
-        
-        // Don't render empty categories
-        if (visibleOptions.length === 0) return null;
-          
-        return (
-          <CommandGroup defaultChecked={false} className="p-0" key={category}>
-            <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
-              {category}
-              {selectedProvider === category && (
-                <div className="ml-2 text-xs text-accent-emerald-foreground">
-                  Enabled
-                </div>
-              )}
-            </div>
-            {visibleOptions.map((option) => (
-              <ShadTooltip
-                key={option.name}
-                delayDuration={700}
-                styleClasses="whitespace-pre-wrap"
-                content={`${category}: ${option.name.split(":")[1] || option.name}`}
-              >
+    <>
+      <CommandList className="max-h-[300px]">
+        {groupedOptions.map(([category, categoryOptions]) => {
+          const visibleOptions = customValue
+            ? categoryOptions.filter((option) =>
+                filteredOptions.some(
+                  (filtered) => filtered.name === option.name,
+                ),
+              )
+            : categoryOptions;
+
+          if (visibleOptions.length === 0) return null;
+
+          return (
+            <CommandGroup
+              defaultChecked={false}
+              className="p-0 overflow-y-auto"
+              key={category}
+            >
+              <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
+                {category}
+                {selectedProvider === category && (
+                  <div className="ml-2 text-xs text-accent-emerald-foreground">
+                    Enabled
+                  </div>
+                )}
+              </div>
+              {visibleOptions.map((option) => (
                 <div>
                   <CommandItem
                     value={option.name}
                     onSelect={(currentValue) => {
+                      setSelectedProvider(
+                        selectedProvider === option.name
+                          ? null
+                          : option.name.includes(":")
+                            ? option.name.split(":")[0]
+                            : option.name,
+                      );
+
                       handleModelSelect(currentValue);
                       setOpen(false);
                     }}
@@ -305,8 +324,9 @@ export default function ModelInputComponent({
                           name="Check"
                           className={cn(
                             "h-4 w-4 shrink-0 text-primary",
-                            Array.isArray(value) && value.length > 0 && 
-                            value[0]?.name === option.name
+                            Array.isArray(value) &&
+                              value.length > 0 &&
+                              value[0]?.name === option.name
                               ? "opacity-100"
                               : "opacity-0",
                           )}
@@ -315,14 +335,13 @@ export default function ModelInputComponent({
                     </div>
                   </CommandItem>
                 </div>
-              </ShadTooltip>
-            ))}
-            {category !== groupedOptions[groupedOptions.length - 1][0] && visibleOptions.length > 0 && (
-              <CommandSeparator />
-            )}
-          </CommandGroup>
-        );
-      })}
+              ))}
+              {category !== groupedOptions[groupedOptions.length - 1][0] &&
+                visibleOptions.length > 0 && <CommandSeparator />}
+            </CommandGroup>
+          );
+        })}
+      </CommandList>
       <div className="sticky bottom-0 border-t bg-background">
         <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs text-muted-foreground">
           <Button
@@ -337,17 +356,16 @@ export default function ModelInputComponent({
               Manage Model Providers
               <ForwardedIconComponent
                 name="arrow-up-right"
-                className={cn(
-                  "ml-auto w-4 h-4 text-muted-foreground",
-                )}
+                className={cn("ml-auto w-4 h-4 text-muted-foreground")}
               />
             </div>
           </Button>
         </CommandItem>
       </div>
-    </CommandList>
+    </>
   );
 
+  // Render the popover content
   const renderPopoverContent = () => (
     <PopoverContentDropdown
       side="bottom"
@@ -363,39 +381,6 @@ export default function ModelInputComponent({
       </Command>
     </PopoverContentDropdown>
   );
-
-  // Provider management dialog component
-  const renderProviderManagementDialog = () => {
-    return (
-      <Dialog open={showProviderModal} onOpenChange={setShowProviderModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Model Providers</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 py-4">
-            {search_category?.map((provider) => (
-              <div key={provider} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ForwardedIconComponent name={provider} className="h-4 w-4" />
-                  <span>{provider}</span>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => {
-                    setSelectedProvider(selectedProvider === provider ? null : provider);
-                  }}
-                >
-                  {selectedProvider === provider ? "Enabled" : "Enable"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  };
 
   // Loading state
   if (options.length === 0 && isLoading) {
@@ -419,7 +404,8 @@ export default function ModelInputComponent({
         )}
         {renderPopoverContent()}
       </Popover>
-      {renderProviderManagementDialog()}
+
+      {renderApiKeyInput()}
     </>
   );
 }
