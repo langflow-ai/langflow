@@ -77,7 +77,7 @@ class SaveToFileComponent(Component):
         # Get and validate file format based on input type
         input_type = self._get_input_type()
         file_format = self.file_format
-        
+
         # Determine allowed formats based on input type
         if input_type == "Message":
             allowed_formats = self.MESSAGE_FORMAT_CHOICES
@@ -87,11 +87,11 @@ class SaveToFileComponent(Component):
             allowed_formats = self.DATA_FORMAT_CHOICES  # Now Excel is supported for Data objects
         else:
             allowed_formats = self.DATA_FORMAT_CHOICES
-        
+
         if not file_format:
             msg = f"File format must be selected for {input_type} input"
             raise ValueError(msg)
-        
+
         if file_format not in allowed_formats:
             msg = f"Invalid file format '{file_format}' for {input_type} input"
             raise ValueError(msg)
@@ -110,11 +110,11 @@ class SaveToFileComponent(Component):
         else:
             # Use current working directory
             file_path = Path(file_name).expanduser()
-        
+
         # Ensure parent directory exists
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         file_path = self._adjust_file_path_with_format(file_path, file_format)
 
         # Save the input to file based on type
@@ -158,21 +158,21 @@ class SaveToFileComponent(Component):
         if directory_input is None:
             return ""
         directory_str = str(directory_input).strip()
-        
+
         # Handle common directory patterns
         if directory_str:
             # Remove trailing slashes for consistency
-            directory_str = directory_str.rstrip('/\\')
+            directory_str = directory_str.rstrip("/\\")
             # Handle relative paths
-            if directory_str.startswith('./'):
+            if directory_str.startswith("./"):
                 directory_str = directory_str[2:]
-            elif directory_str.startswith('../'):
+            elif directory_str.startswith("../"):
                 # Keep relative paths as is
                 pass
-            elif not directory_str.startswith('/') and not directory_str.startswith('\\') and ':' not in directory_str:
+            elif not directory_str.startswith("/") and not directory_str.startswith("\\") and ":" not in directory_str:
                 # If it's not an absolute path and not a Windows drive path, treat as relative
                 pass
-        
+
         return directory_str
 
     def _get_input_type(self) -> str:
@@ -186,14 +186,13 @@ class SaveToFileComponent(Component):
             first_item = self.input[0]
             if type(first_item) is DataFrame:
                 return "DataFrame"
-            elif type(first_item) is Message:
+            if type(first_item) is Message:
                 return "Message"
-            elif type(first_item) is Data:
+            if type(first_item) is Data:
                 return "Data"
-            else:
-                msg = f"Unsupported list item type: {type(first_item)}"
-                raise ValueError(msg)
-        
+            msg = f"Unsupported list item type: {type(first_item)}"
+            raise ValueError(msg)
+
         # Use exact type checking (type() is) instead of isinstance() to avoid inheritance issues.
         # Since Message inherits from Data, isinstance(message, Data) would return True for Message objects,
         # causing Message inputs to be incorrectly identified as Data type.
@@ -239,17 +238,15 @@ class SaveToFileComponent(Component):
                 if isinstance(data[0], dict):
                     # List of dictionaries - perfect for DataFrame
                     return pd.DataFrame(data)
-                else:
-                    # List of other types - try to convert directly
-                    return pd.DataFrame(data)
-            elif isinstance(data, dict):
+                # List of other types - try to convert directly
+                return pd.DataFrame(data)
+            if isinstance(data, dict):
                 # Single dictionary - convert to DataFrame with one row
                 return pd.DataFrame([data])
-            else:
-                # Other data types - try to convert directly
-                return pd.DataFrame(data)
+            # Other data types - try to convert directly
+            return pd.DataFrame(data)
         except Exception as e:
-            msg = f"Error creating DataFrame from data: {str(e)}"
+            msg = f"Error creating DataFrame from data: {e!s}"
             raise ValueError(msg)
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> None:
@@ -261,17 +258,17 @@ class SaveToFileComponent(Component):
                 if dataframe.empty:
                     msg = "Cannot save empty DataFrame to Excel format"
                     raise ValueError(msg)
-                
+
                 if len(dataframe.columns) == 0:
                     msg = "Cannot save DataFrame with no columns to Excel format"
                     raise ValueError(msg)
-                
+
                 dataframe.to_excel(path, index=False, engine="openpyxl")
             except ImportError:
                 msg = "Excel format requires the 'openpyxl' library"
                 raise ImportError(msg)
             except Exception as e:
-                msg = f"Error saving DataFrame to Excel: {str(e)}"
+                msg = f"Error saving DataFrame to Excel: {e!s}"
                 raise ValueError(msg)
         elif fmt == "json":
             dataframe.to_json(path, orient="records", indent=2)
@@ -297,17 +294,17 @@ class SaveToFileComponent(Component):
                     if len(df.columns) == 0:
                         msg = f"DataFrame at index {i} has no columns and cannot be saved to Excel"
                         raise ValueError(msg)
-                
+
                 # Save each DataFrame to a separate sheet
                 with pd.ExcelWriter(path, engine="openpyxl") as writer:
                     for i, df in enumerate(dataframes):
-                        sheet_name = f"Sheet{i+1}" if len(dataframes) > 1 else "Sheet1"
+                        sheet_name = f"Sheet{i + 1}" if len(dataframes) > 1 else "Sheet1"
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
             except ImportError:
                 msg = "Excel format requires the 'openpyxl' library"
                 raise ImportError(msg)
             except Exception as e:
-                msg = f"Error saving DataFrames to Excel: {str(e)}"
+                msg = f"Error saving DataFrames to Excel: {e!s}"
                 raise ValueError(msg)
         elif fmt == "json":
             # Save as a list of records
@@ -331,20 +328,20 @@ class SaveToFileComponent(Component):
         elif fmt == "excel":
             try:
                 df = self._create_dataframe_from_data(data.data)
-                
+
                 if df.empty:
                     msg = "Cannot save empty data to Excel format"
                     raise ValueError(msg)
                 if len(df.columns) == 0:
                     msg = "Cannot save data with no columns to Excel format"
                     raise ValueError(msg)
-                
+
                 df.to_excel(path, index=False, engine="openpyxl")
             except ImportError:
                 msg = "Excel format requires the 'openpyxl' library"
                 raise ImportError(msg)
             except Exception as e:
-                msg = f"Error saving data to Excel: {str(e)}"
+                msg = f"Error saving data to Excel: {e!s}"
                 raise ValueError(msg)
         elif fmt == "json":
             path.write_text(
@@ -370,26 +367,26 @@ class SaveToFileComponent(Component):
                 dataframes = []
                 for i, data in enumerate(data_list):
                     df = self._create_dataframe_from_data(data.data)
-                    
+
                     if df.empty:
                         msg = f"Data object at index {i} is empty and cannot be saved to Excel"
                         raise ValueError(msg)
                     if len(df.columns) == 0:
                         msg = f"Data object at index {i} has no columns and cannot be saved to Excel"
                         raise ValueError(msg)
-                    
+
                     dataframes.append(df)
-                
+
                 # Save each Data object to a separate sheet
                 with pd.ExcelWriter(path, engine="openpyxl") as writer:
                     for i, df in enumerate(dataframes):
-                        sheet_name = f"Sheet{i+1}" if len(dataframes) > 1 else "Sheet1"
+                        sheet_name = f"Sheet{i + 1}" if len(dataframes) > 1 else "Sheet1"
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
             except ImportError:
                 msg = "Excel format requires the 'openpyxl' library"
                 raise ImportError(msg)
             except Exception as e:
-                msg = f"Error saving data to Excel: {str(e)}"
+                msg = f"Error saving data to Excel: {e!s}"
                 raise ValueError(msg)
         elif fmt == "json":
             # Save as a list of data objects
@@ -459,7 +456,7 @@ class SaveToFileComponent(Component):
             # Save as markdown with each message as a section
             markdown_content = ""
             for i, content in enumerate(all_contents):
-                markdown_content += f"**Message {i+1}:**\n\n{content}\n\n"
+                markdown_content += f"**Message {i + 1}:**\n\n{content}\n\n"
             path.write_text(markdown_content.strip(), encoding="utf-8")
         else:
             msg = f"Unsupported Message format: {fmt}"
