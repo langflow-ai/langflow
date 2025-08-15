@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.5.0.post1"
+version = "1.5.0.post2"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -77,6 +77,7 @@ dependencies = [
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
+    "langchain-huggingface==0.3.1",
     "langchain-anthropic==0.3.14",
     "langchain-astradb~=0.6.0",
     "langchain-openai>=0.2.12",
@@ -126,6 +127,7 @@ dependencies = [
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
+    "fastparquet>=2024.11.0",
 ]
 
 [dependency-groups]
