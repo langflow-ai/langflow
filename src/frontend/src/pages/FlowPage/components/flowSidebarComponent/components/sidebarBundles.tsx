@@ -5,8 +5,8 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
-import type { SidebarGroupProps } from "../../types";
-import { BundleItem } from "../bundleItems";
+import type { SidebarGroupProps } from "../types";
+import { BundleItem } from "./bundleItems";
 
 export const MemoizedSidebarGroup = memo(
   ({

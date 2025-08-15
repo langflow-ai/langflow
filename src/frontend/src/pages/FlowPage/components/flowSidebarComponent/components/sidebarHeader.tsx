@@ -9,10 +9,10 @@ import {
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import { SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
-import type { SidebarHeaderComponentProps } from "../../types";
-import FeatureToggles from "../featureTogglesComponent";
-import { SearchInput } from "../searchInput";
-import { SidebarFilterComponent } from "../sidebarFilterComponent";
+import type { SidebarHeaderComponentProps } from "../types";
+import FeatureToggles from "./featureTogglesComponent";
+import { SearchInput } from "./searchInput";
+import { SidebarFilterComponent } from "./sidebarFilterComponent";
 
 export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   showConfig,
