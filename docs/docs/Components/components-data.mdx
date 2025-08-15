@@ -171,6 +171,12 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
 
+### Advanced parsing
+
+As of Langflow 1.6, the File component supports advanced document parsing using the Docling library.
+Only non-tabular documents can be parsed, and only one document at a time.
+The parser requires the Docling dependency to be installed. For more information, see [](/install-custom-dependencies)
+
 ### File output
 
 The output of the **File** component depends on the number and type of files loaded:

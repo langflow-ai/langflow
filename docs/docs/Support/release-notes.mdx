@@ -66,10 +66,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   This allows you to run flows with just a JSON file and a PyPI package, making it easier to integrate Langflow into CI/CD pipelines or scaling deplpoyments.
   For more information, see Run flows with the Langflow Executor (LFX).
 
-- Additional Structured Output for Agent component
+- Additional structured output for Agent component
 
   In addition to the `Message` output, the Agent component now includes a structured output.
   This output parses JSON into a structured `Data` object to make it easier to work with the Agent's output downstream.
+
+- Advanced parsing available for File component
+
+  The File component includes advanced parsing capabilities powered by the Docling library.
 
 ### Deprecations
 
