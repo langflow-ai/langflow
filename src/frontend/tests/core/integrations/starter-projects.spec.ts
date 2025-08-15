@@ -116,8 +116,6 @@ test(
       .getByTestId("text_card_container")
       .count();
 
-    console.log("numberOfTemplates", numberOfTemplates);
-
     let numberOfOutdatedComponents = 0;
 
     for (let i = 0; i < numberOfTemplates; i++) {
@@ -144,6 +142,7 @@ test(
       }
 
       await page.getByTestId("icon-ChevronLeft").click();
+      console.log("exampleName", exampleName);
       await page.waitForSelector('[data-testid="mainpage_title"]', {
         timeout: 5000,
       });
