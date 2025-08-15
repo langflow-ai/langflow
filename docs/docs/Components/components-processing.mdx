@@ -79,25 +79,41 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 ## Data Operations
 
-The **Data Operations** component performs operations on [`Data`](/data-types#data) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
+The **Data Operations** component performs operations on [`Data`](/data-types#data) objects, including extracting, filtering, and editing keys and values in the `Data`.
+For all options, see [Available data operations](#available-data-operations).
+The output is a new `Data` object containing the modified data after running the selected operation.
 
-1. To use the **Data Operations** component in a flow, you must connect its **Data** input port to the output port of a component that outputs `Data`.
-All operations in the **Data Operations** component require at least one `Data` input.
+### Use the Data Operations component in a flow
 
-    For this example, add a **Webhook** component to the flow, and then connect it to a **Data Operations** component. Assume you'll send requests to the webhook with a consistent payload that has `name`, `username`, and `email` keys.
+The following example demonstrates how to use a **Data Operations** component in a flow using data from a webhook payload:
+
+1. Create a flow with a **Webhook** component and a **Data Operations** component, and then connect the **Webhook** component's output to the **Data Operations** component's **Data** input.
+
+    All operations in the **Data Operations** component require at least one `Data` input from another component.
+    If the preceding component doesn't produce `Data` output, you can use another component, such as the **Type Convert** component, to reformat the data before passing it to the **Data Operations** component.
+    Alternatively, you could consider using a component that is designed to process the original data type, such as the **Parser** or **DataFrame Operations** components.
 
 2. In the **Operations** field, select the operation you want to perform on the incoming `Data`.
-For this example, select the **Select Keys** operation to extract specific user information.
+For this example, select the **Select Keys** operation.
 
-3. Add keys for `name`, `username`, and `email` to select those values from the incoming request payload.
+    :::tip
+    You can select only one operation.
+    If you need to perform multiple operations on the data, you can chain multiple **Data Operations** components together to execute each operation in sequence.
+    For more complex multi-step operations, consider using a component like the **Smart Function** component.
+    :::
 
-    To add additional keys, click <Icon name="Plus" aria-hidden="True" /> **Add more**.
+3. Under **Select Keys**, add keys for `name`, `username`, and `email`.
+Click <Icon name="Plus" aria-hidden="True" /> **Add more** to add a field for each key.
 
-4. Connect a **Chat Output** component.
+    For this example, assume that the webhook will receive consistent payloads that always contain `name`, `username`, and `email` keys.
+    The **Select Keys** operation extracts the value of these keys from each incoming payload.
+
+4. Optional: If you want to view the output in the **Playground**, connect the **Data Operations** component's output to a **Chat Output** component.
 
     ![A flow with Webhook, Data Operations, and Chat Output components](/img/component-data-operations-select-key.png)
 
-5. To test the flow, send the following request to your flow's webhook endpoint, and then open the **Playground** to see the resulting output from processing the payload.
+5. To test the flow, send the following request to your flow's webhook endpoint.
+For more information about the webhook endpoint, see [Trigger flows with webhooks](/webhook).
 
     ```bash
     curl -X POST "http://$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
@@ -128,6 +144,11 @@ For this example, select the **Select Keys** operation to extract specific user 
     }'
     ```
 
+6. To view the `Data` resulting from the **Select Keys** operation, do one of the following:
+
+   * If you attached a **Chat Output** component, open the **Playground** to see the result as a chat message.
+   * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **Data Operations** component.
+
 ### Data Operations parameters
 
 Some **Data Operations** component input parameters are hidden by default in the visual editor.
@@ -136,7 +157,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | Input parameter. The `Data` object to operate on. |
-| operations | Operations | Input parameter. The operation to perform on the data. See [Data Operations operations](#data-operations-operations) |
+| operations | Operations | Input parameter. The operation to perform on the data. See [Available data operations](#available-data-operations) |
 | select_keys_input | Select Keys | Input parameter. A list of keys to select from the data. |
 | filter_key | Filter Key | Input parameter. The key to filter by. |
 | operator | Comparison Operator | Input parameter. The operator to apply for comparing values. |
@@ -146,7 +167,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | rename_keys_input | Rename Keys | Input parameter. A list of keys to rename in the data. |
 | data_output | Data | Output parameter. The resulting Data object after the operation. |
 
-#### Data Operations operations
+#### Available data operations
 
 Options for the `operations` input parameter are as follows.
 All operations act on an incoming `Data` object.
@@ -163,94 +184,208 @@ All operations act on an incoming `Data` object.
 
 ## DataFrame Operations
 
-The **DataFrame Operations** component performs operations on [`DataFrame`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
+The **DataFrame Operations** component performs operations on [`DataFrame`](/data-types#dataframe) (table) rows and columns, including schema changes, record changes, sorting, and filtering.
+For all options, see [DataFrame Operations parameters](#dataframe-operations-parameters).
 
-To use the **DataFrame Operations** component in a flow, you must connect its **DataFrame** input port to the output port of a component that outputs `DataFrame`.
-All operations in the **DataFrame Operations** component require at least one `DataFrame` input.
+The output is a new `DataFrame` containing the modified data after running the selected operation.
 
-The following example fetches JSON data from an API. The **Smart Filter** component extracts and flattens the results into a tabular `DataFrame` that is then processed through the **DataFrame Operations** component.
+### Use the DataFrame Operations component in a flow
 
-![A flow that ingests an API response, extracts it to a DataFrame with a Smart Filter component, and the processes it through a DataFrame Operations component](/img/component-dataframe-operations.png)
+The following steps explain how to configure a **DataFrame Operations** component in a flow.
+You can follow along with an example or use your own flow.
+The only requirement is that the preceding component must create `DataFrame` output that you can pass to the **DataFrame Operations** component.
 
-1. The **API Request** component retrieves data with only `source` and `result` fields.
-For this example, the desired data is nested within the `result` field.
-2. Connect a **Language Model** component to a **Smart Filter** component, and then connect the **Smart Filter** component to the **API Request** component. This example connects a **Groq** language model component.
-3. In the **Groq** component, add your Groq API key.
-4. To filter the data, in the **Smart Filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
-For this example, enter:
-```
-I want to explode the result column out into a Data object
-```
-:::tip
-Avoid punctuation in the **Instructions** field, as it can cause errors.
-:::
-5. To run the flow, in the **Smart Filter** component, click <Icon name="Play" aria-hidden="true" /> **Run component**.
-6. To inspect the filtered data, in the **Smart Filter** component, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
-The result is a structured DataFrame.
+1. Create a new flow or use an existing flow.
 
-```text
-id | name             | company               | username        | email                              | address           | zip
----|------------------|----------------------|-----------------|------------------------------------|-------------------|-------
-1  | Emily Johnson    | ABC Corporation      | emily_johnson   | emily.johnson@abccorporation.com   | 123 Main St       | 12345
-2  | Michael Williams | XYZ Corp             | michael_williams| michael.williams@xyzcorp.com       | 456 Elm Ave       | 67890
-```
+    <details>
+    <summary>API response extraction flow example</summary>
 
-7. Add **DataFrame Operations** and **Chat Output** components to the flow.
-8. In the **DataFrame Operations** component, in the **Operation** field, select **Filter**.
-9. To apply a filter, in the **Column Name** field, enter a column to filter on. This example filters by `name`.
-10. Click **Playground**, and then click **Run Flow**.
-The flow extracts the values from the `name` column.
+    The following example flow uses five components to extract `Data` from an API response, transform it to a `DataFrame`, and then perform further processing on the tabular data using a **DataFrame Operations** component.
+    The sixth component, **Chat Output**, is optional in this example.
+    It only serves as a convenient way for you to view the final output in the **Playground**, rather than inspecting the component logs.
 
-```text
-name
-Emily Johnson
-Michael Williams
-John Smith
-...
-```
+    ![A flow that ingests an API response, extracts it to a DataFrame with a Smart Function component, and the processes it through a DataFrame Operations component](/img/component-dataframe-operations.png)
 
-### Operations
+    If you want to use this example to test the **DataFrame Operations** component, do the following:
 
-This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
+    1. Create a flow with the following components:
 
-| Operation | Required Inputs | Info |
-|-----------|----------------|-------------|
+        * **API Request**
+        * **Language Model**
+        * **Smart Function**
+        * **Type Convert**
+
+    2. Configure the [**Smart Function** component](#smart-function) and its dependencies:
+
+        * **API Request**: Configure the [**API Request** component](/components-data#api-request) to get JSON data from an endpoint of your choice, and then connect the **API Response** output to the **Smart Function** component's **Data** input.
+        * **Language Model**: Select your preferred provider and model, and then enter a valid API key.
+        Change the output to **Language Model**, and then connect the `LanguageModel` output to the **Smart Function** component's **Language Model** input.
+        * **Smart Function**: In the **Instructions** field, enter natural language instructions to extract data from the API response.
+        Your instructions depend on the response content and desired outcome.
+        For example, if the response contains a large `result` field, you might provide instructions like `explode the result field out into a Data object`.
+
+    3. Convert the **Smart Function** component's `Data` output to `DataFrame`:
+
+        1. Connect the **Filtered Data** output to the **Type Convert** component's **Data** input.
+        2. Set the **Type Convert** component's **Output Type** to **DataFrame**.
+
+    Now the flow is ready for you to add the **DataFrame Operations** component.
+
+    </details>
+
+2. Add a **DataFrame Operations** component to the flow, and then connect `DataFrame` output from another component to the **DataFrame** input.
+
+    All operations in the **DataFrame Operations** component require at least one `DataFrame` input from another component.
+    If a component doesn't produce `DataFrame` output, you can use another component, such as the **Type Convert** component, to reformat the data before passing it to the **DataFrame Operations** component.
+    Alternatively, you could consider using a component that is designed to process the original data type, such as the **Parser** or **Data Operations** components.
+
+    If you are following along with the example flow, connect the **Type Convert** component's **DataFrame Output** port to the **DataFrame** input.
+
+3. In the **Operations** field, select the operation you want to perform on the incoming `DataFrame`.
+For example, the **Filter** operation filters the rows based on a specified column and value.
+
+    :::tip
+    You can select only one operation.
+    If you need to perform multiple operations on the data, you can chain multiple **DataFrame Operations** components together to execute each operation in sequence.
+    For more complex multi-step operations, like dramatic schema changes or pivots, consider using an LLM-powered component, like the **Structured Output** or **Smart Function** component, as a replacement or preparation for the **DataFrame Operations** component.
+    :::
+
+    If you're following along with the example flow, select any operation that you want to apply to the data that was extracted by the **Smart Function** component.
+    To view the contents of the incoming `DataFrame`, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Type Convert** component, and then <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
+    If the `DataFrame` seems malformed, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on each upstream component to determine where the error occurs, and then modify your flow's configuration as needed.
+    For example, if the **Smart Function** component didn't extract the expected fields, modify your instructions or verify that the given fields are present in the **API Response** output.
+
+4. Configure the operation's parameters.
+The specific parameters depend on the selected operation.
+For example, if you select the **Filter** operation, you must define a filter condition using the **Column Name**, **Filter Value**, and **Filter Operator** parameters.
+For more information, see [DataFrame Operations parameters](#dataframe-operations-parameters)
+
+5. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **DataFrame Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the new `DataFrame` created from the **Filter** operation.
+
+   If you want to view the output in the **Playground**, connect the **DataFrame Operations** component's output to a **Chat Output** component, rerun the **DataFrame Operations** component, and then click **Playground**.
+
+For another example, see [Conditional looping](/components-logic#conditional-looping).
+
+### DataFrame Operations parameters
+
+Most **DataFrame Operations** parameters are conditional because they only apply to specific operations.
+
+The only permanent parameters are **DataFrame** (`df`), which is the `DataFrame` input, and **Operation** (`operation`), which is the operation to perform on the `DataFrame`.
+Once you select an operation, the conditional parameters for that operation appear on the **DataFrame Operations** component.
+
+<Tabs>
+<TabItem value="addcolumn" label="Add Column" default>
+
 | Add Column | new_column_name, new_column_value | Adds a new column with a constant value. |
-| Drop Column | column_name | Removes a specified column. |
-| Filter | column_name, filter_value | Filters rows based on column value. |
-| Head | num_rows | Returns first `n` rows. |
-| Rename Column | column_name, new_column_name | Renames an existing column. |
-| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
-| Select Columns | columns_to_select | Selects specific columns. |
-| Sort | column_name, ascending | Sorts DataFrame by column. |
-| Tail | num_rows | Returns last `n` rows. |
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| df | DataFrame | The input DataFrame to operate on. |
-| operation | Operation | The DataFrame operation to perform. Options include Add Column, Drop Column, Filter, Head, Rename Column, Replace Value, Select Columns, Sort, and Tail. |
-| column_name | Column Name | The column name to use for the operation. |
-| filter_value | Filter Value | The value to filter rows by. |
-| ascending | Sort Ascending | Whether to sort in ascending order. |
 | new_column_name | New Column Name | The new column name when renaming or adding a column. |
 | new_column_value | New Column Value | The value to populate the new column with. |
-| columns_to_select | Columns to Select | A list of column names to select. |
+
+</TabItem>
+<TabItem value="dropcolumn" label="Drop Column">
+
+| Drop Column | column_name | Removes a specified column. |
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| column_name | Column Name | The column name to use for the operation. |
+
+Removes a specified column from the DataFrame.
+
+</TabItem>
+<TabItem value="filter" label="Filter">
+
+| Filter | column_name, filter_value | Filters rows based on column value. |
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| column_name | Column Name | The column name to use for the operation. |
+| filter_value | Filter Value | The value to filter rows by. |
+
+Filters rows based on a column value.
+
+</TabItem>
+<TabItem value="head" label="Head">
+
+| Head | num_rows | Returns first `n` rows. |
+
+| Name | Display Name | Info |
+|------|--------------|------|
 | num_rows | Number of Rows | The number of rows to return for head/tail operations. The default is 5. |
+
+Returns the first `n` rows of the DataFrame.
+
+</TabItem>
+<TabItem value="renamecolumn" label="Rename Column">
+
+| Rename Column | column_name, new_column_name | Renames an existing column. |
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| column_name | Column Name | The column name to use for the operation. |
+| new_column_name | New Column Name | The new column name when renaming or adding a column. |
+
+Renames an existing column in the DataFrame.
+
+</TabItem>
+<TabItem value="replacevalue" label="Replace Value">
+
+| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| column_name | Column Name | The column name to use for the operation. |
 | replace_value | Value to Replace | The value to replace in the column. |
 | replacement_value | Replacement Value | The value to replace with. |
 
-**Outputs**
+Replaces values in a column.
+
+</TabItem>
+<TabItem value="selectcolumns" label="Select Columns">
+
+| Select Columns | columns_to_select | Selects specific columns. |
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| output | DataFrame | The resulting DataFrame after the operation. |
+| columns_to_select | Columns to Select | A list of column names to select. |
 
-</details>
+Selects specific columns from the DataFrame.
+
+</TabItem>
+<TabItem value="sort" label="Sort">
+
+| Sort | column_name, ascending | Sorts DataFrame by column. |
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| column_name | Column Name | The column name to use for the operation. |
+| ascending | Sort Ascending | Whether to sort in ascending order. |
+
+Sorts the DataFrame by a column.
+
+</TabItem>
+<TabItem value="tail" label="Tail">
+
+| Tail | num_rows | Returns last `n` rows. |
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| num_rows | Number of Rows | The number of rows to return for head/tail operations. The default is 5. |
+
+
+Returns the last `n` rows of the DataFrame.
+
+</TabItem>
+<TabItem value="dropduplicates" label="Drop Duplicates">
+
+
+
+Removes duplicate rows from the DataFrame.
+
+</TabItem>
+</Tabs>
 
 ## LLM Router
 
@@ -433,7 +568,7 @@ To troubleshoot missing or unexpected values, you can do the following:
 To see the data being passed directly to the **Parser** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output** on the component that is sending data to the **Parser** component.
 
 * Check the source data for missing or incorrect values.
-There are several ways you can address these inconstencies:
+There are several ways you can address these inconsistencies:
 
     * Rectify the source data directly.
     * Use other components to amend or filter anomalies before passing the data to the **Parser** component.
@@ -586,6 +721,13 @@ The **Smart Function** component uses an LLM to generate a Lambda function to fi
 You must connect this component to a [**Language Model** component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
 The LLM runs the function against the data input, and then outputs the results as [`Data`](/data-types#data).
 
+:::tip
+Provide brief, clear instructions, focusing on the desired outcome or specific actions, such as `Filter the data to only include items where the 'status' is 'active'`.
+One sentence or less is preferred because end punctuation, like periods, can cause errors or unexpected behavior.
+
+If you need to provide more details instructions that aren't directly relevant to the Lambda function, you can input them in the **Language Model** component's **Input** field or through a **Prompt Template** component.
+:::
+
 The following example uses the **API Request** endpoint to pass JSON data from the `https://jsonplaceholder.typicode.com/users` endpoint to the **Smart Function** component.
 Then, the **Smart Function** component passes the data and the instruction `extract emails` to the attached **Language Model** component.
 From there, the LLM generates a filter function that extracts email addresses from the JSON data, returning the filtered data as chat output.
@@ -601,7 +743,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 |------|--------------|------|
 | data | Data | Input parameter. The structured data to filter or transform using a Lambda function. |
 | llm | Language Model | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component. |
-| filter_instruction | Instructions | Input parameter. The natural language instructions for how to filter or transform the data. The LLM uses these instructions to create a Lambda function. For example: `Filter the data to only include items where the 'status' is 'active'`. |
+| filter_instruction | Instructions | Input parameter. The natural language instructions for how to filter or transform the data. The LLM uses these instructions to create a Lambda function. |
 | sample_size | Sample Size | Input parameter. For large datasets, the number of characters to sample from the dataset head and tail. Only applied if the dataset meets or exceeds `max_size`. Default: `1000`. |
 | max_size | Max Size | Input parameter. The number of characters for the dataset to be considered large, which triggers sampling by the `sample_size` value. Default: `30000`. |
 
