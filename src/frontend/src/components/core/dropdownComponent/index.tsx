@@ -15,8 +15,7 @@ import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
   filterNullOptions,
-  formatName,
-  formatPlaceholderName,
+  formatName
 } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
@@ -88,9 +87,6 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const _placeholderName = name
-    ? formatPlaceholderName(name)
-    : "Choose an option...";
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
