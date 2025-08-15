@@ -18,13 +18,7 @@ interface NavItem {
   tooltip: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    id: "agents",
-    icon: "bot",
-    label: "Agents",
-    tooltip: "Agents",
-  },
+export const NAV_ITEMS: NavItem[] = [
   {
     id: "components",
     icon: "component",

@@ -305,7 +305,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   return (
     <Sidebar
-      collapsible={ENABLE_NEW_SIDEBAR ? "icon" : "offcanvas"}
+      collapsible={"offcanvas"}
       data-testid="shad-sidebar"
       className="noflow select-none"
     >

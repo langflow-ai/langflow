@@ -8,6 +8,7 @@ import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
+import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -49,7 +50,32 @@ export const MemoizedCanvasControls = memo(
 );
 
 export const MemoizedSidebarTrigger = memo(() => {
-  if (ENABLE_NEW_SIDEBAR) return;
+  const { open, toggleSidebar, setActiveSection } = useSidebar();
+  if (ENABLE_NEW_SIDEBAR) {
+    return (
+      <Panel
+        className={cn(
+          "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-0.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+          "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
+        )}
+        position="top-left"
+      >
+        {NAV_ITEMS.map((item) => (
+          <CustomControlButton
+            iconName={item.icon}
+            tooltipText={item.tooltip}
+            onClick={() => {
+              setActiveSection(item.id);
+              if (!open) {
+                toggleSidebar();
+              }
+            }}
+            testId={item.id}
+          />
+        ))}
+      </Panel>
+    );
+  }
 
   return (
     <Panel
