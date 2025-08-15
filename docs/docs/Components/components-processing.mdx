@@ -151,13 +151,12 @@ For more information about the webhook endpoint, see [Trigger flows with webhook
 
 ### Data Operations parameters
 
-Some **Data Operations** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+Many **Data Operations** component input parameters are conditional based on the selected **Operation** (`operation`).
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | Input parameter. The `Data` object to operate on. |
-| operations | Operations | Input parameter. The operation to perform on the data. See [Available data operations](#available-data-operations) |
+| operation | Operation | Input parameter. The operation to perform on the data. See [Available data operations](#available-data-operations) |
 | select_keys_input | Select Keys | Input parameter. A list of keys to select from the data. |
 | filter_key | Filter Key | Input parameter. The key to filter by. |
 | operator | Comparison Operator | Input parameter. The operator to apply for comparing values. |
@@ -165,7 +164,6 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | append_update_data | Append or Update | Input parameter. The data to append or update the existing data with. |
 | remove_keys_input | Remove Keys | Input parameter. A list of keys to remove from the data. |
 | rename_keys_input | Rename Keys | Input parameter. A list of keys to rename in the data. |
-| data_output | Data | Output parameter. The resulting Data object after the operation. |
 
 #### Available data operations
 
@@ -276,113 +274,92 @@ Once you select an operation, the conditional parameters for that operation appe
 <Tabs>
 <TabItem value="addcolumn" label="Add Column" default>
 
-| Add Column | new_column_name, new_column_value | Adds a new column with a constant value. |
+The **Add Column** operation allows you to add a new column to the `DataFrame` with a constant value.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| new_column_name | New Column Name | The new column name when renaming or adding a column. |
-| new_column_value | New Column Value | The value to populate the new column with. |
+The parameters are **New Column Name** (`new_column_name`) and **New Column Value** (`new_column_value`).
 
 </TabItem>
 <TabItem value="dropcolumn" label="Drop Column">
 
-| Drop Column | column_name | Removes a specified column. |
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| column_name | Column Name | The column name to use for the operation. |
-
-Removes a specified column from the DataFrame.
+The **Drop Column** operation allows you to remove a column from the `DataFrame`, specified by **Column Name** (`column_name`).
 
 </TabItem>
 <TabItem value="filter" label="Filter">
 
-| Filter | column_name, filter_value | Filters rows based on column value. |
+The **Filter** operation allows you to filter the `DataFrame` based on a specified condition.
+The output is a `DataFrame` containing only the rows that matched the filter condition.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| column_name | Column Name | The column name to use for the operation. |
-| filter_value | Filter Value | The value to filter rows by. |
+Provide the following parameters:
 
-Filters rows based on a column value.
+* **Column Name** (`column_name`): The name of the column to filter on.
+* **Filter Value** (`filter_value`): The value to filter on.
+* **Filter Operator** (`filter_operator`): The operator to use for filtering, one of `equals` (default), `not equals`, `contains`, `starts with`, `ends with`, `greater than`, or `less than`.
 
 </TabItem>
 <TabItem value="head" label="Head">
 
-| Head | num_rows | Returns first `n` rows. |
+The **Head** operation allows you to retrieve the first `n` rows of the `DataFrame`, where `n` is set in **Number of Rows** (`num_rows`).
+The default is `5`.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| num_rows | Number of Rows | The number of rows to return for head/tail operations. The default is 5. |
-
-Returns the first `n` rows of the DataFrame.
+The output is a `DataFrame` containing only the selected rows.
 
 </TabItem>
 <TabItem value="renamecolumn" label="Rename Column">
 
-| Rename Column | column_name, new_column_name | Renames an existing column. |
+The **Rename Column** operation allows you to rename an existing column in the `DataFrame`.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| column_name | Column Name | The column name to use for the operation. |
-| new_column_name | New Column Name | The new column name when renaming or adding a column. |
-
-Renames an existing column in the DataFrame.
+The parameters are **Column Name** (`column_name`), which is the current name, and **New Column Name** (`new_column_name`).
 
 </TabItem>
 <TabItem value="replacevalue" label="Replace Value">
 
-| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
+The **Replace Value** operation allows you to replace values in a specific column of the `DataFrame`.
+This operation replaces a target value with a new value.
+All cells matching the target value are replaced with the new value in the new `DataFrame` output.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| column_name | Column Name | The column name to use for the operation. |
-| replace_value | Value to Replace | The value to replace in the column. |
-| replacement_value | Replacement Value | The value to replace with. |
+Provide the following parameters:
 
-Replaces values in a column.
+* **Column Name** (`column_name`): The name of the column to modify.
+* **Value to Replace** (`replace_value`): The value that you want to replace.
+* **Replacement Value** (`replacement_value`): The new value to use.
 
 </TabItem>
 <TabItem value="selectcolumns" label="Select Columns">
 
-| Select Columns | columns_to_select | Selects specific columns. |
+The **Select Columns** operation allows you to select one or more specific columns from the `DataFrame`.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| columns_to_select | Columns to Select | A list of column names to select. |
+Provide a list of column names in **Columns to Select** (`columns_to_select`).
+In the visual editor, click <Icon name="Plus" aria-hidden="true"/> **Add More** to add multiple fields, and then enter one column name in each field.
 
-Selects specific columns from the DataFrame.
+The output is a `DataFrame` containing only the specified columns.
 
 </TabItem>
 <TabItem value="sort" label="Sort">
 
-| Sort | column_name, ascending | Sorts DataFrame by column. |
+The **Sort** operation allows you to sort the `DataFrame` on a specific column in ascending or descending order.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| column_name | Column Name | The column name to use for the operation. |
-| ascending | Sort Ascending | Whether to sort in ascending order. |
+Provide the following parameters:
 
-Sorts the DataFrame by a column.
+* **Column Name** (`column_name`): The name of the column to sort on.
+* **Sort Ascending** (`ascending`): Whether to sort in ascending or descending order. If enabled (true), sorts in ascending order; if disabled (false), sorts in descending order. Default: Enabled (true)
 
 </TabItem>
 <TabItem value="tail" label="Tail">
 
-| Tail | num_rows | Returns last `n` rows. |
+The **Tail** operation allows you to retrieve the last `n` rows of the `DataFrame`, where `n` is set in **Number of Rows** (`num_rows`).
+The default is `5`.
 
-| Name | Display Name | Info |
-|------|--------------|------|
-| num_rows | Number of Rows | The number of rows to return for head/tail operations. The default is 5. |
-
-
-Returns the last `n` rows of the DataFrame.
+The output is a `DataFrame` containing only the selected rows.
 
 </TabItem>
 <TabItem value="dropduplicates" label="Drop Duplicates">
 
+The **Drop Duplicates** operation removes rows from the `DataFrame` by identifying all duplicate values within a single column.
 
+The only parameter is the **Column Name** (`column_name`).
 
-Removes duplicate rows from the DataFrame.
+When the flow runs, all rows with duplicate values in the given column are removed.
+The output is a `DataFrame` containing all columns from the original `DataFrame`, but only rows with non-duplicate values.
 
 </TabItem>
 </Tabs>
