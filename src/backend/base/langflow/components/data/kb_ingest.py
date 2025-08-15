@@ -141,11 +141,6 @@ class KBIngestionComponent(Component):
                     "vectorize": True,
                     "identifier": False,
                 },
-                {
-                    "column_name": "id",
-                    "vectorize": False,
-                    "identifier": True,
-                },
             ],
         ),
         IntInput(
