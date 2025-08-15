@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +20,6 @@ import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
 import InputGlobalComponent from "../inputGlobalComponent";
@@ -64,8 +64,8 @@ export default function ModelInputComponent({
   const [filteredOptions, setFilteredOptions] = useState(() => options);
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
-    const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData); 
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [enableProvider, setEnableProvider] = useState(false);
 
   const fuse = new Fuse(options, { keys: ["name", "category"] });
@@ -108,7 +108,11 @@ export default function ModelInputComponent({
 
   const handleModelSelect = (modelOption: string) => {
     const selectedOption = options.find((opt) => opt.name === modelOption);
-    setCurrentSelection(selectedOption?.name.includes(":") ? selectedOption?.name.split(":")[1] : selectedOption?.name);
+    setCurrentSelection(
+      selectedOption?.name.includes(":")
+        ? selectedOption?.name.split(":")[1]
+        : selectedOption?.name,
+    );
     if (selectedOption) {
       handleOnNewValue({ value: [selectedOption] });
     } else {
