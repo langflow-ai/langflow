@@ -662,7 +662,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
 
     field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
     model_type: str = "language"
-    options: list[dict[str, str]] = Field(default_factory=list)
+    options: list[dict[str, Any]] = Field(default_factory=list)
     placeholder: str = "Select a Model"
     value: Any = Field(default_factory=list)
     temperature: float = 0.1
@@ -687,7 +687,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
         from langflow.base.models.unified_models import get_unified_models_detailed
 
         provider_models = get_unified_models_detailed(
-            provider=self.providers,
+            # provider=self.providers,
             model_type="llm",
             include_unsupported=False,
         )
@@ -701,6 +701,8 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
                     "name": f"{model['model_name']}",
                     "icon": model.get("icon", provider_name.replace(" ", "")),
                     "category": provider_name,
+                    "metadata": model.get("metadata", {}),
+                    "provider": provider_name,
                 }
                 for model in entry["models"]
             )
@@ -713,7 +715,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
         from langflow.base.models.unified_models import get_unified_models_detailed
 
         provider_models = get_unified_models_detailed(
-            provider=self.providers,
+            # provider=self.providers,
             model_type="embeddings",
             include_unsupported=False,
         )
@@ -725,6 +727,8 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
                     "name": f"{model['model_name']}",
                     "icon": model.get("icon", provider_name),
                     "category": provider_name,
+                    "metadata": model.get("metadata", {}),
+                    "provider": provider_name,
                 }
                 for model in entry["models"]
             )
@@ -738,20 +742,20 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             return self._get_embedding_model_options()
         return self._get_language_model_options()  # Default to language models
 
-    def parse_model_selection(self, selection: str) -> tuple[str, str]:
-        """Parse Provider:ModelName selection into provider and model_name.
+    # def parse_model_selection(self, selection: str) -> tuple[str, str]:
+    #     """Parse Provider:ModelName selection into provider and model_name.
 
-        Args:
-            selection: String in format "Provider:ModelName"
+    #     Args:
+    #         selection: String in format "Provider:ModelName"
 
-        Returns:
-            Tuple of (provider, model_name)
-        """
-        if ":" in selection:
-            provider, model_name = selection.split(":", 1)
-            return provider.strip(), model_name.strip()
-        # Fallback if format is incorrect
-        return "OpenAI", selection
+    #     Returns:
+    #         Tuple of (provider, model_name)
+    #     """
+    #     if ":" in selection:
+    #         provider, model_name = selection.split(":", 1)
+    #         return provider.strip(), model_name.strip()
+    #     # Fallback if format is incorrect
+    #     return "OpenAI", selection
 
     @field_validator("value")
     @classmethod
@@ -784,14 +788,10 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
         if not self.value or not isinstance(self.value, list) or not self.value:
             return None
 
-        # Get the first (and only) selected item
         selected_item = self.value[0]
-        model_selection = selected_item.get("name", "") if isinstance(selected_item, dict) else str(selected_item)
-        if not model_selection or ":" not in model_selection:
-            return None
 
-        # Parse the selection
-        provider, model_name = model_selection.split(":", 1)
+        model_name = selected_item.get("name", "")
+        provider = selected_item.get("provider", "")
         provider = provider.strip()
         model_name = model_name.strip()
 
@@ -835,6 +835,14 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
+            # if provider == "Google Generative AI":
+            #     from langchain_google_genai import ChatGoogleGenerativeAI
+
+            #     return ChatGoogleGenerativeAI(
+            #         google_api_key=api_key,
+            #         model=model_name,
+            #         temperature=temperature,
+            #     )
         except ImportError:
             # If the required package is not installed, return None
             pass
