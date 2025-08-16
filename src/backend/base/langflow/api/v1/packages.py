@@ -619,7 +619,7 @@ async def install_package_background(installation_id: UUID) -> None:
             else:
                 # Use uv add on other platforms for better dependency management
                 command = [str(uv_executable), "add", package_name]
-            
+
             logger.info(f"Executing command: {' '.join(command)} in {project_root}")
 
             process = await asyncio.create_subprocess_exec(
