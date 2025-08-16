@@ -12,12 +12,7 @@ import {
   getStatusColor,
 } from "@/utils/stringManipulation";
 import type { DropDownComponent } from "../../../types/components";
-import {
-  cn,
-  filterNullOptions,
-  formatName,
-  formatPlaceholderName,
-} from "../../../utils/utils";
+import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -88,9 +83,6 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const _placeholderName = name
-    ? formatPlaceholderName(name)
-    : "Choose an option...";
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
