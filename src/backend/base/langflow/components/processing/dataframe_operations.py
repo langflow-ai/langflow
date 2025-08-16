@@ -79,7 +79,7 @@ class DataFrameOperationsComponent(Component):
         DropdownInput(
             name="filter_operator",
             display_name="Filter Operator",
-            options=["equals", "not equals", "contains", "starts with", "ends with", "greater than", "less than"],
+            options=["equals", "not equals", "contains", "not contains", "starts with", "ends with", "greater than", "less than"],
             value="equals",
             info="The operator to apply for filtering rows.",
             advanced=False,
@@ -254,6 +254,8 @@ class DataFrameOperationsComponent(Component):
             mask = column != filter_value
         elif operator == "contains":
             mask = column.astype(str).str.contains(str(filter_value), na=False)
+        elif operator == "not contains":
+            mask = ~column.astype(str).str.contains(str(filter_value), na=False)
         elif operator == "starts with":
             mask = column.astype(str).str.startswith(str(filter_value), na=False)
         elif operator == "ends with":
