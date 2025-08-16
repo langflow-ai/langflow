@@ -1,16 +1,26 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from typing import Annotated
 
-from langflow.base.models.unified_models import get_unified_models_detailed
+from fastapi import APIRouter, Query
+
+from langflow.base.models.unified_models import get_model_providers, get_unified_models_detailed
 
 router = APIRouter(prefix="/models", tags=["Models"])
+
+
+@router.get("/providers", status_code=200)
+async def list_model_providers() -> list[str]:
+    """Return available model providers."""
+    return get_model_providers()
 
 
 @router.get("", status_code=200)
 async def list_models(
     *,
-    provider: str | None = None,
+    providers: Annotated[
+        list[str] | None, Query(description="Repeat to include multiple providers", alias="providers")
+    ] = None,
     model_name: str | None = None,
     model_type: str | None = None,
     include_unsupported: bool = False,
@@ -24,9 +34,10 @@ async def list_models(
 ):
     """Return model catalog filtered by query parameters.
 
-    All query parameters are optional. If *include_unsupported* is *False*,
-    entries with ``not_supported=True`` are hidden by default.
+    Pass providers as repeated query params, e.g. `?providers=OpenAI&providers=Anthropic`.
     """
+    selected_providers: list[str] | None = providers
+
     metadata_filters = {
         "tool_calling": tool_calling,
         "reasoning": reasoning,
@@ -38,7 +49,7 @@ async def list_models(
     metadata_filters = {k: v for k, v in metadata_filters.items() if v is not None}
 
     return get_unified_models_detailed(
-        provider=provider,
+        providers=selected_providers,
         model_name=model_name,
         include_unsupported=include_unsupported,
         model_type=model_type,

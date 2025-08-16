@@ -1,10 +1,17 @@
-from langflow.base.models.unified_models import get_unified_models_detailed
+from langflow.base.models.unified_models import get_model_providers, get_unified_models_detailed
 
 
 def _flatten_models(result):
     """Helper to flatten result to list of model dicts."""
     for provider_dict in result:
         yield from provider_dict["models"]
+
+
+def test_get_model_providers_present():
+    providers = get_model_providers()
+    assert "OpenAI" in providers
+    assert "Anthropic" in providers
+    assert "Google Generative AI" in providers
 
 
 def test_default_providers_present():
@@ -23,13 +30,31 @@ def test_default_excludes_not_supported():
 
 
 def test_filter_by_provider():
-    result = get_unified_models_detailed(provider="Anthropic")
+    result = get_unified_models_detailed(providers=["Anthropic"])
     # Only one provider should be returned
     assert len(result) == 1
     assert result[0]["provider"] == "Anthropic"
     # Ensure all models are from that provider
     for _model in _flatten_models(result):
         assert result[0]["provider"] == "Anthropic"
+
+
+def test_filter_by_multiple_providers():
+    result = get_unified_models_detailed(providers=["OpenAI", "Anthropic"])
+    returned = {entry["provider"] for entry in result}
+    assert "OpenAI" in returned
+    assert "Anthropic" in returned
+    assert "Google Generative AI" not in returned
+
+
+def test_filter_by_multiple_providers_with_type():
+    result = get_unified_models_detailed(providers=["OpenAI", "Anthropic"], model_type="llm")
+
+    returned = {entry["provider"] for entry in result}
+    assert result is not None
+    assert "OpenAI" in returned
+    assert "Anthropic" in returned
+    assert "Google Generative AI" not in returned
 
 
 def test_filter_by_model_name():
