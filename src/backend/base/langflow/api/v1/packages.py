@@ -365,7 +365,11 @@ async def restore_langflow_background(installation_id: UUID) -> None:
                         logger.info(f"Skipping removal of restore marker package: {package}")
                         continue
 
-                    remove_command = [str(uv_executable), "remove", package]
+                    # On Windows, use pip uninstall for packages installed via pip
+                    if platform.system() == "Windows":
+                        remove_command = [str(uv_executable), "pip", "uninstall", package]
+                    else:
+                        remove_command = [str(uv_executable), "remove", package]
                     logger.info(f"Removing package: {package}")
 
                     process = await asyncio.create_subprocess_exec(
@@ -607,8 +611,15 @@ async def install_package_background(installation_id: UUID) -> None:
                 return
 
             # Install the package using UV
-            command = [str(uv_executable), "add", package_name]
-
+            # On Windows, use pip install directly to avoid file locking issues with langflow.exe
+            if platform.system() == "Windows":
+                # Use pip install on Windows to avoid rebuilding the running langflow.exe
+                command = [str(uv_executable), "pip", "install", package_name]
+                logger.info("Using 'uv pip install' on Windows to avoid file locking issues")
+            else:
+                # Use uv add on other platforms for better dependency management
+                command = [str(uv_executable), "add", package_name]
+            
             logger.info(f"Executing command: {' '.join(command)} in {project_root}")
 
             process = await asyncio.create_subprocess_exec(
