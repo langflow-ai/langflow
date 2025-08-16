@@ -28,8 +28,7 @@ class VariableBase(SQLModel):
     @classmethod
     def validate_category(cls, v: str | None):
         if v is not None and v not in VALID_CATEGORIES:
-            msg = f"Category must be one of: {', '.join(VALID_CATEGORIES)}"
-            raise ValueError(msg)
+            raise ValueError(_CATEGORY_ERROR_MSG)
         return v
 
 
@@ -93,3 +92,6 @@ class VariableUpdate(SQLModel):
             msg = f"Category must be one of: {', '.join(VALID_CATEGORIES)}"
             raise ValueError(msg)
         return v
+
+
+_CATEGORY_ERROR_MSG = f"Category must be one of: {', '.join(VALID_CATEGORIES)}"
