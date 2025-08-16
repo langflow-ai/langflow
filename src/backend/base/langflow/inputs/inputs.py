@@ -688,7 +688,7 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
 
         provider_models = get_unified_models_detailed(
             provider=self.providers,
-            model_type="language",
+            model_type="llm",
             include_unsupported=False,
         )
 
@@ -699,11 +699,12 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             options.extend(
                 {
                     "name": f"{model['model_name']}",
-                    "icon": model.get("icon", provider_name),
+                    "icon": model.get("icon", provider_name.replace(" ", "")),
                     "category": provider_name,
                 }
                 for model in entry["models"]
             )
+
         return options
 
     def _get_embedding_model_options(self) -> list[dict[str, str]]:
@@ -716,7 +717,6 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             model_type="embeddings",
             include_unsupported=False,
         )
-
         options: list[dict[str, str]] = []
         for entry in provider_models:
             provider_name = entry["provider"]
