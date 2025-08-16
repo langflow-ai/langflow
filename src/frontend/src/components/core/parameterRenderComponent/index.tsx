@@ -1,5 +1,6 @@
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
@@ -230,6 +231,21 @@ export function ParameterRenderComponent({
           />
         );
       case "sortableList":
+        // Handle ModelInput special case if model_type is present
+        if (templateData?.model_type) {
+          return (
+            <ModelInputComponent
+              {...baseInputProps}
+              model_type={templateData.model_type}
+              options={templateData?.options || []}
+              placeholder={templateData?.placeholder || "Select a Model"}
+              temperature={templateData?.temperature}
+              max_tokens={templateData?.max_tokens}
+              limit={templateData?.limit}
+              search_category={templateData?.search_category}
+            />
+          );
+        }
         return (
           <SortableListComponent
             {...baseInputProps}

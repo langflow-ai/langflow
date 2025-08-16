@@ -86,8 +86,13 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
-  options?: string[];
+  options?: any[];
   active_tab?: number;
+  model_type?: "language" | "embedding"; // Added for ModelInput
+  temperature?: number; // Added for ModelInput
+  max_tokens?: number; // Added for ModelInput
+  limit?: number; // Added for ModelInput
+  search_category?: string[]; // Added for ModelInput
   [key: string]: any;
   icon?: string;
   text?: string;
