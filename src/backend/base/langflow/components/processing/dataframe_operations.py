@@ -79,7 +79,16 @@ class DataFrameOperationsComponent(Component):
         DropdownInput(
             name="filter_operator",
             display_name="Filter Operator",
-            options=["equals", "not equals", "contains", "not contains", "starts with", "ends with", "greater than", "less than"],
+            options=[
+                "equals",
+                "not equals",
+                "contains",
+                "not contains",
+                "starts with",
+                "ends with",
+                "greater than",
+                "less than",
+            ],
             value="equals",
             info="The operator to apply for filtering rows.",
             advanced=False,
