@@ -87,12 +87,25 @@ class DoclingInlineComponent(BaseFileComponent):
         )
 
         proc.start()
-        result = queue.get()
-        proc.join()
+        try:
+            # Prevent indefinite blocking if the worker crashes or deadlocks
+            result = queue.get(timeout=300)
+        finally:
+            # Best-effort cleanup
+            proc.join(timeout=10)
+            if proc.is_alive():
+                proc.terminate()
+                proc.join()
+            # Close the queue to release background feeder threads
+            queue.close()
+            queue.join_thread()
 
         # Check if there was an error in the worker
         if isinstance(result, dict) and "error" in result:
-            raise ImportError(result["error"])
+            msg = result["error"]
+            if msg.startswith("Docling is not installed"):
+                raise ImportError(msg)
+            raise RuntimeError(msg)
 
         processed_data = [Data(data={"doc": r["document"], "file_path": r["file_path"]}) if r else None for r in result]
 
