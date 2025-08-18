@@ -34,6 +34,9 @@ from langflow.services.database.models.folder.model import (
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.utils.version import get_version_info
 
+# Regex pattern for sanitizing filenames - allows only alphanumeric, underscore, and dash
+FILENAME_SANITIZE_PATTERN = r"[^a-zA-Z0-9_-]"
+
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
@@ -297,9 +300,9 @@ async def download_file(
         # Build export structure
         version_info = get_version_info()
         project_data = {
-            "version": "2.0",  # Enhanced export format version
+            "version": "1.0",
             "langflow_version": version_info["version"],
-            "export_type": "project_enhanced",
+            "export_type": "project",
             "exported_at": datetime.now(tz=timezone.utc).isoformat(),
             "project": {
                 "id": str(project.id),
@@ -327,7 +330,7 @@ async def download_file(
 
                     # Sanitize flow name for filename
                     flow_name = flow_data.get("name", f"flow_{flow_data.get('id', 'unknown')}")
-                    safe_flow_name = re.sub(r"[^a-zA-Z0-9_-]", "_", flow_name)
+                    safe_flow_name = re.sub(FILENAME_SANITIZE_PATTERN, "_", flow_name)
                     zip_file.writestr(f"flows/{safe_flow_name}.json", flow_json.encode("utf-8"))
 
                     # Extract component code
@@ -474,7 +477,7 @@ async def export_project(
         project_data = {
             "version": "1.0",  # Enhanced export format version
             "langflow_version": version_info["version"],
-            "export_type": "project_enhanced",
+            "export_type": "project",
             "exported_at": datetime.now(tz=timezone.utc).isoformat(),
             "project": {
                 "id": str(project.id),
@@ -502,7 +505,7 @@ async def export_project(
 
                     # Sanitize flow name for filename
                     flow_name = flow_data.get("name", f"flow_{flow_data.get('id', 'unknown')}")
-                    safe_flow_name = re.sub(r"[^a-zA-Z0-9_-]", "_", flow_name)
+                    safe_flow_name = re.sub(FILENAME_SANITIZE_PATTERN, "_", flow_name)
                     zip_file.writestr(f"flows/{safe_flow_name}.json", flow_json.encode("utf-8"))
 
                     # Extract component code
@@ -603,7 +606,7 @@ def _generate_code_filename(node: dict) -> str:
 
     # Sanitize filename components
     safe_component_type = re.sub(r"\W", "_", component_type)
-    safe_component_id = re.sub(r"[^a-zA-Z0-9_-]", "_", component_id)
+    safe_component_id = re.sub(FILENAME_SANITIZE_PATTERN, "_", component_id)
 
     return f"{safe_component_type}_{safe_component_id}.py"
 
