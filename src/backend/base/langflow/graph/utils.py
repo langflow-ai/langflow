@@ -168,7 +168,7 @@ def prepare_transaction(
         outputs=serialize(outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
         status=status,
         error=error,
-        flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
+        flow_id=flow_id,
     )
 
 
@@ -214,7 +214,11 @@ async def flush_transaction_queue(transaction_queue: list[tuple[str | UUID, Any,
     transactions_to_log = []
 
     for flow_id, source, status, target, error in transaction_queue:
-        transaction = prepare_transaction(flow_id, source, status, target, error)
+        try:
+            transaction = prepare_transaction(flow_id, source, status, target, error)
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Skipping invalid transaction during prepare: {e!s}")
+            continue
         if transaction:
             transactions_to_log.append(transaction)
 
