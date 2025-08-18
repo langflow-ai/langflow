@@ -1090,5 +1090,6 @@ export const DOCS_URL = "https://docs.langflow.org";
 export const DATASTAX_DOCS_URL =
   "https://docs.datastax.com/en/langflow/index.html";
 export const DESKTOP_URL = "https://www.langflow.org/desktop";
+export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";

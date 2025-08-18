@@ -1,5 +1,3 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
@@ -11,12 +9,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
+  BUG_REPORT_URL,
   DATASTAX_DOCS_URL,
   DESKTOP_URL,
   DOCS_URL,
 } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { cn, getOS } from "@/utils/utils";
+import React, { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import ToggleShadComponent from "../parameterRenderComponent/components/toggleShadComponent";
 
 type DropdownControlButtonProps = {
   tooltipText?: string;
@@ -26,6 +28,8 @@ type DropdownControlButtonProps = {
   label?: string;
   shortcut?: string;
   iconName?: string;
+  hasToogle?: boolean;
+  toggleValue?: boolean;
 };
 
 const getModifierKey = (): string => {
@@ -41,6 +45,8 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
   label = "",
   shortcut = "",
   iconName,
+  hasToogle=false,
+  toggleValue = false,
 }) => (
   <Button
     data-testid={testId}
@@ -48,7 +54,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
       "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none",
       disabled && "cursor-not-allowed opacity-50",
     )}
-    onClick={onClick}
+    onClick={hasToogle ? () => {} : onClick}
     variant="ghost"
     disabled={disabled}
     title={tooltipText || ""}
@@ -72,6 +78,15 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
         )}
       </div>
     </div>
+    {hasToogle && (
+      <ToggleShadComponent
+        value={toggleValue}
+        handleOnNewValue={hasToogle ? onClick : () => {} }
+        editNode={true}
+        id="enable_smart_guides"
+        disabled={false}
+      />
+    )}
   </Button>
 );
 
@@ -181,6 +196,10 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
   onSelectAction,
 }) => {
   const navigate = useNavigate();
+  const [helperLineEnabled, setHelperLineEnabled] = useState(false);
+  const onToggleHelperLines = useCallback(() => {
+    setHelperLineEnabled(!helperLineEnabled);
+  }, [helperLineEnabled]);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
@@ -222,11 +241,14 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
             navigate("/settings/shortcuts");
           }}
         />
-        {/* <DropdownControlButton
+        <DropdownControlButton
         iconName="bug"
         testId="canvas_controls_dropdown_report_a_bug"
         label="Report a bug"
-      /> */}
+        onClick={() => {
+          window.open(BUG_REPORT_URL, "_blank");
+        }}
+      />
         <Separator />
         <DropdownControlButton
           iconName="download"
@@ -236,12 +258,14 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
             window.open(DESKTOP_URL, "_blank");
           }}
         />
-        {/* <DropdownControlButton
-        iconName="cog"
+        <DropdownControlButton
+        iconName={!helperLineEnabled ? "UnfoldHorizontal" : "FoldHorizontal"}
         testId="canvas_controls_dropdown_enable_smart_guides"
+        onClick={onToggleHelperLines}
+        toggleValue={helperLineEnabled}
         label="Enable smart guides"
-        
-      /> */}
+        hasToogle={true}
+      />
       </DropdownMenuContent>
     </DropdownMenu>
   );
