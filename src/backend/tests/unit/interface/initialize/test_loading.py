@@ -7,8 +7,9 @@ from langflow.interface.initialize.loading import update_params_with_load_from_d
 
 @pytest.mark.asyncio
 async def test_update_params_fallback_to_env_when_variable_not_found():
-    """Test that when a variable is not found in database and fallback_to_env_vars is True,
-    it falls back to environment variables.
+    """Test that when a variable is not found in database and fallback_to_env_vars is True.
+
+    It falls back to environment variables.
     """
     # Set up environment variable
     os.environ["TEST_API_KEY"] = "test-secret-key-123"
@@ -38,8 +39,9 @@ async def test_update_params_fallback_to_env_when_variable_not_found():
 
 @pytest.mark.asyncio
 async def test_update_params_raises_when_variable_not_found_and_no_fallback():
-    """Test that when a variable is not found and fallback_to_env_vars is False,
-    it raises the error.
+    """Test that when a variable is not found and fallback_to_env_vars is False.
+
+    It raises the error.
     """
     # Create mock custom component
     custom_component = MagicMock()
@@ -61,8 +63,9 @@ async def test_update_params_raises_when_variable_not_found_and_no_fallback():
 
 @pytest.mark.asyncio
 async def test_update_params_uses_database_variable_when_found():
-    """Test that when a variable is found in database, it uses that value
-    and doesn't check environment variables.
+    """Test that when a variable is found in database, it uses that value.
+
+    It doesn't check environment variables.
     """
     # Set up environment variable (should not be used)
     os.environ["TEST_API_KEY"] = "env-value"
@@ -92,8 +95,9 @@ async def test_update_params_uses_database_variable_when_found():
 
 @pytest.mark.asyncio
 async def test_update_params_sets_none_when_no_env_var_and_fallback_enabled():
-    """Test that when variable not found in db and env var doesn't exist,
-    the field is set to None.
+    """Test that when variable not found in db and env var doesn't exist.
+
+    The field is set to None.
     """
     # Make sure env var doesn't exist
     if "NONEXISTENT_KEY" in os.environ:
@@ -189,12 +193,14 @@ async def test_update_params_handles_multiple_fields():
     custom_component = MagicMock()
 
     # Set up different responses for different fields
-    async def mock_get_variable(name, field, session):
+    async def mock_get_variable(name, **_kwargs):
         if name == "DB_KEY":
             return "db-value"
         if name == "ENV_KEY":
-            raise ValueError("ENV_KEY variable not found.")
-        raise ValueError(f"{name} variable not found.")
+            error_msg = "ENV_KEY variable not found."
+            raise ValueError(error_msg)
+        error_msg = f"{name} variable not found."
+        raise ValueError(error_msg)
 
     custom_component.get_variable = AsyncMock(side_effect=mock_get_variable)
 
