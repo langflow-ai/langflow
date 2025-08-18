@@ -1,4 +1,5 @@
 import type React from "react";
+import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,8 +29,12 @@ export const SessionManagerPopover = ({
   const { isPlayground } = usePlaygroundStore();
 
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
+  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
+  const setSelectedSession = usePlaygroundStore(
+    (state) => state.setSelectedSession
+  );
 
-  const { data: sessions } = useGetSessionsFromFlowQuery({
+  const { data: dbSessions } = useGetSessionsFromFlowQuery({
     flowId,
     useLocalStorage: isPlayground,
   });
@@ -44,6 +49,13 @@ export const SessionManagerPopover = ({
     useLocalStorage: isPlayground,
   });
 
+  const sessions = useMemo(() => {
+    if (!selectedSession || dbSessions?.includes(selectedSession)) {
+      return dbSessions;
+    }
+    return [...(dbSessions || []), selectedSession];
+  }, [dbSessions, selectedSession]);
+
   const {
     query,
     setQuery,
@@ -51,14 +63,26 @@ export const SessionManagerPopover = ({
   } = useSearch(sessions || []);
 
   const handleRename = (oldSessionId: string, newSessionId: string) => {
-    updateSessionName({
-      oldSessionId,
-      newSessionId,
-    });
+    if (!selectedSession) {
+      return;
+    }
+    if (dbSessions?.includes(selectedSession)) {
+      updateSessionName({
+        oldSessionId,
+        newSessionId,
+      });
+    } else {
+      setSelectedSession(newSessionId);
+    }
   };
 
   const handleDelete = (sessionId: string) => {
-    deleteSession({ sessionId });
+    if (selectedSession === sessionId) {
+      setSelectedSession(flowId);
+    }
+    if (dbSessions?.includes(sessionId)) {
+      deleteSession({ sessionId });
+    }
   };
 
   return (
