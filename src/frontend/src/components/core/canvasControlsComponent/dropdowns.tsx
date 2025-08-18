@@ -1,3 +1,5 @@
+import React, { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
@@ -16,8 +18,6 @@ import {
 } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { cn, getOS } from "@/utils/utils";
-import React, { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import ToggleShadComponent from "../parameterRenderComponent/components/toggleShadComponent";
 
 type DropdownControlButtonProps = {
@@ -45,7 +45,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
   label = "",
   shortcut = "",
   iconName,
-  hasToogle=false,
+  hasToogle = false,
   toggleValue = false,
 }) => (
   <Button
@@ -242,13 +242,13 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
           }}
         />
         <DropdownControlButton
-        iconName="bug"
-        testId="canvas_controls_dropdown_report_a_bug"
-        label="Report a bug"
-        onClick={() => {
-          window.open(BUG_REPORT_URL, "_blank");
-        }}
-      />
+          iconName="bug"
+          testId="canvas_controls_dropdown_report_a_bug"
+          label="Report a bug"
+          onClick={() => {
+            window.open(BUG_REPORT_URL, "_blank");
+          }}
+        />
         <Separator />
         <DropdownControlButton
           iconName="download"
@@ -259,13 +259,13 @@ export const HelpDropdown: React.FC<HelpDropdownProps> = ({
           }}
         />
         <DropdownControlButton
-        iconName={!helperLineEnabled ? "UnfoldHorizontal" : "FoldHorizontal"}
-        testId="canvas_controls_dropdown_enable_smart_guides"
-        onClick={onToggleHelperLines}
-        toggleValue={helperLineEnabled}
-        label="Enable smart guides"
-        hasToogle={true}
-      />
+          iconName={!helperLineEnabled ? "UnfoldHorizontal" : "FoldHorizontal"}
+          testId="canvas_controls_dropdown_enable_smart_guides"
+          onClick={onToggleHelperLines}
+          toggleValue={helperLineEnabled}
+          label="Enable smart guides"
+          hasToogle={true}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );
