@@ -167,19 +167,19 @@ To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-
 
 ## Agent component output
 
-The **Agent** component has two outputs.
+The **Agent** component has two outputs: **Response** and **Structured Output**.
+You can set the output type near the component's output port.
 
-The **Response** (`response`) output is [`Message` data](/data-types#message) containing the agent's raw response to the query.
+The **Response** (`response`) output is a [`Message`](/data-types#message) containing the agent's raw response to the query.
 
 Typically, this is passed to a **Chat Output** component to return the response in a human-readable format.
 It can also be passed to other components if you need to process the response further before, or in addition to, returning it to the user.
 
 The **Structured Response** (`structured_response`) output is [`Data`](/data-types#data) containing a validated JSON representation of the agent's response.
-
-This output attempts to parse the agent's response as JSON and returns it as structured data.
-If the response contains valid JSON, it is returned as-is.
-If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
-If no valid JSON is found, the output returns the raw content with an error indicator.
+This output attempts to parse the agent's response as JSON and returns it as structured data:
+* If the response contains valid JSON, it is returned as-is.
+* If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
+* If no valid JSON is found, the output returns the raw content with an error indicator.
 
 ## See also
 
