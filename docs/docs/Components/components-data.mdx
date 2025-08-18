@@ -396,7 +396,7 @@ There are two settings that control the output of the **URL** component at diffe
 When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
 You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/components-processing#type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
 
-Processing components, like the **Type Convert** component, are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
+**Processing** components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
 For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/components-processing#parser) to extract only that data from the crawled pages before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
