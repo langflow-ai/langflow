@@ -64,7 +64,7 @@ describe("CanvasControls", () => {
 
   it("updates reactFlow state based on flow lock status", () => {
     render(<CanvasControls />);
-    
+
     // The component should set up state through useStoreApi
     // This test verifies the component renders and doesn't throw
     expect(screen.getByTestId("main_canvas_controls")).toBeInTheDocument();

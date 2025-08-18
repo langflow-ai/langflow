@@ -11,6 +11,7 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 import { getOS } from "@/utils/utils";
+
 const mockGetOS = getOS as jest.MockedFunction<typeof getOS>;
 
 describe("canvasUtils", () => {
@@ -83,15 +84,18 @@ describe("canvasUtils", () => {
   });
 
   describe("reactFlowSelector", () => {
-    const createMockReactFlowState = (overrides: Partial<ReactFlowState> = {}): ReactFlowState => ({
-      nodesDraggable: true,
-      nodesConnectable: true,
-      elementsSelectable: true,
-      transform: [0, 0, 1], // x, y, zoom
-      minZoom: 0.1,
-      maxZoom: 5,
-      ...overrides,
-    } as ReactFlowState);
+    const createMockReactFlowState = (
+      overrides: Partial<ReactFlowState> = {},
+    ): ReactFlowState =>
+      ({
+        nodesDraggable: true,
+        nodesConnectable: true,
+        elementsSelectable: true,
+        transform: [0, 0, 1], // x, y, zoom
+        minZoom: 0.1,
+        maxZoom: 5,
+        ...overrides,
+      }) as ReactFlowState;
 
     it("returns correct isInteractive when all interaction modes are enabled", () => {
       const state = createMockReactFlowState({
@@ -241,7 +245,7 @@ describe("canvasUtils", () => {
       });
 
       const result = reactFlowSelector(state);
-      
+
       expect(result).toEqual({
         isInteractive: true,
         minZoomReached: false,

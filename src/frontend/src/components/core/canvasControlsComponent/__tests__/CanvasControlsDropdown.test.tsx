@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import CanvasControlsDropdown, { KEYBOARD_SHORTCUTS } from "../CanvasControlsDropdown";
+import CanvasControlsDropdown, {
+  KEYBOARD_SHORTCUTS,
+} from "../CanvasControlsDropdown";
 
 // Mock React Flow hooks
 const mockReactFlowFns = {
@@ -84,7 +86,7 @@ jest.mock("../utils/canvasUtils", () => ({
 describe("CanvasControlsDropdown", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Reset mock store values
     mockStoreValues = {
       isInteractive: true,
@@ -92,10 +94,10 @@ describe("CanvasControlsDropdown", () => {
       maxZoomReached: false,
       zoom: 1,
     };
-    
+
     // Mock addEventListener and removeEventListener
-    jest.spyOn(document, 'addEventListener');
-    jest.spyOn(document, 'removeEventListener');
+    jest.spyOn(document, "addEventListener");
+    jest.spyOn(document, "removeEventListener");
   });
 
   afterEach(() => {
@@ -104,58 +106,64 @@ describe("CanvasControlsDropdown", () => {
 
   it("renders dropdown trigger with zoom percentage", () => {
     render(<CanvasControlsDropdown />);
-    
+
     expect(screen.getByTestId("canvas_controls_dropdown")).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
   });
 
   it("renders chevron icon", () => {
     render(<CanvasControlsDropdown />);
-    
+
     // Should have one of the chevron icons (the actual logic depends on internal state)
     const chevronUp = screen.queryByTestId("icon-ChevronUp");
     const chevronDown = screen.queryByTestId("icon-ChevronDown");
-    
+
     expect(chevronUp || chevronDown).toBeInTheDocument();
   });
 
   it("renders all control buttons with correct props", () => {
     render(<CanvasControlsDropdown />);
-    
+
     expect(screen.getByTestId("zoom_in_dropdown")).toBeInTheDocument();
     expect(screen.getByTestId("zoom_out_dropdown")).toBeInTheDocument();
     expect(screen.getByTestId("reset_zoom_dropdown")).toBeInTheDocument();
     expect(screen.getByTestId("fit_view_dropdown")).toBeInTheDocument();
-    
+
     // Check shortcuts are passed correctly
-    expect(screen.getByTestId("zoom_in_dropdown")).toHaveAttribute("data-shortcut", KEYBOARD_SHORTCUTS.ZOOM_IN.key);
-    expect(screen.getByTestId("zoom_out_dropdown")).toHaveAttribute("data-shortcut", KEYBOARD_SHORTCUTS.ZOOM_OUT.key);
+    expect(screen.getByTestId("zoom_in_dropdown")).toHaveAttribute(
+      "data-shortcut",
+      KEYBOARD_SHORTCUTS.ZOOM_IN.key,
+    );
+    expect(screen.getByTestId("zoom_out_dropdown")).toHaveAttribute(
+      "data-shortcut",
+      KEYBOARD_SHORTCUTS.ZOOM_OUT.key,
+    );
   });
 
   it("handles zoom in button click", () => {
     render(<CanvasControlsDropdown />);
-    
+
     fireEvent.click(screen.getByTestId("zoom_in_dropdown"));
     expect(mockReactFlowFns.zoomIn).toHaveBeenCalledTimes(1);
   });
 
   it("handles zoom out button click", () => {
     render(<CanvasControlsDropdown />);
-    
+
     fireEvent.click(screen.getByTestId("zoom_out_dropdown"));
     expect(mockReactFlowFns.zoomOut).toHaveBeenCalledTimes(1);
   });
 
   it("handles fit view button click", () => {
     render(<CanvasControlsDropdown />);
-    
+
     fireEvent.click(screen.getByTestId("fit_view_dropdown"));
     expect(mockReactFlowFns.fitView).toHaveBeenCalledTimes(1);
   });
 
   it("handles reset zoom button click", () => {
     render(<CanvasControlsDropdown />);
-    
+
     fireEvent.click(screen.getByTestId("reset_zoom_dropdown"));
     expect(mockReactFlowFns.zoomTo).toHaveBeenCalledWith(1);
   });
@@ -164,7 +172,7 @@ describe("CanvasControlsDropdown", () => {
     mockStoreValues.maxZoomReached = true;
 
     render(<CanvasControlsDropdown />);
-    
+
     expect(screen.getByTestId("zoom_in_dropdown")).toBeDisabled();
   });
 
@@ -172,17 +180,17 @@ describe("CanvasControlsDropdown", () => {
     mockStoreValues.minZoomReached = true;
 
     render(<CanvasControlsDropdown />);
-    
+
     expect(screen.getByTestId("zoom_out_dropdown")).toBeDisabled();
   });
 
   describe("Keyboard shortcuts", () => {
     it("sets up keyboard event listeners on mount", () => {
       render(<CanvasControlsDropdown />);
-      
+
       expect(document.addEventListener).toHaveBeenCalledWith(
         "keydown",
-        expect.any(Function)
+        expect.any(Function),
       );
     });
   });
@@ -190,12 +198,12 @@ describe("CanvasControlsDropdown", () => {
   describe("Event listener management", () => {
     it("removes keydown event listener on unmount", () => {
       const { unmount } = render(<CanvasControlsDropdown />);
-      
+
       unmount();
-      
+
       expect(document.removeEventListener).toHaveBeenCalledWith(
         "keydown",
-        expect.any(Function)
+        expect.any(Function),
       );
     });
   });
@@ -203,7 +211,7 @@ describe("CanvasControlsDropdown", () => {
   describe("Dynamic zoom display", () => {
     it("displays zoom percentage correctly", () => {
       render(<CanvasControlsDropdown />);
-      
+
       expect(screen.getByText("100%")).toBeInTheDocument();
     });
 
@@ -211,7 +219,7 @@ describe("CanvasControlsDropdown", () => {
       mockStoreValues.zoom = 0.75;
 
       render(<CanvasControlsDropdown />);
-      
+
       expect(screen.getByText("75%")).toBeInTheDocument();
     });
   });
