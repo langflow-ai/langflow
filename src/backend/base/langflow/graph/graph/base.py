@@ -443,6 +443,11 @@ class Graph:
                     # Create a future to gather all pending tasks
                     cleanup_future = asyncio.gather(*pending, return_exceptions=True)
                     loop.run_until_complete(cleanup_future)
+                # Best-effort flush of any remaining queued transactions
+                try:
+                    loop.run_until_complete(self.flush_transaction_logs())
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(f"flush_transaction_logs failed during start() shutdown: {e!s}")
 
                 # Close the loop
                 loop.close()
@@ -1375,6 +1380,8 @@ class Graph:
             raise ValueError(msg)
         if not self._run_queue:
             self._end_all_traces_async()
+            # Ensure queued transactions are persisted for generator/step flows
+            await self.flush_transaction_logs()
             return Finish()
         vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()
