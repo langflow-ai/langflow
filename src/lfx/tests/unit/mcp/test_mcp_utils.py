@@ -196,9 +196,9 @@ class TestGetUniqueName:
         """Test truncation when adding suffix."""
         existing = {"toolname"}
         # With max_length=8, "toolname_1" would be too long
-        # So it should truncate to "tooln_1"
+        # So it should truncate to "toolna_1" (using available space efficiently)
         result = get_unique_name("toolname", 8, existing)
-        assert result == "tooln_1"
+        assert result == "toolna_1"
         assert len(result) <= 8
 
     def test_many_conflicts(self):

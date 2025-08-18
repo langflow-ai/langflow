@@ -163,6 +163,10 @@ def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
     name = unicodedata.normalize("NFD", name)
     name = "".join(char for char in name if unicodedata.category(char) != "Mn")
 
+    # Special handling for version numbers (v followed by digits and dots) - BEFORE removing dots
+    name = re.sub(r"v(\d+)\.(\d+)", r"v\1_\2", name)  # v2.0 -> v2_0
+    name = re.sub(r"v(\d+)\.(\d+)\.(\d+)", r"v\1_\2_\3", name)  # v1.2.3 -> v1_2_3
+
     # Replace spaces and special characters with underscores
     name = re.sub(r"[^\w\s-]", "", name)  # Keep only word chars, spaces, and hyphens
     name = re.sub(r"[-\s]+", "_", name)  # Replace spaces and hyphens with underscores
@@ -255,6 +259,7 @@ def get_unique_name(base_name, max_length, existing_names):
     i = 1
     while True:
         suffix = f"_{i}"
+        # Truncate base name to make room for suffix
         truncated_base = base_name[: max_length - len(suffix)]
         candidate = f"{truncated_base}{suffix}"
         if candidate not in existing_names:
@@ -349,8 +354,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return list[schema_type]
 
         if t == "object":
-            # inline object not in $defs ⇒ anonymous nested model
-            return _build_model(f"AnonModel{len(model_cache)}", s)
+            # If object has properties, create a nested model; otherwise use dict
+            if s.get("properties"):
+                return _build_model(f"AnonModel{len(model_cache)}", s)
+            return dict
 
         # primitive fallback
         return {
