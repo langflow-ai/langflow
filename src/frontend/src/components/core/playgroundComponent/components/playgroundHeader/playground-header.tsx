@@ -3,7 +3,7 @@ import { DEFAULT_SESSION_NAME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { HeaderButton } from "./components/header-button";
-import { SessionManagerPopover } from "./components/session-manager-popover";
+import { SessionManagerDropdown } from "./components/session-manager-dropdown";
 import { useAddNewSession } from "./hooks/useAddNewSession";
 
 export function PlaygroundHeader({ onClose }: { onClose?: () => void }) {
@@ -24,9 +24,9 @@ export function PlaygroundHeader({ onClose }: { onClose?: () => void }) {
       </div>
       <div className="flex items-center gap-1">
         <HeaderButton icon="Plus" onClick={addSession} />
-        <SessionManagerPopover>
+        <SessionManagerDropdown>
           <HeaderButton icon="History" />
-        </SessionManagerPopover>
+        </SessionManagerDropdown>
         <HeaderButton icon="ExternalLink" onClick={() => {}} />
         <HeaderButton icon="MoreHorizontal" onClick={() => {}} />
         {onClose && <HeaderButton icon="X" onClick={onClose} />}

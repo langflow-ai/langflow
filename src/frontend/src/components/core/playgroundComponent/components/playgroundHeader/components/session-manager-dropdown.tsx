@@ -1,12 +1,12 @@
 import type React from "react";
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   NO_SESSIONS_MATCH_SEARCH,
   SEARCH_SESSIONS,
@@ -19,13 +19,13 @@ import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { SessionItem } from "./session-item";
 
-interface SessionManagerPopoverProps {
+interface SessionManagerDropdownProps {
   children: React.ReactNode;
 }
 
-export const SessionManagerPopover = ({
+export const SessionManagerDropdown = ({
   children,
-}: SessionManagerPopoverProps) => {
+}: SessionManagerDropdownProps) => {
   const { isPlayground } = usePlaygroundStore();
 
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
@@ -71,7 +71,8 @@ export const SessionManagerPopover = ({
         oldSessionId,
         newSessionId,
       });
-    } else {
+    }
+    if (oldSessionId === selectedSession) {
       setSelectedSession(newSessionId);
     }
   };
@@ -85,10 +86,16 @@ export const SessionManagerPopover = ({
     }
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setQuery("");
+    }
+  };
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
+    <DropdownMenu onOpenChange={handleOpenChange}>
+      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
+      <DropdownMenuContent className="w-80 p-0" align="start">
         {sessions && (
           <>
             <div className="p-1 border-b">
@@ -98,6 +105,7 @@ export const SessionManagerPopover = ({
                 onChange={(e) => setQuery(e.target.value)}
                 className="h-8 text-sm"
                 icon="Search"
+                autoFocus
                 inputClassName="h-8 text-sm border-none"
               />
             </div>
@@ -120,7 +128,7 @@ export const SessionManagerPopover = ({
             </div>
           </>
         )}
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
