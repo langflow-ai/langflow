@@ -1,7 +1,7 @@
 // src/constants/constants.ts
 
 import custom from "../customization/config-constants";
-import { languageMap } from "../types/components";
+import type { languageMap } from "../types/components";
 
 /**
  * invalid characters for flow name
@@ -558,7 +558,6 @@ export const NOUNS: string[] = [
 export const USER_PROJECTS_HEADER = "My Collection";
 
 export const DEFAULT_FOLDER = "Starter Project";
-export const DEFAULT_FOLDER_DEPRECATED = "My Projects";
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
@@ -762,7 +761,7 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "assemblyai",
   "LangWatch",
   "langwatch",
-  "Youtube",
+  "YouTube",
   "youtube",
 ];
 

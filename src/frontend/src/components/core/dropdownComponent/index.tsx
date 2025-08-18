@@ -1,18 +1,17 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { DropDownComponent } from "../../../types/components";
+import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
   filterNullOptions,
@@ -35,7 +34,7 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../ui/popover";
-import { BaseInputProps } from "../parameterRenderComponent/types";
+import type { BaseInputProps } from "../parameterRenderComponent/types";
 
 export default function Dropdown({
   disabled,
@@ -89,7 +88,7 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const placeholderName = name
+  const _placeholderName = name
     ? formatPlaceholderName(name)
     : "Choose an option...";
   const { firstWord } = formatName(name);
@@ -305,7 +304,9 @@ export default function Dropdown({
             disabled ||
             (Object.keys(validOptions).length === 0 &&
               !combobox &&
-              !dialogInputs?.fields?.data?.node?.template)
+              !dialogInputs?.fields?.data?.node?.template &&
+              !hasRefreshButton &&
+              !dialogInputs?.fields)
           }
           variant="primary"
           size="xs"
@@ -394,7 +395,10 @@ export default function Dropdown({
                   className="w-full items-center rounded-none"
                   data-testid={`${option}-${index}-option`}
                 >
-                  <div className="flex w-full items-center gap-2">
+                  <div
+                    className="flex w-full items-center gap-2"
+                    data-testid={`dropdown-option-${index}-container`}
+                  >
                     {filteredMetadata?.[index]?.icon && (
                       <ForwardedIconComponent
                         name={filteredMetadata?.[index]?.icon || "Unknown"}
@@ -486,41 +490,38 @@ export default function Dropdown({
       <CommandSeparator />
       {dialogInputs && dialogInputs?.fields && (
         <CommandGroup className="p-0">
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
-            <Button
-              className="w-full"
-              unstyled
-              onClick={() => {
-                setOpenDialog(true);
-              }}
-            >
-              <div className="flex items-center gap-2 pl-1">
-                <ForwardedIconComponent
-                  name="Plus"
-                  className="h-3 w-3 text-primary"
-                />
-                {`New ${firstWord}`}
-              </div>
-            </Button>
-          </CommandItem>
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
-            <Button
-              className="w-full"
-              unstyled
-              data-testid={`refresh-dropdown-list-${name}`}
-              onClick={() => {
-                handleRefreshButtonPress();
-              }}
-            >
-              <div className="flex items-center gap-2 pl-1">
-                <ForwardedIconComponent
-                  name="RefreshCcw"
-                  className={cn("refresh-icon h-3 w-3 text-primary")}
-                />
-                Refresh list
-              </div>
-            </Button>
-          </CommandItem>
+          <Button
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            unstyled
+            onClick={() => {
+              setOpenDialog(true);
+            }}
+          >
+            <div className="flex items-center gap-2 pl-1">
+              <ForwardedIconComponent
+                name="Plus"
+                className="h-3 w-3 text-primary"
+              />
+              {`New ${firstWord}`}
+            </div>
+          </Button>
+
+          <Button
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            unstyled
+            data-testid={`refresh-dropdown-list-${name}`}
+            onClick={() => {
+              handleRefreshButtonPress();
+            }}
+          >
+            <div className="flex items-center gap-2 pl-1">
+              <ForwardedIconComponent
+                name="RefreshCcw"
+                className={cn("refresh-icon h-3 w-3 text-primary")}
+              />
+              Refresh list
+            </div>
+          </Button>
           <NodeDialog
             open={openDialog}
             dialogInputs={dialogInputs}

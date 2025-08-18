@@ -2,6 +2,13 @@ name: Python tests
 
 on:
   workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      ANTHROPIC_API_KEY:
+        required: true
+      CODECOV_TOKEN:
+        required: false
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
@@ -28,9 +35,12 @@ env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
   PYTEST_RUN_PATH: "src/backend/tests"
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
 jobs:
   build:
+
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
@@ -42,11 +52,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
+
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -54,14 +66,45 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+
       - name: Install the project
         run: uv sync
+
+      - name: Generate dynamic coverage configuration
+        run: |
+          echo "Generating dynamic coverage configuration..."
+          python3 scripts/generate_coverage_config.py
+          echo "Generated .coveragerc with the following exclusions:"
+          echo "Bundled components and legacy files excluded from coverage"
+
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: matrix.python-version == '3.10'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: backend
+          name: backend-coverage-group-${{ matrix.group }}
+          fail_ci_if_error: false
+          directory: ./
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.10'
+        with:
+          name: backend-coverage-report-group-${{ matrix.group }}
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 30
+
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}

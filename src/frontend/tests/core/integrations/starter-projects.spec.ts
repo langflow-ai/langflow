@@ -21,7 +21,7 @@ async function getAuthToken(request: any) {
 
 test(
   "vector store from starter projects should have its connections and nodes on the flow",
-  { tag: ["@release", "@starter-projects"] },
+  { tag: ["@release", "@starter-projects", "@mainpage"] },
   async ({ page, request }) => {
     // Get authentication token
     const authToken = await getAuthToken(request);
@@ -126,6 +126,8 @@ test(
 
       await page.getByTestId("text_card_container").nth(i).click();
 
+      await page.waitForTimeout(500);
+
       await page.waitForSelector('[data-testid="fit_view"]', {
         timeout: 5000,
       });
@@ -139,9 +141,13 @@ test(
         numberOfOutdatedComponents++;
       }
 
-      await page.getByTestId("icon-ChevronLeft").click();
-      await page.waitForSelector('[data-testid="mainpage_title"]', {
-        timeout: 5000,
+      await Promise.all([
+        page.waitForURL((url) => url.pathname === "/", { timeout: 30000 }),
+        page.getByTestId("icon-ChevronLeft").click(),
+      ]);
+
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 30000,
       });
 
       await page.waitForTimeout(500);

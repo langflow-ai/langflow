@@ -22,7 +22,7 @@ test("user must be able to move flow from folder", async ({ page }) => {
   //wait for the project to be created and changed to the new project
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("sidebar-nav-My Projects").click();
+  await page.getByTestId("sidebar-nav-Starter Project").click();
 
   await page.getByText(randomName).hover();
 

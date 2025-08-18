@@ -1,3 +1,4 @@
+import contextlib
 import json
 from io import BytesIO
 
@@ -43,8 +44,22 @@ async def get_server_list(
     # Read the server configuration from a file using the files api
     server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
 
-    # If the file does not exist, create a new one with an empty configuration
-    if not server_config_file:
+    # Attempt to download the configuration file content
+    try:
+        server_config_bytes = await download_file(
+            server_config_file.id if server_config_file else None,
+            current_user,
+            session,
+            storage_service=storage_service,
+            return_content=True,
+        )
+    except (FileNotFoundError, HTTPException):
+        # Storage file missing - DB entry may be stale. Remove it and recreate.
+        if server_config_file:
+            with contextlib.suppress(Exception):
+                await delete_file(server_config_file.id, current_user, session, storage_service)
+
+        # Create a fresh empty config
         await upload_server_config(
             {"mcpServers": {}},
             current_user,
@@ -52,24 +67,23 @@ async def get_server_list(
             storage_service=storage_service,
             settings_service=settings_service,
         )
+
+        # Fetch and download again
         server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+        if not server_config_file:
+            raise HTTPException(status_code=500, detail="Failed to create _mcp_servers.json") from None
 
-    # Make sure we have it now
-    if not server_config_file:
-        raise HTTPException(status_code=500, detail="Server configuration file not found.")
+        server_config_bytes = await download_file(
+            server_config_file.id,
+            current_user,
+            session,
+            storage_service=storage_service,
+            return_content=True,
+        )
 
-    # Download the server configuration file content
-    server_config = await download_file(
-        server_config_file.id,
-        current_user,
-        session,
-        storage_service=storage_service,
-        return_content=True,
-    )
-
-    # Parse the JSON content
+    # Parse JSON content
     try:
-        servers = json.loads(server_config)
+        servers = json.loads(server_config_bytes)
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Invalid server configuration file format.") from None
 
@@ -128,10 +142,14 @@ async def get_servers(
             # Configuration validation errors, invalid URLs, etc.
             logger.error(f"Configuration error for server {server_name}: {e}")
             server_info["error"] = f"Configuration error: {e}"
-        except (ConnectionError, TimeoutError) as e:
+        except ConnectionError as e:
             # Network connection and timeout issues
             logger.error(f"Connection error for server {server_name}: {e}")
             server_info["error"] = f"Connection failed: {e}"
+        except (TimeoutError, asyncio.TimeoutError) as e:
+            # Timeout errors
+            logger.error(f"Timeout error for server {server_name}: {e}")
+            server_info["error"] = "Timeout when checking server tools"
         except OSError as e:
             # System-level errors (process execution, file access)
             logger.error(f"System error for server {server_name}: {e}")
@@ -149,24 +167,21 @@ async def get_servers(
             if hasattr(e, "exceptions") and e.exceptions:
                 # Extract the first underlying exception for a more meaningful error message
                 underlying_error = e.exceptions[0]
-                logger.exception(f"Error checking server {server_name}: {underlying_error}")
+                if hasattr(underlying_error, "exceptions"):
+                    logger.error(
+                        f"Error checking server {server_name}: {underlying_error}, {underlying_error.exceptions}"
+                    )
+                    underlying_error = underlying_error.exceptions[0]
+                else:
+                    logger.exception(f"Error checking server {server_name}: {underlying_error}")
                 server_info["error"] = f"Error loading server: {underlying_error}"
             else:
                 logger.exception(f"Error checking server {server_name}: {e}")
                 server_info["error"] = f"Error loading server: {e}"
         return server_info
 
-    async def check_server_with_timeout(server_name: str) -> dict:
-        try:
-            return await asyncio.wait_for(
-                check_server(server_name), timeout=get_settings_service().settings.mcp_server_timeout
-            )
-        except asyncio.TimeoutError:
-            logger.error(f"Timeout checking server {server_name}")
-            return {"name": server_name, "mode": None, "toolsCount": None, "error": "Server check timed out."}
-
     # Run all server checks concurrently
-    tasks = [check_server_with_timeout(server) for server in server_list["mcpServers"]]
+    tasks = [check_server(server) for server in server_list["mcpServers"]]
     return await asyncio.gather(*tasks, return_exceptions=True)
 
 

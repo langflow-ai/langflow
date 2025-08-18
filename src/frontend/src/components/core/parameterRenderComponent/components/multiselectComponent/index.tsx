@@ -17,7 +17,7 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../../../ui/popover";
-import { InputProps, MultiselectComponentType } from "../../types";
+import type { InputProps, MultiselectComponentType } from "../../types";
 
 export default function MultiselectComponent({
   disabled,

@@ -1,5 +1,3 @@
-from crewai import Agent, Task
-
 from langflow.base.agents.crewai.tasks import SequentialTask
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
@@ -10,6 +8,7 @@ class SequentialTaskAgentComponent(Component):
     description = "Creates a CrewAI Task and its associated Agent."
     documentation = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
+    legacy = True
 
     inputs = [
         # Agent inputs
@@ -105,6 +104,12 @@ class SequentialTaskAgentComponent(Component):
     ]
 
     def build_agent_and_task(self) -> list[SequentialTask]:
+        try:
+            from crewai import Agent, Task
+        except ImportError as e:
+            msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
+            raise ImportError(msg) from e
+
         # Build the agent
         agent_kwargs = self.agent_kwargs or {}
         agent = Agent(

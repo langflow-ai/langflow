@@ -29,7 +29,8 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     from langflow.services.database.models.user.model import User
 
     stmt = select(User).where(User.username == username)
-    user = (await session.exec(stmt)).first()
+    result = await session.exec(stmt)
+    user = result.first()
 
     if user and user.is_superuser:
         return None  # Superuser already exists
@@ -64,27 +65,23 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
         logger.debug("Creating default superuser.")
     else:
         logger.debug("Creating superuser.")
-    try:
-        return await create_super_user(username, password, db=session)
-    except Exception as exc:  # noqa: BLE001
-        if "UNIQUE constraint failed: user.username" in str(exc):
-            # This is to deal with workers running this
-            # at startup and trying to create the superuser
-            # at the same time.
-            logger.opt(exception=True).debug("Superuser already exists.")
-            return None
-        logger.opt(exception=True).debug("Error creating superuser.")
+    return await create_super_user(username, password, db=session)
 
 
-async def setup_superuser(settings_service, session: AsyncSession) -> None:
+async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
+        username = DEFAULT_SUPERUSER
+        password = DEFAULT_SUPERUSER_PASSWORD
     else:
         # Remove the default superuser if it exists
         await teardown_superuser(settings_service, session)
+        username = settings_service.auth_settings.SUPERUSER
+        password = settings_service.auth_settings.SUPERUSER_PASSWORD
 
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    if not username or not password:
+        msg = "Username and password must be set"
+        raise ValueError(msg)
 
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
 
@@ -114,7 +111,8 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
             from langflow.services.database.models.user.model import User
 
             stmt = select(User).where(User.username == username)
-            user = (await session.exec(stmt)).first()
+            result = await session.exec(stmt)
+            user = result.first()
             # Check if super was ever logged in, if not delete it
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
