@@ -173,9 +173,18 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 ### Advanced parsing
 
-As of Langflow 1.6, the File component supports advanced document parsing using the Docling library.
+As of Langflow 1.6, the File component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library.
 Only non-tabular documents can be parsed, and only one document at a time.
-The parser requires the Docling dependency to be installed. For more information, see [](/install-custom-dependencies)
+The parser requires the Docling dependency to be installed.
+For more information, see [Install custom dependencies](/install-custom-dependencies).
+
+The advanced parser includes the following advanced fields.
+
+* pipeline: Which Docling pipeline to use. Docling chooses the pipeline based on the source document type.
+* ocr_engine: Which OCR parser to use. The default is [EasyOCR](https://pypi.org/project/easyocr/).
+* doc_key: The key to use for the DoclingDocument column, which holds the structured information extracted from the source document. Default: `doc`.
+* md_image_placeholder: Defines the placeholder for image files in the output Markdown document.
+* md_page_break_placeholder: Defines the placeholder for page breaks in the output Markdown document.
 
 ### File output
 
