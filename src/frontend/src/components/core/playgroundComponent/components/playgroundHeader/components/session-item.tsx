@@ -51,9 +51,6 @@ export const SessionItem = ({
   const handleDelete = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     onDelete(sessionId);
-    if (selectedSession === sessionId) {
-      setSelectedSession(flowId);
-    }
   };
 
   const handleSessionSelect = () => {
