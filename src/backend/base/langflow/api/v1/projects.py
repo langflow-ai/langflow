@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import zipfile
 from datetime import datetime, timezone
 from typing import Annotated
@@ -595,15 +596,13 @@ def _extract_code_from_node(node: dict) -> str | None:
 
 def _generate_code_filename(node: dict) -> str:
     """Generate a sanitized filename for the component code."""
-    import re
-
     node_data = node["data"]
     component_type = node_data.get("type", "component")
     component_id = node.get("id", "unknown")
 
     # Sanitize filename components
-    safe_component_type = re.sub(r"\W", "_", component_type)
-    safe_component_id = re.sub(r"[^a-zA-Z0-9_-]", "_", component_id)
+    safe_component_type = _RE_SAFE_COMPONENT_TYPE.sub("_", component_type)
+    safe_component_id = _RE_SAFE_COMPONENT_ID.sub("_", component_id)
 
     return f"{safe_component_type}_{safe_component_id}.py"
 
@@ -640,3 +639,8 @@ def extract_component_code_from_flow(flow_data: dict, flow_name: str) -> dict[st
         code_files[filename] = file_content
 
     return code_files
+
+
+_RE_SAFE_COMPONENT_TYPE = re.compile(r"\W")
+
+_RE_SAFE_COMPONENT_ID = re.compile(r"[^a-zA-Z0-9_-]")
