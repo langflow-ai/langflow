@@ -1,4 +1,4 @@
-import { MutableRefObject, useEffect, useRef } from "react";
+import { type MutableRefObject, useEffect, useRef } from "react";
 
 type Ref<T> = MutableRefObject<T | null> | ((instance: T | null) => void);
 

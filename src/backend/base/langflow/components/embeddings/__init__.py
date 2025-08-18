@@ -1,35 +1,37 @@
-from .aiml import AIMLEmbeddingsComponent
-from .astra_vectorize import AstraVectorizeComponent
-from .azure_openai import AzureOpenAIEmbeddingsComponent
-from .cloudflare import CloudflareWorkersAIEmbeddingsComponent
-from .cohere import CohereEmbeddingsComponent
-from .google_generative_ai import GoogleGenerativeAIEmbeddingsComponent
-from .huggingface_inference_api import HuggingFaceInferenceAPIEmbeddingsComponent
-from .lmstudioembeddings import LMStudioEmbeddingsComponent
-from .mistral import MistralAIEmbeddingsComponent
-from .nvidia import NVIDIAEmbeddingsComponent
-from .ollama import OllamaEmbeddingsComponent
-from .openai import OpenAIEmbeddingsComponent
-from .similarity import EmbeddingSimilarityComponent
-from .text_embedder import TextEmbedderComponent
-from .vertexai import VertexAIEmbeddingsComponent
-from .watsonx import WatsonxEmbeddingsComponent
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from langflow.components._importing import import_mod
+
+if TYPE_CHECKING:
+    from langflow.components.embeddings.similarity import EmbeddingSimilarityComponent
+    from langflow.components.embeddings.text_embedder import TextEmbedderComponent
+
+_dynamic_imports = {
+    "EmbeddingSimilarityComponent": "similarity",
+    "TextEmbedderComponent": "text_embedder",
+}
 
 __all__ = [
-    "AIMLEmbeddingsComponent",
-    "AstraVectorizeComponent",
-    "AzureOpenAIEmbeddingsComponent",
-    "CloudflareWorkersAIEmbeddingsComponent",
-    "CohereEmbeddingsComponent",
     "EmbeddingSimilarityComponent",
-    "GoogleGenerativeAIEmbeddingsComponent",
-    "HuggingFaceInferenceAPIEmbeddingsComponent",
-    "LMStudioEmbeddingsComponent",
-    "MistralAIEmbeddingsComponent",
-    "NVIDIAEmbeddingsComponent",
-    "OllamaEmbeddingsComponent",
-    "OpenAIEmbeddingsComponent",
     "TextEmbedderComponent",
-    "VertexAIEmbeddingsComponent",
-    "WatsonxEmbeddingsComponent",
 ]
+
+
+def __getattr__(attr_name: str) -> Any:
+    """Lazily import embedding components on attribute access."""
+    if attr_name not in _dynamic_imports:
+        msg = f"module '{__name__}' has no attribute '{attr_name}'"
+        raise AttributeError(msg)
+    try:
+        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
+    except (ModuleNotFoundError, ImportError, AttributeError) as e:
+        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
+        raise AttributeError(msg) from e
+    globals()[attr_name] = result
+    return result
+
+
+def __dir__() -> list[str]:
+    return list(__all__)

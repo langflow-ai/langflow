@@ -7,7 +7,7 @@ from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.components.data.sql_executor import SQLComponent
 from langflow.components.input_output.chat_output import ChatOutput
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
-from langflow.components.languagemodels import OpenAIModelComponent
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph.graph.base import Graph
 from pydantic import BaseModel

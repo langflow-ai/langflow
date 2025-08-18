@@ -206,20 +206,30 @@ async def test_update_project_mcp_settings_success(
 ):
     """Test successful update of MCP settings using real database."""
     # Create settings for updating the flow
-    settings = [
-        {
-            "id": str(test_flow_for_update.id),
-            "action_name": "updated_action",
-            "action_description": "Updated description",
-            "mcp_enabled": False,
-            "name": test_flow_for_update.name,
-            "description": test_flow_for_update.description,
-        }
-    ]
+    json_payload = {
+        "settings": [
+            {
+                "id": str(test_flow_for_update.id),
+                "action_name": "updated_action",
+                "action_description": "Updated description",
+                "mcp_enabled": False,
+                "name": test_flow_for_update.name,
+                "description": test_flow_for_update.description,
+            }
+        ],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the real PATCH request
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Assert response
@@ -268,11 +278,21 @@ async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, u
     # Use real database objects instead of mocks to avoid the coroutine issue
 
     # Empty settings list
-    settings: list = []
+    json_payload = {
+        "settings": [],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the request to the actual endpoint
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Verify response - the real endpoint should handle empty settings correctly
@@ -385,20 +405,30 @@ async def test_user_can_update_own_flow_mcp_settings(
 ):
     """Test that a user can update MCP settings for their own flows using real database."""
     # User attempts to update their own flow settings
-    updated_settings = [
-        {
-            "id": str(user_test_flow.id),
-            "action_name": "updated_user_action",
-            "action_description": "Updated user action description",
-            "mcp_enabled": False,
-            "name": "User Test Flow",
-            "description": "This flow belongs to the active user",
-        }
-    ]
+    json_payload = {
+        "settings": [
+            {
+                "id": str(user_test_flow.id),
+                "action_name": "updated_user_action",
+                "action_description": "Updated user action description",
+                "mcp_enabled": False,
+                "name": "User Test Flow",
+                "description": "This flow belongs to the active user",
+            }
+        ],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the PATCH request to update settings
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=updated_settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Should succeed as the user owns this project and flow

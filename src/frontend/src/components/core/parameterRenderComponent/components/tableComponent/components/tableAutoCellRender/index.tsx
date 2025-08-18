@@ -1,11 +1,11 @@
+import type { CustomCellRendererProps } from "ag-grid-react";
+import { uniqueId } from "lodash";
 import NumberReader from "@/components/common/numberReader";
 import ObjectRender from "@/components/common/objectRender";
 import StringReader from "@/components/common/stringReaderComponent";
 import DateReader from "@/components/core/dateReaderComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn, isTimeStampString } from "@/utils/utils";
-import { CustomCellRendererProps } from "ag-grid-react";
-import { uniqueId } from "lodash";
 import ToggleShadComponent from "../../../toggleShadComponent";
 
 interface CustomCellRender extends CustomCellRendererProps {
@@ -18,6 +18,7 @@ export default function TableAutoCellRender({
   colDef,
   formatter,
   api,
+  ...props
 }: CustomCellRender) {
   function getCellType() {
     let format: string = formatter ? formatter : typeof value;
@@ -29,7 +30,7 @@ export default function TableAutoCellRender({
       case "object":
         return (
           <ObjectRender
-            setValue={!!colDef?.onCellValueChanged ? setValue : undefined}
+            setValue={colDef?.onCellValueChanged ? setValue : undefined}
             object={value}
           />
         );
@@ -92,7 +93,12 @@ export default function TableAutoCellRender({
             }}
             editNode={true}
             id={"toggle" + colDef?.colId + uniqueId()}
-            disabled={false}
+            disabled={
+              colDef?.cellRendererParams?.isSingleToggleColumn &&
+              colDef?.cellRendererParams?.checkSingleToggleEditable
+                ? !colDef.cellRendererParams.checkSingleToggleEditable(props)
+                : false
+            }
           />
         ) : (
           <Badge

@@ -1,0 +1,38 @@
+---
+title: Icosa Computing
+slug: /bundles-icosacomputing
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+The **Icosa Computing** components require access to Icosa Computing services.
+For more information and to request access, see the [Icosa Computing site](https://www.icosacomputing.com/).
+
+## Combinatorial Reasoner
+
+The **Combinatorial Reasoner** component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons.
+
+### Combinatorial Reasoner parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| prompt | String | Input parameter. The input to run CR on. |
+| openai_api_key | SecretString | Input parameter. An OpenAI API key for authentication to OpenAI, which is used for reason generation. |
+| model_name | String | Input parameter. The OpenAI LLM to use for reason generation. |
+| username | String | Input parameter. A username for authentication to the Icosa API. |
+| password | SecretString | Input parameter. A password for authentication to the Icosa API. |
+
+### Combinatorial Reasoner outputs
+
+The **Combinatorial Reasoner** component outputs one of the following:
+
+* **Optimized Prompt (`optimized_prompt`)**: A [`Message`](/data-types#message) object containing the optimized prompt with embedded reasons.
+* **Selected Reasons (`reasons`)**: A [`Data`](/data-types#data) object containing a list of strings where each string is a reason that was selected and embedded in the optimized prompt.
+
+You can toggle the output type near the component's output port.
+
+## See also
+
+* [**Prompt Template** component](/components-prompts)

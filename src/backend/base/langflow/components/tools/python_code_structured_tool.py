@@ -298,7 +298,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                     if isinstance(default, ast.Name):
                         func_arg["default"] = default.id
                     elif isinstance(default, ast.Constant):
-                        func_arg["default"] = default.value
+                        func_arg["default"] = str(default.value) if default.value is not None else None
 
                 if arg.annotation:
                     annotation_line = lines[arg.annotation.lineno - 1]

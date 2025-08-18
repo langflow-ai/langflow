@@ -1,4 +1,4 @@
-import { Users } from "../api";
+import type { Users } from "../api";
 
 export type AuthContextType = {
   accessToken: string | null;

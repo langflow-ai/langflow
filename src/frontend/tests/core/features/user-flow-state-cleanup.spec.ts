@@ -101,8 +101,8 @@ test(
 
     try {
       await page.getByTestId("new_project_btn_empty_page").click();
-    } catch (error) {
-      await page.getByText("New Flow", { exact: true }).click();
+    } catch (_error) {
+      await page.getByTestId("new-project-btn").click();
     }
 
     await page.waitForSelector('[data-testid="modal-title"]', {

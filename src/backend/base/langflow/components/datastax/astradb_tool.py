@@ -4,8 +4,8 @@ from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
 from astrapy.admin import parse_api_endpoint
-from langchain.pydantic_v1 import BaseModel, Field, create_model
 from langchain_core.tools import StructuredTool, Tool
+from pydantic import BaseModel, Field, create_model
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
@@ -17,7 +17,7 @@ from langflow.schema.table import EditMode
 class AstraDBToolComponent(LCToolComponent):
     display_name: str = "Astra DB Tool"
     description: str = "Tool to run hybrid vector and metadata search on DataStax Astra DB Collection"
-    documentation: str = "https://docs.langflow.org/Components/components-tools#astra-db-tool"
+    documentation: str = "https://docs.langflow.org/components-bundle-components"
     icon: str = "AstraDB"
 
     inputs = [
@@ -268,7 +268,7 @@ class AstraDBToolComponent(LCToolComponent):
         return tool
 
     def projection_args(self, input_str: str) -> dict | None:
-        """Build the projection arguments for the AstraDB query."""
+        """Build the projection arguments for the Astra DB query."""
         elements = input_str.split(",")
         result = {}
 
@@ -329,7 +329,7 @@ class AstraDBToolComponent(LCToolComponent):
         raise ValueError(msg)
 
     def build_filter(self, args: dict, filter_settings: list) -> dict:
-        """Build filter dictionary for AstraDB query.
+        """Build filter dictionary for Astra DB query.
 
         Args:
             args: Dictionary of arguments from the tool
@@ -370,7 +370,7 @@ class AstraDBToolComponent(LCToolComponent):
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
-        """Run the query to get the data from the AstraDB collection."""
+        """Run the query to get the data from the Astra DB collection."""
         collection = self._build_collection()
         sort = {}
 

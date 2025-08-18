@@ -1,0 +1,33 @@
+---
+title: Bing
+slug: /bundles-bing
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Bing** bundle.
+
+## Bing Search API
+
+This component allows you to call the Bing Search API.
+
+It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
+
+### Bing Search API parameters
+
+Some **Bing Search API** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| bing_subscription_key | SecretString | Input parameter. A Bing API subscription key. |
+| input_value | String | Input parameter. The search query input. |
+| bing_search_url | String | Input parameter. A custom Bing Search URL. |
+| k | Integer | Input parameter. The number of search results to return. |
+
+## See also
+
+* [**Web Search** component](/components-data#web-search)
+* [**SearchApi** bundle](/bundles-searchapi)

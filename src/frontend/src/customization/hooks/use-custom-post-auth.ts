@@ -1,5 +1,5 @@
 import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
-import { useQueryFunctionType } from "@/types/api";
+import type { useQueryFunctionType } from "@/types/api";
 
 export const useCustomPostAuth: useQueryFunctionType<undefined, null> = (
   options,

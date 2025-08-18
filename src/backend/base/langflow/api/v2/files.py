@@ -11,7 +11,8 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlmodel import String, cast, col, select
+from loguru import logger
+from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -23,6 +24,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 
 # Set the static name of the MCP servers file
 MCP_SERVERS_FILE = "_mcp_servers"
+SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 
 
 async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGenerator[bytes, None]:
@@ -61,6 +63,21 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
     return file
 
 
+async def save_file_routine(file, storage_service, current_user: CurrentActiveUser, file_content=None, file_name=None):
+    """Routine to save the file content to the storage service."""
+    file_id = uuid.uuid4()
+
+    if not file_content:
+        file_content = await file.read()
+    if not file_name:
+        file_name = file.filename
+
+    # Save the file using the storage service.
+    await storage_service.save_file(flow_id=str(current_user.id), file_name=file_name, data=file_content)
+
+    return file_id, file_name
+
+
 @router.post("", status_code=HTTPStatus.CREATED)
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def upload_user_file(
@@ -88,67 +105,63 @@ async def upload_user_file(
             detail=f"File size is larger than the maximum file size {max_file_size_upload}MB.",
         )
 
-    # Read file content and create a unique file name
-    try:
-        # Create a unique file name
-        file_id = uuid.uuid4()
-        file_content = await file.read()
-
-        # Get file extension of the file
-        file_extension = "." + file.filename.split(".")[-1] if file.filename and "." in file.filename else ""
-        anonymized_file_name = f"{file_id!s}{file_extension}"
-
-        # Here we use the current user's id as the folder name
-        folder = str(current_user.id)
-        # Save the file using the storage service.
-        await storage_service.save_file(flow_id=folder, file_name=anonymized_file_name, data=file_content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
-
     # Create a new database record for the uploaded file.
     try:
-        # Enforce unique constraint on name
-        # Name it as filename (1), (2), etc.
-        # Check if the file name already exists
+        # Enforce unique constraint on name, except for the special _mcp_servers file
         new_filename = file.filename
         try:
-            root_filename, _ = new_filename.rsplit(".", 1)
+            root_filename, file_extension = new_filename.rsplit(".", 1)
         except ValueError:
-            root_filename, _ = new_filename, ""
+            root_filename, file_extension = new_filename, ""
 
-        # Check if there are files with the same name
-        stmt = select(UserFile).where(cast(UserFile.name, String).like(f"{root_filename}%"))
-        existing_files = await session.exec(stmt)
-        files = existing_files.all()  # Fetch all matching records
+        # Special handling for the MCP servers config file: always keep the same root filename
+        if root_filename == MCP_SERVERS_FILE:
+            # Check if an existing record exists; if so, delete it to replace with the new one
+            existing_mcp_file = await get_file_by_name(root_filename, current_user, session)
+            if existing_mcp_file:
+                await delete_file(existing_mcp_file.id, current_user, session, storage_service)
+            unique_filename = new_filename
+        else:
+            # For normal files, ensure unique name by appending a count if necessary
+            stmt = select(UserFile).where(col(UserFile.name).like(f"{root_filename}%"))
+            existing_files = await session.exec(stmt)
+            files = existing_files.all()  # Fetch all matching records
 
-        # If there are files with the same name, append a count to the filename
-        if files:
-            counts = []
+            if files:
+                counts = []
 
-            # Extract the count from the filename
-            for my_file in files:
-                match = re.search(r"\((\d+)\)(?=\.\w+$|$)", my_file.name)  # Match (number) before extension or at end
-                if match:
-                    counts.append(int(match.group(1)))
+                # Extract the count from the filename
+                for my_file in files:
+                    match = re.search(r"\((\d+)\)(?=\.\w+$|$)", my_file.name)
+                    if match:
+                        counts.append(int(match.group(1)))
 
-            # Get the max count and increment by 1
-            count = max(counts) if counts else 0  # Default to 0 if no matches found
+                count = max(counts) if counts else 0
+                root_filename = f"{root_filename} ({count + 1})"
 
-            # Split the extension from the filename
-            root_filename = f"{root_filename} ({count + 1})"
+            # Create the unique filename with extension for storage
+            unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
+
+        # Read file content and save with unique filename
+        try:
+            file_id, stored_file_name = await save_file_routine(
+                file, storage_service, current_user, file_name=unique_filename
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
 
         # Compute the file size based on the path
-        file_size = await storage_service.get_file_size(flow_id=folder, file_name=anonymized_file_name)
-
-        # Compute the file path
-        file_path = f"{folder}/{anonymized_file_name}"
+        file_size = await storage_service.get_file_size(
+            flow_id=str(current_user.id),
+            file_name=stored_file_name,
+        )
 
         # Create a new file record
         new_file = UserFile(
             id=file_id,
             user_id=current_user.id,
             name=root_filename,
-            path=file_path,
+            path=f"{current_user.id}/{stored_file_name}",
             size=file_size,
         )
         session.add(new_file)
@@ -178,14 +191,61 @@ async def get_file_by_name(
         raise HTTPException(status_code=500, detail=f"Error fetching file: {e}") from e
 
 
+async def load_sample_files(current_user: CurrentActiveUser, session: DbSession, storage_service: StorageService):
+    # Check if the sample files in the SAMPLE_DATA_DIR exist
+    for sample_file_path in Path(SAMPLE_DATA_DIR).iterdir():
+        sample_file_name = sample_file_path.name
+        root_filename, _ = sample_file_name.rsplit(".", 1)
+
+        # Check if the sample file exists in the storage service
+        existing_sample_file = await get_file_by_name(
+            file_name=root_filename, current_user=current_user, session=session
+        )
+        if existing_sample_file:
+            continue
+
+        # Read the binary data of the sample file
+        binary_data = sample_file_path.read_bytes()
+
+        # Write the sample file content to the storage service
+        file_id, _ = await save_file_routine(
+            sample_file_path,
+            storage_service,
+            current_user,
+            file_content=binary_data,
+            file_name=sample_file_name,
+        )
+        file_size = await storage_service.get_file_size(
+            flow_id=str(current_user.id),
+            file_name=sample_file_name,
+        )
+        # Create a UserFile object for the sample file
+        sample_file = UserFile(
+            id=file_id,
+            user_id=current_user.id,
+            name=root_filename,
+            path=sample_file_name,
+            size=file_size,
+        )
+
+        session.add(sample_file)
+
+        await session.commit()
+        await session.refresh(sample_file)
+
+
 @router.get("")
 @router.get("/", status_code=HTTPStatus.OK)
 async def list_files(
     current_user: CurrentActiveUser,
     session: DbSession,
+    # storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> list[UserFile]:
     """List the files available to the current user."""
     try:
+        # Load sample files if they don't exist
+        # TODO: Pending further testing
+        # await load_sample_files(current_user, session, get_storage_service())
         # Fetch from the UserFile table
         stmt = select(UserFile).where(UserFile.user_id == current_user.id)
         results = await session.exec(stmt)
@@ -221,7 +281,6 @@ async def delete_files_batch(
             await session.delete(file)
 
         # Delete all files from the database
-        await session.flush()  # Ensures delete is staged
         await session.commit()  # Commit deletion
 
     except Exception as e:
@@ -410,24 +469,26 @@ async def delete_file(
 ):
     """Delete a file by its ID."""
     try:
-        # Fetch the file from the DB
-        file = await fetch_file_object(file_id, current_user, session)
-        if not file:
+        # Fetch the file object
+        file_to_delete = await fetch_file_object(file_id, current_user, session)
+        if not file_to_delete:
             raise HTTPException(status_code=404, detail="File not found")
 
         # Delete the file from the storage service
-        await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+        await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_to_delete.path)
 
         # Delete from the database
-        await session.delete(file)
-        await session.flush()  # Ensures delete is staged
-        await session.commit()  # Commit deletion
+        await session.delete(file_to_delete)
+        await session.commit()
 
+    except HTTPException:
+        # Re-raise HTTPException to avoid being caught by the generic exception handler
+        raise
     except Exception as e:
-        await session.rollback()  # Rollback on failure
+        # Log and return a generic server error
+        logger.error("Error deleting file %s: %s", file_id, e)
         raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
-
-    return {"message": "File deleted successfully"}
+    return {"detail": f"File {file_to_delete.name} deleted successfully"}
 
 
 @router.delete("")
@@ -450,7 +511,6 @@ async def delete_all_files(
             await session.delete(file)
 
         # Delete all files from the database
-        await session.flush()  # Ensures delete is staged
         await session.commit()  # Commit deletion
 
     except Exception as e:

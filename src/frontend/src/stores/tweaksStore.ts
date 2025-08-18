@@ -1,16 +1,17 @@
+import { create } from "zustand";
 import { getChangesType } from "@/modals/apiModal/utils/get-changes-types";
 import { getNodesWithDefaultValue } from "@/modals/apiModal/utils/get-nodes-with-default-value";
-import { AllNodeType, NodeDataType } from "@/types/flow";
+import type { AllNodeType, NodeDataType } from "@/types/flow";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
-import { create } from "zustand";
-import { TweaksStoreType } from "../types/zustand/tweaks";
+import type { TweaksStoreType } from "../types/zustand/tweaks";
 import useFlowStore from "./flowStore";
 
 export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   tweaks: {},
   nodes: [],
   setNodes: (change) => {
-    let newChange = typeof change === "function" ? change(get().nodes) : change;
+    const newChange =
+      typeof change === "function" ? change(get().nodes) : change;
 
     set({
       nodes: newChange,
@@ -18,7 +19,7 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
     get().updateTweaks();
   },
   setNode: (id, change) => {
-    let newChange =
+    const newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;

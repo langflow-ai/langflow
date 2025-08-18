@@ -1,3 +1,8 @@
+import type { ColDef } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { cloneDeep } from "lodash";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
@@ -12,19 +17,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APITemplateType } from "@/types/api";
-import { parseString } from "@/utils/stringManipulation";
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
 
 export default function ToolsTable({
   rows,
   data,
   setData,
   isAction,
+  placeholder,
   open,
   handleOnNewValue,
 }: {
@@ -34,6 +34,7 @@ export default function ToolsTable({
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
   isAction: boolean;
+  placeholder: string;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
@@ -56,28 +57,34 @@ export default function ToolsTable({
     setSelectedRows(filter);
   }, [rows, open]);
 
-  useEffect(() => {
+  const applyInitialSelection = () => {
+    if (!agGrid.current?.api) return;
+
     const initialData = cloneDeep(rows);
     const filter = initialData.filter((row) => row.status === true);
-    if (agGrid.current) {
-      agGrid.current?.api?.forEachNode((node) => {
-        if (
-          filter.some(
-            (row) =>
-              (row.display_name ?? row.name) ===
-              (node.data.display_name ?? node.data.name),
-          )
-        ) {
-          node.setSelected(true);
-        } else {
-          node.setSelected(false);
-        }
-      });
-    }
-  }, [agGrid.current]);
+
+    agGrid.current.api.forEachNode((node) => {
+      if (
+        filter.some(
+          (row) =>
+            (row.display_name ?? row.name) ===
+            (node.data.display_name ?? node.data.name),
+        )
+      ) {
+        node.setSelected(true);
+      } else {
+        node.setSelected(false);
+      }
+    });
+  };
+
+  // Apply initial selection when data changes and grid is ready
+  useEffect(() => {
+    applyInitialSelection();
+  }, [rows, data]);
 
   useEffect(() => {
-    if (!open && selectedRows) {
+    if (!open) {
       handleOnNewValue({
         value: data.map((row) => {
           const name = parseString(row.name, [
@@ -94,7 +101,7 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-                ? ""
+                ? sanitizeMcpName(display_name || row.name, 46)
                 : display_name
           ).slice(0, 46);
 
@@ -161,7 +168,7 @@ export default function ToolsTable({
     },
     {
       field: "name",
-      headerName: isAction ? "Action" : "Slug",
+      headerName: isAction ? "Tool" : "Slug",
       flex: 1,
       resizable: false,
       valueGetter: (params) =>
@@ -172,11 +179,7 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? parseString(params.data.display_name, [
-                "snake_case",
-                "no_blank",
-                "uppercase",
-              ])
+            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
             : parseString(params.data.tags.join(", "), [
                 "snake_case",
                 "uppercase",
@@ -237,8 +240,10 @@ export default function ToolsTable({
   };
 
   const handleNameChange = (e) => {
-    setSidebarName(e.target.value);
-    handleSidebarInputChange("name", e.target.value);
+    const rawValue = e.target.value;
+    const sanitizedValue = isAction ? sanitizeMcpName(rawValue, 46) : rawValue;
+    setSidebarName(sanitizedValue);
+    handleSidebarInputChange("name", sanitizedValue);
   };
 
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
@@ -250,6 +255,11 @@ export default function ToolsTable({
   const handleRowClicked = (event) => {
     setFocusedRow(event.data);
     setSidebarOpen(true);
+  };
+
+  const handleGridReady = () => {
+    // Apply initial selection when grid is ready
+    applyInitialSelection();
   };
 
   const rowName = useMemo(() => {
@@ -264,7 +274,7 @@ export default function ToolsTable({
         <div className="flex-none px-4">
           <Input
             icon="Search"
-            placeholder="Search actions..."
+            placeholder="Search tools..."
             inputClassName="h-8"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -285,6 +295,7 @@ export default function ToolsTable({
             tableOptions={tableOptions}
             onRowClicked={handleRowClicked}
             getRowId={getRowId}
+            onGridReady={handleGridReady}
           />
         </div>
       </main>
@@ -301,7 +312,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    Name
+                    {isAction ? "Tool name" : "Name"}
                   </label>
 
                   <Input
@@ -323,7 +334,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-desc-input"
                   >
-                    Description
+                    {isAction ? "Tool description" : "Description"}
                   </label>
 
                   <Textarea
@@ -336,7 +347,7 @@ export default function ToolsTable({
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "This is the description for the action exposed to the clients."
+                      ? "This is the description for the tool exposed to a client."
                       : "This is the description for the tool exposed to the agents."}
                   </div>
                 </div>
@@ -371,7 +382,7 @@ export default function ToolsTable({
                           Parameters
                         </h3>
                         <p className="text-mmd text-muted-foreground">
-                          Manage inputs for this action
+                          Manage inputs for this tool
                         </p>
                       </div>
                     )}

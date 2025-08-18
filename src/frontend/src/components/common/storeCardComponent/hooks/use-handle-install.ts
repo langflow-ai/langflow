@@ -1,6 +1,6 @@
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { getComponent } from "../../../../controllers/API";
-import { storeComponent } from "../../../../types/store";
+import type { storeComponent } from "../../../../types/store";
 import cloneFlowWithParent from "../../../../utils/storeUtils";
 
 const useInstallComponent = (

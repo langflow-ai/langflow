@@ -1,0 +1,983 @@
+---
+title: Vector Stores
+slug: /components-vector-stores
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Langflow's **Vector Store** components are used to read and write vector data, including embedding storage, vector search, Graph RAG traversals, and specialized provider-specific search, such as OpenSearch, Elasticsearch, and Vectara.
+
+These components are critical for vector search applications, such as Retrieval Augmented Generation (RAG) chatbots that need to retrieve relevant context from large datasets.
+
+Most of these components connect to a specific vector database provider, but some components support multiple providers or platforms.
+For example, the **Cassandra** vector store component can connect to self-managed Apache Cassandra-based clusters as well as Astra DB, which is a managed Cassandra DBaaS.
+
+Other types of storage, like traditional structured databases and chat memory, are handled through other components like the [**SQL Database** component](/components-data#sql-database) or the [**Message History** component](/components-helpers#message-history).
+
+## Use Vector Store components in a flow
+
+:::tip
+For a tutorial using **Vector Store** components in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+The following steps introduce the use of **Vector Store** components in a flow, including configuration details, how the components work when you run a flow, why you might need multiple **Vector Store** components in one flow, and useful supporting components, such as **Embedding Model** and **Parser** components.
+
+1. Create a flow with the **Vector Store RAG** template.
+
+    This template has two subflows.
+    The **Load Data** subflow loads embeddings and content into a vector database, and the **Retriever** subflow runs a vector search to retrieve relevant context based on a user's query.
+
+2. Configure the database connection for both [**Astra DB** components](#astra-db), or replace them with another pair of **Vector Store** components of your choice.
+Make sure the components connect to the same vector store, and that the component in the **Retriever** subflow is able to run a similarity search.
+
+    The parameters you set in each **Vector Store** component depend on the component's role in your flow.
+    In this example, the **Load Data** subflow _writes_ to the vector store, whereas the **Retriever** subflow _reads_ from the vector store.
+    Therefore, search-related parameters are only relevant to the **Vector Search** component in the **Retriever** subflow.
+
+    For information about specific configuration parameters, see the section of this page for your chosen **Vector Store** component and [Hidden parameters](#hidden-parameters).
+
+3. To configure the embedding model, do one of the following:
+
+    * **Use an OpenAI model**: In both **OpenAI Embeddings** components, enter your OpenAI API key.
+    You can use the default model or select a different OpenAI embedding model.
+
+    * **Use another provider**: Replace the **OpenAI Embeddings** components with another pair of [**Embedding Model** component](/components-embedding-models) of your choice, and then configure the parameters and credentials accordingly.
+
+    * **Use Astra DB vectorize**: If you are using an Astra DB vector store that has a vectorize integration, you can remove both **OpenAI Embeddings** components.
+    If you do this, the vectorize integration automatically generates embeddings from the **Ingest Data** (in the **Load Data** subflow) and **Search Query** (in the **Retriever** subflow).
+
+    :::tip
+    If your vector store already contains embeddings, make sure your **Embedding Model** components use the same model as your previous embeddings.
+    Mixing embedding models in the same vector store can produce inaccurate search results.
+    :::
+
+4. Recommended: In the [**Split Text** component](/components-processing#split-text), optimize the chunking settings for your embedding model.
+For example, if your embedding model has a token limit of 512, then the **Chunk Size** parameter must not exceed that limit.
+
+    Additionally, because the **Retriever** subflow passes the chat input directly to the **Vector Store** component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
+    For this example, you can enter a query that is within the limits; however, in a production environment, you might need to implement additional checks or preprocessing steps to ensure compliance.
+    For example, use additional components to prepare the chat input before running the vector search, or enforce chat input limits in your application code.
+
+5. In the **Language Model** component, enter your OpenAI API key, or select a different provider and model to use for the chat portion of the flow.
+
+6. Run the **Load Data** subflow to populate your vector store.
+In the **File** component, select one or more files, and then click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Vector Store** component in the **Load Data** subflow.
+
+    The **Load Data** subflow loads files from your local machine, chunks them, generates embeddings for the chunks, and then stores the chunks and their embeddings in the vector database.
+
+    ![Embedding data into a vector store](/img/vector-store-document-ingestion.png)
+
+    The **Load Data** subflow is separate from the **Retriever** subflow because you probably won't run it every time you use the chat.
+    You can run the **Load Data** subflow as needed to preload or update the data in your vector store.
+    Then, your chat interactions only use the components that are necessary for chat.
+
+    If your vector store already contains data that you want to use for vector search, then you don't need to run the **Load Data** subflow.
+
+7. Open the **Playground** and start chatting to run the **Retriever** subflow.
+
+    The **Retriever** subflow generates an embedding from chat input, runs a vector search to retrieve similar content from your vector store, parses the search results into supplemental context for the LLM, and then uses the LLM to generate a natural language response to your query.
+    The LLM uses the vector search results along with its internal training data and tools, such as basic web search and datetime information, to produce the response.
+
+    ![Retrieval from a vector store](/img/vector-store-retrieval.png)
+
+    To avoid passing the entire block of raw search results to the LLM, the **Parser** component extracts `text` strings from the search results `Data` object, and then passes them to the **Prompt Template** component in `Message` format.
+    From there, the strings and other template content are compiled into natural language instructions for the LLM.
+
+    You can use other components for this transformation, such as the **Data Operations** component, depending on how you want to use the search results.
+
+    To view the raw search results, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** on the **Vector Store** component after running the **Retriever** subflow.
+
+### Hidden parameters
+
+You can inspect a **Vector Store** component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+Many input parameters for **Vector Store** components are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in each [component's header menu](/concepts-components#component-menus).
+
+Some parameters are conditional, and they are only available after you set other parameters or select specific options for other parameters.
+Conditional parameters may not be visible on the **Controls** pane until you set the required dependencies.
+However, all parameters are always listed in a [component's code](/concepts-components#component-code).
+
+For information about a specific component's parameters, see the provider's documentation and the component details.
+
+### Search results output
+
+If you use a **Vector Store** component to query your vector store, it produces search results that you can pass to downstream components in your flow as a list of [`Data`](/data-types#data) objects or a tabular [`DataFrame`](/data-types#dataframe).
+If both types are supported, you can set the format near the component's output port in the visual editor.
+
+The exception to this pattern is the **Vectara RAG** component, which outputs only an `answer` string in [`Message`](/data-types#message) format.
+
+### Vector store instances
+
+Because Langflow is based on LangChain, **Vector Store** components use an instance of [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) to drive the underlying vector search functions.
+In the component code, this is often instantiated as `vector_store`, but some components use a different name, such as the provider name.
+
+For the **Cassandra Graph** and **Astra DB Graph** components, `vector_store` is an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html).
+
+These instances are provider-specific and configured according to the component's parameters.
+For example, the **Redis** component creates an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/) based on the component's parameters, such as the connection string, index name, and schema.
+
+Some LangChain classes don't expose all possible options as component parameters.
+Depending on the provider, these options might use default values or allow modification through environment variables, if they are supported in Langflow.
+For information about specific options, see the LangChain API reference and provider documentation.
+
+<details>
+<summary>Vector Store Connection ports</summary>
+
+The **Astra DB** and **OpenSearch** components have an additional **Vector Store Connection** output.
+This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
+
+The only non-legacy component that supports this input is the **Graph RAG** component, which was meant as a Graph RAG extension to the **Astra DB** component.
+Instead, you can use the **Astra DB Graph** component that includes both the vector store connection and Graph RAG functionality.
+OpenSearch instances support Graph traversal through built-in RAG functionality and plugins.
+
+</details>
+
+## Apache Cassandra
+
+The **Cassandra** and **Cassandra Graph** components can be used with Cassandra clusters that support vector search, including Astra DB.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Vector search in Cassandra](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html)
+
+### Cassandra
+
+Use the **Cassandra** component to read or write to a Cassandra vector store using a `CassandraVectorStore` instance.
+
+<details>
+<summary>Cassandra parameters</summary>
+
+| Name | Type | Description |
+|------|------|-------------|
+| database_ref | String | Input parameter. Contact points for the database or an Astra database ID. |
+| username | String | Input parameter. Username for the database. Leave empty for Astra DB. |
+| token | SecretString | Input parameter. User password for the database or an Astra application token. |
+| keyspace | String | Input parameter. The name of the keyspace containing the vector store specified in **Table Name** (`table_name`). |
+| table_name | String | Input parameter. The name of the table or collection that is the vector store. |
+| ttl_seconds | Integer | Input parameter. Time-to-live for added texts, if supported by the cluster. Only relevant for writes. |
+| batch_size | Integer | Input parameter. Amount of records to process in a single batch. |
+| setup_mode | String | Input parameter. Configuration mode for setting up a Cassandra table. |
+| cluster_kwargs | Dict | Input parameter. Additional keyword arguments for a Cassandra cluster. |
+| search_query | String | Input parameter. Query string for similarity search. Only relevant for reads. |
+| ingest_data | Data | Input parameter. Data to be loaded into the vector store as raw chunks and embeddings. Only relevant for writes. |
+| embedding | Embeddings | Input parameter. Embedding function to use. |
+| number_of_results | Integer | Input parameter. Number of results to return in search. Only relevant for reads. |
+| search_type | String | Input parameter. Type of search to perform. Only relevant for reads. |
+| search_score_threshold | Float | Input parameter. Minimum similarity score for search results. Only relevant for reads. |
+| search_filter | Dict | Input parameter. An optional dictionary of metadata search filters to apply in addition to vector search. Only relevant for reads. |
+| body_search | String | Input parameter. Document textual search terms. Only relevant for reads. |
+| enable_body_search | Boolean | Input parameter. Flag to enable body search. Only relevant for reads. |
+
+</details>
+
+### Cassandra Graph
+
+The **Cassandra Graph** component uses a `CassandraGraphVectorStore` instance for graph traversal and graph-based document retrieval in a compatible Cassandra cluster.
+It also supports writing to the vector store.
+
+<details>
+<summary>Cassandra Graph parameters</summary>
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_ref | Contact Points / Astra Database ID | Input parameter. The contact points for the database or an Astra database ID. Required. |
+| username | Username | Input parameter. The username for the database. Leave empty for Astra DB. |
+| token | Password / Astra DB Token | Input parameter. The user password for the database or an Astra application token. Required. |
+| keyspace | Keyspace | Input parameter. The name of the keyspace containing the vector store specified in **Table Name** (`table_name`). Required. |
+| table_name | Table Name | Input parameter. The name of the table or collection that is the vector store. Required. |
+| setup_mode | Setup Mode | Input parameter. The configuration mode for setting up the Cassandra table. The options are `Sync` (default) or `Off`. |
+| cluster_kwargs | Cluster arguments | Input parameter. An optional dictionary of additional keyword arguments for the Cassandra cluster. |
+| search_query | Search Query | Input parameter. The query string for similarity search. Only relevant for reads. |
+| ingest_data | Ingest Data | Input parameter. Data to be loaded into the vector store as raw chunks and embeddings. Only relevant for writes. |
+| embedding | Embedding | Input parameter. The embedding model to use. |
+| number_of_results | Number of Results | Input parameter. The number of results to return in similarity search. Only relevant for reads. Default: 4. |
+| search_type | Search Type | Input parameter. The search type to use. The options are `Traversal` (default), `MMR Traversal`, `Similarity`, `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`. |
+| depth | Depth of traversal | Input parameter. The maximum depth of edges to traverse. Only relevant if **Search Type** (`search_type`) is `Traversal` or `MMR Traversal`. Default: 1. |
+| search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for search results. Only relevant for reads using the `Similarity with score threshold` search type. |
+| search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata search filters to apply in addition to graph traversal and similarity search. |
+
+</details>
+
+## Chroma
+
+The **Chroma DB** and **Local DB** components read and write to Chroma vector stores using an instance of `Chroma` vector store.
+Includes support for remote or in-memory instances with or without persistence.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Chroma documentation](https://docs.trychroma.com/)
+
+### Chroma DB
+
+You can use the **Chroma DB** component to read and write to a Chroma database in local storage or a remote Chroma server with options for persistence and caching.
+When writing, the component can create a new database or collection at the specified location.
+
+:::tip
+An ephemeral (non-persistent) local Chroma vector store is helpful for testing vector search flows where you don't need to retain the database.
+:::
+
+The following example flow uses one **Chroma DB** component for both reads and writes:
+
+* When writing, it splits `Data` from a [**URL** component](/components-data#url) into chunks, computes embeddings with attached **Embedding Model** component, and then loads the chunks and embeddings into the Chroma vector store.
+To trigger writes, click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Chroma DB** component.
+
+* When reading, it uses chat input to perform a similarity search on the vector store, and then print the search results to the chat.
+To trigger reads, open the **Playground** and enter a chat message.
+
+After running the flow once, you can click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each component to understand how the data transformed as it passed from component to component.
+
+![ChromaDB receiving split text](/img/component-chroma-db.png)
+
+<details>
+<summary>Chroma DB parameters</summary>
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Collection Name** (`collection_name`) | String | Input parameter.  The name of your Chroma vector store collection. Default: `langflow`. |
+| **Persist Directory** (`persist_directory`) | String | Input parameter. To persist the Chroma database, enter a relative or absolute path to a directory to store the `chroma.sqlite3` file. Leave empty for an ephemeral database. When reading or writing to an existing persistent database, specify the path to the persistent directory. |
+| **Ingest Data** (`ingest_data`) | Data or DataFrame | Input parameter. `Data` or `DataFrame` input containing the records to write to the vector store. Only relevant for writes. |
+| **Search Query** (`search_query`) | String | Input parameter. The query to use for vector search. Only relevant for reads. |
+| **Cache Vector Store** (`cache_vector_store`) | Boolean | Input parameter. If true, the component caches the vector store in memory for faster reads. Default: Enabled (true). |
+| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. By default, Chroma DB uses its built-in embeddings model, or you can attach an **Embedding Model** component to use a different provider or model. |
+| **CORS Allow Origins** (`chroma_server_cors_allow_origins`) | String | Input parameter. The CORS allow origins for the Chroma server. |
+| **Chroma Server Host** (`chroma_server_host`) | String | Input parameter. The host for the Chroma server. |
+| **Chroma Server HTTP Port** (`chroma_server_http_port`) | Integer | Input parameter. The HTTP port for the Chroma server. |
+| **Chroma Server gRPC Port** (`chroma_server_grpc_port`) | Integer | Input parameter. The gRPC port for the Chroma server. |
+| **Chroma Server SSL Enabled** (`chroma_server_ssl_enabled`) | Boolean | Input parameter. Enable SSL for the Chroma server. |
+| **Allow Duplicates** (`allow_duplicates`) | Boolean | Input parameter. If true (default), writes don't check for existing duplicates in the collection, allowing you to store multiple copies of the same content. If false, writes won't add documents that match existing documents already present in the collection. If false, it can strictly enforce deduplication by searching the entire collection or only search the number of records, specified in `limit`. Only relevant for writes.|
+| **Search Type** (`search_type`) | String | Input parameter. The type of search to perform, either `Similarity` or `MMR`. Only relevant for reads. |
+| **Number of Results** (`number_of_results`) | Integer | Input parameter. The number of search results to return. Default: `10`. Only relevant for reads. |
+| **Limit** (`limit`) | Integer | Input parameter. Limit the number of records to compare when **Allow Duplicates** is false. This can help improve performance when writing to large collections, but it can result in some duplicate records. Only relevant for writes. |
+
+</details>
+
+### Local DB
+
+The **Local DB** component reads and writes to a persistent, in-memory Chroma DB instance intended for use with Langflow.
+It has separate modes for reads and writes, automatic collection management, and default persistence in your Langflow cache directory.
+
+![A basic flow with a Local DB component in Retrieve mode.](/img/component-local-db.png)
+
+Set the **Mode** parameter to reflect the operation you want the component to perform, and the configure the other parameters accordingly.
+Some parameters are only available for one mode.
+
+<Tabs>
+<TabItem value="ingest" label="Ingest">
+
+To create or write to your local Chroma vector store, use **Ingest** mode.
+
+The following parameters are available in **Ingest** mode:
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Name Your Collection** (`collection_name`) | String | Input parameter. The name for your Chroma vector store collection. Default: `langflow`. Only available in **Ingest** mode. |
+| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow cache directory (`LANGFLOW_CONFIG_DIR`). For more information, see [Memory management options](/memory). |
+| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
+| **Allow Duplicates** (`allow_duplicates`) | Boolean | Input parameter. If true (default), writes don't check for existing duplicates in the collection, allowing you to store multiple copies of the same content. If false, writes won't add documents that match existing documents already present in the collection. If false, it can strictly enforce deduplication by searching the entire collection or only search the number of records, specified in `limit`. Only available in **Ingest** mode. |
+| **Ingest Data** (`ingest_data`) | Data or DataFrame | Input parameter. The records to write to the collection. Records are embedded and indexed for semantic search. Only available in **Ingest** mode. |
+| **Limit** (`limit`) | Integer | Input parameter. Limit the number of records to compare when **Allow Duplicates** is false. This can help improve performance when writing to large collections, but it can result in some duplicate records. Only available in **Ingest** mode. |
+
+</TabItem>
+<TabItem value="retrieve" label="Retrieve">
+
+To read from your local Chroma vector store, use **Retrieve** mode.
+
+The following parameters are available in **Retrieve** mode:
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow cache directory (`LANGFLOW_CONFIG_DIR`). For more information, see [Memory management options](/memory). |
+| **Existing Collections** (`existing_collections`) | String | Input parameter. Select a previously-created collection to search. Only available in **Retrieve** mode. |
+| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
+| **Search Type** (`search_type`) | String | Input parameter. The type of search to perform, either `Similarity` or `MMR`. Only available in **Retrieve** mode. |
+| **Search Query** (`search_query`) | String | Input parameter. Enter a query for similarity search. Only available in **Retrieve** mode. |
+| **Number of Results** (`number_of_results`) | Integer | Input parameter. Number of search results to return. Default: 10. Only available in **Retrieve** mode. |
+
+</TabItem>
+</Tabs>
+
+## Clickhouse
+
+The **Clickhouse** component reads and writes to a Clickhouse vector store using an instance of `Clickhouse` vector store.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Clickhouse Documentation](https://clickhouse.com/docs/en/intro)
+
+<details>
+<summary>Clickhouse parameters</summary>
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| host | hostname | Input parameter. The Clickhouse server hostname. Required. Default: `localhost`. |
+| port | port | Input parameter. The Clickhouse server port. Required. Default: `8123`. |
+| database | database | Input parameter. The Clickhouse database name. Required. |
+| table | Table name | Input parameter. The Clickhouse table name. Required. |
+| username | Username | Input parameter. Clickhouse username for authentication. Required. |
+| password | Password | Input parameter. Clickhouse password for authentication. Required. |
+| index_type | index_type | Input parameter. Type of the index, either `annoy` (default) or `vector_similarity`. |
+| metric | metric | Input parameter. Metric to compute distance for similarity search. The options are `angular` (default), `euclidean`, `manhattan`, `hamming`, `dot`. |
+| secure | Use HTTPS/TLS | Input parameter. If true, enables HTTPS/TLS for the Clickhouse server and overrides inferred values for interface or port arguments. Default: false. |
+| index_param | Param of the index | Input parameter. Index parameters. Default: `100,'L2Distance'`. |
+| index_query_params | index query params | Input parameter. Additional index query parameters. |
+| search_query | Search Query | Input parameter. The query string for similarity search. Only relevant for reads. |
+| ingest_data | Ingest Data | Input parameter. The records to load into the vector store. |
+| cache_vector_store | Cache Vector Store | Input parameter. If true, the component caches the vector store in memory for faster reads. Default: Enabled (true). |
+| embedding | Embedding | Input parameter. The embedding model to use. |
+| number_of_results | Number of Results | Input parameter. The number of search results to return. Default: `4`. Only relevant for reads. |
+| score_threshold | Score threshold | Input parameter. The threshold for similarity score comparison. Default: Unset (no threshold). Only relevant for reads. |
+
+</details>
+
+## Couchbase
+
+The **Couchbase** component reads and writes to a Couchbase vector store using an instance of `CouchbaseSearchVectorStore`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Couchbase documentation](https://docs.couchbase.com/home/index.html)
+
+<details>
+<summary>Couchbase parameters</summary>
+
+| Name | Type | Description |
+|------|------|-------------|
+| couchbase_connection_string | SecretString | Input parameter. Couchbase Cluster connection string. Required. |
+| couchbase_username | String | Input parameter. Couchbase username for authentication. Required. |
+| couchbase_password | SecretString | Input parameter. Couchbase password for authentication. Required. |
+| bucket_name | String | Input parameter. Name of the Couchbase bucket. Required. |
+| scope_name | String | Input parameter. Name of the Couchbase scope. Required. |
+| collection_name | String | Input parameter. Name of the Couchbase collection. Required. |
+| index_name | String | Input parameter. Name of the Couchbase index. Required. |
+| ingest_data | Data | Input parameter. The records to load into the vector store. Only relevant for writes. |
+| search_query | String | Input parameter. The query string for vector search. Only relevant for reads. |
+| cache_vector_store | Boolean | Input parameter. If true, the component caches the vector store in memory for faster reads. Default: Enabled (true). |
+| embedding | Embeddings | Input parameter. The embedding function to use for the vector store. |
+| number_of_results | Integer | Input parameter. Maximum number of search results to return. Default: 4. Only relevant for reads. |
+
+</details>
+
+## DataStax
+
+The following components support DataStax vector stores.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/index.html)
+* [Hyper-Converged Database (HCD) documentation](https://docs.datastax.com/en/hyper-converged-database/1.2/get-started/get-started-hcd.html)
+
+### Astra DB
+
+The **Astra DB** component read and writes to Astra DB Serverless databases, using an instance of `AstraDBVectorStore` to call the Data API and DevOps API.
+
+:::important
+It is recommend that you create any databases, keyspaces, and collections you need before configuring the **Astra DB** component.
+
+You can create new databases and collections through this component, but this is only possible in the Langflow visual editor, not at runtime, and you must wait while the database or collection initializes before proceeding with flow configuration.
+Additionally, not all database and collection configuration options are available through the **Astra DB** component, such as hybrid search options, PCU groups, vectorize integration management, and multi-region deployments.
+:::
+
+<details>
+<summary>Astra DB parameters</summary>
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. If you want to create a database through this component, the application token must have Organization Administrator permissions. |
+| environment | Environment | Input parameter. The environment for the Astra DB API endpoint. Always use `prod`. |
+| database_name | Database | Input parameter. The name of the database that you want this component to connect to. Or, you can select **New Database** to create a new database, and then wait for the database to initialize. |
+| keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
+| collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
+| embedding_model | Embedding Model | Input parameter. Attach an [**Embedding Model** component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
+| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. |
+| search_query | Search Query | Input parameter. The query string for vector search. |
+| cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
+| search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All collections in Astra DB Serverless (Vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
+| reranker | Reranker | Input parameter. The re-ranker model to use for hybrid search, depending on the collection configuration. **This parameter shows the default reranker even if the selected collection doesn't support hybrid search.** To verify if a collection supports hybrid search, [get collection metadata](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/list-collection-metadata.html), and then check that `lexical` and `rerank` both have `"enabled": true`. |
+| lexical_terms | Lexical Terms | Input parameter. A space-separated string of keywords for hybrid search, like `features, data, attributes, characteristics`. This parameter is only available if the collection supports hybrid search. For more information, see the following **Hybrid search example**. |
+| number_of_results | Number of Search Results | Input parameter. The number of search results to return. Default: 4. |
+| search_type | Search Type | Input parameter. The search type to use, either `Similarity` (default), `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
+| search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for vector search results with the `Similarity with score threshold` search type. Default: 0. |
+| advanced_search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata filters to apply in addition to vector or hybrid search. |
+| autodetect_collection | Autodetect Collection | Input parameter. Whether to automatically fetch a list of available collections after providing an application token and API endpoint. |
+| content_field | Content Field | Input parameter. For writes, this parameter specifies the name of the field in the documents that contains text strings for which you want to generate embeddings. |
+| deletion_field | Deletion Based On Field | Input parameter. When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new records are loaded. Use this setting for writes with upserts (overwrites). |
+| ignore_invalid_documents | Ignore Invalid Documents | Input parameter. Whether to ignore invalid documents during writes. If disabled (false), then an error is raised for invalid documents. Default: Enabled (true). |
+| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Input parameter. An optional dictionary of additional parameters for the `AstraDBVectorStore` instance. For more information, see [Vector store instances](#vector-store-instances). |
+
+</details>
+
+<details>
+<summary>Hybrid search example</summary>
+
+The **Astra DB** component supports the Data API's [hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) feature.
+Hybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
+
+To use hybrid search through the **Astra DB** component, do the following:
+
+1. Use the Data API to [create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid) if you haven't already created one.
+
+    Although you can create a collection through the **Astra DB** component, you have more control and insight into the collection settings when using the Data API for this operation.
+
+2. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
+3. In the **Language Model** components, add your OpenAI API key.
+4. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
+5. Configure the **Astra DB** vector store component:
+
+    1. Enter your Astra DB application token.
+    2. In the **Database** field, select your database.
+    3. In the **Collection** field, select your collection with hybrid search enabled.
+
+        Once you select a collection that supports hybrid search, the other parameters automatically update to allow hybrid search options.
+
+6. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Lexical Terms** field, enable the **Show** toggle, and then click **Close**.
+
+7. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
+This input only appears after connecting a collection that support hybrid search with reranking.
+
+8. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
+
+    ```text
+    You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
+    You should convert the query into:
+    1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
+    2. A question to use as the basis for a QA embedding engine.
+    Avoid common keywords associated with the user's subject matter.
+    ```
+
+9. Click **Finish Editing**, and then click **Close** to save your changes to the component.
+
+10. Open the **Playground**, and then enter a natural language question that you would ask about your database.
+
+    In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
+
+    * The input sent directly to the **Astra DB** component's **Search Query** port is used as a string for similarity search.
+    An embedding is generated from the query string using the collection's Astra DB vectorize integration.
+
+    * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract space-separated `keywords` used for the lexical search portion of the hybrid search.
+
+    The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
+    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
+    Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
+
+11. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
+This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
+
+    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
+    The following example is based on the aforementioned instructions for keyword extraction:
+
+        ```
+        1. Keywords: features, data, attributes, characteristics
+        2. Question: What characteristics can be identified in my data?
+        ```
+
+    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
+
+    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
+
+</details>
+
+### Astra DB Graph
+
+The **Astra DB Graph** component uses a `AstraDBGraphVectorStore` instance for graph traversal and graph-based document retrieval in an Astra DB collection. It also supports writing to the vector store.
+For more information, see [Build a Graph RAG system with LangChain and GraphRetriever](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
+
+<details>
+<summary>Astra DB Graph parameters</summary>
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. If you want to create a database through this component, the application token must have Organization Administrator permissions. |
+| api_endpoint | API Endpoint | Input parameter. Your database's API endpoint. |
+| keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
+| collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. For write operations, if a matching collection doesn't exist, a new one is created. |
+| metadata_incoming_links_key | Metadata Incoming Links Key | Input parameter. The metadata key for the incoming links in the vector store. |
+| ingest_data | Ingest Data | Input parameter. Records to load into the vector store. Only relevant for writes. |
+| search_input | Search Query | Input parameter. Query string for similarity search. Only relevant for reads. |
+| cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
+| embedding_model | Embedding Model | Input parameter. Attach an [**Embedding Model** component](/components-embedding-models) to generate embeddings. If the collection has a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html), don't attach an **Embedding Model** component. |
+| metric | Metric | Input parameter. The metrics to use for similarity search calculations, either `cosine` (default), `dot_product`, or `euclidean`. This is a collection setting. |
+| batch_size | Batch Size | Input parameter. Optional number of records to process in a single batch. |
+| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Input parameter. Optional concurrency level for bulk write operations. |
+| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Input parameter. Optional concurrency level for bulk write operations that allow upserts (overwriting existing records). |
+| bulk_delete_concurrency | Bulk Delete Concurrency | Input parameter. Optional concurrency level for bulk delete operations. |
+| setup_mode | Setup Mode | Input parameter. Configuration mode for setting up the vector store, either `Sync` (default) or `Off`. |
+| pre_delete_collection | Pre Delete Collection | Input parameter. Whether to delete the collection before creating a new one. Default: Disabled (false). |
+| metadata_indexing_include | Metadata Indexing Include | Input parameter. An list of metadata fields to index if you want to enable [selective indexing](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-indexes.html) *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
+| metadata_indexing_exclude | Metadata Indexing Exclude | Input parameter. An list of metadata fields to exclude from indexing if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
+| collection_indexing_policy | Collection Indexing Policy | Input parameter. A dictionary to define the indexing policy if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). The `collection_indexing_policy` dictionary is used when you need to set indexing on subfields or a complex indexing definition that isn't compatible as a list. |
+| number_of_results | Number of Results | Input parameter. Number of search results to return. Default: 4. Only relevant to reads. |
+| search_type | Search Type | Input parameter. Search type to use, either `Similarity`, `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`, `Graph Traversal`, or `MMR (Max Marginal Relevance) Graph Traversal` (default). Only relevant to reads. |
+| search_score_threshold | Search Score Threshold | Input parameter. Minimum similarity score threshold for search results if the `search_type` is `Similarity with score threshold`. Default: 0. |
+| search_filter | Search Metadata Filter | Input parameter. Optional dictionary of metadata filters to apply in addition to vector search. |
+
+</details>
+
+### Graph RAG
+
+The **Graph RAG** component uses an instance of [`GraphRetriever`](https://datastax.github.io/graph-rag/reference/langchain_graph_retriever/) for Graph RAG traversal enabling graph-based document retrieval in an Astra DB vector store.
+For more information, see the [DataStax Graph RAG documentation](https://datastax.github.io/graph-rag/).
+
+:::tip
+This component was meant as a Graph RAG extension for the **Astra DB** vector store component.
+However, the **Astra DB Graph** component includes both the vector store connection and Graph RAG functionality.
+:::
+
+<details>
+<summary>Graph RAG parameters</summary>
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embedding_model | Embedding Model | Input parameter. Specify the embedding model to use. Not required if the connected vector store has an [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
+| vector_store | Vector Store Connection | Input parameter. A [`vector_store`](#vector-store-instances) instance inherited from an **Astra DB** component's **Vector Store Connection** output. |
+| edge_definition | Edge Definition | Input parameter. [Edge definition](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/) for the graph traversal. |
+| strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
+| search_query | Search Query | Input parameter. The query to search for in the vector store. |
+| graphrag_strategy_kwargs | Strategy Parameters | Input parameter. Optional dictionary of additional parameters for the [retrieval strategy](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
+| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`Data`](/data-types#data) objects or as a tabular [`DataFrame`](/data-types#dataframe). You can set the desired output type near the component's output port. |
+
+</details>
+
+### Hyper-Converged Database (HCD)
+
+The **Hyper-Converged Database (HCD)** component uses your cluster's the Data API server to read and write to an HCD vector store.
+Because the underlying functions call the Data API, which originated from Astra DB, the component uses an instance of `AstraDBVectorStore`.
+
+![A flow using the HCD component to load vector data.](/img/component-hcd-example-flow.png)
+
+For more information about using the Data API with an HCD deployment, see [Get started with the Data API in HCD 1.2](https://docs.datastax.com/en/hyper-converged-database/1.2/api-reference/dataapiclient.html).
+
+<details>
+<summary>HCD parameters</summary>
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| collection_name | Collection Name | Input parameter. The name of a vector store collection in HCD. For write operations, if the collection doesn't exist, then a new one is created. Required. |
+| username | HCD Username | Input parameter. Username for authenticating to your HCD deployment. Default: `hcd-superuser`. Required. |
+| password | HCD Password | Input parameter. Password for authenticating to your HCD deployment. Required. |
+| api_endpoint | HCD API Endpoint | Input parameter. Your deployment's HCD Data API endpoint, formatted as `http[s]://**CLUSTER_HOST**:**GATEWAY_PORT` where `CLUSTER_HOST` is the IP address of any node in your cluster and `GATEWAY_PORT` is the port number ofr your API gateway service. For example, `http://192.0.2.250:8181`. Required. |
+| ingest_data | Ingest Data | Input parameter. Records to load into the vector store. Only relevant for writes. |
+| search_input | Search Input | Input parameter. Query string for similarity search. Only relevant for reads. |
+| namespace | Namespace | Input parameter. The namespace in HCD that contains or will contain the collection specified in `collection_name`. Default: `default_namespace`. |
+| ca_certificate | CA Certificate | Input parameter. Optional CA certificate for TLS connections to HCD. |
+| metric | Metric | Input parameter. The metrics to use for similarity search calculations, either `cosine`, `dot_product`, or `euclidean`. This is a collection setting. If calling an existing collection, leave unset to use the collection's metric. If a write operation creates a new collection, specify the desired similarity metric setting. |
+| batch_size | Batch Size | Input parameter. Optional number of records to process in a single batch. |
+| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Input parameter. Optional concurrency level for bulk write operations. |
+| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Input parameter. Optional concurrency level for bulk write operations that allow upserts (overwriting existing records). |
+| bulk_delete_concurrency | Bulk Delete Concurrency | Input parameter. Optional concurrency level for bulk delete operations. |
+| setup_mode | Setup Mode | Input parameter. Configuration mode for setting up the vector store, either `Sync` (default), `Async`, or `Off`. |
+| pre_delete_collection | Pre Delete Collection | Input parameter. Whether to delete the collection before creating a new one. |
+| metadata_indexing_include | Metadata Indexing Include | Input parameter. An list of metadata fields to index if you want to enable [selective indexing](https://docs.datastax.com/en/hyper-converged-database/1.2/api-reference/collection-indexes.html) *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
+| metadata_indexing_exclude | Metadata Indexing Exclude | Input parameter. An list of metadata fields to exclude from indexing if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
+| collection_indexing_policy | Collection Indexing Policy | Input parameter. A dictionary to define the indexing policy if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). The `collection_indexing_policy` dictionary is used when you need to set indexing on subfields or a complex indexing definition that isn't compatible as a list. |
+| embedding | Embedding or Astra Vectorize | Input parameter. The embedding model to use by attaching an **Embedding Model** component. This component doesn't support additional vectorize authentication headers, so it isn't possible to use a vectorize integration with this component, even if you have enabled one on an existing HCD collection. |
+| number_of_results | Number of Results | Input parameter. Number of search results to return. Default: 4. Only relevant to reads. |
+| search_type | Search Type | Input parameter. Search type to use, either `Similarity` (default), `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`. Only relevant to reads. |
+| search_score_threshold | Search Score Threshold | Input parameter. Minimum similarity score threshold for search results if the `search_type` is `Similarity with score threshold`. Default: 0. |
+| search_filter | Search Metadata Filter | Input parameter. Optional dictionary of metadata filters to apply in addition to vector search. |
+
+</details>
+
+## Elasticsearch
+
+The **Elasticsearch** component reads and writes to an Elasticsearch instance using `ElasticsearchStore`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html)
+
+<details>
+<summary>Elasticsearch parameters</summary>
+
+| Name | Type | Description |
+|------|------|-------------|
+| es_url | String | Input parameter. Elasticsearch server URL. |
+| es_user | String | Input parameter. Username for Elasticsearch authentication. |
+| es_password | SecretString | Input parameter. Password for Elasticsearch authentication. |
+| index_name | String | Input parameter. Name of the Elasticsearch index. |
+| strategy | String | Input parameter. Strategy for vector search, either `approximate_k_nearest_neighbors` or `script_scoring`. |
+| distance_strategy | String | Input parameter. Strategy for distance calculation, either `COSINE`, `EUCLIDEAN_DISTANCE`, or `DOT_PRODUCT`. |
+| search_query | String | Input parameter. Query string for similarity search. |
+| ingest_data | Data | Input parameter. Records to load into the vector store. |
+| embedding | Embeddings | Input parameter. The embedding model to use. |
+| number_of_results | Integer | Input parameter. Number of search results to return. Default: 4. |
+
+</details>
+
+## FAISS
+
+The **FAISS** component providese access to the Facebook AI Similarity Search (FAISS) library through an instance of `FAISS` vector store.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [FAISS documentation](https://faiss.ai/index.html)
+
+<details>
+<summary>FAISS parameters</summary>
+
+| Name                      | Type          | Description                                      |
+|---------------------------|---------------|--------------------------------------------------|
+| index_name                 | String        | Input parameter. The name of the FAISS index. Default: "langflow_index". |
+| persist_directory          | String        | Input parameter. Path to save the FAISS index. It is relative to where Langflow is running. |
+| search_query               | String        | Input parameter. The query to search for in the vector store.     |
+| ingest_data                | Data          | Input parameter. The list of data to ingest into the vector store. |
+| allow_dangerous_deserialization | Boolean  | Input parameter. Set to True to allow loading pickle files from untrusted sources. Default: True. |
+| embedding                  | Embeddings    | Input parameter. The embedding function to use for the vector store. |
+| number_of_results          | Integer       | Input parameter. Number of results to return from the search. Default: 4. |
+
+</details>
+
+## Milvus
+
+The **Milvus** component reads and writes to Milvus vector stores using an instance of `Milvus` vector store.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Milvus documentation](https://milvus.io/docs)
+
+<details>
+<summary>Milvus parameters</summary>
+
+| Name                    | Type          | Description                                      |
+|-------------------------|---------------|--------------------------------------------------|
+| collection_name          | String        | Input parameter. Name of the Milvus collection.                   |
+| collection_description   | String        | Input parameter. Description of the Milvus collection.            |
+| uri                      | String        | Input parameter. Connection URI for Milvus.                       |
+| password                 | SecretString  | Input parameter. Password for Milvus.                             |
+| username                 | SecretString  | Input parameter. Username for Milvus.                             |
+| batch_size               | Integer       | Input parameter. Number of data to process in a single batch.     |
+| search_query             | String        | Input parameter. Query for similarity search.                     |
+| ingest_data              | Data          | Input parameter. Data to be ingested into the vector store.       |
+| embedding                | Embeddings    | Input parameter. Embedding function to use.                       |
+| number_of_results        | Integer       | Input parameter. Number of results to return in search.           |
+| search_type              | String        | Input parameter. Type of search to perform.                       |
+| search_score_threshold   | Float         | Input parameter. Minimum similarity score for search results.     |
+| search_filter            | Dict          | Input parameter. Metadata filters for search query.               |
+| setup_mode               | String        | Input parameter. Configuration mode for setting up the vector store. |
+| vector_dimensions        | Integer       | Input parameter. Number of dimensions of the vectors.             |
+| pre_delete_collection    | Boolean       | Input parameter. Whether to delete the collection before creating a new one. |
+
+</details>
+
+## MongoDB Atlas
+
+The **MongoDB Atlas** component reads and writes to MongoDB Atlas vector stores using an instance of `MongoDBAtlasVectorSearch`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [MongoDB Atlas documentation](https://www.mongodb.com/docs/atlas/atlas-vector-search/tutorials/vector-search-quick-start/)
+
+<details>
+<summary>MongoDB Atlas parameters</summary>
+
+| Name                      | Type         | Description                               |
+| ------------------------- | ------------ | ----------------------------------------- |
+| mongodb_atlas_cluster_uri | SecretString | Input parameter. The connection URI for your MongoDB Atlas cluster. Required. |
+| enable_mtls               | Boolean      | Input parameter. Enable mutual TLS authentication. Default: false. |
+| mongodb_atlas_client_cert | SecretString | Input parameter. Client certificate combined with private key for mTLS authentication. Required if mTLS is enabled. |
+| db_name                   | String       | Input parameter. The name of the database to use. Required. |
+| collection_name           | String       | Input parameter. The name of the collection to use. Required. |
+| index_name                | String       | Input parameter. The name of the Atlas Search index, it should be a Vector Search. Required. |
+| insert_mode               | String       | Input parameter. How to insert new documents into the collection. The options are "append" or "overwrite". Default: "append". |
+| embedding                 | Embeddings   | Input parameter. The embedding model to use. |
+| number_of_results         | Integer      | Input parameter. Number of results to return in similarity search. Default: 4. |
+| index_field               | String       | Input parameter. The field to index. Default: "embedding". |
+| filter_field              | String       | Input parameter. The field to filter the index. |
+| number_dimensions         | Integer      | Input parameter. Embedding context length. Default: 1536. |
+| similarity                | String       | Input parameter. The method used to measure similarity between vectors. The options are "cosine", "euclidean", or "dotProduct". Default: "cosine". |
+| quantization              | String       | Input parameter. Quantization reduces memory costs by converting 32-bit floats to smaller data types. The options are "scalar" or "binary". |
+
+</details>
+
+## OpenSearch
+
+The **OpenSearch** component reads and writes to OpenSearch instances using `OpenSearchVectorSearch`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [OpenSearch documentation](https://opensearch.org/platform/search/vector-database.html)
+
+<details>
+<summary>OpenSearch parameters</summary>
+
+| Name | Type | Description |
+|------|------|-------------|
+| opensearch_url | String | Input parameter. URL for OpenSearch cluster, such as `https://192.168.1.1:9200`. |
+| index_name | String | Input parameter. The index name where the vectors are stored in OpenSearch cluster. |
+| search_input | String | Input parameter. Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used. |
+| ingest_data | Data | Input parameter. The data to be ingested into the vector store. |
+| embedding | Embeddings | Input parameter. The embedding function to use. |
+| search_type | String | Input parameter. The options are "similarity", "similarity_score_threshold", "mmr". |
+| number_of_results | Integer | Input parameter. The number of results to return in search. |
+| search_score_threshold | Float | Input parameter. The minimum similarity score threshold for search results. |
+| username | String | Input parameter. The username for the opensource cluster. |
+| password | SecretString | Input parameter. The password for the opensource cluster. |
+| use_ssl | Boolean | Input parameter. Use SSL. |
+| verify_certs | Boolean | Input parameter. Verify certificates. |
+| hybrid_search_query | String | Input parameter. Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching. |
+
+</details>
+
+## PGVector
+
+The **PGVector** component reads and writes to PostgreSQL vector stores using an instance of `PGVector`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [PGVector documentation](https://github.com/pgvector/pgvector)
+
+<details>
+<summary>PGVector parameters</summary>
+
+| Name            | Type         | Description                               |
+| --------------- | ------------ | ----------------------------------------- |
+| pg_server_url   | SecretString | Input parameter. The PostgreSQL server connection string.       |
+| collection_name | String       | Input parameter. The table name for the vector store.           |
+| search_query    | String       | Input parameter. The query for similarity search.               |
+| ingest_data     | Data         | Input parameter. The data to be ingested into the vector store. |
+| embedding       | Embeddings   | Input parameter. The embedding function to use.                 |
+| number_of_results | Integer    | Input parameter. The number of results to return in search.     |
+
+</details>
+
+## Pinecone
+
+The **Pinecone** component reads and writes to Pinecone vector stores using an instance of `PineconeVectorStore`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Pinecone documentation](https://docs.pinecone.io/home)
+
+<details>
+<summary>Pinecone parameters</summary>
+
+| Name              | Type         | Description                               |
+| ----------------- | ------------ | ----------------------------------------- |
+| index_name        | String       | Input parameter. The name of the Pinecone index.                |
+| namespace         | String       | Input parameter. The namespace for the index.                   |
+| distance_strategy | String       | Input parameter. The strategy for calculating distance between vectors. |
+| pinecone_api_key  | SecretString | Input parameter. The API key for Pinecone.                      |
+| text_key          | String       | Input parameter. The key in the record to use as text.          |
+| search_query      | String       | Input parameter. The query for similarity search.               |
+| ingest_data       | Data         | Input parameter. The data to be ingested into the vector store. |
+| embedding         | Embeddings   | Input parameter. The embedding function to use.                 |
+| number_of_results | Integer      | Input parameter. The number of results to return in search.     |
+
+</details>
+
+## Qdrant
+
+The **Qdrant** component reads and writes to Qdrant vector stores using an instance of `QdrantVectorStore`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Qdrant documentation](https://qdrant.tech/documentation/)
+
+<details>
+<summary>Qdrant parameters</summary>
+
+| Name                 | Type         | Description                               |
+| -------------------- | ------------ | ----------------------------------------- |
+| collection_name      | String       | Input parameter. The name of the Qdrant collection.             |
+| host                 | String       | Input parameter. The Qdrant server host.                        |
+| port                 | Integer      | Input parameter. The Qdrant server port.                        |
+| grpc_port            | Integer      | Input parameter. The Qdrant gRPC port.                          |
+| api_key              | SecretString | Input parameter. The API key for Qdrant.                        |
+| prefix               | String       | Input parameter. The prefix for Qdrant.                         |
+| timeout              | Integer      | Input parameter. The timeout for Qdrant operations.             |
+| path                 | String       | Input parameter. The path for Qdrant.                           |
+| url                  | String       | Input parameter. The URL for Qdrant.                            |
+| distance_func        | String       | Input parameter. The distance function for vector similarity.   |
+| content_payload_key  | String       | Input parameter. The content payload key.                       |
+| metadata_payload_key | String       | Input parameter. The metadata payload key.                      |
+| search_query         | String       | Input parameter. The query for similarity search.               |
+| ingest_data          | Data         | Input parameter. The data to be ingested into the vector store. |
+| embedding            | Embeddings   | Input parameter. The embedding function to use.                 |
+| number_of_results    | Integer      | Input parameter. The number of results to return in search.     |
+
+</details>
+
+## Redis
+
+The **Redis** component reads and writes to Redis vector stores using an instance of `Redis` vector store.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/)
+
+<details>
+<summary>Redis parameters</summary>
+
+| Name              | Type         | Description                               |
+| ----------------- | ------------ | ----------------------------------------- |
+| redis_server_url  | SecretString | Input parameter. The Redis server connection string.            |
+| redis_index_name  | String       | Input parameter. The name of the Redis index.                   |
+| code              | String       | Input parameter. The custom code for Redis (advanced).          |
+| schema            | String       | Input parameter. The schema for Redis index.                    |
+| search_query      | String       | Input parameter. The query for similarity search.               |
+| ingest_data       | Data         | Input parameter. The data to be ingested into the vector store. |
+| number_of_results | Integer      | Input parameter. The number of results to return in search.     |
+| embedding         | Embeddings   | Input parameter. The embedding function to use.                 |
+
+</details>
+
+## Supabase
+
+The **Supabase** component reads and writes to Supabase vector stores using an instance of `SupabaseVectorStore`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Supabase documentation](https://supabase.com/docs/guides/ai)
+
+<details>
+<summary>Supabase parameters</summary>
+
+| Name                | Type         | Description                               |
+| ------------------- | ------------ | ----------------------------------------- |
+| supabase_url        | String       | Input parameter. The URL of the Supabase instance.              |
+| supabase_service_key| SecretString | Input parameter. The service key for Supabase authentication.   |
+| table_name          | String       | Input parameter. The name of the table in Supabase.             |
+| query_name          | String       | Input parameter. The name of the query to use.                  |
+| search_query        | String       | Input parameter. The query for similarity search.               |
+| ingest_data         | Data         | Input parameter. The data to be ingested into the vector store. |
+| embedding           | Embeddings   | Input parameter. The embedding function to use.                 |
+| number_of_results   | Integer      | Input parameter. The number of results to return in search.     |
+
+</details>
+
+## Upstash
+
+The **Upstash** component reads and writes to Upstash vector stores using an instance of `UpstashVectorStore`.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Upstash documentation](https://upstash.com/docs/introduction)
+
+<details>
+<summary>Upstash parameters</summary>
+
+| Name            | Type         | Description                               |
+| --------------- | ------------ | ----------------------------------------- |
+| index_url       | String       | Input parameter. The URL of the Upstash index.              |
+| index_token     | SecretString | Input parameter. The token for the Upstash index.           |
+| text_key        | String       | Input parameter. The key in the record to use as text.      |
+| namespace       | String       | Input parameter. The namespace for the index.                   |
+| search_query    | String       | Input parameter. The query for similarity search.               |
+| metadata_filter | String       | Input parameter. Filter documents by metadata.             |
+| ingest_data     | Data         | Input parameter. The data to be ingested into the vector store. |
+| embedding       | Embeddings   | Input parameter. The embedding function to use.      |
+| number_of_results | Integer    | Input parameter. The number of results to return in search.     |
+
+</details>
+
+## Vectara Platform
+
+The **Vectara** and **Vectara RAG** components support Vectara vector store, search, and RAG functionality using instances of `Vectara` vector store.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Vector store instances](#vector-store-instances)
+* [Vectara documentation](https://docs.vectara.com/docs/)
+
+### Vectara
+
+The **Vectara** component reads and writes to Vectara vector stores, and then produces [search results output](#search-results-output).
+
+<details>
+<summary>Vectara parameters</summary>
+
+| Name             | Type         | Description                               |
+| ---------------- | ------------ | ----------------------------------------- |
+| vectara_customer_id | String     | Input parameter. The Vectara customer ID.                       |
+| vectara_corpus_id   | String     | Input parameter. The Vectara corpus ID.                         |
+| vectara_api_key   | SecretString | Input parameter. The Vectara API key.                           |
+| embedding         | Embeddings   | Input parameter. The embedding function to use (optional).      |
+| ingest_data       | List[Document/Data] | Input parameter. The data to be ingested into the vector store. |
+| search_query      | String       | Input parameter. The query for similarity search.               |
+| number_of_results | Integer      | Input parameter. The number of results to return in search.     |
+
+</details>
+
+### Vectara RAG
+
+This component enables Vectara's full end-to-end RAG capabilities with reranking options.
+
+This component uses a `Vectara` vector store to execute the vector search and reranking functions, and then outputs an **Answer** string in [`Message`](/data-types#message) format.
+
+## Weaviate
+
+The **Weaviate** component reads and writes to Weaviate vector stores using an instance of `Weaviate` vector store.
+
+For more information, see the following:
+
+* [Hidden parameters](#hidden-parameters)
+* [Search results output](#search-results-output)
+* [Vector store instances](#vector-store-instances)
+* [Weaviate Documentation](https://weaviate.io/developers/weaviate)
+
+<details>
+<summary>Weaviate parameters</summary>
+
+| Name          | Type         | Description                               |
+|---------------|--------------|-------------------------------------------|
+| weaviate_url  | String       | Input parameter. The default instance URL.                      |
+| search_by_text| Boolean      | Input parameter. Indicates whether to search by text.       |
+| api_key       | SecretString | Input parameter. The optional API key for authentication.       |
+| index_name    | String       | Input parameter. The optional index name.                       |
+| text_key      | String       | Input parameter. The default text extraction key.               |
+| input         | Document     | Input parameter. The document or record.                        |
+| embedding     | Embeddings   | Input parameter. The embedding model used.                     |
+| attributes    | List[String] | Input parameter. Optional additional attributes.            |
+
+</details>

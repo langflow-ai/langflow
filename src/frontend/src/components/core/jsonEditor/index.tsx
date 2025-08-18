@@ -1,12 +1,15 @@
 import { jsonquery } from "@jsonquerylang/jsonquery";
-import { KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
-  Content,
+  type Content,
   createJSONEditor,
-  JsonEditor as VanillaJsonEditor,
+  type MenuItem,
+  type Mode,
+  type JsonEditor as VanillaJsonEditor,
 } from "vanilla-jsoneditor";
 import useAlertStore from "../../../stores/alertStore";
 import { cn } from "../../../utils/utils";
+import { useMenuCustomization } from "./useMenuCustomization";
 
 interface JsonEditorProps {
   data?: Content;
@@ -42,7 +45,10 @@ const JsonEditor = ({
   const [transformQuery, setTransformQuery] = useState(initialFilter ?? "");
   const [originalData, setOriginalData] = useState(data);
   const [isFiltered, setIsFiltered] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [_showSuccess, setShowSuccess] = useState(false);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+
+  const { customizeMenu } = useMenuCustomization(setSuccessData, setErrorData);
 
   // Apply initial filter when component mounts
   useEffect(() => {
@@ -59,12 +65,6 @@ const JsonEditor = ({
       (Array.isArray(result) ||
         (typeof result === "object" && !Array.isArray(result)))
     );
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTransformQuery(e.target.value);
-    setIsFiltered(false);
-    setShowSuccess(false);
   };
 
   const applyFilter = (filtered: { json: any }, query: string) => {
@@ -110,7 +110,7 @@ const JsonEditor = ({
                 setIsFiltered(true);
               }
               return;
-            } catch (jsonError) {
+            } catch (_jsonError) {
               setErrorData({
                 title: "Invalid Result",
                 list: [
@@ -131,7 +131,7 @@ const JsonEditor = ({
         }
       } catch (jsonQueryError) {
         // If JSONQuery fails, continue with our path-based method
-        console.debug(
+        console.error(
           "JSONQuery parsing failed, falling back to path-based method:",
           jsonQueryError,
         );
@@ -208,7 +208,7 @@ const JsonEditor = ({
               setIsFiltered(true);
             }
             return;
-          } catch (jsonError) {
+          } catch (_jsonError) {
             setErrorData({
               title: "Invalid Result",
               list: [
@@ -249,7 +249,7 @@ const JsonEditor = ({
     setShowSuccess(false);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const _handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleTransform();
@@ -272,7 +272,7 @@ const JsonEditor = ({
         }
       }
     } catch (jsonQueryError) {
-      console.debug(
+      console.error(
         "JSONQuery parsing failed, falling back to path-based method:",
         jsonQueryError,
       );
@@ -339,6 +339,8 @@ const JsonEditor = ({
       containerRef.current.style.height = height;
     }
 
+    let editorInstance: VanillaJsonEditor | null = null;
+
     const editor = createJSONEditor({
       target: containerRef.current,
       props: {
@@ -350,8 +352,18 @@ const JsonEditor = ({
         onChange: (content) => {
           onChange?.(content);
         },
+        onRenderMenu: (
+          items: MenuItem[],
+          context: { mode: Mode; modal: boolean; readOnly: boolean },
+        ) => {
+          // Use a getter function that will return the editor when called
+          return customizeMenu(items, context, () => editorInstance);
+        },
       },
     });
+
+    // Set the editor instance immediately after creation
+    editorInstance = editor;
 
     setTimeout(() => editor.focus(), 100);
 

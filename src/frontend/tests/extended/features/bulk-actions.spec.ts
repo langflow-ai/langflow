@@ -4,7 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to select flows with different methods and perform bulk actions",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release", "@workspace", "@mainpage"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
@@ -20,7 +20,7 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
 
     await page.getByText("Projects").first().isVisible();
-    await page.getByText("New Flow", { exact: true }).click();
+    await page.getByTestId("new-project-btn").click();
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Document Q&A" }).click();
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -29,7 +29,7 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
 
     await page.getByText("Projects").first().isVisible();
-    await page.getByText("New Flow", { exact: true }).click();
+    await page.getByTestId("new-project-btn").click();
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {

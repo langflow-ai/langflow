@@ -1,5 +1,5 @@
 import { XCircle } from "lucide-react";
-import { crashComponentPropsType } from "../../../types/components";
+import type { crashComponentPropsType } from "../../../types/components";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "../../ui/card";
 

@@ -88,7 +88,7 @@ async function waitForInstallButton(page) {
     await button.waitForElementState("stable");
     return button;
   } catch (error) {
-    console.log("Install button not found, retrying...");
+    console.error("Install button not found, retrying...");
     // Optional: Add custom retry logic here
     throw error;
   }
@@ -105,7 +105,7 @@ async function waitForSuccessMessage(page) {
     // Click the message when it's ready
     await page.getByText("Flow Installed Successfully.").first().click();
   } catch (error) {
-    console.log("Success message not found");
+    console.error("Success message not found");
     throw error;
   }
 }

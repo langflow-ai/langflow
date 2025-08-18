@@ -1,5 +1,5 @@
 import { useTypesStore } from "@/stores/typesStore";
-import { FlowType } from "@/types/flow";
+import type { FlowType } from "@/types/flow";
 import { iconExists } from "@/utils/styleUtils";
 
 export const useGetTemplateStyle = (

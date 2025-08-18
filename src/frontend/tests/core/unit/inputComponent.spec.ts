@@ -30,13 +30,26 @@ test(
       .getByTestId("popover-anchor-input-collection_name")
       .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-    let value = await page
+    const value = await page
       .getByTestId("popover-anchor-input-collection_name")
       .inputValue();
 
     if (value != "collection_name_test_123123123!@#$&*(&%$@") {
       expect(false).toBeTruthy();
     }
+
+    // Test cursor position preservation
+    const input = page.getByTestId("popover-anchor-input-collection_name");
+    await input.click();
+    await input.press("Home"); // Move cursor to start
+    await input.press("ArrowRight"); // Move cursor to position 1
+    await input.press("ArrowRight"); // Move cursor to position 2
+    await input.pressSequentially("X", { delay: 100 }); // Type at position 2
+    const cursorValue = await input.inputValue();
+    if (!cursorValue.startsWith("coX")) {
+      expect(false).toBeTruthy();
+    }
+    await input.fill("collection_name_test_123123123!@#$&*(&%$@");
 
     await page.getByTestId("div-generic-node").click();
 
@@ -104,7 +117,7 @@ test(
         .isChecked(),
     ).toBeFalsy();
 
-    let valueEditNode = await page
+    const valueEditNode = await page
       .getByTestId("popover-anchor-input-collection_name-edit")
       .inputValue();
 
@@ -129,7 +142,7 @@ test(
 
       await page.getByText("Close").last().click();
 
-      let value = await page
+      const value = await page
         .getByTestId("popover-anchor-input-collection_name")
         .inputValue();
 

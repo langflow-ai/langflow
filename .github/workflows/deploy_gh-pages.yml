@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: yarn
           cache-dependency-path: ./docs/yarn.lock
 
@@ -25,6 +25,8 @@ jobs:
         run: cd docs && yarn install
       - name: Build website
         run: cd docs && yarn build
+        env:
+          SEGMENT_PUBLIC_WRITE_KEY: ${{ vars.DOCS_PROD_SEGMENT_PUBLIC_WRITE_KEY }}
 
       # Popular action to deploy to GitHub Pages:
       # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus

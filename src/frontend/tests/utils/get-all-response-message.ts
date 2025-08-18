@@ -1,4 +1,4 @@
-import { Page } from "playwright/test";
+import type { Page } from "playwright/test";
 
 export const getAllResponseMessage = async (page: Page) => {
   const numberOfResponseMessages = await page

@@ -31,12 +31,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="languagemodelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("languagemodelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -66,11 +66,15 @@ test(
       );
 
       await page.getByText("Exit Anyway", { exact: true }).click();
-    } catch (error) {
-      console.log("Warning text not visible, skipping dialog confirmation");
+    } catch (_error) {
+      console.error("Warning text not visible, skipping dialog confirmation");
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlowDiv = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlowDiv.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,
@@ -85,7 +89,7 @@ test(
     await page.keyboard.press("Escape");
     await page.locator('//*[@id="react-flow-id"]').click();
 
-    const lastNvidiaModel = page.getByTestId("languagemodelsNVIDIA").last();
+    const lastNvidiaModel = page.getByTestId("nvidiaNVIDIA").last();
     await lastNvidiaModel.scrollIntoViewIfNeeded();
 
     try {
@@ -114,7 +118,11 @@ test(
 
     await page.getByText("Save And Exit", { exact: true }).click();
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow.click();
 
     await page.waitForSelector("text=loading", {
       state: "hidden",
@@ -128,12 +136,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="languagemodelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("languagemodelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -162,7 +170,11 @@ test(
       await page.getByText("Save And Exit", { exact: true }).last().click();
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow2 = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow2.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,

@@ -1,4 +1,4 @@
-import { Link, LinkProps, useParams } from "react-router-dom";
+import { Link, type LinkProps, useParams } from "react-router-dom";
 import { ENABLE_CUSTOM_PARAM } from "../feature-flags";
 
 export function CustomLink({ to, ...props }: LinkProps) {

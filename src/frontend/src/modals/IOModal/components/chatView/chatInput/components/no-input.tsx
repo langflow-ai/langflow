@@ -1,13 +1,14 @@
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
-import React, { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../../../components/common/genericIconComponent";
 import { ICON_STROKE_WIDTH } from "../../../../../../constants/constants";
 import { cn } from "../../../../../../utils/utils";
 
 interface NoInputViewProps {
   isBuilding: boolean;
-  sendMessage: (args: { repeat: number }) => void;
+  sendMessage: (args: { repeat: number }) => Promise<void>;
   stopBuilding: () => void;
 }
 
@@ -23,8 +24,8 @@ const NoInputView: React.FC<NoInputViewProps> = ({
           <Button
             data-testid="button-send"
             className="font-semibold"
-            onClick={() => {
-              sendMessage({
+            onClick={async () => {
+              await sendMessage({
                 repeat: 1,
               });
             }}
@@ -51,6 +52,7 @@ const NoInputView: React.FC<NoInputViewProps> = ({
             className="underline underline-offset-4"
             target="_blank"
             href="https://docs.langflow.org/components-io#chat-input"
+            rel="noopener"
           >
             Chat Input
           </a>{" "}

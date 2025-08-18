@@ -633,7 +633,7 @@ class McpInput(BaseInputMixin, MetadataTraceMixin):
     """
 
     field_type: SerializableFieldTypes = FieldTypes.MCP
-    value: str = Field(default="")
+    value: dict[str, Any] = Field(default_factory=dict)
 
 
 class LinkInput(BaseInputMixin, LinkMixin):

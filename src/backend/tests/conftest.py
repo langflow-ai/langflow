@@ -76,6 +76,10 @@ def blockbuster(request):
                 .can_block_in("rich/traceback.py", "_render_stack")
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
                 .can_block_in("langchain_core/runnables/utils.py", "get_function_nonlocals")
+                .can_block_in("alembic/versions", "_load_revisions")
+                .can_block_in("dotenv/main.py", "find_dotenv")
+                .can_block_in("alembic/script/base.py", "_load_revisions")
+                .can_block_in("alembic/env.py", "_do_run_migrations")
             )
 
             for func in ["os.stat", "os.path.abspath", "os.scandir", "os.listdir"]:
@@ -164,11 +168,11 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
             continue
         try:
             await delete_vertex_builds_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
         try:
             await delete_transactions_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug(f"Error deleting transactions for flow {flow_id}: {e}")
 
 
@@ -194,11 +198,18 @@ async def async_client() -> AsyncGenerator:
 
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-    SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    try:
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            yield session
+    finally:
+        SQLModel.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest.fixture
@@ -366,6 +377,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture
+def use_noop_session(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
+    # Optionally patch the Settings object if needed
+    # from langflow.services.settings.base import Settings
+    # monkeypatch.setattr(Settings, "use_noop_database", True)
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
@@ -460,7 +481,7 @@ async def active_user(client):  # noqa: ARG001
             user = await session.get(User, user.id, options=[selectinload(User.flows)])
             await _delete_transactions_and_vertex_builds(session, user.flows)
             await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting transactions and vertex builds for user: {e}")
 
     try:
@@ -468,7 +489,7 @@ async def active_user(client):  # noqa: ARG001
             user = await session.get(User, user.id)
             await session.delete(user)
             await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting user: {e}")
 
 

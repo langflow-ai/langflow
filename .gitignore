@@ -277,3 +277,4 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
+*.mcp.json

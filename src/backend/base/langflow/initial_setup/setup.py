@@ -2,7 +2,6 @@ import asyncio
 import copy
 import io
 import json
-import os
 import re
 import shutil
 import zipfile
@@ -30,6 +29,7 @@ from langflow.base.constants import (
     FIELD_FORMAT_ATTRIBUTES,
     NODE_FORMAT_ATTRIBUTES,
     ORJSON_OPTIONS,
+    SKIPPED_COMPONENTS,
     SKIPPED_FIELD_ATTRIBUTES,
 )
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
@@ -65,8 +65,16 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
+            # skip components that are having dynamic values that need to be persisted for templates
 
-            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            if node_type in SKIPPED_COMPONENTS:
+                continue
+
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in {
+                "Agent",
+                "LanguageModelComponent",
+                "TypeConverterComponent",
+            }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 # Set selected output as the previous selected output
@@ -682,7 +690,7 @@ async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUI
     return list((await session.exec(stmt)).first().flows)
 
 
-async def delete_start_projects(session, folder_id) -> None:
+async def delete_starter_projects(session, folder_id) -> None:
     flows = await get_all_flows_similar_to_project(session, folder_id)
     for flow in flows:
         await session.delete(flow)
@@ -695,7 +703,7 @@ async def folder_exists(session, folder_name):
     return folder is not None
 
 
-async def create_starter_folder(session):
+async def get_or_create_starter_folder(session):
     if not await folder_exists(session, STARTER_FOLDER_NAME):
         new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
@@ -891,21 +899,31 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: bool = True) -> None:
+async def create_or_update_starter_projects(all_types_dict: dict) -> None:
     """Create or update starter projects.
 
     Args:
         all_types_dict (dict): Dictionary containing all component types and their templates
-        do_create (bool, optional): Whether to create new projects. Defaults to True.
     """
-    successfully_created_projects = 0
+    if not get_settings_service().settings.create_starter_projects:
+        # no-op for environments that don't want to create starter projects.
+        # note that this doesn't check if the starter projects are already loaded in the db;
+        # this is intended to be used to skip all startup project logic.
+        return
+
     async with session_scope() as session:
-        new_folder = await create_starter_folder(session)
+        new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
-        await delete_start_projects(session, new_folder.id)
-        await copy_profile_pictures()
-        for project_path, project in starter_projects:
-            try:
+
+        if get_settings_service().settings.update_starter_projects:
+            logger.debug("Updating starter projects")
+            # 1. Delete all existing starter projects
+            successfully_updated_projects = 0
+            await delete_starter_projects(session, new_folder.id)
+            await copy_profile_pictures()
+
+            # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
+            for project_path, project in starter_projects:
                 (
                     project_name,
                     project_description,
@@ -917,23 +935,16 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     project_gradient,
                     project_tags,
                 ) = get_project_data(project)
-                do_update_starter_projects = (
-                    os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
+                updated_project_data = update_projects_components_with_latest_component_versions(
+                    project_data.copy(), all_types_dict
                 )
-                if do_update_starter_projects:
-                    updated_project_data = update_projects_components_with_latest_component_versions(
-                        project_data.copy(), all_types_dict
-                    )
-                    updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-                    if updated_project_data != project_data:
-                        project_data = updated_project_data
-                        # We also need to update the project data in the file
-                        await update_project_file(project_path, project, updated_project_data)
-                if do_create and project_name and project_data:
-                    existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
-                    for existing_project in existing_flows:
-                        await session.delete(existing_project)
+                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+                if updated_project_data != project_data:
+                    project_data = updated_project_data
+                    await update_project_file(project_path, project, updated_project_data)
 
+                try:
+                    # Create the updated starter project
                     create_new_project(
                         session=session,
                         project_name=project_name,
@@ -947,10 +958,48 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                         project_tags=project_tags,
                         new_folder_id=new_folder.id,
                     )
+                except Exception:  # noqa: BLE001
+                    logger.exception(f"Error while creating starter project {project_name}")
+
+                successfully_updated_projects += 1
+            logger.debug(f"Successfully updated {successfully_updated_projects} starter projects")
+        else:
+            # Even if we're not updating starter projects, we still need to create any that don't exist
+            logger.debug("Creating new starter projects")
+            successfully_created_projects = 0
+            existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+            existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
+            for _, project in starter_projects:
+                (
+                    project_name,
+                    project_description,
+                    project_is_component,
+                    updated_at_datetime,
+                    project_data,
+                    project_icon,
+                    project_icon_bg_color,
+                    project_gradient,
+                    project_tags,
+                ) = get_project_data(project)
+                if project_name not in existing_flow_names:
+                    try:
+                        create_new_project(
+                            session=session,
+                            project_name=project_name,
+                            project_description=project_description,
+                            project_is_component=project_is_component,
+                            updated_at_datetime=updated_at_datetime,
+                            project_data=project_data,
+                            project_icon=project_icon,
+                            project_icon_bg_color=project_icon_bg_color,
+                            project_gradient=project_gradient,
+                            project_tags=project_tags,
+                            new_folder_id=new_folder.id,
+                        )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(f"Error while creating starter project {project_name}")
                     successfully_created_projects += 1
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Error while creating starter project {project_name}")
-    logger.debug(f"Successfully created {successfully_created_projects} starter projects")
+                logger.debug(f"Successfully created {successfully_created_projects} starter projects")
 
 
 async def initialize_super_user_if_needed() -> None:
@@ -967,7 +1016,7 @@ async def initialize_super_user_if_needed() -> None:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
-    logger.info("Super user initialized")
+    logger.debug("Super user initialized")
 
 
 async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:
@@ -1010,32 +1059,45 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 async def sync_flows_from_fs():
     flow_mtimes = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
-    while True:
-        try:
-            async with session_scope() as session:
-                stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
-                flows = (await session.exec(stmt)).all()
-                for flow in flows:
-                    mtime = flow_mtimes.setdefault(flow.id, 0)
-                    path = anyio.Path(flow.fs_path)
-                    try:
-                        if await path.exists():
-                            new_mtime = (await path.stat()).st_mtime
-                            if new_mtime > mtime:
-                                update_data = orjson.loads(await path.read_text(encoding="utf-8"))
-                                try:
-                                    for field_name in ("name", "description", "data", "locked"):
-                                        if new_value := update_data.get(field_name):
-                                            setattr(flow, field_name, new_value)
-                                    if folder_id := update_data.get("folder_id"):
-                                        flow.folder_id = UUID(folder_id)
-                                    await session.commit()
-                                    await session.refresh(flow)
-                                except Exception:  # noqa: BLE001
-                                    logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
-                                flow_mtimes[flow.id] = new_mtime
-                    except Exception:  # noqa: BLE001
-                        logger.exception(f"Error while handling flow file {path}")
-        except Exception:  # noqa: BLE001
-            logger.exception("Error while syncing flows from database")
-        await asyncio.sleep(fs_flows_polling_interval)
+    try:
+        while True:
+            try:
+                async with session_scope() as session:
+                    stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
+                    flows = (await session.exec(stmt)).all()
+                    for flow in flows:
+                        mtime = flow_mtimes.setdefault(flow.id, 0)
+                        path = anyio.Path(flow.fs_path)
+                        try:
+                            if await path.exists():
+                                new_mtime = (await path.stat()).st_mtime
+                                if new_mtime > mtime:
+                                    update_data = orjson.loads(await path.read_text(encoding="utf-8"))
+                                    try:
+                                        for field_name in ("name", "description", "data", "locked"):
+                                            if new_value := update_data.get(field_name):
+                                                setattr(flow, field_name, new_value)
+                                        if folder_id := update_data.get("folder_id"):
+                                            flow.folder_id = UUID(folder_id)
+                                        await session.commit()
+                                        await session.refresh(flow)
+                                    except Exception:  # noqa: BLE001
+                                        logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
+                                    flow_mtimes[flow.id] = new_mtime
+                        except Exception:  # noqa: BLE001
+                            logger.exception(f"Error while handling flow file {path}")
+            except asyncio.CancelledError:
+                logger.debug("Flow sync cancelled")
+                break
+            except (sa.exc.OperationalError, ValueError) as e:
+                if "no active connection" in str(e) or "connection is closed" in str(e):
+                    logger.debug("Database connection lost, assuming shutdown")
+                    break  # Exit gracefully, don't error
+                raise  # Re-raise if it's a real connection problem
+            except Exception:  # noqa: BLE001
+                logger.exception("Error while syncing flows from database")
+                break
+
+            await asyncio.sleep(fs_flows_polling_interval)
+    except asyncio.CancelledError:
+        logger.debug("Flow sync task cancelled")

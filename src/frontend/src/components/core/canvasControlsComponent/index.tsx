@@ -1,21 +1,21 @@
-import IconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useFlowStore from "@/stores/flowStore";
-import { cn } from "@/utils/utils";
 import {
   ControlButton,
   Panel,
+  type ReactFlowState,
   useReactFlow,
   useStore,
   useStoreApi,
-  type ReactFlowState,
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { useCallback, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { shallow } from "zustand/shallow";
+import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { cn } from "@/utils/utils";
 
 type CustomControlButtonProps = {
   iconName: string;
@@ -79,6 +79,10 @@ const CanvasControls = ({ children }) => {
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+  const setHelperLineEnabled = useFlowStore(
+    (state) => state.setHelperLineEnabled,
+  );
+  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
   useEffect(() => {
     store.setState({
@@ -108,6 +112,10 @@ const CanvasControls = ({ children }) => {
     });
     handleSaveFlow();
   }, [isInteractive, store, handleSaveFlow]);
+
+  const onToggleHelperLines = useCallback(() => {
+    setHelperLineEnabled(!helperLineEnabled);
+  }, [setHelperLineEnabled, helperLineEnabled]);
 
   return (
     <Panel
@@ -149,6 +157,17 @@ const CanvasControls = ({ children }) => {
           isInteractive ? "" : "text-primary-foreground dark:text-primary"
         }
         testId="lock_unlock"
+      />
+      {/* Display Helper Lines */}
+      <CustomControlButton
+        iconName={helperLineEnabled ? "FoldHorizontal" : "UnfoldHorizontal"}
+        tooltipText={
+          helperLineEnabled ? "Hide Helper Lines" : "Show Helper Lines"
+        }
+        onClick={onToggleHelperLines}
+        backgroundClasses={cn(helperLineEnabled && "bg-muted")}
+        iconClasses={cn(helperLineEnabled && "text-muted-foreground")}
+        testId="helper_lines"
       />
     </Panel>
   );

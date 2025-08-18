@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { GlobalVariablesStore } from "../../types/zustand/globalVariables";
+import type { GlobalVariablesStore } from "../../types/zustand/globalVariables";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({

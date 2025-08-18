@@ -92,7 +92,7 @@ test(
       .getByTestId("handle-parsercomponent-shownode-parsed text-right")
       .click();
 
-    const loopItemInput = await page
+    const _loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
       .first()
       .click();

@@ -34,6 +34,10 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
+    await page.getByTestId("title-Chat Output").click();
+    await page.getByTestId("icon-MoreHorizontal").click();
+    await page.getByText("Expand").click();
+
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 

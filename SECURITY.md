@@ -49,3 +49,46 @@ Langflow allows users to define and run **custom code components** through endpo
 This means an attacker could send malicious code to the endpoint and have it executed on the server—leading to full system compromise, including data theft, remote shell access, or lateral movement within the network.
 
 To address, upgrade to >= 1.3.0.
+
+### No API key required if running Langflow with `LANGFLOW_AUTO_LOGIN=true` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true`
+
+In Langflow versions earlier than 1.5, if `LANGFLOW_AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication. In this case, API requests don't require a Langflow API key.
+
+In Langflow version 1.5, a Langflow API key is required to authenticate requests.
+Setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` and `LANGFLOW_AUTO_LOGIN=true` skips authentication for API requests. However, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in v1.6.
+
+`LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true` is the default behavior, so users do not need to change existing workflows in 1.5. To update your workflows to require authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=false`.
+
+For more information, see [API keys and authentication](https://docs.langflow.org/api-keys-and-authentication).
+
+## Security Configuration Guidelines
+
+### Superuser Creation Security
+
+The `langflow superuser` CLI command can present a privilege escalation risk if not properly secured.
+
+#### Security Measures
+
+1. **Authentication Required in Production**
+   - When `LANGFLOW_AUTO_LOGIN=false`, superuser creation requires authentication
+   - Use `--auth-token` parameter with a valid superuser API key or JWT token
+
+2. **Disable CLI Superuser Creation**
+   - Set `LANGFLOW_ENABLE_SUPERUSER_CLI=false` to disable the command entirely
+   - Strongly recommended for production environments
+
+3. **Secure AUTO_LOGIN Setting**
+   - Default is `true` for <=1.5. This may change in a future release.
+   - When `true`, creates default superuser `langflow/langflow` - **ONLY USE IN DEVELOPMENT**
+
+#### Production Security Configuration
+
+```bash
+# Recommended production settings
+export LANGFLOW_AUTO_LOGIN=false
+export LANGFLOW_ENABLE_SUPERUSER_CLI=false
+export LANGFLOW_SUPERUSER="<your-superuser-username>"
+export LANGFLOW_SUPERUSER_PASSWORD="<your-superuser-password>"
+export LANGFLOW_DATABASE_URL="<your-production-database-url>" # e.g. "postgresql+psycopg://langflow:secure_pass@db.internal:5432/langflow"
+export LANGFLOW_SECRET_KEY="your-strong-random-secret-key"
+```

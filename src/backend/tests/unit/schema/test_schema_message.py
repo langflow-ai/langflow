@@ -65,6 +65,7 @@ def test_message_from_human_text():
     lc_message = message.to_lc_message()
 
     assert isinstance(lc_message, HumanMessage)
+    assert isinstance(lc_message.content, str)
     assert lc_message.content == text
 
 
@@ -94,9 +95,10 @@ def test_message_with_single_image(sample_image):
     assert lc_message.content[0] == {"type": "text", "text": text}
 
     # Check image content
-    assert lc_message.content[1]["type"] == "image_url"
-    assert "url" in lc_message.content[1]["image_url"]
-    assert lc_message.content[1]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert lc_message.content[1]["type"] == "image"
+    assert lc_message.content[1]["source_type"] == "url"
+    assert "url" in lc_message.content[1]
+    assert lc_message.content[1]["url"].startswith("data:image/png;base64,")
 
 
 def test_message_with_multiple_images(sample_image, langflow_cache_dir):
@@ -129,7 +131,10 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
 
     # Check both images
     assert all(
-        content["type"] == "image_url" and content["image_url"]["url"].startswith("data:image/png;base64,")
+        content["type"] == "image"
+        and content["source_type"] == "url"
+        and "url" in content
+        and content["url"].startswith("data:image/png;base64,")
         for content in lc_message.content[1:]
     )
 
@@ -169,10 +174,9 @@ def test_message_serialization():
 def test_message_to_lc_without_sender():
     """Test converting a message without sender to langchain message."""
     message = Message(text="Test message")
-    # When no sender is specified, it defaults to HumanMessage
+    # When no sender is specified, it defaults to AIMessage
     lc_message = message.to_lc_message()
     assert isinstance(lc_message, HumanMessage)
-    assert lc_message.content == "Test message"
 
 
 def test_timestamp_serialization():

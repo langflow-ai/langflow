@@ -1,4 +1,4 @@
-import { InputFieldType } from "@/types/api";
+import type { InputFieldType } from "@/types/api";
 import { convertArrayToObj } from "../../../utils/reactflowUtils";
 
 export const getChangesType = (

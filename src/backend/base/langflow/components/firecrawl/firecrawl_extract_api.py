@@ -12,8 +12,8 @@ from langflow.schema.data import Data
 
 
 class FirecrawlExtractApi(Component):
-    display_name: str = "FirecrawlExtractApi"
-    description: str = "Firecrawl Extract API."
+    display_name: str = "Firecrawl Extract API"
+    description: str = "Extracts data from a URL."
     name = "FirecrawlExtractApi"
 
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/extract"

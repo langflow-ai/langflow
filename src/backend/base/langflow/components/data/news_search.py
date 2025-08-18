@@ -12,6 +12,7 @@ from langflow.schema import DataFrame
 class NewsSearchComponent(Component):
     display_name = "News Search"
     description = "Searches Google News via RSS. Returns clean article data."
+    documentation: str = "https://docs.langflow.org/components-data#news-search"
     icon = "newspaper"
     name = "NewsSearch"
 

@@ -12,12 +12,12 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
 
-  await page.waitForSelector('[data-testid="languagemodelsOpenAI"]', {
+  await page.waitForSelector('[data-testid="openaiOpenAI"]', {
     timeout: 3000,
   });
 
   await page
-    .getByTestId("languagemodelsOpenAI")
+    .getByTestId("openaiOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 

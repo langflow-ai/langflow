@@ -4,7 +4,7 @@ import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 const codeContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap",

@@ -1,6 +1,6 @@
-import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
-import { JsonEditor as VanillaJsonEditor } from "vanilla-jsoneditor";
+import type { JsonEditor as VanillaJsonEditor } from "vanilla-jsoneditor";
+import useAlertStore from "@/stores/alertStore";
 import IconComponent from "../../components/common/genericIconComponent";
 import JsonEditor from "../../components/core/jsonEditor";
 import BaseModal from "../baseModal";
@@ -102,14 +102,15 @@ export default function DictAreaModal({
   );
 
   const renderContent = () => (
-    <BaseModal.Content>
-      <div className="flex h-full w-full flex-col transition-all">
+    <BaseModal.Content overflowHidden>
+      <div className="flex h-[500px] w-full flex-col transition-all">
         <JsonEditor
           data={{ json: value }}
           jsonRef={jsonEditorRef}
-          height="400px"
+          readOnly={!onChange}
+          height="500px"
           width="100%"
-          className="h-[400px] w-full overflow-visible"
+          className="h-full w-full overflow-auto"
         />
       </div>
     </BaseModal.Content>

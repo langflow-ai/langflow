@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import { getDiscordCount, getRepoStars } from "../controllers/API";
-import { DarkStoreType } from "../types/zustand/dark";
+import type { DarkStoreType } from "../types/zustand/dark";
 
 const startedStars = Number(window.localStorage.getItem("githubStars")) ?? 0;
 
 export const useDarkStore = create<DarkStoreType>((set, get) => ({
-  dark: JSON.parse(window.localStorage.getItem("isDark")!) ?? false,
+  dark: (() => {
+    const stored = window.localStorage.getItem("isDark");
+    return stored !== null ? JSON.parse(stored) : false;
+  })(),
   stars: startedStars,
   version: "",
   latestVersion: "",
@@ -25,7 +28,7 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
       set(() => ({ stars: 0, lastUpdated: new Date() }));
       return;
     }
-    let lastUpdated = window.localStorage.getItem("githubStarsLastUpdated");
+    const lastUpdated = window.localStorage.getItem("githubStarsLastUpdated");
     let diff = 0;
     // check if lastUpdated actually exists
     if (lastUpdated !== null) {

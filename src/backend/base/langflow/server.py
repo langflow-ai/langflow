@@ -25,7 +25,6 @@ class LangflowUvicornWorker(UvicornWorker):
 
     def handle_exit(self, sig, frame):
         if not self._has_exited:
-            print("👋 See you next time!")  # noqa: T201
             self._has_exited = True
 
         super().handle_exit(sig, frame)
@@ -46,6 +45,9 @@ class Logger(glogging.Logger):
 
     def __init__(self, cfg) -> None:
         super().__init__(cfg)
+        logging.getLogger("gunicorn.error").setLevel(logging.WARNING)
+        logging.getLogger("gunicorn.access").setLevel(logging.WARNING)
+
         logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
         logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
 
