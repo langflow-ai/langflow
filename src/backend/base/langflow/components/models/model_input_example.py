@@ -15,9 +15,10 @@ class ModelInputExampleComponent(Component):
     inputs = [
         ModelInput(
             name="model_selection",
+            required=True,
             display_name="Model",
-            info="Select the model to use",
             model_type="language",
+            placeholder="Select a model",
             temperature=0.7,
             max_tokens=1000,
         ),
@@ -30,7 +31,9 @@ class ModelInputExampleComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Language Model", name="model_output", method="build_model"),
+        Output(
+            display_name="Language Model", name="model_output", method="build_model"
+        ),
     ]
 
     def build_model(self) -> LanguageModel:
@@ -41,9 +44,15 @@ class ModelInputExampleComponent(Component):
         if not model:
             # Parse the selection to show a helpful error message
             selection_value = ""
-            if self.model_selection.value and isinstance(self.model_selection.value, list):
+            if self.model_selection.value and isinstance(
+                self.model_selection.value, list
+            ):
                 first_item = self.model_selection.value[0]
-                selection_value = first_item.get("name", "") if isinstance(first_item, dict) else str(first_item)
+                selection_value = (
+                    first_item.get("name", "")
+                    if isinstance(first_item, dict)
+                    else str(first_item)
+                )
             if ":" in selection_value:
                 provider, model_name = selection_value.split(":", 1)
                 msg = f"Failed to build {provider} model '{model_name}'. Check API key configuration."
