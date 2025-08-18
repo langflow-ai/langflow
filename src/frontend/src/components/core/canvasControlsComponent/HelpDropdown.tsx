@@ -1,5 +1,3 @@
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,12 +13,18 @@ import {
   DOCS_URL,
 } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import useFlowStore from "@/stores/flowStore";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DropdownControlButton from "./DropdownControlButton";
 
 const HelpDropdown = () => {
   const navigate = useNavigate();
-  const [helperLineEnabled, setHelperLineEnabled] = useState(false);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
+  const setHelperLineEnabled = useFlowStore(
+    (state) => state.setHelperLineEnabled,
+  );
 
   const onToggleHelperLines = useCallback(() => {
     setHelperLineEnabled(!helperLineEnabled);
