@@ -102,6 +102,38 @@ def _find_uv_executable() -> str:
     raise RuntimeError(msg)
 
 
+def _find_python_executable(project_root: Path) -> str:
+    """Find the Python executable in the virtual environment with cross-platform support."""
+    if platform.system() == "Windows":
+        # Windows: .venv/Scripts/python.exe
+        python_path = project_root / ".venv" / "Scripts" / "python.exe"
+        if python_path.exists():
+            logger.info(f"Found Python executable at: {python_path}")
+            return str(python_path)
+        # Fallback to python without .exe extension
+        python_path = project_root / ".venv" / "Scripts" / "python"
+        if python_path.exists():
+            logger.info(f"Found Python executable at: {python_path}")
+            return str(python_path)
+    else:
+        # Unix-like systems (Linux, macOS): .venv/bin/python
+        python_path = project_root / ".venv" / "bin" / "python"
+        if python_path.exists():
+            logger.info(f"Found Python executable at: {python_path}")
+            return str(python_path)
+
+    # If virtual environment Python not found, fall back to system Python
+    # This should not happen in normal operation but provides a safety net
+    logger.warning("Virtual environment Python not found, falling back to system Python")
+    python_executable = shutil.which("python3") or shutil.which("python")
+    if python_executable:
+        logger.info(f"Using system Python executable: {python_executable}")
+        return python_executable
+
+    msg = "Python executable not found in virtual environment or system PATH"
+    raise RuntimeError(msg)
+
+
 def _is_valid_windows_package_name(package_name: str) -> bool:
     """Validate package name for Windows forbidden characters."""
     forbidden_chars = ["<", ">", ":", '"', "|", "?", "*"]
@@ -268,11 +300,15 @@ async def cleanup_orphaned_installation_records(session, user_id: UUID) -> int:
         uv_executable = _find_uv_executable()
         project_root = _find_project_root()
 
+        # Get system packages with explicit Python path to ensure consistent environment
+        python_executable = _find_python_executable(project_root)
         process = await asyncio.create_subprocess_exec(
             str(uv_executable),
             "pip",
             "list",
             "--format=json",
+            "--python",
+            python_executable,
             cwd=project_root,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -367,7 +403,8 @@ async def restore_langflow_background(installation_id: UUID) -> None:
 
                     # On Windows, use pip uninstall for packages installed via pip
                     if platform.system() == "Windows":
-                        remove_command = [str(uv_executable), "pip", "uninstall", package]
+                        python_executable = _find_python_executable(project_root)
+                        remove_command = [str(uv_executable), "pip", "uninstall", package, "--python", python_executable]
                     else:
                         remove_command = [str(uv_executable), "remove", package]
                     logger.info(f"Removing package: {package}")
@@ -610,14 +647,17 @@ async def install_package_background(installation_id: UUID) -> None:
                 await session.commit()
                 return
 
-            # Install the package using UV
+            # Install the package using UV with explicit Python path
+            python_executable = _find_python_executable(project_root)
+            
             # On Windows, use pip install directly to avoid file locking issues with langflow.exe
             if platform.system() == "Windows":
                 # Use pip install on Windows to avoid rebuilding the running langflow.exe
-                command = [str(uv_executable), "pip", "install", package_name]
+                command = [str(uv_executable), "pip", "install", package_name, "--python", python_executable]
                 logger.info("Using 'uv pip install' on Windows to avoid file locking issues")
             else:
                 # Use uv add on other platforms for better dependency management
+                # Note: uv add doesn't need --python flag as it works with the project environment
                 command = [str(uv_executable), "add", package_name]
 
             logger.info(f"Executing command: {' '.join(command)} in {project_root}")
@@ -1036,8 +1076,9 @@ async def get_installed_packages(
 
         logger.info(f"Getting installed packages list using {uv_executable} in {project_root}")
 
-        # Get installed packages using UV
-        command = [str(uv_executable), "pip", "list", "--format=json"]
+        # Get installed packages using UV with explicit Python path
+        python_executable = _find_python_executable(project_root)
+        command = [str(uv_executable), "pip", "list", "--format=json", "--python", python_executable]
 
         process = await asyncio.create_subprocess_exec(
             *command,
