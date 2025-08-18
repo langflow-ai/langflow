@@ -66,7 +66,7 @@ class KBRetrievalComponent(Component):
             display_name="Include Metadata",
             info="Whether to include all metadata and embeddings in the output. If false, only content is returned.",
             value=True,
-            advanced=True,
+            advanced=False,
         ),
     ]
 
