@@ -1,9 +1,16 @@
+from functools import lru_cache
+
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
 from langflow.base.models.openai_constants import OPENAI_MODELS_DETAILED
 
-from .google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
 
-MODELS_DETAILED = [ANTHROPIC_MODELS_DETAILED, OPENAI_MODELS_DETAILED, GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
+@lru_cache(maxsize=1)
+def get_models_detailed():
+    return [ANTHROPIC_MODELS_DETAILED, OPENAI_MODELS_DETAILED, GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
+
+
+MODELS_DETAILED = get_models_detailed()
 
 
 def get_model_providers() -> list[str]:

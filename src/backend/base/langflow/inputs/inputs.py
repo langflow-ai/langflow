@@ -670,6 +670,12 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
     limit: int = 1  # Only allow single selection
     providers: list[str] = Field(default=["OpenAI", "Anthropic"])
     # TODO: Option to add fields related to API key.
+    api_key: str = Field(
+        default="",
+        description="API key for the selected provider.",
+        repr=False,
+        json_schema_extra={"input_type": "password"},
+    )
 
     def __init__(self, **kwargs):
         """Initialize ModelInput with default options based on model_type."""
