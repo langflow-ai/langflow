@@ -186,38 +186,46 @@ def generate_env_example_content(all_env_vars: dict[str, dict]) -> str:
         "",
     ]
 
-    # Separate valid and invalid env vars
-    valid_vars = {k: v for k, v in all_env_vars.items() if v["valid"]}
-    invalid_vars = {k: v for k, v in all_env_vars.items() if not v["valid"]}
+    # Single pass to separate valid/invalid
+    valid_vars = {}
+    invalid_vars = {}
+    for k, v in all_env_vars.items():
+        if v["valid"]:
+            valid_vars[k] = v
+        else:
+            invalid_vars[k] = v
 
     # Add valid environment variables
     if valid_vars:
-        lines.append("# Environment Variables")
-        lines.append("# Set these values according to your deployment needs")
-        lines.append("")
+        lines.extend(("# Environment Variables", "# Set these values according to your deployment needs", ""))
 
-        for var_name, var_info in sorted(valid_vars.items()):
+        for var_name in sorted(valid_vars):
+            var_info = valid_vars[var_name]
             components = ", ".join(var_info["components"])
             field_name = var_info.get("field_name", "unknown")
-
             lines.append(f"# Used by: {components} (field: {field_name})")
             lines.append(f"{var_name}=your_value_here")
             lines.append("")
 
     # Add invalid environment variables as comments
     if invalid_vars:
-        lines.append("# Invalid Environment Variable Names")
-        lines.append("# These variables have invalid names and need to be renamed in your components")
-        lines.append("# Valid env var names should use UPPERCASE_WITH_UNDERSCORES format")
-        lines.append("")
+        lines.extend(
+            (
+                "# Invalid Environment Variable Names",
+                "# These variables have invalid names and need to be renamed in your components",
+                "# Valid env var names should use UPPERCASE_WITH_UNDERSCORES format",
+                "",
+            )
+        )
 
-        for var_name, var_info in sorted(invalid_vars.items()):
+        for var_name in sorted(invalid_vars):
+            var_info = invalid_vars[var_name]
             components = ", ".join(var_info["components"])
             field_name = var_info.get("field_name", "unknown")
-
             lines.append(f"# INVALID: '{var_name}' - Used by: {components} (field: {field_name})")
             lines.append("# Suggested fix: Rename to a valid format like: MY_API_KEY")
-            lines.append(f"# {var_name.upper().replace(' ', '_').replace('-', '_')}=your_value_here")
+            safe_name = var_name.upper().replace(" ", "_").replace("-", "_")
+            lines.append(f"# {safe_name}=your_value_here")
             lines.append("")
 
     return "\n".join(lines)
