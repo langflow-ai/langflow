@@ -10,8 +10,8 @@ withEventDeliveryModes(
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -34,14 +34,14 @@ withEventDeliveryModes(
       skipAddNewApiKeys: true,
       skipSelectGptModel: true,
     });
-
-    await page.getByTestId("dropdown_str_provider").click();
-    await page.getByTestId("Anthropic-1-option").click();
+    // TODO: Uncomment this when we have a way to test Anthropic
+    // await page.getByTestId("dropdown_str_provider").click();
+    // await page.getByTestId("Anthropic-1-option").click();
 
     await page
       .getByTestId("popover-anchor-input-api_key")
       .last()
-      .fill(process.env.ANTHROPIC_API_KEY ?? "");
+      .fill(process.env.OPENAI_API_KEY ?? "");
 
     await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
       timeout: 5000,

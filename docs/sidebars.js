@@ -119,6 +119,11 @@ module.exports = {
               label: "Use Session IDs"
             },
             "Configuration/configuration-custom-database",
+            {
+              type: "doc",
+              id: "Develop/enterprise-database-guide",
+              label: "Database guide for enterprise administrators"
+            },
           ],
         },
         {
@@ -192,8 +197,13 @@ module.exports = {
               items: [
                 {
                   type: "doc",
+                  id: "Deployment/deployment-architecture",
+                  label: "Deployment architecture"
+                },
+                {
+                  type: "doc",
                   id: "Deployment/deployment-prod-best-practices",
-                  label: "Langflow architecture and best practices"
+                  label: "Best practices"
                 },
                 {
                   type: "doc",
@@ -204,7 +214,7 @@ module.exports = {
                   type: "doc",
                   id: "Deployment/deployment-kubernetes-prod",
                   label: "Deploy in production"
-                }
+                },
               ]
             },
           ],

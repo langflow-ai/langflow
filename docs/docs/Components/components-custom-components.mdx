@@ -156,7 +156,7 @@ The component will have only one output port where the user can select the prefe
 
 This behavior is controlled by the `group_outputs` parameter:
 
-- **`group_outputs=False` (default)**: When a component has more than one output and `group_outputs` is `False` or not set, the outputs are grouped in the visual editor, and the user must select one.
+- **`group_outputs=False` (default)**: When a component has more than one output and `group_outputs` is false or not set, the outputs are grouped in the visual editor, and the user must select one.
 
     Use this option when the component is expected to return only one type of output when used in a flow.
 
@@ -290,9 +290,9 @@ An input is usually an instance of a class from `langflow.io` (such as `StrInput
 * **`display_name`**: The label shown to users in the visual editor.
 * **`info`** *(optional)*: A tooltip or short description.
 * **`value`** *(optional)*: The default value.
-* **`advanced`** *(optional)*: If `True`, moves the field into the "Advanced" section.
-* **`required`** *(optional)*: If `True`, forces the user to provide a value.
-* **`is_list`** *(optional)*: If `True`, allows multiple values.
+* **`advanced`** *(optional)*: If true, moves the field into the "Advanced" section.
+* **`required`** *(optional)*: If true, forces the user to provide a value.
+* **`is_list`** *(optional)*: If true, allows multiple values.
 * **`input_types`** *(optional)*: Restricts allowed connection types (e.g., `["Data"]`, `["LanguageModel"]`).
 
 Here are the most commonly used input classes and their typical usage.
@@ -301,8 +301,8 @@ Here are the most commonly used input classes and their typical usage.
 * **`StrInput`** creates a single-line text field.
 * **`MultilineInput`** creates a multi-line text area.
 
-**Numeric and Boolean Inputs**: Ensures users can only enter valid numeric or boolean data.
-* **`BoolInput`**, **`IntInput`**, and **`FloatInput`** provide fields for boolean, integer, and float values, ensuring type consistency.
+**Numeric and Boolean Inputs**: Ensures users can only enter valid numeric or Boolean data.
+* **`BoolInput`**, **`IntInput`**, and **`FloatInput`** provide fields for Boolean, integer, and float values, ensuring type consistency.
 
 **Dropdowns**: For selecting from predefined options, useful for modes or levels.
 * **`DropdownInput`**
@@ -323,7 +323,7 @@ Here are the most commonly used input classes and their typical usage.
 
 **Lists**: Set `is_list=True` to accept multiple values, ideal for batch or grouped operations.
 
-This example defines three inputs: a text field (`StrInput`), a boolean toggle (`BoolInput`), and a dropdown selection (`DropdownInput`).
+This example defines three inputs: a text field (`StrInput`), a Boolean toggle (`BoolInput`), and a dropdown selection (`DropdownInput`).
 
 ```python
 from langflow.io import StrInput, BoolInput, DropdownInput
