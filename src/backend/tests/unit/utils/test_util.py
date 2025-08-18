@@ -191,9 +191,11 @@ class TestBuildTemplateFromMethod:
 
         type_dict = {"test_type": mock_class}
 
-        with patch("builtins.hasattr", return_value=False):
-            with pytest.raises(ValueError, match="Method test_method not found in class TestClass"):
-                build_template_from_method("TestClass", "test_method", type_dict)
+        with (
+            patch("builtins.hasattr", return_value=False),
+            pytest.raises(ValueError, match="Method test_method not found in class TestClass"),
+        ):
+            build_template_from_method("TestClass", "test_method", type_dict)
 
     @patch("langflow.utils.util.parse")
     @patch("langflow.utils.util.get_base_classes")
@@ -380,7 +382,8 @@ class TestSyncToAsync:
 
         @sync_to_async
         def failing_function():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError, match="Test error"):
             await failing_function()
@@ -626,13 +629,7 @@ class TestUpdateSettings:
 
         mock_init_service.assert_called_once()
         # Function calls update_settings with each parameter individually
-        expected_calls = [
-            {"cache": "redis"},
-            {"auto_saving_interval": 1000},
-            {"health_check_max_retries": 5},
-            {"max_file_size_upload": 100},
-            {"webhook_polling_interval": 5000},
-        ]
+        # Verify the service was initialized
 
         # Check that update_settings was called (may be multiple times with different params)
         assert mock_settings.update_settings.called
@@ -648,7 +645,7 @@ class TestUpdateSettings:
         mock_settings.update_from_yaml = Mock(return_value=None)
 
         # Create an async mock
-        async def async_update_from_yaml(*args, **kwargs):
+        async def async_update_from_yaml(*_args, **_kwargs):
             return None
 
         mock_settings.update_from_yaml = async_update_from_yaml

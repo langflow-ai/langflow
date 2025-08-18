@@ -65,8 +65,8 @@ class TestGetTypeStr:
     def test_basic_types(self):
         """Test basic Python types."""
         assert get_type_str(None) == "null"
-        assert get_type_str(True) == "bool"
-        assert get_type_str(False) == "bool"
+        assert get_type_str(True) == "bool"  # noqa: FBT003
+        assert get_type_str(False) == "bool"  # noqa: FBT003
         assert get_type_str(42) == "int"
         assert get_type_str(3.14) == "float"
         assert get_type_str("hello") == "str"
@@ -144,7 +144,7 @@ class TestAnalyzeValue:
         """Test analysis of simple values."""
         assert analyze_value(42) == "int"
         assert analyze_value("hello") == "str"
-        assert analyze_value(True) == "bool"
+        assert analyze_value(True) == "bool"  # noqa: FBT003
         assert analyze_value(None) == "null"
 
     def test_simple_list(self):
@@ -207,7 +207,8 @@ class TestAnalyzeValue:
         # Create an object that raises exception on access
         class ProblematicClass:
             def __getitem__(self, key):
-                raise RuntimeError("Access error")
+                msg = "Access error"
+                raise RuntimeError(msg)
 
         problematic = ProblematicClass()
         result = analyze_value(problematic)
@@ -319,7 +320,7 @@ class TestGetSampleValues:
         """Test sampling simple values."""
         assert get_sample_values(42) == 42
         assert get_sample_values("hello") == "hello"
-        assert get_sample_values(True) is True
+        assert get_sample_values(True) is True  # noqa: FBT003
 
     def test_list_sampling(self):
         """Test sampling from lists."""
