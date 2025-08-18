@@ -86,12 +86,10 @@ def is_valid_env_var_name(name: str) -> bool:
     - Not start with a digit
     - Be reasonably formatted as an environment variable
     """
-    # Check if it matches the pattern for env vars
-    if not re.match(r"^[A-Z_][A-Z0-9_]*$", name):
+    # Use precompiled regex for performance
+    if not _ENV_VAR_PATTERN.match(name):
         return False
 
-    # Additional heuristics - should look like an env var
-    # Examples: API_KEY, OPENAI_API_KEY, DATABASE_URL
     if len(name) < MIN_ENV_VAR_LENGTH:
         return False
 
@@ -271,3 +269,6 @@ The extracted Python files in the `components/` directory can be used for:
 
 Each component file includes metadata in its docstring indicating the original component type, ID, and parent flow.
 """
+
+
+_ENV_VAR_PATTERN = re.compile(r"^[A-Z_][A-Z0-9_]*$")
