@@ -6,8 +6,8 @@ import {
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import type { BundleItemProps } from "../../types";
-import SidebarItemsList from "../sidebarItemsList";
+import type { BundleItemProps } from "../types";
+import SidebarItemsList from "./sidebarItemsList";
 
 export const BundleItem = memo(
   ({
@@ -46,6 +46,7 @@ export const BundleItem = memo(
           <DisclosureTrigger className="group/collapsible">
             <SidebarMenuButton asChild>
               <div
+                role="button"
                 tabIndex={0}
                 onKeyDown={(e) => handleKeyDownInput(e, item.name)}
                 className="user-select-none flex cursor-pointer items-center gap-2"

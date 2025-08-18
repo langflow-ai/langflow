@@ -1,28 +1,28 @@
 import { type DragEventHandler, forwardRef, useRef, useState } from "react";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import useDeleteFlow from "@/hooks/flows/use-delete-flow";
-import { useAddComponent } from "@/hooks/use-add-component";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../../../components/common/genericIconComponent";
-import ShadTooltip from "../../../../../../components/common/shadTooltipComponent";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "../../../../../../components/ui/select-custom";
-import { useDarkStore } from "../../../../../../stores/darkStore";
-import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
-import type { APIClassType } from "../../../../../../types/api";
+} from "@/components/ui/select-custom";
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
+import { useAddComponent } from "@/hooks/use-add-component";
+import { useDarkStore } from "@/stores/darkStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { APIClassType } from "@/types/api";
 import {
   createFlowComponent,
   downloadNode,
   getNodeId,
-} from "../../../../../../utils/reactflowUtils";
-import { cn, removeCountFromString } from "../../../../../../utils/utils";
+} from "@/utils/reactflowUtils";
+import { cn, removeCountFromString } from "@/utils/utils";
 
 export const SidebarDraggableComponent = forwardRef(
   (
@@ -159,7 +159,10 @@ export const SidebarDraggableComponent = forwardRef(
               />
               <div className="flex flex-1 items-center overflow-hidden">
                 <ShadTooltip content={display_name} styleClasses="z-50">
-                  <span className="truncate text-sm font-normal">
+                  <span
+                    data-testid="display-name"
+                    className="truncate text-sm font-normal"
+                  >
                     {display_name}
                   </span>
                 </ShadTooltip>

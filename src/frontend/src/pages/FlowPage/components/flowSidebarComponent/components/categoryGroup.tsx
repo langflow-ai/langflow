@@ -5,8 +5,8 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
-import type { CategoryGroupProps } from "../../types";
-import { CategoryDisclosure } from "../categoryDisclouse";
+import type { CategoryGroupProps } from "../types";
+import { CategoryDisclosure } from "./categoryDisclouse";
 
 export const CategoryGroup = memo(function CategoryGroup({
   dataFilter,

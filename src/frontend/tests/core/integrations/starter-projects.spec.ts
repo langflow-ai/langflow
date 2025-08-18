@@ -141,9 +141,13 @@ test(
         numberOfOutdatedComponents++;
       }
 
-      await page.getByTestId("icon-ChevronLeft").click();
-      await page.waitForSelector('[data-testid="mainpage_title"]', {
-        timeout: 5000,
+      await Promise.all([
+        page.waitForURL((url) => url.pathname === "/", { timeout: 30000 }),
+        page.getByTestId("icon-ChevronLeft").click(),
+      ]);
+
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 30000,
       });
 
       await page.waitForTimeout(500);
