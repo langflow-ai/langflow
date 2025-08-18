@@ -1,3 +1,5 @@
+import Fuse from "fuse.js";
+import { useCallback, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +19,6 @@ import { getCustomParameterTitle } from "@/customization/components/custom-param
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
-import Fuse from "fuse.js";
-import { useCallback, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
 import InputGlobalComponent from "../inputGlobalComponent";
@@ -262,10 +262,7 @@ export default function ModelInputComponent({
           if (visibleOptions.length === 0) return null;
 
           return (
-            <CommandGroup
-              className="p-0 overflow-y-auto"
-              key={`${category}`}
-            >
+            <CommandGroup className="p-0 overflow-y-auto" key={`${category}`}>
               <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
                 {category}
                 <div className="ml-2 text-xs text-accent-emerald-foreground">
