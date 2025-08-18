@@ -272,36 +272,116 @@ async def download_file(
     project_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    """Download all flows from project as a zip file."""
+    """Download project with flows and extracted component code as a ZIP archive."""
+    import re
+
     try:
-        query = select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)
-        result = await session.exec(query)
-        project = result.first()
+        # Get project with flows
+        project = (
+            await session.exec(
+                select(Folder)
+                .options(selectinload(Folder.flows))
+                .where(Folder.id == project_id, Folder.user_id == current_user.id)
+            )
+        ).first()
 
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        flows_query = select(Flow).where(Flow.folder_id == project_id)
-        flows_result = await session.exec(flows_query)
-        flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
+        # Filter flows for current user
+        flows = [flow for flow in project.flows if flow.user_id == current_user.id]
 
         if not flows:
             raise HTTPException(status_code=404, detail="No flows found in project")
 
-        flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
+        # Build export structure
+        version_info = get_version_info()
+        project_data = {
+            "version": "2.0",  # Enhanced export format version
+            "langflow_version": version_info["version"],
+            "export_type": "project_enhanced",
+            "exported_at": datetime.now(tz=timezone.utc).isoformat(),
+            "project": {
+                "id": str(project.id),
+                "name": project.name,
+                "description": project.description,
+                "auth_settings": getattr(project, "auth_settings", {}) or {},
+            },
+            "flows": [FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json") for flow in flows],
+        }
+
+        # Create ZIP archive
         zip_stream = io.BytesIO()
 
-        with zipfile.ZipFile(zip_stream, "w") as zip_file:
-            for flow in flows_without_api_keys:
-                flow_json = json.dumps(jsonable_encoder(flow))
-                zip_file.writestr(f"{flow['name']}.json", flow_json.encode("utf-8"))
+        with zipfile.ZipFile(zip_stream, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            # Add main project metadata
+            project_json = json.dumps(project_data, indent=2)
+            zip_file.writestr("project.json", project_json.encode("utf-8"))
+
+            # Add individual flow files and extract component code
+            all_code_files = {}
+            for flow in flows:
+                try:
+                    flow_data = remove_api_keys(FlowRead.model_validate(flow, from_attributes=True).model_dump())
+                    flow_json = json.dumps(jsonable_encoder(flow_data), indent=2)
+
+                    # Sanitize flow name for filename
+                    flow_name = flow_data.get("name", f"flow_{flow_data.get('id', 'unknown')}")
+                    safe_flow_name = re.sub(r"[^a-zA-Z0-9_-]", "_", flow_name)
+                    zip_file.writestr(f"flows/{safe_flow_name}.json", flow_json.encode("utf-8"))
+
+                    # Extract component code
+                    code_files = extract_component_code_from_flow(flow_data, flow_name)
+                    for filename, code_content in code_files.items():
+                        # Organize by flow
+                        flow_code_path = f"components/{safe_flow_name}/{filename}"
+                        zip_file.writestr(flow_code_path, code_content.encode("utf-8"))
+                        all_code_files[flow_code_path] = True
+                except Exception as e:
+                    # Log the error and re-raise with more context
+                    import traceback
+
+                    flow_id = getattr(flow, "id", "unknown")
+                    error_details = f"Error processing flow {flow_id}: {e!s}\nTraceback: {traceback.format_exc()}"
+                    raise ValueError(error_details) from e
+
+            # Add README with export structure info
+            readme_content = f"""# {project.name}
+
+This export contains the complete project structure with extracted component code.
+
+## Structure
+
+- `project.json` - Project metadata and complete flow definitions
+- `flows/` - Individual flow JSON files
+- `components/` - Extracted Python code from custom components, organized by flow
+
+## Export Info
+
+- Export format version: 2.0
+- Langflow version: {version_info["version"]}
+- Exported at: {datetime.now(tz=timezone.utc).isoformat()}
+- Total flows: {len(flows)}
+- Code files extracted: {len(all_code_files)}
+
+## Usage
+
+The extracted Python files in the `components/` directory can be used for:
+- Static analysis with tools like mypy, ruff, pylint
+- Code review and auditing
+- Understanding component logic outside of Langflow
+
+Each component file includes metadata in its docstring indicating the original component type, ID, and parent flow.
+"""
+            zip_file.writestr("README.md", readme_content.encode("utf-8"))
 
         zip_stream.seek(0)
 
+        # Generate filename
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
-        filename = f"{current_time}_{project.name}_flows.zip"
+        filename = f"{current_time}_{project.name}_export.zip"
 
-        # URL encode filename handle non-ASCII (ex. Cyrillic)
+        # URL encode filename to handle non-ASCII characters
         encoded_filename = quote(filename)
 
         return StreamingResponse(
@@ -310,9 +390,9 @@ async def download_file(
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Project not found") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -367,7 +447,9 @@ async def export_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    """Export a project with all its flows in the new format."""
+    """Export a project with flows and extracted component code as a ZIP archive."""
+    import re
+
     try:
         # Get project with flows
         project = (
@@ -384,30 +466,177 @@ async def export_project(
         # Filter flows for current user
         flows = [flow for flow in project.flows if flow.user_id == current_user.id]
 
+        if not flows:
+            raise HTTPException(status_code=404, detail="No flows found in project")
+
         # Build export structure
         version_info = get_version_info()
-        export_data = {
-            "version": "1.0",  # Export format version
+        project_data = {
+            "version": "1.0",  # Enhanced export format version
             "langflow_version": version_info["version"],
-            "export_type": "project",
+            "export_type": "project_enhanced",
             "exported_at": datetime.now(tz=timezone.utc).isoformat(),
             "project": {
                 "id": str(project.id),
                 "name": project.name,
                 "description": project.description,
-                "auth_settings": project.auth_settings or {},
+                "auth_settings": getattr(project, "auth_settings", {}) or {},
             },
             "flows": [FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json") for flow in flows],
         }
 
-        # Return as JSON response
-        return Response(
-            content=orjson.dumps(export_data),
-            media_type="application/json",
-            headers={"Content-Disposition": f'attachment; filename="{project.name}_export.json"'},
+        # Create ZIP archive
+        zip_stream = io.BytesIO()
+
+        with zipfile.ZipFile(zip_stream, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            # Add main project metadata
+            project_json = json.dumps(project_data, indent=2)
+            zip_file.writestr("project.json", project_json.encode("utf-8"))
+
+            # Add individual flow files and extract component code
+            all_code_files = {}
+            for flow in flows:
+                try:
+                    flow_data = remove_api_keys(FlowRead.model_validate(flow, from_attributes=True).model_dump())
+                    flow_json = json.dumps(jsonable_encoder(flow_data), indent=2)
+
+                    # Sanitize flow name for filename
+                    flow_name = flow_data.get("name", f"flow_{flow_data.get('id', 'unknown')}")
+                    safe_flow_name = re.sub(r"[^a-zA-Z0-9_-]", "_", flow_name)
+                    zip_file.writestr(f"flows/{safe_flow_name}.json", flow_json.encode("utf-8"))
+
+                    # Extract component code
+                    code_files = extract_component_code_from_flow(flow_data, flow_name)
+                    for filename, code_content in code_files.items():
+                        # Organize by flow
+                        flow_code_path = f"components/{safe_flow_name}/{filename}"
+                        zip_file.writestr(flow_code_path, code_content.encode("utf-8"))
+                        all_code_files[flow_code_path] = True
+                except Exception as e:
+                    # Log the error and re-raise with more context
+                    import traceback
+
+                    flow_id = getattr(flow, "id", "unknown")
+                    error_details = f"Error processing flow {flow_id}: {e!s}\nTraceback: {traceback.format_exc()}"
+                    raise ValueError(error_details) from e
+
+            # Add README with export structure info
+            readme_content = f"""# {project.name}
+
+This export contains the complete project structure with extracted component code.
+
+## Structure
+
+- `project.json` - Project metadata and complete flow definitions
+- `flows/` - Individual flow JSON files
+- `components/` - Extracted Python code from custom components, organized by flow
+
+## Export Info
+
+- Export format version: 1.0
+- Langflow version: {version_info["version"]}
+- Exported at: {datetime.now(tz=timezone.utc).isoformat()}
+- Total flows: {len(flows)}
+- Code files extracted: {len(all_code_files)}
+
+## Usage
+
+The extracted Python files in the `components/` directory can be used for:
+- Static analysis with tools like mypy, ruff, pylint
+- Code review and auditing
+- Understanding component logic outside of Langflow
+
+Each component file includes metadata in its docstring indicating the original component type, ID, and parent flow.
+"""
+            zip_file.writestr("README.md", readme_content.encode("utf-8"))
+
+        zip_stream.seek(0)
+
+        # Generate filename
+        current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
+        filename = f"{current_time}_{project.name}_export.zip"
+
+        # URL encode filename to handle non-ASCII characters
+        encoded_filename = quote(filename)
+
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
         )
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+def _is_valid_node(node: dict) -> bool:
+    """Check if a node is valid and has the required structure."""
+    return isinstance(node, dict) and "data" in node and "node" in node["data"] and "template" in node["data"]["node"]
+
+
+def _extract_code_from_node(node: dict) -> str | None:
+    """Extract code content from a node's template."""
+    template = node["data"]["node"]["template"]
+    if "code" not in template:
+        return None
+
+    code_field = template["code"]
+    if not isinstance(code_field, dict) or "value" not in code_field:
+        return None
+
+    code_content = code_field["value"]
+    if not code_content or not isinstance(code_content, str):
+        return None
+
+    return code_content
+
+
+def _generate_code_filename(node: dict) -> str:
+    """Generate a sanitized filename for the component code."""
+    import re
+
+    node_data = node["data"]
+    component_type = node_data.get("type", "component")
+    component_id = node.get("id", "unknown")
+
+    # Sanitize filename components
+    safe_component_type = re.sub(r"\W", "_", component_type)
+    safe_component_id = re.sub(r"[^a-zA-Z0-9_-]", "_", component_id)
+
+    return f"{safe_component_type}_{safe_component_id}.py"
+
+
+def _create_code_file_content(node: dict, flow_name: str, code_content: str) -> str:
+    """Create the complete code file content with docstring."""
+    node_data = node["data"]
+    component_type = node_data.get("type", "component")
+    component_id = node.get("id", "unknown")
+
+    docstring = f'"""Component: {component_type}\nID: {component_id}\nFlow: {flow_name}\n"""\n\n'
+    return docstring + code_content
+
+
+def extract_component_code_from_flow(flow_data: dict, flow_name: str) -> dict[str, str]:
+    """Extract code from components in a flow and return a mapping of filenames to code content."""
+    code_files = {}
+
+    if "data" not in flow_data or "nodes" not in flow_data["data"]:
+        return code_files
+
+    nodes = flow_data["data"]["nodes"]
+
+    for node in nodes:
+        if not _is_valid_node(node):
+            continue
+
+        code_content = _extract_code_from_node(node)
+        if code_content is None:
+            continue
+
+        filename = _generate_code_filename(node)
+        file_content = _create_code_file_content(node, flow_name, code_content)
+        code_files[filename] = file_content
+
+    return code_files
