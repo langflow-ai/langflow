@@ -1,5 +1,3 @@
-import Fuse from "fuse.js";
-import { useCallback, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,12 +13,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
-import ApiKeyModal from "@/modals/apiKeyModal";
+import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
+import Fuse from "fuse.js";
+import { useCallback, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
+import InputGlobalComponent from "../inputGlobalComponent";
 
 export type ModelInputComponentType = {
   model_type: "language" | "embedding";
@@ -61,8 +62,6 @@ export default function ModelInputComponent({
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
     null,
   );
-  const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState("");
   const refButton = useRef<HTMLButtonElement>(null);
   const isLoading = false;
@@ -157,7 +156,8 @@ export default function ModelInputComponent({
   }, []);
 
   const handleSendApiKey = useCallback(() => {
-    setOpenApiKeyDialog(true);
+    // This could be used for future API key management
+    console.log("Send API Key clicked");
   }, []);
 
   const renderTriggerButton = () => (
@@ -222,32 +222,33 @@ export default function ModelInputComponent({
     if (!selectedModel) return null;
 
     return (
-      //     <div className="flex flex-col gap-3">
-      //       {getCustomParameterTitle({
-      //         title: `${selectedProvider || "Provider"} API Key`,
-      //         nodeId: id,
-      //         isFlexView: false,
-      //         required: true,
-      //       })}
-      //       <InputComponent
-      //         id={`${id}-api-key`}
-      //         value={apiKey}
-      //         disabled={false}
-      //         editNode={false}
-      //         password={true}
-      //         placeholder="Enter model API key"
-      //         onChange={(value) => setApiKey(value)}
-      //         hidePopover={true}
-      //       />
-      <Button
-        onClick={handleSendApiKey}
-        size="sm"
-        className="whitespace-nowrap"
-        data-testid="enable-provider-button"
-      >
-        {`Enable ${selectedProvider || "Provider"}`}
-      </Button>
-      //     </div>
+      <div className="flex flex-col gap-3">
+        {getCustomParameterTitle({
+          title: `${selectedProvider || "Provider"} API Key`,
+          nodeId: id,
+          isFlexView: false,
+          required: true,
+        })}
+        <InputGlobalComponent
+          id={`${id}-api-key`}
+          display_name={`${selectedProvider || "Provider"} API Key`}
+          value={""}
+          disabled={false}
+          editNode={false}
+          handleOnNewValue={({ value }: any) => handleApiKeyChange(value)}
+          password={true}
+          load_from_db={false}
+          placeholder="Enter model API key"
+        />
+        <Button
+          onClick={handleSendApiKey}
+          size="sm"
+          className="whitespace-nowrap"
+          data-testid="enable-provider-button"
+        >
+          {`Enable ${selectedProvider || "Provider"}`}
+        </Button>
+      </div>
     );
   };
 
@@ -261,7 +262,10 @@ export default function ModelInputComponent({
           if (visibleOptions.length === 0) return null;
 
           return (
-            <CommandGroup className="p-0 overflow-y-auto" key={`${category}`}>
+            <CommandGroup
+              className="p-0 overflow-y-auto"
+              key={`${category}`}
+            >
               <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
                 {category}
                 <div className="ml-2 text-xs text-accent-emerald-foreground">
@@ -409,14 +413,6 @@ export default function ModelInputComponent({
         </PopoverContentWithoutPortal>
       </Popover>
       {renderApiKeyInput()}
-      {openApiKeyDialog && (
-        <ApiKeyModal
-          open={openApiKeyDialog}
-          onClose={() => setOpenApiKeyDialog(false)}
-          provider={selectedProvider || "Provider"}
-          onSave={handleApiKeyChange}
-        />
-      )}
     </>
   );
 }
