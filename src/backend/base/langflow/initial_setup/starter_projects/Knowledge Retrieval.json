@@ -2,11 +2,11 @@
   "data": {
     "edges": [
       {
-        "className": "",
+        "animated": false,
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-Z3rM3",
+            "id": "TextInput-WyJxO",
             "name": "text",
             "output_types": [
               "Message"
@@ -14,25 +14,26 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "KBRetrieval-tGoBR",
+            "id": "KBRetrieval-zz3I0",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__TextInput-Z3rM3{œdataTypeœ:œTextInputœ,œidœ:œTextInput-Z3rM3œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-tGoBR{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-tGoBRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "TextInput-Z3rM3",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-Z3rM3œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "KBRetrieval-tGoBR",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-tGoBRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__TextInput-WyJxO{œdataTypeœ:œTextInputœ,œidœ:œTextInput-WyJxOœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-zz3I0{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-zz3I0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "TextInput-WyJxO",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-WyJxOœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "KBRetrieval-zz3I0",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-zz3I0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
+        "animated": false,
         "data": {
           "sourceHandle": {
             "dataType": "KBRetrieval",
-            "id": "KBRetrieval-tGoBR",
+            "id": "KBRetrieval-zz3I0",
             "name": "chroma_kb_data",
             "output_types": [
               "DataFrame"
@@ -40,7 +41,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-tixOe",
+            "id": "ChatOutput-N7nxz",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -49,17 +50,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__KBRetrieval-tGoBR{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-tGoBRœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-tixOe{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tixOeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "KBRetrieval-tGoBR",
-        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-tGoBRœ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ChatOutput-tixOe",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tixOeœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__KBRetrieval-zz3I0{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-zz3I0œ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-N7nxz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N7nxzœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "KBRetrieval-zz3I0",
+        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-zz3I0œ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ChatOutput-N7nxz",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N7nxzœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-YyBfz",
+          "id": "note-f86G8",
           "node": {
             "description": "## Knowledge Retrieval\n\nA stand-alone component handles the retrieval of ingested knowledge from existing knowledge bases. To retrieve knowledge:\n\n1. Select your knowledge base from the Knowledge Base dropdown. If you do not see it, choose \"Refresh List\".\n2. (Optional) Enter a Search Query to be performed against the knowledge base.\n\nNote that by default, 5 results are returned, which can be configured by clicking Controls at the top of the component.\n",
             "display_name": "",
@@ -70,7 +72,7 @@
         },
         "dragging": false,
         "height": 384,
-        "id": "note-YyBfz",
+        "id": "note-f86G8",
         "measured": {
           "height": 384,
           "width": 371
@@ -86,7 +88,7 @@
       },
       {
         "data": {
-          "id": "TextInput-Z3rM3",
+          "id": "TextInput-WyJxO",
           "node": {
             "base_classes": [
               "Message"
@@ -180,7 +182,7 @@
           "type": "TextInput"
         },
         "dragging": false,
-        "id": "TextInput-Z3rM3",
+        "id": "TextInput-WyJxO",
         "measured": {
           "height": 204,
           "width": 320
@@ -194,7 +196,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-tixOe",
+          "id": "ChatOutput-N7nxz",
           "node": {
             "base_classes": [
               "Message"
@@ -492,7 +494,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-tixOe",
+        "id": "ChatOutput-N7nxz",
         "measured": {
           "height": 48,
           "width": 192
@@ -506,7 +508,7 @@
       },
       {
         "data": {
-          "id": "KBRetrieval-tGoBR",
+          "id": "KBRetrieval-zz3I0",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -527,10 +529,10 @@
             ],
             "frozen": false,
             "icon": "database",
-            "last_updated": "2025-08-13T19:46:57.894Z",
+            "last_updated": "2025-08-14T17:19:22.182Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "f82365a0977f",
+              "code_hash": "ee2b66958f09",
               "module": "langflow.components.data.kb_retrieval.KBRetrievalComponent"
             },
             "minimized": false,
@@ -587,11 +589,11 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import json\nfrom pathlib import Path\nfrom typing import Any\n\nfrom cryptography.fernet import InvalidToken\nfrom langchain_chroma import Chroma\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.services.auth.utils import decrypt_api_key\nfrom langflow.services.deps import get_settings_service\n\nsettings = get_settings_service().settings\nknowledge_directory = settings.knowledge_bases_dir\nif not knowledge_directory:\n    msg = \"Knowledge bases directory is not set in the settings.\"\n    raise ValueError(msg)\nKNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()\n\n\nclass KBRetrievalComponent(Component):\n    display_name = \"Knowledge Retrieval\"\n    description = \"Search and retrieve data from knowledge.\"\n    icon = \"database\"\n    name = \"KBRetrieval\"\n\n    inputs = [\n        DropdownInput(\n            name=\"knowledge_base\",\n            display_name=\"Knowledge\",\n            info=\"Select the knowledge to load data from.\",\n            required=True,\n            options=[\n                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()\n            ]\n            if KNOWLEDGE_BASES_ROOT_PATH.exists()\n            else [],\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Embedding Provider API Key\",\n            info=\"API key for the embedding provider to generate embeddings.\",\n            advanced=True,\n            required=False,\n        ),\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"Optional search query to filter knowledge base data.\",\n        ),\n        IntInput(\n            name=\"top_k\",\n            display_name=\"Top K Results\",\n            info=\"Number of top results to return from the knowledge base.\",\n            value=5,\n            advanced=True,\n            required=False,\n        ),\n        BoolInput(\n            name=\"include_metadata\",\n            display_name=\"Include Metadata\",\n            info=\"Whether to include all metadata and embeddings in the output. If false, only content is returned.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"chroma_kb_data\",\n            display_name=\"Results\",\n            method=\"get_chroma_kb_data\",\n            info=\"Returns the data from the selected knowledge base.\",\n        ),\n    ]\n\n    def _get_knowledge_bases(self) -> list[str]:\n        \"\"\"Retrieve a list of available knowledge bases.\n\n        Returns:\n            A list of knowledge base names.\n        \"\"\"\n        if not KNOWLEDGE_BASES_ROOT_PATH.exists():\n            return []\n\n        return [str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()]\n\n    def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002\n        if field_name == \"knowledge_base\":\n            # Update the knowledge base options dynamically\n            build_config[\"knowledge_base\"][\"options\"] = self._get_knowledge_bases()\n\n            # If the selected knowledge base is not available, reset it\n            if build_config[\"knowledge_base\"][\"value\"] not in build_config[\"knowledge_base\"][\"options\"]:\n                build_config[\"knowledge_base\"][\"value\"] = None\n\n        return build_config\n\n    def _get_kb_metadata(self, kb_path: Path) -> dict:\n        \"\"\"Load and process knowledge base metadata.\"\"\"\n        metadata: dict[str, Any] = {}\n        metadata_file = kb_path / \"embedding_metadata.json\"\n        if not metadata_file.exists():\n            logger.warning(f\"Embedding metadata file not found at {metadata_file}\")\n            return metadata\n\n        try:\n            with metadata_file.open(\"r\", encoding=\"utf-8\") as f:\n                metadata = json.load(f)\n        except json.JSONDecodeError:\n            logger.error(f\"Error decoding JSON from {metadata_file}\")\n            return {}\n\n        # Decrypt API key if it exists\n        if \"api_key\" in metadata and metadata.get(\"api_key\"):\n            settings_service = get_settings_service()\n            try:\n                decrypted_key = decrypt_api_key(metadata[\"api_key\"], settings_service)\n                metadata[\"api_key\"] = decrypted_key\n            except (InvalidToken, TypeError, ValueError) as e:\n                logger.error(f\"Could not decrypt API key. Please provide it manually. Error: {e}\")\n                metadata[\"api_key\"] = None\n        return metadata\n\n    def _build_embeddings(self, metadata: dict):\n        \"\"\"Build embedding model from metadata.\"\"\"\n        provider = metadata.get(\"embedding_provider\")\n        model = metadata.get(\"embedding_model\")\n        api_key = metadata.get(\"api_key\")\n        chunk_size = metadata.get(\"chunk_size\")\n\n        # If user provided a key in the input, it overrides the stored one.\n        if self.api_key and self.api_key.get_secret_value():\n            api_key = self.api_key.get_secret_value()\n\n        # Handle various providers\n        if provider == \"OpenAI\":\n            from langchain_openai import OpenAIEmbeddings\n\n            if not api_key:\n                msg = \"OpenAI API key is required. Provide it in the component's advanced settings.\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=model,\n                api_key=api_key,\n                chunk_size=chunk_size,\n            )\n        if provider == \"HuggingFace\":\n            from langchain_huggingface import HuggingFaceEmbeddings\n\n            return HuggingFaceEmbeddings(\n                model=model,\n            )\n        if provider == \"Cohere\":\n            from langchain_cohere import CohereEmbeddings\n\n            if not api_key:\n                msg = \"Cohere API key is required when using Cohere provider\"\n                raise ValueError(msg)\n            return CohereEmbeddings(\n                model=model,\n                cohere_api_key=api_key,\n            )\n        if provider == \"Custom\":\n            # For custom embedding models, we would need additional configuration\n            msg = \"Custom embedding models not yet supported\"\n            raise NotImplementedError(msg)\n        # Add other providers here if they become supported in ingest\n        msg = f\"Embedding provider '{provider}' is not supported for retrieval.\"\n        raise NotImplementedError(msg)\n\n    def get_chroma_kb_data(self) -> DataFrame:\n        \"\"\"Retrieve data from the selected knowledge base by reading the Chroma collection.\n\n        Returns:\n            A DataFrame containing the data rows from the knowledge base.\n        \"\"\"\n        kb_path = KNOWLEDGE_BASES_ROOT_PATH / self.knowledge_base\n\n        metadata = self._get_kb_metadata(kb_path)\n        if not metadata:\n            msg = f\"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed.\"\n            raise ValueError(msg)\n\n        # Build the embedder for the knowledge base\n        embedding_function = self._build_embeddings(metadata)\n\n        # Load vector store\n        chroma = Chroma(\n            persist_directory=str(kb_path),\n            embedding_function=embedding_function,\n            collection_name=self.knowledge_base,\n        )\n\n        # If a search query is provided, perform a similarity search\n        if self.search_query:\n            # Use the search query to perform a similarity search\n            logger.info(f\"Performing similarity search with query: {self.search_query}\")\n            results = chroma.similarity_search_with_score(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n        else:\n            results = chroma.similarity_search(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n\n            # For each result, make it a tuple to match the expected output format\n            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0\n\n        # If metadata is enabled, get embeddings for the results\n        id_to_embedding = {}\n        if self.include_metadata and results:\n            doc_ids = [doc[0].metadata.get(\"_id\") for doc in results if doc[0].metadata.get(\"_id\")]\n\n            # Only proceed if we have valid document IDs\n            if doc_ids:\n                # Access underlying client to get embeddings\n                collection = chroma._client.get_collection(name=self.knowledge_base)\n                embeddings_result = collection.get(where={\"_id\": {\"$in\": doc_ids}}, include=[\"embeddings\", \"metadatas\"])\n\n                # Create a mapping from document ID to embedding\n                for i, metadata in enumerate(embeddings_result.get(\"metadatas\", [])):\n                    if metadata and \"_id\" in metadata:\n                        id_to_embedding[metadata[\"_id\"]] = embeddings_result[\"embeddings\"][i]\n\n        # Build output data based on include_metadata setting\n        data_list = []\n        for doc in results:\n            if self.include_metadata:\n                # Include all metadata, embeddings, and content\n                kwargs = {\n                    \"content\": doc[0].page_content,\n                    **doc[0].metadata,\n                }\n                if self.search_query:\n                    kwargs[\"_score\"] = -1 * doc[1]\n                kwargs[\"_embeddings\"] = id_to_embedding.get(doc[0].metadata.get(\"_id\"))\n            else:\n                # Only include content\n                kwargs = {\n                    \"content\": doc[0].page_content,\n                }\n\n            data_list.append(Data(**kwargs))\n\n        # Return the DataFrame containing the data\n        return DataFrame(data=data_list)\n"
+                "value": "import json\nfrom pathlib import Path\nfrom typing import Any\n\nfrom cryptography.fernet import InvalidToken\nfrom langchain_chroma import Chroma\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.services.auth.utils import decrypt_api_key\nfrom langflow.services.deps import get_settings_service\n\nsettings = get_settings_service().settings\nknowledge_directory = settings.knowledge_bases_dir\nif not knowledge_directory:\n    msg = \"Knowledge bases directory is not set in the settings.\"\n    raise ValueError(msg)\nKNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()\n\n\nclass KBRetrievalComponent(Component):\n    display_name = \"Knowledge Retrieval\"\n    description = \"Search and retrieve data from knowledge.\"\n    icon = \"database\"\n    name = \"KBRetrieval\"\n\n    inputs = [\n        DropdownInput(\n            name=\"knowledge_base\",\n            display_name=\"Knowledge\",\n            info=\"Select the knowledge to load data from.\",\n            required=True,\n            options=[\n                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()\n            ]\n            if KNOWLEDGE_BASES_ROOT_PATH.exists()\n            else [],\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Embedding Provider API Key\",\n            info=\"API key for the embedding provider to generate embeddings.\",\n            advanced=True,\n            required=False,\n        ),\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"Optional search query to filter knowledge base data.\",\n        ),\n        IntInput(\n            name=\"top_k\",\n            display_name=\"Top K Results\",\n            info=\"Number of top results to return from the knowledge base.\",\n            value=5,\n            advanced=True,\n            required=False,\n        ),\n        BoolInput(\n            name=\"include_metadata\",\n            display_name=\"Include Metadata\",\n            info=\"Whether to include all metadata and embeddings in the output. If false, only content is returned.\",\n            value=True,\n            advanced=False,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"chroma_kb_data\",\n            display_name=\"Results\",\n            method=\"get_chroma_kb_data\",\n            info=\"Returns the data from the selected knowledge base.\",\n        ),\n    ]\n\n    def _get_knowledge_bases(self) -> list[str]:\n        \"\"\"Retrieve a list of available knowledge bases.\n\n        Returns:\n            A list of knowledge base names.\n        \"\"\"\n        if not KNOWLEDGE_BASES_ROOT_PATH.exists():\n            return []\n\n        return [str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(\".\") and d.is_dir()]\n\n    def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002\n        if field_name == \"knowledge_base\":\n            # Update the knowledge base options dynamically\n            build_config[\"knowledge_base\"][\"options\"] = self._get_knowledge_bases()\n\n            # If the selected knowledge base is not available, reset it\n            if build_config[\"knowledge_base\"][\"value\"] not in build_config[\"knowledge_base\"][\"options\"]:\n                build_config[\"knowledge_base\"][\"value\"] = None\n\n        return build_config\n\n    def _get_kb_metadata(self, kb_path: Path) -> dict:\n        \"\"\"Load and process knowledge base metadata.\"\"\"\n        metadata: dict[str, Any] = {}\n        metadata_file = kb_path / \"embedding_metadata.json\"\n        if not metadata_file.exists():\n            logger.warning(f\"Embedding metadata file not found at {metadata_file}\")\n            return metadata\n\n        try:\n            with metadata_file.open(\"r\", encoding=\"utf-8\") as f:\n                metadata = json.load(f)\n        except json.JSONDecodeError:\n            logger.error(f\"Error decoding JSON from {metadata_file}\")\n            return {}\n\n        # Decrypt API key if it exists\n        if \"api_key\" in metadata and metadata.get(\"api_key\"):\n            settings_service = get_settings_service()\n            try:\n                decrypted_key = decrypt_api_key(metadata[\"api_key\"], settings_service)\n                metadata[\"api_key\"] = decrypted_key\n            except (InvalidToken, TypeError, ValueError) as e:\n                logger.error(f\"Could not decrypt API key. Please provide it manually. Error: {e}\")\n                metadata[\"api_key\"] = None\n        return metadata\n\n    def _build_embeddings(self, metadata: dict):\n        \"\"\"Build embedding model from metadata.\"\"\"\n        provider = metadata.get(\"embedding_provider\")\n        model = metadata.get(\"embedding_model\")\n        api_key = metadata.get(\"api_key\")\n        chunk_size = metadata.get(\"chunk_size\")\n\n        # If user provided a key in the input, it overrides the stored one.\n        if self.api_key and self.api_key.get_secret_value():\n            api_key = self.api_key.get_secret_value()\n\n        # Handle various providers\n        if provider == \"OpenAI\":\n            from langchain_openai import OpenAIEmbeddings\n\n            if not api_key:\n                msg = \"OpenAI API key is required. Provide it in the component's advanced settings.\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=model,\n                api_key=api_key,\n                chunk_size=chunk_size,\n            )\n        if provider == \"HuggingFace\":\n            from langchain_huggingface import HuggingFaceEmbeddings\n\n            return HuggingFaceEmbeddings(\n                model=model,\n            )\n        if provider == \"Cohere\":\n            from langchain_cohere import CohereEmbeddings\n\n            if not api_key:\n                msg = \"Cohere API key is required when using Cohere provider\"\n                raise ValueError(msg)\n            return CohereEmbeddings(\n                model=model,\n                cohere_api_key=api_key,\n            )\n        if provider == \"Custom\":\n            # For custom embedding models, we would need additional configuration\n            msg = \"Custom embedding models not yet supported\"\n            raise NotImplementedError(msg)\n        # Add other providers here if they become supported in ingest\n        msg = f\"Embedding provider '{provider}' is not supported for retrieval.\"\n        raise NotImplementedError(msg)\n\n    def get_chroma_kb_data(self) -> DataFrame:\n        \"\"\"Retrieve data from the selected knowledge base by reading the Chroma collection.\n\n        Returns:\n            A DataFrame containing the data rows from the knowledge base.\n        \"\"\"\n        kb_path = KNOWLEDGE_BASES_ROOT_PATH / self.knowledge_base\n\n        metadata = self._get_kb_metadata(kb_path)\n        if not metadata:\n            msg = f\"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed.\"\n            raise ValueError(msg)\n\n        # Build the embedder for the knowledge base\n        embedding_function = self._build_embeddings(metadata)\n\n        # Load vector store\n        chroma = Chroma(\n            persist_directory=str(kb_path),\n            embedding_function=embedding_function,\n            collection_name=self.knowledge_base,\n        )\n\n        # If a search query is provided, perform a similarity search\n        if self.search_query:\n            # Use the search query to perform a similarity search\n            logger.info(f\"Performing similarity search with query: {self.search_query}\")\n            results = chroma.similarity_search_with_score(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n        else:\n            results = chroma.similarity_search(\n                query=self.search_query or \"\",\n                k=self.top_k,\n            )\n\n            # For each result, make it a tuple to match the expected output format\n            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0\n\n        # If metadata is enabled, get embeddings for the results\n        id_to_embedding = {}\n        if self.include_metadata and results:\n            doc_ids = [doc[0].metadata.get(\"_id\") for doc in results if doc[0].metadata.get(\"_id\")]\n\n            # Only proceed if we have valid document IDs\n            if doc_ids:\n                # Access underlying client to get embeddings\n                collection = chroma._client.get_collection(name=self.knowledge_base)\n                embeddings_result = collection.get(where={\"_id\": {\"$in\": doc_ids}}, include=[\"embeddings\", \"metadatas\"])\n\n                # Create a mapping from document ID to embedding\n                for i, metadata in enumerate(embeddings_result.get(\"metadatas\", [])):\n                    if metadata and \"_id\" in metadata:\n                        id_to_embedding[metadata[\"_id\"]] = embeddings_result[\"embeddings\"][i]\n\n        # Build output data based on include_metadata setting\n        data_list = []\n        for doc in results:\n            if self.include_metadata:\n                # Include all metadata, embeddings, and content\n                kwargs = {\n                    \"content\": doc[0].page_content,\n                    **doc[0].metadata,\n                }\n                if self.search_query:\n                    kwargs[\"_score\"] = -1 * doc[1]\n                kwargs[\"_embeddings\"] = id_to_embedding.get(doc[0].metadata.get(\"_id\"))\n            else:\n                # Only include content\n                kwargs = {\n                    \"content\": doc[0].page_content,\n                }\n\n            data_list.append(Data(**kwargs))\n\n        # Return the DataFrame containing the data\n        return DataFrame(data=data_list)\n"
               },
               "include_metadata": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Include Metadata",
                 "dynamic": false,
                 "info": "Whether to include all metadata and embeddings in the output. If false, only content is returned.",
@@ -678,28 +680,28 @@
           "type": "KBRetrieval"
         },
         "dragging": false,
-        "id": "KBRetrieval-tGoBR",
+        "id": "KBRetrieval-zz3I0",
         "measured": {
-          "height": 286,
+          "height": 329,
           "width": 320
         },
         "position": {
-          "x": 640.6283193600648,
-          "y": -313.9694258557284
+          "x": 616.6226476085393,
+          "y": -343.13068334363356
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 285.0464459586908,
-      "y": 588.7377652547386,
-      "zoom": 0.9833370380356916
+      "x": 177.06633386268413,
+      "y": 482.8027480187026,
+      "zoom": 0.8999566725119924
     }
   },
   "description": "An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.",
   "endpoint_name": null,
-  "id": "670745f6-08b1-480e-bdaf-64ba74967cba",
+  "id": "5487ee05-73d5-4b12-9b41-bc4c3a2f9326",
   "is_component": false,
   "last_tested_version": "1.5.0.post1",
   "name": "Knowledge Retrieval",

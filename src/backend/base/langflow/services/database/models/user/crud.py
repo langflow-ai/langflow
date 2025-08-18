@@ -60,3 +60,10 @@ async def update_user_last_login_at(user_id: UUID, db: AsyncSession):
         return await update_user(user, user_data, db)
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error updating user last login at: {e!s}")
+
+
+async def get_all_superusers(db: AsyncSession) -> list[User]:
+    """Get all superuser accounts from the database."""
+    stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+    result = await db.exec(stmt)
+    return list(result.all())
