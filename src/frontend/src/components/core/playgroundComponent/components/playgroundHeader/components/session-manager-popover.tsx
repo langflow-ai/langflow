@@ -6,6 +6,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  NO_SESSIONS_MATCH_SEARCH,
+  SEARCH_SESSIONS,
+} from "@/constants/constants";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
@@ -63,20 +67,20 @@ export const SessionManagerPopover = ({
       <PopoverContent className="w-80 p-0" align="start">
         {sessions && (
           <>
-            <div className="p-3 border-b">
+            <div className="p-1 border-b">
               <Input
-                placeholder="Search sessions..."
+                placeholder={SEARCH_SESSIONS}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="h-8 text-sm"
+                icon="Search"
+                inputClassName="h-8 text-sm border-none"
               />
             </div>
             <div className="max-h-64 overflow-y-auto">
               {filteredSessions.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  {query
-                    ? "No sessions match your search"
-                    : "No sessions found"}
+                  {NO_SESSIONS_MATCH_SEARCH}
                 </div>
               ) : (
                 filteredSessions.map((sessionId, index) => (

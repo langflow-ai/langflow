@@ -1034,6 +1034,11 @@ export const POLLING_MESSAGES = {
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
+export const DEFAULT_SESSION_NAME = "Default Session";
+export const SELECT_SESSION = "Select session";
+export const SEARCH_SESSIONS = "Search sessions...";
+export const NO_SESSIONS_MATCH_SEARCH = "No sessions match your search";
+
 export const BUILD_POLLING_INTERVAL = 25;
 
 export const IS_AUTO_LOGIN =

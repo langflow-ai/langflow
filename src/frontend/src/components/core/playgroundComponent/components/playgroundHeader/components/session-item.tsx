@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_SESSION_NAME, SELECT_SESSION } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
@@ -80,7 +81,7 @@ export const SessionItem = ({
       )}
       onClick={handleSessionSelect}
       onKeyDown={handleSessionSelectKeyDown}
-      aria-label={`Select session ${sessionId}`}
+      aria-label={`${SELECT_SESSION} ${sessionId}`}
       role="button"
       tabIndex={tabIndex}
     >
@@ -93,7 +94,9 @@ export const SessionItem = ({
           />
         ) : (
           <div className="flex items-center justify-between">
-            <span className="text-sm truncate font-medium">{sessionId}</span>
+            <span className="text-sm truncate font-medium">
+              {canEdit ? sessionId : DEFAULT_SESSION_NAME}
+            </span>
             {canEdit && (
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
