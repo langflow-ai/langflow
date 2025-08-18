@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { APIClassType } from "@/types/api";
-import SidebarItemsList from "../sidebarItemsList";
+import SidebarItemsList from "./sidebarItemsList";
 
 export const CategoryDisclosure = memo(function CategoryDisclosure({
   item,
@@ -59,6 +59,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
           <SidebarMenuButton asChild>
             <div
               data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
+              role="button"
               tabIndex={0}
               onKeyDown={handleKeyDownInput}
               className="user-select-none flex cursor-pointer items-center gap-2"
