@@ -433,3 +433,267 @@ def test_custom_component_subclass_from_lctoolcomponent():
     assert "outputs" in frontend_node
     assert frontend_node["outputs"][0]["types"] != []
     assert frontend_node["outputs"][1]["types"] != []
+
+
+def test_build_custom_component_template_includes_metadata_with_module():
+    """Test that build_custom_component_template includes metadata when module_name is provided."""
+    code = dedent("""
+    from langflow.custom import Component
+    from langflow.inputs.inputs import MessageTextInput
+    from langflow.template.field.base import Output
+
+    class TestMetadataComponent(Component):
+        display_name = "Test Metadata Component"
+        description = "Test component for metadata"
+
+        inputs = [
+            MessageTextInput(display_name="Input", name="input_value"),
+        ]
+        outputs = [
+            Output(display_name="Output", name="output", method="process_input"),
+        ]
+
+        def process_input(self) -> str:
+            return f"Processed: {self.input_value}"
+    """)
+
+    component = Component(_code=code)
+    frontend_node, _ = build_custom_component_template(component, module_name="test.module")
+
+    # Verify metadata is present
+    assert "metadata" in frontend_node
+    metadata = frontend_node["metadata"]
+
+    # Verify metadata contains required fields
+    assert "module" in metadata
+    assert "code_hash" in metadata
+
+    # Verify metadata values
+    assert metadata["module"] == "test.module"
+    assert isinstance(metadata["code_hash"], str)
+    assert len(metadata["code_hash"]) == 12
+    assert all(c in "0123456789abcdef" for c in metadata["code_hash"])
+
+
+def test_build_custom_component_template_always_has_metadata():
+    """Test that build_custom_component_template always generates metadata, even when module_name is None."""
+    code = dedent("""
+    from langflow.custom import Component
+    from langflow.template.field.base import Output
+
+    class TestAlwaysMetadata(Component):
+        display_name = "Test Always Metadata"
+
+        outputs = [
+            Output(display_name="Output", name="output", method="get_result"),
+        ]
+
+        def get_result(self) -> str:
+            return "test"
+    """)
+
+    component = Component(_code=code)
+    frontend_node, _ = build_custom_component_template(component, module_name=None)
+
+    # Metadata should ALWAYS be present
+    assert "metadata" in frontend_node
+    metadata = frontend_node["metadata"]
+
+    assert "module" in metadata
+    assert "code_hash" in metadata
+
+    # Should generate default module name from display_name
+    assert metadata["module"] == "custom_components.test_always_metadata"
+    assert len(metadata["code_hash"]) == 12
+
+
+def test_build_custom_component_template_metadata_hash_changes():
+    """Test that code hash changes when component code changes."""
+    code_v1 = dedent("""
+    from langflow.custom import Component
+    from langflow.template.field.base import Output
+
+    class VersionComponent(Component):
+        display_name = "Version Component"
+        version = "1.0"
+
+        outputs = [
+            Output(display_name="Output", name="output", method="get_version"),
+        ]
+
+        def get_version(self) -> str:
+            return "version 1.0"
+    """)
+
+    code_v2 = dedent("""
+    from langflow.custom import Component
+    from langflow.template.field.base import Output
+
+    class VersionComponent(Component):
+        display_name = "Version Component"
+        version = "2.0"
+
+        outputs = [
+            Output(display_name="Output", name="output", method="get_version"),
+        ]
+
+        def get_version(self) -> str:
+            return "version 2.0"
+    """)
+
+    component_v1 = Component(_code=code_v1)
+    component_v2 = Component(_code=code_v2)
+
+    frontend_node_v1, _ = build_custom_component_template(component_v1, module_name="test.version")
+    frontend_node_v2, _ = build_custom_component_template(component_v2, module_name="test.version")
+
+    metadata_v1 = frontend_node_v1["metadata"]
+    metadata_v2 = frontend_node_v2["metadata"]
+
+    # Same module name
+    assert metadata_v1["module"] == metadata_v2["module"]
+
+    # Different code hashes
+    assert metadata_v1["code_hash"] != metadata_v2["code_hash"]
+
+
+def test_build_custom_component_template_metadata_unicode():
+    """Test that metadata generation works with unicode characters in code."""
+    code = dedent("""
+    from langflow.custom import Component
+    from langflow.template.field.base import Output
+
+    class UnicodeComponent(Component):
+        display_name = "Unicode Test 🌟"
+        description = "测试组件 with émojis"
+
+        outputs = [
+            Output(display_name="Output", name="output", method="get_unicode"),
+        ]
+
+        def get_unicode(self) -> str:
+            # Comment with unicode: 你好世界 🚀
+            return "Hello 世界!"
+    """)
+
+    component = Component(_code=code)
+    frontend_node, _ = build_custom_component_template(component, module_name="unicode.test")
+
+    # Verify metadata is present and valid
+    metadata = frontend_node["metadata"]
+    assert "module" in metadata
+    assert "code_hash" in metadata
+
+    # Verify hash is valid hexadecimal
+    code_hash = metadata["code_hash"]
+    assert len(code_hash) == 12
+    assert all(c in "0123456789abcdef" for c in code_hash)
+
+
+def test_build_custom_component_template_component_always_has_metadata():
+    """Test that build_custom_component_template always returns metadata for Component path."""
+    code = dedent("""
+    from langflow.custom import Component
+    from langflow.inputs.inputs import MessageTextInput
+    from langflow.template.field.base import Output
+
+    class TestComponentMetadata(Component):
+        display_name = "Test Component Metadata"
+
+        inputs = [
+            MessageTextInput(display_name="Input", name="input_value"),
+        ]
+        outputs = [
+            Output(display_name="Output", name="output", method="process_input"),
+        ]
+
+        def process_input(self) -> str:
+            return f"Processed: {self.input_value}"
+    """)
+
+    component = Component(_code=code)
+    frontend_node, _ = build_custom_component_template(component, module_name=None)
+
+    # Metadata should ALWAYS be present, even for Component without module_name
+    assert "metadata" in frontend_node
+    metadata = frontend_node["metadata"]
+
+    assert "module" in metadata
+    assert "code_hash" in metadata
+
+    # Should generate default module name from display_name
+    assert metadata["module"] == "custom_components.test_component_metadata"
+    assert len(metadata["code_hash"]) == 12
+
+
+def test_metadata_always_returned_comprehensive():
+    """Comprehensive test to verify metadata is ALWAYS returned in all scenarios."""
+    # Test scenario 1: Component with module_name provided
+    code1 = dedent("""
+    from langflow.custom import Component
+    from langflow.template.field.base import Output
+
+    class TestWithModule(Component):
+        display_name = "Test With Module"
+
+        outputs = [
+            Output(display_name="Output", name="output", method="get_result"),
+        ]
+
+        def get_result(self) -> str:
+            return "with module"
+    """)
+
+    component1 = Component(_code=code1)
+    frontend_node1, _ = build_custom_component_template(component1, module_name="explicit.module")
+
+    assert "metadata" in frontend_node1
+    assert frontend_node1["metadata"]["module"] == "explicit.module"
+    assert "code_hash" in frontend_node1["metadata"]
+    assert len(frontend_node1["metadata"]["code_hash"]) == 12
+
+    # Test scenario 2: Component without module_name (should generate default)
+    component2 = Component(_code=code1)
+    frontend_node2, _ = build_custom_component_template(component2, module_name=None)
+
+    assert "metadata" in frontend_node2
+    assert frontend_node2["metadata"]["module"] == "custom_components.test_with_module"
+    assert "code_hash" in frontend_node2["metadata"]
+    assert len(frontend_node2["metadata"]["code_hash"]) == 12
+
+    # Test scenario 3: Component with inputs and outputs
+    code3 = dedent("""
+    from langflow.custom import Component
+    from langflow.inputs.inputs import MessageTextInput
+    from langflow.template.field.base import Output
+
+    class TestWithInputs(Component):
+        display_name = "Test With Inputs"
+
+        inputs = [
+            MessageTextInput(display_name="Input", name="input_value"),
+        ]
+        outputs = [
+            Output(display_name="Output", name="output", method="process_input"),
+        ]
+
+        def process_input(self) -> str:
+            return f"Processed: {self.input_value}"
+    """)
+
+    component3 = Component(_code=code3)
+    frontend_node3, _ = build_custom_component_template(component3, module_name="custom.explicit")
+
+    assert "metadata" in frontend_node3
+    assert frontend_node3["metadata"]["module"] == "custom.explicit"
+    assert "code_hash" in frontend_node3["metadata"]
+    assert len(frontend_node3["metadata"]["code_hash"]) == 12
+
+    # Test scenario 4: Component without module_name (should generate default)
+    component4 = Component(_code=code3)
+    frontend_node4, _ = build_custom_component_template(component4, module_name=None)
+
+    assert "metadata" in frontend_node4
+    assert frontend_node4["metadata"]["module"] == "custom_components.test_with_inputs"
+    assert "code_hash" in frontend_node4["metadata"]
+    assert len(frontend_node4["metadata"]["code_hash"]) == 12
