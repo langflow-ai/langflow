@@ -55,15 +55,17 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
         from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
         from docling.models.factories import get_ocr_factory
         from docling.pipeline.vlm_pipeline import VlmPipeline
-    except ImportError:
+    except ModuleNotFoundError as e:
         msg = (
             "Docling is not installed. Please install it with `uv pip install docling` or"
             " `uv pip install langflow[docling]`."
         )
-        # Send error to the main process
         queue.put({"error": msg})
         return
-
+    except ImportError as e:
+        # A different import failed (e.g., a transitive dependency); preserve details.
+        queue.put({"error": f"Failed to import a Docling dependency: {e}"})
+        return
     # Configure the standard PDF pipeline
     def _get_standard_opts() -> PdfPipelineOptions:
         pipeline_options = PdfPipelineOptions()
