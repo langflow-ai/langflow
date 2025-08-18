@@ -1,6 +1,3 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +17,9 @@ import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
 import InputGlobalComponent from "../inputGlobalComponent";
@@ -45,16 +45,12 @@ export default function ModelInputComponent({
   disabled,
   editNode = false,
   handleOnNewValue,
-  model_type = "language",
   options = [],
   placeholder = "Select a Model",
   search_category = ["OpenAI", "Anthropic"],
-  isToolMode = false,
-  hasRefreshButton = false,
   helperText,
   children,
 }: ModelInputProps): JSX.Element {
-  // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -143,7 +139,6 @@ export default function ModelInputComponent({
 
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
-
     setFilteredOptions(filtered);
   };
 
