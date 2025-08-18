@@ -1,6 +1,3 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,18 +17,27 @@ import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
 import InputGlobalComponent from "../inputGlobalComponent";
 
 export type ModelInputComponentType = {
   model_type: "language" | "embedding";
-  options: { name: string; icon: string; category: string }[];
+  options: { 
+    name: string; 
+    icon: string; 
+    category: string;
+    metadata?: any;
+    provider?: string;
+  }[];
   placeholder: string;
   temperature?: number;
   max_tokens?: number;
   limit?: number;
-  search_category?: string[];
+  providers?: string[];
 };
 
 export type ModelInputProps = BaseInputProps<any> &
@@ -47,7 +53,11 @@ export default function ModelInputComponent({
   handleOnNewValue,
   options = [],
   placeholder = "Select a Model",
-  search_category = ["OpenAI", "Anthropic"],
+  providers = ["OpenAI", "Anthropic"],
+  temperature = 0.1,
+  max_tokens = 256,
+  limit = 1,
+  model_type = "language",
   helperText,
   children,
 }: ModelInputProps): JSX.Element {
@@ -82,11 +92,11 @@ export default function ModelInputComponent({
     // Sort by provider priority
     const sortedGroups: [string, typeof options][] = Object.entries(groups);
 
-    // Move specified categories to top
-    if (search_category?.length) {
+    // Move specified providers to top
+    if (providers?.length) {
       sortedGroups.sort(([a], [b]) => {
-        const aIndex = search_category.indexOf(a);
-        const bIndex = search_category.indexOf(b);
+        const aIndex = providers.indexOf(a);
+        const bIndex = providers.indexOf(b);
 
         if (aIndex !== -1 && bIndex !== -1) {
           return aIndex - bIndex;
@@ -100,7 +110,7 @@ export default function ModelInputComponent({
     }
 
     return sortedGroups;
-  }, [options, search_category]);
+  }, [options, providers]);
 
   const handleModelSelect = (modelOption: string) => {
     const selectedOption = options.find((opt) => opt.name === modelOption);
@@ -110,9 +120,25 @@ export default function ModelInputComponent({
         : selectedOption?.name,
     );
     if (selectedOption) {
-      handleOnNewValue({ value: [selectedOption] });
+      // Include all backend-expected properties
+      const selectedValue = {
+        name: selectedOption.name,
+        icon: selectedOption.icon || "",
+        category: selectedOption.category,
+        provider: selectedOption.provider || selectedOption.category,
+        metadata: selectedOption.metadata || {},
+      };
+      handleOnNewValue({ value: [selectedValue] });
     } else {
-      handleOnNewValue({ value: [{ name: modelOption, icon: "" }] });
+      // Fallback for custom values
+      const fallbackValue = {
+        name: modelOption,
+        icon: "",
+        category: "Custom",
+        provider: "Custom",
+        metadata: {},
+      };
+      handleOnNewValue({ value: [fallbackValue] });
     }
   };
 
@@ -221,6 +247,15 @@ export default function ModelInputComponent({
 
     return (
       <div className="flex flex-col gap-4 mt-2">
+        <div className="text-xs text-muted-foreground mb-2">
+          <span>Temperature: {temperature}</span>
+          {model_type === "language" && (
+            <span className="ml-4">Max Tokens: {max_tokens}</span>
+          )}
+          {limit > 1 && (
+            <span className="ml-4">Limit: {limit}</span>
+          )}
+        </div>
         <InputGlobalComponent
           id={`${id}-api-key`}
           display_name={`${selectedProvider || "Provider"} API Key`}
@@ -299,9 +334,7 @@ export default function ModelInputComponent({
                       setSelectedProvider(
                         selectedProvider === option.name
                           ? null
-                          : option.name.includes(":")
-                            ? option.name.split(":")[0]
-                            : option.name,
+                          : option.provider || option.category,
                       );
 
                       handleModelSelect(currentValue);

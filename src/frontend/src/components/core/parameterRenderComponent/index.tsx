@@ -1,14 +1,15 @@
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
-import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
 import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import type { APIClassType, InputFieldType } from "@/types/api";
+import ToolsComponent from "./components/ToolsComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -21,7 +22,6 @@ import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
-import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
 import type { InputProps, NodeInfoType } from "./types";
 
@@ -242,7 +242,7 @@ export function ParameterRenderComponent({
               temperature={templateData?.temperature}
               max_tokens={templateData?.max_tokens}
               limit={templateData?.limit}
-              search_category={templateData?.search_category}
+              providers={templateData?.providers}
             />
           );
         }
@@ -252,7 +252,7 @@ export function ParameterRenderComponent({
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.search_category}
+            searchCategory={templateData?.searchCategory}
             limit={templateData?.limit}
           />
         );
@@ -271,7 +271,7 @@ export function ParameterRenderComponent({
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.search_category}
+            searchCategory={templateData?.searchCategory}
             buttonMetadata={templateData?.button_metadata}
             connectionLink={link as string}
           />
