@@ -54,7 +54,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
       "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none",
       disabled && "cursor-not-allowed opacity-50",
     )}
-    onClick={hasToogle ? () => {} : onClick}
+    onClick={onClick}
     variant="ghost"
     disabled={disabled}
     title={tooltipText || ""}
@@ -81,7 +81,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
     {hasToogle && (
       <ToggleShadComponent
         value={toggleValue}
-        handleOnNewValue={hasToogle ? onClick : () => {} }
+        handleOnNewValue={onClick}
         editNode={true}
         id="enable_smart_guides"
         disabled={false}
