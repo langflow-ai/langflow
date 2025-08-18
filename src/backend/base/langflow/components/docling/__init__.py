@@ -121,4 +121,5 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
     except Exception as e:  # noqa: BLE001
         # Send any processing error to the main process with traceback
         import traceback
+
         queue.put({"error": str(e), "traceback": traceback.format_exc()})
