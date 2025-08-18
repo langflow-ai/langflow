@@ -840,7 +840,6 @@ export type chatViewProps = {
     files?: string[];
   }) => Promise<void>;
   visibleSession?: string;
-  focusChat?: string;
   playgroundPage?: boolean;
 };
 

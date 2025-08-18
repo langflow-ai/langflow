@@ -40,7 +40,6 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
 export default function ChatView({
   sendMessage,
   visibleSession,
-  focusChat,
   playgroundPage,
 }: chatViewProps): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
