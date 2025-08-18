@@ -6,8 +6,13 @@ from .google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
 MODELS_DETAILED = [ANTHROPIC_MODELS_DETAILED, OPENAI_MODELS_DETAILED, GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
 
 
+def get_model_providers() -> list[str]:
+    """Return a sorted list of unique provider names."""
+    return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
+
+
 def get_unified_models_detailed(
-    provider: str | None = None,
+    providers: list[str] | None = None,
     model_name: str | None = None,
     model_type: str | None = None,
     include_unsupported: bool | None = None,
@@ -17,8 +22,8 @@ def get_unified_models_detailed(
 
     Parameters
     ----------
-    provider : str | None
-        If given, only models from this provider are returned.
+    providers : list[str] | None
+        If given, only models from these providers are returned.
     model_name : str | None
         If given, only the model with this exact name is returned.
     model_type : str | None
@@ -49,7 +54,7 @@ def get_unified_models_detailed(
         if (not include_unsupported) and md.get("not_supported", False):
             continue
 
-        if provider and md.get("provider") != provider:
+        if providers and md.get("provider") not in providers:
             continue
         if model_name and md.get("name") != model_name:
             continue
