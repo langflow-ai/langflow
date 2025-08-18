@@ -1,11 +1,10 @@
 const SvgFirecrawlLogo = (props) => (
   <svg
     viewBox="-33 0 255 255"
-    width="24"
-    height="24"
     xmlns="http://www.w3.org/2000/svg"
     xmlnsXlink="http://www.w3.org/1999/xlink"
     preserveAspectRatio="xMidYMid"
+    {...props}
   >
     <defs>
       <style>

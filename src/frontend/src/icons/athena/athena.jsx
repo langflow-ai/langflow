@@ -6,8 +6,8 @@ export const AthenaComponent = ({ className, ...props }) => (
     height="239"
     viewBox="0 0 300 239"
     fill="none"
-    {...props}
     xmlns="http://www.w3.org/2000/svg"
+    {...props}
   >
     <path
       d="M275.757 193.713L300 234.575H275.757H251.515L275.757 193.713Z"

@@ -132,12 +132,6 @@ class Vertex:
     def add_result(self, name: str, result: Any) -> None:
         self.results[name] = result
 
-    def update_graph_state(self, key, new_state, *, append: bool) -> None:
-        if append:
-            self.graph.append_state(key, new_state, caller=self.id)
-        else:
-            self.graph.update_state(key, new_state, caller=self.id)
-
     def set_state(self, state: str) -> None:
         self.state = VertexStates[state]
         if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] <= 1:

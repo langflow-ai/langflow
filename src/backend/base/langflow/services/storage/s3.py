@@ -99,3 +99,6 @@ class S3StorageService(StorageService):
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 storage at the moment.
+
+    async def get_file_size(self, flow_id: str, file_name: str):
+        raise NotImplementedError

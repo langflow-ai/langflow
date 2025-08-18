@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
-import { ChatViewWrapperProps } from "../types/chat-view-wrapper";
+import type { ChatViewWrapperProps } from "../types/chat-view-wrapper";
 import ChatView from "./chatView/components/chat-view";
 
 export const ChatViewWrapper = ({

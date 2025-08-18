@@ -1,7 +1,7 @@
+import type { ColDef, ValueGetterParams } from "ag-grid-community";
+import { useMemo } from "react";
 import TableAdvancedToggleCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAdvancedToggleCellRender";
 import TableNodeCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableNodeCellRender";
-import { ColDef, ValueGetterParams } from "ag-grid-community";
-import { useMemo } from "react";
 
 const useColumnDefs = (
   nodeId: string,
@@ -26,7 +26,7 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 1,
         resizable: false,
-        cellClass: "no-border cursor-default",
+        cellClass: "no-border cursor-default text-muted-foreground !py-1",
       },
       {
         headerName: "Description",
@@ -36,10 +36,10 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 2,
         resizable: false,
-        cellClass: "no-border cursor-default",
+        cellClass: "no-border cursor-default text-muted-foreground !py-1",
       },
       {
-        headerName: "Value",
+        headerName: isTweaks ? "Current Value" : "Value",
         field: "value",
         cellRenderer: TableNodeCellRender,
         cellStyle: {
@@ -61,12 +61,12 @@ const useColumnDefs = (
         autoHeight: true,
         flex: 1,
         resizable: false,
-        cellClass: "no-border cursor-default",
+        cellClass: "no-border cursor-default !py-1",
       },
     ];
     if (!hideVisibility) {
-      colDefs.push({
-        headerName: isTweaks ? "Enable Input" : "Show",
+      colDefs.unshift({
+        headerName: isTweaks ? "Expose Input" : "Show",
         field: "advanced",
         cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
@@ -80,7 +80,7 @@ const useColumnDefs = (
         maxWidth: !isTweaks ? 80 : 120,
         minWidth: !isTweaks ? 80 : 120,
         resizable: false,
-        cellClass: "no-border cursor-default",
+        cellClass: "no-border cursor-default !py-1",
       });
     }
     return colDefs;

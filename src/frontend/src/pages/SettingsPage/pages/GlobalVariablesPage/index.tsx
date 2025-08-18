@@ -1,7 +1,9 @@
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/common/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
+import type {
+  ColDef,
+  RowClickedEvent,
+  SelectionChangedEvent,
+} from "ag-grid-community";
+import { useRef, useState } from "react";
 
 import Dropdown from "@/components/core/dropdownComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
@@ -10,14 +12,12 @@ import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { GlobalVariable } from "@/types/global_variables";
-import {
-  ColDef,
-  RowClickedEvent,
-  SelectionChangedEvent,
-} from "ag-grid-community";
-import { useRef, useState } from "react";
+import type { GlobalVariable } from "@/types/global_variables";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/common/genericIconComponent";
 import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
 
 export default function GlobalVariablesPage() {

@@ -1,5 +1,3 @@
-from crewai import Agent, Crew, Process, Task
-
 from langflow.base.agents.crewai.crew import BaseCrewComponent
 from langflow.io import HandleInput
 from langflow.schema.message import Message
@@ -10,6 +8,7 @@ class SequentialCrewComponent(BaseCrewComponent):
     description: str = "Represents a group of agents with tasks that are executed sequentially."
     documentation: str = "https://docs.crewai.com/how-to/Sequential/"
     icon = "CrewAI"
+    legacy = True
 
     inputs = [
         *BaseCrewComponent._base_inputs,
@@ -17,11 +16,11 @@ class SequentialCrewComponent(BaseCrewComponent):
     ]
 
     @property
-    def agents(self: "SequentialCrewComponent") -> list[Agent]:
+    def agents(self: "SequentialCrewComponent") -> list:
         # Derive agents directly from linked tasks
         return [task.agent for task in self.tasks if hasattr(task, "agent")]
 
-    def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
+    def get_tasks_and_agents(self, agents_list=None) -> tuple[list, list]:
         # Use the agents property to derive agents
         if not agents_list:
             existing_agents = self.agents
@@ -30,6 +29,12 @@ class SequentialCrewComponent(BaseCrewComponent):
         return super().get_tasks_and_agents(agents_list=agents_list)
 
     def build_crew(self) -> Message:
+        try:
+            from crewai import Crew, Process
+        except ImportError as e:
+            msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
+            raise ImportError(msg) from e
+
         tasks, agents = self.get_tasks_and_agents()
 
         return Crew(

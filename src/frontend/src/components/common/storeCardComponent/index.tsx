@@ -1,10 +1,10 @@
-import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useState } from "react";
+import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { getComponent } from "../../../controllers/API";
 import useAlertStore from "../../../stores/alertStore";
 import { useStoreStore } from "../../../stores/storeStore";
-import { FlowType } from "../../../types/flow";
-import { storeComponent } from "../../../types/store";
+import type { FlowType } from "../../../types/flow";
+import type { storeComponent } from "../../../types/store";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
 } from "../../../utils/storeUtils";
@@ -44,13 +44,13 @@ export default function StoreCardComponent({
 
   const name = data.is_component ? "Component" : "Flow";
 
-  async function getFlowData() {
+  async function _getFlowData() {
     const res = await getComponent(data.id);
     const newFlow = cloneFLowWithParent(res, res.id, data.is_component, true);
     return newFlow;
   }
 
-  function hasPlayground(flow?: FlowType) {
+  function _hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
     }
