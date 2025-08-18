@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -30,6 +31,14 @@ export function PlaygroundComponent({
   const messages = useMessagesStore((state) => state.messages);
 
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
+  const setSelectedSession = usePlaygroundStore(
+    (state) => state.setSelectedSession
+  );
+  const { data: sessions, refetch: refetchSessions } =
+    useGetSessionsFromFlowQuery({
+      flowId: currentFlowId,
+      useLocalStorage: playgroundPage,
+    });
 
   const { isFetched: messagesFetched, refetch: refetchMessages } =
     useGetMessagesQuery({
@@ -66,6 +75,9 @@ export function PlaygroundComponent({
           console.error(err);
           throw err;
         });
+        if (selectedSession && !sessions?.includes(selectedSession)) {
+          refetchSessions();
+        }
       }
     },
     [
@@ -84,6 +96,7 @@ export function PlaygroundComponent({
 
   useEffect(() => {
     setPlaygroundScrollBehaves("instant");
+    setSelectedSession(currentFlowId);
   }, []);
 
   useEffect(() => {
