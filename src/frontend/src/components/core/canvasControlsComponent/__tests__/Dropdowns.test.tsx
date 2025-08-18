@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import { CanvasControlsDropdown, HelpDropdown } from "../dropdowns";
+import CanvasControlsDropdown from "../CanvasControlsDropdown";
+import HelpDropdown from "../HelpDropdown";
 
 jest.mock("@/components/ui/button", () => ({
   Button: ({ children, ...props }: any) => (

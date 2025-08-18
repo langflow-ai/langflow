@@ -4,7 +4,7 @@ import {
   default as ForwardedIconComponent,
   default as IconComponent,
 } from "@/components/common/genericIconComponent";
-import CanvasControls from "@/components/core/canvasControlsComponent";
+import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";

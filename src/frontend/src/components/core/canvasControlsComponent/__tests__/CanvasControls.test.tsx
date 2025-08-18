@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import CanvasControls from "../index";
+import CanvasControls from "../CanvasControls";
 
 // Capture flow functions for assertions
 const reactFlowFns = {
@@ -38,11 +38,14 @@ jest.mock("@/components/ui/separator", () => ({
 }));
 
 // Mock dropdowns to a simple render that exposes props for assertions
-jest.mock("../dropdowns", () => ({
-  CanvasControlsDropdown: (props: any) => (
-    <div data-testid="controls-dropdown" {...props} />
-  ),
-  HelpDropdown: (props: any) => <div data-testid="help-dropdown" {...props} />,
+jest.mock("../CanvasControlsDropdown", () => ({
+  __esModule: true,
+  default: (props: any) => <div data-testid="controls-dropdown" {...props} />,
+}));
+
+jest.mock("../HelpDropdown", () => ({
+  __esModule: true,
+  default: (props: any) => <div data-testid="help-dropdown" {...props} />,
 }));
 
 describe("CanvasControls", () => {
