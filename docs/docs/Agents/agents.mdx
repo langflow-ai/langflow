@@ -181,6 +181,50 @@ This output attempts to parse the agent's response as JSON and returns it as str
 * If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
 * If no valid JSON is found, the output returns the raw content with an error indicator.
 
+This structured response can be used to further use an Agent's response in downstream applications.
+For example, using the Simple Agent starter template, instruct the Agent to return a JSON response that your application can consume from Langflow's output.
+
+```text
+You are a helpful assistant. Your task is to take a user query and return a JSON object with two fields:
+
+{
+  "agent_response": "<Your clear and helpful answer to the user’s query. Be conversational, but concise.>",
+  "follow_up_questions": [
+    "<A follow-up question the user might ask you next>",
+    "<Another follow-up question the user could naturally ask>",
+    "<Something the user might want to explore in more detail>",
+    "<A clarifying or related question the user might ask>",
+    "<(Optional) A task-based or next-step question the user could ask>"
+  ]
+}
+
+Guidelines:
+- All `follow_up_questions` must be phrased as **user-initiated** questions — they should sound like something the user might type next to continue the conversation.
+- If the user’s input is vague or generic (e.g., “Hi”, “How are you?”), include general-purpose follow-ups the user might ask, such as:
+  - “What can you do?”
+  - “Can you help me write something?”
+  - “Show me examples of what you can assist with.”
+  - “How do I build a GenAI app?”
+  - “Tell me something interesting.”
+- Do not include questions that the assistant would ask the user.
+- Always respond in **valid JSON only** — no extra commentary.
+```
+
+The Agent's response to the input `Tell me about the OpenWeather API` is similar to the following:
+
+```json
+{
+  "agent_response": "Here’s a quick starter for the OpenWeather API. OpenWeather provides weather data via REST APIs. Key endpoints include Current Weather Data, 5 Day / 3 Hour Forecast, and the One Call API (combined current, hourly, and daily data). Authentication is via an API key (appid). Base URL: https://api.openweathermap.org/data/2.5/ . Common parameters: q (city name), lat & lon (coordinates), id (city ID), zip (ZIP code), appid, units (metric/imperial/standard), and lang for localized descriptions.\n\nExamples:\n- Current weather by city name:\n  curl 'https://api.openweathermap.org/data/2.5/weather?q=London&appid=YOUR_API_KEY&units=metric'\n- Current weather by coordinates:\n  curl 'https://api.openweathermap.org/data/2.5/weather?lat=35&lon=139&appid=YOUR_API_KEY&units=metric'\n- One Call API by coordinates (lat/lon):\n  curl 'https://api.openweathermap.org/data/2.5/onecall?lat=35&lon=139&exclude=minutely&appid=YOUR_API_KEY&units=metric'\n\nWhat you get:\n- Current weather: a JSON object with fields like weather[0].description, main.temp, humidity, wind.speed, name, sys.country.\n- One Call: a JSON object with current, hourly[], and daily[] blocks.\n\nNotes:\n- Choose units=metric for Celsius or imperial for Fahrenheit.\n- The free tier has usage limits; check your OpenWeather account for current quotas.\n- You can localize descriptions with the lang parameter (e.g., lang=es for Spanish).\n\nIf you’d like, I can tailor a small example in a language you’re using (Python, JavaScript, etc.) or fetch the official docs and summarize the key pages for you.",
+  "follow_up_questions": [
+    "What can you do?",
+    "Show me a simple curl example for a city I care about.",
+    "Would you like a Python or JavaScript example?",
+    "How do I parse and use the temperature data in an app?",
+    "Would you like me to fetch the official OpenWeather API docs for you?"
+  ]
+}
+```
+
 ## See also
 
 * [**Agent** and **MCP Tools** components](/components-agents)
