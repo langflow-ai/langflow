@@ -80,7 +80,6 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
-        telemetry_service.client_type = "oss"
 
         # Mock HTTP client
         mock_response = MagicMock()
@@ -112,6 +111,7 @@ class TestExceptionTelemetry:
             "exceptionMessage": "Test error",
             "exceptionContext": "handler",
             "stackTraceHash": "abc123",
+            "clientType": "oss",
         }
         assert call_args[1]["params"] == expected_params
 
