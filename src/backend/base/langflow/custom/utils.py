@@ -443,7 +443,9 @@ def get_module_name_from_display_name(display_name: str):
     # Convert display name to snake_case for Python module name
     # e.g., "Custom Component" -> "custom_component"
     # Remove extra spaces and convert to lowercase
-    cleaned_name = re.sub(r"\s+", " ", display_name.strip())
+
+    # Avoid regex for whitespace collapsing and stripping
+    cleaned_name = " ".join(display_name.strip().split())
     # Replace spaces with underscores and convert to lowercase
     module_name = cleaned_name.replace(" ", "_").lower()
     # Remove any non-alphanumeric characters except underscores
