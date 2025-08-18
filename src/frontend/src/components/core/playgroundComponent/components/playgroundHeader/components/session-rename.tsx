@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import type React from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 
 interface SessionRenameProps {
   sessionId: string;
@@ -14,52 +14,50 @@ export const SessionRename = ({
   onSave,
   onCancel,
 }: SessionRenameProps) => {
-  const [editValue, setEditValue] = useState(sessionId);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  const handleSave = () => {
-    if (editValue.trim() && editValue !== sessionId) {
-      onSave(editValue.trim());
+    const formData = new FormData(e.currentTarget);
+    const newSessionId = formData.get("sessionId") as string;
+    const trimmedValue = newSessionId?.trim();
+
+    if (trimmedValue && trimmedValue !== sessionId) {
+      onSave(trimmedValue);
     } else {
       onCancel();
     }
   };
 
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (e.key === "Escape") {
+      onCancel();
     }
-  }, []);
+  };
+
+  const handleClick = (
+    e: React.MouseEvent<HTMLInputElement | HTMLButtonElement>
+  ) => {
+    e.stopPropagation();
+  };
 
   return (
-    <div className="flex items-center gap-2">
+    <form onSubmit={handleSubmit} className="flex items-center gap-2">
       <Input
-        ref={inputRef}
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.key === "Enter") {
-            handleSave();
-          } else if (e.key === "Escape") {
-            onCancel();
-          }
-        }}
+        name="sessionId"
+        defaultValue={sessionId}
+        autoFocus
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
         className="h-8 text-sm"
+        required
       />
-      <Button
-        size="iconSm"
-        variant="ghost"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleSave();
-        }}
-      >
+      <Button type="submit" size="iconSm" variant="ghost" onClick={handleClick}>
         <ForwardedIconComponent name="Check" className="h-3 w-3" />
       </Button>
       <Button
+        type="button"
         size="iconSm"
         variant="ghost"
         onClick={(e) => {
@@ -69,6 +67,6 @@ export const SessionRename = ({
       >
         <ForwardedIconComponent name="X" className="h-3 w-3" />
       </Button>
-    </div>
+    </form>
   );
 };
