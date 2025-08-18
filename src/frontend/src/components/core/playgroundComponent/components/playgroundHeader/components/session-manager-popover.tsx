@@ -1,18 +1,18 @@
-import React from "react";
-import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
-import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
-import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
-import useFlowStore from "@/stores/flowStore";
-import { usePlaygroundStore } from "@/stores/playgroundStore";
+import type React from "react";
 import { useShallow } from "zustand/react/shallow";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { SessionItem } from "./session-item";
+import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
+import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
+import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { useSearch } from "@/hooks/useSearch";
+import useFlowStore from "@/stores/flowStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
+import { SessionItem } from "./session-item";
 
 interface SessionManagerPopoverProps {
   children: React.ReactNode;
@@ -79,9 +79,10 @@ export const SessionManagerPopover = ({
                     : "No sessions found"}
                 </div>
               ) : (
-                filteredSessions.map((sessionId) => (
+                filteredSessions.map((sessionId, index) => (
                   <SessionItem
                     key={sessionId}
+                    tabIndex={index}
                     sessionId={sessionId}
                     onRename={handleRename}
                     onDelete={handleDelete}
