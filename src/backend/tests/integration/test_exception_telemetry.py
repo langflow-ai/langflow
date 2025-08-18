@@ -17,6 +17,7 @@ class TestExceptionTelemetryIntegration:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
 
         # Mock successful response
         mock_response = MagicMock()
@@ -68,6 +69,7 @@ class TestExceptionTelemetryIntegration:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
 
         # Mock the async queue and HTTP client
         telemetry_service.telemetry_queue = asyncio.Queue()
