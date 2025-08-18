@@ -188,7 +188,7 @@ async def test_export_project(client: AsyncClient, logged_in_headers, basic_case
     assert flow_response.status_code == status.HTTP_201_CREATED
 
     # Export the project
-    export_response = await client.get(f"api/v1/projects/export/{project_id}", headers=logged_in_headers)
+    export_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
     assert export_response.status_code == status.HTTP_200_OK
 
     # Check response headers - now returns ZIP instead of JSON
@@ -208,8 +208,8 @@ async def test_export_project(client: AsyncClient, logged_in_headers, basic_case
         project_content = zip_file.read("project.json").decode("utf-8")
         export_data = json.loads(project_content)
 
-        assert export_data["version"] == "2.0"
-        assert export_data["export_type"] == "project_enhanced"
+        assert export_data["version"] == "1.0"
+        assert export_data["export_type"] == "project"
         assert "exported_at" in export_data
         assert "project" in export_data
         assert "flows" in export_data
@@ -229,7 +229,7 @@ async def test_export_project(client: AsyncClient, logged_in_headers, basic_case
 async def test_export_project_not_found(client: AsyncClient, logged_in_headers):
     """Test exporting a non-existent project."""
     fake_id = str(uuid4())
-    response = await client.get(f"api/v1/projects/export/{fake_id}", headers=logged_in_headers)
+    response = await client.get(f"api/v1/projects/download/{fake_id}", headers=logged_in_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -256,7 +256,7 @@ async def test_export_project_with_code_extraction(client: AsyncClient, logged_i
     assert flow_response.status_code == status.HTTP_201_CREATED
 
     # Export the project using export endpoint
-    export_response = await client.get(f"api/v1/projects/export/{project_id}", headers=logged_in_headers)
+    export_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
     assert export_response.status_code == status.HTTP_200_OK
 
     # Check response headers
@@ -272,24 +272,24 @@ async def test_export_project_with_code_extraction(client: AsyncClient, logged_i
         file_list = zip_file.namelist()
         assert "project.json" in file_list
         assert "README.md" in file_list
-        assert any(f.startswith("flows/") and f.endswith(".json") for f in file_list)
-        # Check that code files were extracted from PythonFunctionTool component
+        assert ".env.example" in file_list
+        # Flow data is now in project.json only
+        # Check that code files were extracted from components with code
         code_files = [f for f in file_list if f.startswith("components/") and f.endswith(".py")]
         assert len(code_files) == 1  # Should have 1 PythonFunctionTool component with code
 
-        # Verify the extracted code content
+        # Verify the extracted code content structure
         code_file = code_files[0]
         code_content = zip_file.read(code_file).decode("utf-8")
         assert '"""Component: PythonFunctionTool' in code_content
-        assert "def python_function(text: str) -> str:" in code_content
-        assert "return text" in code_content
+        assert "Flow: complex_example" in code_content
 
         # Validate project.json structure
         project_content = zip_file.read("project.json").decode("utf-8")
         project_data = json.loads(project_content)
 
-        assert project_data["version"] == "2.0"
-        assert project_data["export_type"] == "project_enhanced"
+        assert project_data["version"] == "1.0"
+        assert project_data["export_type"] == "project"
         assert "exported_at" in project_data
         assert "project" in project_data
         assert "flows" in project_data
@@ -299,45 +299,32 @@ async def test_export_project_with_code_extraction(client: AsyncClient, logged_i
 
         # Validate README.md exists and contains expected content
         readme_content = zip_file.read("README.md").decode("utf-8")
-        assert "Enhanced Export" in readme_content
-        assert "Export format version: 2.0" in readme_content
+        assert "New Project" in readme_content
+        assert "Export format version: 1.0" in readme_content
         assert "Static analysis" in readme_content
 
-        # Validate flow JSON file
-        flow_files = [f for f in file_list if f.startswith("flows/") and f.endswith(".json")]
-        assert len(flow_files) == 1
-        flow_content = zip_file.read(flow_files[0]).decode("utf-8")
-        flow_json = json.loads(flow_content)
-        assert flow_json["name"] == "complex_example"
+        # Validate flow data in project.json
+        project_flows = project_data["flows"]
+        assert len(project_flows) == 1
+        assert project_flows[0]["name"] == "complex_example"
 
         # Validate extracted code files
         code_files = [f for f in file_list if f.startswith("components/") and f.endswith(".py")]
-        assert len(code_files) == 2
+        assert len(code_files) == 1
 
         # Check that code files contain expected content
-        for code_file in code_files:
-            code_content = zip_file.read(code_file).decode("utf-8")
-            # Should have docstring with metadata
-            assert '"""Component:' in code_content
-            assert "Flow: Test Flow with Code" in code_content
-            # Should contain actual code
-            assert "class " in code_content
+        code_file = code_files[0]
+        code_content = zip_file.read(code_file).decode("utf-8")
+        # Should have docstring with metadata
+        assert '"""Component: PythonFunctionTool' in code_content
+        assert "Flow: complex_example" in code_content
+        # Should contain actual code
+        assert "def python_function" in code_content
 
-        # Verify specific components
-        chatinput_files = [f for f in code_files if "ChatInput" in f]
-        textinput_files = [f for f in code_files if "TextInput" in f]
-        assert len(chatinput_files) == 1
-        assert len(textinput_files) == 1
-
-        # Check ChatInput code content
-        chatinput_content = zip_file.read(chatinput_files[0]).decode("utf-8")
-        assert "ChatComponent" in chatinput_content
-        assert "class ChatInput" in chatinput_content
-
-        # Check TextInput code content
-        textinput_content = zip_file.read(textinput_files[0]).decode("utf-8")
-        assert "TextComponent" in textinput_content
-        assert "def process" in textinput_content
+        # Validate .env.example file
+        env_example_content = zip_file.read(".env.example").decode("utf-8")
+        assert ".env.example - Environment Variables Template" in env_example_content
+        assert "Copy this file to .env and fill in your actual values" in env_example_content
 
 
 async def test_export_project_no_code(client: AsyncClient, logged_in_headers, basic_case):
@@ -361,7 +348,7 @@ async def test_export_project_no_code(client: AsyncClient, logged_in_headers, ba
     assert flow_response.status_code == status.HTTP_201_CREATED
 
     # Export the project using export endpoint
-    export_response = await client.get(f"api/v1/projects/export/{project_id}", headers=logged_in_headers)
+    export_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
     assert export_response.status_code == status.HTTP_200_OK
 
     # Parse ZIP archive
@@ -373,7 +360,7 @@ async def test_export_project_no_code(client: AsyncClient, logged_in_headers, ba
         # Basic structure should still exist
         assert "project.json" in file_list
         assert "README.md" in file_list
-        assert any(f.startswith("flows/") and f.endswith(".json") for f in file_list)
+        # Flow data is now in project.json only
 
         # No component code files should exist
         code_files = [f for f in file_list if f.startswith("components/") and f.endswith(".py")]
