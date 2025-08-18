@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.e756ed1e.css">
-<script src="/assets/js/runtime~main.a1afa176.js" defer="defer"></script>
-<script src="/assets/js/main.6e50f663.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.f7d3d7de.js" defer="defer"></script>
+<script src="/assets/js/main.35957350.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -291,7 +291,7 @@ You can toggle parameters through the <svg xmlns="http://www.w3.org/2000/svg" wi
 </ul>
 <p>When used as a standard component in a flow, the <strong>URL</strong> component must be connected to a component that accepts the selected output data type (<code>DataFrame</code> or <code>Message</code>).
 You can connect the <strong>URL</strong> component directly to a compatible component, or you can use a <a href="/components-processing#type-convert"><strong>Type Convert</strong> component</a> to convert the output to another type before passing the data to other components if the data types aren&#x27;t directly compatible.</p>
-<p>Processing components, like the <strong>Type Convert</strong> component, are useful with the <strong>URL</strong> component because it can extract a large amount of data from the crawled pages.
+<p><strong>Processing</strong> components like the <strong>Type Convert</strong> component are useful with the <strong>URL</strong> component because it can extract a large amount of data from the crawled pages.
 For example, if you only want to pass specific fields to other components, you can use a <a href="/components-processing#parser"><strong>Parser</strong> component</a> to extract only that data from the crawled pages before passing the data to other components.</p>
 <p>When used in <strong>Tool Mode</strong> with an <strong>Agent</strong> component, the <strong>URL</strong> component can be connected directly to the <strong>Agent</strong> component&#x27;s <strong>Tools</strong> port without converting the data.
 The agent decides whether to use the <strong>URL</strong> component based on the user&#x27;s query, and it can process the <code>DataFrame</code> or <code>Message</code> output directly.</p>
