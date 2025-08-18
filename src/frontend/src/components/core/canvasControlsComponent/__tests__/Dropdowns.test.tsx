@@ -78,7 +78,7 @@ jest.mock("@/stores/flowStore", () => ({
 }));
 
 // Mock window.open
-Object.defineProperty(window, 'open', {
+Object.defineProperty(window, "open", {
   writable: true,
   value: jest.fn(),
 });
