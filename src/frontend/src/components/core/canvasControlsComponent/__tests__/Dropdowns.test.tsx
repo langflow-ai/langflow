@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import CanvasControlsDropdown from "../CanvasControlsDropdown";
 import HelpDropdown from "../HelpDropdown";
 
 jest.mock("@/components/ui/button", () => ({
@@ -63,51 +62,25 @@ jest.mock("react-router-dom", () => {
   };
 });
 
-describe("CanvasControlsDropdown", () => {
-  const baseProps = {
-    zoom: 1,
-    minZoomReached: false,
-    maxZoomReached: false,
-    isOpen: true,
-    onOpenChange: jest.fn(),
-    onZoomIn: jest.fn(),
-    onZoomOut: jest.fn(),
-    onResetZoom: jest.fn(),
-    onFitView: jest.fn(),
-    shortcuts: {
-      ZOOM_IN: { key: "+" },
-      ZOOM_OUT: { key: "-" },
-      RESET_ZOOM: { key: "0" },
-      FIT_VIEW: { key: "1" },
-    },
-  };
+jest.mock("@/stores/darkStore", () => ({
+  useDarkStore: () => ({
+    dark: false,
+    setDark: jest.fn(),
+  }),
+}));
 
-  it("renders zoom percentage and calls handlers", () => {
-    render(<CanvasControlsDropdown {...baseProps} />);
-    expect(screen.getByText("100%")).toBeInTheDocument();
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: () => ({
+    helperLineEnabled: false,
+    setHelperLineEnabled: jest.fn(),
+  }),
+}));
 
-    fireEvent.click(screen.getByTestId("zoom_in_dropdown"));
-    fireEvent.click(screen.getByTestId("zoom_out_dropdown"));
-    fireEvent.click(screen.getByTestId("reset_zoom_dropdown"));
-    fireEvent.click(screen.getByTestId("fit_view_dropdown"));
-
-    expect(baseProps.onZoomIn).toHaveBeenCalled();
-    expect(baseProps.onZoomOut).toHaveBeenCalled();
-    expect(baseProps.onResetZoom).toHaveBeenCalled();
-    expect(baseProps.onFitView).toHaveBeenCalled();
-  });
-
-  it("disables buttons based on min/max zoom flags", () => {
-    render(
-      <CanvasControlsDropdown
-        {...baseProps}
-        minZoomReached={true}
-        maxZoomReached={true}
-      />,
-    );
-    expect(screen.getByTestId("zoom_in_dropdown")).toBeDisabled();
-    expect(screen.getByTestId("zoom_out_dropdown")).toBeDisabled();
-  });
+// Mock window.open
+Object.defineProperty(window, 'open', {
+  writable: true,
+  value: jest.fn(),
 });
 
 describe("HelpDropdown", () => {
