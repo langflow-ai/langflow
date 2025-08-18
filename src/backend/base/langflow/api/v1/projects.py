@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import zipfile
 from datetime import datetime, timezone
 from typing import Annotated
@@ -595,16 +596,12 @@ def _extract_code_from_node(node: dict) -> str | None:
 
 def _generate_code_filename(node: dict) -> str:
     """Generate a sanitized filename for the component code."""
-    import re
-
     node_data = node["data"]
     component_type = node_data.get("type", "component")
     component_id = node.get("id", "unknown")
-
-    # Sanitize filename components
-    safe_component_type = re.sub(r"\W", "_", component_type)
-    safe_component_id = re.sub(r"[^a-zA-Z0-9_-]", "_", component_id)
-
+    # Use precompiled regex
+    safe_component_type = _SAFE_COMPONENT_TYPE_RE.sub("_", component_type)
+    safe_component_id = _SAFE_COMPONENT_ID_RE.sub("_", component_id)
     return f"{safe_component_type}_{safe_component_id}.py"
 
 
@@ -613,7 +610,6 @@ def _create_code_file_content(node: dict, flow_name: str, code_content: str) -> 
     node_data = node["data"]
     component_type = node_data.get("type", "component")
     component_id = node.get("id", "unknown")
-
     docstring = f'"""Component: {component_type}\nID: {component_id}\nFlow: {flow_name}\n"""\n\n'
     return docstring + code_content
 
@@ -622,17 +618,28 @@ def extract_component_code_from_flow(flow_data: dict, flow_name: str) -> dict[st
     """Extract code from components in a flow and return a mapping of filenames to code content."""
     code_files = {}
 
-    if "data" not in flow_data or "nodes" not in flow_data["data"]:
+    flow_data_dict = flow_data.get("data")
+    if not flow_data_dict or "nodes" not in flow_data_dict:
         return code_files
 
-    nodes = flow_data["data"]["nodes"]
-
+    nodes = flow_data_dict["nodes"]
+    # Minimize lookup and function call overhead in hot loop
     for node in nodes:
-        if not _is_valid_node(node):
+        # Inlining _is_valid_node logic for speed (large saving for big node lists)
+        if (
+            not isinstance(node, dict)
+            or "data" not in node
+            or "node" not in node["data"]
+            or "template" not in node["data"]["node"]
+        ):
             continue
 
-        code_content = _extract_code_from_node(node)
-        if code_content is None:
+        template = node["data"]["node"]["template"]
+        code_field = template.get("code")
+        if not isinstance(code_field, dict):
+            continue
+        code_content = code_field.get("value")
+        if not code_content or not isinstance(code_content, str):
             continue
 
         filename = _generate_code_filename(node)
@@ -640,3 +647,8 @@ def extract_component_code_from_flow(flow_data: dict, flow_name: str) -> dict[st
         code_files[filename] = file_content
 
     return code_files
+
+
+_SAFE_COMPONENT_TYPE_RE = re.compile(r"\W")
+
+_SAFE_COMPONENT_ID_RE = re.compile(r"[^a-zA-Z0-9_-]")
