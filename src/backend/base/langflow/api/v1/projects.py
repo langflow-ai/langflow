@@ -16,7 +16,6 @@ from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -24,7 +23,7 @@ from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
+from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
@@ -47,6 +46,9 @@ FILENAME_SANITIZE_PATTERN = r"[^a-zA-Z0-9_-]"
 
 # Error messages
 PROJECT_NOT_FOUND_ERROR = "Project not found"
+
+# Environment variable validation
+MIN_ENV_VAR_LENGTH = 3
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -437,17 +439,16 @@ async def download_file(
             project_json = json.dumps(project_data, indent=2)
             zip_file.writestr("project.json", project_json.encode("utf-8"))
 
-            # Add individual flow files and extract component code
+            # Extract component code and collect environment variables from flows
             all_code_files = {}
+            all_env_vars = {}
             for flow in flows:
                 try:
-                    flow_data = remove_api_keys(FlowRead.model_validate(flow, from_attributes=True).model_dump())
-                    flow_json = json.dumps(jsonable_encoder(flow_data), indent=2)
+                    flow_data = FlowRead.model_validate(flow, from_attributes=True).model_dump()
 
-                    # Sanitize flow name for filename
+                    # Get flow name for component organization
                     flow_name = flow_data.get("name", f"flow_{flow_data.get('id', 'unknown')}")
                     safe_flow_name = re.sub(FILENAME_SANITIZE_PATTERN, "_", flow_name)
-                    zip_file.writestr(f"flows/{safe_flow_name}.json", flow_json.encode("utf-8"))
 
                     # Extract component code
                     code_files = extract_component_code_from_flow(flow_data, flow_name)
@@ -456,6 +457,16 @@ async def download_file(
                         flow_code_path = f"components/{safe_flow_name}/{filename}"
                         zip_file.writestr(flow_code_path, code_content.encode("utf-8"))
                         all_code_files[flow_code_path] = True
+
+                    # Extract environment variables
+                    env_vars = _extract_env_variables_from_flow(flow_data)
+                    for var_name, var_info in env_vars.items():
+                        if var_name in all_env_vars:
+                            # Merge component lists
+                            all_env_vars[var_name]["components"].extend(var_info["components"])
+                            all_env_vars[var_name]["components"] = list(set(all_env_vars[var_name]["components"]))
+                        else:
+                            all_env_vars[var_name] = var_info
                 except Exception as e:
                     # Log the error and re-raise with more context
                     import traceback
@@ -465,34 +476,19 @@ async def download_file(
                     raise ValueError(error_details) from e
 
             # Add README with export structure info
-            readme_content = f"""# {project.name}
-
-This export contains the complete project structure with extracted component code.
-
-## Structure
-
-- `project.json` - Project metadata and complete flow definitions
-- `flows/` - Individual flow JSON files
-- `components/` - Extracted Python code from custom components, organized by flow
-
-## Export Info
-
-- Export format version: 2.0
-- Langflow version: {version_info["version"]}
-- Exported at: {datetime.now(tz=timezone.utc).isoformat()}
-- Total flows: {len(flows)}
-- Code files extracted: {len(all_code_files)}
-
-## Usage
-
-The extracted Python files in the `components/` directory can be used for:
-- Static analysis with tools like mypy, ruff, pylint
-- Code review and auditing
-- Understanding component logic outside of Langflow
-
-Each component file includes metadata in its docstring indicating the original component type, ID, and parent flow.
-"""
+            readme_content = _generate_export_readme(
+                project_name=project.name,
+                version="1.0",
+                langflow_version=version_info["version"],
+                export_timestamp=datetime.now(tz=timezone.utc).isoformat(),
+                flows_count=len(flows),
+                code_files_count=len(all_code_files),
+            )
             zip_file.writestr("README.md", readme_content.encode("utf-8"))
+
+            # Add .env.example file
+            env_example_content = _generate_env_example_content(all_env_vars)
+            zip_file.writestr(".env.example", env_example_content.encode("utf-8"))
 
         zip_stream.seek(0)
 
@@ -575,155 +571,6 @@ async def upload_file(
     return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
 
 
-@router.get("/export/{project_id}", status_code=200)
-async def export_project(
-    *,
-    session: DbSession,
-    project_id: UUID,
-    current_user: CurrentActiveUser,
-):
-    """Export project as a ZIP archive (legacy endpoint).
-
-    Legacy export endpoint that creates a ZIP archive similar to the download endpoint
-    but with version 1.0 format. This endpoint is maintained for backwards compatibility.
-
-    For new integrations, prefer using the /download/{project_id} endpoint which
-    provides the enhanced export format.
-
-    Args:
-        session: Database session
-        project_id: UUID of the project to export
-        current_user: Currently authenticated user
-
-    Returns:
-        StreamingResponse: ZIP file download with project export
-
-    Raises:
-        HTTPException: 404 if project not found or no flows, 500 if export fails
-    """
-    import re
-
-    try:
-        # Get project with flows
-        project = (
-            await session.exec(
-                select(Folder)
-                .options(selectinload(Folder.flows))
-                .where(Folder.id == project_id, Folder.user_id == current_user.id)
-            )
-        ).first()
-
-        if not project:
-            raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND_ERROR)
-
-        # Filter flows for current user
-        flows = [flow for flow in project.flows if flow.user_id == current_user.id]
-
-        if not flows:
-            raise HTTPException(status_code=404, detail="No flows found in project")
-
-        # Build export structure
-        version_info = get_version_info()
-        project_data = {
-            "version": "1.0",  # Enhanced export format version
-            "langflow_version": version_info["version"],
-            "export_type": "project",
-            "exported_at": datetime.now(tz=timezone.utc).isoformat(),
-            "project": {
-                "id": str(project.id),
-                "name": project.name,
-                "description": project.description,
-                "auth_settings": getattr(project, "auth_settings", {}) or {},
-            },
-            "flows": [FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json") for flow in flows],
-        }
-
-        # Create ZIP archive
-        zip_stream = io.BytesIO()
-
-        with zipfile.ZipFile(zip_stream, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            # Add main project metadata
-            project_json = json.dumps(project_data, indent=2)
-            zip_file.writestr("project.json", project_json.encode("utf-8"))
-
-            # Add individual flow files and extract component code
-            all_code_files = {}
-            for flow in flows:
-                try:
-                    flow_data = remove_api_keys(FlowRead.model_validate(flow, from_attributes=True).model_dump())
-                    flow_json = json.dumps(jsonable_encoder(flow_data), indent=2)
-
-                    # Sanitize flow name for filename
-                    flow_name = flow_data.get("name", f"flow_{flow_data.get('id', 'unknown')}")
-                    safe_flow_name = re.sub(FILENAME_SANITIZE_PATTERN, "_", flow_name)
-                    zip_file.writestr(f"flows/{safe_flow_name}.json", flow_json.encode("utf-8"))
-
-                    # Extract component code
-                    code_files = extract_component_code_from_flow(flow_data, flow_name)
-                    for filename, code_content in code_files.items():
-                        # Organize by flow
-                        flow_code_path = f"components/{safe_flow_name}/{filename}"
-                        zip_file.writestr(flow_code_path, code_content.encode("utf-8"))
-                        all_code_files[flow_code_path] = True
-                except Exception as e:
-                    # Log the error and re-raise with more context
-                    import traceback
-
-                    flow_id = getattr(flow, "id", "unknown")
-                    error_details = f"Error processing flow {flow_id}: {e!s}\nTraceback: {traceback.format_exc()}"
-                    raise ValueError(error_details) from e
-
-            # Add README with export structure info
-            readme_content = f"""# {project.name}
-
-This export contains the complete project structure with extracted component code.
-
-## Structure
-
-- `project.json` - Project metadata and complete flow definitions
-- `flows/` - Individual flow JSON files
-- `components/` - Extracted Python code from custom components, organized by flow
-
-## Export Info
-
-- Export format version: 1.0
-- Langflow version: {version_info["version"]}
-- Exported at: {datetime.now(tz=timezone.utc).isoformat()}
-- Total flows: {len(flows)}
-- Code files extracted: {len(all_code_files)}
-
-## Usage
-
-The extracted Python files in the `components/` directory can be used for:
-- Static analysis with tools like mypy, ruff, pylint
-- Code review and auditing
-- Understanding component logic outside of Langflow
-
-Each component file includes metadata in its docstring indicating the original component type, ID, and parent flow.
-"""
-            zip_file.writestr("README.md", readme_content.encode("utf-8"))
-
-        zip_stream.seek(0)
-
-        # Generate filename
-        current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
-        filename = f"{current_time}_{project.name}_export.zip"
-
-        # URL encode filename to handle non-ASCII characters
-        encoded_filename = quote(filename)
-
-        return StreamingResponse(
-            zip_stream,
-            media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-
 def _is_valid_node(node: dict) -> bool:
     """Check if a node is valid and has the required structure."""
     return isinstance(node, dict) and "data" in node and "node" in node["data"] and "template" in node["data"]["node"]
@@ -769,6 +616,203 @@ def _create_code_file_content(node: dict, flow_name: str, code_content: str) -> 
 
     docstring = f'"""Component: {component_type}\nID: {component_id}\nFlow: {flow_name}\n"""\n\n'
     return docstring + code_content
+
+
+def _is_valid_env_var_name(name: str) -> bool:
+    """Check if a string is a valid environment variable name.
+
+    Valid env var names should:
+    - Contain only uppercase letters, digits, and underscores
+    - Not start with a digit
+    - Be reasonably formatted as an environment variable
+    """
+    import re
+
+    # Check if it matches the pattern for env vars
+    if not re.match(r"^[A-Z_][A-Z0-9_]*$", name):
+        return False
+
+    # Additional heuristics - should look like an env var
+    # Examples: API_KEY, OPENAI_API_KEY, DATABASE_URL
+    if len(name) < MIN_ENV_VAR_LENGTH:
+        return False
+
+    # Should contain at least one underscore or be all caps
+    return "_" in name or name.isupper()
+
+
+def _extract_env_variables_from_flow(flow_data: dict) -> dict[str, dict]:
+    """Extract environment variables from a flow's components.
+
+    Args:
+        flow_data: Flow data containing nodes with templates
+
+    Returns:
+        Dict mapping variable names to their metadata:
+        {
+            "OPENAI_API_KEY": {
+                "valid": True,
+                "components": ["OpenAI", "ChatOpenAI"],
+                "description": "OpenAI API key for authentication"
+            },
+            "My API Key": {
+                "valid": False,
+                "components": ["SomeComponent"],
+                "description": "Invalid env var name - contains spaces and mixed case"
+            }
+        }
+    """
+    env_vars = {}
+
+    if "data" not in flow_data or "nodes" not in flow_data["data"]:
+        return env_vars
+
+    nodes = flow_data["data"]["nodes"]
+
+    for node in nodes:
+        if not _is_valid_node(node):
+            continue
+
+        node_data = node["data"]
+        component_type = node_data.get("type", "Unknown")
+        template = node_data["node"]["template"]
+
+        # Look for fields with load_from_db=True
+        for field_name, field_data in template.items():
+            if not isinstance(field_data, dict):
+                continue
+
+            load_from_db = field_data.get("load_from_db", False)
+            if not load_from_db:
+                continue
+
+            # Get the value which should be the variable name
+            var_name = field_data.get("value", "")
+            if not var_name or not isinstance(var_name, str):
+                continue
+
+            # Initialize or update the env var entry
+            if var_name not in env_vars:
+                env_vars[var_name] = {
+                    "valid": _is_valid_env_var_name(var_name),
+                    "components": [],
+                    "field_name": field_name,
+                }
+
+            if component_type not in env_vars[var_name]["components"]:
+                env_vars[var_name]["components"].append(component_type)
+
+    return env_vars
+
+
+def _generate_env_example_content(all_env_vars: dict[str, dict]) -> str:
+    """Generate .env.example file content.
+
+    Args:
+        all_env_vars: Dictionary of environment variables from all flows
+
+    Returns:
+        String content for .env.example file
+    """
+    if not all_env_vars:
+        return """# .env.example - Environment Variables Template
+# Copy this file to .env and fill in your actual values
+
+# No environment variables detected in this project
+"""
+
+    lines = [
+        "# .env.example - Environment Variables Template",
+        "# Copy this file to .env and fill in your actual values",
+        "# Generated from Langflow project export",
+        "",
+    ]
+
+    # Separate valid and invalid env vars
+    valid_vars = {k: v for k, v in all_env_vars.items() if v["valid"]}
+    invalid_vars = {k: v for k, v in all_env_vars.items() if not v["valid"]}
+
+    # Add valid environment variables
+    if valid_vars:
+        lines.append("# Environment Variables")
+        lines.append("# Set these values according to your deployment needs")
+        lines.append("")
+
+        for var_name, var_info in sorted(valid_vars.items()):
+            components = ", ".join(var_info["components"])
+            field_name = var_info.get("field_name", "unknown")
+
+            lines.append(f"# Used by: {components} (field: {field_name})")
+            lines.append(f"{var_name}=your_value_here")
+            lines.append("")
+
+    # Add invalid environment variables as comments
+    if invalid_vars:
+        lines.append("# Invalid Environment Variable Names")
+        lines.append("# These variables have invalid names and need to be renamed in your components")
+        lines.append("# Valid env var names should use UPPERCASE_WITH_UNDERSCORES format")
+        lines.append("")
+
+        for var_name, var_info in sorted(invalid_vars.items()):
+            components = ", ".join(var_info["components"])
+            field_name = var_info.get("field_name", "unknown")
+
+            lines.append(f"# INVALID: '{var_name}' - Used by: {components} (field: {field_name})")
+            lines.append("# Suggested fix: Rename to a valid format like: MY_API_KEY")
+            lines.append(f"# {var_name.upper().replace(' ', '_').replace('-', '_')}=your_value_here")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+def _generate_export_readme(
+    project_name: str,
+    version: str,
+    langflow_version: str,
+    export_timestamp: str,
+    flows_count: int,
+    code_files_count: int,
+) -> str:
+    """Generate README content for project export.
+
+    Args:
+        project_name: Name of the project
+        version: Export format version (e.g., "2.0")
+        langflow_version: Version of Langflow used
+        export_timestamp: ISO timestamp of export
+        flows_count: Number of flows in the export
+        code_files_count: Number of code files extracted
+
+    Returns:
+        str: README content as markdown
+    """
+    return f"""# {project_name}
+
+This export contains the complete project structure with extracted component code.
+
+## Structure
+
+- `project.json` - Project metadata and complete flow definitions
+- `components/` - Extracted Python code from custom components, organized by flow
+- `.env.example` - Template for environment variables used by components
+
+## Export Info
+
+- Export format version: {version}
+- Langflow version: {langflow_version}
+- Exported at: {export_timestamp}
+- Total flows: {flows_count}
+- Code files extracted: {code_files_count}
+
+## Usage
+
+The extracted Python files in the `components/` directory can be used for:
+- Static analysis with tools like mypy, ruff, pylint
+- Code review and auditing
+- Understanding component logic outside of Langflow
+
+Each component file includes metadata in its docstring indicating the original component type, ID, and parent flow.
+"""
 
 
 def extract_component_code_from_flow(flow_data: dict, flow_name: str) -> dict[str, str]:
