@@ -1422,14 +1422,10 @@ class Component(CustomComponent):
         try:
             # Handle both sync and async _get_tools methods
             if asyncio.iscoroutinefunction(self._get_tools):
-                tools_result = await self._get_tools()
+                tools = await self._get_tools()
             else:
-                tools_result = self._get_tools()
-            # Use inspect.isawaitable to reliably detect awaitable objects (coroutine, future, etc.)
-            if asyncio.isawaitable(tools_result):
-                tools = await tools_result
-            else:
-                tools = tools_result
+                tools = self._get_tools()
+
             placeholder = "Loading actions..." if len(tools) == 0 else ""
         except (TimeoutError, asyncio.TimeoutError):
             placeholder = "Timeout loading actions"
