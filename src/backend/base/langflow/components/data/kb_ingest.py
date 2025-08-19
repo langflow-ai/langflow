@@ -139,7 +139,7 @@ class KBIngestionComponent(Component):
                 {
                     "column_name": "text",
                     "vectorize": True,
-                    "identifier": False,
+                    "identifier": True,
                 },
             ],
         ),
