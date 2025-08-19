@@ -1,5 +1,3 @@
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +14,8 @@ import {
 } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DropdownControlButton from "./DropdownControlButton";
 
 const HelpDropdown = () => {
@@ -55,6 +55,7 @@ const HelpDropdown = () => {
           iconName="book-open"
           testId="canvas_controls_dropdown_docs"
           label="Docs"
+          externalLink
           onClick={() => {
             window.open(
               ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL,
@@ -73,6 +74,7 @@ const HelpDropdown = () => {
         <DropdownControlButton
           iconName="bug"
           testId="canvas_controls_dropdown_report_a_bug"
+          externalLink
           label="Report a bug"
           onClick={() => {
             window.open(BUG_REPORT_URL, "_blank");
@@ -83,6 +85,7 @@ const HelpDropdown = () => {
           iconName="download"
           testId="canvas_controls_dropdown_get_langflow_desktop"
           label="Get Langflow Desktop"
+          externalLink
           onClick={() => {
             window.open(DESKTOP_URL, "_blank");
           }}

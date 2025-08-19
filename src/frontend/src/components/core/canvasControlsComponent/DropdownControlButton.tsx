@@ -1,7 +1,7 @@
-import React from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
+import React from "react";
 import ToggleShadComponent from "../parameterRenderComponent/components/toggleShadComponent";
 import { getModifierKey } from "./utils/canvasUtils";
 
@@ -15,6 +15,7 @@ export type DropdownControlButtonProps = {
   iconName?: string;
   hasToogle?: boolean;
   toggleValue?: boolean;
+  externalLink?: boolean;
 };
 
 const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
@@ -27,6 +28,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
   iconName,
   hasToogle = false,
   toggleValue = false,
+  externalLink = false,
 }) => (
   <Button
     data-testid={testId}
@@ -49,12 +51,18 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
       <span className="text-muted-foreground text-sm mr-2 group-hover:text-primary">
         {label}
       </span>
-      <div className="flex flex-row items-center justify-center gap-1 text-sm text-placeholder-foreground">
+      <div className={cn("flex flex-row items-center text-sm", shortcut && "w-[25px]")}>
         {shortcut && (
-          <>
-            <span className="mr-1">{getModifierKey()}</span>
-            <span>{shortcut}</span>
-          </>
+          <div className="flex items-center justify-between w-full text-muted-foreground group-hover:text-primary">
+            <span>{getModifierKey()}</span>
+            <span className="">{shortcut}</span>
+          </div>
+        )}
+        {externalLink && (
+          <ForwardedIconComponent
+            name="external-link"
+            className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100"
+          />
         )}
       </div>
     </div>
