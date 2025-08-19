@@ -1,6 +1,5 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
-import React, { type ChangeEvent, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,11 +11,11 @@ import {
 } from "@/components/ui/command";
 import {
   Popover,
-  PopoverContent,
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
+import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
@@ -26,52 +25,70 @@ import InputGlobalComponent from "../inputGlobalComponent";
 
 export type ModelInputComponentType = {
   model_type: "language" | "embedding";
-  options: { name: string; icon: string; category: string }[];
+  options: {
+    name: string;
+    icon: string;
+    category: string;
+    metadata?: any;
+    provider?: string;
+  }[];
   placeholder: string;
+  providers?: string[];
   temperature?: number;
   max_tokens?: number;
   limit?: number;
-  search_category?: string[];
 };
 
-export type ModelInputProps = BaseInputProps<any> &
-  ModelInputComponentType & {
-    children?: React.ReactNode;
-  };
+export type SelectedModel = {
+  name: string;
+  icon: string;
+  category: string;
+  metadata?: any;
+  provider?: string;
+};
 
 export default function ModelInputComponent({
   id,
   value,
   disabled,
-  editNode = false,
   handleOnNewValue,
   options = [],
   placeholder = "Select a Model",
-  search_category = ["OpenAI", "Anthropic"],
+  providers = ["OpenAI", "Anthropic"],
   helperText,
-  children,
-}: ModelInputProps): JSX.Element {
-  const [open, setOpen] = useState(children ? true : false);
-  const [showProviderModal, setShowProviderModal] = useState(false);
+}: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
+  const [open, setOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [currentSelection, setCurrentSelection] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
+    null,
+  );
+  const [searchTerm, setSearchTerm] = useState("");
   const refButton = useRef<HTMLButtonElement>(null);
-  const [customValue, setCustomValue] = useState("");
-  const [filteredOptions, setFilteredOptions] = useState(() => options);
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const [enableProvider, setEnableProvider] = useState(false);
+  const isLoading = false;
+  const { setErrorData } = useAlertStore();
 
-  const fuse = new Fuse(options, { keys: ["name", "category"] });
-  const PopoverContentDropdown =
-    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
+  // Filter options based on search term
+  const filteredOptions = useMemo(() => {
+    try {
+      if (!options || options.length === 0) return [];
+      if (!searchTerm.trim()) return options;
 
+      const fuse = new Fuse(options, {
+        keys: ["name", "category", "provider"],
+        threshold: 0.3,
+      });
+      return fuse.search(searchTerm).map((result) => result.item);
+    } catch (error) {
+      console.warn("Error filtering options:", error);
+      return options || [];
+    }
+  }, [options, searchTerm]);
+
+  // Group options by category
   const groupedOptions = useMemo(() => {
     const groups: Record<string, typeof options> = {};
 
-    options.forEach((option) => {
+    filteredOptions.forEach((option) => {
       const category = option.category || "Other";
       if (!groups[category]) {
         groups[category] = [];
@@ -82,11 +99,11 @@ export default function ModelInputComponent({
     // Sort by provider priority
     const sortedGroups: [string, typeof options][] = Object.entries(groups);
 
-    // Move specified categories to top
-    if (search_category?.length) {
+    // Move specified providers to top
+    if (providers?.length) {
       sortedGroups.sort(([a], [b]) => {
-        const aIndex = search_category.indexOf(a);
-        const bIndex = search_category.indexOf(b);
+        const aIndex = providers.indexOf(a);
+        const bIndex = providers.indexOf(b);
 
         if (aIndex !== -1 && bIndex !== -1) {
           return aIndex - bIndex;
@@ -100,70 +117,48 @@ export default function ModelInputComponent({
     }
 
     return sortedGroups;
-  }, [options, search_category]);
+  }, [filteredOptions, providers]);
 
-  const handleModelSelect = (modelOption: string) => {
-    const selectedOption = options.find((opt) => opt.name === modelOption);
-    setCurrentSelection(
-      selectedOption?.name.includes(":")
-        ? selectedOption?.name.split(":")[1]
-        : selectedOption?.name,
-    );
-    if (selectedOption) {
-      handleOnNewValue({ value: [selectedOption] });
-    } else {
-      handleOnNewValue({ value: [{ name: modelOption, icon: "" }] });
-    }
-  };
+  // Handle model selection
+  const handleModelSelect = useCallback(
+    (modelName: string) => {
+      try {
+        // Find the selected option from the original options list
+        const selectedOption = options.find(
+          (option) => option.name === modelName,
+        );
 
-  const handleApiKeyChange = (newApiKey: string) => {
-    setApiKey(newApiKey);
-  };
+        // Update the value as an array with the selected model
+        const newValue = [
+          {
+            name: selectedOption.name,
+            icon: selectedOption.icon || "Bot",
+            category: selectedOption.category || "Other",
+            provider:
+              selectedOption.provider || selectedOption.category || "Unknown",
+            metadata: selectedOption.metadata || {},
+          },
+        ];
 
-  const handleSendApiKey = () => {
-    // TODO: Wire up API call to save/send key to provider backend
-    // Keeping as a no-op for now per request
-    // eslint-disable-next-line no-console
-    console.log("Send API key clicked", { provider: selectedProvider, apiKey });
-    setSuccessData({ title: "Model API key saved successfully" });
-  };
-
-  const searchModelsByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setCustomValue(value);
-
-    if (!value) {
-      setFilteredOptions(options);
-      return;
-    }
-
-    const searchValues = fuse.search(value);
-    const filtered = searchValues.map((search) => search.item);
-    setFilteredOptions(filtered);
-  };
-
-  const renderLoadingButton = () => (
-    <Button
-      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
-      variant="primary"
-      size="xs"
-    >
-      <LoadingTextComponent text="Loading options" />
-    </Button>
+        handleOnNewValue({ value: newValue });
+        setSelectedProvider(selectedOption.provider || selectedOption.category);
+        setSelectedModel(selectedOption);
+      } catch (error) {
+        setErrorData({ title: "Error selecting model" });
+      }
+    },
+    [options, handleOnNewValue],
   );
 
-  const renderSelectedIcon = () => {
-    if (Array.isArray(value) && value.length > 0 && value[0]?.name) {
-      const selectedOption = options.find((opt) => opt.name === value[0]?.name);
-      return selectedOption?.icon ? (
-        <ForwardedIconComponent
-          name={selectedOption.icon}
-          className="h-4 w-4 flex-shrink-0"
-        />
-      ) : null;
-    }
-    return null;
-  };
+  const handleApiKeyChange = useCallback((newApiKey: string) => {
+    // This could be used for future API key management
+    console.log("API Key changed:", newApiKey);
+  }, []);
+
+  const handleSendApiKey = useCallback(() => {
+    // This could be used for future API key management
+    console.log("Send API Key clicked");
+  }, []);
 
   const renderTriggerButton = () => (
     <div className="flex w-full flex-col">
@@ -176,23 +171,30 @@ export default function ModelInputComponent({
           ref={refButton}
           aria-expanded={open}
           data-testid={id}
-          className={cn(
-            editNode
-              ? "dropdown-component-outline input-edit-node"
-              : "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
-          )}
+          className="dropdown-component-false-outline py-2 no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground"
         >
           <span
             className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
-            {currentSelection && renderSelectedIcon()}
+            {selectedModel && selectedModel?.icon ? (
+              <ForwardedIconComponent
+                name={selectedModel.icon}
+                className="h-4 w-4 flex-shrink-0"
+              />
+            ) : null}
             <span className="truncate">
               {disabled ? (
                 RECEIVING_INPUT_VALUE
               ) : (
-                <>{currentSelection || placeholder || "Select a Model"}</>
+                <div
+                  className={cn(
+                    "truncate",
+                    !selectedModel?.name && "text-muted-foreground",
+                  )}
+                >
+                  {selectedModel?.name || placeholder}
+                </div>
               )}
             </span>
           </span>
@@ -217,21 +219,26 @@ export default function ModelInputComponent({
 
   // Render API key input and send button when a model is selected
   const renderApiKeyInput = () => {
-    if (!currentSelection) return null;
+    if (!selectedModel) return null;
 
     return (
-      <div className="flex flex-col gap-4 mt-2">
+      <div className="flex flex-col gap-3">
+        {getCustomParameterTitle({
+          title: `${selectedProvider || "Provider"} API Key`,
+          nodeId: id,
+          isFlexView: false,
+          required: true,
+        })}
         <InputGlobalComponent
           id={`${id}-api-key`}
           display_name={`${selectedProvider || "Provider"} API Key`}
-          value={apiKey}
+          value={""}
           disabled={false}
           editNode={false}
-          // The component expects handleOnNewValue signature; we only need value
           handleOnNewValue={({ value }: any) => handleApiKeyChange(value)}
           password={true}
           load_from_db={false}
-          placeholder="Enter API key"
+          placeholder="Enter model API key"
         />
         <Button
           onClick={handleSendApiKey}
@@ -245,65 +252,32 @@ export default function ModelInputComponent({
     );
   };
 
-  // Render the search input
-  const renderSearchInput = () => (
-    <div className="flex items-center border-b px-2.5">
-      <ForwardedIconComponent
-        name="search"
-        className="mr-2 h-4 w-4 shrink-0 opacity-50"
-      />
-      <input
-        onChange={searchModelsByTerm}
-        placeholder="Search models..."
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        autoComplete="off"
-        data-testid="model_search_input"
-      />
-    </div>
-  );
-
   // Render the model options
   const renderModelOptions = () => (
     <>
       <CommandList className="max-h-[300px]">
         {groupedOptions.map(([category, categoryOptions]) => {
-          const visibleOptions = customValue
-            ? categoryOptions.filter((option) =>
-                filteredOptions.some(
-                  (filtered) => filtered.name === option.name,
-                ),
-              )
-            : categoryOptions;
+          const visibleOptions = categoryOptions;
 
           if (visibleOptions.length === 0) return null;
 
           return (
-            <CommandGroup
-              defaultChecked={false}
-              className="p-0 overflow-y-auto"
-              key={category}
-            >
+            <CommandGroup className="p-0 overflow-y-auto" key={`${category}`}>
               <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center">
                 {category}
-                {selectedProvider === category && (
-                  <div className="ml-2 text-xs text-accent-emerald-foreground">
-                    Enabled
-                  </div>
-                )}
+                <div className="ml-2 text-xs text-accent-emerald-foreground">
+                  Enabled
+                </div>
               </div>
-              {visibleOptions.map((option) => (
-                <div>
+              {visibleOptions.map((option) => {
+                // Validate option before rendering
+                if (!option || !option.name) {
+                  return null;
+                }
+                return (
                   <CommandItem
                     value={option.name}
                     onSelect={(currentValue) => {
-                      setSelectedProvider(
-                        selectedProvider === option.name
-                          ? null
-                          : option.name.includes(":")
-                            ? option.name.split(":")[0]
-                            : option.name,
-                      );
-
                       handleModelSelect(currentValue);
                       setOpen(false);
                     }}
@@ -312,20 +286,16 @@ export default function ModelInputComponent({
                   >
                     <div className="flex w-full items-center gap-2">
                       <ForwardedIconComponent
-                        name={option.icon || "Unknown"}
+                        name={option.icon || "Bot"}
                         className="h-4 w-4 shrink-0 text-primary ml-2"
                       />
-                      <div className="truncate text-[13px]">
-                        {option.name.split(":")[1] || option.name}
-                      </div>
+                      <div className="truncate text-[13px]">{option.name}</div>
                       <div className="pl-2 ml-auto">
                         <ForwardedIconComponent
                           name="Check"
                           className={cn(
                             "h-4 w-4 shrink-0 text-primary",
-                            Array.isArray(value) &&
-                              value.length > 0 &&
-                              value[0]?.name === option.name
+                            selectedModel?.name === option.name
                               ? "opacity-100"
                               : "opacity-0",
                           )}
@@ -333,8 +303,8 @@ export default function ModelInputComponent({
                       </div>
                     </div>
                   </CommandItem>
-                </div>
-              ))}
+                );
+              })}
               {category !== groupedOptions[groupedOptions.length - 1][0] &&
                 visibleOptions.length > 0 && <CommandSeparator />}
             </CommandGroup>
@@ -347,7 +317,7 @@ export default function ModelInputComponent({
             className="w-full"
             unstyled
             onClick={() => {
-              setShowProviderModal(true);
+              window.open("/settings/model-providers", "_blank");
             }}
             data-testid="manage-model-providers"
           >
@@ -364,28 +334,36 @@ export default function ModelInputComponent({
     </>
   );
 
-  // Render the popover content
-  const renderPopoverContent = () => (
-    <PopoverContentDropdown
-      side="bottom"
-      avoidCollisions={!!children}
-      className="noflow nowheel nopan nodelete nodrag p-0"
-      style={
-        children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
-      }
-    >
-      <Command className="flex flex-col">
-        {options?.length > 0 && renderSearchInput()}
-        {renderModelOptions()}
-      </Command>
-    </PopoverContentDropdown>
-  );
-
   // Loading state
-  if (options.length === 0 && isLoading) {
+  if ((options.length === 0 && isLoading) || (!options && isLoading)) {
     return (
-      <div>
-        <span className="text-sm italic">Loading...</span>
+      <div className="w-full">
+        <Button
+          className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+          variant="primary"
+          size="xs"
+          disabled
+        >
+          <LoadingTextComponent text="Loading models" />
+        </Button>
+      </div>
+    );
+  }
+
+  // Error state - no options available
+  if (!options || (options.length === 0 && !isLoading)) {
+    return (
+      <div className="w-full">
+        <Button
+          className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+          variant="primary"
+          size="xs"
+          disabled
+        >
+          <span className="text-muted-foreground text-sm">
+            No models available
+          </span>
+        </Button>
       </div>
     );
   }
@@ -393,17 +371,44 @@ export default function ModelInputComponent({
   // Main render
   return (
     <>
-      <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
-        {children ? (
-          <PopoverAnchor>{children}</PopoverAnchor>
-        ) : isLoading ? (
-          renderLoadingButton()
+      <Popover open={open} onOpenChange={setOpen}>
+        {isLoading ? (
+          <Button
+            className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+            variant="primary"
+            size="xs"
+          >
+            <LoadingTextComponent text="Loading options" />
+          </Button>
         ) : (
           <div className="w-full truncate">{renderTriggerButton()}</div>
         )}
-        {renderPopoverContent()}
+        <PopoverContentWithoutPortal
+          side="bottom"
+          avoidCollisions={false}
+          className="noflow nowheel nopan nodelete nodrag p-0"
+          style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
+        >
+          <Command className="flex flex-col">
+            {options?.length > 0 && (
+              <div className="flex items-center border-b px-2.5">
+                <ForwardedIconComponent
+                  name="search"
+                  className="mr-2 h-4 w-4 shrink-0 opacity-50"
+                />
+                <input
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search models..."
+                  className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  autoComplete="off"
+                  data-testid="model_search_input"
+                />
+              </div>
+            )}
+            {renderModelOptions()}
+          </Command>
+        </PopoverContentWithoutPortal>
       </Popover>
-
       {renderApiKeyInput()}
     </>
   );

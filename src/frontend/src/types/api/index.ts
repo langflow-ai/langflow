@@ -92,7 +92,7 @@ export type InputFieldType = {
   temperature?: number; // Added for ModelInput
   max_tokens?: number; // Added for ModelInput
   limit?: number; // Added for ModelInput
-  search_category?: string[]; // Added for ModelInput
+  providers?: string[]; // Added for ModelInput
   [key: string]: any;
   icon?: string;
   text?: string;

@@ -242,7 +242,7 @@ export function ParameterRenderComponent({
               temperature={templateData?.temperature}
               max_tokens={templateData?.max_tokens}
               limit={templateData?.limit}
-              search_category={templateData?.search_category}
+              providers={templateData?.providers}
             />
           );
         }
@@ -252,7 +252,7 @@ export function ParameterRenderComponent({
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.search_category}
+            searchCategory={templateData?.searchCategory}
             limit={templateData?.limit}
           />
         );
@@ -271,7 +271,7 @@ export function ParameterRenderComponent({
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.search_category}
+            searchCategory={templateData?.searchCategory}
             buttonMetadata={templateData?.button_metadata}
             connectionLink={link as string}
           />

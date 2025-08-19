@@ -15,9 +15,10 @@ class ModelInputExampleComponent(Component):
     inputs = [
         ModelInput(
             name="model_selection",
+            required=True,
             display_name="Model",
-            info="Select the model to use",
             model_type="language",
+            placeholder="Select a model",
             temperature=0.7,
             max_tokens=1000,
         ),
