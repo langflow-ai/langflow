@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
+import {useUtilityStore} from "@/stores/utilityStore";
 
 export default function NodeName({
   display_name,
@@ -15,6 +16,9 @@ export default function NodeName({
   editNameDescription,
   toggleEditNameDescription,
   setHasChangedNodeDescription,
+  sandboxed,
+  locked,
+  blocked
 }: {
   display_name?: string;
   selected?: boolean;
@@ -24,6 +28,9 @@ export default function NodeName({
   editNameDescription: boolean;
   toggleEditNameDescription: () => void;
   setHasChangedNodeDescription: (hasChanged: boolean) => void;
+  sandboxed?: boolean;
+  locked?: boolean;
+  blocked?: boolean;
 }) {
   const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -73,6 +80,10 @@ export default function NodeName({
     setHasChangedNodeDescription(true);
   };
 
+  const lockAllComponents = useUtilityStore(
+    (state) => state.lockAllComponents,
+  );
+
   return editNameDescription ? (
     <div className="w-full">
       <Input
@@ -107,6 +118,42 @@ export default function NodeName({
               <ForwardedIconComponent
                 name="FlaskConical"
                 className="text-accent-purple-foreground"
+              />
+            </div>
+          </ShadTooltip>
+        </div>
+      )}
+      {sandboxed && (
+        <div className="shrink-0">
+          <ShadTooltip content="This component will run in a sandbox">
+            <div>
+              <ForwardedIconComponent
+                name="ShieldAlert"
+                className="text-blue-500 h-5 dark:text-blue-400"
+              />
+            </div>
+          </ShadTooltip>
+        </div>
+      )}
+      {!lockAllComponents && locked && (
+        <div className="shrink-0">
+          <ShadTooltip content="Due to sandbox incompability, this components code cannot be modified.">
+            <div>
+              <ForwardedIconComponent
+                name="Lock"
+                className="text-gray-600 h-4 dark:text-gray-300"
+              />
+            </div>
+          </ShadTooltip>
+        </div>
+      )}
+      {blocked && (
+        <div className="shrink-0">
+          <ShadTooltip content="Due to sandbox incompability, this component will not be allowed to run.">
+            <div>
+              <ForwardedIconComponent
+                name="CircleX"
+                className="text-red-500 h-5 dark:text-red-400"
               />
             </div>
           </ShadTooltip>

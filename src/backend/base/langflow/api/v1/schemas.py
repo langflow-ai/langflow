@@ -407,6 +407,8 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+    sandbox_enabled: bool
+    sandbox_lock_components: bool
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "ConfigResponse":
@@ -418,6 +420,18 @@ class ConfigResponse(BaseModel):
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
         """
+        # Get sandbox status
+        from langflow.services.deps import get_sandbox_service
+        sandbox_service = get_sandbox_service()
+        sandbox_enabled = sandbox_service.enabled if sandbox_service else False
+        sandbox_lock_components = False
+        
+        if sandbox_enabled and sandbox_service:
+            try:
+                sandbox_lock_components = sandbox_service.manager.security_policy.is_lock_mode_enabled()
+            except Exception:
+                sandbox_lock_components = False
+        
         return cls(
             feature_flags=FEATURE_FLAGS,
             serialization_max_items_length=settings.max_items_length,
@@ -431,6 +445,8 @@ class ConfigResponse(BaseModel):
             public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
+            sandbox_enabled=sandbox_enabled,
+            sandbox_lock_components=sandbox_lock_components,
         )
 
 

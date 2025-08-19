@@ -12,6 +12,7 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { APIClassType } from "@/types/api";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
@@ -426,10 +427,14 @@ const NodeToolbarComponent = memo(
       return isCustom;
     }, [data.type, data.node]);
 
+    const lockAllComponents = useUtilityStore(
+      (state) => state.lockAllComponents,
+    );
+
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && (
+          {!lockAllComponents && hasCode && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
@@ -439,6 +444,8 @@ const NodeToolbarComponent = memo(
                 s.name.toLowerCase().startsWith("code"),
               )}
               dataTestId="code-button-modal"
+              disabled={data.locked}
+              tooltipContent={data.locked ? "This component is locked and can't be modified" : undefined}
             />
           )}
           {nodeLength > 0 && (

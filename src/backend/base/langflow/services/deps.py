@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
+    from langflow.services.sandbox.service import SandboxService
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -247,3 +248,14 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_sandbox_service() -> SandboxService:
+    """Retrieves the SandboxService instance from the service manager.
+    
+    Returns:
+        SandboxService: The SandboxService instance.
+    """
+    from langflow.services.sandbox.factory import SandboxServiceFactory
+    
+    return get_service(ServiceType.SANDBOX_SERVICE, SandboxServiceFactory())

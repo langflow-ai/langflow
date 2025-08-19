@@ -13,6 +13,8 @@ export const ToolbarButton = memo(
     shortcut,
     className,
     dataTestId,
+    disabled = false,
+    tooltipContent,
   }: {
     onClick: () => void;
     icon: string;
@@ -20,18 +22,46 @@ export const ToolbarButton = memo(
     shortcut?: any;
     className?: string;
     dataTestId?: string;
-  }) => (
-    <ShadTooltip content={<ShortcutDisplay {...shortcut} />} side="top">
-      <Button
-        className={cn("node-toolbar-buttons", className)}
-        variant="ghost"
-        onClick={onClick}
-        size="node-toolbar"
-        data-testid={dataTestId}
-      >
-        <ForwardedIconComponent name={icon} className="h-4 w-4" />
-        {label && <span className="text-mmd font-medium">{label}</span>}
-      </Button>
-    </ShadTooltip>
-  ),
+    disabled?: boolean;
+    tooltipContent?: string | React.ReactNode;
+  }) => {
+    const content = tooltipContent || <ShortcutDisplay {...shortcut} />;
+    
+    if (disabled) {
+      // For disabled buttons, wrap in a div to enable tooltip
+      return (
+        <ShadTooltip content={content} side="top">
+          <div className="inline-block cursor-not-allowed">
+            <Button
+              className={cn("node-toolbar-buttons", className)}
+              variant="ghost"
+              onClick={onClick}
+              size="node-toolbar"
+              data-testid={dataTestId}
+              disabled={disabled}
+            >
+              <ForwardedIconComponent name={icon} className="h-4 w-4" />
+              {label && <span className="text-mmd font-medium">{label}</span>}
+            </Button>
+          </div>
+        </ShadTooltip>
+      );
+    }
+
+    return (
+      <ShadTooltip content={content} side="top">
+        <Button
+          className={cn("node-toolbar-buttons", className)}
+          variant="ghost"
+          onClick={onClick}
+          size="node-toolbar"
+          data-testid={dataTestId}
+          disabled={disabled}
+        >
+          <ForwardedIconComponent name={icon} className="h-4 w-4" />
+          {label && <span className="text-mmd font-medium">{label}</span>}
+        </Button>
+      </ShadTooltip>
+    );
+  },
 );

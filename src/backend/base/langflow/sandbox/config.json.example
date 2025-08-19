@@ -1,0 +1,8 @@
+{
+  "allow_secrets_for_untrusted": false,
+  "network_enabled": true,
+  "max_execution_time_seconds": 30,
+  "max_memory_mb": 128,
+  "max_code_size_kb": 50,
+  "env_params": ["LANGFLOW_SANDBOX_ENABLED"]
+}

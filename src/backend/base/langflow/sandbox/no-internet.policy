@@ -1,0 +1,10 @@
+POLICY no_network {
+    ERRNO(100) {
+        socket, connect, bind, listen, accept, accept4,
+        sendto, recvfrom, sendmsg, recvmsg,
+        getsockname, getpeername, socketpair,
+        setsockopt, getsockopt, sendmmsg, recvmmsg
+    }
+}
+
+USE no_network DEFAULT ALLOW

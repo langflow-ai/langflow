@@ -180,7 +180,7 @@ async def create_flow(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return db_flow
+    return _add_sandbox_flags(db_flow)
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
@@ -253,6 +253,10 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
+            
+            # Add sandbox flags to each flow
+            flows = [_add_sandbox_flags(flow) for flow in flows]
+            
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
@@ -286,6 +290,74 @@ async def _read_flow(
     return (await session.exec(stmt)).first()
 
 
+def _add_sandbox_flags(flow: Flow) -> Flow:
+    """Add sandbox flags to each node in the flow data."""
+    try:
+        from langflow.services.deps import get_sandbox_service
+        sandbox_service = get_sandbox_service()
+        
+        if not sandbox_service or not sandbox_service.enabled or not flow.data:
+            return flow
+            
+        verifier = sandbox_service.manager.verifier
+        locked = verifier.security_policy.is_lock_mode_enabled()
+
+        # Process nodes in the flow data
+        if "nodes" in flow.data:
+            for node in flow.data["nodes"]:
+                if "data" in node:
+                    is_untrusted = True
+
+                    node_data = node["data"]
+                    node_id = node.get("id", "")
+                    
+                    # Extract component class name from node ID (e.g., "CustomComponent-5ADNr" -> "CustomComponent")
+                    component_name = node_id.split("-")[0] if "-" in node_id else node_id
+
+                    # Build component path for sandbox verification
+                    component_path = f"component.{component_name}"
+                    
+                    # Get code from template
+                    template = node_data.get("node", {}).get("template", {})
+                    component_code = template.get("code", {}).get("value") if "code" in template else None
+                    
+                    # Determine trust level and execution mode with 3 independent flags
+                    if component_code:
+                        # Check if component is verified (matches signature)
+                        verified_ok = verifier.verify_component_signature(component_path, component_code)
+                        
+                        # If verification failed and component doesn't end with "Component", try with suffix
+                        if not verified_ok and not component_name.endswith("Component"):
+                            component_path_with_suffix = f"component.{component_name}Component"
+                            verified_ok = verifier.verify_component_signature(component_path_with_suffix, component_code)
+                            if verified_ok:
+                                # Update component_path to the one that worked
+                                component_path = component_path_with_suffix
+                        
+                        is_untrusted = not verified_ok
+
+                    # Check if component is in sandbox supported list
+                    sandbox_supported = verifier.supports_sandboxing(component_path)
+
+                    # Check if component is forced to execute in sandbox mode
+                    force_sandbox = verifier.is_force_sandbox(component_path)
+                        
+                    # Set the 3 independent flags
+                    sandboxed = is_untrusted or force_sandbox  # true if component is untrusted OR forced into sandbox
+                    component_locked = locked or not sandbox_supported  # true if lock mode OR unsupported
+                    blocked = is_untrusted and not sandbox_supported  # true if untrusted AND unsupported
+                    
+                    # Add the sandbox flags to the node data
+                    node["data"]["sandboxed"] = sandboxed
+                    node["data"]["locked"] = component_locked
+                    node["data"]["blocked"] = blocked
+                    
+    except Exception as e:
+        logger.warning(f"Failed to add sandbox flags to flow: {e}")
+        
+    return flow
+
+
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
@@ -295,7 +367,7 @@ async def read_flow(
 ):
     """Read a flow."""
     if user_flow := await _read_flow(session, flow_id, current_user.id):
-        return user_flow
+        return _add_sandbox_flags(user_flow)
     raise HTTPException(status_code=404, detail="Flow not found")
 
 
@@ -379,7 +451,7 @@ async def update_flow(
             raise HTTPException(status_code=e.status_code, detail=str(e)) from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return db_flow
+    return _add_sandbox_flags(db_flow)
 
 
 @router.delete("/{flow_id}", status_code=200)

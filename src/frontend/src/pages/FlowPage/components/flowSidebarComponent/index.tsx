@@ -13,6 +13,7 @@ import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
 import {
   nodeColors,
@@ -50,6 +51,10 @@ interface FlowSidebarComponentProps {
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const data = useTypesStore((state) => state.data);
+
+  const lockAllComponents = useUtilityStore(
+    (state) => state.lockAllComponents,
+  );
 
   const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
     useShallow((state) => ({
@@ -360,14 +365,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           </>
         )}
       </SidebarContent>
-      <SidebarFooter className="border-t p-4 py-3">
-        <SidebarMenuButtons
-          hasStore={hasStore}
-          customComponent={customComponent}
-          addComponent={addComponent}
-          isLoading={isLoading}
-        />
-      </SidebarFooter>
+      {(!lockAllComponents || (lockAllComponents && hasStore)) && (
+        <SidebarFooter className="border-t p-4 py-3">
+          <SidebarMenuButtons
+            hasStore={hasStore}
+            createCustomComponentButton={!lockAllComponents}
+            customComponent={customComponent}
+            addComponent={addComponent}
+            isLoading={isLoading}
+          />
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

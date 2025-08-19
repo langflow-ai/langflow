@@ -48,4 +48,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
+  sandboxEnabled: false,
+  setSandboxEnabled: (sandboxEnabled: boolean) => set({ sandboxEnabled }),
+  lockAllComponents: false,
+  setLockAllComponents: (lockAllComponents: boolean) =>
+    set({ lockAllComponents }),
 }));

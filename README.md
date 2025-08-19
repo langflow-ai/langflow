@@ -53,6 +53,17 @@ For more information about installing Langflow, including Docker and Desktop opt
 
 Langflow is completely open source and you can deploy it to all major deployment clouds. To learn how to use Docker to deploy Langflow, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
+### Sandboxed Development Environment
+
+To run the sandboxed development environment, you can use the following make command:
+
+```shell
+make dcdev_sandbox_up
+```
+
+This will start the Langflow application with sandboxing enabled.
+
+
 ## ⭐ Stay up-to-date
 
 Star Langflow on GitHub to be instantly notified of new releases.

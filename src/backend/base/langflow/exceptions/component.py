@@ -15,3 +15,14 @@ class StreamingError(Exception):
         self.cause = cause
         self.source = source
         super().__init__(cause)
+
+
+class ComponentLockError(ComponentBuildError):
+    """Raised when component execution blocked per sandboxing policies."""
+    def __init__(self, component_path: str):
+        self.component_path = component_path
+        message = f"Cannot execute untrusted component '{component_path}'"
+        formatted_traceback = f"ComponentLockError: {message}"
+        super().__init__(message, formatted_traceback)
+
+

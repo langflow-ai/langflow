@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -241,3 +242,32 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     await clean_transactions(settings_service, session)
     await clean_vertex_builds(settings_service, session)
+    
+    # Initialize sandbox service if enabled
+    await initialize_sandbox_service()
+
+
+async def initialize_sandbox_service() -> None:
+    """Initialize sandbox service for component signature verification."""
+    try:
+        # Check if sandbox is enabled
+        from langflow.services.sandbox.service import is_sandbox_enabled
+        sandbox_enabled = is_sandbox_enabled()
+        
+        if not sandbox_enabled:
+            logger.debug("Sandbox service disabled, skipping initialization")
+            return
+        
+        logger.info("Sandbox service enabled - component signature verification active")
+        
+        # Force initialization of sandbox manager to generate signatures at startup
+        from langflow.services.deps import get_sandbox_service
+        sandbox_service = get_sandbox_service()
+        if sandbox_service and sandbox_service.enabled:
+            # Access the manager property to trigger lazy initialization
+            manager = sandbox_service.manager
+            if manager:
+                logger.info("Sandbox manager initialized successfully")
+            
+    except Exception as e:
+        logger.error(f"Failed to check sandbox configuration: {e}")
