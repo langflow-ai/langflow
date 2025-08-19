@@ -1035,9 +1035,7 @@ export const POLLING_MESSAGES = {
 } as const;
 
 export const DEFAULT_SESSION_NAME = "Default Session";
-export const SELECT_SESSION = "Select session";
-export const SEARCH_SESSIONS = "Search sessions...";
-export const NO_SESSIONS_MATCH_SEARCH = "No sessions match your search";
+export const NEW_SESSION_NAME = "New chat";
 
 export const BUILD_POLLING_INTERVAL = 25;
 
