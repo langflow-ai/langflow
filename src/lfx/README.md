@@ -106,6 +106,95 @@ echo '{"data": {"nodes": [...], "edges": [...]}}' | uv run lfx run --stdin --inp
 uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' --input-value "Test"
 ```
 
+### Complete Agent Example
+
+Here's a step-by-step example of creating and running an agent workflow with dependencies:
+
+**Step 1: Create the agent script**
+
+Create a file called `simple_agent.py`:
+
+```python
+"""A simple agent flow example for Langflow.
+
+This script demonstrates how to set up a conversational agent using Langflow's
+Agent component with web search capabilities.
+
+Features:
+- Configures logging to 'langflow.log' at INFO level
+- Creates an agent with OpenAI GPT model
+- Provides web search tools via URLComponent
+- Connects ChatInput → Agent → ChatOutput
+
+Usage:
+    uv run lfx run simple_agent.py "How are you?"
+"""
+
+import os
+from pathlib import Path
+
+from lfx.components.agents.agent import AgentComponent
+from lfx.components.data.url import URLComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.graph import Graph
+from lfx.lfx_logging.logger import LogConfig
+
+log_config = LogConfig(
+    log_level="INFO",
+    log_file=Path("langflow.log"),
+)
+chat_input = ChatInput()
+agent = AgentComponent()
+url_component = URLComponent()
+tools = url_component.to_toolkit()
+agent.set(
+    model_name="gpt-4.1-mini",
+    agent_llm="OpenAI",
+    api_key=os.getenv("OPENAI_API_KEY"),
+    input_value=chat_input.message_response,
+    tools=tools,
+)
+chat_output = ChatOutput().set(input_value=agent.message_response)
+
+graph = Graph(chat_input, chat_output, log_config=log_config)
+```
+
+**Step 2: Install dependencies**
+
+```bash
+# Install lfx (if not already installed)
+uv pip install lfx
+
+# Install additional dependencies required for the agent
+uv pip install langchain-community langchain beautifulsoup4 lxml langchain-openai
+```
+
+**Step 3: Set up environment**
+
+```bash
+# Set your OpenAI API key
+export OPENAI_API_KEY=your-openai-api-key-here
+```
+
+**Step 4: Run the agent**
+
+```bash
+# Run with verbose output to see detailed execution
+uv run lfx run simple_agent.py "How are you?" --verbose
+
+# Run with different questions
+uv run lfx run simple_agent.py "What's the weather like today?"
+uv run lfx run simple_agent.py "Search for the latest news about AI"
+```
+
+This creates an intelligent agent that can:
+
+- Answer questions using the GPT model
+- Search the web for current information
+- Process and respond to natural language queries
+
+The `--verbose` flag shows detailed execution information including timing and component details.
+
 ## Input Sources
 
 Both commands support multiple input sources:
