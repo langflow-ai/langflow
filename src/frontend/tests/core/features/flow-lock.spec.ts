@@ -18,7 +18,9 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Verify initially the flow is not locked (no lock icon should be visible)
-      const initialLockIcon = page.locator('[data-testid="menu_bar_display"] [data-testid="icon-Lock"]');
+      const initialLockIcon = page.locator(
+        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]',
+      );
       await expect(initialLockIcon).toHaveCount(0);
 
       // Open flow settings by clicking on the flow name
@@ -36,7 +38,7 @@ test.describe("Flow Lock Feature", () => {
       // Verify that name and description inputs are enabled when not locked
       const nameInput = page.getByTestId("input-flow-name");
       const descriptionInput = page.getByTestId("input-flow-description");
-      
+
       await expect(nameInput).not.toHaveAttribute("disabled");
       await expect(descriptionInput).not.toHaveAttribute("disabled");
 
@@ -52,7 +54,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Save the settings by clicking the save button
       await page.getByTestId("save-flow-settings").click();
-      
+
       // Wait for the modal to close by waiting for the popover to be detached
       await page.waitForSelector('[role="dialog"]', {
         state: "detached",
@@ -60,12 +62,14 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Verify lock icon now appears in the flow header
-      const lockIconInHeader = page.locator('[data-testid="menu_bar_display"]').locator('[data-testid="icon-Lock"]');
+      const lockIconInHeader = page
+        .locator('[data-testid="menu_bar_display"]')
+        .locator('[data-testid="icon-Lock"]');
       await expect(lockIconInHeader).toBeVisible();
 
       // Try to open settings again to unlock
       await page.getByTestId("menu_bar_display").click();
-      
+
       // Wait for the settings modal to open again
       await page.waitForSelector('[data-testid="lock-flow-switch"]', {
         timeout: 30000,
