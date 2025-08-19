@@ -11,6 +11,13 @@ from pydantic import ValidationError
 
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 
+_LANGFLOW_IS_INSTALLED = False
+
+with contextlib.suppress(ImportError):
+    import langflow  # noqa: F401
+
+    _LANGFLOW_IS_INSTALLED = True
+
 
 def add_type_ignores() -> None:
     if not hasattr(ast, "TypeIgnore"):
@@ -190,6 +197,8 @@ def create_class(code, class_name):
         "from langflow.interface.custom.custom_component import CustomComponent",
         "from langflow.custom import CustomComponent",
     )
+    if not _LANGFLOW_IS_INSTALLED:
+        code = code.replace("from langflow.", "from lfx.")
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
