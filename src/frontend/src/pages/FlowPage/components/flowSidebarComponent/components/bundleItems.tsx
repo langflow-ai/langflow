@@ -20,13 +20,6 @@ export const BundleItem = memo(
     sensitiveSort,
     handleKeyDownInput,
   }: BundleItemProps) => {
-    if (
-      !dataFilter[item.name] ||
-      Object.keys(dataFilter[item.name]).length === 0
-    ) {
-      return null;
-    }
-
     const isOpen = openCategories.includes(item.name);
 
     const handleOpenChange = useCallback(
