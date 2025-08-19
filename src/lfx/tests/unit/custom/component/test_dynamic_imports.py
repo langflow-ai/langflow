@@ -22,14 +22,14 @@ class TestImportUtils:
     def test_import_mod_with_module_name(self):
         """Test importing specific attribute from a module."""
         # Test importing a specific class from a module
-        result = import_mod("OpenAIModelComponent", "openai_chat_model", "langflow.components.openai")
+        result = import_mod("CalculatorComponent", "calculator_core", "lfx.components.helpers")
         assert result is not None
         assert hasattr(result, "__name__")
-        assert "OpenAI" in result.__name__
+        assert "Calculator" in result.__name__
 
     def test_import_mod_without_module_name(self):
         """Test importing entire module when module_name is None."""
-        result = import_mod("agents", "__module__", "langflow.components")
+        result = import_mod("agents", "__module__", "lfx.components")
         assert result is not None
         # Should return the agents module
         assert hasattr(result, "__all__")
@@ -37,122 +37,117 @@ class TestImportUtils:
     def test_import_mod_module_not_found(self):
         """Test error handling when module doesn't exist."""
         with pytest.raises(ImportError, match="not found"):
-            import_mod("NonExistentComponent", "nonexistent_module", "langflow.components.openai")
+            import_mod("NonExistentComponent", "nonexistent_module", "lfx.components.helpers")
 
     def test_import_mod_attribute_not_found(self):
         """Test error handling when attribute doesn't exist in module."""
         with pytest.raises(AttributeError):
-            import_mod("NonExistentComponent", "openai_chat_model", "langflow.components.openai")
+            import_mod("NonExistentComponent", "calculator_core", "lfx.components.helpers")
 
 
 class TestComponentDynamicImports:
     """Test dynamic import behavior in component modules."""
 
     def test_main_components_module_dynamic_import(self):
-        """Test that main components module imports submodules dynamically."""
-        # Import the main components module
-        from langflow import components
+        """Test that main components module allows direct submodule imports."""
+        # Test direct imports work
+        import lfx.components.helpers
+        import lfx.components.input_output
 
-        # Test that submodules are in __all__
-        assert "agents" in components.__all__
-        assert "data" in components.__all__
-        assert "openai" in components.__all__
+        # These should be importable modules
+        assert lfx.components.helpers is not None
+        assert lfx.components.input_output is not None
 
-        # Access agents module - this should work via dynamic import
-        agents_module = components.agents
-        assert agents_module is not None
-
-        # Should be cached in globals after access
-        assert "agents" in components.__dict__
-        assert components.__dict__["agents"] is agents_module
-
-        # Second access should return cached version
-        agents_module_2 = components.agents
-        assert agents_module_2 is agents_module
+        # Should have the expected structure
+        assert hasattr(lfx.components.helpers, "__all__")
+        assert "CalculatorComponent" in lfx.components.helpers.__all__
 
     def test_main_components_module_dir(self):
-        """Test __dir__ functionality for main components module."""
-        from langflow import components
+        """Test component module structure."""
+        # Test that we can import components directly
+        import lfx.components.helpers
+        import lfx.components.input_output
 
-        dir_result = dir(components)
-        # Should include all component categories
-        assert "agents" in dir_result
-        assert "data" in dir_result
-        assert "openai" in dir_result
-        assert "vectorstores" in dir_result
+        # These modules should have the expected structure
+        assert hasattr(lfx.components.helpers, "__all__")
+        assert hasattr(lfx.components.input_output, "__all__")
+
+        # Test __dir__ works on the component modules themselves
+        helpers_dir = dir(lfx.components.helpers)
+        assert "CalculatorComponent" in helpers_dir
 
     def test_main_components_module_missing_attribute(self):
         """Test error handling for non-existent component category."""
-        from langflow import components
+        from lfx import components
 
         with pytest.raises(AttributeError, match="has no attribute 'nonexistent_category'"):
             _ = components.nonexistent_category
 
     def test_category_module_dynamic_import(self):
-        """Test dynamic import behavior in category modules like openai."""
-        import langflow.components.openai as openai_components
+        """Test dynamic import behavior in category modules like helpers."""
+        import lfx.components.helpers as helpers_components
 
         # Test that components are in __all__
-        assert "OpenAIModelComponent" in openai_components.__all__
-        assert "OpenAIEmbeddingsComponent" in openai_components.__all__
+        assert "CalculatorComponent" in helpers_components.__all__
+        assert "CurrentDateComponent" in helpers_components.__all__
 
         # Access component - this should work via dynamic import
-        openai_model = openai_components.OpenAIModelComponent
-        assert openai_model is not None
+        calc_component = helpers_components.CalculatorComponent
+        assert calc_component is not None
 
         # Should be cached in globals after access
-        assert "OpenAIModelComponent" in openai_components.__dict__
-        assert openai_components.__dict__["OpenAIModelComponent"] is openai_model
+        assert "CalculatorComponent" in helpers_components.__dict__
+        assert helpers_components.__dict__["CalculatorComponent"] is calc_component
 
         # Second access should return cached version
-        openai_model_2 = openai_components.OpenAIModelComponent
-        assert openai_model_2 is openai_model
+        calc_component_2 = helpers_components.CalculatorComponent
+        assert calc_component_2 is calc_component
 
     def test_category_module_dir(self):
         """Test __dir__ functionality for category modules."""
-        import langflow.components.openai as openai_components
+        import lfx.components.helpers as helpers_components
 
-        dir_result = dir(openai_components)
-        assert "OpenAIModelComponent" in dir_result
-        assert "OpenAIEmbeddingsComponent" in dir_result
+        dir_result = dir(helpers_components)
+        assert "CalculatorComponent" in dir_result
+        assert "CurrentDateComponent" in dir_result
 
     def test_category_module_missing_component(self):
         """Test error handling for non-existent component in category."""
-        import langflow.components.openai as openai_components
+        import lfx.components.helpers as helpers_components
 
         with pytest.raises(AttributeError, match="has no attribute 'NonExistentComponent'"):
-            _ = openai_components.NonExistentComponent
+            _ = helpers_components.NonExistentComponent
 
     def test_multiple_category_modules(self):
         """Test dynamic imports work across multiple category modules."""
-        import langflow.components.anthropic as anthropic_components
-        import langflow.components.data as data_components
+        import lfx.components.helpers as helpers_components
+        import lfx.components.processing as processing_components
 
         # Test different categories work independently
-        anthropic_model = anthropic_components.AnthropicModelComponent
-        api_request = data_components.APIRequestComponent
+        calc_component = helpers_components.CalculatorComponent
+        combine_text = processing_components.CombineTextComponent
 
-        assert anthropic_model is not None
-        assert api_request is not None
+        assert calc_component is not None
+        assert combine_text is not None
 
         # Test they're cached in their respective modules
-        assert "AnthropicModelComponent" in anthropic_components.__dict__
-        assert "APIRequestComponent" in data_components.__dict__
+        assert "CalculatorComponent" in helpers_components.__dict__
+        assert "CombineTextComponent" in processing_components.__dict__
 
     def test_backward_compatibility(self):
         """Test that existing import patterns still work."""
-        # These imports should work the same as before
-        from langflow.components.agents import AgentComponent
-        from langflow.components.data import APIRequestComponent
-        from langflow.components.openai import OpenAIModelComponent
+        # These imports should work the same as before - using components without external deps
+        from lfx.components.helpers import CalculatorComponent
+        from lfx.components.input_output import TextInputComponent
+        from lfx.components.processing import CombineTextComponent
 
-        assert OpenAIModelComponent is not None
-        assert APIRequestComponent is not None
-        assert AgentComponent is not None
+        assert CalculatorComponent is not None
+        assert CombineTextComponent is not None
+        assert TextInputComponent is not None
 
     def test_component_instantiation(self):
         """Test that dynamically imported components can be instantiated."""
-        from langflow.components import helpers
+        from lfx.components import helpers
 
         # Import component dynamically
         calculator_class = helpers.CalculatorComponent
@@ -163,46 +158,46 @@ class TestComponentDynamicImports:
 
     def test_import_error_handling(self):
         """Test error handling when import fails."""
-        import langflow.components.notdiamond as notdiamond_components
+        import lfx.components.helpers as helpers_components
 
         # Patch the import_mod function directly
-        with patch("langflow.components.notdiamond.import_mod") as mock_import_mod:
+        with patch("lfx.components.helpers.import_mod") as mock_import_mod:
             # Mock import_mod to raise ImportError
             mock_import_mod.side_effect = ImportError("Module not found")
 
             # Clear any cached attribute
-            if "NotDiamondComponent" in notdiamond_components.__dict__:
-                del notdiamond_components.__dict__["NotDiamondComponent"]
+            if "CalculatorComponent" in helpers_components.__dict__:
+                del helpers_components.__dict__["CalculatorComponent"]
 
             with pytest.raises(AttributeError, match="Could not import"):
-                _ = notdiamond_components.NotDiamondComponent
+                _ = helpers_components.CalculatorComponent
 
     def test_consistency_check(self):
         """Test that __all__ and _dynamic_imports are consistent."""
-        import langflow.components.openai as openai_components
+        import lfx.components.helpers as helpers_components
 
         # All items in __all__ should have corresponding entries in _dynamic_imports
-        for component_name in openai_components.__all__:
-            assert component_name in openai_components._dynamic_imports
+        for component_name in helpers_components.__all__:
+            assert component_name in helpers_components._dynamic_imports
 
         # All keys in _dynamic_imports should be in __all__
-        for component_name in openai_components._dynamic_imports:
-            assert component_name in openai_components.__all__
+        for component_name in helpers_components._dynamic_imports:
+            assert component_name in helpers_components.__all__
 
     def test_type_checking_imports(self):
         """Test that TYPE_CHECKING imports work correctly with dynamic loading."""
         # This test ensures that imports in TYPE_CHECKING blocks
         # work correctly with the dynamic import system
-        import langflow.components.searchapi as searchapi_components
+        import lfx.components.processing as processing_components
 
         # Components should be available for dynamic loading
-        assert "SearchComponent" in searchapi_components.__all__
-        assert "SearchComponent" in searchapi_components._dynamic_imports
+        assert "CombineTextComponent" in processing_components.__all__
+        assert "CombineTextComponent" in processing_components._dynamic_imports
 
         # Accessing should trigger dynamic import and caching
-        component = searchapi_components.SearchComponent
+        component = processing_components.CombineTextComponent
         assert component is not None
-        assert "SearchComponent" in searchapi_components.__dict__
+        assert "CombineTextComponent" in processing_components.__dict__
 
 
 class TestPerformanceCharacteristics:
@@ -210,38 +205,38 @@ class TestPerformanceCharacteristics:
 
     def test_lazy_loading_performance(self):
         """Test that components can be accessed and cached properly."""
-        from langflow.components import vectorstores
+        from lfx.components import processing
 
         # Test that we can access a component
-        chroma = vectorstores.ChromaVectorStoreComponent
-        assert chroma is not None
+        combine_text = processing.CombineTextComponent
+        assert combine_text is not None
 
         # After access, it should be cached in the module's globals
-        assert "ChromaVectorStoreComponent" in vectorstores.__dict__
+        assert "CombineTextComponent" in processing.__dict__
 
         # Subsequent access should return the same cached object
-        chroma_2 = vectorstores.ChromaVectorStoreComponent
-        assert chroma_2 is chroma
+        combine_text_2 = processing.CombineTextComponent
+        assert combine_text_2 is combine_text
 
     def test_caching_behavior(self):
         """Test that components are cached after first access."""
-        from langflow.components import models
+        from lfx.components import helpers
 
         # First access
-        embedding_model_1 = models.EmbeddingModelComponent
+        calc_component_1 = helpers.CalculatorComponent
 
         # Second access should return the exact same object (cached)
-        embedding_model_2 = models.EmbeddingModelComponent
+        calc_component_2 = helpers.CalculatorComponent
 
-        assert embedding_model_1 is embedding_model_2
+        assert calc_component_1 is calc_component_2
 
     def test_memory_usage_multiple_accesses(self):
         """Test memory behavior with multiple component accesses."""
-        from langflow.components import processing
+        from lfx.components import processing
 
         # Access multiple components
         components = []
-        component_names = ["CombineTextComponent", "SplitTextComponent", "JSONCleaner", "RegexExtractorComponent"]
+        component_names = ["CombineTextComponent", "CreateDataComponent", "JSONCleaner", "RegexExtractorComponent"]
 
         for name in component_names:
             component = getattr(processing, name)
@@ -259,38 +254,38 @@ class TestSpecialCases:
     def test_empty_init_files(self):
         """Test that empty __init__.py files are handled gracefully."""
         # Test accessing components from categories that might have empty __init__.py
-        from langflow import components
+        from lfx import components
 
         # These should work even if some categories have empty __init__.py files
         agents = components.agents
         assert agents is not None
 
     def test_platform_specific_components(self):
-        """Test platform-specific component handling (like NVIDIA Windows components)."""
-        import langflow.components.nvidia as nvidia_components
+        """Test component handling for modules without external dependencies."""
+        import lfx.components.input_output as io_components
 
-        # NVIDIA components should be available
-        nvidia_model = nvidia_components.NVIDIAModelComponent
-        assert nvidia_model is not None
+        # Input/Output components should be available
+        text_input = io_components.TextInputComponent
+        assert text_input is not None
 
-        # Platform-specific components should be handled correctly
-        # (This test will pass regardless of platform since the import structure handles it)
-        assert "NVIDIAModelComponent" in nvidia_components.__all__
+        # Components should be handled correctly
+        # (This test will pass since these components have no external dependencies)
+        assert "TextInputComponent" in io_components.__all__
 
     def test_import_structure_integrity(self):
         """Test that the import structure maintains integrity."""
-        from langflow import components
+        from lfx import components
 
         # Test that we can access nested components through the hierarchy
-        openai_model = components.openai.OpenAIModelComponent
-        data_api = components.data.APIRequestComponent
+        calc_component = components.helpers.CalculatorComponent
+        text_input = components.input_output.TextInputComponent
 
-        assert openai_model is not None
-        assert data_api is not None
+        assert calc_component is not None
+        assert text_input is not None
 
         # Test that both main module and submodules are properly cached
-        assert "openai" in components.__dict__
-        assert "data" in components.__dict__
+        assert "helpers" in components.__dict__
+        assert "input_output" in components.__dict__
 
 
 if __name__ == "__main__":

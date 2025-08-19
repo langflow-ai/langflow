@@ -1,3 +1,11 @@
+"""Project management API endpoints.
+
+This module provides REST API endpoints for managing Langflow projects (folders).
+Projects serve as containers for flows and components, allowing users to organize
+their AI workflows. The module supports CRUD operations, project export/import,
+and enhanced ZIP exports with extracted component code for static analysis.
+"""
+
 import io
 import json
 import zipfile
@@ -8,7 +16,6 @@ from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -16,7 +23,7 @@ from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
+from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
@@ -32,6 +39,17 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.utils.project_export import (
+    FILENAME_SANITIZE_PATTERN,
+    extract_component_code_from_flow,
+    extract_env_variables_from_flow,
+    generate_env_example_content,
+    generate_export_readme,
+)
+from langflow.utils.version import get_version_info
+
+# Error messages
+PROJECT_NOT_FOUND_ERROR = "Project not found"
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -43,6 +61,22 @@ async def create_project(
     project: FolderCreate,
     current_user: CurrentActiveUser,
 ):
+    """Create a new project.
+
+    Creates a new project folder for the authenticated user. If a project with the same name
+    already exists, automatically appends a number suffix to ensure uniqueness.
+
+    Args:
+        session: Database session
+        project: Project creation data including name, description, and optional flow/component lists
+        current_user: Currently authenticated user
+
+    Returns:
+        FolderRead: The created project data
+
+    Raises:
+        HTTPException: 500 if project creation fails
+    """
     try:
         new_project = Folder.model_validate(project, from_attributes=True)
         new_project.user_id = current_user.id
@@ -100,6 +134,21 @@ async def read_projects(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
+    """Retrieve all projects for the current user.
+
+    Returns a list of all projects owned by the authenticated user, excluding starter folders.
+    Projects are sorted with the default folder first.
+
+    Args:
+        session: Database session
+        current_user: Currently authenticated user
+
+    Returns:
+        list[FolderRead]: List of user's projects
+
+    Raises:
+        HTTPException: 500 if retrieval fails
+    """
     try:
         projects = (
             await session.exec(
@@ -125,6 +174,26 @@ async def read_project(
     is_flow: bool = False,
     search: str = "",
 ):
+    """Retrieve a specific project with its flows.
+
+    Returns project details along with associated flows. Supports pagination and filtering
+    by component type, flow type, and search terms.
+
+    Args:
+        session: Database session
+        project_id: UUID of the project to retrieve
+        current_user: Currently authenticated user
+        params: Optional pagination parameters
+        is_component: Filter to show only component flows
+        is_flow: Filter to show only regular flows
+        search: Search term to filter flows by name
+
+    Returns:
+        FolderWithPaginatedFlows | FolderReadWithFlows: Project data with flows
+
+    Raises:
+        HTTPException: 404 if project not found, 500 if retrieval fails
+    """
     try:
         project = (
             await session.exec(
@@ -135,11 +204,11 @@ async def read_project(
         ).first()
     except Exception as e:
         if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Project not found") from e
+            raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND_ERROR) from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND_ERROR)
 
     try:
         if params and params.page and params.size:
@@ -176,9 +245,26 @@ async def update_project(
     *,
     session: DbSession,
     project_id: UUID,
-    project: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
+    project: FolderUpdate,
     current_user: CurrentActiveUser,
 ):
+    """Update an existing project.
+
+    Updates project properties such as name and description. Can also move flows
+    between projects by updating the components and flows lists.
+
+    Args:
+        session: Database session
+        project_id: UUID of the project to update
+        project: Project update data with fields to modify
+        current_user: Currently authenticated user
+
+    Returns:
+        FolderRead: The updated project data
+
+    Raises:
+        HTTPException: 404 if project not found, 500 if update fails
+    """
     try:
         existing_project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
@@ -187,7 +273,7 @@ async def update_project(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     if not existing_project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND_ERROR)
 
     try:
         if project.name and project.name != existing_project.name:
@@ -239,6 +325,22 @@ async def delete_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
 ):
+    """Delete a project and all its flows.
+
+    Permanently deletes a project and cascades deletion to all associated flows.
+    This operation cannot be undone.
+
+    Args:
+        session: Database session
+        project_id: UUID of the project to delete
+        current_user: Currently authenticated user
+
+    Returns:
+        204 No Content on successful deletion
+
+    Raises:
+        HTTPException: 404 if project not found, 500 if deletion fails
+    """
     try:
         flows = (
             await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
@@ -254,7 +356,7 @@ async def delete_project(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND_ERROR)
 
     try:
         await session.delete(project)
@@ -271,36 +373,131 @@ async def download_file(
     project_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    """Download all flows from project as a zip file."""
+    """Download project as a ZIP archive with extracted component code.
+
+    Creates a comprehensive export of the project including:
+    - Complete project metadata in project.json
+    - Individual flow JSON files organized in flows/ directory
+    - Extracted Python code from custom components in components/ directory
+    - README.md with export structure documentation
+
+    The extracted code files can be used for static analysis with tools like
+    mypy, ruff, and pylint.
+
+    Args:
+        session: Database session
+        project_id: UUID of the project to export
+        current_user: Currently authenticated user
+
+    Returns:
+        StreamingResponse: ZIP file download with project export
+
+    Raises:
+        HTTPException: 404 if project not found or no flows, 500 if export fails
+    """
+    import re
+
     try:
-        query = select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)
-        result = await session.exec(query)
-        project = result.first()
+        # Get project with flows
+        project = (
+            await session.exec(
+                select(Folder)
+                .options(selectinload(Folder.flows))
+                .where(Folder.id == project_id, Folder.user_id == current_user.id)
+            )
+        ).first()
 
         if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+            raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND_ERROR)
 
-        flows_query = select(Flow).where(Flow.folder_id == project_id)
-        flows_result = await session.exec(flows_query)
-        flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
+        # Filter flows for current user
+        flows = [flow for flow in project.flows if flow.user_id == current_user.id]
 
         if not flows:
             raise HTTPException(status_code=404, detail="No flows found in project")
 
-        flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
+        # Build export structure
+        version_info = get_version_info()
+        project_data = {
+            "version": "1.0",
+            "langflow_version": version_info["version"],
+            "export_type": "project",
+            "exported_at": datetime.now(tz=timezone.utc).isoformat(),
+            "project": {
+                "id": str(project.id),
+                "name": project.name,
+                "description": project.description,
+                "auth_settings": getattr(project, "auth_settings", {}) or {},
+            },
+            "flows": [FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json") for flow in flows],
+        }
+
+        # Create ZIP archive
         zip_stream = io.BytesIO()
 
-        with zipfile.ZipFile(zip_stream, "w") as zip_file:
-            for flow in flows_without_api_keys:
-                flow_json = json.dumps(jsonable_encoder(flow))
-                zip_file.writestr(f"{flow['name']}.json", flow_json.encode("utf-8"))
+        with zipfile.ZipFile(zip_stream, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            # Add main project metadata
+            project_json = json.dumps(project_data, indent=2)
+            zip_file.writestr("project.json", project_json.encode("utf-8"))
+
+            # Extract component code and collect environment variables from flows
+            all_code_files = {}
+            all_env_vars = {}
+            for flow in flows:
+                try:
+                    flow_data = FlowRead.model_validate(flow, from_attributes=True).model_dump()
+
+                    # Get flow name for component organization
+                    flow_name = flow_data.get("name", f"flow_{flow_data.get('id', 'unknown')}")
+                    safe_flow_name = re.sub(FILENAME_SANITIZE_PATTERN, "_", flow_name)
+
+                    # Extract component code
+                    code_files = extract_component_code_from_flow(flow_data, flow_name)
+                    for filename, code_content in code_files.items():
+                        # Organize by flow
+                        flow_code_path = f"components/{safe_flow_name}/{filename}"
+                        zip_file.writestr(flow_code_path, code_content.encode("utf-8"))
+                        all_code_files[flow_code_path] = True
+
+                    # Extract environment variables
+                    env_vars = extract_env_variables_from_flow(flow_data)
+                    for var_name, var_info in env_vars.items():
+                        if var_name in all_env_vars:
+                            # Merge component lists
+                            all_env_vars[var_name]["components"].extend(var_info["components"])
+                            all_env_vars[var_name]["components"] = list(set(all_env_vars[var_name]["components"]))
+                        else:
+                            all_env_vars[var_name] = var_info
+                except Exception as e:
+                    # Log the error and re-raise with more context
+                    import traceback
+
+                    flow_id = getattr(flow, "id", "unknown")
+                    error_details = f"Error processing flow {flow_id}: {e!s}\nTraceback: {traceback.format_exc()}"
+                    raise ValueError(error_details) from e
+
+            # Add README with export structure info
+            readme_content = generate_export_readme(
+                project_name=project.name,
+                version="1.0",
+                langflow_version=version_info["version"],
+                export_timestamp=datetime.now(tz=timezone.utc).isoformat(),
+                flows_count=len(flows),
+                code_files_count=len(all_code_files),
+            )
+            zip_file.writestr("README.md", readme_content.encode("utf-8"))
+
+            # Add .env.example file
+            env_example_content = generate_env_example_content(all_env_vars)
+            zip_file.writestr(".env.example", env_example_content.encode("utf-8"))
 
         zip_stream.seek(0)
 
+        # Generate filename
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
-        filename = f"{current_time}_{project.name}_flows.zip"
+        filename = f"{current_time}_{project.name}_export.zip"
 
-        # URL encode filename handle non-ASCII (ex. Cyrillic)
+        # URL encode filename to handle non-ASCII characters
         encoded_filename = quote(filename)
 
         return StreamingResponse(
@@ -309,9 +506,9 @@ async def download_file(
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Project not found") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -322,7 +519,23 @@ async def upload_file(
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
 ):
-    """Upload flows from a file."""
+    """Upload and import flows from a file into a new project.
+
+    Accepts a JSON file containing flow definitions and creates a new project
+    to contain the imported flows. Flow names are automatically made unique
+    if conflicts exist.
+
+    Args:
+        session: Database session
+        file: Uploaded file containing flow data in JSON format
+        current_user: Currently authenticated user
+
+    Returns:
+        list[FlowRead]: List of created flows
+
+    Raises:
+        HTTPException: 400 if no flows found in file or invalid format, 500 if upload fails
+    """
     contents = await file.read()
     data = orjson.loads(contents)
 

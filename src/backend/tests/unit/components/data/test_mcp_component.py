@@ -19,6 +19,8 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
+        from lfx.components.agents.mcp_component import MCPToolsComponent
+
         return MCPToolsComponent
 
     @pytest.fixture

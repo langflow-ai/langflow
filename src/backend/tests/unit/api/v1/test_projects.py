@@ -169,3 +169,203 @@ async def test_create_and_read_project_cyrillic(client: AsyncClient, logged_in_h
 
     assert fetched["name"] == CYRILLIC_NAME
     assert fetched["description"] == CYRILLIC_DESC
+
+
+async def test_export_project(client: AsyncClient, logged_in_headers, basic_case):
+    """Test exporting a project with flows."""
+    # Create a project first
+    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = response.json()["id"]
+
+    # Create a flow in the project
+    flow_data = {
+        "name": "Test Flow",
+        "description": "Test flow description",
+        "data": {"nodes": [], "edges": [], "viewport": {}},
+        "folder_id": project_id,
+    }
+    flow_response = await client.post("api/v1/flows/", json=flow_data, headers=logged_in_headers)
+    assert flow_response.status_code == status.HTTP_201_CREATED
+
+    # Export the project
+    export_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert export_response.status_code == status.HTTP_200_OK
+
+    # Check response headers - now returns ZIP instead of JSON
+    assert "application/x-zip-compressed" in export_response.headers["content-type"]
+    assert "attachment" in export_response.headers["content-disposition"]
+
+    # Parse and validate export data as ZIP
+    import io
+    import json
+    import zipfile
+
+    zip_content = io.BytesIO(export_response.content)
+
+    with zipfile.ZipFile(zip_content, "r") as zip_file:
+        # Check that project.json exists and contains expected data
+        assert "project.json" in zip_file.namelist()
+        project_content = zip_file.read("project.json").decode("utf-8")
+        export_data = json.loads(project_content)
+
+        assert export_data["version"] == "1.0"
+        assert export_data["export_type"] == "project"
+        assert "exported_at" in export_data
+        assert "project" in export_data
+        assert "flows" in export_data
+
+        # Validate project data
+        project_data = export_data["project"]
+        assert project_data["id"] == project_id
+        assert project_data["name"] == "New Project"
+
+        # Validate flows data
+        flows = export_data["flows"]
+        assert len(flows) == 1
+        assert flows[0]["name"] == "Test Flow"
+        assert flows[0]["description"] == "Test flow description"
+
+
+async def test_export_project_not_found(client: AsyncClient, logged_in_headers):
+    """Test exporting a non-existent project."""
+    fake_id = str(uuid4())
+    response = await client.get(f"api/v1/projects/download/{fake_id}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_export_project_with_code_extraction(client: AsyncClient, logged_in_headers, basic_case):
+    """Test enhanced project export with ZIP archive and code extraction."""
+    import io
+    import json
+    import zipfile
+
+    # Create a project first
+    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = response.json()["id"]
+
+    # Use complex_example fixture that contains PythonFunctionTool with code
+    from pathlib import Path
+
+    data_path = Path("/Users/ogabrielluiz/Projects/langflow/src/backend/tests/data/complex_example.json")
+    complex_flow_data = json.loads(data_path.read_text(encoding="utf-8"))
+
+    # Set the project folder_id
+    complex_flow_data["folder_id"] = project_id
+
+    flow_response = await client.post("api/v1/flows/", json=complex_flow_data, headers=logged_in_headers)
+    assert flow_response.status_code == status.HTTP_201_CREATED
+
+    # Export the project using export endpoint
+    export_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert export_response.status_code == status.HTTP_200_OK
+
+    # Check response headers
+    assert "application/x-zip-compressed" in export_response.headers["content-type"]
+    assert "attachment" in export_response.headers["content-disposition"]
+    assert "_export.zip" in export_response.headers["content-disposition"]
+
+    # Parse ZIP archive
+    zip_content = io.BytesIO(export_response.content)
+
+    with zipfile.ZipFile(zip_content, "r") as zip_file:
+        # Check required files exist
+        file_list = zip_file.namelist()
+        assert "project.json" in file_list
+        assert "README.md" in file_list
+        assert ".env.example" in file_list
+        # Flow data is now in project.json only
+        # Check that code files were extracted from components with code
+        code_files = [f for f in file_list if f.startswith("components/") and f.endswith(".py")]
+        assert len(code_files) == 1  # Should have 1 PythonFunctionTool component with code
+
+        # Verify the extracted code content structure
+        code_file = code_files[0]
+        code_content = zip_file.read(code_file).decode("utf-8")
+        assert '"""Component: PythonFunctionTool' in code_content
+        assert "Flow: complex_example" in code_content
+
+        # Validate project.json structure
+        project_content = zip_file.read("project.json").decode("utf-8")
+        project_data = json.loads(project_content)
+
+        assert project_data["version"] == "1.0"
+        assert project_data["export_type"] == "project"
+        assert "exported_at" in project_data
+        assert "project" in project_data
+        assert "flows" in project_data
+        assert project_data["project"]["id"] == project_id
+        assert project_data["project"]["name"] == "New Project"
+        assert len(project_data["flows"]) == 1
+
+        # Validate README.md exists and contains expected content
+        readme_content = zip_file.read("README.md").decode("utf-8")
+        assert "New Project" in readme_content
+        assert "Export format version: 1.0" in readme_content
+        assert "Static analysis" in readme_content
+
+        # Validate flow data in project.json
+        project_flows = project_data["flows"]
+        assert len(project_flows) == 1
+        assert project_flows[0]["name"] == "complex_example"
+
+        # Validate extracted code files
+        code_files = [f for f in file_list if f.startswith("components/") and f.endswith(".py")]
+        assert len(code_files) == 1
+
+        # Check that code files contain expected content
+        code_file = code_files[0]
+        code_content = zip_file.read(code_file).decode("utf-8")
+        # Should have docstring with metadata
+        assert '"""Component: PythonFunctionTool' in code_content
+        assert "Flow: complex_example" in code_content
+        # Should contain actual code
+        assert "def python_function" in code_content
+
+        # Validate .env.example file
+        env_example_content = zip_file.read(".env.example").decode("utf-8")
+        assert ".env.example - Environment Variables Template" in env_example_content
+        assert "Copy this file to .env and fill in your actual values" in env_example_content
+
+
+async def test_export_project_no_code(client: AsyncClient, logged_in_headers, basic_case):
+    """Test export with flows that have no custom code."""
+    import io
+    import zipfile
+
+    # Create a project first
+    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = response.json()["id"]
+
+    # Create a flow without custom code components
+    flow_data_no_code = {
+        "name": "Test Flow No Code",
+        "description": "Test flow without custom components",
+        "data": {"nodes": [], "edges": [], "viewport": {}},
+        "folder_id": project_id,
+    }
+
+    flow_response = await client.post("api/v1/flows/", json=flow_data_no_code, headers=logged_in_headers)
+    assert flow_response.status_code == status.HTTP_201_CREATED
+
+    # Export the project using export endpoint
+    export_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert export_response.status_code == status.HTTP_200_OK
+
+    # Parse ZIP archive
+    zip_content = io.BytesIO(export_response.content)
+
+    with zipfile.ZipFile(zip_content, "r") as zip_file:
+        file_list = zip_file.namelist()
+
+        # Basic structure should still exist
+        assert "project.json" in file_list
+        assert "README.md" in file_list
+        # Flow data is now in project.json only
+
+        # No component code files should exist
+        code_files = [f for f in file_list if f.startswith("components/") and f.endswith(".py")]
+        assert len(code_files) == 0
+
+        # README should indicate no code files
+        readme_content = zip_file.read("README.md").decode("utf-8")
+        assert "Code files extracted: 0" in readme_content
