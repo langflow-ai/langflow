@@ -31,6 +31,16 @@ jest.mock(
         data-testid={`toggle-${id}`}
         data-value={value}
         onClick={handleOnNewValue}
+        role="switch"
+        tabIndex={0}
+        aria-checked={value}
+        aria-label={`Toggle ${id}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleOnNewValue();
+          }
+        }}
       />
     ),
   }),
