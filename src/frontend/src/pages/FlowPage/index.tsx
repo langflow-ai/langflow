@@ -180,7 +180,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               shortcut={openPlayground}
             >
               <FlowBorderWrapperComponent setIsLoading={setIsLoading} />
-              <PlaygroundSidebar />
             </SimpleSidebarProvider>
           </>
         )}
