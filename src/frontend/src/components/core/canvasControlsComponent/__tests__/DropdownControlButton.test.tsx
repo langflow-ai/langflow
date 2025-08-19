@@ -36,7 +36,7 @@ jest.mock(
         aria-checked={value}
         aria-label={`Toggle ${id}`}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             handleOnNewValue();
           }
