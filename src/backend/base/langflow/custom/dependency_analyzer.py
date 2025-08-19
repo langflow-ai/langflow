@@ -151,5 +151,5 @@ def _get_distribution_version(import_name: str):
         # Take the first matching distribution
         dist_name = dist_names[0]
         return md.distribution(dist_name).version
-    except (md.PackageNotFoundError, ImportError, AttributeError):
+    except (ImportError, AttributeError):
         return None
