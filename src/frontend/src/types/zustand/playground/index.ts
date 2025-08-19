@@ -4,5 +4,5 @@ export type PlaygroundStoreType = {
   isPlayground: boolean;
   setIsPlayground: (isPlayground: boolean) => void;
   isFullscreen: boolean;
-  setIsFullscreen: (isFullscreen: boolean) => void;
+  toggleFullscreen: () => void;
 };
