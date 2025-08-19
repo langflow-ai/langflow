@@ -1,13 +1,16 @@
 import json
 from io import StringIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aiofile import async_open
 from dotenv import dotenv_values
 from loguru import logger
 
-from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+
+if TYPE_CHECKING:
+    from lfx.graph.graph.base import Graph
 from lfx.lfx_logging.logger import configure
 from lfx.load.utils import replace_tweaks_with_env
 from lfx.processing.process import process_tweaks, run_graph
@@ -25,7 +28,7 @@ async def aload_flow_from_json(
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
-) -> Graph:
+) -> "Graph":
     """Load a flow graph from a JSON file or a JSON object.
 
     Args:
@@ -78,6 +81,8 @@ async def aload_flow_from_json(
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
 
+    from lfx.graph.graph.base import Graph
+
     return Graph.from_payload(graph_data)
 
 
@@ -91,7 +96,7 @@ def load_flow_from_json(
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
-) -> Graph:
+) -> "Graph":
     """Load a flow graph from a JSON file or a JSON object.
 
     Args:
