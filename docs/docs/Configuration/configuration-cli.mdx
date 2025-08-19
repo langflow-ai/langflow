@@ -152,12 +152,12 @@ langflow api-key
 
 ### langflow copy-db
 
-Copies the Langflow database files from the cache directory to the current Langflow installation directory, which is the directory containing `__main__.py`.
+Copies the Langflow database files from the configuration directory to the current Langflow installation directory, which is the directory containing `__main__.py`.
 You can find the copy target directory by running `which langflow`.
 
-The following files are copied if they exist in the cache directory:
+The following files are copied if they exist in the configuration directory:
 
-* `langflow.db`: The main Langflow database, stored in the user cache directory
+* `langflow.db`: The main Langflow database, stored in the user configuration directory
 * `langflow-pre.db`: The pre-release database, if it exists
 
 <Tabs groupId="Invocation">
