@@ -1,8 +1,6 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
-import { useEffect, useRef, useState } from "react";
-import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
-import useAlertStore from "../../stores/alertStore";
+import { useEffect, useState } from "react";
 import BaseModal from "../baseModal";
 
 interface ApiKeyModalProps {
@@ -21,9 +19,7 @@ export default function ApiKeyModal({
   const [apiKeyName, setApiKeyName] = useState("");
   const [apiKeyValue, setApiKeyValue] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [textCopied, setTextCopied] = useState(true);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+
 
   useEffect(() => {
     if (open) {
@@ -35,22 +31,6 @@ export default function ApiKeyModal({
   const resetForm = () => {
     setApiKeyName("");
     setApiKeyValue("");
-  };
-
-  const handleCopyClick = async () => {
-    if (apiKeyValue) {
-      await navigator.clipboard.writeText(apiKeyValue);
-      inputRef?.current?.focus();
-      inputRef?.current?.select();
-      setSuccessData({
-        title: COPIED_NOTICE_ALERT,
-      });
-      setTextCopied(false);
-
-      setTimeout(() => {
-        setTextCopied(true);
-      }, 3000);
-    }
   };
 
   const handleSubmitForm = () => {
@@ -108,6 +88,7 @@ export default function ApiKeyModal({
               editNode={false}
               required={true}
               autoFocus={true}
+              hidePopover={true}
             />
           </div>
         </div>
