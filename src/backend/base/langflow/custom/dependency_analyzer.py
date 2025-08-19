@@ -140,9 +140,16 @@ def analyze_component_dependencies(component_code: str) -> dict:
 
 # Helper function to cache version lookups for installed distributions
 @lru_cache(maxsize=128)
-def _get_distribution_version(name: str):
+def _get_distribution_version(import_name: str):
     try:
-        dist = md.distribution(name)
+        # Reverse-lookup: which distribution(s) provide this importable name?
+        reverse_map = md.packages_distributions()
+        dist_names = reverse_map.get(import_name)
+        if not dist_names:
+            return None
+
+        # Take the first matching distribution
+        dist_name = dist_names[0]
+        return md.distribution(dist_name).version
     except (md.PackageNotFoundError, ImportError, AttributeError):
         return None
-    return dist.version
