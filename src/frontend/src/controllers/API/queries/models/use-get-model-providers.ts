@@ -32,7 +32,7 @@ export const useGetModelProviders: useQueryFunctionType<
       // TODO: In the future, we should check for API keys or other configuration
       // to determine if a provider is enabled. For now, we'll use a simple heuristic
       // based on well-known providers
-      const enabledProviders = [""];
+      const enabledProviders = ["OpenAI"];
 
       return providersData.map((providerInfo) => ({
         ...providerInfo,
