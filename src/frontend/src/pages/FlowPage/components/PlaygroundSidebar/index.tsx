@@ -1,9 +1,9 @@
+import { PlaygroundComponent } from "@/components/core/playgroundComponent/playground-component";
 import {
   SimpleSidebar,
   SimpleSidebarContent,
   useSimpleSidebar,
 } from "@/components/ui/simple-sidebar";
-import { PlaygroundComponent } from "@/components/core/playgroundComponent/playground-component";
 
 export function PlaygroundSidebar(): JSX.Element {
   const { setOpen } = useSimpleSidebar();
@@ -13,7 +13,7 @@ export function PlaygroundSidebar(): JSX.Element {
   };
 
   return (
-    <SimpleSidebar side="right" className="noflow select-none border-l">
+    <SimpleSidebar side="right" className="noflow select-none">
       <SimpleSidebarContent className="p-0 flex h-full w-full bg-background">
         <PlaygroundComponent onClose={handleClose} />
       </SimpleSidebarContent>
