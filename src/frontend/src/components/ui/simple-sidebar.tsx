@@ -5,6 +5,7 @@ import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { cn } from "../../utils/utils";
+import { AnimatedConditional } from "./animated-close";
 import { Button } from "./button";
 
 const SIMPLE_SIDEBAR_WIDTH = "400px";
@@ -196,11 +197,7 @@ const SimpleSidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="md"
-      className={cn(
-        "!px-2 !transition-all !font-normal !duration-200 !justify-start overflow-hidden",
-        open || !children ? "w-8 !gap-2.5" : "w-[6.8rem]",
-        className
-      )}
+      className={cn("!px-2 !font-normal !justify-start !gap-0", className)}
       onClick={handleClick}
       {...props}
     >
@@ -209,7 +206,11 @@ const SimpleSidebarTrigger = React.forwardRef<
       ) : (
         <PanelRightOpen strokeWidth={1.5} />
       )}
-      {children}
+      {children && (
+        <AnimatedConditional isOpen={!open}>
+          <div className="pl-2">{children}</div>
+        </AnimatedConditional>
+      )}
     </Button>
   );
 });
