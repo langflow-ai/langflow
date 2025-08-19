@@ -670,6 +670,12 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
     limit: int = 1  # Only allow single selection
     providers: list[str] = Field(default=["OpenAI", "Anthropic"])
     # TODO: Option to add fields related to API key.
+    api_key: str = Field(
+        default="",
+        description="API key for the selected provider.",
+        repr=False,
+        json_schema_extra={"input_type": "password"},
+    )
 
     def __init__(self, **kwargs):
         """Initialize ModelInput with default options based on model_type."""
@@ -742,20 +748,6 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             return self._get_embedding_model_options()
         return self._get_language_model_options()  # Default to language models
 
-    # def parse_model_selection(self, selection: str) -> tuple[str, str]:
-    #     """Parse Provider:ModelName selection into provider and model_name.
-
-    #     Args:
-    #         selection: String in format "Provider:ModelName"
-
-    #     Returns:
-    #         Tuple of (provider, model_name)
-    #     """
-    #     if ":" in selection:
-    #         provider, model_name = selection.split(":", 1)
-    #         return provider.strip(), model_name.strip()
-    #     # Fallback if format is incorrect
-    #     return "OpenAI", selection
 
     @field_validator("value")
     @classmethod
@@ -835,14 +827,14 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
-            # if provider == "Google Generative AI":
-            #     from langchain_google_genai import ChatGoogleGenerativeAI
+            if provider == "Google Generative AI":
+                from langchain_google_genai import ChatGoogleGenerativeAI
 
-            #     return ChatGoogleGenerativeAI(
-            #         google_api_key=api_key,
-            #         model=model_name,
-            #         temperature=temperature,
-            #     )
+                return ChatGoogleGenerativeAI(
+                    google_api_key=api_key,
+                    model=model_name,
+                    temperature=temperature,
+                )
         except ImportError:
             # If the required package is not installed, return None
             pass

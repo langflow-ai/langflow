@@ -1,9 +1,42 @@
+from functools import lru_cache
+
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
 from langflow.base.models.openai_constants import OPENAI_MODELS_DETAILED
 
-from .google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS_DETAILED
 
-MODELS_DETAILED = [ANTHROPIC_MODELS_DETAILED, OPENAI_MODELS_DETAILED, GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
+@lru_cache(maxsize=1)
+def get_model_provider_metadata():
+    return {
+        "OpenAI": {
+            "icon": "OpenAI",
+            "variable_name": "OPENAI_API_KEY",
+        },
+        "Anthropic": {
+            "icon": "Anthropic",
+            "variable_name": "ANTHROPIC_API_KEY",
+        },
+        "Google Generative AI": {
+            "icon": "GoogleGenerativeAI",
+            "variable_name": "GOOGLE_API_KEY",
+        },
+    }
+
+
+model_provider_metadata = get_model_provider_metadata()
+
+
+@lru_cache(maxsize=1)
+def get_models_detailed():
+    return [ANTHROPIC_MODELS_DETAILED, OPENAI_MODELS_DETAILED, GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
+
+
+MODELS_DETAILED = get_models_detailed()
+
+
+@lru_cache(maxsize=1)
+def get_model_provider_variable_mapping() -> dict[str, str]:
+    return {provider: meta["variable_name"] for provider, meta in model_provider_metadata.items()}
 
 
 def get_model_providers() -> list[str]:
@@ -78,4 +111,12 @@ def get_unified_models_detailed(
         )
 
     # Format as requested
-    return [{"provider": prov, "models": models} for prov, models in provider_map.items()]
+    return [
+        {
+            "provider": prov,
+            "models": models,
+            "num_models": len(models),
+            **model_provider_metadata.get(prov, {}),
+        }
+        for prov, models in provider_map.items()
+    ]
