@@ -12,7 +12,7 @@ from pydantic import PydanticDeprecatedSince20
 from lfx.custom.eval import eval_custom_component_code
 from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
-from lfx.services.deps import get_settings_service, get_tracing_service, session_scope
+from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ def instantiate_class(
         _user_id=user_id,
         _parameters=custom_params,
         _vertex=vertex,
-        _tracing_service=get_tracing_service(),
+        _tracing_service=None,
         _id=vertex.id,
     )
     if hasattr(custom_component, "set_event_manager"):

@@ -20,7 +20,6 @@ from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
-from lfx.services.deps import get_storage_service
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
 
@@ -338,8 +337,8 @@ class Vertex:
             self.updated_raw_params = False
             return
 
-        # Create parameter handler
-        param_handler = ParameterHandler(self, storage_service=get_storage_service())
+        # Create parameter handler with lazy storage service initialization
+        param_handler = ParameterHandler(self, storage_service=None)
 
         # Process edge parameters
         edge_params = param_handler.process_edge_parameters(self.edges)
