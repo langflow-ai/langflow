@@ -57,7 +57,7 @@ export default function PublishDropdown() {
                   return updatedFlow;
                 }
                 return flow;
-              }),
+              })
             );
             setCurrentFlow(updatedFlow);
           } else {
@@ -73,7 +73,7 @@ export default function PublishDropdown() {
             list: [e.message],
           });
         },
-      },
+      }
     );
   };
 
@@ -82,13 +82,13 @@ export default function PublishDropdown() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="ghost"
+            variant="default"
             size="md"
-            className="!px-2.5 font-normal"
+            className="font-normal !text-mmd"
             data-testid="publish-button"
           >
             Share
-            <IconComponent name="ChevronDown" className="!h-5 !w-5" />
+            <IconComponent name="ChevronDown" strokeWidth={1.7} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -166,7 +166,7 @@ export default function PublishDropdown() {
                         name="Globe"
                         className={cn(
                           `icon-size mr-2`,
-                          !isPublished && "opacity-50",
+                          !isPublished && "opacity-50"
                         )}
                       />
 
