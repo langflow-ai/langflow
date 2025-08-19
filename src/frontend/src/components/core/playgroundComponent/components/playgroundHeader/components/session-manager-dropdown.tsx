@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NEW_SESSION_NAME } from "@/constants/constants";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -35,7 +36,7 @@ export const SessionManagerDropdown = ({
   });
 
   const addNewSession = () => {
-    const newSessionId = `New Chat ${dbSessions?.length ?? 0}`;
+    const newSessionId = `${NEW_SESSION_NAME} ${dbSessions?.length ?? 0}`;
     setSelectedSession(newSessionId);
   };
 
