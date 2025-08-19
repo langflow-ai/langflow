@@ -139,8 +139,8 @@ class KBIngestionComponent(Component):
                 {
                     "column_name": "text",
                     "vectorize": True,
-                    "identifier": False,
-                }
+                    "identifier": True,
+                },
             ],
         ),
         IntInput(
@@ -402,15 +402,21 @@ class KBIngestionComponent(Component):
 
         # Convert each row to a Data object
         for _, row in df_source.iterrows():
-            # Build content text from vectorized columns using list comprehension
-            content_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
+            # Build content text from identifier columns using list comprehension
+            identifier_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
 
-            page_content = " ".join(content_parts)
+            # Join all parts into a single string
+            page_content = " ".join(identifier_parts)
 
             # Build metadata from NON-vectorized columns only (simple key-value pairs)
             data_dict = {
                 "text": page_content,  # Main content for vectorization
             }
+
+            # Add identifier columns if they exist
+            if identifier_cols:
+                identifier_parts = [str(row[col]) for col in identifier_cols if col in row and pd.notna(row[col])]
+                page_content = " ".join(identifier_parts)
 
             # Add metadata columns as simple key-value pairs
             for col in df_source.columns:
