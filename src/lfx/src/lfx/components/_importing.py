@@ -30,8 +30,13 @@ def import_mod(
     else:
         try:
             module = import_module(f".{module_name}", package=package)
-        except ModuleNotFoundError:
-            msg = f"module '{package!r}.{module_name!r}' not found"
-            raise ImportError(msg) from None
+        except ModuleNotFoundError as e:
+            # Check if this is a missing dependency or a missing module
+            if "No module named" in str(e) and package in str(e):
+                # This is likely a missing module file, not a dependency issue
+                msg = f"module '{package}.{module_name}' not found"
+                raise ImportError(msg) from None
+            # This is likely a missing dependency, let the original error bubble up
+            raise
         result = getattr(module, attr_name)
     return result
