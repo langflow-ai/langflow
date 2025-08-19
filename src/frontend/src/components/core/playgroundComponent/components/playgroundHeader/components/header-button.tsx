@@ -10,7 +10,7 @@ export const HeaderButton = forwardRef<
     <Button
       variant="ghost"
       size="icon"
-      className="flex h-8 items-center gap-2 text-muted-foreground"
+      className="flex h-8 w-8 items-center gap-2 text-muted-foreground"
       ref={ref}
       onClick={onClick}
       {...props}
