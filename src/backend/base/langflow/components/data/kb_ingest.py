@@ -189,7 +189,7 @@ class KBIngestionComponent(Component):
             col_name = config.get("column_name")
             if col_name not in df_columns:
                 msg = f"Column '{col_name}' not found in DataFrame. Available columns: {sorted(df_columns)}"
-                self.log(f"Warning: {msg}")
+                raise ValueError(msg)
 
         return config_list
 
