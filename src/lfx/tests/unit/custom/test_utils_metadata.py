@@ -147,7 +147,7 @@ class TestMetadataInTemplateBuilders:
     def test_hash_non_string_source_raises(self):
         """Test that non-string source raises TypeError."""
         with pytest.raises(TypeError, match="Source code must be a string"):
-            _generate_code_hash(123, "mod", "cls")
+            _generate_code_hash(123, "mod")
 
     def test_hash_mock_source_raises(self):
         """Test that Mock source raises TypeError."""
@@ -155,7 +155,7 @@ class TestMetadataInTemplateBuilders:
 
         mock_code = Mock()
         with pytest.raises(TypeError, match="Source code must be a string"):
-            _generate_code_hash(mock_code, "mod", "cls")
+            _generate_code_hash(mock_code, "mod")
 
     @patch("langflow.custom.utils.ComponentFrontendNode")
     def test_build_from_inputs_without_module_generates_default(self, mock_frontend_class):

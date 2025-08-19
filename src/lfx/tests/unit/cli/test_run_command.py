@@ -35,9 +35,9 @@ You can use this script as a template for building more complex conversational f
 
 from pathlib import Path
 
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.graph import Graph
-from langflow.logging.logger import LogConfig
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.schema.graph import Graph
+from lfx.lfx_logging.logger import LogConfig
 
 log_config = LogConfig(
     log_level="INFO",
@@ -57,7 +57,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         """Create a script without a graph variable."""
         script_content = '''"""Invalid script without graph variable."""
 
-from langflow.components.input_output import ChatInput
+from lfx.components.input_output import ChatInput
 
 chat_input = ChatInput()
 # Missing graph variable
@@ -71,7 +71,7 @@ chat_input = ChatInput()
         """Create a script with syntax errors."""
         script_content = '''"""Script with syntax errors."""
 
-from langflow.components.input_output import ChatInput
+from lfx.components.input_output import ChatInput
 
 # Syntax error - missing closing parenthesis
 chat_input = ChatInput(
