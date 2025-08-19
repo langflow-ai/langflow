@@ -35,7 +35,18 @@ class ParameterHandler:
         }
         self.params: dict[str, Any] = {}
         self.load_from_db_fields: list[str] = []
-        self.storage_service = storage_service or get_storage_service()
+        # Lazy initialization of storage service
+        self._storage_service = storage_service
+        self._storage_service_initialized = False
+
+    @property
+    def storage_service(self):
+        """Lazily initialize storage service only when accessed."""
+        if not self._storage_service_initialized:
+            if self._storage_service is None:
+                self._storage_service = get_storage_service()
+            self._storage_service_initialized = True
+        return self._storage_service
 
     def process_edge_parameters(self, edges: list[CycleEdge]) -> dict[str, Any]:
         """Process parameters from edges.
