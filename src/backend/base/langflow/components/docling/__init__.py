@@ -109,8 +109,8 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
 
     except ModuleNotFoundError:
         msg = (
-            "Docling is not installed. Please install it with `uv pip install docling` or"
-            " `uv pip install langflow[docling]`."
+            "Docling is an optional dependency of Langflow. Install with `uv pip install 'langflow[docling]'`"
+            "or refer to the documentation on how to install optional dependencies."
         )
         queue.put({"error": msg})
         return
