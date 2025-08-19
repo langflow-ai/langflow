@@ -5,6 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
+from backend.base.langflow.services.telemetry.service import TelemetryService
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -411,11 +412,12 @@ async def run_flow_for_openai_responses(
     )
 
 
-@router.post("/responses", response_model=None)
+@router.post("/responses")
 async def create_response(
     request: OpenAIResponsesRequest,
     background_tasks: BackgroundTasks,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    telemetry_service: Annotated[TelemetryService, Depends(get_telemetry_service)],
     http_request: Request,
 ) -> OpenAIResponsesResponse | StreamingResponse | OpenAIErrorResponse:
     """Create a response using OpenAI Responses API format.
@@ -428,6 +430,7 @@ async def create_response(
         background_tasks: FastAPI background task manager
         api_key_user: Authenticated user from API key
         http_request: The incoming HTTP request
+        telemetry_service: Telemetry service for logging
 
     Returns:
         OpenAI-compatible response or streaming response
@@ -435,7 +438,6 @@ async def create_response(
     Raises:
         HTTPException: For validation errors or flow execution issues
     """
-    telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
 
     # Extract global variables from X-LANGFLOW-GLOBAL-VAR-* headers
