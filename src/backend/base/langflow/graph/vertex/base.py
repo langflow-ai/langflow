@@ -287,6 +287,19 @@ class Vertex:
             raise ValueError(msg)
         return template_dict.get(key, {}).get("value")
 
+    def get_node_property(self, key: str, default: Any = None):
+        """Get a property from the node data."""
+        if not self.data or not self.data["node"]:
+            return None
+        return self.data["node"].get(key, default)
+
+    def get_task(self):
+        # using the task_id, get the task from celery
+        # and return it
+        from celery.result import AsyncResult
+
+        return AsyncResult(self.task_id)
+
     def _set_params_from_normal_edge(self, params: dict, edge: Edge, template_dict: dict):
         param_key = edge.target_param
 
