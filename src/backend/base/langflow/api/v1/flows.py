@@ -290,6 +290,29 @@ async def _read_flow(
     return (await session.exec(stmt)).first()
 
 
+def _remove_sandbox_flags(flow_data: dict) -> dict:
+    """Remove sandbox flags from flow data before saving to database.
+    
+    Sandbox flags (sandboxed, locked, blocked) are computed dynamically
+    and should not be persisted to the database.
+    """
+    if not flow_data or "data" not in flow_data:
+        return flow_data
+    
+    # Make a copy to avoid modifying the original
+    cleaned_data = flow_data.copy()
+    
+    if "nodes" in cleaned_data["data"]:
+        for node in cleaned_data["data"]["nodes"]:
+            if "data" in node:
+                # Remove sandbox flags if they exist
+                node["data"].pop("sandboxed", None)
+                node["data"].pop("locked", None) 
+                node["data"].pop("blocked", None)
+    
+    return cleaned_data
+
+
 def _add_sandbox_flags(flow: Flow) -> Flow:
     """Add sandbox flags to each node in the flow data."""
     try:
@@ -414,6 +437,10 @@ async def update_flow(
 
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
+
+        # Remove sandbox flags from flow data before saving to database
+        # These flags are computed dynamically and should not be persisted
+        update_data = _remove_sandbox_flags(update_data)
 
         for key, value in update_data.items():
             setattr(db_flow, key, value)
