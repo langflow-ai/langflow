@@ -1,6 +1,6 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button, ButtonProps } from "@/components/ui/button";
 import { forwardRef } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 
 export const HeaderButton = forwardRef<
   HTMLButtonElement,
