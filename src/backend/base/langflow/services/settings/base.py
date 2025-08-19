@@ -207,6 +207,20 @@ class Settings(BaseSettings):
     backend_only: bool = False
     """If set to True, Langflow will not serve the frontend."""
 
+    # CORS Settings
+    cors_origins: list[str] | str = "*"
+    """Allowed origins for CORS. Can be a list of origins or '*' for all origins.
+    In production, specify exact origins like ['https://app.example.com'].
+    Default is '*' for development convenience."""
+    cors_allow_credentials: bool = False
+    """Whether to allow credentials in CORS requests. 
+    SECURITY WARNING: Cannot be True when cors_origins is '*'.
+    Set to True only with specific origins in production."""
+    cors_allow_methods: list[str] | str = "*"
+    """Allowed HTTP methods for CORS requests."""
+    cors_allow_headers: list[str] | str = "*"
+    """Allowed headers for CORS requests."""
+
     # Telemetry
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
@@ -290,6 +304,27 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def validate_cors_origins(cls, value):
+        """Convert comma-separated string to list if needed."""
+        if isinstance(value, str) and value != "*" and "," in value:
+            # Convert comma-separated string to list
+            return [origin.strip() for origin in value.split(",")]
+        return value
+
+    @field_validator("cors_allow_credentials", mode="after")
+    @classmethod
+    def validate_cors_credentials(cls, value, info):
+        """Ensure credentials are not allowed with wildcard origins."""
+        origins = info.data.get("cors_origins", "*")
+        if value is True and origins == "*":
+            logger.warning(
+                "SECURITY: Cannot allow credentials with wildcard origins. Setting cors_allow_credentials to False."
+            )
+            return False
+        return value
 
     @field_validator("use_noop_database", mode="before")
     @classmethod

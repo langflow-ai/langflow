@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+
 from langflow.components.data.kb_ingest import KBIngestionComponent
 from langflow.schema.data import Data
-
 from tests.base import ComponentTestBaseWithoutClient
 
 
