@@ -21,8 +21,8 @@ class TestImportUtils:
 
     def test_import_mod_with_module_name(self):
         """Test importing specific attribute from a module with missing dependencies."""
-        # Test importing a class that has missing dependencies - should raise ImportError
-        with pytest.raises(ImportError, match="not found"):
+        # Test importing a class that has missing dependencies - should raise ModuleNotFoundError
+        with pytest.raises(ModuleNotFoundError, match="No module named"):
             import_mod("OpenAIModelComponent", "openai_chat_model", "lfx.components.openai")
 
     def test_import_mod_without_module_name(self):
@@ -40,7 +40,7 @@ class TestImportUtils:
     def test_import_mod_attribute_not_found(self):
         """Test error handling when module has missing dependencies."""
         # The openai_chat_model module can't be imported due to missing dependencies
-        with pytest.raises(ImportError, match="not found"):
+        with pytest.raises(ModuleNotFoundError, match="No module named"):
             import_mod("NonExistentComponent", "openai_chat_model", "lfx.components.openai")
 
 
