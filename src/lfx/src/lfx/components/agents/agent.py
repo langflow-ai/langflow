@@ -44,11 +44,14 @@ class AgentComponent(ToolCallingAgentComponent):
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
-    openai_inputs_filtered = [
-        input_field
-        for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
-        if not (hasattr(input_field, "name") and input_field.name == "json_mode")
-    ]
+    if "OpenAI" in MODEL_PROVIDERS_DICT:
+        openai_inputs_filtered = [
+            input_field
+            for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
+            if not (hasattr(input_field, "name") and input_field.name == "json_mode")
+        ]
+    else:
+        openai_inputs_filtered = []
 
     inputs = [
         DropdownInput(
@@ -59,7 +62,8 @@ class AgentComponent(ToolCallingAgentComponent):
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
+            + [{"icon": "brain"}],
         ),
         *openai_inputs_filtered,
         MultilineInput(
@@ -111,7 +115,7 @@ class AgentComponent(ToolCallingAgentComponent):
             if self.add_current_date_tool:
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
-                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+                current_date_tool = (CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
                 if not isinstance(current_date_tool, StructuredTool):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     raise TypeError(msg)
