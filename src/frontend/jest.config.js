@@ -21,7 +21,6 @@ module.exports = {
   transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$|@testing-library))"],
 
   // Coverage configuration
-  collectCoverage: true,
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.{test,spec}.{ts,tsx}",
