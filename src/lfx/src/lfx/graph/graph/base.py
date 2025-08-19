@@ -131,11 +131,9 @@ class Graph:
             msg = "Context must be a dictionary"
             raise TypeError(msg)
         self._context = dotdict(context or {})
-        try:
-            self.tracing_service: TracingService | None = get_tracing_service()
-        except Exception:  # noqa: BLE001
-            logger.exception("Error getting tracing service")
-            self.tracing_service = None
+        # Lazy initialization - only get tracing service when needed
+        self._tracing_service: TracingService | None = None
+        self._tracing_service_initialized = False
         if start is not None and end is not None:
             self._set_start_and_end(start, end)
             self.prepare(start_component_id=start.get_id())
@@ -203,6 +201,18 @@ class Graph:
         self.build_graph_maps(self.edges)
         self.define_vertices_lists()
         return self
+
+    @property
+    def tracing_service(self) -> TracingService | None:
+        """Lazily initialize tracing service only when accessed."""
+        if not self._tracing_service_initialized:
+            try:
+                self._tracing_service = get_tracing_service()
+            except Exception:  # noqa: BLE001
+                logger.exception("Error getting tracing service")
+                self._tracing_service = None
+            self._tracing_service_initialized = True
+        return self._tracing_service
 
     def dumps(
         self,
@@ -1052,7 +1062,7 @@ class Graph:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
-        self.tracing_service = get_tracing_service()
+        # Tracing service will be lazily initialized via property when needed
         self.set_run_id(self._run_id)
 
     @classmethod
