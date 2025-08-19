@@ -42,6 +42,11 @@ export const SessionRename = ({
     e.stopPropagation();
   };
 
+  const handleCancel = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    onCancel();
+  };
+
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
       <Input
@@ -60,10 +65,7 @@ export const SessionRename = ({
         type="button"
         size="iconSm"
         variant="ghost"
-        onClick={(e) => {
-          e.stopPropagation();
-          onCancel();
-        }}
+        onClick={handleCancel}
       >
         <ForwardedIconComponent name="X" className="h-3 w-3" />
       </Button>
