@@ -70,6 +70,11 @@ async def run(
         show_default=True,
         help="Show diagnostic output and execution details",
     ),
+    timing: bool = typer.Option(
+        default=False,
+        show_default=True,
+        help="Include detailed timing information in output",
+    ),
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -86,11 +91,17 @@ async def run(
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
+        timing: Include detailed timing information in output
     """
 
     def verbose_print(message: str) -> None:
         if verbose:
             typer.echo(message, file=sys.stderr)
+
+    # Start timing if requested
+    import time
+
+    start_time = time.time() if timing else None
 
     # Use either positional input_value or --input-value option
     final_input_value = input_value or input_value_option
@@ -191,6 +202,10 @@ async def run(
         raise typer.Exit(1) from e
 
     inputs = InputValueRequest(input_value=final_input_value) if final_input_value else None
+
+    # Mark end of loading phase if timing
+    load_end_time = time.time() if timing else None
+
     verbose_print("Preparing graph for execution...")
     try:
         graph.prepare()
@@ -222,14 +237,44 @@ async def run(
                 pass
         raise typer.Exit(1) from e
 
+    verbose_print("Executing graph...")
+    execution_start_time = time.time() if timing else None
+
     captured_stdout = StringIO()
     captured_stderr = StringIO()
     original_stdout = sys.stdout
     original_stderr = sys.stderr
+
+    # Track component timing if requested
+    component_timings = [] if timing else None
+    execution_step_start = execution_start_time if timing else None
+
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = [result async for result in graph.async_start(inputs)]
+        results = []
+        async for result in graph.async_start(inputs):
+            if timing:
+                step_end_time = time.time()
+                step_duration = step_end_time - execution_step_start
+
+                # Extract component information
+                if hasattr(result, "vertex"):
+                    component_name = getattr(result.vertex, "display_name", "Unknown")
+                    component_id = getattr(result.vertex, "id", "Unknown")
+                    component_timings.append(
+                        {
+                            "component": component_name,
+                            "component_id": component_id,
+                            "duration": step_duration,
+                            "cumulative_time": step_end_time - execution_start_time,
+                        }
+                    )
+
+                execution_step_start = step_end_time
+
+            results.append(result)
+
     except Exception as e:
         sys.stdout = original_stdout
         sys.stderr = original_stderr
@@ -251,10 +296,37 @@ async def run(
             except OSError:
                 pass
 
+    execution_end_time = time.time() if timing else None
+
     captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()
+
+    # Create timing metadata if requested
+    timing_metadata = None
+    if timing:
+        load_duration = load_end_time - start_time
+        execution_duration = execution_end_time - execution_start_time
+        total_duration = execution_end_time - start_time
+
+        timing_metadata = {
+            "load_time": round(load_duration, 3),
+            "execution_time": round(execution_duration, 3),
+            "total_time": round(total_duration, 3),
+            "component_timings": [
+                {
+                    "component": ct["component"],
+                    "component_id": ct["component_id"],
+                    "duration": round(ct["duration"], 3),
+                    "cumulative_time": round(ct["cumulative_time"], 3),
+                }
+                for ct in component_timings
+            ],
+        }
+
     if output_format == "json":
         result_data = extract_structured_result(results)
         result_data["logs"] = captured_logs
+        if timing_metadata:
+            result_data["timing"] = timing_metadata
         indent = 2 if verbose else None
         typer.echo(json.dumps(result_data, indent=indent))
     elif output_format in {"text", "message"}:
@@ -266,5 +338,7 @@ async def run(
     else:
         result_data = extract_structured_result(results)
         result_data["logs"] = captured_logs
+        if timing_metadata:
+            result_data["timing"] = timing_metadata
         indent = 2 if verbose else None
         typer.echo(json.dumps(result_data, indent=indent))
