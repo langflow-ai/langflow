@@ -95,7 +95,8 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
         elif pipeline == "vlm":
             pdf_format_option = PdfFormatOption(pipeline_cls=VlmPipeline, pipeline_options=_get_vlm_opts())
         else:
-            raise ValueError(f"Unknown pipeline: {pipeline!r}")
+            msg = f"Unknown pipeline: {pipeline!r}"
+            raise ValueError(msg)
 
         format_options: dict[InputFormat, FormatOption] = {
             InputFormat.PDF: pdf_format_option,
