@@ -123,7 +123,7 @@ export function PlaygroundComponent({
 
   return (
     <div className="flex flex-col w-full h-full">
-      <PlaygroundHeader onClose={onClose} />
+      <PlaygroundHeader />
       <div className="flex container flex-grow p-4">
         <ChatView
           sendMessage={sendMessage}
