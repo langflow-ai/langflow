@@ -12,7 +12,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -206,6 +206,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
+        category: str = CATEGORY_GLOBAL,
         *,
         default_fields: Sequence[str] = (),
         type_: str = CREDENTIAL_TYPE,
@@ -216,6 +217,7 @@ class DatabaseVariableService(VariableService, Service):
             type=type_,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
             default_fields=list(default_fields),
+            category=category,
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)

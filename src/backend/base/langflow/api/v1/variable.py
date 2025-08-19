@@ -40,6 +40,7 @@ async def create_variable(
             default_fields=variable.default_fields or [],
             type_=variable.type or CREDENTIAL_TYPE,
             session=session,
+            category=variable.category,
         )
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -136,3 +137,60 @@ async def delete_variable(
         await variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# @router.get("/enabled_providers", status_code=200)
+# async def get_enabled_providers(
+#     *,
+#     session: DbSession,
+#     current_user: CurrentActiveUser,
+#     providers: list[str] = Query(default=[]),
+# ):
+#     """Get enabled providers for the current user."""
+#     from langflow.base.models.unified_models import get_model_provider_variable_mapping
+#     from langflow.services.variable.constants import CATEGORY_LLM
+
+#     variable_service = get_variable_service()
+#     if not isinstance(variable_service, DatabaseVariableService):
+#         msg = "Variable service is not an instance of DatabaseVariableService"
+#         raise TypeError(msg)
+#     try:
+#         # Get all LLM category variables for the user
+#         variables = await variable_service.get_by_category(
+#             user_id=current_user.id, category=CATEGORY_LLM, session=session
+#         )
+#         if not variables:
+#             return {
+#                 "enabled_providers": [],
+#                 "provider_status": {},
+#             }
+#         variable_names = {variable.name for variable in variables if variable}
+
+#         # Get the provider-variable mapping
+#         provider_variable_map = get_model_provider_variable_mapping()
+
+#         enabled_providers = []
+#         provider_status = {}
+
+#         for provider, var_name in provider_variable_map.items():
+#             is_enabled = var_name in variable_names
+#             provider_status[provider] = is_enabled
+#             if is_enabled:
+#                 enabled_providers.append(provider)
+
+#         result = {
+#             "enabled_providers": enabled_providers,
+#             "provider_status": provider_status,
+#         }
+
+#         if providers:
+#             # Filter enabled_providers and provider_status by requested providers
+#             filtered_enabled = [p for p in result["enabled_providers"] if p in providers]
+#             filtered_status = {p: v for p, v in result["provider_status"].items() if p in providers}
+#             return {
+#                 "enabled_providers": filtered_enabled,
+#                 "provider_status": filtered_status,
+#             }
+#         return result
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e)) from e
