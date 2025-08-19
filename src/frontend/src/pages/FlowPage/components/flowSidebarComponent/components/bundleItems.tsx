@@ -20,13 +20,6 @@ export const BundleItem = memo(
     sensitiveSort,
     handleKeyDownInput,
   }: BundleItemProps) => {
-    if (
-      !dataFilter[item.name] ||
-      Object.keys(dataFilter[item.name]).length === 0
-    ) {
-      return null;
-    }
-
     const isOpen = openCategories.includes(item.name);
 
     const handleOpenChange = useCallback(
@@ -34,10 +27,10 @@ export const BundleItem = memo(
         setOpenCategories((prev: string[]) =>
           isOpen
             ? [...prev, item.name]
-            : prev.filter((cat) => cat !== item.name),
+            : prev.filter((cat) => cat !== item.name)
         );
       },
-      [item.name, setOpenCategories],
+      [item.name, setOpenCategories]
     );
 
     return (
@@ -78,7 +71,7 @@ export const BundleItem = memo(
         </SidebarMenuItem>
       </Disclosure>
     );
-  },
+  }
 );
 
 BundleItem.displayName = "BundleItem";
