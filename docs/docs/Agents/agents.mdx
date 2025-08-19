@@ -167,7 +167,7 @@ To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-
 
 ## Agent component output
 
-The **Agent** component has two outputs: **Response** and **Structured Output**.
+The **Agent** component has two output modes: **Response** and **Structured Output**.
 You can set the output type near the component's output port.
 
 The **Response** (`response`) output is a [`Message`](/data-types#message) containing the agent's raw response to the query.
@@ -179,10 +179,11 @@ The **Structured Response** (`structured_response`) output is [`Data`](/data-typ
 This output attempts to parse the agent's response as JSON and returns it as structured data:
 * If the response contains valid JSON, it is returned as-is.
 * If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
-* If no valid JSON is found, the output returns the raw content with an error indicator.
+* If no valid JSON is found, the output returns the raw content with an error indicator `Could not parse as JSON`.
 
 This structured response can be used to further use an Agent's response in downstream applications.
 For example, using the Simple Agent starter template, instruct the Agent to return a JSON response that your application can consume from Langflow's output.
+Select the **Structured Output** mode, and connect the **Data** port to the **Chat Output** component to view the results.
 
 ```text
 You are a helpful assistant. Your task is to take a user query and return a JSON object with two fields:
