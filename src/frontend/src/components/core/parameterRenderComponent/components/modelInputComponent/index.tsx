@@ -1,3 +1,5 @@
+import Fuse from "fuse.js";
+import { useCallback, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,15 +15,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
-import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
+import ApiKeyModal from "@/modals/apiKeyModal";
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
-import Fuse from "fuse.js";
-import { useCallback, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
-import InputComponent from "../inputComponent";
 
 export type ModelInputComponentType = {
   model_type: "language" | "embedding";
@@ -62,6 +61,8 @@ export default function ModelInputComponent({
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
     null,
   );
+  const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const refButton = useRef<HTMLButtonElement>(null);
   const isLoading = false;
@@ -156,8 +157,7 @@ export default function ModelInputComponent({
   }, []);
 
   const handleSendApiKey = useCallback(() => {
-    // This could be used for future API key management
-    console.log("Send API Key clicked");
+    setOpenApiKeyDialog(true);
   }, []);
 
   const renderTriggerButton = () => (
@@ -217,39 +217,37 @@ export default function ModelInputComponent({
     </div>
   );
 
-  const [apiKey, setApiKey] = useState("");
-
   // Render API key input and send button when a model is selected
   const renderApiKeyInput = () => {
     if (!selectedModel) return null;
 
     return (
-      <div className="flex flex-col gap-3">
-        {getCustomParameterTitle({
-          title: `${selectedProvider || "Provider"} API Key`,
-          nodeId: id,
-          isFlexView: false,
-          required: true,
-        })}
-        <InputComponent
-          id={`${id}-api-key`}
-          value={apiKey}
-          disabled={false}
-          editNode={false}
-          password={true}
-          placeholder="Enter model API key"
-          onChange={(value) => setApiKey(value)}
-          hidePopover={true}
-        />
-        <Button
-          onClick={handleSendApiKey}
-          size="sm"
-          className="whitespace-nowrap"
-          data-testid="enable-provider-button"
-        >
-          {`Enable ${selectedProvider || "Provider"}`}
-        </Button>
-      </div>
+      //     <div className="flex flex-col gap-3">
+      //       {getCustomParameterTitle({
+      //         title: `${selectedProvider || "Provider"} API Key`,
+      //         nodeId: id,
+      //         isFlexView: false,
+      //         required: true,
+      //       })}
+      //       <InputComponent
+      //         id={`${id}-api-key`}
+      //         value={apiKey}
+      //         disabled={false}
+      //         editNode={false}
+      //         password={true}
+      //         placeholder="Enter model API key"
+      //         onChange={(value) => setApiKey(value)}
+      //         hidePopover={true}
+      //       />
+      <Button
+        onClick={handleSendApiKey}
+        size="sm"
+        className="whitespace-nowrap"
+        data-testid="enable-provider-button"
+      >
+        {`Enable ${selectedProvider || "Provider"}`}
+      </Button>
+      //     </div>
     );
   };
 
@@ -411,6 +409,14 @@ export default function ModelInputComponent({
         </PopoverContentWithoutPortal>
       </Popover>
       {renderApiKeyInput()}
+      {openApiKeyDialog && (
+        <ApiKeyModal
+          open={openApiKeyDialog}
+          onClose={() => setOpenApiKeyDialog(false)}
+          provider={selectedProvider || "Provider"}
+          onSave={handleApiKeyChange}
+        />
+      )}
     </>
   );
 }

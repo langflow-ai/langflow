@@ -1,5 +1,6 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-
+import { X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +17,6 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
-import { X } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 const OptionBadge = ({
   option,
@@ -238,7 +237,9 @@ const CustomInputPopover = ({
         <div
           data-testid={`anchor-${id}`}
           className={getAnchorClassName(editNode, disabled, isFocused)}
-          onClick={() => !nodeStyle && !disabled && !hidePopover && setShowOptions(true)}
+          onClick={() =>
+            !nodeStyle && !disabled && !hidePopover && setShowOptions(true)
+          }
         >
           {!disabled && selectedOptions?.length > 0 ? (
             <div className="mr-5 flex flex-wrap gap-2">
