@@ -18,10 +18,10 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 if TYPE_CHECKING:
     from langflow.schema import DataFrame
-    from langflow.schema.message import Message
 
 
 class MockConversionStatus(Enum):
