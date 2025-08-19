@@ -3,4 +3,6 @@ export type PlaygroundStoreType = {
   setSelectedSession: (selectedSession: string | undefined) => void;
   isPlayground: boolean;
   setIsPlayground: (isPlayground: boolean) => void;
+  isFullscreen: boolean;
+  setIsFullscreen: (isFullscreen: boolean) => void;
 };

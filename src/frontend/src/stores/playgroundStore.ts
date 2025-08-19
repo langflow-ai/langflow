@@ -7,4 +7,6 @@ export const usePlaygroundStore = create<PlaygroundStoreType>((set) => ({
     set({ selectedSession }),
   isPlayground: false,
   setIsPlayground: (isPlayground: boolean) => set({ isPlayground }),
+  isFullscreen: false,
+  setIsFullscreen: (isFullscreen: boolean) => set({ isFullscreen }),
 }));
