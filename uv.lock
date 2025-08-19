@@ -5606,7 +5606,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.1.1"
+version = "0.1.3"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "aiofile" },
