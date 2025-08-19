@@ -748,7 +748,6 @@ class ModelInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolMode
             return self._get_embedding_model_options()
         return self._get_language_model_options()  # Default to language models
 
-
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
