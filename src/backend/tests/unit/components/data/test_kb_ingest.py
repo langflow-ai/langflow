@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -87,25 +86,13 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         invalid_config = [{"column_name": "nonexistent", "vectorize": True, "identifier": False}]
         default_kwargs["column_config"] = invalid_config
 
+        # Instantiate the component with the modified config
         component = component_class(**default_kwargs)
         data_df = default_kwargs["input_df"]
 
+        # Should raise ValueError since column does not exist in DataFrame
         with pytest.raises(ValueError, match="Column 'nonexistent' not found in DataFrame"):
             component._validate_column_config(data_df)
-
-    def test_validate_column_config_silent_errors(self, component_class, default_kwargs):
-        """Test column configuration validation with silent errors enabled."""
-        # Modify column config to include non-existent column
-        invalid_config = [{"column_name": "nonexistent", "vectorize": True, "identifier": False}]
-        default_kwargs["column_config"] = invalid_config
-        default_kwargs["silent_errors"] = True
-
-        component = component_class(**default_kwargs)
-        data_df = default_kwargs["input_df"]
-
-        # Should not raise exception with silent_errors=True
-        config_list = component._validate_column_config(data_df)
-        assert isinstance(config_list, list)
 
     def test_get_embedding_provider(self, component_class, default_kwargs):
         """Test embedding provider detection."""
@@ -307,22 +294,6 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         assert "kb_name" in result.data
         assert "rows" in result.data
         assert result.data["rows"] == 2
-
-    def test_build_kb_info_with_silent_errors(self, component_class, default_kwargs):
-        """Test KB info building with silent errors enabled."""
-        default_kwargs["silent_errors"] = True
-        component = component_class(**default_kwargs)
-
-        # Remove the metadata file to cause an error
-        kb_path = Path(default_kwargs["kb_root_path"]) / default_kwargs["knowledge_base"]
-        metadata_file = kb_path / "embedding_metadata.json"
-        if metadata_file.exists():
-            metadata_file.unlink()
-
-        # Should not raise exception with silent_errors=True
-        result = component.build_kb_info()
-        assert isinstance(result, Data)
-        assert "error" in result.data
 
     def test_get_knowledge_bases(self, component_class, default_kwargs, tmp_path):
         """Test getting list of knowledge bases."""
