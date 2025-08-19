@@ -277,7 +277,7 @@ class Component(CustomComponent):
         return {
             "_user_id": self.user_id,
             "_session_id": self.graph.session_id,
-            "_tracing_service": self._tracing_service,
+            "_tracing_service": self.tracing_service,
         }
 
     @property
@@ -1070,9 +1070,9 @@ class Component(CustomComponent):
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
-        async with self._tracing_service.trace_component(self, self.trace_name, inputs, metadata):
+        async with self.tracing_service.trace_component(self, self.trace_name, inputs, metadata):
             results, artifacts = await self._build_results()
-            self._tracing_service.set_outputs(self.trace_name, results)
+            self.tracing_service.set_outputs(self.trace_name, results)
 
         return results, artifacts
 
@@ -1088,7 +1088,7 @@ class Component(CustomComponent):
         else:
             session_id = None
         try:
-            if self._tracing_service:
+            if self.tracing_service:
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except StreamingError as e:
@@ -1271,8 +1271,8 @@ class Component(CustomComponent):
     def _finalize_results(self, results, artifacts):
         self._artifacts = artifacts
         self._results = results
-        if self._tracing_service:
-            self._tracing_service.set_outputs(self.trace_name, results)
+        if self.tracing_service:
+            self.tracing_service.set_outputs(self.trace_name, results)
 
     def custom_repr(self):
         if self.repr_value == "":
@@ -1462,8 +1462,8 @@ class Component(CustomComponent):
         )
 
     def get_project_name(self):
-        if hasattr(self, "_tracing_service") and self._tracing_service:
-            return self._tracing_service.project_name
+        if hasattr(self, "_tracing_service") and self.tracing_service:
+            return self.tracing_service.project_name
         return "Langflow"
 
     def log(self, message: LoggableType | list[LoggableType], name: str | None = None) -> None:
@@ -1477,8 +1477,8 @@ class Component(CustomComponent):
             name = f"Log {len(self._logs) + 1}"
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        if self._tracing_service and self._vertex:
-            self._tracing_service.add_log(trace_name=self.trace_name, log=log)
+        if self.tracing_service and self._vertex:
+            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
         if self._event_manager is not None and self._current_output:
             data = log.model_dump()
             data["output"] = self._current_output

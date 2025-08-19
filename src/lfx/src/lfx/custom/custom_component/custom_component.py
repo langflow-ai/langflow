@@ -198,6 +198,19 @@ class CustomComponent(BaseComponent):
     def flow_name(self):
         return self.graph.flow_name
 
+    @property
+    def tracing_service(self):
+        """Lazily initialize tracing service only when accessed."""
+        if self._tracing_service is None:
+            from lfx.services.deps import get_tracing_service
+
+            try:
+                self._tracing_service = get_tracing_service()
+            except Exception:  # noqa: BLE001
+                # Broad exception is intentional - we want to gracefully handle any service initialization error
+                self._tracing_service = None
+        return self._tracing_service
+
     def _get_field_order(self):
         return self.field_order or list(self.field_config.keys())
 
