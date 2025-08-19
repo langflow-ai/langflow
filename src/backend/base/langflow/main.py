@@ -319,14 +319,25 @@ def create_app():
     )
 
     setup_sentry(app)
-    origins = ["*"]
-
+    
+    settings = get_settings_service().settings
+    
+    origins = settings.cors_origins
+    if isinstance(origins, str) and origins != "*":
+        origins = [origins]
+    
+    # Ensure safe configuration
+    allow_credentials = settings.cors_allow_credentials
+    if origins == "*" and allow_credentials:
+        logger.warning("SECURITY: Disabling credentials for wildcard CORS origins")
+        allow_credentials = False
+    
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=allow_credentials,
+        allow_methods=settings.cors_allow_methods,
+        allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
@@ -375,7 +386,6 @@ def create_app():
 
         return await call_next(request)
 
-    settings = get_settings_service().settings
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
