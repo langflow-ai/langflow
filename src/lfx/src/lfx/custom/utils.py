@@ -48,6 +48,10 @@ def _generate_code_hash(source_code: str, modname: str) -> str:
         UnicodeEncodeError: If source_code cannot be encoded
         TypeError: If source_code is not a string
     """
+    if not isinstance(source_code, str):
+        msg = "Source code must be a string"
+        raise TypeError(msg)
+
     if not source_code:
         msg = f"Empty source code for {modname}"
         raise ValueError(msg)
