@@ -1,4 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
+import { AnimatedConditional } from "@/components/ui/animated-close";
+import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 import { DEFAULT_SESSION_NAME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -13,6 +15,12 @@ export function PlaygroundHeader() {
 
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
 
+  const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
+
+  const toggleFullscreen = usePlaygroundStore(
+    (state) => state.toggleFullscreen
+  );
+
   const sessionName =
     selectedSession === flowId ? DEFAULT_SESSION_NAME : selectedSession;
 
@@ -20,6 +28,13 @@ export function PlaygroundHeader() {
     useEditSessionInfo({
       flowId,
     });
+
+  const { setOpen } = useSimpleSidebar();
+
+  const onClose = () => {
+    toggleFullscreen();
+    setOpen(false);
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 px-4 py-3">
@@ -39,15 +54,22 @@ export function PlaygroundHeader() {
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <SessionMenuDropdown
-          onRename={handleEditStart}
-          onDelete={handleDelete}
-          onLogs={() => {}}
-        >
-          <HeaderButton icon="MoreVertical" />
-        </SessionMenuDropdown>
-
-        <HeaderButton icon="Expand" onClick={() => {}} />
+        <AnimatedConditional isOpen={!isFullscreen}>
+          <SessionMenuDropdown
+            onRename={handleEditStart}
+            onDelete={handleDelete}
+            onLogs={() => {}}
+          >
+            <HeaderButton icon="MoreVertical" />
+          </SessionMenuDropdown>
+        </AnimatedConditional>
+        <HeaderButton
+          icon={isFullscreen ? "Shrink" : "Expand"}
+          onClick={toggleFullscreen}
+        />
+        <AnimatedConditional isOpen={isFullscreen}>
+          <HeaderButton icon="X" onClick={onClose} />
+        </AnimatedConditional>
       </div>
     </div>
   );
