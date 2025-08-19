@@ -1,11 +1,11 @@
-import * as Form from "@radix-ui/react-form";
-import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import type { InputComponentType } from "@/types/components";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
+import * as Form from "@radix-ui/react-form";
+import { useEffect, useRef, useState } from "react";
 import { getIconName } from "./components/helpers/get-icon-name";
 import CustomInputPopover from "./components/popover";
 import CustomInputPopoverObject from "./components/popoverObject";
@@ -43,6 +43,7 @@ export default function InputComponent({
   commandWidth,
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
+  hidePopover = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -134,6 +135,7 @@ export default function InputComponent({
               blurOnEnter={blurOnEnter}
               optionsPlaceholder={optionsPlaceholder}
               className={className}
+              hidePopover={hidePopover}
             />
           ) : (
             <CustomInputPopover
@@ -166,6 +168,7 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
+              hidePopover={hidePopover}
             />
           )}
         </>
@@ -183,7 +186,7 @@ export default function InputComponent({
             <button
               disabled={disabled}
               onClick={(e) => {
-                if (disabled) return;
+                if (disabled || hidePopover) return;
                 setShowOptions(!showOptions);
                 e.preventDefault();
                 e.stopPropagation();

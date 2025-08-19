@@ -1,5 +1,3 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -15,6 +13,8 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { classNames, cn } from "@/utils/utils";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { useEffect, useState } from "react";
 
 const CustomInputPopoverObject = ({
   id,
@@ -40,6 +40,7 @@ const CustomInputPopoverObject = ({
   optionsButton,
   handleKeyDown,
   showOptions,
+  hidePopover,
 }) => {
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -87,6 +88,7 @@ const CustomInputPopoverObject = ({
             (((selectedOption !== "" || !onChange) && setSelectedOption) ||
               ((selectedOptions?.length !== 0 || !onChange) &&
                 setSelectedOptions)) &&
+              !hidePopover &&
               setShowOptions(true);
           }}
           required={required}

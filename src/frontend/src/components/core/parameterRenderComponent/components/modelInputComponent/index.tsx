@@ -1,5 +1,3 @@
-import Fuse from "fuse.js";
-import { useCallback, useMemo, useRef, useState } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +17,11 @@ import { getCustomParameterTitle } from "@/customization/components/custom-param
 import useAlertStore from "@/stores/alertStore";
 import { convertStringToHTML } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
+import Fuse from "fuse.js";
+import { useCallback, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import type { BaseInputProps } from "../../types";
-import InputGlobalComponent from "../inputGlobalComponent";
+import InputComponent from "../inputComponent";
 
 export type ModelInputComponentType = {
   model_type: "language" | "embedding";
@@ -217,6 +217,8 @@ export default function ModelInputComponent({
     </div>
   );
 
+  const [apiKey, setApiKey] = useState("");
+
   // Render API key input and send button when a model is selected
   const renderApiKeyInput = () => {
     if (!selectedModel) return null;
@@ -229,16 +231,15 @@ export default function ModelInputComponent({
           isFlexView: false,
           required: true,
         })}
-        <InputGlobalComponent
+        <InputComponent
           id={`${id}-api-key`}
-          display_name={`${selectedProvider || "Provider"} API Key`}
-          value={""}
+          value={apiKey}
           disabled={false}
           editNode={false}
-          handleOnNewValue={({ value }: any) => handleApiKeyChange(value)}
           password={true}
-          load_from_db={false}
           placeholder="Enter model API key"
+          onChange={(value) => setApiKey(value)}
+          hidePopover={true}
         />
         <Button
           onClick={handleSendApiKey}
