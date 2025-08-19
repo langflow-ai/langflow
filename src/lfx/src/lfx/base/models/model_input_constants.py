@@ -1,14 +1,6 @@
 from typing_extensions import TypedDict
 
 from lfx.base.models.model import LCModelComponent
-from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
-from lfx.components.anthropic.anthropic import AnthropicModelComponent
-from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
-from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
-from lfx.components.groq.groq import GroqModel
-from lfx.components.nvidia.nvidia import NVIDIAModelComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
-from lfx.components.sambanova.sambanova import SambaNovaComponent
 from lfx.inputs.inputs import InputTypes, SecretStrInput
 from lfx.template.field.base import Input
 
@@ -182,6 +174,8 @@ MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
 try:
+    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+
     openai_inputs, openai_fields = _get_openai_inputs_and_fields()
     MODEL_PROVIDERS_DICT["OpenAI"] = {
         "fields": openai_fields,
@@ -195,6 +189,8 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
+
     azure_inputs, azure_fields = _get_azure_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Azure OpenAI"] = {
         "fields": azure_fields,
@@ -208,6 +204,8 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.groq.groq import GroqModel
+
     groq_inputs, groq_fields = _get_groq_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Groq"] = {
         "fields": groq_fields,
@@ -221,6 +219,8 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.anthropic.anthropic import AnthropicModelComponent
+
     anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Anthropic"] = {
         "fields": anthropic_fields,
@@ -234,6 +234,8 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+
     nvidia_inputs, nvidia_fields = _get_nvidia_inputs_and_fields()
     MODEL_PROVIDERS_DICT["NVIDIA"] = {
         "fields": nvidia_fields,
@@ -247,6 +249,8 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+
     bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {
         "fields": bedrock_fields,
@@ -260,6 +264,8 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
+
     google_generative_ai_inputs, google_generative_ai_fields = _get_google_generative_ai_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Google Generative AI"] = {
         "fields": google_generative_ai_fields,
@@ -273,6 +279,8 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.sambanova.sambanova import SambaNovaComponent
+
     sambanova_inputs, sambanova_fields = _get_sambanova_inputs_and_fields()
     MODEL_PROVIDERS_DICT["SambaNova"] = {
         "fields": sambanova_fields,
