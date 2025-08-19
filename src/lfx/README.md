@@ -24,6 +24,36 @@ cd langflow/src/lfx
 uv run lfx serve my_flow.json
 ```
 
+## Key Features
+
+### Flattened Component Access
+
+lfx now supports simplified component imports for better developer experience:
+
+**Before (old import style):**
+```python
+from lfx.components.agents.agent import AgentComponent
+from lfx.components.data.url import URLComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+```
+
+**Now (new flattened style):**
+```python
+from lfx import components as cp
+
+# Direct access to all components
+chat_input = cp.ChatInput()
+agent = cp.AgentComponent()
+url_component = cp.URLComponent()
+chat_output = cp.ChatOutput()
+```
+
+**Benefits:**
+- **Simpler imports**: One import line instead of multiple deep imports
+- **Better discovery**: All components accessible via `cp.ComponentName`
+- **Helpful error messages**: Clear guidance when dependencies are missing
+- **Backward compatible**: Traditional imports still work
+
 ## Commands
 
 ### `lfx serve` - Run flows as an API
@@ -121,6 +151,7 @@ This script demonstrates how to set up a conversational agent using Langflow's
 Agent component with web search capabilities.
 
 Features:
+- Uses the new flattened component access (cp.AgentComponent instead of deep imports)
 - Configures logging to 'langflow.log' at INFO level
 - Creates an agent with OpenAI GPT model
 - Provides web search tools via URLComponent
@@ -133,9 +164,8 @@ Usage:
 import os
 from pathlib import Path
 
-from lfx.components.agents.agent import AgentComponent
-from lfx.components.data.url import URLComponent
-from lfx.components.input_output import ChatInput, ChatOutput
+# Using the new flattened component access
+from lfx import components as cp
 from lfx.graph import Graph
 from lfx.lfx_logging.logger import LogConfig
 
@@ -143,10 +173,13 @@ log_config = LogConfig(
     log_level="INFO",
     log_file=Path("langflow.log"),
 )
-chat_input = ChatInput()
-agent = AgentComponent()
-url_component = URLComponent()
+
+# Showcase the new flattened component access - no need for deep imports!
+chat_input = cp.ChatInput()
+agent = cp.AgentComponent()
+url_component = cp.URLComponent()
 tools = url_component.to_toolkit()
+
 agent.set(
     model_name="gpt-4.1-mini",
     agent_llm="OpenAI",
@@ -154,7 +187,7 @@ agent.set(
     input_value=chat_input.message_response,
     tools=tools,
 )
-chat_output = ChatOutput().set(input_value=agent.message_response)
+chat_output = cp.ChatOutput().set(input_value=agent.message_response)
 
 graph = Graph(chat_input, chat_output, log_config=log_config)
 ```
