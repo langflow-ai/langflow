@@ -1,9 +1,11 @@
 "use client";
 
+import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { cn } from "../../utils/utils";
+import { Button } from "./button";
 
 const SIMPLE_SIDEBAR_WIDTH = "400px";
 
@@ -178,7 +180,7 @@ const SimpleSidebarTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, onClick, children, ...props }, ref) => {
-  const { toggleSidebar } = useSimpleSidebar();
+  const { toggleSidebar, open } = useSimpleSidebar();
 
   const handleClick = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -189,15 +191,26 @@ const SimpleSidebarTrigger = React.forwardRef<
   );
 
   return (
-    <button
+    <Button
       ref={ref}
-      data-simple-sidebar="trigger"
-      className={cn("outline-none", className)}
+      data-sidebar="trigger"
+      variant="ghost"
+      size="md"
+      className={cn(
+        "!px-2 !transition-all !font-normal !duration-200 !justify-start overflow-hidden",
+        open || !children ? "w-8 !gap-2.5" : "w-[6.8rem]",
+        className
+      )}
       onClick={handleClick}
       {...props}
     >
+      {open ? (
+        <PanelLeftOpen strokeWidth={1.5} />
+      ) : (
+        <PanelRightOpen strokeWidth={1.5} />
+      )}
       {children}
-    </button>
+    </Button>
   );
 });
 SimpleSidebarTrigger.displayName = "SimpleSidebarTrigger";
