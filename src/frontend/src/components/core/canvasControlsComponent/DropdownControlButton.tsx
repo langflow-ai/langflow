@@ -1,7 +1,7 @@
+import React from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import React from "react";
 import ToggleShadComponent from "../parameterRenderComponent/components/toggleShadComponent";
 import { getModifierKey } from "./utils/canvasUtils";
 
@@ -51,7 +51,12 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
       <span className="text-muted-foreground text-sm mr-2 group-hover:text-primary">
         {label}
       </span>
-      <div className={cn("flex flex-row items-center text-sm", shortcut && "w-[25px]")}>
+      <div
+        className={cn(
+          "flex flex-row items-center text-sm",
+          shortcut && "w-[25px]",
+        )}
+      >
         {shortcut && (
           <div className="flex items-center justify-between w-full text-muted-foreground group-hover:text-primary">
             <span>{getModifierKey()}</span>
