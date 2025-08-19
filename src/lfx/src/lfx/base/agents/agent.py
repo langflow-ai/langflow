@@ -1,4 +1,5 @@
 import re
+import uuid
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -171,7 +172,7 @@ class LCAgentComponent(Component):
             sender_name=self.display_name or "Agent",
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
-            session_id=session_id,
+            session_id=session_id or uuid.uuid4(),
         )
         try:
             result = await process_agent_events(
