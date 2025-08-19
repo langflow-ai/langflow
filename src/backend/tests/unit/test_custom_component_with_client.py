@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing.constants import Data
 

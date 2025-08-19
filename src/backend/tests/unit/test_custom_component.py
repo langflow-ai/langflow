@@ -5,7 +5,6 @@ from textwrap import dedent
 
 import pytest
 from langchain_core.documents import Document
-
 from langflow.custom import Component, CustomComponent
 from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError

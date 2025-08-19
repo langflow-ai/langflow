@@ -4,9 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from langflow.services.settings.base import Settings
 
 

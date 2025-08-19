@@ -303,19 +303,19 @@ def create_app():
     )
 
     setup_sentry(app)
-    
+
     settings = get_settings_service().settings
-    
+
     origins = settings.cors_origins
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
-    
+
     # Ensure safe configuration
     allow_credentials = settings.cors_allow_credentials
     if origins == "*" and allow_credentials:
         logger.warning("SECURITY: Disabling credentials for wildcard CORS origins")
         allow_credentials = False
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

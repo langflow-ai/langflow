@@ -4,8 +4,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from langflow.components.data.kb_retrieval import KBRetrievalComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
