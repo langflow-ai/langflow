@@ -100,6 +100,31 @@ class DatabaseVariableService(VariableService, Service):
             variables_read.append(variable_read)
         return variables_read
 
+    async def get_by_category(
+        self,
+        user_id: UUID | str,
+        category: str,
+        session: AsyncSession,
+    ) -> list[VariableRead]:
+        stmt = select(Variable).where(Variable.user_id == user_id, Variable.category == category)
+        variables = list((await session.exec(stmt)).all())
+
+        variables_read: list[VariableRead] = []
+        for variable in variables:
+            value = None
+            if variable.type == GENERIC_TYPE:
+                try:
+                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(
+                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
+                    )
+                    value = variable.value
+            variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            variable_read.value = value
+            variables_read.append(variable_read)
+        return variables_read
+
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         variables = await self.get_all(user_id=user_id, session=session)
         return [variable.name for variable in variables if variable]
