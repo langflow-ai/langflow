@@ -4824,6 +4824,7 @@ version = "1.5.0.post2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofile" },
+    { name = "aiosqlite" },
     { name = "apify-client" },
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
@@ -5017,6 +5018,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
+    { name = "aiosqlite", specifier = "==0.21.0" },
     { name = "apify-client", specifier = ">=1.8.1" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
