@@ -27,8 +27,8 @@ class TestCodeHashGeneration:
             _generate_code_hash("", "mod")
 
     def test_hash_none_source_raises(self):
-        """Test that None source raises ValueError."""
-        with pytest.raises(ValueError, match="Empty source code"):
+        """Test that None source raises TypeError."""
+        with pytest.raises(TypeError, match="Source code must be a string"):
             _generate_code_hash(None, "mod")
 
     def test_hash_consistency(self):
@@ -157,11 +157,11 @@ class TestMetadataInTemplateBuilders:
         with pytest.raises(TypeError, match="Source code must be a string"):
             _generate_code_hash(mock_code, "mod")
 
-    @patch("langflow.custom.utils.ComponentFrontendNode")
+    @patch("lfx.custom.utils.ComponentFrontendNode")
     def test_build_from_inputs_without_module_generates_default(self, mock_frontend_class):
         """Test that build_custom_component_template_from_inputs generates default module when module_name is None."""
-        from langflow.custom.custom_component.component import Component
-        from langflow.custom.utils import build_custom_component_template_from_inputs
+        from lfx.custom.custom_component.component import Component
+        from lfx.custom.utils import build_custom_component_template_from_inputs
 
         # Setup mock frontend node
         mock_frontend = Mock()
@@ -180,7 +180,7 @@ class TestMetadataInTemplateBuilders:
         test_component.template_config = {"inputs": []}
 
         # Mock get_component_instance to return a mock instance
-        with patch("langflow.custom.utils.get_component_instance") as mock_get_instance:
+        with patch("lfx.custom.utils.get_component_instance") as mock_get_instance:
             mock_instance = Mock()
             mock_instance.get_template_config = Mock(return_value={})
             mock_instance._get_field_order = Mock(return_value=[])
@@ -188,8 +188,8 @@ class TestMetadataInTemplateBuilders:
 
             # Mock add_code_field to return the frontend node
             with (
-                patch("langflow.custom.utils.add_code_field", return_value=mock_frontend),
-                patch("langflow.custom.utils.reorder_fields"),
+                patch("lfx.custom.utils.add_code_field", return_value=mock_frontend),
+                patch("lfx.custom.utils.reorder_fields"),
             ):
                 # Call the function without module_name
                 template, _ = build_custom_component_template_from_inputs(test_component, module_name=None)
