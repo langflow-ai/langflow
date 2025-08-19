@@ -1,3 +1,4 @@
+import importlib
 import re
 
 import requests
@@ -23,6 +24,15 @@ URL_REGEX = re.compile(
     r"^(https?:\/\/)?" r"(www\.)?" r"([a-zA-Z0-9.-]+)" r"(\.[a-zA-Z]{2,})?" r"(:\d+)?" r"(\/[^\s]*)?$",
     re.IGNORECASE,
 )
+
+USER_AGENT = None
+# Check if langflow is installed using importlib.util.find_spec(name))
+if importlib.util.find_spec("langflow"):
+    langflow_installed = True
+    USER_AGENT = get_user_agent()
+else:
+    langflow_installed = False
+    USER_AGENT = "lfx"
 
 
 class URLComponent(Component):
@@ -128,7 +138,7 @@ class URLComponent(Component):
                     "description": "Header value",
                 },
             ],
-            value=[{"key": "User-Agent", "value": get_user_agent()}],
+            value=[{"key": "User-Agent", "value": USER_AGENT}],
             advanced=True,
             input_types=["DataFrame"],
         ),
