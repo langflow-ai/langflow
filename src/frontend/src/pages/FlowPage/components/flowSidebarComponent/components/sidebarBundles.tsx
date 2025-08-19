@@ -30,7 +30,8 @@ export const MemoizedSidebarGroup = memo(
         );
       }).filter(
         (item: { name: string | number }) =>
-          dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0
+          dataFilter[item.name] &&
+          Object.keys(dataFilter[item.name]).length > 0,
       );
     }, [BUNDLES, search, sortedCategories, dataFilter]);
 
@@ -58,7 +59,7 @@ export const MemoizedSidebarGroup = memo(
         </SidebarGroupContent>
       </SidebarGroup>
     );
-  }
+  },
 );
 
 MemoizedSidebarGroup.displayName = "MemoizedSidebarGroup";

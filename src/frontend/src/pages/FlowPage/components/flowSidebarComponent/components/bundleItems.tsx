@@ -27,10 +27,10 @@ export const BundleItem = memo(
         setOpenCategories((prev: string[]) =>
           isOpen
             ? [...prev, item.name]
-            : prev.filter((cat) => cat !== item.name)
+            : prev.filter((cat) => cat !== item.name),
         );
       },
-      [item.name, setOpenCategories]
+      [item.name, setOpenCategories],
     );
 
     return (
@@ -71,7 +71,7 @@ export const BundleItem = memo(
         </SidebarMenuItem>
       </Disclosure>
     );
-  }
+  },
 );
 
 BundleItem.displayName = "BundleItem";
