@@ -13,7 +13,6 @@ from lfx.inputs import (
 
 class ComposioSlackAPIComponent(ComposioBaseComponent):
     display_name: str = "Slack"
-    description: str = "Slack API"
     icon = "Slack"
     documentation: str = "https://docs.composio.dev"
     app_name = "slack"
@@ -578,9 +577,3 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         return super().update_build_config(build_config, field_value, field_name)
-
-    def set_default_tools(self):
-        self._default_tools = {
-            "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
-            "SLACK_SEARCH_FOR_MESSAGES_WITH_QUERY",
-        }

@@ -1220,8 +1220,8 @@
                 "display_name": "File Path",
                 "group_outputs": false,
                 "method": "save_to_file",
-                "name": "result",
-                "selected": "Text",
+                "name": "message",
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"

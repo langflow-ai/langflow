@@ -2,11 +2,11 @@
   "data": {
     "edges": [
       {
-        "className": "",
+        "animated": false,
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-Z3rM3",
+            "id": "TextInput-WyJxO",
             "name": "text",
             "output_types": [
               "Message"
@@ -14,25 +14,26 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "KBRetrieval-tGoBR",
+            "id": "KBRetrieval-zz3I0",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__TextInput-Z3rM3{œdataTypeœ:œTextInputœ,œidœ:œTextInput-Z3rM3œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-tGoBR{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-tGoBRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "TextInput-Z3rM3",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-Z3rM3œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "KBRetrieval-tGoBR",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-tGoBRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__TextInput-WyJxO{œdataTypeœ:œTextInputœ,œidœ:œTextInput-WyJxOœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KBRetrieval-zz3I0{œfieldNameœ:œsearch_queryœ,œidœ:œKBRetrieval-zz3I0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "TextInput-WyJxO",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-WyJxOœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "KBRetrieval-zz3I0",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKBRetrieval-zz3I0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
+        "animated": false,
         "data": {
           "sourceHandle": {
             "dataType": "KBRetrieval",
-            "id": "KBRetrieval-tGoBR",
+            "id": "KBRetrieval-zz3I0",
             "name": "chroma_kb_data",
             "output_types": [
               "DataFrame"
@@ -40,7 +41,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-tixOe",
+            "id": "ChatOutput-N7nxz",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -49,17 +50,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__KBRetrieval-tGoBR{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-tGoBRœ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-tixOe{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tixOeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "KBRetrieval-tGoBR",
-        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-tGoBRœ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ChatOutput-tixOe",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tixOeœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__KBRetrieval-zz3I0{œdataTypeœ:œKBRetrievalœ,œidœ:œKBRetrieval-zz3I0œ,œnameœ:œchroma_kb_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-N7nxz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-N7nxzœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "KBRetrieval-zz3I0",
+        "sourceHandle": "{œdataTypeœ: œKBRetrievalœ, œidœ: œKBRetrieval-zz3I0œ, œnameœ: œchroma_kb_dataœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ChatOutput-N7nxz",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-N7nxzœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-YyBfz",
+          "id": "note-f86G8",
           "node": {
             "description": "## Knowledge Retrieval\n\nA stand-alone component handles the retrieval of ingested knowledge from existing knowledge bases. To retrieve knowledge:\n\n1. Select your knowledge base from the Knowledge Base dropdown. If you do not see it, choose \"Refresh List\".\n2. (Optional) Enter a Search Query to be performed against the knowledge base.\n\nNote that by default, 5 results are returned, which can be configured by clicking Controls at the top of the component.\n",
             "display_name": "",
@@ -70,7 +72,7 @@
         },
         "dragging": false,
         "height": 384,
-        "id": "note-YyBfz",
+        "id": "note-f86G8",
         "measured": {
           "height": 384,
           "width": 371
@@ -86,7 +88,7 @@
       },
       {
         "data": {
-          "id": "TextInput-Z3rM3",
+          "id": "TextInput-WyJxO",
           "node": {
             "base_classes": [
               "Message"
@@ -180,7 +182,7 @@
           "type": "TextInput"
         },
         "dragging": false,
-        "id": "TextInput-Z3rM3",
+        "id": "TextInput-WyJxO",
         "measured": {
           "height": 204,
           "width": 320
@@ -194,7 +196,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-tixOe",
+          "id": "ChatOutput-N7nxz",
           "node": {
             "base_classes": [
               "Message"
@@ -492,7 +494,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-tixOe",
+        "id": "ChatOutput-N7nxz",
         "measured": {
           "height": 48,
           "width": 192
@@ -506,7 +508,7 @@
       },
       {
         "data": {
-          "id": "KBRetrieval-tGoBR",
+          "id": "KBRetrieval-zz3I0",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -527,7 +529,7 @@
             ],
             "frozen": false,
             "icon": "database",
-            "last_updated": "2025-08-13T19:46:57.894Z",
+            "last_updated": "2025-08-14T17:19:22.182Z",
             "legacy": false,
             "metadata": {
               "code_hash": "1ff926e02193",
@@ -591,7 +593,7 @@
               },
               "include_metadata": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Include Metadata",
                 "dynamic": false,
                 "info": "Whether to include all metadata and embeddings in the output. If false, only content is returned.",
@@ -678,28 +680,28 @@
           "type": "KBRetrieval"
         },
         "dragging": false,
-        "id": "KBRetrieval-tGoBR",
+        "id": "KBRetrieval-zz3I0",
         "measured": {
-          "height": 286,
+          "height": 329,
           "width": 320
         },
         "position": {
-          "x": 640.6283193600648,
-          "y": -313.9694258557284
+          "x": 616.6226476085393,
+          "y": -343.13068334363356
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 285.0464459586908,
-      "y": 588.7377652547386,
-      "zoom": 0.9833370380356916
+      "x": 177.06633386268413,
+      "y": 482.8027480187026,
+      "zoom": 0.8999566725119924
     }
   },
   "description": "An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.",
   "endpoint_name": null,
-  "id": "670745f6-08b1-480e-bdaf-64ba74967cba",
+  "id": "5487ee05-73d5-4b12-9b41-bc4c3a2f9326",
   "is_component": false,
   "last_tested_version": "1.5.0.post1",
   "name": "Knowledge Retrieval",
