@@ -91,9 +91,10 @@ if TYPE_CHECKING:
         zep,
     )
 
-# Dynamic imports mapping - maps module name to module directory
-# Include all component modules that exist in the directory
+
+# Dynamic imports mapping - maps both modules and individual components
 _dynamic_imports = {
+    # Category modules (existing functionality)
     "agentql": "__module__",
     "agents": "__module__",
     "aiml": "__module__",
@@ -178,6 +179,42 @@ _dynamic_imports = {
     "zep": "__module__",
 }
 
+# Track which modules we've already discovered to avoid re-scanning
+_discovered_modules = set()
+
+
+def _discover_components_from_module(module_name):
+    """Discover individual components from a specific module on-demand."""
+    if module_name in _discovered_modules or module_name == "Notion":
+        return
+
+    try:
+        # Try to import the module and get its dynamic imports
+        module = import_mod(module_name, "__module__", __spec__.parent)
+
+        if hasattr(module, "_dynamic_imports"):
+            # Add each component from this module to our main mapping
+            new_components = []
+            current_all = globals()["__all__"]
+            for comp_name, comp_file in module._dynamic_imports.items():
+                # Create the full path: module_name.comp_file
+                _dynamic_imports[comp_name] = f"{module_name}.{comp_file}"
+                # Keep track of new components to add to __all__
+                if comp_name not in current_all:
+                    new_components.append(comp_name)
+
+            # Extend __all__ with newly discovered components
+            if new_components:
+                globals()["__all__"] = current_all + new_components
+
+        _discovered_modules.add(module_name)
+
+    except (ImportError, AttributeError):
+        # If import fails, mark as discovered to avoid retrying
+        _discovered_modules.add(module_name)
+
+
+# Static base __all__ with module names
 __all__ = [
     "Notion",
     "agentql",
@@ -265,15 +302,72 @@ __all__ = [
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import component modules on attribute access."""
+    """Lazily import component modules or individual components on attribute access.
+
+    Supports both:
+    - components.agents (module access)
+    - components.AgentComponent (direct component access)
+
+    Uses on-demand discovery - only scans modules when components are requested.
+    """
+    # First check if we already know about this attribute
+    if attr_name not in _dynamic_imports:
+        # Try to discover components from modules that might have this component
+        # Get all module names we haven't discovered yet
+        undiscovered_modules = [
+            name
+            for name in _dynamic_imports
+            if _dynamic_imports[name] == "__module__" and name not in _discovered_modules and name != "Notion"
+        ]
+
+        # Discover components from undiscovered modules
+        # Try all undiscovered modules until we find the component or exhaust the list
+        for module_name in undiscovered_modules:
+            _discover_components_from_module(module_name)
+            # Check if we found what we're looking for
+            if attr_name in _dynamic_imports:
+                break
+
+    # If still not found, raise AttributeError
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
+
     try:
-        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
-    except (ModuleNotFoundError, ImportError, AttributeError) as e:
-        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
+        module_path = _dynamic_imports[attr_name]
+
+        if module_path == "__module__":
+            # This is a module import (e.g., components.agents)
+            result = import_mod(attr_name, "__module__", __spec__.parent)
+            # After importing a module, discover its components
+            _discover_components_from_module(attr_name)
+        elif "." in module_path:
+            # This is a component import (e.g., components.AgentComponent -> agents.agent)
+            module_name, component_file = module_path.split(".", 1)
+            # Import the specific component from its module
+            result = import_mod(attr_name, component_file, f"{__spec__.parent}.{module_name}")
+        else:
+            # Fallback to regular import
+            result = import_mod(attr_name, module_path, __spec__.parent)
+
+    except (ImportError, AttributeError) as e:
+        # Check if this is a missing dependency issue by looking at the error message
+        if "No module named" in str(e):
+            # Extract the missing module name and suggest installation
+            import re
+
+            match = re.search(r"No module named '([^']+)'", str(e))
+            if match:
+                missing_module = match.group(1)
+                msg = f"Could not import '{attr_name}' from '{__name__}'. Missing dependency: '{missing_module}'. "
+            else:
+                msg = f"Could not import '{attr_name}' from '{__name__}'. Missing dependencies: {e}"
+        elif "cannot import name" in str(e):
+            msg = f"Could not import '{attr_name}' from '{__name__}'. Import error: {e}"
+        else:
+            msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
         raise AttributeError(msg) from e
+
     globals()[attr_name] = result
     return result
 
