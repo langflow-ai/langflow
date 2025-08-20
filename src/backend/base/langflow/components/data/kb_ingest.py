@@ -94,11 +94,7 @@ class KBIngestionComponent(Component):
             display_name="Knowledge",
             info="Select the knowledge to load data from.",
             required=True,
-            options=[
-                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
-            ]
-            if KNOWLEDGE_BASES_ROOT_PATH.exists()
-            else [],
+            options=[],
             refresh_button=True,
             dialog_inputs=asdict(NewKnowledgeBaseInput()),
         ),
