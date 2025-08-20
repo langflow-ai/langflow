@@ -343,6 +343,40 @@ const SimpleSidebar = React.forwardRef<
   ) => {
     const { open, isResizing, fullscreen } = useSimpleSidebar();
 
+    // Memoized animation values
+    const spacerWidth = React.useMemo(() => {
+      if (!open) return 0;
+      return fullscreen ? "100%" : "var(--simple-sidebar-width)";
+    }, [open, fullscreen]);
+
+    const sidebarWidth = React.useMemo(() => {
+      return fullscreen ? "100%" : "var(--simple-sidebar-width)";
+    }, [fullscreen]);
+
+    const sidebarLeft = React.useMemo(() => {
+      if (!open && !fullscreen && side === "left") {
+        return "calc(var(--simple-sidebar-width) * -1)";
+      }
+      if (open && (fullscreen || side === "left")) {
+        return 0;
+      }
+      return "auto";
+    }, [open, fullscreen, side]);
+
+    const sidebarRight = React.useMemo(() => {
+      if (!open && !fullscreen && side === "right") {
+        return "calc(var(--simple-sidebar-width) * -1)";
+      }
+      if (open && (fullscreen || side === "right")) {
+        return 0;
+      }
+      return "auto";
+    }, [open, fullscreen, side]);
+
+    const transitionDuration = React.useMemo(() => {
+      return isResizing && !fullscreen ? 0 : 0.3;
+    }, [isResizing, fullscreen]);
+
     return (
       <div
         ref={ref}
@@ -355,47 +389,23 @@ const SimpleSidebar = React.forwardRef<
         <motion.div
           className={cn("relative h-full bg-transparent")}
           animate={{
-            width: open
-              ? fullscreen
-                ? "100%"
-                : "var(--simple-sidebar-width)"
-              : 0,
+            width: spacerWidth,
           }}
           transition={{
-            duration: isResizing && !fullscreen ? 0 : 0.3,
+            duration: transitionDuration,
             ease: "easeInOut",
           }}
         />
         <motion.div
           className={cn("absolute inset-y-0 z-50 flex h-full", className)}
           animate={{
-            width: fullscreen ? "100%" : "var(--simple-sidebar-width)",
-            left: !open
-              ? fullscreen
-                ? "auto"
-                : side === "left"
-                ? "calc(var(--simple-sidebar-width) * -1)"
-                : "auto"
-              : fullscreen
-              ? 0
-              : side === "left"
-              ? 0
-              : "auto",
-            right: !open
-              ? fullscreen
-                ? "auto"
-                : side === "right"
-                ? "calc(var(--simple-sidebar-width) * -1)"
-                : "auto"
-              : fullscreen
-              ? 0
-              : side === "right"
-              ? 0
-              : "auto",
+            width: sidebarWidth,
+            left: sidebarLeft,
+            right: sidebarRight,
             opacity: open ? 1 : 0,
           }}
           transition={{
-            duration: 0.3,
+            duration: transitionDuration,
             ease: "easeInOut",
           }}
           style={props.style}
