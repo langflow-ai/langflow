@@ -124,6 +124,16 @@ const SimpleSidebarProvider = React.forwardRef<
       return setOpen((prev) => !prev);
     }, [setOpen]);
 
+    // Reset width and isResizing when fullscreen is true
+    React.useEffect(() => {
+      if (fullscreen) {
+        _setWidth(
+          typeof width === "string" ? parseInt(width.replace("px", "")) : width
+        );
+        _setIsResizing(false);
+      }
+    }, [fullscreen, width]);
+
     // Track parent width using ResizeObserver
     React.useEffect(() => {
       const element = internalRef.current;
@@ -228,12 +238,7 @@ const SimpleSidebarResizeHandle = React.forwardRef<
     side?: "left" | "right";
   }
 >(({ side = "right", className, ...props }, ref) => {
-  const {
-    setWidth,
-    width,
-    setIsResizing: setGlobalIsResizing,
-  } = useSimpleSidebar();
-  const [isResizing, setIsResizing] = React.useState(false);
+  const { setWidth, width, setIsResizing, isResizing } = useSimpleSidebar();
   const [dragStartX, setDragStartX] = React.useState(0);
   const [dragStartWidth, setDragStartWidth] = React.useState(0);
 
@@ -241,13 +246,12 @@ const SimpleSidebarResizeHandle = React.forwardRef<
     (e: React.MouseEvent) => {
       e.preventDefault();
       setIsResizing(true);
-      setGlobalIsResizing(true);
       setDragStartX(e.clientX);
       setDragStartWidth(width);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [width, setGlobalIsResizing]
+    [width, setIsResizing]
   );
 
   const handleMouseMove = React.useCallback(
@@ -265,10 +269,9 @@ const SimpleSidebarResizeHandle = React.forwardRef<
 
   const handleMouseUp = React.useCallback(() => {
     setIsResizing(false);
-    setGlobalIsResizing(false);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-  }, [setGlobalIsResizing]);
+  }, [setIsResizing]);
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
@@ -294,6 +297,13 @@ const SimpleSidebarResizeHandle = React.forwardRef<
       };
     }
   }, [isResizing, handleMouseMove, handleMouseUp]);
+
+  React.useEffect(() => {
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, []);
 
   return (
     <button
@@ -370,7 +380,9 @@ const SimpleSidebar = React.forwardRef<
             className="flex h-full w-full flex-col bg-background relative"
           >
             {children}
-            {resizable && open && <SimpleSidebarResizeHandle side={side} />}
+            {resizable && open && !fullscreen && (
+              <SimpleSidebarResizeHandle side={side} />
+            )}
           </div>
         </div>
       </div>
