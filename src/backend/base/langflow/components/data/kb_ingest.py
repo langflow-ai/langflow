@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import re
@@ -16,12 +17,14 @@ from loguru import logger
 
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.custom import Component
+from langflow.custom.custom_component.custom_component import get_variable_service
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
-from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
-from langflow.services.deps import get_settings_service
+from langflow.services.auth.utils import create_user_longterm_token, decrypt_api_key, encrypt_api_key, get_current_user
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_session, get_settings_service
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
@@ -76,7 +79,7 @@ class KBIngestionComponent(Component):
                                 display_name="API Key",
                                 info="Provider API key for embedding model",
                                 required=True,
-                                load_from_db=True,
+                                load_from_db=False,
                             ),
                         },
                     },
@@ -156,6 +159,13 @@ class KBIngestionComponent(Component):
             info="API key for the embedding provider to generate embeddings.",
             advanced=True,
             required=False,
+        ),
+        SecretStrInput(
+            name="langflow_api_key",
+            display_name="Langflow API Key",
+            info="Langflow API key for authentication when saving the knowledge base.",
+            required=False,
+            advanced=True,
         ),
         BoolInput(
             name="allow_duplicates",
@@ -329,22 +339,47 @@ class KBIngestionComponent(Component):
 
         return metadata
 
-    def _create_vector_store(
+    async def _get_current_user(self, db):
+        """Get the current user based on the provided API key or create a new user."""
+        if self.langflow_api_key:
+            current_user = await get_current_user(
+                token="",
+                query_param=self.langflow_api_key,
+                header_param="",
+                db=db,
+            )
+        else:
+            user_id, _ = await create_user_longterm_token(db)
+            current_user = await get_user_by_id(db, user_id)
+
+        # Fail if the user is not found
+        if not current_user:
+            msg = "User not found. Please provide a valid Langflow API key or ensure the user exists."
+            raise ValueError(msg)
+
+        return current_user
+
+    async def _create_vector_store(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
+            # Get the current user
+            async for db in get_session():
+                current_user = await self._get_current_user(db)
+
             # Set up vector store directory
             base_dir = self._get_kb_root()
+            kb_user = current_user.username
 
-            vector_store_dir = base_dir / self.knowledge_base
+            vector_store_dir = base_dir / kb_user / self.knowledge_base
             vector_store_dir.mkdir(parents=True, exist_ok=True)
 
             # Create embeddings model
             embedding_function = self._build_embeddings(embedding_model, api_key)
 
             # Convert DataFrame to Data objects (following Local DB pattern)
-            data_objects = self._convert_df_to_data_objects(df_source, config_list)
+            data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
             # Create vector store
             chroma = Chroma(
@@ -367,16 +402,22 @@ class KBIngestionComponent(Component):
         except (OSError, ValueError, RuntimeError) as e:
             self.log(f"Error creating vector store: {e}")
 
-    def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:
+    async def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:
         """Convert DataFrame to Data objects for vector store."""
         data_objects: list[Data] = []
 
+        # Get the current user
+        async for db in get_session():
+            current_user = await self._get_current_user(db)
+
         # Set up vector store directory
         base_dir = self._get_kb_root()
+        kb_user = current_user.username
+        kb_path = base_dir / kb_user / self.knowledge_base
 
         # If we don't allow duplicates, we need to get the existing hashes
         chroma = Chroma(
-            persist_directory=str(base_dir / self.knowledge_base),
+            persist_directory=str(kb_path),
             collection_name=self.knowledge_base,
         )
 
@@ -469,7 +510,7 @@ class KBIngestionComponent(Component):
     # ---------------------------------------------------------------------
     #                         OUTPUT METHODS
     # ---------------------------------------------------------------------
-    def build_kb_info(self) -> Data:
+    async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
         try:
             # Get source DataFrame
@@ -479,9 +520,14 @@ class KBIngestionComponent(Component):
             config_list = self._validate_column_config(df_source)
             column_metadata = self._build_column_metadata(config_list, df_source)
 
-            # Prepare KB folder (using File Component patterns)
+            # Get the current user
+            async for db in get_session():
+                current_user = await self._get_current_user(db)
+
+            # Set up vector store directory
             kb_root = self._get_kb_root()
-            kb_path = kb_root / self.knowledge_base
+            kb_user = current_user.username
+            kb_path = kb_root / kb_user / self.knowledge_base
 
             # Read the embedding info from the knowledge base folder
             metadata_path = kb_path / "embedding_metadata.json"
@@ -506,7 +552,7 @@ class KBIngestionComponent(Component):
                 )
 
             # Create vector store following Local DB component pattern
-            self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
+            await self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, config_list)
@@ -532,21 +578,48 @@ class KBIngestionComponent(Component):
             self.status = f"❌ KB ingestion failed: {e}"
             return Data(data={"error": str(e), "kb_name": self.knowledge_base})
 
-    def _get_knowledge_bases(self) -> list[str]:
+    async def _get_knowledge_bases(self) -> list[str]:
         """Retrieve a list of available knowledge bases.
 
         Returns:
             A list of knowledge base names.
         """
-        # Return the list of directories in the knowledge base root path
-        kb_root_path = self._get_kb_root()
-
-        if not kb_root_path.exists():
+        if not KNOWLEDGE_BASES_ROOT_PATH.exists():
             return []
 
-        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
+        # Get the current user
+        async for db in get_session():
+            current_user = await self._get_current_user(db)
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+        # Set up vector store directory
+        kb_user = current_user.username
+        kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user
+
+        if not kb_path.exists():
+            return []
+
+        return [str(d.name) for d in kb_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
+
+    async def _get_api_key_variable(self, field_value: dict[str, Any]):
+        async for db in get_session():
+            current_user = await self._get_current_user(db)
+            variable_service = get_variable_service()
+
+            # Process the api_key field variable
+            return await variable_service.get_variable(
+                user_id=current_user.id,
+                name=field_value["03_api_key"],
+                field="",
+                session=db,
+            )
+        return None
+
+    async def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: str | None = None,
+    ) -> dotdict:
         """Update build configuration based on provider selection."""
         # Create a new knowledge base
         if field_name == "knowledge_base":
@@ -556,16 +629,24 @@ class KBIngestionComponent(Component):
                     msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
                     raise ValueError(msg)
 
+                api_key = field_value.get("03_api_key", None)
+                with contextlib.suppress(Exception):
+                    # If the API key is a variable, resolve it
+                    api_key = await self._get_api_key_variable(field_value)
+
                 # We need to test the API Key one time against the embedding model
                 embed_model = self._build_embeddings(
-                    embedding_model=field_value["02_embedding_model"], api_key=field_value["03_api_key"]
+                    embedding_model=field_value["02_embedding_model"], api_key=api_key
                 )
 
                 # Try to generate a dummy embedding to validate the API key
                 embed_model.embed_query("test")
 
                 # Create the new knowledge base directory
-                kb_path = KNOWLEDGE_BASES_ROOT_PATH / field_value["01_new_kb_name"]
+                async for db in get_session():
+                    current_user = await self._get_current_user(db)
+                kb_user = current_user.username
+                kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / field_value["01_new_kb_name"]
                 kb_path.mkdir(parents=True, exist_ok=True)
 
                 # Save the embedding metadata
@@ -573,11 +654,11 @@ class KBIngestionComponent(Component):
                 self._save_embedding_metadata(
                     kb_path=kb_path,
                     embedding_model=field_value["02_embedding_model"],
-                    api_key=field_value["03_api_key"],
+                    api_key=api_key,
                 )
 
             # Update the knowledge base options dynamically
-            build_config["knowledge_base"]["options"] = self._get_knowledge_bases()
+            build_config["knowledge_base"]["options"] = await self._get_knowledge_bases()
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
                 build_config["knowledge_base"]["value"] = None
 

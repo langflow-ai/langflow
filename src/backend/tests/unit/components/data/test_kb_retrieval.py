@@ -26,8 +26,8 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         """Return default kwargs for component instantiation."""
         # Create knowledge base directory structure
         kb_name = "test_kb"
-        kb_path = tmp_path / kb_name
-        kb_path.mkdir(exist_ok=True)
+        kb_path = tmp_path / "langflow" / kb_name
+        kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create embedding metadata file
         metadata = {
@@ -55,16 +55,16 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         # This is a new component, so it doesn't exist in older versions
         return []
 
-    def test_get_knowledge_bases(self, component_class, default_kwargs, tmp_path):
+    async def test_get_knowledge_bases(self, component_class, default_kwargs, tmp_path):
         """Test getting list of knowledge bases."""
         component = component_class(**default_kwargs)
 
         # Create additional test directories
-        (tmp_path / "kb1").mkdir()
-        (tmp_path / "kb2").mkdir()
-        (tmp_path / ".hidden").mkdir()  # Should be ignored
+        (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "langflow" / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
-        kb_list = component._get_knowledge_bases()
+        kb_list = await component._get_knowledge_bases()
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
@@ -72,44 +72,44 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         assert ".hidden" not in kb_list
 
     @patch("langflow.components.data.kb_retrieval.Path.exists")
-    def test_get_knowledge_bases_no_path(self, mock_exists, component_class, default_kwargs):
+    async def test_get_knowledge_bases_no_path(self, mock_exists, component_class, default_kwargs):
         """Test getting knowledge bases when path doesn't exist."""
         component = component_class(**default_kwargs)
         mock_exists.return_value = False
 
-        kb_list = component._get_knowledge_bases()
+        kb_list = await component._get_knowledge_bases()
         assert kb_list == []
 
-    def test_update_build_config(self, component_class, default_kwargs, tmp_path):
+    async def test_update_build_config(self, component_class, default_kwargs, tmp_path):
         """Test updating build configuration."""
         component = component_class(**default_kwargs)
 
         # Create additional KB directories
-        (tmp_path / "kb1").mkdir()
-        (tmp_path / "kb2").mkdir()
+        (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
 
         build_config = {"knowledge_base": {"value": "test_kb", "options": []}}
 
-        result = component.update_build_config(build_config, None, "knowledge_base")
+        result = await component.update_build_config(build_config, None, "knowledge_base")
 
         assert "test_kb" in result["knowledge_base"]["options"]
         assert "kb1" in result["knowledge_base"]["options"]
         assert "kb2" in result["knowledge_base"]["options"]
 
-    def test_update_build_config_invalid_kb(self, component_class, default_kwargs):
+    async def test_update_build_config_invalid_kb(self, component_class, default_kwargs):
         """Test updating build config when selected KB is not available."""
         component = component_class(**default_kwargs)
 
         build_config = {"knowledge_base": {"value": "nonexistent_kb", "options": ["test_kb"]}}
 
-        result = component.update_build_config(build_config, None, "knowledge_base")
+        result = await component.update_build_config(build_config, None, "knowledge_base")
 
         assert result["knowledge_base"]["value"] is None
 
     def test_get_kb_metadata_success(self, component_class, default_kwargs):
         """Test successful metadata loading."""
         component = component_class(**default_kwargs)
-        kb_path = Path(default_kwargs["kb_root_path"]) / default_kwargs["knowledge_base"]
+        kb_path = Path(default_kwargs["kb_root_path"]) / "langflow" / default_kwargs["knowledge_base"]
 
         with patch("langflow.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
             mock_decrypt.return_value = "decrypted_key"
@@ -123,8 +123,8 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
     def test_get_kb_metadata_no_file(self, component_class, default_kwargs, tmp_path):
         """Test metadata loading when file doesn't exist."""
         component = component_class(**default_kwargs)
-        nonexistent_path = tmp_path / "nonexistent"
-        nonexistent_path.mkdir()
+        nonexistent_path = tmp_path / "langflow" / "nonexistent"
+        nonexistent_path.mkdir(parents=True, exist_ok=True)
 
         metadata = component._get_kb_metadata(nonexistent_path)
 
@@ -133,8 +133,8 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
     def test_get_kb_metadata_json_error(self, component_class, default_kwargs, tmp_path):
         """Test metadata loading with invalid JSON."""
         component = component_class(**default_kwargs)
-        kb_path = tmp_path / "invalid_json_kb"
-        kb_path.mkdir()
+        kb_path = tmp_path / "langflow" / "invalid_json_kb"
+        kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create invalid JSON file
         (kb_path / "embedding_metadata.json").write_text("invalid json content")
@@ -146,8 +146,8 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
     def test_get_kb_metadata_decrypt_error(self, component_class, default_kwargs, tmp_path):
         """Test metadata loading with decryption error."""
         component = component_class(**default_kwargs)
-        kb_path = tmp_path / "decrypt_error_kb"
-        kb_path.mkdir()
+        kb_path = tmp_path / "langflow" / "decrypt_error_kb"
+        kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create metadata with encrypted key
         metadata = {
@@ -299,10 +299,10 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
                 model="text-embedding-ada-002", api_key="user-provided-key", chunk_size=1000
             )
 
-    def test_get_chroma_kb_data_no_metadata(self, component_class, default_kwargs, tmp_path):
+    async def test_get_chroma_kb_data_no_metadata(self, component_class, default_kwargs, tmp_path):
         """Test retrieving data when metadata is missing."""
         # Remove metadata file
-        kb_path = tmp_path / default_kwargs["knowledge_base"]
+        kb_path = tmp_path / "langflow" / default_kwargs["knowledge_base"]
         metadata_file = kb_path / "embedding_metadata.json"
         if metadata_file.exists():
             metadata_file.unlink()
@@ -310,7 +310,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
 
         with pytest.raises(ValueError, match="Metadata not found for knowledge base"):
-            component.get_chroma_kb_data()
+            await component.get_chroma_kb_data()
 
     def test_get_chroma_kb_data_path_construction(self, component_class, default_kwargs):
         """Test that get_chroma_kb_data constructs the correct paths."""
@@ -331,7 +331,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         assert hasattr(component, "top_k")
         assert hasattr(component, "include_embeddings")
 
-    def test_get_chroma_kb_data_method_exists(self, component_class, default_kwargs):
+    async def test_get_chroma_kb_data_method_exists(self, component_class, default_kwargs):
         """Test that get_chroma_kb_data method exists and can be called."""
         component = component_class(**default_kwargs)
 
@@ -349,7 +349,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
 
             # This is a unit test focused on the component's internal logic
             with contextlib.suppress(Exception):
-                component.get_chroma_kb_data()
+                await component.get_chroma_kb_data()
 
             # Verify internal methods were called
             mock_get_metadata.assert_called_once()

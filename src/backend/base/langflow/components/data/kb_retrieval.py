@@ -10,8 +10,9 @@ from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
-from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.deps import get_settings_service
+from langflow.services.auth.utils import create_user_longterm_token, decrypt_api_key, get_current_user
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_session, get_settings_service
 
 settings = get_settings_service().settings
 knowledge_directory = settings.knowledge_bases_dir
@@ -33,11 +34,7 @@ class KBRetrievalComponent(Component):
             display_name="Knowledge",
             info="Select the knowledge to load data from.",
             required=True,
-            options=[
-                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
-            ]
-            if KNOWLEDGE_BASES_ROOT_PATH.exists()
-            else [],
+            options=[],
             refresh_button=True,
             real_time_refresh=True,
         ),
@@ -47,6 +44,13 @@ class KBRetrievalComponent(Component):
             info="API key for the embedding provider to generate embeddings.",
             advanced=True,
             required=False,
+        ),
+        SecretStrInput(
+            name="langflow_api_key",
+            display_name="Langflow API Key",
+            info="Langflow API key for authentication when accessing the knowledge base.",
+            required=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="search_query",
@@ -79,7 +83,27 @@ class KBRetrievalComponent(Component):
         ),
     ]
 
-    def _get_knowledge_bases(self) -> list[str]:
+    async def _get_current_user(self, db):
+        """Get the current user based on the provided API key or create a new user."""
+        if self.langflow_api_key:
+            current_user = await get_current_user(
+                token="",
+                query_param=self.langflow_api_key,
+                header_param="",
+                db=db,
+            )
+        else:
+            user_id, _ = await create_user_longterm_token(db)
+            current_user = await get_user_by_id(db, user_id)
+
+        # Fail if the user is not found
+        if not current_user:
+            msg = "User not found. Please provide a valid Langflow API key or ensure the user exists."
+            raise ValueError(msg)
+
+        return current_user
+
+    async def _get_knowledge_bases(self) -> list[str]:
         """Retrieve a list of available knowledge bases.
 
         Returns:
@@ -88,12 +112,23 @@ class KBRetrievalComponent(Component):
         if not KNOWLEDGE_BASES_ROOT_PATH.exists():
             return []
 
-        return [str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()]
+        # Get the current user
+        async for db in get_session():
+            current_user = await self._get_current_user(db)
 
-    def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+        # Set up vector store directory
+        kb_user = current_user.username
+        kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user
+
+        if not kb_path.exists():
+            return []
+
+        return [str(d.name) for d in kb_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
+
+    async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
-            build_config["knowledge_base"]["options"] = self._get_knowledge_bases()
+            build_config["knowledge_base"]["options"] = await self._get_knowledge_bases()
 
             # If the selected knowledge base is not available, reset it
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
@@ -174,13 +209,19 @@ class KBRetrievalComponent(Component):
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
 
-    def get_chroma_kb_data(self) -> DataFrame:
+    async def get_chroma_kb_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base by reading the Chroma collection.
 
         Returns:
             A DataFrame containing the data rows from the knowledge base.
         """
-        kb_path = KNOWLEDGE_BASES_ROOT_PATH / self.knowledge_base
+        # Get the current user
+        async for db in get_session():
+            current_user = await self._get_current_user(db)
+
+        # Set up vector store directory
+        kb_user = current_user.username
+        kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / self.knowledge_base
 
         metadata = self._get_kb_metadata(kb_path)
         if not metadata:
