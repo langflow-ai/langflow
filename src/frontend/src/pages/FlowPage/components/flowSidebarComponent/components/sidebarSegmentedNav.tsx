@@ -8,6 +8,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
+import { useSearchContext } from "../index";
 
 export type { SidebarSection };
 
@@ -47,6 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 export default function SidebarSegmentedNav() {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
+  const { focusSearch, isSearchFocused } = useSearchContext();
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2 p-1">
@@ -56,15 +58,28 @@ export default function SidebarSegmentedNav() {
               <SidebarMenuButton
                 size="md"
                 onClick={() => {
-                  setActiveSection(item.id);
-                  if (!open) {
+                  if (activeSection === item.id && open) {
                     toggleSidebar();
+                  } else {
+                    setActiveSection(item.id);
+                    if (!open) {
+                      toggleSidebar();
+                    }
+                    // Focus search input when search section is selected
+                    if (item.id === "search") {
+                      // Add a small delay to ensure the sidebar is open and input is rendered
+                      setTimeout(() => focusSearch(), 100);
+                    }
                   }
                 }}
-                isActive={activeSection === item.id}
+                isActive={
+                  activeSection === item.id ||
+                  (item.id === "search" && isSearchFocused)
+                }
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-md p-0 transition-all duration-200",
-                  activeSection === item.id
+                  activeSection === item.id ||
+                    (item.id === "search" && isSearchFocused)
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}

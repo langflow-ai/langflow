@@ -1,6 +1,15 @@
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import {
@@ -47,6 +56,22 @@ import { UniqueInputsComponents } from "./types";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
+
+// Search context for the sidebar
+type SearchContextType = {
+  focusSearch: () => void;
+  isSearchFocused: boolean;
+};
+
+const SearchContext = createContext<SearchContextType | null>(null);
+
+export function useSearchContext() {
+  const context = useContext(SearchContext);
+  if (!context) {
+    throw new Error("useSearchContext must be used within SearchProvider");
+  }
+  return context;
+}
 
 interface FlowSidebarComponentProps {
   isLoading?: boolean;
@@ -178,6 +203,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setIsInputFocused(false);
   }, []);
 
+  const focusSearchInput = useCallback(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
+
   const handleSearchInput = useCallback((value: string) => {
     setSearch(value);
   }, []);
@@ -303,112 +334,122 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     !ENABLE_NEW_SIDEBAR;
   const showMcp = (ENABLE_API && activeSection === "mcp") || !ENABLE_API;
 
+  const searchContextValue = useMemo(
+    () => ({
+      focusSearch: focusSearchInput,
+      isSearchFocused: isInputFocused,
+    }),
+    [focusSearchInput, isInputFocused],
+  );
+
   return (
-    <Sidebar
-      collapsible={"offcanvas"}
-      data-testid="shad-sidebar"
-      className="noflow select-none"
-    >
-      <div className="flex h-full">
-        {ENABLE_NEW_SIDEBAR && <SidebarSegmentedNav />}
-        <div
-          className={cn(
-            "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
-            ENABLE_NEW_SIDEBAR && "sidebar-segmented",
-          )}
-        >
-          <SidebarHeaderComponent
-            showConfig={showConfig}
-            setShowConfig={setShowConfig}
-            showBeta={showBeta}
-            setShowBeta={setShowBeta}
-            showLegacy={showLegacy}
-            setShowLegacy={setShowLegacy}
-            searchInputRef={searchInputRef}
-            isInputFocused={isInputFocused}
-            search={search}
-            handleInputFocus={handleInputFocus}
-            handleInputBlur={handleInputBlur}
-            handleInputChange={handleInputChange}
-            filterType={filterType}
-            setFilterEdge={setFilterEdge}
-            setFilterData={setFilterData}
-            data={data}
-          />
-
-          <SidebarContent
-            segmentedSidebar={ENABLE_NEW_SIDEBAR}
-            className="flex-1 group-data-[collapsible=icon]:hidden"
-          >
-            {isLoading ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-col gap-1 p-3">
-                  <SkeletonGroup count={13} className="my-0.5 h-7" />
-                </div>
-                <div className="h-8" />
-                <div className="flex flex-col gap-1 px-3 pt-2">
-                  <SkeletonGroup count={21} className="my-0.5 h-7" />
-                </div>
-              </div>
-            ) : (
-              <>
-                {hasResults ? (
-                  <>
-                    {showComponents && (
-                      <CategoryGroup
-                        dataFilter={dataFilter}
-                        sortedCategories={sortedCategories}
-                        CATEGORIES={CATEGORIES}
-                        openCategories={openCategories}
-                        setOpenCategories={setOpenCategories}
-                        search={search}
-                        nodeColors={nodeColors}
-                        onDragStart={onDragStart}
-                        sensitiveSort={sensitiveSort}
-                      />
-                    )}
-
-                    {showBundles && (
-                      <MemoizedSidebarGroup
-                        BUNDLES={BUNDLES}
-                        search={search}
-                        sortedCategories={sortedCategories}
-                        dataFilter={dataFilter}
-                        nodeColors={nodeColors}
-                        onDragStart={onDragStart}
-                        sensitiveSort={sensitiveSort}
-                        openCategories={openCategories}
-                        setOpenCategories={setOpenCategories}
-                        handleKeyDownInput={handleKeyDownInput}
-                      />
-                    )}
-                    {showMcp && (
-                      <McpSidebarGroup
-                        dataFilter={dataFilter}
-                        nodeColors={nodeColors}
-                        onDragStart={onDragStart}
-                        sensitiveSort={sensitiveSort}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <NoResultsMessage onClearSearch={handleClearSearch} />
-                )}
-              </>
+    <SearchContext.Provider value={searchContextValue}>
+      <Sidebar
+        collapsible={"offcanvas"}
+        data-testid="shad-sidebar"
+        className="noflow select-none"
+      >
+        <div className="flex h-full">
+          {ENABLE_NEW_SIDEBAR && <SidebarSegmentedNav />}
+          <div
+            className={cn(
+              "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
+              ENABLE_NEW_SIDEBAR && "sidebar-segmented",
             )}
-          </SidebarContent>
-
-          <SidebarFooter className="border-t p-4 py-3 group-data-[collapsible=icon]:hidden">
-            <SidebarMenuButtons
-              hasStore={hasStore}
-              customComponent={customComponent}
-              addComponent={addComponent}
-              isLoading={isLoading}
+          >
+            <SidebarHeaderComponent
+              showConfig={showConfig}
+              setShowConfig={setShowConfig}
+              showBeta={showBeta}
+              setShowBeta={setShowBeta}
+              showLegacy={showLegacy}
+              setShowLegacy={setShowLegacy}
+              searchInputRef={searchInputRef}
+              isInputFocused={isInputFocused}
+              search={search}
+              handleInputFocus={handleInputFocus}
+              handleInputBlur={handleInputBlur}
+              handleInputChange={handleInputChange}
+              filterType={filterType}
+              setFilterEdge={setFilterEdge}
+              setFilterData={setFilterData}
+              data={data}
             />
-          </SidebarFooter>
+
+            <SidebarContent
+              segmentedSidebar={ENABLE_NEW_SIDEBAR}
+              className="flex-1 group-data-[collapsible=icon]:hidden"
+            >
+              {isLoading ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1 p-3">
+                    <SkeletonGroup count={13} className="my-0.5 h-7" />
+                  </div>
+                  <div className="h-8" />
+                  <div className="flex flex-col gap-1 px-3 pt-2">
+                    <SkeletonGroup count={21} className="my-0.5 h-7" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {hasResults ? (
+                    <>
+                      {showComponents && (
+                        <CategoryGroup
+                          dataFilter={dataFilter}
+                          sortedCategories={sortedCategories}
+                          CATEGORIES={CATEGORIES}
+                          openCategories={openCategories}
+                          setOpenCategories={setOpenCategories}
+                          search={search}
+                          nodeColors={nodeColors}
+                          onDragStart={onDragStart}
+                          sensitiveSort={sensitiveSort}
+                        />
+                      )}
+
+                      {showBundles && (
+                        <MemoizedSidebarGroup
+                          BUNDLES={BUNDLES}
+                          search={search}
+                          sortedCategories={sortedCategories}
+                          dataFilter={dataFilter}
+                          nodeColors={nodeColors}
+                          onDragStart={onDragStart}
+                          sensitiveSort={sensitiveSort}
+                          openCategories={openCategories}
+                          setOpenCategories={setOpenCategories}
+                          handleKeyDownInput={handleKeyDownInput}
+                        />
+                      )}
+                      {showMcp && (
+                        <McpSidebarGroup
+                          dataFilter={dataFilter}
+                          nodeColors={nodeColors}
+                          onDragStart={onDragStart}
+                          sensitiveSort={sensitiveSort}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <NoResultsMessage onClearSearch={handleClearSearch} />
+                  )}
+                </>
+              )}
+            </SidebarContent>
+
+            <SidebarFooter className="border-t p-4 py-3 group-data-[collapsible=icon]:hidden">
+              <SidebarMenuButtons
+                hasStore={hasStore}
+                customComponent={customComponent}
+                addComponent={addComponent}
+                isLoading={isLoading}
+              />
+            </SidebarFooter>
+          </div>
         </div>
-      </div>
-    </Sidebar>
+      </Sidebar>
+    </SearchContext.Provider>
   );
 }
 

@@ -48,9 +48,10 @@ function getInitialSidebarSection(
   const cookieValue = getCookie(SIDEBAR_SECTION_COOKIE_NAME);
   if (cookieValue === null) return defaultSection;
   if (
-    cookieValue === "agents" ||
+    cookieValue === "search" ||
     cookieValue === "components" ||
-    cookieValue === "bundles"
+    cookieValue === "bundles" ||
+    cookieValue === "mcp"
   ) {
     return cookieValue;
   }
@@ -67,6 +68,10 @@ type SidebarContext = {
   activeSection: SidebarSection;
   setActiveSection: (section: SidebarSection) => void;
   defaultSection: SidebarSection;
+  // Search functionality
+  searchInputRef?: React.RefObject<HTMLInputElement>;
+  isSearchFocused?: boolean;
+  focusSearch?: () => void;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);

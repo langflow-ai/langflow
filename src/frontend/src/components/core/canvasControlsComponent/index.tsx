@@ -54,7 +54,7 @@ export const CustomControlButton = ({
           <IconComponent
             name={iconName}
             aria-hidden="true"
-            className={cn("h-8 w-8", iconClasses)}
+            className={cn("scale-150 h-8 w-8", iconClasses)}
           />
         </div>
       </ShadTooltip>
