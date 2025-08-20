@@ -14,7 +14,7 @@ export function PlaygroundSidebar(): JSX.Element {
 
   return (
     <SimpleSidebar side="right" className="noflow select-none">
-      <SimpleSidebarContent className="p-0 flex h-full w-full bg-background">
+      <SimpleSidebarContent className="p-2 pl-0 flex h-full w-full bg-background">
         <PlaygroundComponent onClose={handleClose} />
       </SimpleSidebarContent>
     </SimpleSidebar>
