@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
@@ -1220,10 +1220,11 @@ wheels = [
 
 [[package]]
 name = "codeflash"
-version = "0.15.6"
+version = "0.16.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
+    { name = "codeflash-benchmark" },
     { name = "coverage" },
     { name = "crosshair-tool" },
     { name = "dill" },
@@ -1250,7 +1251,22 @@ dependencies = [
     { name = "unidiff" },
     { name = "unittest-xml-reporting" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/63/157d025e8af6a7347880b5c407f49962c084e5f84c2dca56893fcce8cacc/codeflash-0.15.6.tar.gz", hash = "sha256:d0e51bd6a3c0e20fe65320651404749bce381186e6427f728b19a664ffa882b7", size = 181650, upload-time = "2025-07-24T21:09:01.826Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/26/3f/024c01530275d703f6e4c37e000a1ca6589044414dd5e8a4d392da1df1ac/codeflash-0.16.6.tar.gz", hash = "sha256:6f9e081b2d36d239bd3d63ac2fa119209d224067fb547f1b870158c46ac1dea7", size = 191271, upload-time = "2025-08-20T19:17:15.038Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/55/22c797562969306f25a182ef6ead4451e4a4c8b619c0fdad6d83d88f2918/codeflash-0.16.6-py3-none-any.whl", hash = "sha256:394dc96e2b0560674ecec05469dc29a691d6259c29b1c3847ff923e63e730f02", size = 228485, upload-time = "2025-08-20T19:17:16.477Z" },
+]
+
+[[package]]
+name = "codeflash-benchmark"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/54/d90d90bb679df915fe6225d350cd6b8ffdd761458f037655e5b949aee928/codeflash_benchmark-0.2.0.tar.gz", hash = "sha256:05ffbc948c9e3896b15d57aee18dec96f2db6159157b63aa109973c4d41c0595", size = 2794, upload-time = "2025-08-07T22:46:57.081Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/83/b8ed6cbdedc79425b1fa33f06077c694d1d377fe185fda07a1bd33acbc68/codeflash_benchmark-0.2.0-py3-none-any.whl", hash = "sha256:996e8bf79e6ab6e3c6b5dacd7370a4414d37bea085b69c691bb3c5e07c879c39", size = 3364, upload-time = "2025-08-07T22:46:58.028Z" },
+]
 
 [[package]]
 name = "cohere"
