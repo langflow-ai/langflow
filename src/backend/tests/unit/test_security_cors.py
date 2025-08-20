@@ -37,8 +37,8 @@ class TestCORSConfiguration:
             settings = Settings()
             assert settings.cors_origins == ["https://app1.example.com", "https://app2.example.com"]
 
-    def test_single_origin_remains_string(self):
-        """Test single origin remains as string."""
+    def test_single_origin_converted_to_list(self):
+        """Test single origin is converted to list for consistency."""
         with (
             tempfile.TemporaryDirectory() as temp_dir,
             patch.dict(
@@ -50,7 +50,7 @@ class TestCORSConfiguration:
             ),
         ):
             settings = Settings()
-            assert settings.cors_origins == "https://app.example.com"
+            assert settings.cors_origins == ["https://app.example.com"]
 
     def test_wildcard_with_credentials_prevented(self):
         """Test that credentials are disabled when using wildcard origins."""
@@ -84,7 +84,7 @@ class TestCORSConfiguration:
             ),
         ):
             settings = Settings()
-            assert settings.cors_origins == "https://app.example.com"
+            assert settings.cors_origins == ["https://app.example.com"]
             assert settings.cors_allow_credentials is True
 
     @patch("langflow.main.setup_sentry")  # Mock Sentry setup
@@ -95,7 +95,7 @@ class TestCORSConfiguration:
 
         # Mock settings
         mock_settings = MagicMock()
-        mock_settings.settings.cors_origins = "https://app.example.com"
+        mock_settings.settings.cors_origins = ["https://app.example.com"]
         mock_settings.settings.cors_allow_credentials = True
         mock_settings.settings.cors_allow_methods = ["GET", "POST"]
         mock_settings.settings.cors_allow_headers = ["Content-Type"]
