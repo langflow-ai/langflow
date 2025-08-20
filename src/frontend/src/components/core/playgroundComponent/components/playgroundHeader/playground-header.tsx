@@ -1,6 +1,5 @@
 import { useShallow } from "zustand/react/shallow";
 import { AnimatedConditional } from "@/components/ui/animated-close";
-import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 import { DEFAULT_SESSION_NAME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -21,6 +20,8 @@ export function PlaygroundHeader() {
     (state) => state.toggleFullscreen
   );
 
+  const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
+
   const sessionName =
     selectedSession === flowId ? DEFAULT_SESSION_NAME : selectedSession;
 
@@ -29,11 +30,8 @@ export function PlaygroundHeader() {
       flowId,
     });
 
-  const { setOpen } = useSimpleSidebar();
-
   const onClose = () => {
-    toggleFullscreen();
-    setOpen(false);
+    setIsOpen(false);
   };
 
   return (
