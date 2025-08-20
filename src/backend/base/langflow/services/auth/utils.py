@@ -318,8 +318,15 @@ async def create_super_user(
 async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
 
-    username = settings_service.auth_settings.SUPERUSER
+    # Prefer configured username; fall back to default or any existing superuser
+    username = settings_service.auth_settings.SUPERUSER or "langflow"
     super_user = await get_user_by_username(db, username)
+    if not super_user:
+        from langflow.services.database.models.user.crud import get_all_superusers
+
+        superusers = await get_all_superusers(db)
+        super_user = superusers[0] if superusers else None
+
     if not super_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
     access_token_expires_longterm = timedelta(days=365)

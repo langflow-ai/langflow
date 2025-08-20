@@ -77,7 +77,25 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         # Remove the default superuser if it exists
         await teardown_superuser(settings_service, session)
         username = settings_service.auth_settings.SUPERUSER
-        password = settings_service.auth_settings.SUPERUSER_PASSWORD
+        # SUPERUSER_PASSWORD is now SecretStr; get the underlying value safely
+        password = (
+            settings_service.auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+            if hasattr(settings_service.auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+            else settings_service.auth_settings.SUPERUSER_PASSWORD
+        )
+
+        # If AUTO_LOGIN is disabled and no credentials are provided via env/CLI,
+        # create a headless superuser with a random strong password to satisfy
+        # MCP's requirement without exposing credentials in memory.
+        if not username or not password:
+            import secrets
+
+            logger.warning(
+                "AUTO_LOGIN is False and no SUPERUSER credentials were provided. "
+                "Creating an internal superuser for MCP compatibility."
+            )
+            username = DEFAULT_SUPERUSER
+            password = secrets.token_urlsafe(32)
 
     if not username or not password:
         msg = "Username and password must be set"
@@ -96,6 +114,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         msg = "Could not create superuser. Please create a superuser manually."
         raise RuntimeError(msg) from exc
     finally:
+        # Scrub credentials from in-memory settings after setup
         settings_service.auth_settings.reset_credentials()
 
 

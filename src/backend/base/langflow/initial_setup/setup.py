@@ -1006,8 +1006,12 @@ async def initialize_super_user_if_needed() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    # In AUTO_LOGIN mode, always use the default credentials for initial bootstrapping
+    # without persisting the password in memory after setup.
+    from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+
+    username = DEFAULT_SUPERUSER
+    password = DEFAULT_SUPERUSER_PASSWORD
     if not username or not password:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)
