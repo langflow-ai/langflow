@@ -208,7 +208,7 @@ class Settings(BaseSettings):
     In production, specify exact origins like ['https://app.example.com'].
     Default is '*' for development convenience."""
     cors_allow_credentials: bool = False
-    """Whether to allow credentials in CORS requests. 
+    """Whether to allow credentials in CORS requests.
     SECURITY WARNING: Cannot be True when cors_origins is '*'.
     Set to True only with specific origins in production."""
     cors_allow_methods: list[str] | str = "*"
