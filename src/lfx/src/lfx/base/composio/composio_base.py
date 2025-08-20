@@ -27,7 +27,7 @@ from lfx.schema.message import Message
 def _patch_graph_clean_null_input_types() -> None:
     """Monkey-patch Graph._create_vertex to clean legacy templates."""
     try:
-        from langflow.graph.graph.base import Graph
+        from lfx.graph.graph.base import Graph
 
         original_create_vertex = Graph._create_vertex
 
