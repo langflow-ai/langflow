@@ -402,7 +402,9 @@ class KBIngestionComponent(Component):
         except (OSError, ValueError, RuntimeError) as e:
             self.log(f"Error creating vector store: {e}")
 
-    async def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:
+    async def _convert_df_to_data_objects(
+        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]
+    ) -> list[Data]:
         """Convert DataFrame to Data objects for vector store."""
         data_objects: list[Data] = []
 
@@ -635,9 +637,7 @@ class KBIngestionComponent(Component):
                     api_key = await self._get_api_key_variable(field_value)
 
                 # We need to test the API Key one time against the embedding model
-                embed_model = self._build_embeddings(
-                    embedding_model=field_value["02_embedding_model"], api_key=api_key
-                )
+                embed_model = self._build_embeddings(embedding_model=field_value["02_embedding_model"], api_key=api_key)
 
                 # Try to generate a dummy embedding to validate the API key
                 embed_model.embed_query("test")
