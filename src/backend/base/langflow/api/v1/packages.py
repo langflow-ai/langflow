@@ -404,7 +404,14 @@ async def restore_langflow_background(installation_id: UUID) -> None:
                     # On Windows, use pip uninstall for packages installed via pip
                     if platform.system() == "Windows":
                         python_executable = _find_python_executable(project_root)
-                        remove_command = [str(uv_executable), "pip", "uninstall", package, "--python", python_executable]
+                        remove_command = [
+                            str(uv_executable),
+                            "pip",
+                            "uninstall",
+                            package,
+                            "--python",
+                            python_executable,
+                        ]
                     else:
                         remove_command = [str(uv_executable), "remove", package]
                     logger.info(f"Removing package: {package}")
@@ -649,7 +656,7 @@ async def install_package_background(installation_id: UUID) -> None:
 
             # Install the package using UV with explicit Python path
             python_executable = _find_python_executable(project_root)
-            
+
             # On Windows, use pip install directly to avoid file locking issues with langflow.exe
             if platform.system() == "Windows":
                 # Use pip install on Windows to avoid rebuilding the running langflow.exe
