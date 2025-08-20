@@ -240,7 +240,7 @@ export default function ChatView({
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col rounded-md",
+        "flex h-full flex-1 flex-col rounded-md",
         !isVoiceAssistantActive && "pointer-events-auto"
       )}
       onDragOver={dragOver}
