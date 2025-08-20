@@ -1,9 +1,11 @@
 """Unit tests for CORS security configuration."""
 
 import os
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langflow.services.settings.base import Settings
 
@@ -13,7 +15,7 @@ class TestCORSConfiguration:
 
     def test_default_cors_settings(self):
         """Test default CORS settings are secure."""
-        with patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": "/tmp/test"}):
+        with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
             settings = Settings()
             assert settings.cors_origins == "*"
             assert settings.cors_allow_credentials is False
@@ -22,37 +24,46 @@ class TestCORSConfiguration:
 
     def test_cors_origins_string_to_list_conversion(self):
         """Test comma-separated origins are converted to list."""
-        with patch.dict(
-            os.environ,
-            {
-                "LANGFLOW_CONFIG_DIR": "/tmp/test",
-                "LANGFLOW_CORS_ORIGINS": "https://app1.example.com,https://app2.example.com",
-            },
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "https://app1.example.com,https://app2.example.com",
+                },
+            ),
         ):
             settings = Settings()
             assert settings.cors_origins == ["https://app1.example.com", "https://app2.example.com"]
 
     def test_single_origin_remains_string(self):
         """Test single origin remains as string."""
-        with patch.dict(
-            os.environ,
-            {
-                "LANGFLOW_CONFIG_DIR": "/tmp/test",
-                "LANGFLOW_CORS_ORIGINS": "https://app.example.com",
-            },
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "https://app.example.com",
+                },
+            ),
         ):
             settings = Settings()
             assert settings.cors_origins == "https://app.example.com"
 
     def test_wildcard_with_credentials_prevented(self):
         """Test that credentials are disabled when using wildcard origins."""
-        with patch.dict(
-            os.environ,
-            {
-                "LANGFLOW_CONFIG_DIR": "/tmp/test",
-                "LANGFLOW_CORS_ORIGINS": "*",
-                "LANGFLOW_CORS_ALLOW_CREDENTIALS": "true",
-            },
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "*",
+                    "LANGFLOW_CORS_ALLOW_CREDENTIALS": "true",
+                },
+            ),
         ):
             settings = Settings()
             assert settings.cors_origins == "*"
@@ -61,13 +72,16 @@ class TestCORSConfiguration:
 
     def test_specific_origins_allow_credentials(self):
         """Test that credentials work with specific origins."""
-        with patch.dict(
-            os.environ,
-            {
-                "LANGFLOW_CONFIG_DIR": "/tmp/test",
-                "LANGFLOW_CORS_ORIGINS": "https://app.example.com",
-                "LANGFLOW_CORS_ALLOW_CREDENTIALS": "true",
-            },
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.dict(
+                os.environ,
+                {
+                    "LANGFLOW_CONFIG_DIR": temp_dir,
+                    "LANGFLOW_CORS_ORIGINS": "https://app.example.com",
+                    "LANGFLOW_CORS_ALLOW_CREDENTIALS": "true",
+                },
+            ),
         ):
             settings = Settings()
             assert settings.cors_origins == "https://app.example.com"
@@ -91,6 +105,7 @@ class TestCORSConfiguration:
         mock_get_settings.return_value = mock_settings
 
         # Create app
+        mock_setup_sentry.return_value = None  # Use the mock
         app = create_app()
 
         # Find CORS middleware
@@ -125,6 +140,7 @@ class TestCORSConfiguration:
         mock_get_settings.return_value = mock_settings
 
         # Create app
+        mock_setup_sentry.return_value = None  # Use the mock
         app = create_app()
 
         # Check that warning was logged
@@ -160,10 +176,11 @@ class TestRefreshTokenSecurity:
                 mock_settings.return_value.auth_settings.SECRET_KEY.get_secret_value.return_value = "secret"
                 mock_settings.return_value.auth_settings.ALGORITHM = "HS256"
 
-                with pytest.raises(Exception) as exc_info:
+                with pytest.raises(HTTPException) as exc_info:
                     await create_refresh_token("fake-token", mock_db)
 
-                assert "Invalid refresh token" in str(exc_info.value)
+                assert exc_info.value.status_code == 401
+                assert "Invalid refresh token" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_refresh_token_user_active_check(self):
@@ -184,10 +201,11 @@ class TestRefreshTokenSecurity:
                 with patch("langflow.services.auth.utils.get_user_by_id") as mock_get_user:
                     mock_get_user.return_value = mock_user
 
-                    with pytest.raises(Exception) as exc_info:
+                    with pytest.raises(HTTPException) as exc_info:
                         await create_refresh_token("fake-token", mock_db)
 
-                    assert "inactive" in str(exc_info.value).lower()
+                    assert exc_info.value.status_code == 401
+                    assert "inactive" in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
     async def test_refresh_token_valid_flow(self):
@@ -212,23 +230,25 @@ class TestRefreshTokenSecurity:
                     mock_get_user.return_value = mock_user
 
                     with patch("langflow.services.auth.utils.create_user_tokens") as mock_create_tokens:
+                        expected_access = "new-access-token"
+                        expected_refresh = "new-refresh-token"
                         mock_create_tokens.return_value = {
-                            "access_token": "new-access-token",
-                            "refresh_token": "new-refresh-token",
+                            "access_token": expected_access,
+                            "refresh_token": expected_refresh,
                         }
 
                         result = await create_refresh_token("fake-token", mock_db)
 
-                        assert result["access_token"] == "new-access-token"
-                        assert result["refresh_token"] == "new-refresh-token"
+                        assert result["access_token"] == expected_access
+                        assert result["refresh_token"] == expected_refresh
                         mock_create_tokens.assert_called_once_with("user-123", mock_db)
 
     def test_refresh_token_samesite_setting(self):
         """Test that refresh token uses SameSite=Lax by default."""
         from langflow.services.settings.auth import AuthSettings
 
-        with patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": "/tmp/test"}):
-            auth_settings = AuthSettings(CONFIG_DIR="/tmp/test")
+        with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
+            auth_settings = AuthSettings(CONFIG_DIR=temp_dir)
             assert auth_settings.REFRESH_SAME_SITE == "lax"
             assert auth_settings.ACCESS_SAME_SITE == "lax"  # Access token should also be lax
 
@@ -255,6 +275,7 @@ class TestCORSIntegration:
 
             from langflow.main import create_app
 
+            mock_setup_sentry.return_value = None  # Use the mock
             app = create_app()
             client = TestClient(app)
 
@@ -290,6 +311,7 @@ class TestCORSIntegration:
 
             from langflow.main import create_app
 
+            mock_setup_sentry.return_value = None  # Use the mock
             app = create_app()
             client = TestClient(app)
 
