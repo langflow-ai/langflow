@@ -20,6 +20,8 @@ export function PlaygroundHeader() {
     (state) => state.toggleFullscreen
   );
 
+  const isPlayground = usePlaygroundStore((state) => state.isPlayground);
+
   const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
 
   const sessionName =
@@ -36,10 +38,14 @@ export function PlaygroundHeader() {
 
   return (
     <div className="flex items-center justify-between gap-2 px-4 py-3">
-      <div className="flex items-center gap-2 flex-1 overflow-hidden">
-        <SessionManagerDropdown>
-          <HeaderButton icon="ListRestart" />
-        </SessionManagerDropdown>
+      <div className="flex items-center flex-1 overflow-hidden">
+        <AnimatedConditional isOpen={!isFullscreen}>
+          <div className="pr-2">
+            <SessionManagerDropdown>
+              <HeaderButton icon="ListRestart" />
+            </SessionManagerDropdown>
+          </div>
+        </AnimatedConditional>
         <div className="truncate text-sm w-full font-medium text-secondary-foreground">
           {isEditing ? (
             <SessionRename
@@ -51,24 +57,26 @@ export function PlaygroundHeader() {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1">
-        <AnimatedConditional isOpen={!isFullscreen}>
-          <SessionMenuDropdown
-            onRename={handleEditStart}
-            onDelete={handleDelete}
-            onLogs={() => {}}
-          >
-            <HeaderButton icon="MoreVertical" />
-          </SessionMenuDropdown>
-        </AnimatedConditional>
-        <HeaderButton
-          icon={isFullscreen ? "Shrink" : "Expand"}
-          onClick={toggleFullscreen}
-        />
-        <AnimatedConditional isOpen={isFullscreen}>
-          <HeaderButton icon="X" onClick={onClose} />
-        </AnimatedConditional>
-      </div>
+      {!isPlayground && (
+        <div className="flex items-center gap-1">
+          <AnimatedConditional isOpen={!isFullscreen}>
+            <SessionMenuDropdown
+              onRename={handleEditStart}
+              onDelete={handleDelete}
+              onLogs={() => {}}
+            >
+              <HeaderButton icon="MoreVertical" />
+            </SessionMenuDropdown>
+          </AnimatedConditional>
+          <HeaderButton
+            icon={isFullscreen ? "Shrink" : "Expand"}
+            onClick={toggleFullscreen}
+          />
+          <AnimatedConditional isOpen={isFullscreen}>
+            <HeaderButton icon="X" onClick={onClose} />
+          </AnimatedConditional>
+        </div>
+      )}
     </div>
   );
 }
