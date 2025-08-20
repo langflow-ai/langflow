@@ -16,14 +16,14 @@ from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
 
+from langflow.base.data.kb_utils import _get_current_user, get_knowledge_bases
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
-from langflow.services.auth.utils import create_user_longterm_token, decrypt_api_key, encrypt_api_key, get_current_user
-from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.deps import get_session, get_settings_service, get_variable_service
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
@@ -339,40 +339,13 @@ class KBIngestionComponent(Component):
 
         return metadata
 
-    async def _get_current_user(self, db):
-        """Get the current user based on the provided API key or create a new user."""
-        if self.langflow_api_key:
-            current_user = await get_current_user(
-                token="",
-                query_param=self.langflow_api_key,
-                header_param="",
-                db=db,
-            )
-        else:
-            user_id, _ = await create_user_longterm_token(db)
-            current_user = await get_user_by_id(db, user_id)
-
-        # Fail if the user is not found
-        if not current_user:
-            msg = "User not found. Please provide a valid Langflow API key or ensure the user exists."
-            raise ValueError(msg)
-
-        return current_user
-
     async def _create_vector_store(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
-            # Get the current user
-            async for db in get_session():
-                current_user = await self._get_current_user(db)
-
             # Set up vector store directory
-            base_dir = self._get_kb_root()
-            kb_user = current_user.username
-
-            vector_store_dir = base_dir / kb_user / self.knowledge_base
+            vector_store_dir = await self._kb_path()
             vector_store_dir.mkdir(parents=True, exist_ok=True)
 
             # Create embeddings model
@@ -408,14 +381,8 @@ class KBIngestionComponent(Component):
         """Convert DataFrame to Data objects for vector store."""
         data_objects: list[Data] = []
 
-        # Get the current user
-        async for db in get_session():
-            current_user = await self._get_current_user(db)
-
         # Set up vector store directory
-        base_dir = self._get_kb_root()
-        kb_user = current_user.username
-        kb_path = base_dir / kb_user / self.knowledge_base
+        kb_path = await self._kb_path()
 
         # If we don't allow duplicates, we need to get the existing hashes
         chroma = Chroma(
@@ -509,6 +476,14 @@ class KBIngestionComponent(Component):
         # Check allowed characters (condition 3)
         return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
 
+    async def _kb_path(self) -> Path:
+        current_user = await _get_current_user(self.langflow_api_key)
+
+        kb_root = self._get_kb_root()
+        kb_user = current_user.username
+
+        return kb_root / kb_user / self.knowledge_base
+
     # ---------------------------------------------------------------------
     #                         OUTPUT METHODS
     # ---------------------------------------------------------------------
@@ -522,16 +497,8 @@ class KBIngestionComponent(Component):
             config_list = self._validate_column_config(df_source)
             column_metadata = self._build_column_metadata(config_list, df_source)
 
-            # Get the current user
-            async for db in get_session():
-                current_user = await self._get_current_user(db)
-
-            # Set up vector store directory
-            kb_root = self._get_kb_root()
-            kb_user = current_user.username
-            kb_path = kb_root / kb_user / self.knowledge_base
-
             # Read the embedding info from the knowledge base folder
+            kb_path = await self._kb_path()
             metadata_path = kb_path / "embedding_metadata.json"
 
             # If the API key is not provided, try to read it from the metadata file
@@ -580,31 +547,9 @@ class KBIngestionComponent(Component):
             self.status = f"❌ KB ingestion failed: {e}"
             return Data(data={"error": str(e), "kb_name": self.knowledge_base})
 
-    async def _get_knowledge_bases(self) -> list[str]:
-        """Retrieve a list of available knowledge bases.
-
-        Returns:
-            A list of knowledge base names.
-        """
-        if not KNOWLEDGE_BASES_ROOT_PATH.exists():
-            return []
-
-        # Get the current user
-        async for db in get_session():
-            current_user = await self._get_current_user(db)
-
-        # Set up vector store directory
-        kb_user = current_user.username
-        kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user
-
-        if not kb_path.exists():
-            return []
-
-        return [str(d.name) for d in kb_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
-
     async def _get_api_key_variable(self, field_value: dict[str, Any]):
         async for db in get_session():
-            current_user = await self._get_current_user(db)
+            current_user = await _get_current_user(self.langflow_api_key)
             variable_service = get_variable_service()
 
             # Process the api_key field variable
@@ -625,6 +570,8 @@ class KBIngestionComponent(Component):
         """Update build configuration based on provider selection."""
         # Create a new knowledge base
         if field_name == "knowledge_base":
+            current_user = await _get_current_user(langflow_api_key=self.langflow_api_key)
+            kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 # Validate the knowledge base name - Make sure it follows these rules:
                 if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
@@ -653,9 +600,6 @@ class KBIngestionComponent(Component):
                     raise ValueError(msg) from e
 
                 # Create the new knowledge base directory
-                async for db in get_session():
-                    current_user = await self._get_current_user(db)
-                kb_user = current_user.username
                 kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / field_value["01_new_kb_name"]
                 kb_path.mkdir(parents=True, exist_ok=True)
 
@@ -668,7 +612,7 @@ class KBIngestionComponent(Component):
                 )
 
             # Update the knowledge base options dynamically
-            build_config["knowledge_base"]["options"] = await self._get_knowledge_bases()
+            build_config["knowledge_base"]["options"] = await get_knowledge_bases(KNOWLEDGE_BASES_ROOT_PATH)
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
                 build_config["knowledge_base"]["value"] = None
 

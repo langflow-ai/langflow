@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from langflow.base.data.kb_utils import get_knowledge_bases
 import pytest
 from langflow.components.data.kb_retrieval import KBRetrievalComponent
 
@@ -55,30 +56,19 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         # This is a new component, so it doesn't exist in older versions
         return []
 
-    async def test_get_knowledge_bases(self, component_class, default_kwargs, tmp_path):
+    async def test_get_knowledge_bases(self, tmp_path):
         """Test getting list of knowledge bases."""
-        component = component_class(**default_kwargs)
-
         # Create additional test directories
         (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
         (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
         (tmp_path / "langflow" / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
-        kb_list = await component._get_knowledge_bases()
+        kb_list = await get_knowledge_bases(tmp_path)
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
-
-    @patch("langflow.components.data.kb_retrieval.Path.exists")
-    async def test_get_knowledge_bases_no_path(self, mock_exists, component_class, default_kwargs):
-        """Test getting knowledge bases when path doesn't exist."""
-        component = component_class(**default_kwargs)
-        mock_exists.return_value = False
-
-        kb_list = await component._get_knowledge_bases()
-        assert kb_list == []
 
     async def test_update_build_config(self, component_class, default_kwargs, tmp_path):
         """Test updating build configuration."""

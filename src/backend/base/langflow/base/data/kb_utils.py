@@ -1,5 +1,11 @@
 import math
 from collections import Counter
+from pathlib import Path
+
+from langflow.services.auth.utils import create_user_longterm_token, get_current_user
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_session
 
 
 def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
@@ -102,3 +108,45 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
         scores.append(doc_score)
 
     return scores
+
+async def _get_current_user(langflow_api_key: str | None = None) -> User:
+    """Get the current user based on the provided API key or create a new user."""
+    async for db in get_session():
+        if langflow_api_key:
+            current_user = await get_current_user(
+                token="",
+                query_param=langflow_api_key,
+                header_param="",
+                db=db,
+            )
+        else:
+            user_id, _ = await create_user_longterm_token(db)
+            current_user = await get_user_by_id(db, user_id)
+
+        # Fail if the user is not found
+        if not current_user:
+            msg = "User not found. Please provide a valid Langflow API key or ensure the user exists."
+            raise ValueError(msg)
+
+    return current_user
+
+async def get_knowledge_bases(kb_root: Path) -> list[str]:
+    """Retrieve a list of available knowledge bases.
+
+    Returns:
+        A list of knowledge base names.
+    """
+    if not kb_root.exists():
+        return []
+
+    # Get the current user
+    current_user = await _get_current_user()
+
+    # Set up vector store directory
+    kb_user = current_user.username
+    kb_path = kb_root / kb_user
+
+    if not kb_path.exists():
+        return []
+
+    return [str(d.name) for d in kb_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
