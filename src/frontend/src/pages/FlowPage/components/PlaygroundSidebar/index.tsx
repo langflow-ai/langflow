@@ -2,20 +2,13 @@ import { PlaygroundComponent } from "@/components/core/playgroundComponent/playg
 import {
   SimpleSidebar,
   SimpleSidebarContent,
-  useSimpleSidebar,
 } from "@/components/ui/simple-sidebar";
 
 export function PlaygroundSidebar(): JSX.Element {
-  const { setOpen } = useSimpleSidebar();
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
   return (
     <SimpleSidebar side="right" className="noflow select-none">
-      <SimpleSidebarContent className="p-2 pl-0 flex h-full w-full bg-background">
-        <PlaygroundComponent onClose={handleClose} />
+      <SimpleSidebarContent className={"flex h-full w-full bg-background"}>
+        <PlaygroundComponent />
       </SimpleSidebarContent>
     </SimpleSidebar>
   );
