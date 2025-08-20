@@ -1,7 +1,7 @@
 """Add package installation table.
 
 Revision ID: 8693956d355f
-Revises: 3162e83e485f
+Revises: 1cb603706752
 Create Date: 2025-07-28 09:56:58.645226
 
 """
@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "8693956d355f"
-down_revision: str | None = "3162e83e485f"
+down_revision: str | None = "1cb603706752"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
