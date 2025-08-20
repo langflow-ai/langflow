@@ -3,11 +3,11 @@ import { AnimatedConditional } from "@/components/ui/animated-close";
 import { DEFAULT_SESSION_NAME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
+import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
 import { HeaderButton } from "./components/header-button";
 import { SessionManagerDropdown } from "./components/session-manager-dropdown";
 import { SessionMenuDropdown } from "./components/session-menu-dropdown";
 import { SessionRename } from "./components/session-rename";
-import { useEditSessionInfo } from "./hooks/use-edit-session-info";
 
 export function PlaygroundHeader() {
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);

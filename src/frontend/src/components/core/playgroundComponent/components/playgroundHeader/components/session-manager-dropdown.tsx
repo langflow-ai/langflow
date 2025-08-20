@@ -12,7 +12,7 @@ import { NEW_SESSION_NAME } from "@/constants/constants";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
-import { useGetAddSessions } from "../hooks/use-get-add-sessions";
+import { useGetAddSessions } from "../../../hooks/use-get-add-sessions";
 import { SessionItem } from "./session-manager-item";
 import { SessionMenuItem } from "./session-menu-item";
 
