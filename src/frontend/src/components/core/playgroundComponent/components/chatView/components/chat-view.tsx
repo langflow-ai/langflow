@@ -241,8 +241,7 @@ export default function ChatView({
     <div
       className={cn(
         "flex h-full w-full flex-col rounded-md",
-        !isVoiceAssistantActive &&
-          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
+        !isVoiceAssistantActive && "pointer-events-auto"
       )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
