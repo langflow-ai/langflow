@@ -86,7 +86,10 @@ class KBRetrievalComponent(Component):
     async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
-            build_config["knowledge_base"]["options"] = await get_knowledge_bases(KNOWLEDGE_BASES_ROOT_PATH)
+            build_config["knowledge_base"]["options"] = await get_knowledge_bases(
+                KNOWLEDGE_BASES_ROOT_PATH,
+                langflow_api_key=self.langflow_api_key,
+            )
 
             # If the selected knowledge base is not available, reset it
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:

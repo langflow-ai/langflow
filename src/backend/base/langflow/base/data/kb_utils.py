@@ -132,7 +132,7 @@ async def _get_current_user(langflow_api_key: str | None = None) -> User:
     return current_user
 
 
-async def get_knowledge_bases(kb_root: Path) -> list[str]:
+async def get_knowledge_bases(kb_root: Path, langflow_api_key: str | None = None) -> list[str]:
     """Retrieve a list of available knowledge bases.
 
     Returns:
@@ -142,7 +142,7 @@ async def get_knowledge_bases(kb_root: Path) -> list[str]:
         return []
 
     # Get the current user
-    current_user = await _get_current_user()
+    current_user = await _get_current_user(langflow_api_key)
 
     # Set up vector store directory
     kb_user = current_user.username

@@ -608,7 +608,12 @@ class KBIngestionComponent(Component):
                 )
 
             # Update the knowledge base options dynamically
-            build_config["knowledge_base"]["options"] = await get_knowledge_bases(KNOWLEDGE_BASES_ROOT_PATH)
+            build_config["knowledge_base"]["options"] = await get_knowledge_bases(
+                KNOWLEDGE_BASES_ROOT_PATH,
+                langflow_api_key=self.langflow_api_key,
+            )
+
+            # If the selected knowledge base is not available, reset it
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
                 build_config["knowledge_base"]["value"] = None
 
