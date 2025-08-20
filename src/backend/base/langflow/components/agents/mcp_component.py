@@ -16,14 +16,14 @@ from langflow.base.mcp.util import (
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs.inputs import InputTypes  # noqa: TC001
-from langflow.io import DropdownInput, McpInput, MessageTextInput, Output
+from langflow.io import DropdownInput, McpInput, MessageTextInput, Output, SecretStrInput
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.services.auth.utils import create_user_longterm_token
 
 # Import get_server from the backend API
+from langflow.services.auth.utils import create_user_longterm_token, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
 
@@ -96,6 +96,13 @@ class MCPToolsComponent(ComponentWithCache):
             show=False,
             tool_mode=False,
         ),
+        SecretStrInput(
+            name="api_key",
+            display_name="Langflow API Key",
+            info="Langflow API key for authentication when fetching MCP servers and tools.",
+            required=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -155,8 +162,18 @@ class MCPToolsComponent(ComponentWithCache):
 
         try:
             async for db in get_session():
-                user_id, _ = await create_user_longterm_token(db)
-                current_user = await get_user_by_id(db, user_id)
+                # TODO: In 1.6, this may need to be removed or adjusted
+                # Try to get the super user token, if possible
+                if self.api_key:
+                    current_user = await get_current_user(
+                        token=None,
+                        query_param=self.api_key,
+                        header_param=None,
+                        db=db,
+                    )
+                else:
+                    user_id, _ = await create_user_longterm_token(db)
+                    current_user = await get_user_by_id(db, user_id)
 
                 # Try to get server config from DB/API
                 server_config = await get_server(
