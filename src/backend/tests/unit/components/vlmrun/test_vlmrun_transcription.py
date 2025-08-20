@@ -85,13 +85,15 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
     def test_vlmrun_import_error(self, component_class, default_kwargs, monkeypatch):
         """Test handling of VLM Run SDK import error."""
+        # Capture the original __import__ before monkeypatching
+        original_import = __import__
 
         # Mock the vlmrun module to not exist
         def mock_import(name, *args):
             if name == "vlmrun.client":
                 msg = "No module named 'vlmrun'"
                 raise ImportError(msg)
-            return __import__(name, *args)
+            return original_import(name, *args)
 
         monkeypatch.setattr("builtins.__import__", mock_import)
 
