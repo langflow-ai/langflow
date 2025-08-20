@@ -1,7 +1,11 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import NodeDrawer from "@/CustomNodes/GenericNode/components/NodeDrawer";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { useSidebar } from "@/components/ui/sidebar";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
@@ -9,9 +13,6 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
@@ -64,6 +65,8 @@ export default function Dropdown({
   );
 
   // Initialize state and refs
+  const { setOpen: setSidebarOpen } = useSidebar();
+
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
@@ -501,10 +504,9 @@ export default function Dropdown({
       <CommandSeparator />
       {dialogInputs && dialogInputs?.fields && (
         <CommandGroup className="p-0">
-          <Button
+          <CommandItem
             className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-            unstyled
-            onClick={() => {
+            onSelect={() => {
               if (dialogInputs?.functionality === "side_panel") {
                 setOpenDrawer(true);
                 setOpen(false);
@@ -525,7 +527,7 @@ export default function Dropdown({
                 />
               </div>
             )}
-          </Button>
+          </CommandItem>
 
           {hasRefreshButton && (
             <Button
@@ -556,14 +558,13 @@ export default function Dropdown({
             name={name!}
             nodeClass={nodeClass!}
           />
-          {openDrawer && <NodeDrawer
+          <NodeDrawer
             open={openDrawer}
             onClose={() => {
               setOpenDrawer(false);
               setOpen(false);
             }}
-            nodeId={nodeId!}
-          />}
+          />
         </CommandGroup>
       )}
     </CommandList>
