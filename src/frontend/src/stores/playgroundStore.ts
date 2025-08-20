@@ -10,4 +10,5 @@ export const usePlaygroundStore = create<PlaygroundStoreType>((set) => ({
   isFullscreen: false,
   toggleFullscreen: () =>
     set((state) => ({ isFullscreen: !state.isFullscreen })),
+  setIsFullscreen: (isFullscreen: boolean) => set({ isFullscreen }),
 }));
