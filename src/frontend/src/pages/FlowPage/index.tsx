@@ -167,6 +167,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
   const setIsFullscreen = usePlaygroundStore((state) => state.setIsFullscreen);
 
+  const isOpen = usePlaygroundStore((state) => state.isOpen);
+  const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
+
   const onMaxWidth = (attemptedWidth: number, maxWidth: number) => {
     if (attemptedWidth > maxWidth + 50) {
       setIsFullscreen(true);
@@ -179,7 +182,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         {currentFlow && (
           <>
             <div className="flex h-full w-fit">
-              <AnimatedConditional isOpen={!isFullscreen}>
+              <AnimatedConditional isOpen={!isFullscreen || !isOpen}>
                 <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
                   {!view && <FlowSidebarComponent isLoading={isLoading} />}
                   <MemoizedSidebarTrigger />
@@ -194,6 +197,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               onMaxWidth={onMaxWidth}
               fullscreen={isFullscreen}
               defaultOpen={false}
+              open={isOpen}
+              onOpenChange={setIsOpen}
               shortcut={openPlayground}
             >
               <FlowBorderWrapperComponent setIsLoading={setIsLoading} />
