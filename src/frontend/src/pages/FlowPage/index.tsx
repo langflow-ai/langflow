@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
+import { AnimatedConditional } from "@/components/ui/animated-close";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { SimpleSidebarProvider } from "@/components/ui/simple-sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
@@ -178,10 +179,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         {currentFlow && (
           <>
             <div className="flex h-full w-fit">
-              <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
-                {!view && <FlowSidebarComponent isLoading={isLoading} />}
-                <MemoizedSidebarTrigger />
-              </SidebarProvider>
+              <AnimatedConditional isOpen={!isFullscreen}>
+                <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
+                  {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                  <MemoizedSidebarTrigger />
+                </SidebarProvider>
+              </AnimatedConditional>
             </div>
 
             <SimpleSidebarProvider
