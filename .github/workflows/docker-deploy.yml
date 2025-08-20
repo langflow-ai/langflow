@@ -1,0 +1,74 @@
+name: Docker Deploy - Entire Application
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Domain name for deployment"
+        required: true
+        default: "staging.visualaiagentsbuilder.com"
+      email:
+        description: "Admin email for deployment"
+        required: true
+        default: "saravana.k.r@gmail.com"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Pull latest main branch
+        run: |
+          git fetch origin main
+          git checkout main
+          git pull origin main
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        run: |
+          DOCKER_BUILDKIT=1 \
+          VITE_AUTO_LOGIN=false \
+          VITE_CLERK_AUTH_ENABLED=true \
+          VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
+          make docker_build
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: forwardemailforaifirstdesk
+          password: ${{ secrets.DOCKERHUB_TOKEN }}    
+
+      - name: Tag and Push Docker Image
+        run: |
+          docker tag langflow:1.4.2 forwardemailforaifirstdesk/langflow:1.4.2
+          docker push forwardemailforaifirstdesk/langflow:1.4.2
+
+      - name: Upload script to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: staging.visualaiagentsbuilder.com
+          username: root
+          password: ${{ secrets.VM_PASSWORD }}
+          source: |
+              ./deploy/deploy.sh
+              ./.env-file
+          target: /root/
+
+      - name: Run script on VM
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: staging.visualaiagentsbuilder.com
+          username: root
+          password: ${{ secrets.VM_PASSWORD }}
+          script: |
+            chmod +x /root/deploys.sh
+            /root/deploys.sh \
+              --image forwardemailforaifirstdesk/langflow:1.4.2 \
+              --domain ${{ github.event.inputs.domain }} \
+              --email ${{ github.event.inputs.email }} \
+              --env-file /root/.env-file
