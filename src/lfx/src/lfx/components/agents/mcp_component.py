@@ -15,7 +15,7 @@ from lfx.base.mcp.util import (
     update_tools,
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
-from lfx.inputs.inputs import InputTypes  # noqa: TC001
+from lfx.inputs.inputs import InputTypes, SecretStrInput
 from lfx.io import DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.schema.dataframe import DataFrame
@@ -91,6 +91,13 @@ class MCPToolsComponent(ComponentWithCache):
             show=False,
             tool_mode=False,
         ),
+        SecretStrInput(
+            name="api_key",
+            display_name="Langflow API Key",
+            info="Langflow API key for authentication when fetching MCP servers and tools.",
+            required=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -151,7 +158,7 @@ class MCPToolsComponent(ComponentWithCache):
         try:
             try:
                 from langflow.api.v2.mcp import get_server
-                from langflow.services.auth.utils import create_user_longterm_token
+                from langflow.services.auth.utils import create_user_longterm_token, get_current_user
                 from langflow.services.database.models.user.crud import get_user_by_id
             except ImportError as e:
                 msg = (
@@ -161,8 +168,16 @@ class MCPToolsComponent(ComponentWithCache):
                 raise ImportError(msg) from e
 
             async with session_scope() as db:
-                user_id, _ = await create_user_longterm_token(db)
-                current_user = await get_user_by_id(db, user_id)
+                if self.api_key:
+                    current_user = await get_current_user(
+                        token=None,
+                        query_param=self.api_key,
+                        header_param=None,
+                        db=db,
+                    )
+                else:
+                    user_id, _ = await create_user_longterm_token(db)
+                    current_user = await get_user_by_id(db, user_id)
 
                 # Try to get server config from DB/API
                 server_config = await get_server(

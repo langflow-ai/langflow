@@ -702,8 +702,8 @@
             "last_updated": "2025-08-13T19:45:49.122Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "8b0bf9929957",
-              "module": "lfx.components.data.kb_ingest.KBIngestionComponent"
+              "code_hash": "e1ebcd66ecbc",
+              "module": "langflow.components.data.kb_ingest.KBIngestionComponent"
             },
             "minimized": false,
             "output_types": [],
