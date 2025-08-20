@@ -298,11 +298,11 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.66"
+                    "version": "0.3.72"
                   }
                 ],
                 "total_dependencies": 4
@@ -533,11 +533,11 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": null
+                    "version": "2.154.0"
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
@@ -1490,7 +1490,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
@@ -1822,7 +1822,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -2581,7 +2581,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1

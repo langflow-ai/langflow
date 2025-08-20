@@ -1915,7 +1915,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1
@@ -2818,7 +2818,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.66"
+                    "version": "0.3.72"
                   },
                   {
                     "name": "loguru",
@@ -2830,7 +2830,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 5
@@ -3053,7 +3053,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1
@@ -3227,7 +3227,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
@@ -3644,7 +3644,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3

@@ -122,7 +122,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1
@@ -637,7 +637,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3

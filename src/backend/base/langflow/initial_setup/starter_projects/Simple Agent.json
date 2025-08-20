@@ -196,7 +196,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1
@@ -363,7 +363,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1
@@ -698,7 +698,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
@@ -1569,7 +1569,7 @@
                   },
                   {
                     "name": "bs4",
-                    "version": null
+                    "version": "4.12.3"
                   },
                   {
                     "name": "langchain_community",
@@ -1581,7 +1581,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 5

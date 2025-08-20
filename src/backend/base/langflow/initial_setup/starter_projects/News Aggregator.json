@@ -218,7 +218,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
@@ -583,7 +583,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1
@@ -942,7 +942,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5.0.post1"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
@@ -1252,6 +1252,27 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "d9af728ce02a",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "pandas",
+                    "version": "2.2.3"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.115.13"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "module": "langflow.components.processing.save_file.SaveToFileComponent"
             },
             "minimized": false,
