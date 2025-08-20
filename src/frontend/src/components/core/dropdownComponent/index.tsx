@@ -1,7 +1,5 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
+import NodeDrawer from "@/CustomNodes/GenericNode/components/NodeDrawer";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
@@ -11,6 +9,9 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
@@ -65,6 +66,7 @@ export default function Dropdown({
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openDrawer, setOpenDrawer] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -321,23 +323,29 @@ export default function Dropdown({
             "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
-          <span
-            className="flex w-full items-center gap-2 overflow-hidden"
-            data-testid={`value-dropdown-${id}`}
-          >
-            {value && <>{renderSelectedIcon()}</>}
-            <span className="truncate">
-              {disabled ? (
-                RECEIVING_INPUT_VALUE
-              ) : (
-                <>
-                  {value && filteredOptions.includes(value)
-                    ? value
-                    : placeholder || SELECT_AN_OPTION}{" "}
-                </>
-              )}
+          {!openDrawer ? (
+            <span
+              className="flex w-full items-center gap-2 overflow-hidden"
+              data-testid={`value-dropdown-${id}`}
+            >
+              {value && <>{renderSelectedIcon()}</>}
+              <span className="truncate">
+                {disabled ? (
+                  RECEIVING_INPUT_VALUE
+                ) : (
+                  <>
+                    {value && filteredOptions.includes(value)
+                      ? value
+                      : placeholder || SELECT_AN_OPTION}{" "}
+                  </>
+                )}
+              </span>
             </span>
-          </span>
+          ) : (
+            <span className="flex w-full items-center gap-2 overflow-hidden text-muted-foreground relative">
+              <LoadingTextComponent text={"Awaiting response"} />
+            </span>
+          )}
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
@@ -412,7 +420,10 @@ export default function Dropdown({
                     >
                       <div
                         className={cn("truncate text-[13px]", {
-                          "w-1/2": filteredMetadata?.length !== 0,
+                          "w-1/2":
+                            filteredMetadata?.[index]?.length > 1 &&
+                            filteredMetadata?.[index]?.icon,
+                          "w-3/4": !filteredMetadata?.[index]?.icon,
                         })}
                       >
                         {option}
@@ -494,34 +505,46 @@ export default function Dropdown({
             className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
             unstyled
             onClick={() => {
-              setOpenDialog(true);
+              if (dialogInputs?.functionality === "side_panel") {
+                setOpenDrawer(true);
+                setOpen(false);
+              } else {
+                setOpenDialog(true);
+              }
             }}
           >
             <div className="flex items-center gap-2 pl-1">
-              <ForwardedIconComponent
-                name="Plus"
-                className="h-3 w-3 text-primary"
-              />
-              {`New ${firstWord}`}
+              <ForwardedIconComponent name="Plus" className="h-3 w-3 " />
+              {dialogInputs?.fields?.data?.node?.display_name}
             </div>
+            {dialogInputs?.fields?.data?.node?.icon && (
+              <div className="ml-auto">
+                <ForwardedIconComponent
+                  name={dialogInputs?.fields?.data?.node?.icon}
+                  className="h-3 w-3 "
+                />
+              </div>
+            )}
           </Button>
 
-          <Button
-            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-            unstyled
-            data-testid={`refresh-dropdown-list-${name}`}
-            onClick={() => {
-              handleRefreshButtonPress();
-            }}
-          >
-            <div className="flex items-center gap-2 pl-1">
-              <ForwardedIconComponent
-                name="RefreshCcw"
-                className={cn("refresh-icon h-3 w-3 text-primary")}
-              />
-              Refresh list
-            </div>
-          </Button>
+          {hasRefreshButton && (
+            <Button
+              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+              unstyled
+              data-testid={`refresh-dropdown-list-${name}`}
+              onClick={() => {
+                handleRefreshButtonPress();
+              }}
+            >
+              <div className="flex items-center gap-2 pl-1">
+                <ForwardedIconComponent
+                  name="RefreshCcw"
+                  className={cn("refresh-icon h-3 w-3 text-primary")}
+                />
+                Refresh list
+              </div>
+            </Button>
+          )}
           <NodeDialog
             open={openDialog}
             dialogInputs={dialogInputs}
@@ -533,6 +556,14 @@ export default function Dropdown({
             name={name!}
             nodeClass={nodeClass!}
           />
+          {openDrawer && <NodeDrawer
+            open={openDrawer}
+            onClose={() => {
+              setOpenDrawer(false);
+              setOpen(false);
+            }}
+            nodeId={nodeId!}
+          />}
         </CommandGroup>
       )}
     </CommandList>
