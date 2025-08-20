@@ -10,16 +10,11 @@ export default function FlowBorderWrapperComponent({
 }) {
   const { open } = useSimpleSidebar();
   return (
-    <div
-      className={cn(
-        "transition-all duration-300 flex h-full w-full",
-        open && "p-2"
-      )}
-    >
+    <>
       <main
         className={cn(
-          "flex w-full overflow-hidden transition-all duration-300",
-          open && "rounded-xl"
+          "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
+          open && "rounded-xl m-2 mr-0"
         )}
       >
         <div className="h-full w-full relative">
@@ -27,6 +22,6 @@ export default function FlowBorderWrapperComponent({
         </div>
       </main>
       <PlaygroundSidebar />
-    </div>
+    </>
   );
 }
