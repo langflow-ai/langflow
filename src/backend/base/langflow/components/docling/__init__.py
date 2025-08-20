@@ -57,7 +57,7 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
     def signal_handler(signum: int, frame) -> None:  # noqa: ARG001
         """Handle shutdown signals gracefully."""
         nonlocal shutdown_requested
-        signal_names = {signal.SIGTERM: "SIGTERM", signal.SIGINT: "SIGINT"}
+        signal_names: dict[int, str] = {signal.SIGTERM: "SIGTERM", signal.SIGINT: "SIGINT"}
         signal_name = signal_names.get(signum, f"signal {signum}")
 
         logger.debug(f"Docling worker received {signal_name}, initiating graceful shutdown...")
