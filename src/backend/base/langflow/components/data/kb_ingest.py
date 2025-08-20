@@ -139,8 +139,8 @@ class KBIngestionComponent(Component):
                 {
                     "column_name": "text",
                     "vectorize": True,
-                    "identifier": False,
-                }
+                    "identifier": True,
+                },
             ],
         ),
         IntInput(
@@ -187,9 +187,8 @@ class KBIngestionComponent(Component):
         df_columns = set(df_source.columns)
         for config in config_list:
             col_name = config.get("column_name")
-            if col_name not in df_columns and not self.silent_errors:
+            if col_name not in df_columns:
                 msg = f"Column '{col_name}' not found in DataFrame. Available columns: {sorted(df_columns)}"
-                self.log(f"Warning: {msg}")
                 raise ValueError(msg)
 
         return config_list
@@ -295,9 +294,7 @@ class KBIngestionComponent(Component):
             if not cfg_path.exists():
                 cfg_path.write_text(json.dumps(config_list, indent=2))
 
-        except Exception as e:
-            if not self.silent_errors:
-                raise
+        except (OSError, TypeError, ValueError) as e:
             self.log(f"Error saving KB files: {e}")
 
     def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:
@@ -367,9 +364,7 @@ class KBIngestionComponent(Component):
                 chroma.add_documents(documents)
                 self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
 
-        except Exception as e:
-            if not self.silent_errors:
-                raise
+        except (OSError, ValueError, RuntimeError) as e:
             self.log(f"Error creating vector store: {e}")
 
     def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:
@@ -407,15 +402,21 @@ class KBIngestionComponent(Component):
 
         # Convert each row to a Data object
         for _, row in df_source.iterrows():
-            # Build content text from vectorized columns using list comprehension
-            content_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
+            # Build content text from identifier columns using list comprehension
+            identifier_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
 
-            page_content = " ".join(content_parts)
+            # Join all parts into a single string
+            page_content = " ".join(identifier_parts)
 
             # Build metadata from NON-vectorized columns only (simple key-value pairs)
             data_dict = {
                 "text": page_content,  # Main content for vectorization
             }
+
+            # Add identifier columns if they exist
+            if identifier_cols:
+                identifier_parts = [str(row[col]) for col in identifier_cols if col in row and pd.notna(row[col])]
+                page_content = " ".join(identifier_parts)
 
             # Add metadata columns as simple key-value pairs
             for col in df_source.columns:
@@ -526,9 +527,7 @@ class KBIngestionComponent(Component):
 
             return Data(data=meta)
 
-        except Exception as e:
-            if not self.silent_errors:
-                raise
+        except (OSError, ValueError, RuntimeError, KeyError) as e:
             self.log(f"Error in KB ingestion: {e}")
             self.status = f"❌ KB ingestion failed: {e}"
             return Data(data={"error": str(e), "kb_name": self.knowledge_base})
