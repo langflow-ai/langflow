@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 export const AnimatedConditional = ({
   children,
   isOpen,
+  className,
 }: {
   children: React.ReactNode;
   isOpen: boolean;
+  className?: string;
 }) => {
   return (
     <motion.div
@@ -20,6 +22,7 @@ export const AnimatedConditional = ({
         overflow: "hidden",
         whiteSpace: "nowrap",
       }}
+      className={className}
     >
       {children}
     </motion.div>
