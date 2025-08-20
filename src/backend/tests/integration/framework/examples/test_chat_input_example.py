@@ -1,7 +1,6 @@
 """Example of ChatInput integration test using new framework."""
 
 from langflow.components.input_output import ChatInput
-
 from tests.integration.framework import ComponentTest, leak_detection, timeout
 
 
