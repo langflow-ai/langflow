@@ -124,8 +124,7 @@ async def upload_user_file(
         else:
             # For normal files, ensure unique name by appending a count if necessary
             stmt = select(UserFile).where(
-                col(UserFile.name).like(f"{root_filename}%"),
-                UserFile.user_id == current_user.id
+                col(UserFile.name).like(f"{root_filename}%"), UserFile.user_id == current_user.id
             )
             existing_files = await session.exec(stmt)
             files = existing_files.all()  # Fetch all matching records
