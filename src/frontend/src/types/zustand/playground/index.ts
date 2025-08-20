@@ -6,4 +6,6 @@ export type PlaygroundStoreType = {
   isFullscreen: boolean;
   toggleFullscreen: () => void;
   setIsFullscreen: (isFullscreen: boolean) => void;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
 };
