@@ -284,7 +284,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         try:
             return await get_user_by_flow_id_or_endpoint_name(flow_id)
         except Exception as exc:
-            raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
+            raise HTTPException(status_code=404, detail="Flow not found") from exc
 
     # When webhook auth is enabled, require API key authentication
     api_key_header_val = request.headers.get("x-api-key")
@@ -302,11 +302,11 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         async with get_db_service().with_session() as db:
             result = await check_key(db, api_key)
             if not result:
-                logger.warning(f"Invalid API key provided for webhook: {api_key[:10]}...")
+                logger.warning("Invalid API key provided for webhook")
                 raise HTTPException(status_code=403, detail="Invalid API key")
 
             authenticated_user = UserRead.model_validate(result, from_attributes=True)
-            logger.info(f"Webhook API key validated successfully for user: {authenticated_user.username}")
+            logger.info("Webhook API key validated successfully")
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
@@ -319,10 +319,10 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     try:
         flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
     except Exception as exc:
-        raise HTTPException(status_code=404, detail=f"Flow {flow_id} not found") from exc
+        raise HTTPException(status_code=404, detail="Flow not found") from exc
 
     if flow_owner.id != authenticated_user.id:
-        raise HTTPException(status_code=403, detail="You don't have permission to run this flow")
+        raise HTTPException(status_code=403, detail="Access denied: You can only execute webhooks for flows you own")
 
     return authenticated_user
 
