@@ -20,6 +20,7 @@ type SimpleSidebarContext = {
   setWidth: (width: number) => void;
   isResizing: boolean;
   setIsResizing: (isResizing: boolean) => void;
+  fullscreen: boolean;
 };
 
 const SimpleSidebarContext = React.createContext<SimpleSidebarContext | null>(
@@ -45,6 +46,10 @@ const SimpleSidebarProvider = React.forwardRef<
     onOpenChange?: (open: boolean) => void;
     width?: string;
     shortcut?: string;
+    minWidth?: number; // 0 to 1, percentage of parent width
+    maxWidth?: number; // 0 to 1, percentage of parent width
+    onMaxWidth?: (attemptedWidth: number, maxWidth: number) => void;
+    fullscreen?: boolean;
   }
 >(
   (
@@ -57,6 +62,10 @@ const SimpleSidebarProvider = React.forwardRef<
       children,
       width = SIMPLE_SIDEBAR_WIDTH,
       shortcut,
+      minWidth = 0.1, // 10% of parent width
+      maxWidth = 0.8, // 80% of parent width
+      onMaxWidth,
+      fullscreen = false,
       ...props
     },
     ref
@@ -68,6 +77,10 @@ const SimpleSidebarProvider = React.forwardRef<
       typeof width === "string" ? parseInt(width.replace("px", "")) : width
     );
     const [_isResizing, _setIsResizing] = React.useState(false);
+    const [_parentWidth, _setParentWidth] = React.useState(10000);
+
+    // Internal ref for tracking parent width
+    const internalRef = React.useRef<HTMLDivElement>(null);
 
     const open = openProp ?? _open;
     const setOpen = React.useCallback(
@@ -83,18 +96,54 @@ const SimpleSidebarProvider = React.forwardRef<
       [setOpenProp, open]
     );
 
-    const setWidth = React.useCallback((newWidth: number) => {
-      const constrainedWidth = Math.min(
-        Math.max(newWidth, MIN_SIDEBAR_WIDTH),
-        MAX_SIDEBAR_WIDTH
-      );
-      _setWidth(constrainedWidth);
-    }, []);
+    const setWidth = React.useCallback(
+      (newWidth: number) => {
+        const minWidthPx = _parentWidth * minWidth;
+        const maxWidthPx = _parentWidth * maxWidth;
+
+        // Fallback to absolute constraints if parent width is not available
+        const minConstraint = _parentWidth > 0 ? minWidthPx : MIN_SIDEBAR_WIDTH;
+        const maxConstraint = _parentWidth > 0 ? maxWidthPx : MAX_SIDEBAR_WIDTH;
+
+        // Check if user is trying to resize beyond max width
+        if (newWidth > maxConstraint && onMaxWidth) {
+          onMaxWidth(newWidth, maxConstraint);
+        }
+
+        const constrainedWidth = Math.min(
+          Math.max(newWidth, minConstraint),
+          maxConstraint
+        );
+        _setWidth(constrainedWidth);
+      },
+      [_parentWidth, minWidth, maxWidth, onMaxWidth]
+    );
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
       return setOpen((prev) => !prev);
     }, [setOpen]);
+
+    // Track parent width using ResizeObserver
+    React.useEffect(() => {
+      const element = internalRef.current;
+      if (!element) return;
+
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          _setParentWidth(entry.contentRect.width);
+        }
+      });
+
+      resizeObserver.observe(element);
+
+      // Initial measurement
+      _setParentWidth(element.getBoundingClientRect().width);
+
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }, []);
 
     const contextValue = React.useMemo<SimpleSidebarContext>(
       () => ({
@@ -105,8 +154,9 @@ const SimpleSidebarProvider = React.forwardRef<
         setWidth,
         isResizing: _isResizing,
         setIsResizing: _setIsResizing,
+        fullscreen,
       }),
-      [open, setOpen, toggleSidebar, _width, setWidth, _isResizing]
+      [open, setOpen, toggleSidebar, _width, setWidth, _isResizing, fullscreen]
     );
 
     // Register hotkey if provided
@@ -124,21 +174,44 @@ const SimpleSidebarProvider = React.forwardRef<
       }
     );
 
+    // Combine refs to track both forwarded ref and internal ref
+    const combinedRef = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        // Set our internal ref
+        (internalRef as React.MutableRefObject<HTMLDivElement | null>).current =
+          node;
+
+        // Handle forwarded ref
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          try {
+            (ref as React.MutableRefObject<HTMLDivElement | null>).current =
+              node;
+          } catch {
+            // Ignore read-only ref errors
+          }
+        }
+      },
+      [ref]
+    );
+
     return (
       <SimpleSidebarContext.Provider value={contextValue}>
         <div
           style={
             {
               "--simple-sidebar-width": `${_width}px`,
+              "--simple-sidebar-parent-width": `${_parentWidth}px`,
               ...style,
             } as React.CSSProperties
           }
           className={cn(
-            "group/simple-sidebar-wrapper flex h-full w-full text-foreground",
+            "group/simple-sidebar-wrapper relative flex h-full w-full text-foreground",
             className
           )}
           data-open={open}
-          ref={ref}
+          ref={combinedRef}
           {...props}
         >
           {children}
@@ -257,14 +330,15 @@ const SimpleSidebar = React.forwardRef<
     { side = "right", resizable = true, className, children, ...props },
     ref
   ) => {
-    const { open, isResizing } = useSimpleSidebar();
+    const { open, isResizing, fullscreen } = useSimpleSidebar();
 
     return (
       <div
         ref={ref}
-        className="relative block h-full flex-col"
+        className={cn(" flex h-full")}
         data-open={open}
         data-side={side}
+        data-fullscreen={fullscreen}
       >
         {/* This is what handles the sidebar gap */}
         <div
@@ -276,18 +350,17 @@ const SimpleSidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "absolute inset-y-0 z-50 flex h-full w-[--simple-sidebar-width]",
-            !isResizing &&
-              "transition-[left,right,width] duration-300 ease-in-out",
-            side === "left"
-              ? cn(
-                  "left-0",
-                  !open && "left-[calc(var(--simple-sidebar-width)*-1)]"
-                )
+            "absolute inset-y-0 z-50 flex h-full",
+            fullscreen
+              ? "left-0 w-[--simple-sidebar-parent-width]"
               : cn(
-                  "right-0",
-                  !open && "right-[calc(var(--simple-sidebar-width)*-1)]"
+                  "w-[--simple-sidebar-width]",
+                  open
+                    ? "left-[calc(var(--simple-sidebar-parent-width)-var(--simple-sidebar-width))]"
+                    : "left-[--simple-sidebar-parent-width]"
                 ),
+            (!isResizing || fullscreen) &&
+              "transition-[left,right,width] duration-300 ease-in-out",
             className
           )}
           {...props}
