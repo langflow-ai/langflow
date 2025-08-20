@@ -308,9 +308,12 @@ class Settings(BaseSettings):
     @classmethod
     def validate_cors_origins(cls, value):
         """Convert comma-separated string to list if needed."""
-        if isinstance(value, str) and value != "*" and "," in value:
-            # Convert comma-separated string to list
-            return [origin.strip() for origin in value.split(",")]
+        if isinstance(value, str) and value != "*":
+            if "," in value:
+                # Convert comma-separated string to list
+                return [origin.strip() for origin in value.split(",")]
+            # Convert single origin to list for consistency
+            return [value]
         return value
 
     @field_validator("cors_allow_credentials", mode="after")
