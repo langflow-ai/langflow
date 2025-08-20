@@ -9,6 +9,7 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
@@ -162,6 +163,15 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const openPlayground = useShortcutsStore((state) => state.openPlayground);
 
+  const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
+  const setIsFullscreen = usePlaygroundStore((state) => state.setIsFullscreen);
+
+  const onMaxWidth = (attemptedWidth: number, maxWidth: number) => {
+    if (attemptedWidth > maxWidth + 50) {
+      setIsFullscreen(true);
+    }
+  };
+
   return (
     <>
       <div className="flex h-full w-full">
@@ -176,6 +186,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
             <SimpleSidebarProvider
               width="400px"
+              minWidth={0.22}
+              maxWidth={0.8}
+              onMaxWidth={onMaxWidth}
+              fullscreen={isFullscreen}
               defaultOpen={false}
               shortcut={openPlayground}
             >
