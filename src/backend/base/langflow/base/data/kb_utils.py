@@ -109,6 +109,7 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
 
     return scores
 
+
 async def _get_current_user(langflow_api_key: str | None = None) -> User:
     """Get the current user based on the provided API key or create a new user."""
     async for db in get_session():
@@ -129,6 +130,7 @@ async def _get_current_user(langflow_api_key: str | None = None) -> User:
             raise ValueError(msg)
 
     return current_user
+
 
 async def get_knowledge_bases(kb_root: Path) -> list[str]:
     """Retrieve a list of available knowledge bases.

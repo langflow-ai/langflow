@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from langflow.base.data.kb_utils import get_knowledge_bases
 import pytest
+from langflow.base.data.kb_utils import get_knowledge_bases
 from langflow.components.data.kb_retrieval import KBRetrievalComponent
 
 from tests.base import ComponentTestBaseWithoutClient

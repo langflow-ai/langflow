@@ -12,7 +12,7 @@ from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Ou
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.deps import get_settings_service
 
 settings = get_settings_service().settings
 knowledge_directory = settings.knowledge_bases_dir
