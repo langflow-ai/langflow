@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import hashlib
 import json
@@ -17,14 +18,13 @@ from loguru import logger
 
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.custom import Component
-from langflow.custom.custom_component.custom_component import get_variable_service
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import create_user_longterm_token, decrypt_api_key, encrypt_api_key, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.deps import get_session, get_settings_service, get_variable_service
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
@@ -639,8 +639,18 @@ class KBIngestionComponent(Component):
                 # We need to test the API Key one time against the embedding model
                 embed_model = self._build_embeddings(embedding_model=field_value["02_embedding_model"], api_key=api_key)
 
-                # Try to generate a dummy embedding to validate the API key
-                embed_model.embed_query("test")
+                # Try to generate a dummy embedding to validate the API key without blocking the event loop
+                try:
+                    await asyncio.wait_for(
+                        asyncio.to_thread(embed_model.embed_query, "test"),
+                        timeout=10,
+                    )
+                except TimeoutError as e:
+                    msg = "Embedding validation timed out. Please verify network connectivity and key."
+                    raise ValueError(msg) from e
+                except Exception as e:
+                    msg = f"Embedding validation failed: {e!s}"
+                    raise ValueError(msg) from e
 
                 # Create the new knowledge base directory
                 async for db in get_session():

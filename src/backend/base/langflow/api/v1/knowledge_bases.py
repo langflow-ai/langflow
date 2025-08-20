@@ -406,12 +406,12 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
     try:
         kb_root_path = get_kb_root_path()
         kb_user = current_user.username
-        kb_path = kb_root_path / kb_user
+        kb_user_path = kb_root_path / kb_user
         deleted_count = 0
         not_found_kbs = []
 
         for kb_name in request.kb_names:
-            kb_path = kb_path / kb_name
+            kb_path = kb_user_path / kb_name
 
             if not kb_path.exists() or not kb_path.is_dir():
                 not_found_kbs.append(kb_name)
