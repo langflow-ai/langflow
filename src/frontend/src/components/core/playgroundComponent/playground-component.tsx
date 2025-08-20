@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
+import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import useFlowStore from "@/stores/flowStore";
@@ -10,12 +11,13 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { PlaygroundModalPropsType } from "@/types/components";
+import { cn } from "@/utils/utils";
 import ChatView from "./components/chatView/components/chat-view";
 import { PlaygroundHeader } from "./components/playgroundHeader/playground-header";
+import SessionSidebar from "./components/sessionSidebar/session-sidebar";
 
 export function PlaygroundComponent({
   playgroundPage,
-  onClose,
 }: PlaygroundModalPropsType): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
   const buildFlow = useFlowStore((state) => state.buildFlow);
@@ -34,6 +36,8 @@ export function PlaygroundComponent({
   const setSelectedSession = usePlaygroundStore(
     (state) => state.setSelectedSession
   );
+
+  const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
   const { data: sessions, refetch: refetchSessions } =
     useGetSessionsFromFlowQuery({
       flowId: currentFlowId,
@@ -122,14 +126,24 @@ export function PlaygroundComponent({
   }, [selectedSession]);
 
   return (
-    <div className="flex flex-col w-full h-full">
-      <PlaygroundHeader />
-      <div className="flex container flex-grow p-4">
-        <ChatView
-          sendMessage={sendMessage}
-          visibleSession={selectedSession}
-          playgroundPage={playgroundPage}
-        />
+    <div className="flex w-full h-full">
+      <AnimatedConditional className="flex shrink-0" isOpen={isFullscreen}>
+        <SessionSidebar />
+      </AnimatedConditional>
+      <div
+        className={cn(
+          "flex flex-col w-full h-full transition-all duration-300",
+          isFullscreen ? "p-2" : "p-2 pl-0"
+        )}
+      >
+        <PlaygroundHeader />
+        <div className="flex flex-grow p-4">
+          <ChatView
+            sendMessage={sendMessage}
+            visibleSession={selectedSession}
+            playgroundPage={playgroundPage}
+          />
+        </div>
       </div>
     </div>
   );
