@@ -3,17 +3,13 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
-  SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
-import SidebarItemsList from "./sidebarItemsList";
 
 type McpSidebarGroupProps = {
-  openCategories: string[];
-  setOpenCategories;
   dataFilter: any;
   nodeColors: any;
   onDragStart: (
@@ -28,7 +24,7 @@ const McpSidebarGroup = ({
   nodeColors,
   onDragStart,
   sensitiveSort,
-}) => {
+}: McpSidebarGroupProps) => {
   const {
     data: mcpServers,
     isLoading,
@@ -36,11 +32,22 @@ const McpSidebarGroup = ({
     isError,
   } = useGetMCPServers();
 
-  console.log(mcpServers);
-
   const mcpComponent = dataFilter["agents"]["MCPTools"];
 
-  console.log(mcpComponent);
+  const updatedMcpComponent = (mcpServer: any) => {
+    const updatedMcpComponent = {
+      ...mcpComponent,
+      template: {
+        ...mcpComponent.template,
+        mcp_server: {
+          ...mcpComponent.template.mcp_server,
+          value: mcpServer,
+        },
+      },
+    };
+
+    return updatedMcpComponent;
+  };
 
   return (
     <SidebarGroup className="p-3">
@@ -57,7 +64,7 @@ const McpSidebarGroup = ({
                   onDragStart={(event) =>
                     onDragStart(event, {
                       type: removeCountFromString("MCP"),
-                      node: mcpComponent,
+                      node: updatedMcpComponent(mcpServer),
                     })
                   }
                   color={nodeColors["agents"]}

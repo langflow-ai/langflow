@@ -45,14 +45,16 @@ export const CustomControlButton = ({
       title={testId?.replace(/_/g, " ")}
     >
       <ShadTooltip content={tooltipText} side="right">
-        <div className={cn("rounded p-2.5", backgroundClasses)}>
+        <div
+          className={cn(
+            "rounded p-2.5 text-muted-foreground group-hover:text-primary",
+            backgroundClasses,
+          )}
+        >
           <IconComponent
             name={iconName}
             aria-hidden="true"
-            className={cn(
-              "scale-150 text-muted-foreground group-hover:text-primary",
-              iconClasses,
-            )}
+            className={cn("h-8 w-8", iconClasses)}
           />
         </div>
       </ShadTooltip>
@@ -120,7 +122,7 @@ const CanvasControls = ({ children }) => {
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls !left-auto !m-2 flex !flex-col gap-1.5 rounded-md border border-border bg-background fill-foreground stroke-foreground p-0.5 text-primary [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+      className="react-flow__controls !left-auto !m-2 flex !flex-col gap-1.5 rounded-md border border-border bg-background p-0.5 text-primary [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
       position="bottom-left"
     >
       {/* Zoom In */}

@@ -1,6 +1,7 @@
-import { Background, Panel } from "@xyflow/react";
+import { Background, ControlButton, Panel } from "@xyflow/react";
 import { memo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import CanvasControls, {
   CustomControlButton,
 } from "@/components/core/canvasControlsComponent";
@@ -55,7 +56,7 @@ export const MemoizedSidebarTrigger = memo(() => {
     return (
       <Panel
         className={cn(
-          "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-0.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+          "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-0.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
           "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
         )}
         position="top-left"
@@ -63,6 +64,7 @@ export const MemoizedSidebarTrigger = memo(() => {
         {NAV_ITEMS.map((item) => (
           <CustomControlButton
             iconName={item.icon}
+            iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
             tooltipText={item.tooltip}
             onClick={() => {
               setActiveSection(item.id);
@@ -80,7 +82,7 @@ export const MemoizedSidebarTrigger = memo(() => {
   return (
     <Panel
       className={cn(
-        "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+        "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
         "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
       )}
       position="top-left"

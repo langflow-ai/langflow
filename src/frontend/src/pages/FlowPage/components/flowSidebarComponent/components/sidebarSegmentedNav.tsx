@@ -20,22 +20,28 @@ interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   {
+    id: "search",
+    icon: "search",
+    label: "Search",
+    tooltip: "Search",
+  },
+  {
     id: "components",
     icon: "component",
     label: "Components",
     tooltip: "Components",
   },
   {
-    id: "bundles",
-    icon: "blocks",
-    label: "Bundles",
-    tooltip: "Bundles",
-  },
-  {
     id: "mcp",
     icon: "Mcp",
     label: "MCP",
     tooltip: "MCP",
+  },
+  {
+    id: "bundles",
+    icon: "blocks",
+    label: "Bundles",
+    tooltip: "Bundles",
   },
 ];
 
