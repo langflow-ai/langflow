@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -351,29 +352,44 @@ const SimpleSidebar = React.forwardRef<
         data-fullscreen={fullscreen}
       >
         {/* This is what handles the sidebar gap */}
-        <div
-          className={cn(
-            "relative h-full w-[--simple-sidebar-width] bg-transparent",
-            !isResizing && "transition-[width] duration-300 ease-in-out",
-            !open && "w-0"
-          )}
+        <motion.div
+          className={cn("relative h-full bg-transparent")}
+          animate={{
+            width: fullscreen
+              ? "100%"
+              : open
+              ? "var(--simple-sidebar-width)"
+              : 0,
+          }}
+          transition={{
+            duration: isResizing ? 0 : 0.3,
+            ease: "easeInOut",
+          }}
         />
-        <div
-          className={cn(
-            "absolute inset-y-0 z-50 flex h-full",
-            fullscreen
-              ? "left-0 w-[--simple-sidebar-parent-width]"
-              : cn(
-                  "w-[--simple-sidebar-width]",
-                  open
-                    ? "left-[calc(var(--simple-sidebar-parent-width)-var(--simple-sidebar-width))]"
-                    : "left-[--simple-sidebar-parent-width]"
-                ),
-            (!isResizing || fullscreen) &&
-              "transition-[left,right,width] duration-300 ease-in-out",
-            className
-          )}
-          {...props}
+        <motion.div
+          className={cn("absolute inset-y-0 z-50 flex h-full", className)}
+          animate={{
+            width: fullscreen ? "100%" : "var(--simple-sidebar-width)",
+            left: fullscreen
+              ? 0
+              : side === "left"
+              ? open
+                ? 0
+                : "calc(var(--simple-sidebar-width) * -1)"
+              : "auto",
+            right: fullscreen
+              ? 0
+              : side === "right"
+              ? open
+                ? 0
+                : "calc(var(--simple-sidebar-width) * -1)"
+              : "auto",
+          }}
+          transition={{
+            duration: 0.3,
+            ease: "easeInOut",
+          }}
+          style={props.style}
         >
           <div
             data-simple-sidebar="sidebar"
@@ -384,7 +400,7 @@ const SimpleSidebar = React.forwardRef<
               <SimpleSidebarResizeHandle side={side} />
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
