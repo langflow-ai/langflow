@@ -87,21 +87,23 @@ class DoclingInlineComponent(BaseFileComponent):
                 # Process died, try to get any result it might have sent
                 try:
                     result = queue.get_nowait()
-                    self.log("Process completed and result retrieved")
-                    return result
                 except Empty:
                     # Process died without sending result
                     msg = f"Worker process crashed unexpectedly without producing result. Exit code: {proc.exitcode}"
                     raise RuntimeError(msg) from None
+                else:
+                    self.log("Process completed and result retrieved")
+                    return result
 
             # Poll the queue instead of blocking
             try:
                 result = queue.get(timeout=1)
-                self.log("Result received from worker process")
-                return result
             except Empty:
                 # No result yet, continue monitoring
                 continue
+            else:
+                self.log("Result received from worker process")
+                return result
 
         # Overall timeout reached
         msg = f"Process timed out after {timeout} seconds"
