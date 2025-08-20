@@ -80,7 +80,7 @@ class DoclingInlineComponent(BaseFileComponent):
         Handles cases where process crashes without sending result.
         """
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout:
             # Check if process is still alive
             if not proc.is_alive():
@@ -102,7 +102,7 @@ class DoclingInlineComponent(BaseFileComponent):
             except Empty:
                 # No result yet, continue monitoring
                 continue
-        
+
         # Overall timeout reached
         msg = f"Process timed out after {timeout} seconds"
         raise TimeoutError(msg)
