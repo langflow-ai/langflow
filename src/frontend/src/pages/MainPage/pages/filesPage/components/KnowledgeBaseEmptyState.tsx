@@ -36,7 +36,7 @@ const KnowledgeBaseEmptyState = () => {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
       <div className="flex flex-col items-center gap-2">
-        <h3 className="text-2xl font-semibold">Welcome to Knowledge Base!</h3>
+        <h3 className="text-2xl font-semibold">Welcome to Knowledge Bases!</h3>
         <p className="text-lg text-secondary-foreground">
           Create a knowledge base that your agents can search and reference.
         </p>
