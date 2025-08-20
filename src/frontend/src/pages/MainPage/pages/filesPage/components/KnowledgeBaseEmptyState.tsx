@@ -52,7 +52,7 @@ const KnowledgeBaseEmptyState = () => {
             className="h-4 w-4"
           />
           <span className="whitespace-nowrap font-semibold">
-            New Knowledge Base
+            New Knowledge Base template
           </span>
         </Button>
       </div>
