@@ -98,20 +98,25 @@ def analyze_dependencies(source: str, *, resolve_versions: bool = True) -> list[
     visitor = _ImportVisitor()
     visitor.visit(tree)
 
-    # Process and deduplicate dependencies by package name only
-    unique_packages: dict[str, DependencyInfo] = {}
+    # Deduplicate dependencies by package name first,
+    # so we only resolve version once per package
+    raw_packages: dict[str, DependencyInfo] = {}
     for raw_dep in visitor.results:
-        processed_dep = _classify_dependency(raw_dep) if resolve_versions else raw_dep
-
         # Skip stdlib imports and local imports - we only care about external dependencies
-        if processed_dep.name in STDLIB_MODULES or processed_dep.is_local:
+        name = raw_dep.name
+        if not name or name in STDLIB_MODULES or raw_dep.is_local:
             continue
+        # Deduplicate by package name
+        if name not in raw_packages:
+            raw_packages[name] = raw_dep
 
-        # Deduplicate by package name only (not full_module)
-        if processed_dep.name not in unique_packages:
-            unique_packages[processed_dep.name] = processed_dep
+    # Only resolve version for unique packages if requested
+    if resolve_versions:
+        processed_packages = {name: _classify_dependency(dep) for name, dep in raw_packages.items()}
+    else:
+        processed_packages = raw_packages
 
-    return [asdict(d) for d in unique_packages.values()]
+    return [asdict(d) for d in processed_packages.values()]
 
 
 def analyze_component_dependencies(component_code: str) -> dict:
