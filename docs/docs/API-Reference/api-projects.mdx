@@ -8,14 +8,9 @@ import TabItem from '@theme/TabItem';
 
 Use the `/projects` endpoint to create, read, update, and delete [Langflow projects](/concepts-flows#projects).
 
-Projects store your flows and components.
-
 ## Read projects
 
 Get a list of Langflow projects, including project IDs, names, and descriptions.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -24,8 +19,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 [
@@ -38,15 +33,11 @@ curl -X GET \
 ]
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Create project
 
 Create a new project.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X POST \
@@ -61,8 +52,8 @@ curl -X POST \
 }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -73,12 +64,11 @@ curl -X POST \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [`/all`](/api-reference-api-examples#get-all-components) and [/flows/read](/api-flows#read-flows) endpoints and add them to the request body.
 
-Adding a flow to a project moves the flow from its previous location. The flow is not copied.
+Adding a flow to a project moves the flow from its previous location. The flow isn't copied.
 
 ```bash
 curl -X POST \
@@ -104,9 +94,6 @@ Retrieve details of a specific project.
 
 To find the UUID of your project, call the [read projects](#read-projects) endpoint.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/$PROJECT_ID" \
@@ -114,8 +101,8 @@ curl -X GET \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 [
@@ -128,8 +115,7 @@ curl -X GET \
 ]
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Update project
 
@@ -138,9 +124,6 @@ Update the information of a specific project with a `PATCH` request.
 Each PATCH request updates the project with the values you send.
 Only the fields you include in your request are updated.
 If you send the same values multiple times, the update is still processed, even if the values are unchanged.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X PATCH \
@@ -160,8 +143,8 @@ curl -X PATCH \
 }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -172,15 +155,11 @@ curl -X PATCH \
 }
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Delete project
 
 Delete a specific project.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X DELETE \
@@ -189,15 +168,14 @@ curl -X DELETE \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+<details>
+<summary>Result</summary>
 
 ```text
 204 No Content
 ```
 
-  </TabItem>
-</Tabs>
+</details>
 
 ## Export a project
 
@@ -207,7 +185,7 @@ The `--output` flag is optional.
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/projects/download/b408ddb9-6266-4431-9be8-e04a62758331" \
+  "$LANGFLOW_URL/api/v1/projects/download/$PROJECT_ID" \
   -H "accept: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   --output langflow-project.zip

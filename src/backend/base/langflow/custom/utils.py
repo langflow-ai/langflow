@@ -39,13 +39,12 @@ if TYPE_CHECKING:
     from langflow.custom.custom_component.custom_component import CustomComponent
 
 
-def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:
+def _generate_code_hash(source_code: str, modname: str) -> str:
     """Generate a hash of the component source code.
 
     Args:
         source_code: The source code string
         modname: The module name for context
-        class_name: The class name for context
 
     Returns:
         SHA256 hash of the source code
@@ -56,7 +55,7 @@ def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str:
         TypeError: If source_code is not a string
     """
     if not source_code:
-        msg = f"Empty source code for {class_name} in {modname}"
+        msg = f"Empty source code for {modname}"
         raise ValueError(msg)
 
     # Generate SHA256 hash of the source code
@@ -445,6 +444,18 @@ def add_code_field_to_build_config(build_config: dict, raw_code: str):
     return build_config
 
 
+def get_module_name_from_display_name(display_name: str):
+    """Get the module name from the display name."""
+    # Convert display name to snake_case for Python module name
+    # e.g., "Custom Component" -> "custom_component"
+    # Remove extra spaces and convert to lowercase
+    cleaned_name = re.sub(r"\s+", " ", display_name.strip())
+    # Replace spaces with underscores and convert to lowercase
+    module_name = cleaned_name.replace(" ", "_").lower()
+    # Remove any non-alphanumeric characters except underscores
+    return re.sub(r"[^a-z0-9_]", "", module_name)
+
+
 def build_custom_component_template_from_inputs(
     custom_component: Component | CustomComponent, user_id: str | UUID | None = None, module_name: str | None = None
 ):
@@ -494,11 +505,17 @@ def build_component_metadata(
     """Build the metadata for a custom component."""
     if module_name:
         frontend_node.metadata["module"] = module_name
+    else:
+        module_name = get_module_name_from_display_name(frontend_node.display_name)
+        frontend_node.metadata["module"] = f"custom_components.{module_name}"
 
-        # Generate code hash for cache invalidation and debugging
-        code_hash = _generate_code_hash(custom_component._code, module_name, ctype_name)
+    # Generate code hash for cache invalidation and debugging
+    try:
+        code_hash = _generate_code_hash(custom_component._code, module_name)
         if code_hash:
             frontend_node.metadata["code_hash"] = code_hash
+    except Exception as exc:  # noqa: BLE001
+        logger.opt(exception=exc).debug(f"Error generating code hash for {custom_component.__class__.__name__}")
 
     # Analyze component dependencies
     try:

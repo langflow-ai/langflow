@@ -26,11 +26,13 @@ The **Prompt Template** component can also output variable instructions to other
 
 Variables in a **Prompt Template** component dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from other components, Langflow global variables, or fixed input.
 
-For example, with the [**Message History**](/components-helpers#message-history) component, you can use a `{memory}` variable to pass chat history to the prompt.
+For example, with the [**Message History** component](/components-helpers#message-history), you can use a `{memory}` variable to pass chat history to the prompt.
+However, the **Language Model** and **Agent** components include built-in chat memory that is enabled by default.
+For more information, see [Memory management options](/memory).
 
 The following steps demonstrate how to add variables to a **Prompt Template** component:
 
-1. Create a flow based on the [**Basic prompting** template](/basic-prompting).
+1. Create a flow based on the **Basic prompting** template.
 
     This template already has a **Prompt Template** component, but the template only contains natural language instructions: `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
 
@@ -42,9 +44,12 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
     For example, the following template creates `context` and `user_question` variables:
 
     ```text
-    Given the context
+    Given the context:
+
     {context}
-    Answer the question
+
+    Answer the question:
+
     {user_question}
     ```
 
@@ -58,7 +63,10 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
    * Use Langflow global variables.
    * Enter fixed values directly into the fields.
 
+You can add as many variables as you like in your template.
+For example, you could add variables for `{references}` and `{instructions}`, and then feed that information in from other components, such as **Text Input**, **URL**, or **File** components.
+
 ## See also
 
-* [LangChain Prompt Hub](/bundles-langchain#prompt-hub)
-* [Processing components](/components-processing)
+* [**LangChain Prompt Hub** component](/bundles-langchain#prompt-hub)
+* [**Processing** components](/components-processing)
