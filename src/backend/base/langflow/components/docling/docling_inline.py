@@ -80,8 +80,7 @@ class DoclingInlineComponent(BaseFileComponent):
         Handles cases where process crashes without sending result.
         """
         start_time = time.time()
-        result = None
-
+        
         while time.time() - start_time < timeout:
             # Check if process is still alive
             if not proc.is_alive():
@@ -89,26 +88,24 @@ class DoclingInlineComponent(BaseFileComponent):
                 try:
                     result = queue.get_nowait()
                     self.log("Process completed and result retrieved")
-                    break
+                    return result
                 except Empty:
                     # Process died without sending result
                     msg = f"Worker process crashed unexpectedly without producing result. Exit code: {proc.exitcode}"
                     raise RuntimeError(msg) from None
 
-            # Try to get result with short timeout to avoid blocking
+            # Poll the queue instead of blocking
             try:
                 result = queue.get(timeout=1)
                 self.log("Result received from worker process")
-                break
+                return result
             except Empty:
                 # No result yet, continue monitoring
                 continue
-        else:
-            # Overall timeout reached
-            msg = f"Process timed out after {timeout} seconds"
-            raise TimeoutError(msg)
-
-        return result
+        
+        # Overall timeout reached
+        msg = f"Process timed out after {timeout} seconds"
+        raise TimeoutError(msg)
 
     def _terminate_process_gracefully(self, proc, timeout_terminate: int = 10, timeout_kill: int = 5):
         """Terminate process gracefully with escalating signals.
@@ -148,14 +145,12 @@ class DoclingInlineComponent(BaseFileComponent):
         proc.start()
 
         try:
-            # Use improved monitoring that handles process crashes
             result = self._wait_for_result_with_process_monitoring(queue, proc, timeout=300)
-
-        except (TimeoutError, RuntimeError) as e:
-            self.log(f"Error during processing: {e}")
-            raise
+        except KeyboardInterrupt:
+            self.log("Docling process cancelled by user")
+            result = []
         except Exception as e:
-            self.log(f"Unexpected error during processing: {e}")
+            self.log(f"Error during processing: {e}")
             raise
         finally:
             # Improved cleanup with graceful termination
@@ -175,7 +170,12 @@ class DoclingInlineComponent(BaseFileComponent):
             msg = result["error"]
             if msg.startswith("Docling is not installed"):
                 raise ImportError(msg)
-            raise RuntimeError(msg)
+            # Handle interrupt gracefully - return empty result instead of raising error
+            if "Worker interrupted by SIGINT" in msg or "shutdown" in result:
+                self.log("Docling process cancelled by user")
+                result = []
+            else:
+                raise RuntimeError(msg)
 
         processed_data = [Data(data={"doc": r["document"], "file_path": r["file_path"]}) if r else None for r in result]
         return self.rollup_data(file_list, processed_data)

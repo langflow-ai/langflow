@@ -60,7 +60,7 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
         signal_names = {signal.SIGTERM: "SIGTERM", signal.SIGINT: "SIGINT"}
         signal_name = signal_names.get(signum, f"signal {signum}")
 
-        logger.info(f"Docling worker received {signal_name}, initiating graceful shutdown...")
+        logger.debug(f"Docling worker received {signal_name}, initiating graceful shutdown...")
         shutdown_requested = True
 
         # Send shutdown notification to parent process
@@ -109,8 +109,9 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
 
     except ModuleNotFoundError:
         msg = (
-            "Docling is an optional dependency of Langflow. Install with `uv pip install 'langflow[docling]'`"
-            "or refer to the documentation on how to install optional dependencies."
+            "Docling is an optional dependency of Langflow. "
+            "Install with `uv pip install 'langflow[docling]'` "
+            "or refer to the documentation"
         )
         queue.put({"error": msg})
         return
