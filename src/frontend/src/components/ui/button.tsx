@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
 const buttonVariants = cva(
-  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "noflow nopan nodelete nodrag inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -32,15 +32,15 @@ const buttonVariants = cva(
         link: "underline-offset-4 hover:underline text-primary",
       },
       size: {
-        default: "h-10 py-2 px-4",
-        md: "h-8 py-2 px-3 !gap-1.5",
-        sm: "h-9 px-3 rounded-md",
-        xs: "py-0.5 px-3 rounded-md",
-        lg: "h-11 px-8 rounded-md",
-        iconMd: "p-1.5 rounded-md",
-        icon: "p-1 rounded-md",
-        iconSm: "p-0.5 rounded-md",
-        "node-toolbar": "py-[6px] px-[6px] rounded-md",
+        default: "h-10 py-2 px-4 gap-2",
+        md: "h-8 py-2 px-3 gap-1.5",
+        sm: "h-9 px-3 rounded-md gap-2",
+        xs: "py-0.5 px-3 rounded-md gap-2",
+        lg: "h-11 px-8 rounded-md gap-2",
+        iconMd: "p-1.5 rounded-md gap-2",
+        icon: "p-1 rounded-md gap-2",
+        iconSm: "p-0.5 rounded-md gap-2",
+        "node-toolbar": "py-[6px] px-[6px] rounded-md gap-2",
       },
     },
     defaultVariants: {
