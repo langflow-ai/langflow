@@ -66,8 +66,8 @@ dependencies = [
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
     "astra-assistants[tools]~=2.2.12",
-    "composio-langchain==0.7.15",
-    "composio-core==0.7.15",
+    "composio-langchain==0.8.5",
+    "composio==0.8.5",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
@@ -127,6 +127,7 @@ dependencies = [
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
+    "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
 ]
 
