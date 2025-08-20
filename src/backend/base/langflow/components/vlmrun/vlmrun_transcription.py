@@ -75,149 +75,135 @@ class VLMRunTranscription(Component):
         ),
     ]
 
+    def _check_inputs(self) -> str | None:
+        """Validate that either media files or URL is provided."""
+        if not self.media_files and not self.media_url:
+            return "Either media files or media URL must be provided"
+        return None
+
+    def _import_vlmrun(self):
+        """Import and return VLMRun client class."""
+        try:
+            from vlmrun.client import VLMRun
+        except ImportError as e:
+            error_msg = "VLM Run SDK not installed. Run: pip install 'vlmrun[all]'"
+            raise ImportError(error_msg) from e
+        else:
+            return VLMRun
+
+    def _generate_media_response(self, client, media_source):
+        """Generate response for audio or video media."""
+        if self.media_type == "audio":
+            if isinstance(media_source, Path):
+                return client.audio.generate(file=media_source, domain="audio.transcription", batch=True)
+            return client.audio.generate(url=media_source, domain="audio.transcription", batch=True)
+        # video
+        if isinstance(media_source, Path):
+            return client.video.generate(file=media_source, domain="video.transcription", batch=True)
+        return client.video.generate(url=media_source, domain="video.transcription", batch=True)
+
+    def _wait_for_response(self, client, response):
+        """Wait for batch processing to complete if needed."""
+        if hasattr(response, "id"):
+            return client.predictions.wait(response.id, timeout=600)
+        return response
+
+    def _extract_transcription(self, segments: list) -> list[str]:
+        """Extract transcription parts from segments."""
+        transcription_parts = []
+        for segment in segments:
+            if self.media_type == "audio" and "audio" in segment:
+                transcription_parts.append(segment["audio"].get("content", ""))
+            elif self.media_type == "video" and "video" in segment:
+                transcription_parts.append(segment["video"].get("content", ""))
+                # Also include audio if available for video
+                if "audio" in segment:
+                    audio_content = segment["audio"].get("content", "")
+                    if audio_content and audio_content.strip():
+                        transcription_parts.append(f"[Audio: {audio_content}]")
+        return transcription_parts
+
+    def _create_result_dict(self, response, transcription_parts: list, source_name: str) -> dict:
+        """Create a standardized result dictionary."""
+        response_data = response.response if hasattr(response, "response") else {}
+        result = {
+            "prediction_id": response.id if hasattr(response, "id") else None,
+            "transcription": " ".join(transcription_parts),
+            "full_response": response_data,
+            "metadata": {
+                "media_type": self.media_type,
+                "duration": response_data.get("metadata", {}).get("duration", 0),
+            },
+            "usage": response.usage.__dict__ if hasattr(response, "usage") else None,
+            "status": response.status if hasattr(response, "status") else "completed",
+        }
+
+        # Add source-specific field
+        if source_name.startswith("http"):
+            result["source"] = source_name
+        else:
+            result["filename"] = source_name
+
+        return result
+
+    def _process_single_media(self, client, media_source, source_name: str) -> dict:
+        """Process a single media file or URL."""
+        response = self._generate_media_response(client, media_source)
+        response = self._wait_for_response(client, response)
+        response_data = response.response if hasattr(response, "response") else {}
+        segments = response_data.get("segments", [])
+        transcription_parts = self._extract_transcription(segments)
+        return self._create_result_dict(response, transcription_parts, source_name)
+
+    def _format_output(self, all_results: list) -> dict:
+        """Format the output based on number of results."""
+        if len(all_results) == 1:
+            return all_results[0]
+
+        return {
+            "results": all_results,
+            "total_files": len(all_results),
+            "combined_transcription": "\n\n---\n\n".join(
+                [f"[{r.get('filename', r.get('source', 'Unknown'))}]\n{r['transcription']}" for r in all_results]
+            ),
+        }
+
     def process_media(self) -> Data:
         """Process audio or video file and extract structured data."""
         # Validate inputs
-        if not self.media_files and not self.media_url:
-            error_msg = "Either media files or media URL must be provided"
+        error_msg = self._check_inputs()
+        if error_msg:
             self.status = error_msg
             return Data(data={"error": error_msg})
 
         try:
-            # Import VLM Run client
-            try:
-                from vlmrun.client import VLMRun
-            except ImportError:
-                error_msg = "VLM Run SDK not installed. Run: pip install 'vlmrun[all]'"
-                self.status = error_msg
-                return Data(data={"error": error_msg})
-
-            # Initialize client
-            client = VLMRun(api_key=self.api_key)
-
-            # Process files
+            # Import and initialize client
+            vlmrun_class = self._import_vlmrun()
+            client = vlmrun_class(api_key=self.api_key)
             all_results = []
 
             # Handle multiple files
             if self.media_files:
-                # Convert to list if single file
                 files_to_process = self.media_files if isinstance(self.media_files, list) else [self.media_files]
-
                 for idx, media_file in enumerate(files_to_process):
                     self.status = f"Processing file {idx + 1} of {len(files_to_process)}..."
+                    result = self._process_single_media(client, Path(media_file), Path(media_file).name)
+                    all_results.append(result)
 
-                    # Process based on media type
-                    if self.media_type == "audio":
-                        response = client.audio.generate(
-                            file=Path(media_file), domain="audio.transcription", batch=True
-                        )
-                    else:  # video
-                        response = client.video.generate(
-                            file=Path(media_file), domain="video.transcription", batch=True
-                        )
-
-                    # Wait for batch processing to complete
-                    if hasattr(response, "id"):
-                        response = client.predictions.wait(response.id, timeout=600)
-
-                    # Extract response data
-                    response_data = response.response if hasattr(response, "response") else {}
-
-                    # Extract transcription from segments
-                    transcription_parts = []
-                    segments = response_data.get("segments", [])
-
-                    for segment in segments:
-                        if self.media_type == "audio" and "audio" in segment:
-                            transcription_parts.append(segment["audio"].get("content", ""))
-                        elif self.media_type == "video" and "video" in segment:
-                            transcription_parts.append(segment["video"].get("content", ""))
-                            # Also include audio if available for video
-                            if "audio" in segment:
-                                audio_content = segment["audio"].get("content", "")
-                                if audio_content and audio_content.strip():
-                                    transcription_parts.append(f"[Audio: {audio_content}]")
-
-                    # Store result for this file
-                    file_result = {
-                        "filename": Path(media_file).name,
-                        "prediction_id": response.id if hasattr(response, "id") else None,
-                        "transcription": " ".join(transcription_parts),
-                        "full_response": response_data,
-                        "metadata": {
-                            "media_type": self.media_type,
-                            "duration": response_data.get("metadata", {}).get("duration", 0),
-                        },
-                        "usage": response.usage.__dict__ if hasattr(response, "usage") else None,
-                        "status": response.status if hasattr(response, "status") else "completed",
-                    }
-                    all_results.append(file_result)
-
-            # Handle URL (single processing)
+            # Handle URL
             elif self.media_url:
-                if self.media_type == "audio":
-                    response = client.audio.generate(url=self.media_url, domain="audio.transcription", batch=True)
-                else:  # video
-                    response = client.video.generate(url=self.media_url, domain="video.transcription", batch=True)
+                result = self._process_single_media(client, self.media_url, self.media_url)
+                all_results.append(result)
 
-                # Wait for batch processing to complete
-                if hasattr(response, "id"):
-                    response = client.predictions.wait(response.id, timeout=600)
-
-                # Extract response data
-                response_data = response.response if hasattr(response, "response") else {}
-
-                # Extract transcription from segments
-                transcription_parts = []
-                segments = response_data.get("segments", [])
-
-                for segment in segments:
-                    if self.media_type == "audio" and "audio" in segment:
-                        transcription_parts.append(segment["audio"].get("content", ""))
-                    elif self.media_type == "video" and "video" in segment:
-                        transcription_parts.append(segment["video"].get("content", ""))
-                        # Also include audio if available for video
-                        if "audio" in segment:
-                            audio_content = segment["audio"].get("content", "")
-                            if audio_content and audio_content.strip():
-                                transcription_parts.append(f"[Audio: {audio_content}]")
-
-                # Store result for URL
-                url_result = {
-                    "source": self.media_url,
-                    "prediction_id": response.id if hasattr(response, "id") else None,
-                    "transcription": " ".join(transcription_parts),
-                    "full_response": response_data,
-                    "metadata": {
-                        "media_type": self.media_type,
-                        "duration": response_data.get("metadata", {}).get("duration", 0),
-                    },
-                    "usage": response.usage.__dict__ if hasattr(response, "usage") else None,
-                    "status": response.status if hasattr(response, "status") else "completed",
-                }
-                all_results.append(url_result)
-
-            # Create output data
-            if len(all_results) == 1:
-                # Single file/URL - return simple format for backward compatibility
-                output_data = all_results[0]
-            else:
-                # Multiple files - return list of results
-                output_data = {
-                    "results": all_results,
-                    "total_files": len(all_results),
-                    "combined_transcription": "\n\n---\n\n".join(
-                        [
-                            f"[{r.get('filename', r.get('source', 'Unknown'))}]\n{r['transcription']}"
-                            for r in all_results
-                        ]
-                    ),
-                }
-
+            # Format and return output
+            output_data = self._format_output(all_results)
             self.status = f"Successfully processed {len(all_results)} file(s)"
             return Data(data=output_data)
 
-        except (ImportError, ValueError, ConnectionError, TimeoutError) as e:
+        except ImportError as e:
+            self.status = str(e)
+            return Data(data={"error": str(e)})
+        except (ValueError, ConnectionError, TimeoutError) as e:
             logger.opt(exception=True).debug("Error processing media with VLM Run")
             error_msg = f"Processing failed: {e!s}"
             self.status = error_msg
