@@ -355,14 +355,14 @@ const SimpleSidebar = React.forwardRef<
         <motion.div
           className={cn("relative h-full bg-transparent")}
           animate={{
-            width: fullscreen
-              ? "100%"
-              : open
-              ? "var(--simple-sidebar-width)"
+            width: open
+              ? fullscreen
+                ? "100%"
+                : "var(--simple-sidebar-width)"
               : 0,
           }}
           transition={{
-            duration: isResizing ? 0 : 0.3,
+            duration: isResizing && !fullscreen ? 0 : 0.3,
             ease: "easeInOut",
           }}
         />
@@ -370,20 +370,29 @@ const SimpleSidebar = React.forwardRef<
           className={cn("absolute inset-y-0 z-50 flex h-full", className)}
           animate={{
             width: fullscreen ? "100%" : "var(--simple-sidebar-width)",
-            left: fullscreen
+            left: !open
+              ? fullscreen
+                ? "auto"
+                : side === "left"
+                ? "calc(var(--simple-sidebar-width) * -1)"
+                : "auto"
+              : fullscreen
               ? 0
               : side === "left"
-              ? open
-                ? 0
-                : "calc(var(--simple-sidebar-width) * -1)"
+              ? 0
               : "auto",
-            right: fullscreen
+            right: !open
+              ? fullscreen
+                ? "auto"
+                : side === "right"
+                ? "calc(var(--simple-sidebar-width) * -1)"
+                : "auto"
+              : fullscreen
               ? 0
               : side === "right"
-              ? open
-                ? 0
-                : "calc(var(--simple-sidebar-width) * -1)"
+              ? 0
               : "auto",
+            opacity: open ? 1 : 0,
           }}
           transition={{
             duration: 0.3,
