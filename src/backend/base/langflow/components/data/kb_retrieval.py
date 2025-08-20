@@ -5,6 +5,7 @@ from typing import Any
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
+from pydantic import SecretStr
 
 from langflow.base.data.kb_utils import _get_current_user, get_knowledge_bases
 from langflow.custom import Component
@@ -125,14 +126,11 @@ class KBRetrievalComponent(Component):
 
     def _build_embeddings(self, metadata: dict):
         """Build embedding model from metadata."""
+        runtime_api_key = self.api_key.get_secret_value() if isinstance(self.api_key, SecretStr) else self.api_key
         provider = metadata.get("embedding_provider")
         model = metadata.get("embedding_model")
-        api_key = metadata.get("api_key")
+        api_key = runtime_api_key or metadata.get("api_key")
         chunk_size = metadata.get("chunk_size")
-
-        # If user provided a key in the input, it overrides the stored one.
-        if self.api_key and self.api_key.get_secret_value():
-            api_key = self.api_key.get_secret_value()
 
         # Handle various providers
         if provider == "OpenAI":
