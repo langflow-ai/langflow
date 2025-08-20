@@ -1,3 +1,4 @@
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -6,7 +7,6 @@ import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
-import { useParams } from "react-router-dom";
 
 const KnowledgeBaseEmptyState = () => {
   const examples = useFlowsManagerStore((state) => state.examples);
