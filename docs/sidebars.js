@@ -111,7 +111,7 @@ module.exports = {
             {
               type: "doc",
               id: "Concepts/knowledge",
-              label: "Create and retrieve knowledge"
+              label: "Manage knowledge bases"
             },
             {
               type: "doc",

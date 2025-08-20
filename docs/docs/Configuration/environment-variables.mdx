@@ -195,6 +195,7 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_SUPERUSER` | String | `langflow` | See [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](/api-keys-and-authentication#langflow-superuser). |
 | `LANGFLOW_SUPERUSER_PASSWORD` | String | `langflow` | See [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](/api-keys-and-authentication#langflow-superuser). |
 | `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](/configuration-global-variables). |
+| `LANGFLOW_KNOWLEDGE_BASES_DIR` | String | `~/.langflow/knowledge_bases` | Set the directory to store knowledge bases. The default path depends on your operating system. See [Knowledge bases](/knowledge#local-database-configuration). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Note that this feature only works if `LANGFLOW_AUTO_LOGIN` is enabled. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
@@ -224,6 +225,7 @@ LANGFLOW_CACHE_TYPE=async
 LANGFLOW_COMPONENTS_PATH=/path/to/components/
 LANGFLOW_CONFIG_DIR=/path/to/config/
 LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
+LANGFLOW_KNOWLEDGE_BASES_DIR=/path/to/knowledge/bases
 LANGFLOW_DEV=False
 LANGFLOW_FALLBACK_TO_ENV_VAR=False
 LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
