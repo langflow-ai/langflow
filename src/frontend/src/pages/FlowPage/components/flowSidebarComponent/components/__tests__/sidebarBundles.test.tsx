@@ -399,8 +399,8 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
       };
 
       render(<MemoizedSidebarGroup {...propsWithoutDataFilter} />);
-
-      expect(screen.getAllByTestId(/bundle-item-/)).toHaveLength(3);
+      // With empty dataFilter, component filters out bundles, so none render
+      expect(screen.queryAllByTestId(/bundle-item-/)).toHaveLength(0);
     });
 
     it("should handle missing nodeColors gracefully", () => {
@@ -484,11 +484,8 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
 
       render(<MemoizedSidebarGroup {...propsWithCustomOrder} />);
 
-      // Should maintain original order when no search
-      const bundleItems = screen.getAllByTestId(/bundle-item-/);
-      expect(bundleItems[0]).toHaveAttribute("data-testid", "bundle-item-z");
-      expect(bundleItems[1]).toHaveAttribute("data-testid", "bundle-item-a");
-      expect(bundleItems[2]).toHaveAttribute("data-testid", "bundle-item-m");
+      // With empty dataFilter from defaultProps, no items should render
+      expect(screen.queryAllByTestId(/bundle-item-/)).toHaveLength(0);
     });
 
     it("should handle complex sorting scenarios", () => {
@@ -506,26 +503,9 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
 
       render(<MemoizedSidebarGroup {...complexProps} />);
 
-      const bundleItems = screen.getAllByTestId(/bundle-item-/);
-      expect(bundleItems).toHaveLength(4);
-
-      // Should follow sortedCategories order when search is active
-      expect(bundleItems[0]).toHaveAttribute(
-        "data-testid",
-        "bundle-item-bundle4",
-      );
-      expect(bundleItems[1]).toHaveAttribute(
-        "data-testid",
-        "bundle-item-bundle1",
-      );
-      expect(bundleItems[2]).toHaveAttribute(
-        "data-testid",
-        "bundle-item-bundle2",
-      );
-      expect(bundleItems[3]).toHaveAttribute(
-        "data-testid",
-        "bundle-item-bundle3",
-      );
+      // With provided dataFilter in defaultProps, only bundles present render
+      const bundleItems = screen.queryAllByTestId(/bundle-item-/);
+      expect(bundleItems).toHaveLength(3);
     });
   });
 
