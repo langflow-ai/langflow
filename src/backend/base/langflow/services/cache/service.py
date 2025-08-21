@@ -228,7 +228,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             await self._client.ping()
         except redis.exceptions.ConnectionError:
             msg = "RedisCache could not connect to the Redis server"
-            logger.exception(msg)
+            await logger.aexception(msg)
             return False
         return True
 
@@ -309,7 +309,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             if time.time() - item["time"] < self.expiration_time:
                 self.cache.move_to_end(key)
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
-            logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
+            await logger.ainfo(f"Cache item for key '{key}' has expired and will be deleted.")
             await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 

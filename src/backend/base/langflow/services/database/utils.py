@@ -29,7 +29,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         # we can ignore it
         if "already exists" not in str(exc):
             msg = "Error creating DB and tables"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise RuntimeError(msg) from exc
     try:
         await database_service.check_schema_health()

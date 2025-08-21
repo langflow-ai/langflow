@@ -91,11 +91,11 @@ class ServiceManager:
         for service in list(self.services.values()):
             if service is None:
                 continue
-            logger.debug(f"Teardown service {service.name}")
+            await logger.adebug(f"Teardown service {service.name}")
             try:
                 await service.teardown()
             except Exception as exc:  # noqa: BLE001
-                logger.exception(exc)
+                await logger.aexception(exc)
         self.services = {}
         self.factories = {}
 

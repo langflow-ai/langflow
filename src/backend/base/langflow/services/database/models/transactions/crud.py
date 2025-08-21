@@ -44,7 +44,7 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         IntegrityError: If there is a database integrity error
     """
     if not transaction.flow_id:
-        logger.debug("Transaction flow_id is None")
+        await logger.adebug("Transaction flow_id is None")
         return None
     table = TransactionTable(**transaction.model_dump())
 

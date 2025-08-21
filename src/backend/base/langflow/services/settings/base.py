@@ -544,6 +544,6 @@ async def load_settings_from_yaml(file_path: str) -> Settings:
             if key not in Settings.model_fields:
                 msg = f"Key {key} not found in settings"
                 raise KeyError(msg)
-            logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
+            await logger.adebug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return await asyncio.to_thread(Settings, **settings_dict)
