@@ -53,10 +53,14 @@ def update_input_types(build_config: dotdict) -> dotdict:
     return build_config
 
 
-def set_field_display(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:  # noqa: FBT001
+def set_field_display(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:
     """Set whether a field should be displayed in the UI."""
-    if field in build_config and isinstance(build_config[field], dict) and "show" in build_config[field]:
-        build_config[field]["show"] = value
+    try:
+        field_dict = build_config[field]
+    except KeyError:
+        return build_config
+    if isinstance(field_dict, dict) and "show" in field_dict:
+        field_dict["show"] = value
     return build_config
 
 
