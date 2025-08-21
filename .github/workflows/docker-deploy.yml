@@ -64,8 +64,8 @@ jobs:
           username: root
           password: ${{ secrets.VM_PASSWORD }}
           script: |
-            chmod +x /root/deploy.sh
-            /root/deploy.sh \
+            chmod +x /root/deploy/deploy.sh
+            /root/deploy/deploy.sh \
               --image forwardemailforaifirstdesk/langflow:1.4.2 \
               --domain ${{ github.event.inputs.domain }} \
               --email ${{ github.event.inputs.email }} \
@@ -76,9 +76,9 @@ jobs:
     needs: build-and-push
     steps:
       - name: Docker Hub Cleanup
-        uses: vlaurin/action-docker-cleanup@v2
+        uses: DataDog/action-docker-cleanup@v2
         with:
           repository: forwardemailforaifirstdesk/langflow
           keep-last: 2
           username: forwardemailforaifirstdesk
-          token: ${{ secrets.DOCKER_HUB_TOKEN }}            
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}            
