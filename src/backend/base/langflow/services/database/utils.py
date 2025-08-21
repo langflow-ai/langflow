@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 async def initialize_database(*, fix_migration: bool = False) -> None:
-    logger.debug("Initializing database")
+    await logger.adebug("Initializing database")
     from langflow.services.deps import get_db_service
 
     database_service: DatabaseService = get_db_service()
@@ -59,7 +59,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         if "already exists" not in str(exc):
             logger.exception(exc)
         raise
-    logger.debug("Database initialized")
+    await logger.adebug("Database initialized")
 
 
 @asynccontextmanager
@@ -68,7 +68,7 @@ async def session_getter(db_service: DatabaseService):
         session = AsyncSession(db_service.engine, expire_on_commit=False)
         yield session
     except Exception:
-        logger.exception("Session rollback because of exception")
+        await logger.aexception("Session rollback because of exception")
         await session.rollback()
         raise
     finally:
