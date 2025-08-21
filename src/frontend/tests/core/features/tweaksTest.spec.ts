@@ -82,7 +82,6 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     timeout: 100000,
   });
 
-
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();

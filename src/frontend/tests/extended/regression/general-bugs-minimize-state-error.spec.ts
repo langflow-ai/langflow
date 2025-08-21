@@ -21,7 +21,7 @@ test(
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
-        await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
