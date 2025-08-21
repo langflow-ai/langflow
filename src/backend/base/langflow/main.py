@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import json
 import os
 import re
@@ -268,10 +267,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as e:  # noqa: BLE001
                 await logger.aexception(f"Unhandled error during cleanup: {e}")
                 await log_exception_to_telemetry(e, "lifespan_cleanup")
-
-            with contextlib.suppress(asyncio.CancelledError):
-                await asyncio.shield(asyncio.sleep(0.1))  # let logger flush async logs
-                # structlog doesn't have a complete() method - logs are flushed automatically
 
     return lifespan
 
