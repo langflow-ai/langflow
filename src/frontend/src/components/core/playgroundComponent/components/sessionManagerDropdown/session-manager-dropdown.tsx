@@ -8,9 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import useFlowStore from "@/stores/flowStore";
-import { useGetAddSessions } from "../../../hooks/use-get-add-sessions";
-import { SessionMenuItem } from "../../sessionMenuDropdown/components/session-menu-item";
-import { SessionItem } from "./session-manager-item";
+import { useGetAddSessions } from "../../hooks/use-get-add-sessions";
+import { SessionMenuItem } from "../sessionMenuDropdown/components/session-menu-item";
+import { SessionItem } from "./components/session-manager-item";
 
 interface SessionManagerDropdownProps {
   children: React.ReactNode;
