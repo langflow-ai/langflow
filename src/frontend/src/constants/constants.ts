@@ -775,6 +775,9 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "couchbase",
   "upstash",
   "vectara",
+  "cassandra",
+  "FAISS",
+  "pgvector",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
