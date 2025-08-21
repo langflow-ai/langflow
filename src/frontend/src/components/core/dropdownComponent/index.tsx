@@ -1,8 +1,4 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
-import NodeDrawer from "@/CustomNodes/GenericNode/components/NodeDrawer";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -13,6 +9,9 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
@@ -558,13 +557,7 @@ export default function Dropdown({
             name={name!}
             nodeClass={nodeClass!}
           />
-          <NodeDrawer
-            open={openDrawer}
-            onClose={() => {
-              setOpenDrawer(false);
-              setOpen(false);
-            }}
-          />
+    
         </CommandGroup>
       )}
     </CommandList>
