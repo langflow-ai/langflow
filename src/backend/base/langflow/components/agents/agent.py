@@ -8,7 +8,6 @@ from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
-    MODEL_PROVIDERS,
     MODEL_PROVIDERS_DICT,
     MODELS_METADATA,
 )
@@ -312,19 +311,31 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config.update(fields_to_add)
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
-            elif field_value == "Custom":
+            elif field_value == "connect_other_models":
                 # Delete all provider fields
                 self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
-                # Update with custom component
+                # # Update with custom component
                 custom_component = DropdownInput(
                     name="agent_llm",
-                    display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
-                    value="Custom",
+                    display_name="Model Provider",
+                    info="The provider of the language model that the agent will use to generate responses.",
+                    options=[*MODEL_PROVIDERS_LIST],
                     real_time_refresh=True,
+                    refresh_button=False,
                     input_types=["LanguageModel"],
-                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
-                    + [{"icon": "brain"}],
+                    placeholder="Awaiting model input.",
+                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
+                    external_options={
+                        "fields": {
+                            "data": {
+                                "node": {
+                                    "name": "connect_other_models",
+                                    "display_name": "Connect other models",
+                                    "icon": "CornerDownLeft",
+                                },
+                            }
+                        },
+                    },
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
             # Update input types for all fields
