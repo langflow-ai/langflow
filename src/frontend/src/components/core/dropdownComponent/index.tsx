@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -9,9 +12,6 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
 import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
