@@ -97,7 +97,7 @@ class NVIDIAModelComponent(LCModelComponent):
         ),
     ]
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:

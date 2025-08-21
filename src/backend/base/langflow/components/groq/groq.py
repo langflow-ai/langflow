@@ -74,7 +74,7 @@ class GroqModel(LCModelComponent):
         ),
     ]
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             url = f"{self.base_url}/openai/v1/models"
             headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}

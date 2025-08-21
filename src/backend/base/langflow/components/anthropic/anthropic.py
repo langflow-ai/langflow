@@ -101,7 +101,7 @@ class AnthropicModelComponent(LCModelComponent):
 
         return output
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             import anthropic
 

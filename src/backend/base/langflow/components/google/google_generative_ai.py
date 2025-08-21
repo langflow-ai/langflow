@@ -98,7 +98,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             google_api_key=SecretStr(google_api_key).get_secret_value(),
         )
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             import google.generativeai as genai
 
