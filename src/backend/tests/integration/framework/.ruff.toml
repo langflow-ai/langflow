@@ -1,0 +1,6 @@
+# Ruff configuration for integration test framework demo files
+[tool.ruff]
+# Allow print statements in demo files
+lint.ignore = ["T201", "E402"] 
+
+# These are demo and example files, print statements are intentional
