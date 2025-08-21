@@ -47,7 +47,7 @@ class KBIngestionComponent(Component):
     icon = "database"
     name = "KBIngestion"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cached_kb_path: Path | None = None
 
@@ -485,6 +485,9 @@ class KBIngestionComponent(Component):
                 msg = "User ID is required for fetching knowledge base path."
                 raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
             kb_user = current_user.username
 
         kb_root = self._get_kb_root()
@@ -566,6 +569,9 @@ class KBIngestionComponent(Component):
                 msg = "User ID is required for fetching global variables."
                 raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
             variable_service = get_variable_service()
 
             # Process the api_key field variable
@@ -590,6 +596,9 @@ class KBIngestionComponent(Component):
                     msg = "User ID is required for fetching knowledge base list."
                     raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
+                if not current_user:
+                    msg = f"User with ID {self.user_id} not found."
+                    raise ValueError(msg)
                 kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 # Validate the knowledge base name - Make sure it follows these rules:
@@ -601,6 +610,11 @@ class KBIngestionComponent(Component):
                 with contextlib.suppress(Exception):
                     # If the API key is a variable, resolve it
                     api_key = await self._get_api_key_variable(field_value)
+
+                # Make sure api_key is a string
+                if not isinstance(api_key, str):
+                    msg = "API key must be a string."
+                    raise ValueError(msg)
 
                 # We need to test the API Key one time against the embedding model
                 embed_model = self._build_embeddings(embedding_model=field_value["02_embedding_model"], api_key=api_key)

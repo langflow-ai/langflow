@@ -174,6 +174,9 @@ class KBRetrievalComponent(Component):
                 msg = "User ID is required for fetching Knowledge Base data."
                 raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
             kb_user = current_user.username
         kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / self.knowledge_base
 
