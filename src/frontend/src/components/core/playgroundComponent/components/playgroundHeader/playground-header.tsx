@@ -21,13 +21,6 @@ export function PlaygroundHeader() {
   const isPlayground = usePlaygroundStore((state) => state.isPlayground);
   const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
 
-  const isMobile = useIsMobile();
-
-  const sessionName =
-    selectedSession === flowId ? DEFAULT_SESSION_NAME : selectedSession;
-
-  const isSessionDropdownVisible = !isFullscreen || isMobile;
-
   const { handleRename, handleDelete } = useEditSessionInfo({
     flowId,
   });
@@ -35,6 +28,8 @@ export function PlaygroundHeader() {
   const { isEditing, handleEditSave, handleEditStart } = useRenameSession({
     handleRename,
   });
+
+  const isMobile = useIsMobile();
 
   const onSave = (newSessionId: string) => {
     if (!selectedSession) return;
@@ -49,6 +44,11 @@ export function PlaygroundHeader() {
   const onClose = () => {
     setIsOpen(false);
   };
+
+  const sessionName =
+    selectedSession === flowId ? DEFAULT_SESSION_NAME : selectedSession;
+
+  const isSessionDropdownVisible = !isFullscreen || isMobile;
 
   return (
     <div className="flex items-center justify-between gap-2 p-4">
