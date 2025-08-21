@@ -134,9 +134,8 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         # Mock the get_agent_requirements method to avoid actual LLM calls
         from unittest.mock import AsyncMock
-        component.get_agent_requirements = AsyncMock(
-            return_value=(MockLanguageModel(), [], [])
-        )
+
+        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
         component.create_agent_runnable = AsyncMock(return_value=None)
         mock_result = type("MockResult", (), {"content": '{"name": "test", "value": 123}'})()
         component.run_agent = AsyncMock(return_value=mock_result)
@@ -153,13 +152,10 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         # Mock the get_agent_requirements method to avoid actual LLM calls
         from unittest.mock import AsyncMock
-        component.get_agent_requirements = AsyncMock(
-            return_value=(MockLanguageModel(), [], [])
-        )
+
+        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
         component.create_agent_runnable = AsyncMock(return_value=None)
-        mock_result = type("MockResult", (), {
-            "content": 'Here is the result: {"status": "success"} - done!'
-        })()
+        mock_result = type("MockResult", (), {"content": 'Here is the result: {"status": "success"} - done!'})()
         component.run_agent = AsyncMock(return_value=mock_result)
 
         result = await component.json_response()
@@ -174,13 +170,10 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         # Mock the get_agent_requirements method to avoid actual LLM calls
         from unittest.mock import AsyncMock
-        component.get_agent_requirements = AsyncMock(
-            return_value=(MockLanguageModel(), [], [])
-        )
+
+        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
         component.create_agent_runnable = AsyncMock(return_value=None)
-        mock_result = type("MockResult", (), {
-            "content": "This is just plain text with no JSON"
-        })()
+        mock_result = type("MockResult", (), {"content": "This is just plain text with no JSON"})()
         component.run_agent = AsyncMock(return_value=mock_result)
 
         result = await component.json_response()
@@ -219,9 +212,8 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         # Mock the get_agent_requirements method
         from unittest.mock import AsyncMock
-        component.get_agent_requirements = AsyncMock(
-            return_value=(MockLanguageModel(), [], [])
-        )
+
+        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
         component.create_agent_runnable = AsyncMock(return_value=None)
         mock_result = type("MockResult", (), {"content": '{"name": "John", "age": 25}'})()
         component.run_agent = AsyncMock(return_value=mock_result)
