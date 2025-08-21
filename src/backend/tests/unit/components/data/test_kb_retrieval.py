@@ -29,42 +29,46 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
             self.id = user_id
             self.username = "langflow"
 
-    @pytest.fixture(autouse=True)
-    def setup_mocks(self):
-        """Mock the component's user_id attribute and User object."""
+    @pytest.fixture
+    def mock_user_data(self):
+        """Create mock user data that persists for the test function."""
         mock_uuid = uuid.uuid4()
         mock_user = self.MockUser(mock_uuid)
+        return {
+            "user_id": mock_uuid,
+            "user": mock_user.username,
+            "user_obj": mock_user
+        }
 
-        # Store for access by other fixtures/tests
-        self._mock_uuid = mock_uuid
-        self._mock_user = mock_user
-
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self, mock_user_data):
+        """Mock the component's user_id attribute and User object."""
         with (
-            patch.object(KBRetrievalComponent, "user_id", mock_uuid),
+            patch.object(KBRetrievalComponent, "user_id", mock_user_data["user_id"]),
             patch(
                 "langflow.components.data.kb_retrieval.get_user_by_id",
                 new_callable=AsyncMock,
-                return_value=mock_user,
+                return_value=mock_user_data["user_obj"],
             ),
             patch(
                 "langflow.base.data.kb_utils.get_user_by_id",
                 new_callable=AsyncMock,
-                return_value=mock_user,
+                return_value=mock_user_data["user_obj"],
             ),
         ):
             yield
 
     @pytest.fixture
-    def mock_user_id(self):
+    def mock_user_id(self, mock_user_data):
         """Get the mock user data."""
-        return {"user_id": self._mock_uuid, "user": self._mock_user}
+        return {"user_id": mock_user_data["user_id"], "user": mock_user_data["user"]}
 
     @pytest.fixture
-    def default_kwargs(self, tmp_path):
+    def default_kwargs(self, tmp_path, mock_user_id):
         """Return default kwargs for component instantiation."""
         # Create knowledge base directory structure
         kb_name = "test_kb"
-        kb_path = tmp_path / "langflow" / kb_name
+        kb_path = tmp_path / mock_user_id["user"] / kb_name
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create embedding metadata file
@@ -96,9 +100,9 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
     async def test_get_knowledge_bases(self, tmp_path, mock_user_id):
         """Test getting list of knowledge bases."""
         # Create additional test directories
-        (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "langflow" / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
+        (tmp_path / mock_user_id["user"] / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
         kb_list = await get_knowledge_bases(tmp_path, user_id=mock_user_id["user_id"])
 
@@ -107,13 +111,13 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
 
-    async def test_update_build_config(self, component_class, default_kwargs, tmp_path):
+    async def test_update_build_config(self, component_class, default_kwargs, tmp_path, mock_user_id):
         """Test updating build configuration."""
         component = component_class(**default_kwargs)
 
         # Create additional KB directories
-        (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / "kb2").mkdir(parents=True, exist_ok=True)
 
         build_config = {"knowledge_base": {"value": "test_kb", "options": []}}
 
@@ -133,10 +137,10 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
 
         assert result["knowledge_base"]["value"] is None
 
-    def test_get_kb_metadata_success(self, component_class, default_kwargs):
+    def test_get_kb_metadata_success(self, component_class, default_kwargs, mock_user_id):
         """Test successful metadata loading."""
         component = component_class(**default_kwargs)
-        kb_path = Path(default_kwargs["kb_root_path"]) / "langflow" / default_kwargs["knowledge_base"]
+        kb_path = Path(default_kwargs["kb_root_path"]) / mock_user_id["user"] / default_kwargs["knowledge_base"]
 
         with patch("langflow.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
             mock_decrypt.return_value = "decrypted_key"
@@ -147,20 +151,20 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert "chunk_size" in metadata
 
-    def test_get_kb_metadata_no_file(self, component_class, default_kwargs, tmp_path):
+    def test_get_kb_metadata_no_file(self, component_class, default_kwargs, tmp_path, mock_user_id):
         """Test metadata loading when file doesn't exist."""
         component = component_class(**default_kwargs)
-        nonexistent_path = tmp_path / "langflow" / "nonexistent"
+        nonexistent_path = tmp_path / mock_user_id["user"] / "nonexistent"
         nonexistent_path.mkdir(parents=True, exist_ok=True)
 
         metadata = component._get_kb_metadata(nonexistent_path)
 
         assert metadata == {}
 
-    def test_get_kb_metadata_json_error(self, component_class, default_kwargs, tmp_path):
+    def test_get_kb_metadata_json_error(self, component_class, default_kwargs, tmp_path, mock_user_id):
         """Test metadata loading with invalid JSON."""
         component = component_class(**default_kwargs)
-        kb_path = tmp_path / "langflow" / "invalid_json_kb"
+        kb_path = tmp_path / mock_user_id["user"] / "invalid_json_kb"
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create invalid JSON file
@@ -170,10 +174,10 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
 
         assert metadata == {}
 
-    def test_get_kb_metadata_decrypt_error(self, component_class, default_kwargs, tmp_path):
+    def test_get_kb_metadata_decrypt_error(self, component_class, default_kwargs, tmp_path, mock_user_id):
         """Test metadata loading with decryption error."""
         component = component_class(**default_kwargs)
-        kb_path = tmp_path / "langflow" / "decrypt_error_kb"
+        kb_path = tmp_path / mock_user_id["user"] / "decrypt_error_kb"
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create metadata with encrypted key
@@ -327,10 +331,10 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
                 chunk_size=1000,
             )
 
-    async def test_get_chroma_kb_data_no_metadata(self, component_class, default_kwargs, tmp_path):
+    async def test_get_chroma_kb_data_no_metadata(self, component_class, default_kwargs, tmp_path, mock_user_id):
         """Test retrieving data when metadata is missing."""
         # Remove metadata file
-        kb_path = tmp_path / "langflow" / default_kwargs["knowledge_base"]
+        kb_path = tmp_path / mock_user_id["user"] / default_kwargs["knowledge_base"]
         metadata_file = kb_path / "embedding_metadata.json"
         if metadata_file.exists():
             metadata_file.unlink()

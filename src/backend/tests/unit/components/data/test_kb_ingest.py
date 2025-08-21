@@ -28,30 +28,42 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
             self.id = user_id
             self.username = "langflow"
 
-    @pytest.fixture(autouse=True)
-    def setup_mocks(self):
-        """Mock the component's user_id attribute and User object."""
+    @pytest.fixture
+    def mock_user_data(self):
+        """Create mock user data that persists for the test function."""
         mock_uuid = uuid.uuid4()
         mock_user = self.MockUser(mock_uuid)
+        return {
+            "user_id": mock_uuid,
+            "user": mock_user.username,
+            "user_obj": mock_user
+        }
 
-        # Store for access by other fixtures/tests
-        self._mock_uuid = mock_uuid
-        self._mock_user = mock_user
-
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self, mock_user_data):
+        """Mock the component's user_id attribute and User object."""
         with (
-            patch.object(KBIngestionComponent, "user_id", mock_uuid),
-            patch("langflow.components.data.kb_ingest.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
-            patch("langflow.base.data.kb_utils.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
+            patch.object(KBIngestionComponent, "user_id", mock_user_data["user_id"]),
+            patch(
+                "langflow.components.data.kb_ingest.get_user_by_id",
+                new_callable=AsyncMock,
+                return_value=mock_user_data["user_obj"],
+            ),
+            patch(
+                "langflow.base.data.kb_utils.get_user_by_id",
+                new_callable=AsyncMock,
+                return_value=mock_user_data["user_obj"],
+            ),
         ):
             yield
 
     @pytest.fixture
-    def mock_user_id(self):
+    def mock_user_id(self, mock_user_data):
         """Get the mock user data."""
-        return {"user_id": self._mock_uuid, "user": self._mock_user}
+        return {"user_id": mock_user_data["user_id"], "user": mock_user_data["user"]}
 
     @pytest.fixture
-    def default_kwargs(self, tmp_path):
+    def default_kwargs(self, tmp_path, mock_user_id):
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
         data_df = pd.DataFrame(
@@ -67,7 +79,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
 
         # Create knowledge base directory
         kb_name = "test_kb"
-        kb_path = tmp_path / "langflow" / kb_name
+        kb_path = tmp_path / mock_user_id["user"] / kb_name
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create embedding metadata file
@@ -327,9 +339,9 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
     async def test_get_knowledge_bases(self, tmp_path, mock_user_id):
         """Test getting list of knowledge bases."""
         # Create additional test directories
-        (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
-        (tmp_path / "langflow" / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
+        (tmp_path / mock_user_id["user"] / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
         kb_list = await get_knowledge_bases(tmp_path, user_id=mock_user_id["user_id"])
 
