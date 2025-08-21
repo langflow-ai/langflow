@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import json
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -1019,11 +1020,32 @@ class Component(CustomComponent):
         return {**predefined_inputs, **runtime_inputs}
 
     def get_trace_as_metadata(self):
-        return {
-            input_.name: getattr(self, input_.name, input_.value)
-            for input_ in self.inputs
-            if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata
-        }
+        metadata = {}
+        for input_ in self.inputs:
+            if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata:
+                value = getattr(self, input_.name, input_.value)
+
+                if isinstance(value, str | int | float | bool) or value is None:
+                    metadata[input_.name] = value
+
+                elif isinstance(value, list | tuple):
+                    # Ensure list elements are primitives; fallback to str otherwise
+                    safe_list = []
+                    for v in value:
+                        if isinstance(v, str | int | float | bool) or v is None:
+                            safe_list.append(v)
+                        else:
+                            safe_list.append(str(v))
+                    metadata[input_.name] = safe_list
+
+                else:
+                    # dicts or any complex object → convert to JSON string
+                    try:
+                        metadata[input_.name] = json.dumps(value)
+                    except (TypeError, ValueError):
+                        metadata[input_.name] = str(value)
+
+        return metadata
 
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
