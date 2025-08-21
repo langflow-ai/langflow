@@ -544,7 +544,7 @@ class KBIngestionComponent(Component):
             return Data(data={"error": str(e), "kb_name": self.knowledge_base})
 
     async def _get_api_key_variable(self, field_value: dict[str, Any]):
-        async for db in get_session():
+        async with session_scope() as db:
             current_user = await _get_current_user(self.langflow_api_key)
             variable_service = get_variable_service()
 
