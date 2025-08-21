@@ -1,6 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { DEFAULT_SESSION_NAME } from "@/constants/constants";
+import { useIsMobile } from "@/hooks/use-mobile";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
@@ -20,8 +21,12 @@ export function PlaygroundHeader() {
   const isPlayground = usePlaygroundStore((state) => state.isPlayground);
   const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
 
+  const isMobile = useIsMobile();
+
   const sessionName =
     selectedSession === flowId ? DEFAULT_SESSION_NAME : selectedSession;
+
+  const isSessionDropdownVisible = !isFullscreen || isMobile;
 
   const { handleRename, handleDelete } = useEditSessionInfo({
     flowId,
@@ -48,7 +53,7 @@ export function PlaygroundHeader() {
   return (
     <div className="flex items-center justify-between gap-2 p-4">
       <div className="flex items-center flex-1 overflow-hidden">
-        <AnimatedConditional isOpen={!isFullscreen}>
+        <AnimatedConditional isOpen={isSessionDropdownVisible}>
           <div className="pr-2">
             <SessionManagerDropdown>
               <HeaderButton icon="ListRestart" />
@@ -65,7 +70,7 @@ export function PlaygroundHeader() {
       </div>
       {!isPlayground && (
         <div className="flex items-center gap-1">
-          <AnimatedConditional isOpen={!isFullscreen}>
+          <AnimatedConditional isOpen={isSessionDropdownVisible}>
             <SessionMenuDropdown
               onRename={handleEditStart}
               onDelete={onDelete}

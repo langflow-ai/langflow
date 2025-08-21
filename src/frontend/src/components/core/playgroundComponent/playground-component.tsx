@@ -5,6 +5,7 @@ import { v5 as uuidv5 } from "uuid";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
+import { useIsMobile } from "@/hooks/use-mobile";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -123,9 +124,16 @@ export function PlaygroundComponent({
     prevVisibleSessionRef.current = selectedSession;
   }, [selectedSession]);
 
+  const isMobile = useIsMobile();
+
+  const isSessionSidebarVisible = isFullscreen && !isMobile;
+
   return (
     <div className="flex w-full h-full">
-      <AnimatedConditional className="flex shrink-0" isOpen={isFullscreen}>
+      <AnimatedConditional
+        className="flex shrink-0"
+        isOpen={isSessionSidebarVisible}
+      >
         <SessionSidebar />
       </AnimatedConditional>
       <div className="flex flex-col w-full h-full transition-all duration-300">
