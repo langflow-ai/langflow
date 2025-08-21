@@ -73,7 +73,7 @@ class LangflowRunnerExperimental:
         tweaks_values: dict | None = None,
     ):
         try:
-            logger.info(f"Start Handling {session_id=}")
+            await logger.ainfo(f"Start Handling {session_id=}")
             await self.init_db_if_needed()
             # Update settings with cache and components path
             await update_settings(cache=cache)
@@ -115,7 +115,7 @@ class LangflowRunnerExperimental:
             result = await self.run_graph(input_value, input_type, output_type, session_id, graph, stream=stream)
         finally:
             await self.clear_flow_state(flow_dict)
-        logger.info(f"Finish Handling {session_id=}")
+        await logger.ainfo(f"Finish Handling {session_id=}")
         return result
 
     async def prepare_flow_and_add_to_db(
@@ -239,10 +239,10 @@ class LangflowRunnerExperimental:
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
-            logger.info("Initializing database...")
+            await logger.ainfo("Initializing database...")
             await initialize_database(fix_migration=True)
             self.should_initialize_db = False
-            logger.info("Database initialized.")
+            await logger.ainfo("Database initialized.")
 
     @staticmethod
     async def database_exists_check():
@@ -251,7 +251,7 @@ class LangflowRunnerExperimental:
                 result = await session.exec(text("SELECT version_num FROM public.alembic_version"))
                 return result.first() is not None
             except Exception as e:  # noqa: BLE001
-                logger.debug(f"Database check failed: {e}")
+                await logger.adebug(f"Database check failed: {e}")
                 return False
 
     @staticmethod
