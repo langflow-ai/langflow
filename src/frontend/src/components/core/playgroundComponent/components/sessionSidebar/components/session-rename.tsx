@@ -52,7 +52,7 @@ export const SessionRename = ({ sessionId, onSave }: SessionRenameProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+    <form onSubmit={handleSubmit} className="flex items-center gap-1">
       <Input
         name="sessionId"
         defaultValue={sessionId}
