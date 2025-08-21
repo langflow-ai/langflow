@@ -3,7 +3,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SessionMenuItem } from "./session-menu-item";
+import { SessionMenuItem } from "./components/session-menu-item";
 
 export function SessionMenuDropdown({
   children,

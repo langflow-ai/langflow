@@ -16,6 +16,7 @@ export const SessionMenuItem = forwardRef<
     <DropdownMenuItem
       className={cn("!text-mmd font-normal gap-2 px-2.5 py-2", className)}
       onSelect={onSelect}
+      onClick={(event) => event.stopPropagation()}
       ref={ref}
     >
       {icon && <ForwardedIconComponent name={icon} className="w-4 h-4" />}
