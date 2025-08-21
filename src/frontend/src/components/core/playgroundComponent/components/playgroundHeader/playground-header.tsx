@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { DEFAULT_SESSION_NAME } from "@/constants/constants";
@@ -6,12 +7,15 @@ import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
 import { useRenameSession } from "../../hooks/use-rename-session";
+import { SessionLogsModal } from "../../modals/SessionLogsModal/session-logs-modal";
 import { SessionManagerDropdown } from "../sessionManagerDropdown/session-manager-dropdown";
 import { SessionMenuDropdown } from "../sessionMenuDropdown/session-menu-dropdown";
 import { HeaderButton } from "./components/header-button";
 import { SessionRename } from "./components/session-rename";
 
 export function PlaygroundHeader() {
+  const [openLogsModal, setOpenLogsModal] = useState(false);
+
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
@@ -41,6 +45,11 @@ export function PlaygroundHeader() {
     handleDelete(selectedSession);
   };
 
+  const onLogs = () => {
+    if (!selectedSession) return;
+    setOpenLogsModal(true);
+  };
+
   const onClose = () => {
     setIsOpen(false);
   };
@@ -68,13 +77,13 @@ export function PlaygroundHeader() {
           )}
         </div>
       </div>
-      {!isPlayground && (
+      {!isPlayground && selectedSession && (
         <div className="flex items-center gap-1">
           <AnimatedConditional isOpen={isSessionDropdownVisible}>
             <SessionMenuDropdown
               onRename={handleEditStart}
               onDelete={onDelete}
-              onLogs={() => {}}
+              onLogs={onLogs}
             >
               <HeaderButton icon="MoreVertical" />
             </SessionMenuDropdown>
@@ -86,6 +95,12 @@ export function PlaygroundHeader() {
           <AnimatedConditional isOpen={isFullscreen}>
             <HeaderButton icon="X" onClick={onClose} />
           </AnimatedConditional>
+          <SessionLogsModal
+            sessionId={selectedSession}
+            flowId={flowId}
+            open={openLogsModal}
+            setOpen={setOpenLogsModal}
+          />
         </div>
       )}
     </div>
