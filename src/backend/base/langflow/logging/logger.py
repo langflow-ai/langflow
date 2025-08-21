@@ -22,7 +22,7 @@ VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Map log level names to integers
 LOG_LEVEL_MAP = {
-    "TRACE": 5,
+    "NOTSET": logging.NOTSET,
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
     "WARNING": logging.WARNING,
@@ -279,7 +279,8 @@ def configure(
             if "MB" in log_rotation:
                 try:
                     mb = int(log_rotation.split()[0])
-                    max_bytes = mb * 1024 * 1024
+                    if mb > 0:  # Only use valid positive values
+                        max_bytes = mb * 1024 * 1024
                 except (ValueError, IndexError):
                     pass
         else:
@@ -306,9 +307,9 @@ def configure(
     logger = structlog.get_logger()
 
     if disable:
-        # In structlog, we can set a very high filter level
+        # In structlog, we can set a very high filter level to effectively disable logging
         structlog.configure(
-            wrapper_class=structlog.make_filtering_bound_logger(logging.CRITICAL + 1),
+            wrapper_class=structlog.make_filtering_bound_logger(logging.CRITICAL),
         )
 
     logger.debug("Logger set up with log level: %s", log_level)
@@ -354,4 +355,6 @@ class InterceptHandler(logging.Handler):
 
 
 # Initialize logger - will be reconfigured when configure() is called
+# Set it to critical level
 logger = structlog.get_logger()
+configure(log_level="CRITICAL", disable=True)
