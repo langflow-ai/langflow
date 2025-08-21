@@ -124,6 +124,45 @@ There are two possible reasons for this error:
 Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
 To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
+### Access Langflow Desktop startup logs
+
+If you encounter issues with Langflow Desktop and need to access startup logs for debugging, follow these steps for your operating system:
+
+The log file is only created when Langflow Desktop runs. If you don't see a log file, try starting Langflow Desktop first, then check for the log file.
+
+<Tabs>
+<TabItem value="macos" label="macOS">
+
+1. Open Terminal and run:
+   ```bash
+   cd ~/.langflow/cache
+   ```
+
+2. List the contents to find log files:
+   ```bash
+   ls -la
+   ```
+
+3. Locate the `langflow.log` file and send it to support for debugging assistance.
+
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+1. Open Command Prompt (CMD) and run:
+   ```cmd
+   cd %LOCALAPPDATA%\com.langflow\logs
+   ```
+
+2. Run the command:
+   ```cmd
+   start .
+   ```
+
+3. Locate the `Langflow.log` file in the opened folder and send it to support for debugging assistance.
+
+</TabItem>
+</Tabs>
+
 ### `User not found or inactive` when running multiple flows
 
 When running multiple Langflow instances locally on different ports (for example, one on `localhost:7860` and another on `localhost:7861`), you might see authentication errors in the logs:
