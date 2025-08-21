@@ -25,10 +25,12 @@ test(
 
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await expect(page.getByText("api_key")).toBeVisible({
       timeout: 3000,
@@ -82,6 +84,8 @@ test(
 
     await page.getByTestId("canvas_controls_dropdown").click();
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("title-SearchApi").first().click();
     await page.getByTestId("tool-mode-button").click();
 

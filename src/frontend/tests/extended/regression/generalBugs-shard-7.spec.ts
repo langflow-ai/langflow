@@ -43,9 +43,11 @@ test(
           .getByTestId("add-component-button-ollama-embeddings")
           .click();
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="div-generic-node"]', {
       timeout: 5000,

@@ -89,10 +89,11 @@ class CustomComponent(Component):
     await page.locator("textarea").fill(waitTimeoutCode);
 
     await page.getByText("Check & Save").last().click();
-
+    await page.getByTestId("canvas_controls_dropdown").click();
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     //connection 1
     const elementCustomComponentOutput = await page

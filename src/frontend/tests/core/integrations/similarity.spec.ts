@@ -111,7 +111,10 @@ test(
 
     await updateOldComponents(page);
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("textarea_str_template")
@@ -150,12 +153,15 @@ test(
       .nth(0)
       .fill("similarity_score");
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
     await page.mouse.wheel(0, 500);
 
     await page.locator(".react-flow__pane").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     //connection 1
     const openAiEmbeddingOutput_0 = await page

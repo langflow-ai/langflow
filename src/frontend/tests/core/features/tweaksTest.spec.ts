@@ -81,10 +81,13 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     timeout: 100000,
   });
 
+  await page.getByTestId("canvas_controls_dropdown").click();
+
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
+  await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("popover-anchor-input-collection_name").click();
   await page
     .getByTestId("popover-anchor-input-collection_name")

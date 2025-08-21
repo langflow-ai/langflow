@@ -37,6 +37,8 @@ export async function uploadFile(page: Page, fileName: string) {
 
   await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("fit_view").click();
+  await page.getByTestId("canvas_controls_dropdown").click();
+
   const fileManagement = await page
     .getByTestId("button_open_file_management")
     ?.isVisible();

@@ -30,6 +30,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByText("openai").last().click();
     await page.keyboard.press("Delete");

@@ -26,9 +26,12 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("title-Ollama").click();
     await page.getByTestId("code-button-modal").click();
@@ -61,8 +64,10 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await mutualValidation(page);
 

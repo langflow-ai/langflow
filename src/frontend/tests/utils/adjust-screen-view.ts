@@ -23,4 +23,5 @@ export async function adjustScreenView(
       await zoomOutButton.click();
     }
   }
+  await page.getByTestId("canvas_controls_dropdown").click();
 }

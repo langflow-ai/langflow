@@ -22,9 +22,11 @@ test(
       .then(async () => {
         await page.getByTestId("add-component-button-if-else").click();
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("edit-button-modal").click();
 

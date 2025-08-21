@@ -95,8 +95,10 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 400 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Fill URL input
     await page

@@ -110,10 +110,12 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 940, y: 100 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 2);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Loop Item -> Update Data
 

@@ -64,6 +64,7 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 3000,
@@ -71,6 +72,7 @@ test(
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
     expect(await page.getByText("Click me").isVisible()).toBeTruthy();

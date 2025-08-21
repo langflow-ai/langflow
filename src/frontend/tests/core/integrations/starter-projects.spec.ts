@@ -85,11 +85,15 @@ test(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
+
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     const edges = await page.locator(".react-flow__edge-interaction").count();
     const nodes = await page.getByTestId("div-generic-node").count();

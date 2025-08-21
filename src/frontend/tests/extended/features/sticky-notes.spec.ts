@@ -47,6 +47,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
@@ -54,6 +55,8 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.getByTestId("fit_view").click();
     await zoomOut(page, 6);
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("note_node").click();
 
     await page.locator(".generic-node-desc-text").last().dblclick();
@@ -119,8 +122,10 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.getByTestId("more-options-modal").click();
 
     await page.getByText("Copy").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     //double click
     await targetElement.click();

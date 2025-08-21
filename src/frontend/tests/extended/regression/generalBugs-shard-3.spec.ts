@@ -80,8 +80,11 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .last()
       .click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
