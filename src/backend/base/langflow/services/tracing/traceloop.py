@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import math
 import os
+import types
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -40,7 +43,7 @@ class TraceloopTracer(BaseTracer):
         self.project_name = project_name
         self.user_id = user_id
         self.session_id = session_id
-        self._span_map: dict[str, trace.Span] = {}  # store spans by trace_name
+        self._span_map: dict[str, trace.Span] = {}
 
         if not self._validate_configuration():
             self._ready = False
@@ -80,6 +83,38 @@ class TraceloopTracer(BaseTracer):
 
         return True
 
+    def _convert_to_traceloop_type(self, value: Any) -> str | int | float | bool | None:
+        """Convert any value into an OTel/Traceloop-compatible type (primitive or JSON string)."""
+        from langchain.schema import BaseMessage, Document, HumanMessage, SystemMessage
+
+        from langflow.schema.message import Message
+
+        try:
+            if isinstance(value, Message):
+                return value.text
+            if isinstance(value, BaseMessage | HumanMessage | SystemMessage):
+                return value.content
+            if isinstance(value, Document):
+                return value.page_content
+            if isinstance(value, types.GeneratorType):
+                return str(value)
+            if value is None:
+                return None
+            if isinstance(value, float) and not math.isfinite(value):
+                return "NaN"
+            if isinstance(value, str | bool | int | float):
+                return value
+
+            # fallback: JSON serialize (dicts, lists, custom objects)
+            return json.dumps(value, default=str)
+        except (TypeError, ValueError) as e:
+            logger.warning(f"Failed to convert value {value!r} to traceloop type: {e}")
+            return str(value)
+
+    def _convert_to_traceloop_dict(self, io_dict: dict[str, Any]) -> dict[str, Any]:
+        """Ensure all values in dict are OTel-compatible."""
+        return {str(k): self._convert_to_traceloop_type(v) for k, v in (io_dict or {}).items()}
+
     @override
     def add_trace(
         self,
@@ -90,24 +125,26 @@ class TraceloopTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ) -> None:
-        """Start a new span for this trace."""
         if not self.ready:
             return
 
         span_name = f"component.{trace_name}"
         span = self._tracer.start_span(span_name)
+
+        safe_inputs = self._convert_to_traceloop_dict(inputs)
+        safe_metadata = self._convert_to_traceloop_dict(metadata or {})
+
         span.set_attributes(
             {
                 "trace_id": trace_id,
                 "trace_name": trace_name,
                 "trace_type": trace_type,
-                "inputs": str(inputs),
+                "inputs": json.dumps(safe_inputs, default=str),
                 "vertex_id": vertex.id if vertex else None,
-                **(metadata or {}),
+                **safe_metadata,
             }
         )
 
-        # Store the span so end_trace can finish it
         self._span_map[trace_name] = span
 
     @override
@@ -119,7 +156,6 @@ class TraceloopTracer(BaseTracer):
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ) -> None:
-        """End the span created in add_trace."""
         if not self.ready:
             return
 
@@ -129,13 +165,13 @@ class TraceloopTracer(BaseTracer):
             return
 
         if outputs:
-            span.set_attributes({"outputs": str(outputs)})
+            span.set_attributes({"outputs": json.dumps(self._convert_to_traceloop_dict(outputs), default=str)})
         if logs:
-            span.set_attributes({"logs": str(logs)})
+            span.set_attributes({"logs": json.dumps(self._convert_to_traceloop_type(logs), default=str)})
         if error:
             span.record_exception(error)
 
-        span.end()  # Properly close span
+        span.end()
 
     @override
     def end(
@@ -145,17 +181,19 @@ class TraceloopTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """End workflow-level span."""
         if not self.ready:
             return
+
+        safe_outputs = self._convert_to_traceloop_dict(outputs)
+        safe_metadata = self._convert_to_traceloop_dict(metadata or {})
 
         with self._tracer.start_as_current_span("workflow.end") as span:
             span.set_attributes(
                 {
                     "workflow_name": self.trace_name,
                     "workflow_id": str(self.trace_id),
-                    "outputs": str(outputs),
-                    **(metadata or {}),
+                    "outputs": json.dumps(safe_outputs, default=str),
+                    **safe_metadata,
                 }
             )
             if error:
@@ -163,10 +201,9 @@ class TraceloopTracer(BaseTracer):
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
-        return None  # Implement if needed
+        return None
 
     def close(self):
-        """Flush pending spans."""
         try:
             provider = trace.get_tracer_provider()
             if hasattr(provider, "force_flush"):
