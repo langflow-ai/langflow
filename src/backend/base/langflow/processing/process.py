@@ -147,6 +147,9 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
             continue
+        if tweak_name == "code":
+            logger.warning("Security: Code field cannot be overridden via tweaks.")
+            continue
         if tweak_name in template_data:
             if template_data[tweak_name]["type"] == "NestedDict":
                 value = validate_and_repair_json(tweak_value)
