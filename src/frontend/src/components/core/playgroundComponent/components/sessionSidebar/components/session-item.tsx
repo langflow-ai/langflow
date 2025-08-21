@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { DEFAULT_SESSION_NAME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useRenameSession } from "../../../hooks/use-rename-session";
+import { SessionLogsModal } from "../../../modals/SessionLogsModal/session-logs-modal";
 import { SessionMenuDropdown } from "../../sessionMenuDropdown/session-menu-dropdown";
 import { MenuIconButton } from "./menu-icon-button";
 import { SessionRename } from "./session-rename";
@@ -11,13 +13,13 @@ export const SessionItem = ({
   sessionId,
   onRename,
   onDelete,
-  onLogs,
 }: {
   sessionId: string;
   onRename: (sessionId: string, newSessionId: string) => Promise<void>;
   onDelete: (sessionId: string) => void;
-  onLogs: () => void;
 }) => {
+  const [openLogsModal, setOpenLogsModal] = useState(false);
+
   const flowId = useFlowStore((state) => state.currentFlow?.id);
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const setSelectedSession = usePlaygroundStore(
@@ -47,6 +49,10 @@ export const SessionItem = ({
     onDelete(sessionId);
   };
 
+  const handleLogs = () => {
+    setOpenLogsModal(true);
+  };
+
   const canEdit = sessionId !== flowId;
 
   const sessionName = canEdit ? sessionId : DEFAULT_SESSION_NAME;
@@ -69,14 +75,20 @@ export const SessionItem = ({
         <>
           <span className="text-mmd font-medium truncate">{sessionName}</span>
           <SessionMenuDropdown
-            onLogs={onLogs}
             onRename={canEdit ? handleEditStart : undefined}
             onDelete={canEdit ? handleDelete : undefined}
+            onLogs={handleLogs}
           >
             <MenuIconButton icon="EllipsisVertical" />
           </SessionMenuDropdown>
         </>
       )}
+      <SessionLogsModal
+        sessionId={sessionId}
+        flowId={flowId}
+        open={openLogsModal}
+        setOpen={setOpenLogsModal}
+      />
     </div>
   );
 };
