@@ -347,7 +347,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_api_key": None,
+            "03_api_key": "abc123",  # Mock API key
         }
 
         # Mock embedding validation
