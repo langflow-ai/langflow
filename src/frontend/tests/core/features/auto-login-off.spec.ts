@@ -6,7 +6,7 @@ test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
   { tag: ["@release", "@api", "@database", "@mainpage"] },
   async ({ page }) => {
-    await page.route("**/api/v1/auto_login", (route) => {
+    await page.route("**/api/v1/auto_login", route => {
       route.fulfill({
         status: 500,
         contentType: "application/json",
@@ -121,7 +121,7 @@ test(
     await expect(page.getByText(secondRandomName, { exact: true })).toBeVisible(
       {
         timeout: 2000,
-      },
+      }
     );
 
     //user must see just your own flows
@@ -148,6 +148,8 @@ test(
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
+
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await renameFlow(page, { flowName: randomFlowName });
 
@@ -207,7 +209,7 @@ test(
         await page.waitForSelector("text=Welcome to LangFlow", {
           timeout: 30000,
         })
-      ).isVisible(),
+      ).isVisible()
     );
 
     await page.waitForTimeout(2000);
@@ -226,6 +228,8 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await renameFlow(page, { flowName: secondRandomFlowName });
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -239,7 +243,7 @@ test(
     });
 
     await expect(
-      page.getByText(secondRandomFlowName, { exact: true }),
+      page.getByText(secondRandomFlowName, { exact: true })
     ).toBeVisible({
       timeout: 2000,
     });
@@ -277,7 +281,7 @@ test(
     });
 
     expect(
-      await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
+      await page.getByText(secondRandomFlowName, { exact: true }).isVisible()
     ).toBe(false);
 
     await expect(page.getByText(randomFlowName, { exact: true })).toBeVisible({
@@ -287,5 +291,5 @@ test(
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
-  },
+  }
 );
