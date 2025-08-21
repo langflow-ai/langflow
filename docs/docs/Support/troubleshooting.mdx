@@ -124,6 +124,16 @@ There are two possible reasons for this error:
 Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
 To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
+### `User not found or inactive` when running multiple flows
+
+When running multiple Langflow instances locally on different ports (for example, one on `localhost:7860` and another on `localhost:7861`), you might see authentication errors in the logs:
+
+```text
+[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - utils - User not found or inactive.
+```
+
+To resolve this error, use separate browser instances or browser profiles for each Langflow instance.
+
 ### Package is not installed
 
 In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
