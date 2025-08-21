@@ -47,7 +47,8 @@ class KBIngestionComponent(Component):
     icon = "database"
     name = "KBIngestion"
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         self._cached_kb_path: Path | None = None
 
     @dataclass
