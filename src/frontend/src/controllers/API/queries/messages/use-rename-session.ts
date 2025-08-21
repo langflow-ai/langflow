@@ -10,6 +10,10 @@ interface UpdateSessionParams {
   newSessionId: string;
 }
 
+interface UpdateSessionContext {
+  previousSessions: string[];
+}
+
 interface useUpdateSessionNameParams {
   flowId?: string;
   useLocalStorage?: boolean;
@@ -52,15 +56,48 @@ export const useUpdateSessionName: useMutationFunctionType<
     }
   };
 
-  const mutation: UseMutationResult<Message[], any, UpdateSessionParams> =
-    mutate(["useUpdateSessionName"], updateSessionApi, {
-      ...options,
-      onSettled: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["useGetSessionsFromFlowQuery", { flowId }],
-        });
-      },
+  const handleMutate = async (data: unknown) => {
+    const { oldSessionId, newSessionId } = data as UpdateSessionParams;
+    await queryClient.cancelQueries({
+      queryKey: ["useGetSessionsFromFlowQuery", { flowId }],
     });
+
+    const previousSessions = queryClient.getQueryData([
+      "useGetSessionsFromFlowQuery",
+      { flowId },
+    ]) as string[];
+
+    queryClient.setQueryData(
+      ["useGetSessionsFromFlowQuery", { flowId }],
+      (old: string[]) =>
+        old.map((session) =>
+          session === oldSessionId ? newSessionId : session
+        )
+    );
+    return { previousSessions };
+  };
+
+  const mutation: UseMutationResult<
+    Message[],
+    any,
+    UpdateSessionParams,
+    UpdateSessionContext
+  > = mutate(["useUpdateSessionName"], updateSessionApi, {
+    ...options,
+    onMutate: handleMutate,
+    onError: (err, newSessionId, context) => {
+      queryClient.setQueryData(
+        ["useGetSessionsFromFlowQuery", { flowId }],
+        (context as UpdateSessionContext).previousSessions
+      );
+      options?.onError?.(err, newSessionId, context);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["useGetSessionsFromFlowQuery", { flowId }],
+      });
+    },
+  });
 
   return mutation;
 };
