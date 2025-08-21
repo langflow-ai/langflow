@@ -4,7 +4,7 @@ import { DEFAULT_SESSION_NAME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
-import { SessionMenuItem } from "./session-menu-item";
+import { SessionMenuItem } from "../../sessionMenuDropdown/components/session-menu-item";
 
 interface SessionItemProps {
   sessionId: string;
