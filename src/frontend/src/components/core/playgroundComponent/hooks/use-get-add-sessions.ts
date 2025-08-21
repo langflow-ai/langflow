@@ -37,7 +37,7 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
   const sessions = useMemo(() => {
     return (
       dbSessions?.map((sessionId, index) => ({
-        id: `session-${index}`,
+        id: `session-${index}`, // provide id based on index to not re-render on rename
         sessionId: sessionId,
       })) ?? []
     );
