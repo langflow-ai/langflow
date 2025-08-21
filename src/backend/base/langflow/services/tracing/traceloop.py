@@ -49,7 +49,7 @@ class TraceloopTracer(BaseTracer):
         api_key = os.getenv("TRACELOOP_API_KEY", "").strip()
         try:
             Traceloop.init(
-                instruments={Instruments.LANGCHAIN},
+                block_instruments={Instruments.PYMYSQL},
                 app_name=project_name,
                 disable_batch=True,
                 api_key=api_key,
@@ -74,7 +74,7 @@ class TraceloopTracer(BaseTracer):
 
         base_url = os.getenv("TRACELOOP_BASE_URL", "https://api.traceloop.com")
         parsed = urlparse(base_url)
-        if not (parsed.scheme in {"https"} and parsed.netloc):
+        if not parsed.netloc:
             logger.error(f"Invalid TRACELOOP_BASE_URL: {base_url}")
             return False
 
