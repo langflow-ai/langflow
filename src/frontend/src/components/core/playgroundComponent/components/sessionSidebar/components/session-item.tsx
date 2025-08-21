@@ -4,7 +4,7 @@ import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useRenameSession } from "../../../hooks/use-rename-session";
-import { SessionLogsModal } from "../../../modals/SessionLogsModal/session-logs-modal";
+import { SessionLogsModal } from "../../../modals/session-logs-modal";
 import { SessionMenuDropdown } from "../../sessionMenuDropdown/session-menu-dropdown";
 import { MenuIconButton } from "./menu-icon-button";
 import { SessionRename } from "./session-rename";

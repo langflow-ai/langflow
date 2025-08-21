@@ -7,7 +7,7 @@ import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
 import { useRenameSession } from "../../hooks/use-rename-session";
-import { SessionLogsModal } from "../../modals/SessionLogsModal/session-logs-modal";
+import { SessionLogsModal } from "../../modals/session-logs-modal";
 import { SessionManagerDropdown } from "../sessionManagerDropdown/session-manager-dropdown";
 import { SessionMenuDropdown } from "../sessionMenuDropdown/session-menu-dropdown";
 import { HeaderButton } from "./components/header-button";
