@@ -9,10 +9,9 @@ export default function SessionSidebar() {
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
 
   const { sessions, addNewSession } = useGetAddSessions({ flowId });
-  const { isEditing, handleEditSave, handleEditStart, handleDelete } =
-    useEditSessionInfo({
-      flowId,
-    });
+  const { handleRename, handleDelete } = useEditSessionInfo({
+    flowId,
+  });
 
   return (
     <>
