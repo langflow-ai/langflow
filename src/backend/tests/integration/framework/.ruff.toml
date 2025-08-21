@@ -1,6 +1,4 @@
 exclude = [
-    "demo_test_generation.py",
-    "validation_test.py",
     "examples/",
 ]
 

@@ -293,7 +293,10 @@ tests/integration/
 │   ├── runners.py         # Component and flow runners
 │   ├── fixtures.py        # Test data factories
 │   ├── generators.py      # Automatic test generation
-│   └── examples/          # Usage examples
+│   └── examples/          # Usage examples and demos
+│       ├── test_framework_demo.py      # Working test example
+│       ├── test_chat_input_example.py  # Real component example
+│       └── demo_generation.py          # Generation demo
 ├── components/            # Component integration tests
 ├── flows/                 # Flow integration tests
 ├── api/                   # API integration tests
