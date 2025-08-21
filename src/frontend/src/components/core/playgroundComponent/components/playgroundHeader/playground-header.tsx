@@ -5,9 +5,9 @@ import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
 import { useRenameSession } from "../../hooks/use-rename-session";
+import { SessionMenuDropdown } from "../sessionMenuDropdown/session-menu-dropdown";
 import { HeaderButton } from "./components/header-button";
 import { SessionManagerDropdown } from "./components/session-manager-dropdown";
-import { SessionMenuDropdown } from "./components/session-menu-dropdown";
 import { SessionRename } from "./components/session-rename";
 
 export function PlaygroundHeader() {
@@ -46,7 +46,7 @@ export function PlaygroundHeader() {
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 px-4 py-3">
+    <div className="flex items-center justify-between gap-2 p-4">
       <div className="flex items-center flex-1 overflow-hidden">
         <AnimatedConditional isOpen={!isFullscreen}>
           <div className="pr-2">
