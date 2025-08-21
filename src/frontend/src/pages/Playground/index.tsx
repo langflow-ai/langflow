@@ -1,18 +1,16 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";
+import { PlaygroundComponent } from "@/components/core/playgroundComponent/playground-component";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
-import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
-import useFlowStore from "@/stores/flowStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
-import { PlaygroundComponent } from "@/components/core/playgroundComponent/playground-component";
-import { usePlaygroundStore } from "@/stores/playgroundStore";
 export default function PlaygroundPage() {
   useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -97,7 +95,7 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
-      {currentSavedFlow && <PlaygroundComponent playgroundPage />}
+      {currentSavedFlow && <PlaygroundComponent />}
     </div>
   );
 }
