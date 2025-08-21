@@ -112,7 +112,7 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
 
 async def _get_current_user(langflow_api_key: str | None = None) -> User:
     """Get the current user based on the provided API key or create a new user."""
-    async for db in get_session():
+    async with session_scope() as db:
         if langflow_api_key:
             current_user = await get_current_user(
                 token="",
