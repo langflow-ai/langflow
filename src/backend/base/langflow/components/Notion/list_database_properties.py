@@ -64,5 +64,5 @@ class NotionDatabaseProperties(LCToolComponent):
         except ValueError as e:
             return f"Error parsing Notion API response: {e}"
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error fetching Notion database properties")
+            logger.debug("Error fetching Notion database properties", exc_info=True)
             return f"An unexpected error occurred: {e}"

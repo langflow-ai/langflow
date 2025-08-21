@@ -84,7 +84,7 @@ class AddContentToPage(LCToolComponent):
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error adding content to Notion page")
+            logger.debug("Error adding content to Notion page", exc_info=True)
             return f"Error: An unexpected error occurred while adding content to Notion page. {e}"
 
     def process_node(self, node):

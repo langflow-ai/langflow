@@ -18,11 +18,10 @@ from typing_extensions import NotRequired
 
 from langflow.settings import DEV
 
-VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Map log level names to integers
 LOG_LEVEL_MAP = {
-    "NOTSET": logging.NOTSET,
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
     "WARNING": logging.WARNING,
@@ -57,9 +56,15 @@ class SizedLogBuffer:
     def write(self, message: str) -> None:
         """Write a message to the buffer."""
         record = json.loads(message)
-        log_entry = record.get("event", record.get("msg", ""))
-        # Convert structlog timestamp to epoch milliseconds
+        log_entry = record.get("event", record.get("msg", record.get("text", "")))
+
+        # Extract timestamp - support both direct timestamp and nested record.time.timestamp
         timestamp = record.get("timestamp", 0)
+        if timestamp == 0 and "record" in record:
+            # Support nested structure from tests: record.time.timestamp
+            time_info = record["record"].get("time", {})
+            timestamp = time_info.get("timestamp", 0)
+
         if isinstance(timestamp, str):
             # Parse ISO format timestamp
             dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
@@ -276,11 +281,15 @@ def configure(
         if log_rotation:
             # Handle rotation like "1 day", "100 MB", etc.
             max_bytes = 10 * 1024 * 1024  # Default 10MB
-            if "MB" in log_rotation:
+            if "MB" in log_rotation.upper():
                 try:
-                    mb = int(log_rotation.split()[0])
-                    if mb > 0:  # Only use valid positive values
-                        max_bytes = mb * 1024 * 1024
+                    # Look for pattern like "100 MB" (with space)
+                    parts = log_rotation.split()
+                    expected_parts = 2
+                    if len(parts) >= expected_parts and parts[1].upper() == "MB":
+                        mb = int(parts[0])
+                        if mb > 0:  # Only use valid positive values
+                            max_bytes = mb * 1024 * 1024
                 except (ValueError, IndexError):
                     pass
         else:
@@ -301,6 +310,10 @@ def configure(
     # Set up interceptors for uvicorn and gunicorn
     setup_uvicorn_logger()
     setup_gunicorn_logger()
+
+    # Add InterceptHandler to root logger to capture all stdlib logging
+    intercept_handler = InterceptHandler()
+    logging.root.addHandler(intercept_handler)
 
     # Create the global logger instance
     global logger  # noqa: PLW0603

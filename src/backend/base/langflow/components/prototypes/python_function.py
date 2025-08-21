@@ -57,7 +57,7 @@ class PythonFunctionComponent(Component):
             func = get_function(function_code)
             return func()
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error executing function")
+            logger.debug("Error executing function", exc_info=True)
             return f"Error executing function: {e}"
 
     def execute_function_data(self) -> list[Data]:

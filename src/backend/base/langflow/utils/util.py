@@ -53,7 +53,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_fu
                                 module=class_.__base__.__module__, function=value_
                             )
                         except Exception:  # noqa: BLE001
-                            logger.opt(exception=True).debug(f"Error getting default factory for {value_}")
+                            logger.debug(f"Error getting default factory for {value_}", exc_info=True)
                             variables[class_field_items]["default"] = None
                     elif name_ != "name":
                         variables[class_field_items][name_] = value_

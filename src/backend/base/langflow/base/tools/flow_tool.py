@@ -109,7 +109,7 @@ class FlowTool(BaseTool):
         try:
             run_id = self.graph.run_id if hasattr(self, "graph") and self.graph else None
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).warning("Failed to set run_id")
+            logger.warning("Failed to set run_id", exc_info=True)
             run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},

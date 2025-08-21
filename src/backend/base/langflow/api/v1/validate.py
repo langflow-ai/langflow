@@ -19,7 +19,7 @@ async def post_validate_code(code: Code, _current_user: CurrentActiveUser) -> Co
             function=errors.get("function", {}),
         )
     except Exception as e:
-        logger.opt(exception=True).debug("Error validating code")
+        logger.debug("Error validating code", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

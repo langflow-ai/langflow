@@ -338,7 +338,7 @@ Note: Check 'Advanced' for all options.
             raise ToolException(error_message) from e
         except Exception as e:
             error_message = f"Unexpected error: {e}"
-            logger.opt(exception=True).debug("Error running Tavily Search")
+            logger.debug("Error running Tavily Search", exc_info=True)
             self.status = error_message
             raise ToolException(error_message) from e
         return data_results

@@ -118,5 +118,5 @@ class NotionListPages(LCToolComponent):
         except KeyError:
             return "Unexpected response format from Notion API"
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error querying Notion database")
+            logger.debug("Error querying Notion database", exc_info=True)
             return f"An unexpected error occurred: {e}"

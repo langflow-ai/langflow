@@ -310,7 +310,7 @@ async def create_super_user(
             if not super_user:
                 raise  # Re-raise if it's not a race condition
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error creating superuser.")
+            logger.debug("Error creating superuser.", exc_info=True)
 
     return super_user
 

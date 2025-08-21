@@ -1447,7 +1447,7 @@ class Graph:
                             if vertex.result is not None:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
-                            logger.opt(exception=True).debug("Error finalizing build")
+                            logger.debug("Error finalizing build", exc_info=True)
                             should_build = True
                     except KeyError:
                         should_build = True
@@ -1993,6 +1993,10 @@ class Graph:
             f"Edges ({len(self.edges)}):\n"
             f"{edges_repr}"
         )
+
+    def __hash__(self) -> int:
+        """Return hash of the graph based on its string representation."""
+        return hash(self.__repr__())
 
     def get_vertex_predecessors_ids(self, vertex_id: str) -> list[str]:
         """Get the predecessor IDs of a vertex."""

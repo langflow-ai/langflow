@@ -36,7 +36,7 @@ class CurrentDateComponent(Component):
             self.status = result
             return Message(text=result)
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error getting current date")
+            logger.debug("Error getting current date", exc_info=True)
             error_message = f"Error: {e}"
             self.status = error_message
             return Message(text=error_message)

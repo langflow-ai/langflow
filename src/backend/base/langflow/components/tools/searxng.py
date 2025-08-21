@@ -76,7 +76,7 @@ class SearXNGToolComponent(LCToolComponent):
             build_config["language"]["options"] = languages.copy()
         except Exception as e:  # noqa: BLE001
             self.status = f"Failed to extract names: {e}"
-            logger.opt(exception=True).debug(self.status)
+            logger.debug(self.status, exc_info=True)
             build_config["categories"]["options"] = ["Failed to parse", str(e)]
         return build_config
 
@@ -112,7 +112,7 @@ class SearXNGToolComponent(LCToolComponent):
                     num_results = min(SearxSearch._max_results, len(response["results"]))
                     return [response["results"][i] for i in range(num_results)]
                 except Exception as e:  # noqa: BLE001
-                    logger.opt(exception=True).debug("Error running SearXNG Search")
+                    logger.debug("Error running SearXNG Search", exc_info=True)
                     return [f"Failed to search: {e}"]
 
         SearxSearch._url = self.url

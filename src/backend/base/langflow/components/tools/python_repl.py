@@ -78,7 +78,7 @@ class PythonREPLToolComponent(LCToolComponent):
             try:
                 return python_repl.run(code)
             except Exception as e:
-                logger.opt(exception=True).debug("Error running Python code")
+                logger.debug("Error running Python code", exc_info=True)
                 raise ToolException(str(e)) from e
 
         tool = StructuredTool.from_function(

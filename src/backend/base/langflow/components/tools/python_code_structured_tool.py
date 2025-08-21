@@ -132,7 +132,7 @@ class PythonCodeStructuredTool(LCToolComponent):
             build_config["tool_function"]["options"] = names
         except Exception as e:  # noqa: BLE001
             self.status = f"Failed to extract names: {e}"
-            logger.opt(exception=True).debug(self.status)
+            logger.debug(self.status, exc_info=True)
             build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
 

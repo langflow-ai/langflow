@@ -162,7 +162,7 @@ class StoreService(Service):
         except HTTPError:
             raise
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Webhook failed")
+            logger.debug("Webhook failed", exc_info=True)
 
     @staticmethod
     def build_tags_filter(tags: list[str]):
@@ -594,7 +594,7 @@ class StoreService(Service):
                         authorized = True
                         result = updated_result
                     except Exception:  # noqa: BLE001
-                        logger.opt(exception=True).debug("Error updating components with user data")
+                        logger.debug("Error updating components with user data", exc_info=True)
                         # If we get an error here, it means the user is not authorized
                         authorized = False
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)

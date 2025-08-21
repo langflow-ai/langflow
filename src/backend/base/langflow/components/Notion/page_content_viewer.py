@@ -65,7 +65,7 @@ class NotionPageContent(LCToolComponent):
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error retrieving Notion page content")
+            logger.debug("Error retrieving Notion page content", exc_info=True)
             return f"Error: An unexpected error occurred while retrieving Notion page content. {e}"
 
     def parse_blocks(self, blocks: list) -> str:

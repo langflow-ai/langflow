@@ -131,7 +131,7 @@ class AssemblyAILeMUR(Component):
         try:
             response = self.perform_lemur_action(transcript_group, self.endpoint)
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error running LeMUR")
+            logger.debug("Error running LeMUR", exc_info=True)
             error = f"An Error happened: {e}"
             self.status = error
             return Data(data={"error": error})

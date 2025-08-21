@@ -255,7 +255,7 @@ class DirectoryReader:
                 try:
                     output_types = self.get_output_types_from_code(result_content)
                 except Exception:  # noqa: BLE001
-                    logger.opt(exception=True).debug("Error while getting output types from code")
+                    logger.debug("Error while getting output types from code", exc_info=True)
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
