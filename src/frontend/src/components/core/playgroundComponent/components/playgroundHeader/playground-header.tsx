@@ -4,33 +4,42 @@ import { DEFAULT_SESSION_NAME } from "@/constants/constants";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
+import { useRenameSession } from "../../hooks/use-rename-session";
 import { HeaderButton } from "./components/header-button";
 import { SessionManagerDropdown } from "./components/session-manager-dropdown";
 import { SessionMenuDropdown } from "./components/session-menu-dropdown";
 import { SessionRename } from "./components/session-rename";
 
 export function PlaygroundHeader() {
-  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
-
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
-
+  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
-
   const toggleFullscreen = usePlaygroundStore(
     (state) => state.toggleFullscreen
   );
-
   const isPlayground = usePlaygroundStore((state) => state.isPlayground);
-
   const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
 
   const sessionName =
     selectedSession === flowId ? DEFAULT_SESSION_NAME : selectedSession;
 
-  const { isEditing, handleEditSave, handleEditStart, handleDelete } =
-    useEditSessionInfo({
-      flowId,
-    });
+  const { handleRename, handleDelete } = useEditSessionInfo({
+    flowId,
+  });
+
+  const { isEditing, handleEditSave, handleEditStart } = useRenameSession({
+    handleRename,
+  });
+
+  const onSave = (newSessionId: string) => {
+    if (!selectedSession) return;
+    handleEditSave(selectedSession, newSessionId);
+  };
+
+  const onDelete = () => {
+    if (!selectedSession) return;
+    handleDelete(selectedSession);
+  };
 
   const onClose = () => {
     setIsOpen(false);
@@ -48,10 +57,7 @@ export function PlaygroundHeader() {
         </AnimatedConditional>
         <div className="truncate text-sm w-full font-medium text-secondary-foreground">
           {isEditing ? (
-            <SessionRename
-              sessionId={selectedSession}
-              onSave={handleEditSave}
-            />
+            <SessionRename sessionId={selectedSession} onSave={onSave} />
           ) : (
             sessionName
           )}
@@ -62,7 +68,7 @@ export function PlaygroundHeader() {
           <AnimatedConditional isOpen={!isFullscreen}>
             <SessionMenuDropdown
               onRename={handleEditStart}
-              onDelete={handleDelete}
+              onDelete={onDelete}
               onLogs={() => {}}
             >
               <HeaderButton icon="MoreVertical" />
