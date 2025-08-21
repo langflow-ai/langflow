@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -28,8 +28,12 @@ export const MemoizedSidebarGroup = memo(
           referenceArray.findIndex((value) => value === a.name) -
           referenceArray.findIndex((value) => value === b.name)
         );
-      });
-    }, [BUNDLES, search, sortedCategories]);
+      }).filter(
+        (item: { name: string | number }) =>
+          dataFilter[item.name] &&
+          Object.keys(dataFilter[item.name]).length > 0,
+      );
+    }, [BUNDLES, search, sortedCategories, dataFilter]);
 
     return (
       <SidebarGroup className="p-3">
