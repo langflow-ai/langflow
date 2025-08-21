@@ -305,18 +305,17 @@ class AgentComponent(ToolCallingAgentComponent):
                     processed_schema = self._preprocess_schema(self.output_schema)
                     output_model = build_model_from_schema(processed_schema)
                     schema_dict = output_model.model_json_schema()
-                    schema_info = f"""You are given some text that may include format instructions, explanations, or other content
-                                    alongside a JSON schema.
-
-                                    Your task:
-                                    - Extract **only the JSON schema**.
-                                    - Return it as valid JSON.
-                                    - Do not include format instructions, explanations, or extra text.
-
-                                    Input:
-                                    {json.dumps(schema_dict, indent=2)}
-
-                                    Output (only JSON schema):"""
+                    schema_info = (
+                        "You are given some text that may include format instructions, "
+                        "explanations, or other content alongside a JSON schema.\n\n"
+                        "Your task:\n"
+                        "- Extract only the JSON schema.\n"
+                        "- Return it as valid JSON.\n"
+                        "- Do not include format instructions, explanations, or extra text.\n\n"
+                        "Input:\n"
+                        f"{json.dumps(schema_dict, indent=2)}\n\n"
+                        "Output (only JSON schema):"
+                    )
                     system_components.append(schema_info)
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
                     logger.error(f"Could not build schema for prompt: {e}", exc_info=True)
