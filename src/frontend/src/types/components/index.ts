@@ -190,7 +190,7 @@ export type FloatComponentType = {
   onChange: (
     value: string | number,
     dbValue?: boolean,
-    skipSnapshot?: boolean
+    skipSnapshot?: boolean,
   ) => void;
   rangeSpec: RangeSpecType;
   editNode?: boolean;
@@ -535,7 +535,7 @@ export type ChatInputType = {
   isDragging: boolean;
   files: FilePreviewType[];
   setFiles: (
-    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
   inputRef: {
     current: any;
@@ -628,7 +628,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;

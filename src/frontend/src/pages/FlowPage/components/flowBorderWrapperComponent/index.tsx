@@ -16,7 +16,7 @@ export default function FlowBorderWrapperComponent({
       <main
         className={cn(
           "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
-          open && !isFullscreen && "rounded-xl m-2 mr-0"
+          open && !isFullscreen && "rounded-xl m-2 mr-0",
         )}
       >
         <div className="h-full w-full relative">

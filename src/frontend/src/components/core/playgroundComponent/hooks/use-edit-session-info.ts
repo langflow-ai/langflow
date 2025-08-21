@@ -5,7 +5,7 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 
 export const useEditSessionInfo = ({ flowId }: { flowId?: string }) => {
   const setSelectedSession = usePlaygroundStore(
-    (state) => state.setSelectedSession
+    (state) => state.setSelectedSession,
   );
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const isPlayground = usePlaygroundStore((state) => state.isPlayground);

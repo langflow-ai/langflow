@@ -25,14 +25,14 @@ type SimpleSidebarContext = {
 };
 
 const SimpleSidebarContext = React.createContext<SimpleSidebarContext | null>(
-  null
+  null,
 );
 
 function useSimpleSidebar() {
   const context = React.useContext(SimpleSidebarContext);
   if (!context) {
     throw new Error(
-      "useSimpleSidebar must be used within a SimpleSidebarProvider."
+      "useSimpleSidebar must be used within a SimpleSidebarProvider.",
     );
   }
 
@@ -69,13 +69,13 @@ const SimpleSidebarProvider = React.forwardRef<
       fullscreen = false,
       ...props
     },
-    ref
+    ref,
   ) => {
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(defaultOpen);
     const [_width, _setWidth] = React.useState(
-      typeof width === "string" ? parseInt(width.replace("px", "")) : width
+      typeof width === "string" ? parseInt(width.replace("px", "")) : width,
     );
     const [_isResizing, _setIsResizing] = React.useState(false);
     const [_parentWidth, _setParentWidth] = React.useState(10000);
@@ -88,13 +88,13 @@ const SimpleSidebarProvider = React.forwardRef<
       (value: boolean | ((value: boolean) => boolean)) => {
         if (setOpenProp) {
           return setOpenProp?.(
-            typeof value === "function" ? value(open) : value
+            typeof value === "function" ? value(open) : value,
           );
         }
 
         _setOpen(value);
       },
-      [setOpenProp, open]
+      [setOpenProp, open],
     );
 
     const setWidth = React.useCallback(
@@ -113,11 +113,11 @@ const SimpleSidebarProvider = React.forwardRef<
 
         const constrainedWidth = Math.min(
           Math.max(newWidth, minConstraint),
-          maxConstraint
+          maxConstraint,
         );
         _setWidth(constrainedWidth);
       },
-      [_parentWidth, minWidth, maxWidth, onMaxWidth]
+      [_parentWidth, minWidth, maxWidth, onMaxWidth],
     );
 
     // Helper to toggle the sidebar.
@@ -129,7 +129,7 @@ const SimpleSidebarProvider = React.forwardRef<
     React.useEffect(() => {
       if (fullscreen) {
         _setWidth(
-          typeof width === "string" ? parseInt(width.replace("px", "")) : width
+          typeof width === "string" ? parseInt(width.replace("px", "")) : width,
         );
         _setIsResizing(false);
       }
@@ -167,7 +167,7 @@ const SimpleSidebarProvider = React.forwardRef<
         setIsResizing: _setIsResizing,
         fullscreen,
       }),
-      [open, setOpen, toggleSidebar, _width, setWidth, _isResizing, fullscreen]
+      [open, setOpen, toggleSidebar, _width, setWidth, _isResizing, fullscreen],
     );
 
     // Register hotkey if provided
@@ -182,7 +182,7 @@ const SimpleSidebarProvider = React.forwardRef<
       {
         preventDefault: true,
         enabled: !!shortcut,
-      }
+      },
     );
 
     // Combine refs to track both forwarded ref and internal ref
@@ -204,7 +204,7 @@ const SimpleSidebarProvider = React.forwardRef<
           }
         }
       },
-      [ref]
+      [ref],
     );
 
     return (
@@ -219,7 +219,7 @@ const SimpleSidebarProvider = React.forwardRef<
           }
           className={cn(
             "group/simple-sidebar-wrapper relative flex h-full w-full text-foreground",
-            className
+            className,
           )}
           data-open={open}
           ref={combinedRef}
@@ -229,7 +229,7 @@ const SimpleSidebarProvider = React.forwardRef<
         </div>
       </SimpleSidebarContext.Provider>
     );
-  }
+  },
 );
 SimpleSidebarProvider.displayName = "SimpleSidebarProvider";
 
@@ -252,7 +252,7 @@ const SimpleSidebarResizeHandle = React.forwardRef<
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [width, setIsResizing]
+    [width, setIsResizing],
   );
 
   const handleMouseMove = React.useCallback(
@@ -265,7 +265,7 @@ const SimpleSidebarResizeHandle = React.forwardRef<
 
       setWidth(newWidth);
     },
-    [isResizing, dragStartX, dragStartWidth, setWidth, side]
+    [isResizing, dragStartX, dragStartWidth, setWidth, side],
   );
 
   const handleMouseUp = React.useCallback(() => {
@@ -284,7 +284,7 @@ const SimpleSidebarResizeHandle = React.forwardRef<
         setWidth(newWidth);
       }
     },
-    [width, setWidth, side]
+    [width, setWidth, side],
   );
 
   React.useEffect(() => {
@@ -314,7 +314,7 @@ const SimpleSidebarResizeHandle = React.forwardRef<
         "absolute top-0 bottom-0 z-50 w-1 cursor-col-resize transition-colors hover:bg-border focus:bg-border focus:outline-none border-0 bg-transparent p-0",
         side === "left" ? "right-0" : "left-0",
         isResizing && "bg-border",
-        className
+        className,
       )}
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
@@ -339,7 +339,7 @@ const SimpleSidebar = React.forwardRef<
 >(
   (
     { side = "right", resizable = true, className, children, ...props },
-    ref
+    ref,
   ) => {
     const { open, isResizing, fullscreen } = useSimpleSidebar();
 
@@ -422,7 +422,7 @@ const SimpleSidebar = React.forwardRef<
         </motion.div>
       </div>
     );
-  }
+  },
 );
 SimpleSidebar.displayName = "SimpleSidebar";
 
@@ -437,7 +437,7 @@ const SimpleSidebarTrigger = React.forwardRef<
       onClick?.(event);
       toggleSidebar();
     },
-    [onClick, toggleSidebar]
+    [onClick, toggleSidebar],
   );
 
   return (
@@ -490,7 +490,7 @@ const SimpleSidebarContent = React.forwardRef<
       data-simple-sidebar="content"
       className={cn(
         "flex min-h-0 flex-1 flex-col gap-2 overflow-auto",
-        className
+        className,
       )}
       {...props}
     />

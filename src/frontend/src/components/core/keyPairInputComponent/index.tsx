@@ -1,8 +1,8 @@
 import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
+import { classNames } from "../../../utils/utils";
 import IconComponent from "../../common/genericIconComponent";
 import { Input } from "../../ui/input";
-import { classNames } from "../../../utils/utils";
 
 export type IOKeyPairInputProps = {
   value: any;

@@ -13,10 +13,10 @@ interface SessionItemProps {
 export const SessionItem = forwardRef<HTMLDivElement, SessionItemProps>(
   ({ sessionId }, ref) => {
     const selectedSession = usePlaygroundStore(
-      (state) => state.selectedSession
+      (state) => state.selectedSession,
     );
     const setSelectedSession = usePlaygroundStore(
-      (state) => state.setSelectedSession
+      (state) => state.setSelectedSession,
     );
 
     const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
@@ -36,5 +36,5 @@ export const SessionItem = forwardRef<HTMLDivElement, SessionItemProps>(
         {canEdit ? sessionId : DEFAULT_SESSION_NAME}
       </SessionMenuItem>
     );
-  }
+  },
 );

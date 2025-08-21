@@ -29,17 +29,17 @@ export const useGetSessionsFromFlowQuery: useQueryFunctionType<
         `${getURL("MESSAGES")}/sessions`,
         {
           params: { flow_id: flowId },
-        }
+        },
       );
       sessionIds = response.data ?? [];
     } else {
       // For playground mode, get sessions from sessionStorage
       const data = JSON.parse(
-        window.sessionStorage.getItem(flowId ?? "") || "[]"
+        window.sessionStorage.getItem(flowId ?? "") || "[]",
       );
       // Extract unique session IDs from stored messages
       const sessionIdsSet = new Set(
-        data.map((msg: any) => msg.session_id).filter(Boolean)
+        data.map((msg: any) => msg.session_id).filter(Boolean),
       );
 
       sessionIds = Array.from(sessionIdsSet) as string[];
@@ -57,7 +57,7 @@ export const useGetSessionsFromFlowQuery: useQueryFunctionType<
     {
       placeholderData: keepPreviousData,
       ...options,
-    }
+    },
   );
 
   return queryResult;

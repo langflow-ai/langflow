@@ -39,7 +39,7 @@ export const useGetMessagesQuery: useQueryFunctionType<
       const processedParams = { ...params } as any;
       if (processedParams.session_id) {
         processedParams.session_id = prepareSessionIdForAPI(
-          processedParams.session_id
+          processedParams.session_id,
         );
       }
       config["params"] = { ...config["params"], ...processedParams };

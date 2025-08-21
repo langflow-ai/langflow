@@ -31,7 +31,7 @@ export const SessionRename = ({ sessionId, onSave }: SessionRenameProps) => {
   };
 
   const handleClick = (
-    e: React.MouseEvent<HTMLInputElement | HTMLButtonElement>
+    e: React.MouseEvent<HTMLInputElement | HTMLButtonElement>,
   ) => {
     e.stopPropagation();
   };

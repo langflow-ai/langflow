@@ -57,7 +57,7 @@ export default function PublishDropdown() {
                   return updatedFlow;
                 }
                 return flow;
-              })
+              }),
             );
             setCurrentFlow(updatedFlow);
           } else {
@@ -73,7 +73,7 @@ export default function PublishDropdown() {
             list: [e.message],
           });
         },
-      }
+      },
     );
   };
 
@@ -166,7 +166,7 @@ export default function PublishDropdown() {
                         name="Globe"
                         className={cn(
                           `icon-size mr-2`,
-                          !isPublished && "opacity-50"
+                          !isPublished && "opacity-50",
                         )}
                       />
 

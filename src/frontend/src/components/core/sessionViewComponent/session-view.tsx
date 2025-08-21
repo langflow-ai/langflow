@@ -73,7 +73,7 @@ export default function SessionView({
           event.data[field] = event.oldValue;
           event.api.refreshCells();
         },
-      }
+      },
     );
   }
 

@@ -21,7 +21,7 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
   const { isPlayground } = usePlaygroundStore();
 
   const setSelectedSession = usePlaygroundStore(
-    (state) => state.setSelectedSession
+    (state) => state.setSelectedSession,
   );
 
   const { data: dbSessions } = useGetSessionsFromFlowQuery({

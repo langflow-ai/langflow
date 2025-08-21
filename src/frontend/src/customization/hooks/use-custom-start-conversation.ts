@@ -7,7 +7,7 @@ export const customUseStartConversation = (
   startRecording: () => void,
   handleWebSocketMessage: (event: MessageEvent) => void,
   stopRecording: () => void,
-  currentSessionId: string
+  currentSessionId: string,
 ) => {
   return useStartConversation(
     flowId,
@@ -16,7 +16,7 @@ export const customUseStartConversation = (
     startRecording,
     handleWebSocketMessage,
     stopRecording,
-    currentSessionId
+    currentSessionId,
   );
 };
 

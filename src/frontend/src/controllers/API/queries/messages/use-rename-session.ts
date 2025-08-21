@@ -1,6 +1,6 @@
+import type { UseMutationResult } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
 import type { Message } from "@/types/messages";
-import type { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -45,12 +45,12 @@ export const useUpdateSessionName: useMutationFunctionType<
     } else {
       const result = await api.patch(
         `${getURL("MESSAGES")}/session/${encodeURIComponent(
-          data.oldSessionId
+          data.oldSessionId,
         )}`,
         null,
         {
           params: { new_session_id: data.newSessionId },
-        }
+        },
       );
       return result.data;
     }
@@ -71,8 +71,8 @@ export const useUpdateSessionName: useMutationFunctionType<
       ["useGetSessionsFromFlowQuery", { flowId }],
       (old: string[]) =>
         old.map((session) =>
-          session === oldSessionId ? newSessionId : session
-        )
+          session === oldSessionId ? newSessionId : session,
+        ),
     );
     return { previousSessions };
   };
@@ -88,7 +88,7 @@ export const useUpdateSessionName: useMutationFunctionType<
     onError: (err, newSessionId, context) => {
       queryClient.setQueryData(
         ["useGetSessionsFromFlowQuery", { flowId }],
-        (context as UpdateSessionContext).previousSessions
+        (context as UpdateSessionContext).previousSessions,
       );
       options?.onError?.(err, newSessionId, context);
     },

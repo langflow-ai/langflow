@@ -13,7 +13,7 @@ export const HeaderButton = forwardRef<
       size="icon"
       className={cn(
         "flex h-8 w-8 items-center gap-2 text-muted-foreground no-focus-visible",
-        className
+        className,
       )}
       ref={ref}
       onClick={onClick}

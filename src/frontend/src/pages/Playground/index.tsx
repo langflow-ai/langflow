@@ -65,7 +65,7 @@ export default function PlaygroundPage() {
     document.title = currentSavedFlow?.name || "Langflow";
     if (currentSavedFlow?.data) {
       const { inputs, outputs } = getInputsAndOutputs(
-        currentSavedFlow?.data?.nodes || []
+        currentSavedFlow?.data?.nodes || [],
       );
       if (
         (inputs.length === 0 && outputs.length === 0) ||

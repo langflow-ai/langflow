@@ -49,14 +49,14 @@ export default function ChatView({
     : realFlowId;
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
-    undefined
+    undefined,
   );
   const messages = useMessagesStore((state) => state.messages);
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
   const displayLoadingMessage = useMessagesStore(
-    (state) => state.displayLoadingMessage
+    (state) => state.displayLoadingMessage,
   );
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -72,7 +72,7 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id || visibleSession === null)
+          (visibleSession === message.session_id || visibleSession === null),
       )
       .map((message) => {
         let files = message.files;
@@ -111,7 +111,7 @@ export default function ChatView({
 
     if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
-        chatInputNode.data.node.template["input_value"].value ?? ""
+        chatInputNode.data.node.template["input_value"].value ?? "",
       );
     }
 
@@ -135,7 +135,7 @@ export default function ChatView({
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
     setIsDragging,
-    !!playgroundPage
+    !!playgroundPage,
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -154,7 +154,7 @@ export default function ChatView({
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
   const isVoiceAssistantActive = useVoiceStore(
-    (state) => state.isVoiceAssistantActive
+    (state) => state.isVoiceAssistantActive,
   );
 
   const [customElement, setCustomElement] = useState<HTMLDivElement>();
@@ -193,7 +193,7 @@ export default function ChatView({
     }
   };
   const setPlaygroundScrollBehaves = useUtilityStore(
-    (state) => state.setPlaygroundScrollBehaves
+    (state) => state.setPlaygroundScrollBehaves,
   );
 
   useEffect(() => {
@@ -240,7 +240,7 @@ export default function ChatView({
     <div
       className={cn(
         "flex h-full flex-1 flex-col rounded-md",
-        !isVoiceAssistantActive && "pointer-events-auto"
+        !isVoiceAssistantActive && "pointer-events-auto",
       )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}

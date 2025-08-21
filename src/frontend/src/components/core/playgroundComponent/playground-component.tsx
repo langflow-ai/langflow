@@ -19,7 +19,7 @@ export function PlaygroundComponent(): JSX.Element {
 
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const setSelectedSession = usePlaygroundStore(
-    (state) => state.setSelectedSession
+    (state) => state.setSelectedSession,
   );
 
   const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);

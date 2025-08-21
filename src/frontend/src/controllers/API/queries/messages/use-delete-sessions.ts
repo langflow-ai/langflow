@@ -1,5 +1,5 @@
-import type { useMutationFunctionType } from "@/types/api";
 import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -29,7 +29,7 @@ export const useDeleteSession: useMutationFunctionType<
     if (useLocalStorage) {
       const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
       const filteredMessages = messages.filter(
-        (message: any) => message.session_id !== sessionId
+        (message: any) => message.session_id !== sessionId,
       );
       sessionStorage.setItem(flowId, JSON.stringify(filteredMessages));
       return {
@@ -37,7 +37,7 @@ export const useDeleteSession: useMutationFunctionType<
       };
     } else {
       const response = await api.delete(
-        `${getURL("MESSAGES")}/session/${sessionId}`
+        `${getURL("MESSAGES")}/session/${sessionId}`,
       );
       return response.data;
     }

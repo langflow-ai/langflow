@@ -20,7 +20,7 @@ export function PlaygroundHeader() {
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
   const toggleFullscreen = usePlaygroundStore(
-    (state) => state.toggleFullscreen
+    (state) => state.toggleFullscreen,
   );
   const isPlayground = usePlaygroundStore((state) => state.isPlayground);
   const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);

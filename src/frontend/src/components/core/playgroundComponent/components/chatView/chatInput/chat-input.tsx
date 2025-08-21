@@ -43,11 +43,11 @@ export default function ChatInput({
   const [showAudioInput, setShowAudioInput] = useState(false);
 
   const setIsVoiceAssistantActive = useVoiceStore(
-    (state) => state.setIsVoiceAssistantActive
+    (state) => state.setIsVoiceAssistantActive,
   );
 
   const newSessionCloseVoiceAssistant = useVoiceStore(
-    (state) => state.newSessionCloseVoiceAssistant
+    (state) => state.newSessionCloseVoiceAssistant,
   );
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function ChatInput({
   const { mutate } = usePostUploadFile();
 
   const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent
+    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
   ) => {
     if (playgroundPage && !ENABLE_IMAGE_ON_PLAYGROUND) {
       return;
@@ -144,7 +144,7 @@ export default function ChatInput({
               list: [error.response?.data?.detail],
             });
           },
-        }
+        },
       );
     }
 

@@ -8,8 +8,8 @@ export const useSendMessage = () => {
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const chatInputId = useFlowStore(
     useShallow(
-      (state) => state.nodes.find((node) => node.data.type === "ChatInput")?.id
-    )
+      (state) => state.nodes.find((node) => node.data.type === "ChatInput")?.id,
+    ),
   );
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
@@ -34,7 +34,7 @@ export const useSendMessage = () => {
         throw err;
       });
     },
-    [buildFlow, chatInputId, selectedSession, eventDeliveryConfig]
+    [buildFlow, chatInputId, selectedSession, eventDeliveryConfig],
   );
 
   return { sendMessage };

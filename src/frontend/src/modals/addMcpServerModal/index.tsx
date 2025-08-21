@@ -6,6 +6,7 @@ import {
 import { useEffect, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import KeyPairInput from "@/components/core/keyPairInputComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,6 @@ import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
-import KeyPairInput from "@/components/core/keyPairInputComponent";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -49,11 +49,11 @@ export default function AddMcpServerModal({
       : useState(false);
 
   const [type, setType] = useState(
-    initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON"
+    initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON",
   );
   const [jsonValue, setJsonValue] = useState("");
   const [error, setError] = useState<string | null>(
-    "Error downloading file: File _mcp_servers.json not found in flow 7e93e2c5-b979-49c0-b01b-4f4111d9230d"
+    "Error downloading file: File _mcp_servers.json not found in flow 7e93e2c5-b979-49c0-b01b-4f4111d9230d",
   );
   const { mutateAsync: addMCPServer, isPending: isAddPending } =
     useAddMCPServer();
@@ -83,7 +83,7 @@ export default function AddMcpServerModal({
   const [stdioName, setStdioName] = useState(initialData?.name || "");
   const [stdioCommand, setStdioCommand] = useState(initialData?.command || "");
   const [stdioArgs, setStdioArgs] = useState<string[]>(
-    initialData?.args || [""]
+    initialData?.args || [""],
   );
   const [stdioEnv, setStdioEnv] = useState<any>(initialData?.env || []);
 
@@ -302,7 +302,7 @@ export default function AddMcpServerModal({
                     <div
                       className={cn(
                         "absolute right-4 top-4 truncate text-xs font-medium text-red-500",
-                        type === "JSON" ? "w-3/5" : "w-4/5"
+                        type === "JSON" ? "w-3/5" : "w-4/5",
                       )}
                     >
                       {error}

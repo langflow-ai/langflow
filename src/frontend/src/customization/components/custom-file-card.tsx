@@ -2,19 +2,19 @@ import FileCard from "@/components/core/playgroundComponent/components/chatView/
 import type { fileCardPropsType } from "@/types/components";
 
 export function CustomFileCard({
-	fileName,
-	path,
-	fileType,
-	showFile = true,
+  fileName,
+  path,
+  fileType,
+  showFile = true,
 }: fileCardPropsType) {
-	return (
-		<FileCard
-			fileName={fileName}
-			path={path}
-			fileType={fileType}
-			showFile={showFile}
-		/>
-	);
+  return (
+    <FileCard
+      fileName={fileName}
+      path={path}
+      fileType={fileType}
+      showFile={showFile}
+    />
+  );
 }
 
 export default CustomFileCard;
