@@ -55,6 +55,32 @@ class AgentComponent(ToolCallingAgentComponent):
     ]
 
     inputs = [
+        DropdownInput(
+            name="agent_llm",
+            display_name="Model Provider",
+            info="The provider of the language model that the agent will use to generate responses.",
+            options=[*MODEL_PROVIDERS_LIST, "Custom"],
+            value="OpenAI",
+            real_time_refresh=True,
+            input_types=[],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
+        ),
+        *openai_inputs_filtered,
+        MultilineInput(
+            name="system_prompt",
+            display_name="Agent Instructions",
+            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
+            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            advanced=False,
+        ),
+        IntInput(
+            name="n_messages",
+            display_name="Number of Chat History Messages",
+            value=100,
+            info="Number of chat history messages to retrieve.",
+            advanced=True,
+            show=True,
+        ),
         MultilineInput(
             name="format_instructions",
             display_name="Output Format Instructions",
@@ -115,32 +141,6 @@ class AgentComponent(ToolCallingAgentComponent):
                     "edit_mode": EditMode.INLINE,
                 },
             ],
-        ),
-        DropdownInput(
-            name="agent_llm",
-            display_name="Model Provider",
-            info="The provider of the language model that the agent will use to generate responses.",
-            options=[*MODEL_PROVIDERS_LIST, "Custom"],
-            value="OpenAI",
-            real_time_refresh=True,
-            input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
-        ),
-        *openai_inputs_filtered,
-        MultilineInput(
-            name="system_prompt",
-            display_name="Agent Instructions",
-            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
-            advanced=False,
-        ),
-        IntInput(
-            name="n_messages",
-            display_name="Number of Chat History Messages",
-            value=100,
-            info="Number of chat history messages to retrieve.",
-            advanced=True,
-            show=True,
         ),
         *LCToolsAgentComponent._base_inputs,
         # removed memory inputs from agent component
@@ -291,12 +291,12 @@ class AgentComponent(ToolCallingAgentComponent):
             # 1. Agent Instructions (system_prompt)
             agent_instructions = getattr(self, "system_prompt", "") or ""
             if agent_instructions:
-                system_components.append(agent_instructions)
+                system_components.append(f"{agent_instructions}")
 
             # 2. Format Instructions
             format_instructions = getattr(self, "format_instructions", "") or ""
             if format_instructions:
-                system_components.append(format_instructions)
+                system_components.append(f"Format instructions: {format_instructions}")
 
             # 3. Schema Information from BaseModel
             if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
@@ -305,13 +305,25 @@ class AgentComponent(ToolCallingAgentComponent):
                     processed_schema = self._preprocess_schema(self.output_schema)
                     output_model = build_model_from_schema(processed_schema)
                     schema_dict = output_model.model_json_schema()
-                    schema_info = f"JSON schema:\n{json.dumps(schema_dict, indent=2)}"
+                    schema_info = f"""You are given some text that may include format instructions, explanations, or other content
+                                    alongside a JSON schema.
+
+                                    Your task:
+                                    - Extract **only the JSON schema**.
+                                    - Return it as valid JSON.
+                                    - Do not include format instructions, explanations, or extra text.
+
+                                    Input:
+                                    {json.dumps(schema_dict, indent=2)}
+
+                                    Output (only JSON schema):"""
                     system_components.append(schema_info)
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
                     logger.error(f"Could not build schema for prompt: {e}", exc_info=True)
 
             # Combine all components
             combined_instructions = "\n\n".join(system_components) if system_components else ""
+            logger.debug(f"Combined instructions: {combined_instructions}")
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
             self.set(
                 llm=llm_model,
@@ -332,7 +344,7 @@ class AgentComponent(ToolCallingAgentComponent):
             except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
                 logger.error(f"Error with structured agent result: {e}")
                 raise
-
+            logger.debug(f"Combined instructions: {combined_instructions}")
             # Extract content from structured agent result
             if hasattr(result, "content"):
                 content = result.content
