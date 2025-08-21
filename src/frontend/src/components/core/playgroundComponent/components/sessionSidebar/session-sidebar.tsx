@@ -33,8 +33,8 @@ export default function SessionSidebar() {
         {sessions ? (
           sessions.map((session) => (
             <SessionItem
-              key={session}
-              sessionId={session}
+              key={session.id}
+              sessionId={session.sessionId}
               onRename={handleRename}
               onDelete={handleDelete}
               onLogs={() => {}}

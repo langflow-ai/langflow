@@ -29,8 +29,8 @@ export const SessionManagerDropdown = ({
         {sessions && (
           <>
             <DropdownMenuGroup>
-              {sessions?.map((sessionId) => (
-                <SessionItem key={sessionId} sessionId={sessionId} />
+              {sessions?.map((session) => (
+                <SessionItem key={session.id} sessionId={session.sessionId} />
               ))}
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="!my-0" />
