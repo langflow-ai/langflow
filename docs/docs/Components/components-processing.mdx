@@ -738,6 +738,12 @@ The **DataFrame** output returns the list of chunks as a structured [`DataFrame`
 
 ### Split Text parameters
 
+:::important
+When using **Split Text** with embedding models (especially NVIDIA models like `nvidia/nv-embed-v1`), you may need to use smaller chunk sizes (`500` or less) even though the model supports larger token limits.
+The **Split Text** component doesn't always respect the exact chunk size you set, and individual chunks may exceed your specified limit.
+If you encounter tokenization errors, try reducing the chunk size and test your configuration by inspecting the output.
+:::
+
 The **Split Text** component's parameters control how the text is split into chunks, specifically the `chunk_size`, `chunk_overlap`, and `separator` parameters.
 
 To test the chunking behavior, add a **Text Input** or **File** component with some sample data to chunk, click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Split Text** component, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the list of chunks and their metadata. The **text** column contains the actual text chunks created from your chunking settings.
