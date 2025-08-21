@@ -407,7 +407,8 @@ class MCPToolsComponent(ComponentWithCache):
         try:
             # Store current values before removing inputs
             current_values = {}
-            for key, value in build_config.items():
+            # Create a copy of items to avoid "dictionary changed size during iteration" error
+            for key, value in list(build_config.items()):
                 if key not in self.default_keys and isinstance(value, dict) and "value" in value:
                     current_values[key] = value["value"]
 
