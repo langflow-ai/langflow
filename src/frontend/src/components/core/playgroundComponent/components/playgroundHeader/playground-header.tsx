@@ -5,9 +5,9 @@ import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
 import { useRenameSession } from "../../hooks/use-rename-session";
+import { SessionManagerDropdown } from "../sessionManagerDropdown/session-manager-dropdown";
 import { SessionMenuDropdown } from "../sessionMenuDropdown/session-menu-dropdown";
 import { HeaderButton } from "./components/header-button";
-import { SessionManagerDropdown } from "./components/session-manager-dropdown";
 import { SessionRename } from "./components/session-rename";
 
 export function PlaygroundHeader() {
