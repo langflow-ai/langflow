@@ -4,7 +4,8 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useRenameSession } from "../../../hooks/use-rename-session";
 import { SessionMenuDropdown } from "../../sessionMenuDropdown/session-menu-dropdown";
-import { MenuEllipsisButton } from "./menu-ellipsis-button";
+import { MenuIconButton } from "./menu-icon-button";
+import { SessionRename } from "./session-rename";
 
 export const SessionItem = ({
   sessionId,
@@ -28,6 +29,7 @@ export const SessionItem = ({
   });
 
   const handleClick = () => {
+    if (isEditing) return;
     setSelectedSession(sessionId);
   };
 
@@ -37,10 +39,17 @@ export const SessionItem = ({
     }
   };
 
+  const handleRename = (newSessionId: string) => {
+    handleEditSave(sessionId, newSessionId);
+  };
+
   const handleDelete = () => {
     onDelete(sessionId);
   };
+
   const canEdit = sessionId !== flowId;
+
+  const sessionName = canEdit ? sessionId : DEFAULT_SESSION_NAME;
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: Can't use button because it will conflict with internal button
@@ -54,16 +63,20 @@ export const SessionItem = ({
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <span className="text-mmd font-medium">
-        {canEdit ? sessionId : DEFAULT_SESSION_NAME}
-      </span>
-      <SessionMenuDropdown
-        onLogs={onLogs}
-        onRename={handleEditStart}
-        onDelete={handleDelete}
-      >
-        <MenuEllipsisButton />
-      </SessionMenuDropdown>
+      {isEditing ? (
+        <SessionRename sessionId={sessionId} onSave={handleRename} />
+      ) : (
+        <>
+          <span className="text-mmd font-medium truncate">{sessionName}</span>
+          <SessionMenuDropdown
+            onLogs={onLogs}
+            onRename={canEdit ? handleEditStart : undefined}
+            onDelete={canEdit ? handleDelete : undefined}
+          >
+            <MenuIconButton icon="EllipsisVertical" />
+          </SessionMenuDropdown>
+        </>
+      )}
     </div>
   );
 };
