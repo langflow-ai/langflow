@@ -1,9 +1,12 @@
 import { useShallow } from "zustand/react/shallow";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
 import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
 import { useGetAddSessions } from "../../hooks/use-get-add-sessions";
-import { HeaderButton } from "../playgroundHeader/components/header-button";
+import { SessionItem } from "./components/session-item";
+import { SessionSkeleton } from "./components/session-skeleton";
 
 export default function SessionSidebar() {
   const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
@@ -14,23 +17,34 @@ export default function SessionSidebar() {
   });
 
   return (
-    <>
-      <div className="flex flex-col h-full w-[220px] p-4">
-        <div className="flex w-full items-center justify-between">
+    <div className="flex h-full">
+      <div className="flex flex-col h-full w-[220px] p-4 gap-1">
+        <div className="flex w-full items-center justify-between px-2 py-1">
           <span className="text-xs font-semibold text-muted-foreground">
             Sessions
           </span>
-          <HeaderButton icon="Plus" onClick={addNewSession} />
+          <Button variant="ghost" size="icon" onClick={addNewSession}>
+            <ForwardedIconComponent
+              name="Plus"
+              className="w-4 h-4 text-muted-foreground"
+            />
+          </Button>
         </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-muted-foreground">
-              Session 1
-            </span>
-          </div>
-        </div>
+        {sessions ? (
+          sessions.map((session) => (
+            <SessionItem
+              key={session}
+              sessionId={session}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              onLogs={() => {}}
+            />
+          ))
+        ) : (
+          <SessionSkeleton />
+        )}
       </div>
       <Separator orientation="vertical" className="shrink-0" />
-    </>
+    </div>
   );
 }
