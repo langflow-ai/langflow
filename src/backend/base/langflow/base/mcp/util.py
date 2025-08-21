@@ -548,7 +548,7 @@ class MCPSessionManager:
         current_time = asyncio.get_event_loop().time()
         servers_to_remove = []
 
-        for server_key, server_data in self.sessions_by_server.items():
+        for server_key, server_data in list(self.sessions_by_server.items()):
             sessions = server_data.get("sessions", {})
             sessions_to_remove = []
 
@@ -649,7 +649,7 @@ class MCPSessionManager:
         sessions = server_data["sessions"]
 
         # Try to find a healthy existing session
-        for session_id, session_info in sessions.items():
+        for session_id, session_info in list(sessions.items()):
             session = session_info["session"]
             task = session_info["task"]
 
