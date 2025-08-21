@@ -1,7 +1,6 @@
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { useSidebar } from "@/components/ui/sidebar";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
@@ -54,6 +53,7 @@ export default function Dropdown({
   handleNodeClass,
   name,
   dialogInputs,
+  externalOptions,
   handleOnNewValue,
   toggle,
   ...baseInputProps
@@ -64,11 +64,8 @@ export default function Dropdown({
   );
 
   // Initialize state and refs
-  const { setOpen: setSidebarOpen } = useSidebar();
-
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
-  const [openDrawer, setOpenDrawer] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -325,29 +322,24 @@ export default function Dropdown({
             "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
-          {!openDrawer ? (
-            <span
-              className="flex w-full items-center gap-2 overflow-hidden"
-              data-testid={`value-dropdown-${id}`}
-            >
-              {value && <>{renderSelectedIcon()}</>}
-              <span className="truncate">
-                {disabled ? (
-                  RECEIVING_INPUT_VALUE
-                ) : (
-                  <>
-                    {value && filteredOptions.includes(value)
-                      ? value
-                      : placeholder || SELECT_AN_OPTION}{" "}
-                  </>
-                )}
-              </span>
+          <span
+            className="flex w-full items-center gap-2 overflow-hidden"
+            data-testid={`value-dropdown-${id}`}
+          >
+            {value && <>{renderSelectedIcon()}</>}
+            <span className="truncate">
+              {disabled ? (
+                RECEIVING_INPUT_VALUE
+              ) : (
+                <>
+                  {value && filteredOptions.includes(value)
+                    ? value
+                    : placeholder || SELECT_AN_OPTION}{" "}
+                </>
+              )}
             </span>
-          ) : (
-            <span className="flex w-full items-center gap-2 overflow-hidden text-muted-foreground relative">
-              <LoadingTextComponent text={"Awaiting response"} />
-            </span>
-          )}
+          </span>
+
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
@@ -506,12 +498,8 @@ export default function Dropdown({
           <CommandItem
             className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
             onSelect={() => {
-              if (dialogInputs?.functionality === "side_panel") {
-                setOpenDrawer(true);
                 setOpen(false);
-              } else {
                 setOpenDialog(true);
-              }
             }}
           >
             <div className="flex items-center gap-2 pl-1">
@@ -557,7 +545,6 @@ export default function Dropdown({
             name={name!}
             nodeClass={nodeClass!}
           />
-    
         </CommandGroup>
       )}
     </CommandList>

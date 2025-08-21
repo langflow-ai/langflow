@@ -35,7 +35,9 @@ from .input_mixin import (
 )
 
 
-class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
+class TableInput(
+    BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin
+):
     field_type: SerializableFieldTypes = FieldTypes.TABLE
     is_list: bool = True
 
@@ -152,7 +154,9 @@ class StrInput(
         """
         if not isinstance(v, str) and v is not None:
             # Keep the warning for now, but we should change it to an error
-            if info.data.get("input_types") and v.__class__.__name__ not in info.data.get("input_types"):
+            if info.data.get(
+                "input_types"
+            ) and v.__class__.__name__ not in info.data.get("input_types"):
                 warnings.warn(
                     f"Invalid value type {type(v)} for input {info.data.get('name')}. "
                     f"Expected types: {info.data.get('input_types')}",
@@ -181,7 +185,11 @@ class StrInput(
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         is_list = info.data["is_list"]
-        return [cls._validate_value(vv, info) for vv in v] if is_list else cls._validate_value(v, info)
+        return (
+            [cls._validate_value(vv, info) for vv in v]
+            if is_list
+            else cls._validate_value(v, info)
+        )
 
 
 class MessageInput(StrInput, InputTraceMixin):
@@ -340,7 +348,9 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
         return value
 
 
-class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
+class IntInput(
+    BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin
+):
     """Represents an integer field.
 
     This class represents an integer input and provides functionality for handling integer values.
@@ -375,7 +385,9 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         return v
 
 
-class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
+class FloatInput(
+    BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin
+):
     """Represents a float field.
 
     This class represents a float input and provides functionality for handling float values.
@@ -486,12 +498,15 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
+    external_options: dict[str, Any] = Field(default_factory=dict)
     toggle: bool = False
     toggle_disable: bool | None = None
     toggle_value: bool | None = None
 
 
-class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
+class ConnectionInput(
+    BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin
+):
     """Represents a connection input field.
 
     This class represents a connection input field and provides functionality for handling connection values.
@@ -532,7 +547,9 @@ class QueryInput(MessageTextInput, QueryMixin):
     separator: str | None = Field(default=None)
 
 
-class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
+class SortableListInput(
+    BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin
+):
     """Represents a list selection input field.
 
     This class represents a list selection input field and provides functionality for handling list selection values.
@@ -578,7 +595,9 @@ class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
         return values
 
 
-class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
+class MultiselectInput(
+    BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin
+):
     """Represents a multiselect input field.
 
     This class represents a multiselect input field and provides functionality for handling multiselect values.
@@ -691,7 +710,9 @@ InputTypes: TypeAlias = (
     | TabInput
 )
 
-InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
+InputTypesMap: dict[str, type[InputTypes]] = {
+    t.__name__: t for t in get_args(InputTypes)
+}
 
 
 def instantiate_input(input_type: str, data: dict) -> InputTypes:
