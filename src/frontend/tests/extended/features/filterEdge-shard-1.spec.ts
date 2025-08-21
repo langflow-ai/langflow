@@ -59,13 +59,13 @@ test(
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
-      "disclosure-vector stores",
       "disclosure-agents",
       "disclosure-logic",
       "disclosure-tools",
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
       "disclosure-bundles-datastax",
+      "disclosure-bundles-vector stores",
     ];
 
     const elementTestIds = [
