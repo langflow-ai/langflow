@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import os
 import platform
 from asyncio.subprocess import create_subprocess_exec
@@ -29,19 +28,13 @@ from langflow.api.v1.mcp_utils import (
     handle_mcp_errors,
     handle_read_resource,
 )
-from langflow.api.v1.schemas import (
-    MCPInstallRequest,
-    MCPProjectResponse,
-    MCPProjectUpdateRequest,
-    MCPSettings,
-)
+from langflow.api.v1.schemas import MCPInstallRequest, MCPProjectResponse, MCPProjectUpdateRequest, MCPSettings
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
+from langflow.logging import logger
 from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
