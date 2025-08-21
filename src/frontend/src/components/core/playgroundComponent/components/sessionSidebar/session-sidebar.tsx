@@ -18,8 +18,8 @@ export default function SessionSidebar() {
 
   return (
     <div className="flex h-full">
-      <div className="flex flex-col h-full w-[220px] p-4 gap-1">
-        <div className="flex w-full items-center justify-between px-2 py-1">
+      <div className="flex flex-col h-full w-[250px] p-4 gap-1">
+        <div className="flex w-full items-center justify-between px-2 pt-1">
           <span className="text-xs font-semibold text-muted-foreground">
             Sessions
           </span>
