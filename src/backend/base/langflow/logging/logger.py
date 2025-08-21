@@ -311,10 +311,6 @@ def configure(
     setup_uvicorn_logger()
     setup_gunicorn_logger()
 
-    # Add InterceptHandler to root logger to capture all stdlib logging
-    intercept_handler = InterceptHandler()
-    logging.root.addHandler(intercept_handler)
-
     # Create the global logger instance
     global logger  # noqa: PLW0603
     logger = structlog.get_logger()
