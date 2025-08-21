@@ -31,6 +31,11 @@ function getMimeType(extension: string): string {
 }
 
 export async function uploadFile(page: Page, fileName: string) {
+  await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("fit_view").click();
   const fileManagement = await page
     .getByTestId("button_open_file_management")
