@@ -1,5 +1,6 @@
 import json
-from unittest.mock import MagicMock, patch
+import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -21,6 +22,31 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         """Mock the knowledge base root path directly."""
         with patch("langflow.components.data.kb_ingest.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
+
+    class MockUser:
+        def __init__(self, user_id):
+            self.id = user_id
+            self.username = "langflow"
+
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self):
+        """Mock the component's user_id attribute and User object."""
+        mock_uuid = uuid.uuid4()
+        mock_user = self.MockUser(mock_uuid)
+
+        # Store for access by other fixtures/tests
+        self._mock_uuid = mock_uuid
+        self._mock_user = mock_user
+
+        with patch.object(KBIngestionComponent, "user_id", mock_uuid), \
+            patch("langflow.components.data.kb_ingest.get_user_by_id", new_callable=AsyncMock, return_value=mock_user), \
+            patch("langflow.base.data.kb_utils.get_user_by_id", new_callable=AsyncMock, return_value=mock_user):
+            yield
+
+    @pytest.fixture
+    def mock_user_id(self):
+        """Get the mock user data."""
+        return {"user_id": self._mock_uuid, "user": self._mock_user}
 
     @pytest.fixture
     def default_kwargs(self, tmp_path):
@@ -296,14 +322,14 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         assert "rows" in result.data
         assert result.data["rows"] == 2
 
-    async def test_get_knowledge_bases(self, tmp_path):
+    async def test_get_knowledge_bases(self, tmp_path, mock_user_id):
         """Test getting list of knowledge bases."""
         # Create additional test directories
         (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
         (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
         (tmp_path / "langflow" / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
-        kb_list = await get_knowledge_bases(tmp_path)
+        kb_list = await get_knowledge_bases(tmp_path, user_id=mock_user_id["user_id"])
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list

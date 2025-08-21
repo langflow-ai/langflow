@@ -1,11 +1,13 @@
 import contextlib
 import json
+import uuid
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.base.data.kb_utils import get_knowledge_bases
 from langflow.components.data.kb_retrieval import KBRetrievalComponent
+from pydantic import SecretStr
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -21,6 +23,39 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         """Mock the knowledge base root path directly."""
         with patch("langflow.components.data.kb_retrieval.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
+
+    class MockUser:
+        def __init__(self, user_id):
+            self.id = user_id
+            self.username = "langflow"
+
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self):
+        """Mock the component's user_id attribute and User object."""
+        mock_uuid = uuid.uuid4()
+        mock_user = self.MockUser(mock_uuid)
+
+        # Store for access by other fixtures/tests
+        self._mock_uuid = mock_uuid
+        self._mock_user = mock_user
+
+        with patch.object(KBRetrievalComponent, "user_id", mock_uuid), \
+            patch(
+                "langflow.components.data.kb_retrieval.get_user_by_id",
+                new_callable=AsyncMock,
+                return_value=mock_user,
+            ), \
+            patch(
+                "langflow.base.data.kb_utils.get_user_by_id",
+                new_callable=AsyncMock,
+                return_value=mock_user,
+            ):
+            yield
+
+    @pytest.fixture
+    def mock_user_id(self):
+        """Get the mock user data."""
+        return {"user_id": self._mock_uuid, "user": self._mock_user}
 
     @pytest.fixture
     def default_kwargs(self, tmp_path):
@@ -56,14 +91,14 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         # This is a new component, so it doesn't exist in older versions
         return []
 
-    async def test_get_knowledge_bases(self, tmp_path):
+    async def test_get_knowledge_bases(self, tmp_path, mock_user_id):
         """Test getting list of knowledge bases."""
         # Create additional test directories
         (tmp_path / "langflow" / "kb1").mkdir(parents=True, exist_ok=True)
         (tmp_path / "langflow" / "kb2").mkdir(parents=True, exist_ok=True)
         (tmp_path / "langflow" / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
-        kb_list = await get_knowledge_bases(tmp_path)
+        kb_list = await get_knowledge_bases(tmp_path, user_id=mock_user_id["user_id"])
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
@@ -264,10 +299,8 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
 
     def test_build_embeddings_with_user_api_key(self, component_class, default_kwargs):
         """Test that user-provided API key overrides stored one."""
-        # Create a mock secret input
-
-        mock_secret = MagicMock()
-        mock_secret.get_secret_value.return_value = "user-provided-key"
+        # Use a real SecretStr object instead of a mock
+        mock_secret = SecretStr("user-provided-key")
 
         default_kwargs["api_key"] = mock_secret
         component = component_class(**default_kwargs)
@@ -275,7 +308,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": "stored-key",
+            "api_key": "stored-key",  # This should be overridden by the user-provided key
             "chunk_size": 1000,
         }
 
@@ -285,8 +318,11 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
 
             component._build_embeddings(metadata)
 
+            # The user-provided key should override the stored key in metadata
             mock_openai.assert_called_once_with(
-                model="text-embedding-ada-002", api_key="user-provided-key", chunk_size=1000
+                model="text-embedding-ada-002", 
+                api_key="user-provided-key",  # Should use the user-provided key, not "stored-key"
+                chunk_size=1000
             )
 
     async def test_get_chroma_kb_data_no_metadata(self, component_class, default_kwargs, tmp_path):
