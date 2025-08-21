@@ -1,8 +1,10 @@
 """Decorators for integration testing."""
 
+import asyncio
 import contextlib
 import functools
 import os
+import time
 from collections.abc import Callable
 
 import pytest
@@ -281,8 +283,3 @@ def requires_docker(reason: str = "Test requires Docker") -> Callable:
             return pytest.mark.skip(reason)(func)
 
     return decorator
-
-
-# Import asyncio for async decorators
-import asyncio
-import time

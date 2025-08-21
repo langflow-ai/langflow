@@ -1,6 +1,11 @@
-# Ruff configuration for integration test framework demo files
-[tool.ruff]
-# Allow print statements in demo files
-lint.ignore = ["T201", "E402"] 
+exclude = [
+    "demo_test_generation.py",
+    "validation_test.py",
+    "examples/",
+]
 
-# These are demo and example files, print statements are intentional
+[lint]
+ignore = [
+    "T201",  # Allow print statements in demo files
+    "E402",  # Allow imports not at top in demo files
+]

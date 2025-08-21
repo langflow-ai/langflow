@@ -13,8 +13,6 @@ from .assertions import AssertionHelpers
 from .fixtures import TestDataFactory
 from .runners import ComponentRunner, FlowRunner
 
-# from ..utils import pyleak_marker  # TODO: Fix pyleak integration
-
 
 class IntegrationTestCase:
     """Base class for all integration tests with common utilities."""
@@ -112,13 +110,6 @@ class ComponentTest(IntegrationTestCase):
         self.assert_output_type(outputs, output_name, Data)
         data = outputs[output_name]
         assert data.data == expected_data, f"Expected {expected_data}, got {data.data}"
-
-    # @pytest.fixture(autouse=True)
-    # def _auto_setup_teardown(self):
-    #     """Automatically run setup/teardown for each test method."""
-    #     self.setup_method()
-    #     yield
-    #     self.teardown_method()
 
 
 class FlowTest(IntegrationTestCase):
@@ -286,9 +277,3 @@ def auto_component_test(component_class: type[Component]):
         return test_class
 
     return decorator
-
-
-# Apply leak detection to all test base classes by default
-# ComponentTest = pyleak_marker()(ComponentTest)  # TODO: Fix pyleak integration
-# FlowTest = pyleak_marker()(FlowTest)  # TODO: Fix pyleak integration
-# APITest = pyleak_marker()(APITest)  # TODO: Fix pyleak integration
