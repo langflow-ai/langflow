@@ -37,7 +37,6 @@ export default function SessionSidebar() {
               sessionId={session.sessionId}
               onRename={handleRename}
               onDelete={handleDelete}
-              onLogs={() => {}}
             />
           ))
         ) : (
