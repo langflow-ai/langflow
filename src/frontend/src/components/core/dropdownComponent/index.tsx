@@ -15,8 +15,7 @@ import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
   filterNullOptions,
-  formatName,
-  formatPlaceholderName,
+  formatName
 } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
@@ -66,6 +65,7 @@ export default function Dropdown({
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -89,9 +89,9 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const _placeholderName = name
-    ? formatPlaceholderName(name)
-    : "Choose an option...";
+
+  const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
+  console.log(sourceOptions, dialogInputs, externalOptions);
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
@@ -305,9 +305,9 @@ export default function Dropdown({
             disabled ||
             (Object.keys(validOptions).length === 0 &&
               !combobox &&
-              !dialogInputs?.fields?.data?.node?.template &&
+              !sourceOptions?.fields?.data?.node?.template &&
               !hasRefreshButton &&
-              !dialogInputs?.fields)
+              !sourceOptions?.fields)
           }
           variant="primary"
           size="xs"
@@ -322,7 +322,7 @@ export default function Dropdown({
             "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
-          <span
+          {!waitingForResponse ? <span
             className="flex w-full items-center gap-2 overflow-hidden"
             data-testid={`value-dropdown-${id}`}
           >
@@ -338,7 +338,7 @@ export default function Dropdown({
                 </>
               )}
             </span>
-          </span>
+          </span> : <span className="text-muted-foreground"><LoadingTextComponent text="Awaiting response" /></span>}
 
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
@@ -393,6 +393,7 @@ export default function Dropdown({
                   onSelect={(currentValue) => {
                     onSelect(currentValue);
                     setOpen(false);
+                    setWaitingForResponse(false);
                   }}
                   className="w-full items-center rounded-none"
                   data-testid={`${option}-${index}-option`}
@@ -493,23 +494,28 @@ export default function Dropdown({
         )}
       </CommandGroup>
       <CommandSeparator />
-      {dialogInputs && dialogInputs?.fields && (
+      {sourceOptions && sourceOptions?.fields && (
         <CommandGroup className="p-0">
           <CommandItem
-            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
             onSelect={() => {
+              if (dialogInputs?.fields) {
                 setOpen(false);
                 setOpenDialog(true);
+              } else {
+                setOpen(false);
+                setWaitingForResponse(true);
+              }
             }}
           >
-            <div className="flex items-center gap-2 pl-1">
+            <div className="flex items-center gap-2 pl-1 text-[13px] font-normal">
               <ForwardedIconComponent name="Plus" className="h-3 w-3 " />
-              {dialogInputs?.fields?.data?.node?.display_name}
+              {sourceOptions?.fields?.data?.node?.display_name}
             </div>
-            {dialogInputs?.fields?.data?.node?.icon && (
+            {sourceOptions?.fields?.data?.node?.icon && (
               <div className="ml-auto">
                 <ForwardedIconComponent
-                  name={dialogInputs?.fields?.data?.node?.icon}
+                  name={sourceOptions?.fields?.data?.node?.icon}
                   className="h-3 w-3 "
                 />
               </div>
@@ -562,7 +568,7 @@ export default function Dropdown({
       <Command className="flex flex-col">
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
-        {!dialogInputs?.fields && hasRefreshButton && (
+        {!sourceOptions?.fields && hasRefreshButton && (
           <div className="sticky bottom-0 border-t bg-background">
             <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
               <Button
