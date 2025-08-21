@@ -15,7 +15,7 @@ export const useEditSessionInfo = ({ flowId }: { flowId?: string }) => {
     useLocalStorage: isPlayground,
   });
 
-  const { mutate: updateSessionName } = useUpdateSessionName({
+  const { mutateAsync: updateSessionName } = useUpdateSessionName({
     flowId,
     useLocalStorage: isPlayground,
   });
@@ -34,9 +34,9 @@ export const useEditSessionInfo = ({ flowId }: { flowId?: string }) => {
     }
   };
 
-  const handleRename = (sessionId: string, newSessionId: string) => {
+  const handleRename = async (sessionId: string, newSessionId: string) => {
     if (dbSessions?.includes(sessionId)) {
-      updateSessionName({
+      await updateSessionName({
         oldSessionId: sessionId,
         newSessionId,
       });
