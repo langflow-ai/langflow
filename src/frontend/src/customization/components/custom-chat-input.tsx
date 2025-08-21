@@ -2,25 +2,23 @@ import ChatInput from "@/components/core/playgroundComponent/components/chatView
 import type { ChatInputType } from "@/types/components";
 
 export const CustomChatInput = ({
-	sendMessage,
-	inputRef,
-	noInput,
-	files,
-	setFiles,
-	isDragging,
-	playgroundPage,
+  inputRef,
+  noInput,
+  files,
+  setFiles,
+  isDragging,
+  playgroundPage,
 }: ChatInputType) => {
-	return (
-		<ChatInput
-			sendMessage={sendMessage}
-			inputRef={inputRef}
-			noInput={noInput}
-			files={files}
-			setFiles={setFiles}
-			isDragging={isDragging}
-			playgroundPage={playgroundPage}
-		/>
-	);
+  return (
+    <ChatInput
+      inputRef={inputRef}
+      noInput={noInput}
+      files={files}
+      setFiles={setFiles}
+      isDragging={isDragging}
+      playgroundPage={playgroundPage}
+    />
+  );
 };
 
 export default CustomChatInput;
