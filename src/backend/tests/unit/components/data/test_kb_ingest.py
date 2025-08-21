@@ -33,11 +33,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         """Create mock user data that persists for the test function."""
         mock_uuid = uuid.uuid4()
         mock_user = self.MockUser(mock_uuid)
-        return {
-            "user_id": mock_uuid,
-            "user": mock_user.username,
-            "user_obj": mock_user
-        }
+        return {"user_id": mock_uuid, "user": mock_user.username, "user_obj": mock_user}
 
     @pytest.fixture(autouse=True)
     def setup_mocks(self, mock_user_data):
