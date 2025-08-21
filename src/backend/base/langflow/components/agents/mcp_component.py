@@ -16,16 +16,15 @@ from langflow.base.mcp.util import (
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs.inputs import InputTypes  # noqa: TC001
-from langflow.io import DropdownInput, McpInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import DropdownInput, McpInput, MessageTextInput, Output
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 # Import get_server from the backend API
-from langflow.services.auth.utils import create_user_longterm_token, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service, get_storage_service, session_scope
+from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
 
 class MCPToolsComponent(ComponentWithCache):

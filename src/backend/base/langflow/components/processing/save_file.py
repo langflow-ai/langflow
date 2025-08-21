@@ -9,7 +9,7 @@ from fastapi.encoders import jsonable_encoder
 
 from langflow.api.v2.files import upload_user_file
 from langflow.custom import Component
-from langflow.io import DropdownInput, HandleInput, SecretStrInput, StrInput
+from langflow.io import DropdownInput, HandleInput, StrInput
 from langflow.schema import Data, DataFrame, Message
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
