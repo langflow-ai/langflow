@@ -40,7 +40,9 @@ export const useUpdateSessionName: useMutationFunctionType<
       };
     } else {
       const result = await api.patch(
-        `${getURL("MESSAGES")}/session/${data.oldSessionId}`,
+        `${getURL("MESSAGES")}/session/${encodeURIComponent(
+          data.oldSessionId
+        )}`,
         null,
         {
           params: { new_session_id: data.newSessionId },
