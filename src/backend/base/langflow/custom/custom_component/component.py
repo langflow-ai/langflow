@@ -1020,32 +1020,24 @@ class Component(CustomComponent):
         return {**predefined_inputs, **runtime_inputs}
 
     def get_trace_as_metadata(self):
-        metadata = {}
-        for input_ in self.inputs:
-            if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata:
-                value = getattr(self, input_.name, input_.value)
+        def safe_list_values(items):
+            return [v if isinstance(v, str | int | float | bool) or v is None else str(v) for v in items]
 
-                if isinstance(value, str | int | float | bool) or value is None:
-                    metadata[input_.name] = value
+        def safe_value(val):
+            if isinstance(val, str | int | float | bool) or val is None:
+                return val
+            if isinstance(val, list | tuple):
+                return safe_list_values(val)
+            try:
+                return json.dumps(val)
+            except (TypeError, ValueError):
+                return str(val)
 
-                elif isinstance(value, list | tuple):
-                    # Ensure list elements are primitives; fallback to str otherwise
-                    safe_list = []
-                    for v in value:
-                        if isinstance(v, str | int | float | bool) or v is None:
-                            safe_list.append(v)
-                        else:
-                            safe_list.append(str(v))
-                    metadata[input_.name] = safe_list
-
-                else:
-                    # dicts or any complex object → convert to JSON string
-                    try:
-                        metadata[input_.name] = json.dumps(value)
-                    except (TypeError, ValueError):
-                        metadata[input_.name] = str(value)
-
-        return metadata
+        return {
+            input_.name: safe_value(getattr(self, input_.name, input_.value))
+            for input_ in self.inputs
+            if getattr(input_, "trace_as_metadata", False)
+        }
 
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
