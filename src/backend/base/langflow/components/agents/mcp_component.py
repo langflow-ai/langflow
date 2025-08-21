@@ -155,16 +155,19 @@ class MCPToolsComponent(ComponentWithCache):
 
         try:
             async with session_scope() as db:
+                if not self.user_id:
+                    msg = "User ID is required for fetching MCP tools."
+                    raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
 
-            # Try to get server config from DB/API
-            server_config = await get_server(
-                server_name,
-                current_user,
-                db,
-                storage_service=get_storage_service(),
-                settings_service=get_settings_service(),
-            )
+                # Try to get server config from DB/API
+                server_config = await get_server(
+                    server_name,
+                    current_user,
+                    db,
+                    storage_service=get_storage_service(),
+                    settings_service=get_settings_service(),
+                )
 
             # If get_server returns empty but we have a config, use it
             if not server_config and server_config_from_value:

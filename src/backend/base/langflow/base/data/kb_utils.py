@@ -120,10 +120,11 @@ async def get_knowledge_bases(kb_root: Path, user_id: UUID | str) -> list[str]:
 
     # Get the current user
     async with session_scope() as db:
+        if not user_id:
+            msg = "User ID is required for fetching knowledge bases."
+            raise ValueError(msg)
         current_user = await get_user_by_id(db, user_id)
-
-    # Set up vector store directory
-    kb_user = current_user.username
+        kb_user = current_user.username
     kb_path = kb_root / kb_user
 
     if not kb_path.exists():

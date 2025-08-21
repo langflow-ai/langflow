@@ -47,6 +47,9 @@ class KBIngestionComponent(Component):
     icon = "database"
     name = "KBIngestion"
 
+    def __init__(self) -> None:
+        self._cached_kb_path: Path | None = None
+
     @dataclass
     class NewKnowledgeBaseInput:
         functionality: str = "create"
@@ -336,6 +339,9 @@ class KBIngestionComponent(Component):
         try:
             # Set up vector store directory
             vector_store_dir = await self._kb_path()
+            if not vector_store_dir:
+                msg = "Knowledge base path is not set. Please create a new knowledge base first."
+                raise ValueError(msg)
             vector_store_dir.mkdir(parents=True, exist_ok=True)
 
             # Create embeddings model
@@ -466,23 +472,21 @@ class KBIngestionComponent(Component):
         # Check allowed characters (condition 3)
         return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
 
-    _cached_kb_path: Path
-
-    async def _kb_path(self) -> Path:
+    async def _kb_path(self) -> Path | None:
         # Check if we already have the path cached
         cached_path = getattr(self, "_cached_kb_path", None)
         if cached_path is not None:
-            if isinstance(cached_path, Path):
-                return cached_path
-            msg = "Cached KB path is not a valid Path object."
-            raise RuntimeError(msg)
+            return cached_path
 
         # If not cached, compute it
         async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required for fetching knowledge base path."
+                raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
+            kb_user = current_user.username
 
         kb_root = self._get_kb_root()
-        kb_user = current_user.username
 
         # Cache the result
         self._cached_kb_path = kb_root / kb_user / self.knowledge_base
@@ -504,6 +508,9 @@ class KBIngestionComponent(Component):
 
             # Read the embedding info from the knowledge base folder
             kb_path = await self._kb_path()
+            if not kb_path:
+                msg = "Knowledge base path is not set. Please create a new knowledge base first."
+                raise ValueError(msg)
             metadata_path = kb_path / "embedding_metadata.json"
 
             # If the API key is not provided, try to read it from the metadata file
@@ -554,6 +561,9 @@ class KBIngestionComponent(Component):
 
     async def _get_api_key_variable(self, field_value: dict[str, Any]):
         async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required for fetching global variables."
+                raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
             variable_service = get_variable_service()
 
@@ -564,7 +574,6 @@ class KBIngestionComponent(Component):
                 field="",
                 session=db,
             )
-        return None
 
     async def update_build_config(
         self,
@@ -576,8 +585,11 @@ class KBIngestionComponent(Component):
         # Create a new knowledge base
         if field_name == "knowledge_base":
             async with session_scope() as db:
+                if not self.user_id:
+                    msg = "User ID is required for fetching knowledge base list."
+                    raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
-            kb_user = current_user.username
+                kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 # Validate the knowledge base name - Make sure it follows these rules:
                 if not self.is_valid_collection_name(field_value["01_new_kb_name"]):

@@ -170,10 +170,11 @@ class KBRetrievalComponent(Component):
         """
         # Get the current user
         async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required for fetching Knowledge Base data."
+                raise ValueError(msg)
             current_user = await get_user_by_id(db, self.user_id)
-
-        # Set up vector store directory
-        kb_user = current_user.username
+            kb_user = current_user.username
         kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / self.knowledge_base
 
         metadata = self._get_kb_metadata(kb_path)

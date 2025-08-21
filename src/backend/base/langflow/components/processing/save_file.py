@@ -137,6 +137,9 @@ class SaveToFileComponent(Component):
 
         with file_path.open("rb") as f:
             async with session_scope() as db:
+                if not self.user_id:
+                    msg = "User ID is required for file saving."
+                    raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
 
                 await upload_user_file(
