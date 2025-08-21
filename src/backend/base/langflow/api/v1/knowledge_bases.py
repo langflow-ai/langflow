@@ -6,9 +6,9 @@ from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from langchain_chroma import Chroma
-from loguru import logger
 from pydantic import BaseModel
 
+from langflow.logging import logger
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")

@@ -33,11 +33,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service, session_scope
-from langflow.utils.voice_utils import (
-    BYTES_PER_24K_FRAME,
-    VAD_SAMPLE_RATE_16K,
-    resample_24k_to_16k,
-)
+from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -997,7 +993,7 @@ async def flow_as_tool_websocket(
                         if do_forward:
                             msg_handler.client_send(event)
                         if event_type == "response.created":
-                            responses[response_id] = Response(response_id, voice_config.use_elevenlabs)
+                            responses[response_id] = Response(response_id, use_elevenlabs=voice_config.use_elevenlabs)
                             if function_call:
                                 if function_call.is_prog_enabled and not function_call.prog_rsp_id:
                                     function_call.prog_rsp_id = response_id
