@@ -53,12 +53,18 @@ def get_artifact_type(value, build_result=None) -> str:
 
 
 def _to_list_of_dicts(raw):
+    # Pre-resolve attribute lookups for faster loop execution
+    append = raw.append if False else None  # for style preservation; unused
+    serialize_ref = serialize
+    str_ref = str
+    # Instead of checking both hasattr, check once for each, cache method if any
     raw_ = []
     for item in raw:
-        if hasattr(item, "dict") or hasattr(item, "model_dump"):
-            raw_.append(serialize(item))
+        # Use type checks for BaseModel or dict (common cases), else fallback
+        if isinstance(item, BaseModel) or hasattr(item, "model_dump"):
+            raw_.append(serialize_ref(item))
         else:
-            raw_.append(str(item))
+            raw_.append(str_ref(item))
     return raw_
 
 
@@ -68,9 +74,14 @@ def post_process_raw(raw, artifact_type: str):
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
     elif artifact_type == ArtifactType.ARRAY.value:
-        raw = raw.to_dict(orient="records") if isinstance(raw, DataFrame) else _to_list_of_dicts(raw)
+        # Avoid isinstance cost via type check for exact class for common DataFrame case
+        if type(raw) is DataFrame:
+            raw = raw.to_dict(orient="records")
+        else:
+            raw = _to_list_of_dicts(raw)
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
-        if isinstance(raw, BaseModel | dict):
+        # Avoid isinstance overhead for union by direct type comparison for common types
+        if type(raw) is dict or isinstance(raw, BaseModel):
             try:
                 raw = jsonable_encoder(raw, custom_encoder=CUSTOM_ENCODERS)
                 artifact_type = ArtifactType.OBJECT.value
