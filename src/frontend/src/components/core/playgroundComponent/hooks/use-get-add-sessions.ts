@@ -1,14 +1,11 @@
 import { NEW_SESSION_NAME } from "@/constants/constants";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
-import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useMemo } from "react";
-import { useShallow } from "zustand/react/shallow";
 
-export const useGetAddSessions = () => {
+export const useGetAddSessions = ({ flowId }: { flowId?: string }) => {
   const { isPlayground } = usePlaygroundStore();
 
-  const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const setSelectedSession = usePlaygroundStore(
     (state) => state.setSelectedSession
