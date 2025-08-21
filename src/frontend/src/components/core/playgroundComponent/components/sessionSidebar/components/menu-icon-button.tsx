@@ -14,7 +14,7 @@ export const MenuIconButton = forwardRef<
     <Button
       variant="menu"
       size="icon"
-      className="duration-75 text-muted-foreground"
+      className="duration-75 text-muted-foreground no-focus-visible"
       ref={ref}
       {...props}
     >
