@@ -79,8 +79,7 @@ class AgentComponent(ToolCallingAgentComponent):
             refresh_button=False,
             input_types=[],
             options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
-            dialog_inputs={
-                "functionality": "side_panel",
+            external_options={
                 "fields": {
                     "data": {
                         "node": {
