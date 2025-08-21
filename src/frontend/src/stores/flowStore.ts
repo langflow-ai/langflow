@@ -647,6 +647,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
   }) => {
+    if (get().isBuilding) return;
     set({
       pastBuildFlowParams: {
         startNodeId,
