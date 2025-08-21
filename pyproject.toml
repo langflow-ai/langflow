@@ -237,6 +237,7 @@ override-dependencies = [
     # force httpx 0.28.1+ for Python 3.12+ (needed for nv-ingest)
     'httpx>=0.28.1; python_version >= "3.12"',
     # force pypdfium2 to use 4.30.0 to avoid yanked 4.30.1
+    # docling needs pypdfium2>=4.30.0, nv-ingest-client needs pypdfium2>=4.30.1
     "pypdfium2==4.30.0"
 ]
 
