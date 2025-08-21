@@ -18,6 +18,7 @@ export const SessionRename = ({ sessionId, onSave }: SessionRenameProps) => {
 
     if (trimmedValue) {
       onSave(trimmedValue);
+      return;
     }
     onSave(sessionId);
   };
