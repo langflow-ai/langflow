@@ -50,6 +50,15 @@ _tasks: list[asyncio.Task] = []
 MAX_PORT = 65535
 
 
+async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
+    """Helper to safely log exceptions to telemetry without raising."""
+    try:
+        telemetry_service = get_telemetry_service()
+        await telemetry_service.log_exception(exc, context)
+    except (httpx.HTTPError, asyncio.QueueFull):
+        logger.warning(f"Failed to log {context} exception to telemetry")
+
+
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
         super().__init__(app)
@@ -107,10 +116,9 @@ async def load_bundles_with_error_handling():
 
 
 def get_lifespan(*, fix_migration=False, version=None):
-    telemetry_service = get_telemetry_service()
-
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        telemetry_service = get_telemetry_service()
         configure(async_file=True)
 
         # Startup message
@@ -203,7 +211,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
-                await logger.aexception(exc)
+                logger.exception(exc)
+
+                await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
             # Clean shutdown with progress indicator
@@ -257,6 +267,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await logger.adebug("Teardown cancelled during shutdown.")
             except Exception as e:  # noqa: BLE001
                 await logger.aexception(f"Unhandled error during cleanup: {e}")
+                await log_exception_to_telemetry(e, "lifespan_cleanup")
 
             with contextlib.suppress(asyncio.CancelledError):
                 await asyncio.shield(asyncio.sleep(0.1))  # let logger flush async logs
@@ -373,6 +384,9 @@ def create_app():
                 content={"message": str(exc.detail)},
             )
         await logger.aerror(f"unhandled error: {exc}", exc_info=exc)
+
+        await log_exception_to_telemetry(exc, "handler")
+
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"message": str(exc)},
