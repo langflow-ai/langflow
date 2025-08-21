@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import SvgVectorStores from "./vectorstores";
+import SvgVectorStores from "./VectorStores";
 
 export const VectorStoresIcon = forwardRef<
   SVGSVGElement,
