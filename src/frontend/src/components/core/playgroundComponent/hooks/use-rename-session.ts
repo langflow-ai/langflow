@@ -1,0 +1,30 @@
+import { useState } from "react";
+
+export const useRenameSession = ({
+  handleRename,
+}: {
+  handleRename: (sessionId: string, newSessionId: string) => void;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+
+  const handleEditSave = (sessionId: string, newSessionId: string) => {
+    if (!newSessionId.trim() || !sessionId || newSessionId === sessionId) {
+      setIsEditing(false);
+      return;
+    }
+    handleRename(sessionId, newSessionId);
+    setIsEditing(false);
+  };
+
+  const handleEditStart = () => {
+    setTimeout(() => {
+      setIsEditing(true);
+    }, 10);
+  };
+
+  return {
+    isEditing,
+    handleEditSave,
+    handleEditStart,
+  };
+};
