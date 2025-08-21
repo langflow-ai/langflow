@@ -175,16 +175,19 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 As of Langflow 1.6, the File component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library.
 Only non-tabular documents can be parsed, and only one document at a time.
-The parser requires the Docling dependency to be installed.
+The parser requires the Docling dependency to be installed. As of Langflow 1.6, the Docling dependency is included with Langflow.
 For more information, see [Install custom dependencies](/install-custom-dependencies).
+The individual Docling components are still available in the [**Docling bundle**](/integrations-docling).
 
 The advanced parser includes the following advanced fields.
 
-* pipeline: Which Docling pipeline to use. Docling chooses the pipeline based on the source document type.
-* ocr_engine: Which OCR parser to use. The default is [EasyOCR](https://pypi.org/project/easyocr/).
-* doc_key: The key to use for the DoclingDocument column, which holds the structured information extracted from the source document. Default: `doc`.
-* md_image_placeholder: Defines the placeholder for image files in the output Markdown document.
-* md_page_break_placeholder: Defines the placeholder for page breaks in the output Markdown document.
+| Name | Display Name | Info |
+|------|--------------|------|
+| pipeline | Pipeline | Input parameter. Which Docling pipeline to use. Docling chooses the pipeline based on the source document type. Options: `standard`, `vlm`. Default: `standard`. |
+| ocr_engine | OCR Engine | Input parameter. Which OCR parser to use. The default is [EasyOCR](https://pypi.org/project/easyocr/). Options: `easyocr`, `tesserocr`, `rapidocr`, `ocrmac`. |
+| doc_key | Document Key | Input parameter. The key to use for the DoclingDocument column, which holds the structured information extracted from the source document. Default: `doc`. |
+| md_image_placeholder | Markdown Image Placeholder | Input parameter. Defines the placeholder for image files in the output Markdown document. |
+| md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter. Defines the placeholder for page breaks in the output Markdown document. |
 
 ### File output
 
