@@ -140,11 +140,11 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-        timeout: 100000,
-      });
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
 
-      await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
@@ -217,11 +217,11 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-        timeout: 100000,
-      });
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
 
-      await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
