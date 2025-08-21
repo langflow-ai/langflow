@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -8,15 +11,8 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
-import {
-  cn,
-  filterNullOptions,
-  formatName
-} from "../../../utils/utils";
+import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -322,23 +318,29 @@ export default function Dropdown({
             "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
-          {!waitingForResponse ? <span
-            className="flex w-full items-center gap-2 overflow-hidden"
-            data-testid={`value-dropdown-${id}`}
-          >
-            {value && <>{renderSelectedIcon()}</>}
-            <span className="truncate">
-              {disabled ? (
-                RECEIVING_INPUT_VALUE
-              ) : (
-                <>
-                  {value && filteredOptions.includes(value)
-                    ? value
-                    : placeholder || SELECT_AN_OPTION}{" "}
-                </>
-              )}
+          {!waitingForResponse ? (
+            <span
+              className="flex w-full items-center gap-2 overflow-hidden"
+              data-testid={`value-dropdown-${id}`}
+            >
+              {value && <>{renderSelectedIcon()}</>}
+              <span className="truncate">
+                {disabled ? (
+                  RECEIVING_INPUT_VALUE
+                ) : (
+                  <>
+                    {value && filteredOptions.includes(value)
+                      ? value
+                      : placeholder || SELECT_AN_OPTION}{" "}
+                  </>
+                )}
+              </span>
             </span>
-          </span> : <span className="text-muted-foreground"><LoadingTextComponent text="Awaiting response" /></span>}
+          ) : (
+            <span className="text-muted-foreground">
+              <LoadingTextComponent text="Awaiting response" />
+            </span>
+          )}
 
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
@@ -415,10 +417,7 @@ export default function Dropdown({
                     >
                       <div
                         className={cn("truncate text-[13px]", {
-                          "w-1/2":
-                            filteredMetadata?.[index]?.length > 1 &&
-                            filteredMetadata?.[index]?.icon,
-                          "w-3/4": !filteredMetadata?.[index]?.icon,
+                          "w-1/2": filteredMetadata?.length !== 0,
                         })}
                       >
                         {option}
@@ -497,7 +496,7 @@ export default function Dropdown({
       {sourceOptions && sourceOptions?.fields && (
         <CommandGroup className="p-0">
           <CommandItem
-            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
             onSelect={() => {
               if (dialogInputs?.fields) {
                 setOpen(false);
@@ -508,7 +507,7 @@ export default function Dropdown({
               }
             }}
           >
-            <div className="flex items-center gap-2 pl-1 text-[13px] font-normal">
+            <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
               <ForwardedIconComponent name="Plus" className="h-3 w-3 " />
               {sourceOptions?.fields?.data?.node?.display_name}
             </div>
@@ -523,22 +522,21 @@ export default function Dropdown({
           </CommandItem>
 
           {hasRefreshButton && (
-            <Button
-              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-              unstyled
-              data-testid={`refresh-dropdown-list-${name}`}
-              onClick={() => {
+            <CommandItem
+              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+              onSelect={() => {
                 handleRefreshButtonPress();
               }}
+              data-testid={`refresh-dropdown-list-${name}`}
             >
-              <div className="flex items-center gap-2 pl-1">
+              <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
                 <ForwardedIconComponent
                   name="RefreshCcw"
-                  className={cn("refresh-icon h-3 w-3 text-primary")}
+                  className={cn("h-3 w-3")}
                 />
                 Refresh list
               </div>
-            </Button>
+            </CommandItem>
           )}
           <NodeDialog
             open={openDialog}
