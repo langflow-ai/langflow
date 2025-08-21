@@ -25,7 +25,7 @@ from langflow.schema.message import Message
 # Import get_server from the backend API
 from langflow.services.auth.utils import create_user_longterm_token, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service, get_storage_service
+from langflow.services.deps import get_session, get_settings_service, get_storage_service, session_scope
 
 
 class MCPToolsComponent(ComponentWithCache):
@@ -96,13 +96,6 @@ class MCPToolsComponent(ComponentWithCache):
             show=False,
             tool_mode=False,
         ),
-        SecretStrInput(
-            name="api_key",
-            display_name="Langflow API Key",
-            info="Langflow API key for authentication when fetching MCP servers and tools.",
-            required=False,
-            advanced=True,
-        ),
     ]
 
     outputs = [
@@ -161,62 +154,50 @@ class MCPToolsComponent(ComponentWithCache):
             return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
-            async for db in get_session():
-                # TODO: In 1.6, this may need to be removed or adjusted
-                # Try to get the super user token, if possible
-                if self.api_key:
-                    current_user = await get_current_user(
-                        token=None,
-                        query_param=self.api_key,
-                        header_param=None,
-                        db=db,
-                    )
-                else:
-                    user_id, _ = await create_user_longterm_token(db)
-                    current_user = await get_user_by_id(db, user_id)
+            async with session_scope() as db:
+                current_user = await get_user_by_id(db, self.user_id)
 
-                # Try to get server config from DB/API
-                server_config = await get_server(
-                    server_name,
-                    current_user,
-                    db,
-                    storage_service=get_storage_service(),
-                    settings_service=get_settings_service(),
-                )
+            # Try to get server config from DB/API
+            server_config = await get_server(
+                server_name,
+                current_user,
+                db,
+                storage_service=get_storage_service(),
+                settings_service=get_settings_service(),
+            )
 
-                # If get_server returns empty but we have a config, use it
-                if not server_config and server_config_from_value:
-                    server_config = server_config_from_value
+            # If get_server returns empty but we have a config, use it
+            if not server_config and server_config_from_value:
+                server_config = server_config_from_value
 
-                if not server_config:
-                    self.tools = []
-                    return [], {"name": server_name, "config": server_config}
+            if not server_config:
+                self.tools = []
+                return [], {"name": server_name, "config": server_config}
 
-                _, tool_list, tool_cache = await update_tools(
-                    server_name=server_name,
-                    server_config=server_config,
-                    mcp_stdio_client=self.stdio_client,
-                    mcp_sse_client=self.sse_client,
-                )
+            _, tool_list, tool_cache = await update_tools(
+                server_name=server_name,
+                server_config=server_config,
+                mcp_stdio_client=self.stdio_client,
+                mcp_sse_client=self.sse_client,
+            )
 
-                self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
-                self._tool_cache = tool_cache
-                self.tools = tool_list
-                # Cache the result using shared cache
-                cache_data = {
-                    "tools": tool_list,
-                    "tool_names": self.tool_names,
-                    "tool_cache": tool_cache,
-                    "config": server_config,
-                }
+            self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
+            self._tool_cache = tool_cache
+            self.tools = tool_list
+            # Cache the result using shared cache
+            cache_data = {
+                "tools": tool_list,
+                "tool_names": self.tool_names,
+                "tool_cache": tool_cache,
+                "config": server_config,
+            }
 
-                # Safely update the servers cache
-                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-                if isinstance(current_servers_cache, dict):
-                    current_servers_cache[server_name] = cache_data
-                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+            # Safely update the servers cache
+            current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+            if isinstance(current_servers_cache, dict):
+                current_servers_cache[server_name] = cache_data
+                safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
 
-                return tool_list, {"name": server_name, "config": server_config}
         except (TimeoutError, asyncio.TimeoutError) as e:
             msg = f"Timeout updating tool list: {e!s}"
             logger.exception(msg)
@@ -225,6 +206,8 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Error updating tool list: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
+        else:
+            return tool_list, {"name": server_name, "config": server_config}
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
