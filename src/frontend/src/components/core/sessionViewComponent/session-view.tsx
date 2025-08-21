@@ -103,7 +103,8 @@ export default function SessionView({
       editable={[
         { field: "text", onUpdate: handleUpdateMessage, editableCell: false },
       ]}
-      overlayNoRowsTemplate="No data available"
+      alertTitle="No messages available"
+      alertDescription="Try sending a message on the playground."
       onSelectionChanged={(event: SelectionChangedEvent) => {
         setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
       }}
