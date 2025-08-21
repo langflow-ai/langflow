@@ -245,11 +245,13 @@ class ChatOllamaComponent(LCModelComponent):
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_models(self.base_url, tool_model_enabled)
+                build_config["model_name"]["options"] = await self.get_models(
+                    self.base_url, tool_model_enabled=tool_model_enabled
+                )
             elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_models(
-                    build_config["base_url"].get("value", ""), tool_model_enabled
+                    build_config["base_url"].get("value", ""), tool_model_enabled=tool_model_enabled
                 )
             else:
                 build_config["model_name"]["options"] = []

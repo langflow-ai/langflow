@@ -114,7 +114,7 @@ class NVIDIAModelComponent(LCModelComponent):
     def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
         if field_name in {"model_name", "tool_model_enabled", "base_url", "api_key"}:
             try:
-                ids = self.get_models(self.tool_model_enabled)
+                ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
                 build_config["model_name"]["options"] = ids
 
                 if "value" not in build_config["model_name"] or build_config["model_name"]["value"] is None:
