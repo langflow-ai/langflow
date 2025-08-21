@@ -61,7 +61,7 @@ export const SessionRename = ({ sessionId, onSave }: SessionRenameProps) => {
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        className="h-8 text-mmd border-none bg-transparent p-0 w-full"
+        className="h-8 text-mmd font-medium border-none bg-transparent p-0 w-full"
         required
       />
       <MenuIconButton
