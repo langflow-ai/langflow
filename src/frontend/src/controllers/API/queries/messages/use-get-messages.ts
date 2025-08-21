@@ -1,6 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColDef, ColGroupDef } from "ag-grid-community";
-import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import type { useQueryFunctionType } from "../../../../types/api";
 import {
@@ -16,6 +15,7 @@ interface MessagesQueryParams {
   mode: "intersection" | "union";
   excludedFields?: string[];
   params?: object;
+  useLocalStorage?: boolean;
 }
 
 interface MessagesResponse {
@@ -26,11 +26,10 @@ interface MessagesResponse {
 export const useGetMessagesQuery: useQueryFunctionType<
   MessagesQueryParams,
   MessagesResponse
-> = ({ id, mode, excludedFields, params }, options) => {
+> = ({ id, mode, excludedFields, params, useLocalStorage }, options) => {
   const { query } = UseRequestProcessor();
 
   const getMessagesFn = async (id?: string, params = {}) => {
-    const isPlaygroundPage = useFlowStore.getState().playgroundPage;
     const config = {};
     if (id) {
       config["params"] = { flow_id: id };
@@ -40,12 +39,13 @@ export const useGetMessagesQuery: useQueryFunctionType<
       const processedParams = { ...params } as any;
       if (processedParams.session_id) {
         processedParams.session_id = prepareSessionIdForAPI(
-          processedParams.session_id,
+          processedParams.session_id
         );
       }
       config["params"] = { ...config["params"], ...processedParams };
     }
-    if (!isPlaygroundPage) {
+
+    if (!useLocalStorage) {
       return await api.get<any>(`${getURL("MESSAGES")}`, config);
     } else {
       return {
