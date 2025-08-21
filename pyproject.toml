@@ -31,7 +31,7 @@ dependencies = [
     "faiss-cpu==1.9.0.post1",
     "types-cachetools==5.5.0.20240820",
     "pymongo==4.10.1",
-    "supabase>=2.6.0",
+    "supabase==2.6.0",
     "certifi>=2023.11.17,<2025.0.0",
     "certifi==2024.8.30",
     'fastavro==1.9.7; python_version < "3.13"',
@@ -185,10 +185,6 @@ dev = [
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 
-[tool.uv]
-override-dependencies = [
-    "httpx>=0.28.1",
-]
 
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
@@ -225,9 +221,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    "nv-ingest-api==25.6.2",
-    "nv-ingest-client==25.6.2",
-    "supabase>=2.15.0",
+    'nv-ingest-api==25.6.2; python_version >= "3.12"',
+    'nv-ingest-client==25.6.2; python_version >= "3.12"',
 ]
 
 postgresql = [
@@ -238,7 +233,11 @@ postgresql = [
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
-    "python-pptx>=1.0.2"
+    "python-pptx>=1.0.2",
+    # force httpx 0.28.1+ for Python 3.12+ (needed for nv-ingest)
+    'httpx>=0.28.1; python_version >= "3.12"',
+    # force pypdfium2 to use 4.30.0 to avoid yanked 4.30.1
+    "pypdfium2==4.30.0"
 ]
 
 [project.scripts]
