@@ -7,13 +7,10 @@ import {
   useDeleteMessages,
   useUpdateMessage,
 } from "@/controllers/API/queries/messages";
-import useAlertStore from "../../../../../../stores/alertStore";
-import { useMessagesStore } from "../../../../../../stores/messagesStore";
-import {
-  extractColumnsFromRows,
-  messagesSorter,
-} from "../../../../../../utils/utils";
-import TableComponent from "../../../../parameterRenderComponent/components/tableComponent";
+import useAlertStore from "../../../stores/alertStore";
+import { useMessagesStore } from "../../../stores/messagesStore";
+import { extractColumnsFromRows, messagesSorter } from "../../../utils/utils";
+import TableComponent from "../parameterRenderComponent/components/tableComponent";
 
 export default function SessionView({
   sessionId,

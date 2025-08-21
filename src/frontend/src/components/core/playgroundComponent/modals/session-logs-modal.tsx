@@ -1,5 +1,5 @@
 import BaseModal from "@/modals/baseModal";
-import SessionView from "./components/session-view";
+import SessionView from "../../sessionViewComponent/session-view";
 
 export const SessionLogsModal = ({
   sessionId,
