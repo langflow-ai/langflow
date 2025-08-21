@@ -38,9 +38,11 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         self._mock_uuid = mock_uuid
         self._mock_user = mock_user
 
-        with patch.object(KBIngestionComponent, "user_id", mock_uuid), \
-            patch("langflow.components.data.kb_ingest.get_user_by_id", new_callable=AsyncMock, return_value=mock_user), \
-            patch("langflow.base.data.kb_utils.get_user_by_id", new_callable=AsyncMock, return_value=mock_user):
+        with (
+            patch.object(KBIngestionComponent, "user_id", mock_uuid),
+            patch("langflow.components.data.kb_ingest.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
+            patch("langflow.base.data.kb_utils.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
+        ):
             yield
 
     @pytest.fixture

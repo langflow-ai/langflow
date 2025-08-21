@@ -39,17 +39,19 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         self._mock_uuid = mock_uuid
         self._mock_user = mock_user
 
-        with patch.object(KBRetrievalComponent, "user_id", mock_uuid), \
+        with (
+            patch.object(KBRetrievalComponent, "user_id", mock_uuid),
             patch(
                 "langflow.components.data.kb_retrieval.get_user_by_id",
                 new_callable=AsyncMock,
                 return_value=mock_user,
-            ), \
+            ),
             patch(
                 "langflow.base.data.kb_utils.get_user_by_id",
                 new_callable=AsyncMock,
                 return_value=mock_user,
-            ):
+            ),
+        ):
             yield
 
     @pytest.fixture
@@ -320,9 +322,9 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
 
             # The user-provided key should override the stored key in metadata
             mock_openai.assert_called_once_with(
-                model="text-embedding-ada-002", 
+                model="text-embedding-ada-002",
                 api_key="user-provided-key",  # Should use the user-provided key, not "stored-key"
-                chunk_size=1000
+                chunk_size=1000,
             )
 
     async def test_get_chroma_kb_data_no_metadata(self, component_class, default_kwargs, tmp_path):
