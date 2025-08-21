@@ -300,6 +300,7 @@ ignore = [
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
     "PLC0415", # Inline imports
     "D10", # Missing docstrings
+    "PLW1641", # Object does not implement `__hash__` method (mutable objects shouldn't be hashable)
     # Rules that are TODOs
     "ANN",
 ]
