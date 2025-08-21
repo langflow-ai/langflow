@@ -2,22 +2,8 @@ name: Coverage Check
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - 'feature/**'
-      - 'fix/**'
-      - 'hotfix/**'
-    paths:
-      - 'src/backend/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
   pull_request:
     types: [opened, synchronize, ready_for_review]
-    paths:
-      - 'src/backend/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
   workflow_dispatch:
     inputs:
       ref:
