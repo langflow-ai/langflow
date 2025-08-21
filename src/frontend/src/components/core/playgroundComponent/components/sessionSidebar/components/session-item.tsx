@@ -14,7 +14,7 @@ export const SessionItem = ({
   onLogs,
 }: {
   sessionId: string;
-  onRename: (sessionId: string, newSessionId: string) => void;
+  onRename: (sessionId: string, newSessionId: string) => Promise<void>;
   onDelete: (sessionId: string) => void;
   onLogs: () => void;
 }) => {
