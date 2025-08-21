@@ -26,8 +26,10 @@ test(
         targetPosition: { x: 0, y: 0 },
       });
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 3);
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     //second component
 
     await page.getByTestId("sidebar-search-input").click();

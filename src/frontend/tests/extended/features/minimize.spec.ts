@@ -34,7 +34,9 @@ test(
 
     await adjustScreenView(page);
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 4);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("more-options-modal").click();
 

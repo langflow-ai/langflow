@@ -54,8 +54,10 @@ test(
     await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
       timeout: 1000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("searchapiSearchApi")
