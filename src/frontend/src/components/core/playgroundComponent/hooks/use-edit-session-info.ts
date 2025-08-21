@@ -7,6 +7,7 @@ export const useEditSessionInfo = ({ flowId }: { flowId?: string }) => {
   const setSelectedSession = usePlaygroundStore(
     (state) => state.setSelectedSession
   );
+  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const isPlayground = usePlaygroundStore((state) => state.isPlayground);
 
   const { data: dbSessions } = useGetSessionsFromFlowQuery({
@@ -28,7 +29,9 @@ export const useEditSessionInfo = ({ flowId }: { flowId?: string }) => {
     if (sessionId && dbSessions?.includes(sessionId)) {
       deleteSession({ sessionId: sessionId });
     }
-    setSelectedSession(flowId);
+    if (flowId && sessionId === selectedSession) {
+      setSelectedSession(flowId);
+    }
   };
 
   const handleRename = (sessionId: string, newSessionId: string) => {
@@ -38,7 +41,9 @@ export const useEditSessionInfo = ({ flowId }: { flowId?: string }) => {
         newSessionId,
       });
     }
-    setSelectedSession(newSessionId);
+    if (flowId && sessionId === selectedSession) {
+      setSelectedSession(newSessionId);
+    }
   };
 
   return {
