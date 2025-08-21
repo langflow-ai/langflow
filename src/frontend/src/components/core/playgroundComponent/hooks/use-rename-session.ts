@@ -3,16 +3,16 @@ import { useState } from "react";
 export const useRenameSession = ({
   handleRename,
 }: {
-  handleRename: (sessionId: string, newSessionId: string) => void;
+  handleRename: (sessionId: string, newSessionId: string) => Promise<void>;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleEditSave = (sessionId: string, newSessionId: string) => {
+  const handleEditSave = async (sessionId: string, newSessionId: string) => {
     if (!newSessionId.trim() || !sessionId || newSessionId === sessionId) {
       setIsEditing(false);
       return;
     }
-    handleRename(sessionId, newSessionId);
+    await handleRename(sessionId, newSessionId);
     setIsEditing(false);
   };
 
