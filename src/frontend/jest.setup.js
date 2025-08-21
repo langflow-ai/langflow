@@ -36,3 +36,15 @@ global.localStorage = localStorageMock;
 
 // Mock sessionStorage
 global.sessionStorage = localStorageMock;
+
+// Polyfill Array.prototype.toSorted for Jest environment if not available
+if (!Array.prototype.toSorted) {
+  Object.defineProperty(Array.prototype, "toSorted", {
+    value: function (compareFn) {
+      const copy = this.slice();
+      return copy.sort(compareFn);
+    },
+    writable: true,
+    configurable: true,
+  });
+}
