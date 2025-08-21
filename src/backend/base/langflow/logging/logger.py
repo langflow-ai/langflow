@@ -202,7 +202,6 @@ def configure(
     disable: bool | None = False,
     log_env: str | None = None,
     log_format: str | None = None,
-    async_file: bool = False,  # noqa: ARG001
     log_rotation: str | None = None,
 ) -> None:
     """Configure the logger."""

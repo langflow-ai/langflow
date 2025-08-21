@@ -119,7 +119,7 @@ def get_lifespan(*, fix_migration=False, version=None):
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         telemetry_service = get_telemetry_service()
-        configure(async_file=True)
+        configure()
 
         # Startup message
         if version:
