@@ -139,28 +139,30 @@ def validate_input(
 
 def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
     template_data = node.get("data", {}).get("node", {}).get("template")
-
     if not isinstance(template_data, dict):
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
+    get_template = template_data.get  # Localize dict get to avoid attribute lookup per iteration
     for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name not in template_data:
+        tpl_entry = get_template(tweak_name)
+        if tpl_entry is None:
             continue
+        # Avoid repeated checks/get/set on tpl_entry dict
+        entry_type = tpl_entry.get("type")
         if tweak_name == "code":
             logger.warning("Security: Code field cannot be overridden via tweaks.")
             continue
-        if tweak_name in template_data:
-            if template_data[tweak_name]["type"] == "NestedDict":
-                value = validate_and_repair_json(tweak_value)
-                template_data[tweak_name]["value"] = value
-            elif isinstance(tweak_value, dict):
-                for k, v in tweak_value.items():
-                    k_ = "file_path" if template_data[tweak_name]["type"] == "file" else k
-                    template_data[tweak_name][k_] = v
-            else:
-                key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
-                template_data[tweak_name][key] = tweak_value
+        if entry_type == "NestedDict":
+            value = validate_and_repair_json(tweak_value)
+            tpl_entry["value"] = value
+        elif isinstance(tweak_value, dict):
+            is_file = entry_type == "file"
+            for k, v in tweak_value.items():
+                k_ = "file_path" if is_file else k
+                tpl_entry[k_] = v
+        else:
+            tpl_entry["file_path" if entry_type == "file" else "value"] = tweak_value
 
 
 def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:

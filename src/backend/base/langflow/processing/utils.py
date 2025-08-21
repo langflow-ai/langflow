@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from typing import Any
 
@@ -17,7 +19,12 @@ def validate_and_repair_json(json_str: str | dict) -> dict[str, Any] | str:
     if not isinstance(json_str, str):
         return json_str
     try:
-        # If invalid, attempt repair
+        # Try normal JSON loads first (skip expensive repair if valid)
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+    try:
+        # Only repair *after* fast parse fails
         repaired = repair_json(json_str)
         return json.loads(repaired)
     except (json.JSONDecodeError, ImportError):
