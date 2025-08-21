@@ -444,6 +444,41 @@ def _process_headers(headers: Any) -> dict:
     return {}
 
 
+def _extract_headers_from_args(args: list[str]) -> dict[str, str]:
+    """Extract headers from command-line arguments.
+
+    Parses arguments in the format: --headers header_name header_value
+
+    Args:
+        args: List of command-line arguments
+
+    Returns:
+        Dictionary of extracted headers
+    """
+    headers = {}
+    i = 0
+    while i < len(args):
+        if args[i] == "--headers":
+            # Check if we have at least 2 more arguments
+            if i + 2 < len(args):
+                header_name = args[i + 1]
+                header_value = args[i + 2]
+                # Make sure the header value is not another "--headers" flag
+                if header_value != "--headers":
+                    headers[header_name] = header_value
+                    i += 3
+                else:
+                    # Skip malformed header (missing value)
+                    i += 2
+            else:
+                # Not enough arguments, skip
+                i += 1
+        else:
+            i += 1
+
+    return validate_headers(headers)
+
+
 def _validate_node_installation(command: str) -> str:
     """Validate the npx command."""
     if "npx" in command and not shutil.which("node"):
@@ -1341,8 +1376,6 @@ class MCPSseClient:
                 session = await self._get_or_create_session()
 
                 # Add timeout to prevent hanging
-                import asyncio
-
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
                     timeout=30.0,  # 30 second timeout
@@ -1476,6 +1509,21 @@ async def update_tools(
         # Stdio connection
         args = server_config.get("args", [])
         env = server_config.get("env", {})
+
+        # Extract headers from command-line arguments (e.g., --headers header_name header_value)
+        extracted_headers = _extract_headers_from_args(args)
+
+        # Merge extracted headers with any headers from server config
+        all_headers = {**headers, **extracted_headers}
+
+        # Store headers in environment variables for the subprocess
+        # This is needed for tools like mcp-proxy and mcp-composer that read headers from env vars
+        if all_headers:
+            for header_name, header_value in all_headers.items():
+                # Convert header names to environment variable format (uppercase, replace - with _)
+                env_var_name = f"MCP_HEADER_{header_name.upper().replace('-', '_')}"
+                env[env_var_name] = header_value
+
         full_command = " ".join([command, *args])
         tools = await mcp_stdio_client.connect_to_server(full_command, env)
         client = mcp_stdio_client
