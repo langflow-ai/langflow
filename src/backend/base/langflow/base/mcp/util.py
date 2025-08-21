@@ -212,7 +212,8 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             raise ValueError(msg) from e
 
         try:
-            return await client.run_tool(tool_name, arguments=validated.model_dump())
+            # Use mode='python' to prevent any potential iteration issues during serialization
+            return await client.run_tool(tool_name, arguments=validated.model_dump(mode="python"))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -240,7 +241,8 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
         try:
             loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            # Use mode='python' to prevent any potential iteration issues during serialization
+            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump(mode="python")))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
