@@ -5,7 +5,7 @@ from pathlib import Path
 from langflow.services.auth.utils import create_user_longterm_token, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session
+from langflow.services.deps import session_scope
 
 
 def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
