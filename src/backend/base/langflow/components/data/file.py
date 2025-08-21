@@ -148,6 +148,7 @@ class FileComponent(BaseFileComponent):
             info="OCR engine to use. Only available when pipeline is set to 'standard'.",
             options=["", "easyocr"],
             value="",
+            show=False,
             advanced=True,
         ),
         StrInput(
