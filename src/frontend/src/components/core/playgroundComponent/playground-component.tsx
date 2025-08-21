@@ -11,7 +11,6 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { PlaygroundModalPropsType } from "@/types/components";
-import { cn } from "@/utils/utils";
 import ChatView from "./components/chatView/components/chat-view";
 import { PlaygroundHeader } from "./components/playgroundHeader/playground-header";
 import SessionSidebar from "./components/sessionSidebar/session-sidebar";
@@ -44,14 +43,13 @@ export function PlaygroundComponent({
       useLocalStorage: playgroundPage,
     });
 
-  const { isFetched: messagesFetched, refetch: refetchMessages } =
-    useGetMessagesQuery({
-      mode: "union",
-      id: currentFlowId,
-      params: {
-        session_id: selectedSession,
-      },
-    });
+  const { refetch: refetchMessages } = useGetMessagesQuery({
+    mode: "union",
+    id: currentFlowId,
+    params: {
+      session_id: selectedSession,
+    },
+  });
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
@@ -130,12 +128,7 @@ export function PlaygroundComponent({
       <AnimatedConditional className="flex shrink-0" isOpen={isFullscreen}>
         <SessionSidebar />
       </AnimatedConditional>
-      <div
-        className={cn(
-          "flex flex-col w-full h-full transition-all duration-300",
-          isFullscreen ? "p-2" : "p-2 pl-0"
-        )}
-      >
+      <div className="flex flex-col w-full h-full transition-all duration-300">
         <PlaygroundHeader />
         <div className="flex flex-grow p-4">
           <ChatView
