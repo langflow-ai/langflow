@@ -20,9 +20,10 @@ class NvidiaIngestComponent(BaseFileComponent):
         # Supported file extensions from https://github.com/NVIDIA/nv-ingest/blob/main/README.md
         VALID_EXTENSIONS = ["pdf", "docx", "pptx", "jpeg", "png", "svg", "tiff", "txt"]
     except ImportError:
-        msg = (
-            "NVIDIA Retriever Extraction (nv-ingest) dependencies missing. "
-            "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
+       msg = (
+            "NVIDIA Retriever Extraction (nv-ingest) is an optional dependency. "
+            "Install with `uv pip install 'langflow[nv-ingest]'` "
+            "(requires Python 3.12>=)"
         )
         VALID_EXTENSIONS = [msg]
 
