@@ -56,7 +56,7 @@ async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
         telemetry_service = get_telemetry_service()
         await telemetry_service.log_exception(exc, context)
     except (httpx.HTTPError, asyncio.QueueFull):
-        logger.warning(f"Failed to log {context} exception to telemetry")
+        await logger.awarning(f"Failed to log {context} exception to telemetry")
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):

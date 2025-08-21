@@ -278,7 +278,7 @@ class DirectoryReader:
         try:
             file_content = await self.aread_file_content(file_path)
         except Exception:  # noqa: BLE001
-            logger.exception(f"Error while reading file {file_path}")
+            await logger.aexception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
         if file_content is None:

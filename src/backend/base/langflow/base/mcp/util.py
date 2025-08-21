@@ -214,7 +214,7 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         try:
             return await client.run_tool(tool_name, arguments=validated.model_dump())
         except Exception as e:
-            logger.error(f"Tool '{tool_name}' execution failed: {e}")
+            await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
             msg = f"Tool '{tool_name}' execution failed: {e}"
             raise ValueError(msg) from e
@@ -264,7 +264,7 @@ def get_unique_name(base_name, max_length, existing_names):
         i += 1
 
 
-async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None) -> Flow | None:
+async def get_flow_snake_case(flow_name: str, user_id: str, session, *, is_action: bool | None = None) -> Flow | None:
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
     stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
     flows = (await session.exec(stmt)).all()
@@ -506,7 +506,7 @@ class MCPSessionManager:
                 break
             except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
                 # Handle common recoverable errors without stopping the cleanup loop
-                logger.warning(f"Error in periodic cleanup: {e}")
+                await logger.awarning(f"Error in periodic cleanup: {e}")
 
     async def _cleanup_idle_sessions(self):
         """Clean up sessions that have been idle for too long."""
@@ -523,7 +523,7 @@ class MCPSessionManager:
 
             # Clean up idle sessions
             for session_id in sessions_to_remove:
-                logger.info(f"Cleaning up idle session {session_id} for server {server_key}")
+                await logger.ainfo(f"Cleaning up idle session {session_id} for server {server_key}")
                 await self._cleanup_session_by_id(server_key, session_id)
 
             # Remove server entry if no sessions left
@@ -561,7 +561,7 @@ class MCPSessionManager:
             # Use a shorter timeout for the connectivity test to fail fast
             response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
         except (asyncio.TimeoutError, ConnectionError, OSError, ValueError) as e:
-            logger.debug(f"Session connectivity test failed (standard error): {e}")
+            await logger.adebug(f"Session connectivity test failed (standard error): {e}")
             return False
         except Exception as e:
             # Handle MCP-specific errors that might not be in the standard list
@@ -574,27 +574,27 @@ class MCPSessionManager:
                 or "Transport closed" in error_str
                 or "Stream closed" in error_str
             ):
-                logger.debug(f"Session connectivity test failed (MCP connection error): {e}")
+                await logger.adebug(f"Session connectivity test failed (MCP connection error): {e}")
                 return False
             # Re-raise unexpected errors
-            logger.warning(f"Unexpected error in connectivity test: {e}")
+            await logger.awarning(f"Unexpected error in connectivity test: {e}")
             raise
         else:
             # Validate that we got a meaningful response
             if response is None:
-                logger.debug("Session connectivity test failed: received None response")
+                await logger.adebug("Session connectivity test failed: received None response")
                 return False
             try:
                 # Check if we can access the tools list (even if empty)
                 tools = getattr(response, "tools", None)
                 if tools is None:
-                    logger.debug("Session connectivity test failed: no tools attribute in response")
+                    await logger.adebug("Session connectivity test failed: no tools attribute in response")
                     return False
             except (AttributeError, TypeError) as e:
-                logger.debug(f"Session connectivity test failed while validating response: {e}")
+                await logger.adebug(f"Session connectivity test failed while validating response: {e}")
                 return False
             else:
-                logger.debug(f"Session connectivity test passed: found {len(tools)} tools")
+                await logger.adebug(f"Session connectivity test passed: found {len(tools)} tools")
                 return True
 
     async def get_session(self, context_id: str, connection_params, transport_type: str):
@@ -625,32 +625,32 @@ class MCPSessionManager:
 
                 # Quick health check
                 if await self._validate_session_connectivity(session):
-                    logger.debug(f"Reusing existing session {session_id} for server {server_key}")
+                    await logger.adebug(f"Reusing existing session {session_id} for server {server_key}")
                     # record mapping & bump ref-count for backwards compatibility
                     self._context_to_session[context_id] = (server_key, session_id)
                     self._session_refcount[(server_key, session_id)] = (
                         self._session_refcount.get((server_key, session_id), 0) + 1
                     )
                     return session
-                logger.info(f"Session {session_id} for server {server_key} failed health check, cleaning up")
+                await logger.ainfo(f"Session {session_id} for server {server_key} failed health check, cleaning up")
                 await self._cleanup_session_by_id(server_key, session_id)
             else:
                 # Task is done, clean up
-                logger.info(f"Session {session_id} for server {server_key} task is done, cleaning up")
+                await logger.ainfo(f"Session {session_id} for server {server_key} task is done, cleaning up")
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Check if we've reached the maximum number of sessions for this server
         if len(sessions) >= MAX_SESSIONS_PER_SERVER:
             # Remove the oldest session
             oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
-            logger.info(
+            await logger.ainfo(
                 f"Maximum sessions reached for server {server_key}, removing oldest session {oldest_session_id}"
             )
             await self._cleanup_session_by_id(server_key, oldest_session_id)
 
         # Create new session
         session_id = f"{server_key}_{len(sessions)}"
-        logger.info(f"Creating new session {session_id} for server {server_key}")
+        await logger.ainfo(f"Creating new session {session_id} for server {server_key}")
 
         if transport_type == "stdio":
             session, task = await self._create_stdio_session(session_id, connection_params)
@@ -700,7 +700,7 @@ class MCPSessionManager:
                         try:
                             await event.wait()
                         except asyncio.CancelledError:
-                            logger.info(f"Session {session_id} is shutting down")
+                            await logger.ainfo(f"Session {session_id} is shutting down")
             except Exception as e:  # noqa: BLE001
                 if not session_future.done():
                     session_future.set_exception(e)
@@ -723,7 +723,7 @@ class MCPSessionManager:
                     await task
             self._background_tasks.discard(task)
             msg = f"Timeout waiting for STDIO session {session_id} to initialize"
-            logger.error(msg)
+            await logger.aerror(msg)
             raise ValueError(msg) from timeout_err
 
         return session, task
@@ -759,7 +759,7 @@ class MCPSessionManager:
                         try:
                             await event.wait()
                         except asyncio.CancelledError:
-                            logger.info(f"Session {session_id} is shutting down")
+                            await logger.ainfo(f"Session {session_id} is shutting down")
             except Exception as e:  # noqa: BLE001
                 if not session_future.done():
                     session_future.set_exception(e)
@@ -782,7 +782,7 @@ class MCPSessionManager:
                     await task
             self._background_tasks.discard(task)
             msg = f"Timeout waiting for SSE session {session_id} to initialize"
-            logger.error(msg)
+            await logger.aerror(msg)
             raise ValueError(msg) from timeout_err
 
         return session, task
@@ -813,9 +813,9 @@ class MCPSessionManager:
                 if hasattr(session, "aclose"):
                     try:
                         await session.aclose()
-                        logger.debug("Successfully closed session %s using aclose()", session_id)
+                        await logger.adebug("Successfully closed session %s using aclose()", session_id)
                     except Exception as e:  # noqa: BLE001
-                        logger.debug("Error closing session %s with aclose(): %s", session_id, e)
+                        await logger.adebug("Error closing session %s with aclose(): %s", session_id, e)
 
                 # If no aclose, try regular close method
                 elif hasattr(session, "close"):
@@ -824,18 +824,20 @@ class MCPSessionManager:
                         if inspect.iscoroutinefunction(session.close):
                             # It's an async method
                             await session.close()
-                            logger.debug("Successfully closed session %s using async close()", session_id)
+                            await logger.adebug("Successfully closed session %s using async close()", session_id)
                         else:
                             # Try calling it and check if result is awaitable
                             close_result = session.close()
                             if inspect.isawaitable(close_result):
                                 await close_result
-                                logger.debug("Successfully closed session %s using awaitable close()", session_id)
+                                await logger.adebug(
+                                    "Successfully closed session %s using awaitable close()", session_id
+                                )
                             else:
                                 # It's a synchronous close
-                                logger.debug("Successfully closed session %s using sync close()", session_id)
+                                await logger.adebug("Successfully closed session %s using sync close()", session_id)
                     except Exception as e:  # noqa: BLE001
-                        logger.debug("Error closing session %s with close(): %s", session_id, e)
+                        await logger.adebug("Error closing session %s with close(): %s", session_id, e)
 
             # Cancel the background task which will properly close the session
             if "task" in session_info:
@@ -845,9 +847,9 @@ class MCPSessionManager:
                     try:
                         await task
                     except asyncio.CancelledError:
-                        logger.info(f"Cancelled task for session {session_id}")
+                        await logger.ainfo(f"Cancelled task for session {session_id}")
         except Exception as e:  # noqa: BLE001
-            logger.warning(f"Error cleaning up session {session_id}: {e}")
+            await logger.awarning(f"Error cleaning up session {session_id}: {e}")
         finally:
             # Remove from sessions dict
             del sessions[session_id]
@@ -900,7 +902,7 @@ class MCPSessionManager:
         """
         mapping = self._context_to_session.get(context_id)
         if not mapping:
-            logger.debug(f"No session mapping found for context_id {context_id}")
+            await logger.adebug(f"No session mapping found for context_id {context_id}")
             return
 
         server_key, session_id = mapping
@@ -1031,7 +1033,7 @@ class MCPStdioClient:
 
         for attempt in range(max_retries):
             try:
-                logger.debug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
+                await logger.adebug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
@@ -1041,7 +1043,7 @@ class MCPStdioClient:
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
-                logger.warning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
+                await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
                 # Import specific MCP error types for detection
                 try:
@@ -1056,14 +1058,14 @@ class MCPStdioClient:
 
                 # If we're getting the same error type repeatedly, don't retry
                 if last_error_type == current_error_type and attempt > 0:
-                    logger.error(f"Repeated {current_error_type} error for tool '{tool_name}', not retrying")
+                    await logger.aerror(f"Repeated {current_error_type} error for tool '{tool_name}', not retrying")
                     break
 
                 last_error_type = current_error_type
 
                 # If it's a connection error (ClosedResourceError or MCP connection closed) and we have retries left
                 if (is_closed_resource_error or is_mcp_connection_error) and attempt < max_retries - 1:
-                    logger.warning(
+                    await logger.awarning(
                         f"MCP session connection issue for tool '{tool_name}', retrying with fresh session..."
                     )
                     # Clean up the dead session
@@ -1076,7 +1078,7 @@ class MCPStdioClient:
 
                 # If it's a timeout error and we have retries left, try once more
                 if is_timeout_error and attempt < max_retries - 1:
-                    logger.warning(f"Tool '{tool_name}' timed out, retrying...")
+                    await logger.awarning(f"Tool '{tool_name}' timed out, retrying...")
                     # Don't clean up session for timeouts, might just be a slow response
                     await asyncio.sleep(1.0)
                     continue
@@ -1089,7 +1091,7 @@ class MCPStdioClient:
                     or is_timeout_error
                 ):
                     msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
-                    logger.error(msg)
+                    await logger.aerror(msg)
                     # Clean up failed session from cache
                     if self._session_context and self._component_cache:
                         cache_key = f"mcp_session_stdio_{self._session_context}"
@@ -1099,12 +1101,12 @@ class MCPStdioClient:
                 # Re-raise unexpected errors
                 raise
             else:
-                logger.debug(f"Tool '{tool_name}' completed successfully")
+                await logger.adebug(f"Tool '{tool_name}' completed successfully")
                 return result
 
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
-        logger.error(msg)
+        await logger.aerror(msg)
         raise ValueError(msg)
 
     async def disconnect(self):
@@ -1213,7 +1215,7 @@ class MCPSseClient:
                     return response.headers.get("Location", url)
                 # Don't treat 404 as an error here - let the main connection handle it
         except (httpx.RequestError, httpx.HTTPError) as e:
-            logger.warning(f"Error checking redirects: {e}")
+            await logger.awarning(f"Error checking redirects: {e}")
         return url
 
     async def _connect_to_server(
@@ -1336,7 +1338,7 @@ class MCPSseClient:
 
         for attempt in range(max_retries):
             try:
-                logger.debug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
+                await logger.adebug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
@@ -1349,7 +1351,7 @@ class MCPSseClient:
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
-                logger.warning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
+                await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
                 # Import specific MCP error types for detection
                 try:
@@ -1367,14 +1369,14 @@ class MCPSseClient:
 
                 # If we're getting the same error type repeatedly, don't retry
                 if last_error_type == current_error_type and attempt > 0:
-                    logger.error(f"Repeated {current_error_type} error for tool '{tool_name}', not retrying")
+                    await logger.aerror(f"Repeated {current_error_type} error for tool '{tool_name}', not retrying")
                     break
 
                 last_error_type = current_error_type
 
                 # If it's a connection error (ClosedResourceError or MCP connection closed) and we have retries left
                 if (is_closed_resource_error or is_mcp_connection_error) and attempt < max_retries - 1:
-                    logger.warning(
+                    await logger.awarning(
                         f"MCP session connection issue for tool '{tool_name}', retrying with fresh session..."
                     )
                     # Clean up the dead session
@@ -1387,7 +1389,7 @@ class MCPSseClient:
 
                 # If it's a timeout error and we have retries left, try once more
                 if is_timeout_error and attempt < max_retries - 1:
-                    logger.warning(f"Tool '{tool_name}' timed out, retrying...")
+                    await logger.awarning(f"Tool '{tool_name}' timed out, retrying...")
                     # Don't clean up session for timeouts, might just be a slow response
                     await asyncio.sleep(1.0)
                     continue
@@ -1400,7 +1402,7 @@ class MCPSseClient:
                     or is_timeout_error
                 ):
                     msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
-                    logger.error(msg)
+                    await logger.aerror(msg)
                     # Clean up failed session from cache
                     if self._session_context and self._component_cache:
                         cache_key = f"mcp_session_sse_{self._session_context}"
@@ -1410,12 +1412,12 @@ class MCPSseClient:
                 # Re-raise unexpected errors
                 raise
             else:
-                logger.debug(f"Tool '{tool_name}' completed successfully")
+                await logger.adebug(f"Tool '{tool_name}' completed successfully")
                 return result
 
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
-        logger.error(msg)
+        await logger.aerror(msg)
         raise ValueError(msg)
 
     async def disconnect(self):

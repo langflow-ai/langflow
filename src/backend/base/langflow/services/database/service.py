@@ -219,7 +219,7 @@ class DatabaseService(Service):
             if not orphaned_flows:
                 return
 
-            logger.debug("Assigning orphaned flows to the default superuser")
+            await logger.adebug("Assigning orphaned flows to the default superuser")
 
             # Retrieve superuser
             superuser_username = settings_service.auth_settings.SUPERUSER
@@ -227,7 +227,7 @@ class DatabaseService(Service):
 
             if not superuser:
                 error_message = "Default superuser not found"
-                logger.error(error_message)
+                await logger.aerror(error_message)
                 raise RuntimeError(error_message)
 
             # Get existing flow names for the superuser
@@ -244,7 +244,7 @@ class DatabaseService(Service):
 
             # Commit changes
             await session.commit()
-            logger.debug("Successfully assigned orphaned flows to the default superuser")
+            await logger.adebug("Successfully assigned orphaned flows to the default superuser")
 
     @staticmethod
     def _generate_unique_flow_name(original_name: str, existing_names: set[str]) -> str:
