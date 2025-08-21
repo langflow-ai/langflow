@@ -2,12 +2,9 @@ import json
 import re
 
 from langchain_core.tools import StructuredTool
-from langchain.agents.structured_chat.base import create_structured_chat_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from pydantic import ValidationError
 
 from langflow.base.agents.agent import LCToolsAgentComponent
-from langflow.helpers.base_model import build_model_from_schema
 from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
@@ -23,7 +20,8 @@ from langflow.components.langchain_utilities.tool_calling import ToolCallingAgen
 from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
 from langflow.field_typing import Tool
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TableInput
+from langflow.helpers.base_model import build_model_from_schema
+from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, TableInput
 from langflow.logging import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
@@ -57,45 +55,9 @@ class AgentComponent(ToolCallingAgentComponent):
     ]
 
     inputs = [
-        DropdownInput(
-            name="agent_llm",
-            display_name="Model Provider",
-            info="The provider of the language model that the agent will use to generate responses.",
-            options=[*MODEL_PROVIDERS_LIST, "Custom"],
-            value="OpenAI",
-            real_time_refresh=True,
-            input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
-        ),
-        *openai_inputs_filtered,
-        MultilineInput(
-            name="system_prompt",
-            display_name="Agent Instructions",
-            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
-            advanced=False,
-        ),
-        IntInput(
-            name="n_messages",
-            display_name="Number of Chat History Messages",
-            value=100,
-            info="Number of chat history messages to retrieve.",
-            advanced=True,
-            show=True,
-        ),
-        *LCToolsAgentComponent._base_inputs,
-        # removed memory inputs from agent component
-        # *memory_inputs,
-        BoolInput(
-            name="add_current_date_tool",
-            display_name="Current Date",
-            advanced=True,
-            info="If true, will add a tool to the agent that returns the current date.",
-            value=True,
-        ),
         MultilineInput(
             name="format_instructions",
-            display_name="Format Instructions (Advanced)",
+            display_name="Output Format Instructions",
             info="Generic Template for structured output formatting. Valid only with Structured response.",
             value=(
                 "You are an AI that extracts structured JSON objects from unstructured text. "
@@ -108,16 +70,13 @@ class AgentComponent(ToolCallingAgentComponent):
             ),
             advanced=True,
         ),
-        MessageTextInput(
-            name="schema_name",
-            display_name="Schema Name",
-            info="Provide a name for the output data schema.",
-            advanced=True,
-        ),
         TableInput(
             name="output_schema",
             display_name="Output Schema",
-            info="Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
+            info=(
+                "Schema Validation: Define the structure and data types for structured output. "
+                "No validation if no output schema."
+            ),
             advanced=True,
             required=False,
             value=[],
@@ -156,6 +115,42 @@ class AgentComponent(ToolCallingAgentComponent):
                     "edit_mode": EditMode.INLINE,
                 },
             ],
+        ),
+        DropdownInput(
+            name="agent_llm",
+            display_name="Model Provider",
+            info="The provider of the language model that the agent will use to generate responses.",
+            options=[*MODEL_PROVIDERS_LIST, "Custom"],
+            value="OpenAI",
+            real_time_refresh=True,
+            input_types=[],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
+        ),
+        *openai_inputs_filtered,
+        MultilineInput(
+            name="system_prompt",
+            display_name="Agent Instructions",
+            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
+            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            advanced=False,
+        ),
+        IntInput(
+            name="n_messages",
+            display_name="Number of Chat History Messages",
+            value=100,
+            info="Number of chat history messages to retrieve.",
+            advanced=True,
+            show=True,
+        ),
+        *LCToolsAgentComponent._base_inputs,
+        # removed memory inputs from agent component
+        # *memory_inputs,
+        BoolInput(
+            name="add_current_date_tool",
+            display_name="Current Date",
+            advanced=True,
+            info="If true, will add a tool to the agent that returns the current date.",
+            value=True,
         ),
     ]
     outputs = [
@@ -203,7 +198,6 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Store result for potential JSON output
             self._agent_result = result
-            # return result
 
         except (ValueError, TypeError, KeyError) as e:
             logger.error(f"{type(e).__name__}: {e!s}")
@@ -211,31 +205,9 @@ class AgentComponent(ToolCallingAgentComponent):
         except ExceptionWithMessageError as e:
             logger.error(f"ExceptionWithMessageError occurred: {e}")
             raise
-        except Exception as e:
-            logger.error(f"Unexpected error: {e!s}")
-            raise
+        # Avoid catching blind Exception; let truly unexpected exceptions propagate
         else:
             return result
-
-    def create_structured_agent_runnable(self):
-        """Create structured chat agent for JSON output with schema validation."""
-        # Build the structured chat agent system prompt
-        messages = [
-            (
-                "system",
-                "{system_prompt}\n\nYou have access to the following tools:\n{tools}\n\nTool names: {tool_names}",
-            ),
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}"),
-        ]
-        prompt = ChatPromptTemplate.from_messages(messages)
-        self.validate_tool_names()
-        try:
-            return create_structured_chat_agent(self.llm, self.tools or [], prompt)
-        except NotImplementedError as e:
-            message = f"{self.display_name} does not support structured chat. Please try using a compatible model."
-            raise NotImplementedError(message) from e
 
     def _preprocess_schema(self, schema):
         """Preprocess schema to ensure correct data types for build_model_from_schema."""
@@ -274,6 +246,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
         # If no output schema provided, return parsed JSON without validation
         if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
+            logger.debug("No output schema provided, returning parsed JSON without validation")
             return json_data
 
         # Use BaseModel validation with schema
@@ -304,7 +277,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 logger.warning(f"Validation error: {e}")
                 return [{"data": json_data, "validation_error": str(e)}]
 
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             logger.error(f"Error building structured output: {e}")
             # Fallback to parsed JSON without validation
             return json_data
@@ -334,7 +307,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     schema_dict = output_model.model_json_schema()
                     schema_info = f"JSON schema:\n{json.dumps(schema_dict, indent=2)}"
                     system_components.append(schema_info)
-                except Exception as e:
+                except (ValidationError, ValueError, TypeError, KeyError) as e:
                     logger.error(f"Could not build schema for prompt: {e}", exc_info=True)
 
             # Combine all components
@@ -350,13 +323,13 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Create and run structured chat agent
             try:
-                structured_agent = self.create_structured_agent_runnable()
-            except Exception as e:
+                structured_agent = self.create_agent_runnable()
+            except (NotImplementedError, ValueError, TypeError) as e:
                 logger.error(f"Error with structured chat agent: {e}")
                 raise
             try:
                 result = await self.run_agent(structured_agent)
-            except Exception as e:
+            except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
                 logger.error(f"Error with structured agent result: {e}")
                 raise
 
@@ -368,19 +341,11 @@ class AgentComponent(ToolCallingAgentComponent):
             else:
                 content = str(result)
 
-        except Exception as e:
-            logger.error(f"Error with structured chat agent: {e}, Response: {result}")
-            raise
-            # # Fallback to regular agent
-            # if not hasattr(self, "_agent_result"):
-            #     await self.message_response()
-            # result = self._agent_result
-            # if hasattr(result, "content"):
-            #     content = result.content
-            # elif hasattr(result, "text"):
-            #     content = result.text
-            # else:
-            #     content = str(result)
+        except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
+            logger.error(f"Error with structured chat agent: {e}")
+            # Fallback to regular agent
+            content_str = "No content returned from agent"
+            return Data(data={"content": content_str, "error": str(e)})
 
         # Process with structured output validation
         try:
@@ -391,11 +356,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 if len(structured_output) == 1:
                     return Data(data=structured_output[0])
                 return Data(data={"results": structured_output})
-            elif isinstance(structured_output, dict):
+            if isinstance(structured_output, dict):
                 return Data(data=structured_output)
             return Data(data={"content": content})
 
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             logger.error(f"Error in structured output processing: {e}")
             return Data(data={"content": content, "error": str(e)})
 
@@ -427,7 +392,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
-        except Exception as e:
+        except (AttributeError, ValueError, TypeError, RuntimeError) as e:
             logger.error(f"Error building {self.agent_llm} language model: {e!s}")
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
