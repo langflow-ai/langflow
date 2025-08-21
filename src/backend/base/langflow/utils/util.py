@@ -3,7 +3,7 @@ import importlib
 import inspect
 import json
 import re
-from functools import wraps
+from functools import lru_cache, wraps
 from pathlib import Path
 from typing import Any
 
@@ -27,29 +27,33 @@ def remove_ansi_escape_codes(text):
 
 
 def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_function: bool = False):
-    classes = [item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()]
-
-    # Raise error if name is not in chains
-    if name not in classes:
+    # Avoid building a list for membership check; use set comprehension
+    # Using generator with any() for early exit
+    if not any(item.__annotations__["return"].__name__ == name for item in type_to_loader_dict.values()):
         msg = f"{name} not found"
         raise ValueError(msg)
 
+    # Iterate only once, don't extract .__annotations__["return"] repeatedly
     for _type, v in type_to_loader_dict.items():
-        if v.__annotations__["return"].__name__ == name:
-            class_ = v.__annotations__["return"]
-
-            # Get the docstring
-            docs = parse(class_.__doc__)
+        cls_return = v.__annotations__["return"]
+        if cls_return.__name__ == name:
+            class_ = cls_return
+            # Cache parse by docstring string (None-safe)
+            docstr = class_.__doc__ or ""
+            docs = _parse_docstring_cached(docstr)
 
             variables = {"_type": _type}
-            for class_field_items, value in class_.model_fields.items():
+            # Using tuple assignment to avoid repeated attribute lookups
+            model_fields = class_.model_fields
+            for class_field_items, value in model_fields.items():
                 if class_field_items == "callback_manager":
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
                     if name_ == "default_factory":
                         try:
-                            variables[class_field_items]["default"] = get_default_factory(
+                            # Use cached factory function
+                            variables[class_field_items]["default"] = _get_default_factory_cached(
                                 module=class_.__base__.__module__, function=value_
                             )
                         except Exception:  # noqa: BLE001
@@ -58,11 +62,12 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_fu
                     elif name_ != "name":
                         variables[class_field_items][name_] = value_
 
+                # docs.params is a dict, so .get is fine
                 variables[class_field_items]["placeholder"] = docs.params.get(class_field_items, "")
-            # Adding function to base classes to allow
-            # the output to be a function
-            base_classes = get_base_classes(class_)
+            # Cache base classes per class, adds "Callable" if required (copy to avoid mutating underlying cache)
+            base_classes = _get_base_classes_cached(class_)
             if add_function:
+                base_classes = list(base_classes)
                 base_classes.append("Callable")
 
             return {
@@ -476,4 +481,48 @@ def find_closest_match(string: str, list_of_strings: list[str]) -> str | None:
     closest_match = difflib.get_close_matches(string, list_of_strings, n=1, cutoff=0.2)
     if closest_match:
         return closest_match[0]
+    return None
+
+
+# Memoize parse results by docstring
+@lru_cache(maxsize=128)
+def _parse_docstring_cached(doc: str):
+    return parse(doc)
+
+
+# Memoize base class computation by class object
+@lru_cache(maxsize=128)
+def _get_base_classes_cached(cls):
+    if hasattr(cls, "__bases__") and cls.__bases__:
+        bases = cls.__bases__
+        result = []
+        for base in bases:
+            if any(_type in base.__module__ for _type in ["pydantic", "abc"]):
+                continue
+            result.append(base.__name__)
+            base_classes = _get_base_classes_cached(base)
+            for base_class in base_classes:
+                if base_class not in result:
+                    result.append(base_class)
+    else:
+        result = [cls.__name__]
+    if not result:
+        result = [cls.__name__]
+    return list({*result, cls.__name__})
+
+
+# Memoize default factory lookup by (module,function) string
+@lru_cache(maxsize=32)
+def _get_default_factory_cached(module: str, function: str):
+    pattern = r"<function (\w+)>"
+    if match := re.search(pattern, function):
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+            )
+            warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+            imported_module = importlib.import_module(module)
+            return getattr(imported_module, match[1])()
     return None
