@@ -1,5 +1,4 @@
 import type React from "react";
-import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
   DropdownMenu,
@@ -8,10 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NEW_SESSION_NAME } from "@/constants/constants";
-import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import useFlowStore from "@/stores/flowStore";
-import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useGetAddSessions } from "../../../hooks/use-get-add-sessions";
 import { SessionItem } from "./session-manager-item";
 import { SessionMenuItem } from "./session-menu-item";
@@ -23,7 +19,8 @@ interface SessionManagerDropdownProps {
 export const SessionManagerDropdown = ({
   children,
 }: SessionManagerDropdownProps) => {
-  const { sessions, addNewSession } = useGetAddSessions();
+  const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
+  const { sessions, addNewSession } = useGetAddSessions({ flowId });
 
   return (
     <DropdownMenu>
