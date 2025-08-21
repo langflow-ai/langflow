@@ -252,7 +252,7 @@ class LCModelComponent(Component):
             if stream:
                 lf_message, result = await self._handle_stream(runnable, inputs)
             else:
-                message = runnable.invoke(inputs)
+                message = await runnable.ainvoke(inputs)
                 result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
@@ -288,7 +288,7 @@ class LCModelComponent(Component):
             else:
                 session_id = None
             model_message = Message(
-                text=runnable.stream(inputs),
+                text=runnable.astream(inputs),
                 sender=MESSAGE_SENDER_AI,
                 sender_name="AI",
                 properties={"icon": self.icon, "state": "partial"},
@@ -298,7 +298,7 @@ class LCModelComponent(Component):
             lf_message = await self.send_message(model_message)
             result = lf_message.text
         else:
-            message = runnable.invoke(inputs)
+            message = await runnable.ainvoke(inputs)
             result = message.content if hasattr(message, "content") else message
         return lf_message, result
 
