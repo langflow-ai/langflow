@@ -38,18 +38,13 @@ MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
 
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
-    description: str = (
-        "Define the agent's instructions, then enter a task to complete using tools."
-    )
+    description: str = "Define the agent's instructions, then enter a task to complete using tools."
     documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
     beta = False
     name = "Agent"
 
-    memory_inputs = [
-        set_advanced_true(component_input)
-        for component_input in MemoryComponent().inputs
-    ]
+    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
     openai_inputs_filtered = [
@@ -137,9 +132,7 @@ class AgentComponent(ToolCallingAgentComponent):
             if self.add_current_date_tool:
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
-                current_date_tool = (
-                    await CurrentDateComponent(**self.get_base_args()).to_toolkit()
-                ).pop(0)
+                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
                 if not isinstance(current_date_tool, StructuredTool):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     raise TypeError(msg)
@@ -218,9 +211,7 @@ class AgentComponent(ToolCallingAgentComponent):
             .retrieve_messages()
         )
         return [
-            message
-            for message in messages
-            if getattr(message, "id", None) != getattr(self.input_value, "id", None)
+            message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
 
     def get_llm(self):
@@ -316,9 +307,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     self.delete_fields(build_config, fields)
 
                 # Add provider-specific fields
-                if field_value == "OpenAI" and not any(
-                    field in build_config for field in fields_to_add
-                ):
+                if field_value == "OpenAI" and not any(field in build_config for field in fields_to_add):
                     build_config.update(fields_to_add)
                 else:
                     build_config.update(fields_to_add)
@@ -335,9 +324,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],
-                    options_metadata=[
-                        MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())
-                    ]
+                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
                     + [{"icon": "brain"}],
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
@@ -380,12 +367,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config = await update_component_build_config(
                         component_class, build_config, field_value, "model_name"
                     )
-        return dotdict(
-            {
-                k: v.to_dict() if hasattr(v, "to_dict") else v
-                for k, v in build_config.items()
-            }
-        )
+        return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
@@ -399,7 +381,5 @@ class AgentComponent(ToolCallingAgentComponent):
             callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
-            tools = component_toolkit(
-                component=self, metadata=self.tools_metadata
-            ).update_tools_metadata(tools=tools)
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
         return tools
