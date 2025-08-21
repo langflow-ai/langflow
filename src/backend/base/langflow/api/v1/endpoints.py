@@ -184,7 +184,7 @@ async def simple_run_flow_task(
         )
 
     except Exception:  # noqa: BLE001
-        logger.exception(f"Error running flow {flow.id} task")
+        await logger.aexception(f"Error running flow {flow.id} task")
 
 
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
@@ -215,7 +215,7 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
         yield value
         get_time_yield = time.time()
         client_consumed_queue.put_nowait(event_id)
-        logger.debug(
+        await logger.adebug(
             f"consumed event {event_id} "
             f"(time in queue, {get_time - put_time:.4f}, "
             f"client {get_time_yield - get_time:.4f})"
@@ -264,7 +264,7 @@ async def run_flow_generator(
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
     except (ValueError, InvalidChatInputError, SerializationError) as e:
-        logger.error(f"Error running flow: {e}")
+        await logger.aerror(f"Error running flow: {e}")
         event_manager.on_error(data={"error": str(e)})
     finally:
         await event_manager.queue.put((None, None, time.time))
@@ -331,7 +331,7 @@ async def simplified_run_flow(
         )
 
         async def on_disconnect() -> None:
-            logger.debug("Client disconnected, closing tasks")
+            await logger.adebug("Client disconnected, closing tasks")
             main_task.cancel()
 
         return StreamingResponse(
@@ -414,7 +414,7 @@ async def webhook_run_flow(
     """
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
-    logger.debug("Received webhook request")
+    await logger.adebug("Received webhook request")
     error_msg = ""
     try:
         try:
@@ -442,7 +442,7 @@ async def webhook_run_flow(
                 session_id=None,
             )
 
-            logger.debug("Starting background task")
+            await logger.adebug("Starting background task")
             background_tasks.add_task(
                 simple_run_flow_task,
                 flow=flow,
@@ -553,7 +553,7 @@ async def experimental_run_flow(
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
             if "badly formed hexadecimal UUID string" in str(exc):
-                logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
+                await logger.aerror(f"Flow ID {flow_id_str} is not a valid UUID")
                 # This means the Flow ID is not a valid UUID which means it can't find the flow
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -600,7 +600,7 @@ async def experimental_run_flow(
 async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
-    logger.warning(
+    await logger.awarning(
         "The /process endpoint is deprecated and will be removed in a future version. Please use /run instead."
     )
     raise HTTPException(
@@ -643,7 +643,7 @@ async def create_upload_file(
             file_path=file_path,
         )
     except Exception as exc:
-        logger.exception("Error saving file")
+        await logger.aexception("Error saving file")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

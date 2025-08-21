@@ -327,7 +327,7 @@ async def list_knowledge_bases() -> list[KnowledgeBaseInfo]:
 
             except OSError as _:
                 # Log the exception and skip directories that can't be read
-                logger.exception("Error reading knowledge base directory '%s'", kb_dir)
+                await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
 
         # Sort by name alphabetically
@@ -415,7 +415,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest) -> dict[str, o
                 shutil.rmtree(kb_path)
                 deleted_count += 1
             except (OSError, PermissionError) as e:
-                logger.exception("Error deleting knowledge base '%s': %s", kb_name, e)
+                await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:

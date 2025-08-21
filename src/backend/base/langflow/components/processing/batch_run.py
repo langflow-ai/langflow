@@ -148,7 +148,7 @@ class BatchRunComponent(Component):
                 ]
 
             total_rows = len(user_texts)
-            logger.info(f"Processing {total_rows} rows with batch run")
+            await logger.ainfo(f"Processing {total_rows} rows with batch run")
 
             # Prepare the batch of conversations
             conversations = [
@@ -192,14 +192,14 @@ class BatchRunComponent(Component):
 
                 # Log progress
                 if (idx + 1) % max(1, total_rows // 10) == 0:
-                    logger.info(f"Processed {idx + 1}/{total_rows} rows")
+                    await logger.ainfo(f"Processed {idx + 1}/{total_rows} rows")
 
-            logger.info("Batch processing completed successfully")
+            await logger.ainfo("Batch processing completed successfully")
             return DataFrame(rows)
 
         except (KeyError, AttributeError) as e:
             # Handle data structure and attribute access errors
-            logger.error(f"Data processing error: {e!s}")
+            await logger.aerror(f"Data processing error: {e!s}")
             error_row = self._create_base_row(dict.fromkeys(df.columns, ""), model_response="", batch_index=-1)
             self._add_metadata(error_row, success=False, error=str(e))
             return DataFrame([error_row])

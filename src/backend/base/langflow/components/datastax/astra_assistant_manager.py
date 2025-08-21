@@ -186,8 +186,8 @@ class AstraAssistantManager(ComponentWithCache):
                 self.initialized = True
 
     async def process_inputs(self) -> None:
-        logger.info(f"env_set is {self.env_set}")
-        logger.info(self.input_tools)
+        await logger.ainfo(f"env_set is {self.env_set}")
+        await logger.ainfo(self.input_tools)
         tools = []
         tool_obj = None
         if self.input_tools is None:

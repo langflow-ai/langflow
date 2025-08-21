@@ -265,7 +265,7 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    async def get_models(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
+    async def get_models(self, base_url_value: str, *, tool_model_enabled: bool | None = None) -> list[str]:
         """Fetches a list of models from the Ollama API that do not have the "embedding" capability.
 
         Args:
@@ -298,13 +298,13 @@ class ChatOllamaComponent(LCModelComponent):
                 models = tags_response.json()
                 if asyncio.iscoroutine(models):
                     models = await models
-                logger.debug(f"Available models: {models}")
+                await logger.adebug(f"Available models: {models}")
 
                 # Filter models that are NOT embedding models
                 model_ids = []
                 for model in models[self.JSON_MODELS_KEY]:
                     model_name = model[self.JSON_NAME_KEY]
-                    logger.debug(f"Checking model: {model_name}")
+                    await logger.adebug(f"Checking model: {model_name}")
 
                     payload = {"model": model_name}
                     show_response = await client.post(show_url, json=payload)
@@ -313,7 +313,7 @@ class ChatOllamaComponent(LCModelComponent):
                     if asyncio.iscoroutine(json_data):
                         json_data = await json_data
                     capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
-                    logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
+                    await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
 
                     if self.DESIRED_CAPABILITY in capabilities and (
                         not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities

@@ -486,7 +486,7 @@ async def delete_file(
         raise
     except Exception as e:
         # Log and return a generic server error
-        logger.error("Error deleting file %s: %s", file_id, e)
+        await logger.aerror("Error deleting file %s: %s", file_id, e)
         raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
     return {"detail": f"File {file_to_delete.name} deleted successfully"}
 

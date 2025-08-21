@@ -78,7 +78,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             for resp in resps:
                 await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
         except Exception:  # noqa: BLE001
-            logger.exception("Error sending response")
+            await logger.aexception("Error sending response")
 
     async def on_tool_error(
         self,

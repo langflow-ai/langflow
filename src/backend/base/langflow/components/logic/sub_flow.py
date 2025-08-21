@@ -40,11 +40,11 @@ class SubFlowComponent(Component):
             try:
                 flow_data = await self.get_flow(field_value)
             except Exception:  # noqa: BLE001
-                logger.exception(f"Error getting flow {field_value}")
+                await logger.aexception(f"Error getting flow {field_value}")
             else:
                 if not flow_data:
                     msg = f"Flow {field_value} not found."
-                    logger.error(msg)
+                    await logger.aerror(msg)
                 else:
                     try:
                         graph = Graph.from_payload(flow_data.data["data"])
@@ -53,7 +53,7 @@ class SubFlowComponent(Component):
                         # Add inputs to the build config
                         build_config = self.add_inputs_to_build_config(inputs, build_config)
                     except Exception:  # noqa: BLE001
-                        logger.exception(f"Error building graph for flow {field_value}")
+                        await logger.aexception(f"Error building graph for flow {field_value}")
 
         return build_config
 

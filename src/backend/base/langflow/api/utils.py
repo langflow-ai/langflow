@@ -119,7 +119,7 @@ async def check_langflow_version(component: StoreComponentCreate) -> None:
     if langflow_version is None:
         raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
     if langflow_version != component.last_tested_version:
-        logger.warning(
+        await logger.awarning(
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
             f"Please update to the latest version ({langflow_version}) and try again."
         )
@@ -371,7 +371,7 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
         user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
 
     except Exception as exc:
-        logger.exception(f"Error getting user for public flow {flow_id}")
+        await logger.aexception(f"Error getting user for public flow {flow_id}")
         raise HTTPException(status_code=403, detail="Flow is not accessible") from exc
 
     if not user:
