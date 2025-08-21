@@ -64,7 +64,7 @@ export default function Dropdown({
   const [openDialog, setOpenDialog] = useState(false);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
-    const nodes = useFlowStore((state) => state.nodes);
+  const nodes = useFlowStore((state) => state.nodes);
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -518,7 +518,9 @@ export default function Dropdown({
               if (dialogInputs?.fields) {
                 setOpenDialog(true);
               } else {
-                handleSourceOptions(sourceOptions?.fields?.data?.node?.name! || value);
+                handleSourceOptions(
+                  sourceOptions?.fields?.data?.node?.name! || value,
+                );
               }
             }}
           >
