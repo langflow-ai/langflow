@@ -76,12 +76,12 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page.getByTestId("canvas_controls_dropdown").click();
 
   await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("canvas_controls_dropdown").click();
 
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
