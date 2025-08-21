@@ -87,7 +87,6 @@ export default function Dropdown({
   // Initialize utilities and constants
 
   const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
-  console.log(sourceOptions, dialogInputs, externalOptions);
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
@@ -266,6 +265,13 @@ export default function Dropdown({
         setOpen(false);
       }
     }
+  };
+
+  const handleSourceOptions = (value: string) => {
+    setOpen(false);
+    handleOnNewValue?.({ value: value });
+    onSelect(value);
+    setWaitingForResponse(true);
   };
 
   const renderLoadingButton = () => (
@@ -497,13 +503,12 @@ export default function Dropdown({
         <CommandGroup className="p-0">
           <CommandItem
             className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-            onSelect={() => {
+            onSelect={(value) => {
               if (dialogInputs?.fields) {
                 // setOpen(false);
                 setOpenDialog(true);
               } else {
-                setOpen(false);
-                setWaitingForResponse(true);
+                handleSourceOptions(sourceOptions?.fields?.data?.node?.name!);
               }
             }}
           >
