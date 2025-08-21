@@ -1,21 +1,21 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { normalizeTimeString } from "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { BorderTrail } from "@/components/core/border-trail";
 import { Button } from "@/components/ui/button";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { BuildStatus } from "@/constants/enums";
-import { normalizeTimeString } from "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   CONTAINER_VARIANTS,
   DISMISS_BUTTON_VARIANTS,
+  getTimeVariants,
   RETRY_BUTTON_VARIANTS,
   STOP_BUTTON_VARIANTS,
-  getTimeVariants,
 } from "./helpers/visual-variants";
 
 export default function FlowBuildingComponent() {
@@ -262,7 +262,7 @@ export default function FlowBuildingComponent() {
                             ),
                             p({ node, ...props }) {
                               return (
-                                <span className="inline-block w-fit max-w-full align-text-top">
+                                <span className="inline-block w-fit max-w-full align-text-top truncate-doubleline">
                                   {props.children}
                                 </span>
                               );

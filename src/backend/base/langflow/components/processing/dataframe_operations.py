@@ -1,14 +1,27 @@
+import pandas as pd
+
 from langflow.custom.custom_component.component import Component
-from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
+from langflow.inputs import SortableListInput
+from langflow.io import (
+    BoolInput,
+    DataFrameInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    StrInput,
+)
+from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
 
 
 class DataFrameOperationsComponent(Component):
     display_name = "DataFrame Operations"
     description = "Perform various operations on a DataFrame."
+    documentation: str = "https://docs.langflow.org/components-processing#dataframe-operations"
     icon = "table"
+    name = "DataFrameOperations"
 
-    # Available operations
     OPERATION_CHOICES = [
         "Add Column",
         "Drop Column",
@@ -19,6 +32,7 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
+        "Drop Duplicates",
     ]
 
     inputs = [
@@ -26,13 +40,27 @@ class DataFrameOperationsComponent(Component):
             name="df",
             display_name="DataFrame",
             info="The input DataFrame to operate on.",
+            required=True,
         ),
-        DropdownInput(
+        SortableListInput(
             name="operation",
             display_name="Operation",
-            options=OPERATION_CHOICES,
+            placeholder="Select Operation",
             info="Select the DataFrame operation to perform.",
+            options=[
+                {"name": "Add Column", "icon": "plus"},
+                {"name": "Drop Column", "icon": "minus"},
+                {"name": "Filter", "icon": "filter"},
+                {"name": "Head", "icon": "arrow-up"},
+                {"name": "Rename Column", "icon": "pencil"},
+                {"name": "Replace Value", "icon": "replace"},
+                {"name": "Select Columns", "icon": "columns"},
+                {"name": "Sort", "icon": "arrow-up-down"},
+                {"name": "Tail", "icon": "arrow-down"},
+                {"name": "Drop Duplicates", "icon": "copy-x"},
+            ],
             real_time_refresh=True,
+            limit=1,
         ),
         StrInput(
             name="column_name",
@@ -45,6 +73,16 @@ class DataFrameOperationsComponent(Component):
             name="filter_value",
             display_name="Filter Value",
             info="The value to filter rows by.",
+            dynamic=True,
+            show=False,
+        ),
+        DropdownInput(
+            name="filter_operator",
+            display_name="Filter Operator",
+            options=["equals", "not equals", "contains", "starts with", "ends with", "greater than", "less than"],
+            value="equals",
+            info="The operator to apply for filtering rows.",
+            advanced=False,
             dynamic=True,
             show=False,
         ),
@@ -111,10 +149,10 @@ class DataFrameOperationsComponent(Component):
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
-        # Hide all dynamic fields by default
         dynamic_fields = [
             "column_name",
             "filter_value",
+            "filter_operator",
             "ascending",
             "new_column_name",
             "new_column_value",
@@ -126,62 +164,120 @@ class DataFrameOperationsComponent(Component):
         for field in dynamic_fields:
             build_config[field]["show"] = False
 
-        # Show relevant fields based on the selected operation
         if field_name == "operation":
-            if field_value == "Filter":
+            # Handle SortableListInput format
+            if isinstance(field_value, list):
+                operation_name = field_value[0].get("name", "") if field_value else ""
+            else:
+                operation_name = field_value or ""
+
+            # If no operation selected, all dynamic fields stay hidden (already set to False above)
+            if not operation_name:
+                return build_config
+
+            if operation_name == "Filter":
                 build_config["column_name"]["show"] = True
                 build_config["filter_value"]["show"] = True
-            elif field_value == "Sort":
+                build_config["filter_operator"]["show"] = True
+            elif operation_name == "Sort":
                 build_config["column_name"]["show"] = True
                 build_config["ascending"]["show"] = True
-            elif field_value == "Drop Column":
+            elif operation_name == "Drop Column":
                 build_config["column_name"]["show"] = True
-            elif field_value == "Rename Column":
+            elif operation_name == "Rename Column":
                 build_config["column_name"]["show"] = True
                 build_config["new_column_name"]["show"] = True
-            elif field_value == "Add Column":
+            elif operation_name == "Add Column":
                 build_config["new_column_name"]["show"] = True
                 build_config["new_column_value"]["show"] = True
-            elif field_value == "Select Columns":
+            elif operation_name == "Select Columns":
                 build_config["columns_to_select"]["show"] = True
-            elif field_value in {"Head", "Tail"}:
+            elif operation_name in {"Head", "Tail"}:
                 build_config["num_rows"]["show"] = True
-            elif field_value == "Replace Value":
+            elif operation_name == "Replace Value":
                 build_config["column_name"]["show"] = True
                 build_config["replace_value"]["show"] = True
                 build_config["replacement_value"]["show"] = True
+            elif operation_name == "Drop Duplicates":
+                build_config["column_name"]["show"] = True
 
         return build_config
 
     def perform_operation(self) -> DataFrame:
-        dataframe_copy = self.df.copy()
-        operation = self.operation
+        df_copy = self.df.copy()
 
-        if operation == "Filter":
-            return self.filter_rows_by_value(dataframe_copy)
-        if operation == "Sort":
-            return self.sort_by_column(dataframe_copy)
-        if operation == "Drop Column":
-            return self.drop_column(dataframe_copy)
-        if operation == "Rename Column":
-            return self.rename_column(dataframe_copy)
-        if operation == "Add Column":
-            return self.add_column(dataframe_copy)
-        if operation == "Select Columns":
-            return self.select_columns(dataframe_copy)
-        if operation == "Head":
-            return self.head(dataframe_copy)
-        if operation == "Tail":
-            return self.tail(dataframe_copy)
-        if operation == "Replace Value":
-            return self.replace_values(dataframe_copy)
-        msg = f"Unsupported operation: {operation}"
+        # Handle SortableListInput format for operation
+        operation_input = getattr(self, "operation", [])
+        if isinstance(operation_input, list) and len(operation_input) > 0:
+            op = operation_input[0].get("name", "")
+        else:
+            op = ""
 
+        # If no operation selected, return original DataFrame
+        if not op:
+            return df_copy
+
+        if op == "Filter":
+            return self.filter_rows_by_value(df_copy)
+        if op == "Sort":
+            return self.sort_by_column(df_copy)
+        if op == "Drop Column":
+            return self.drop_column(df_copy)
+        if op == "Rename Column":
+            return self.rename_column(df_copy)
+        if op == "Add Column":
+            return self.add_column(df_copy)
+        if op == "Select Columns":
+            return self.select_columns(df_copy)
+        if op == "Head":
+            return self.head(df_copy)
+        if op == "Tail":
+            return self.tail(df_copy)
+        if op == "Replace Value":
+            return self.replace_values(df_copy)
+        if op == "Drop Duplicates":
+            return self.drop_duplicates(df_copy)
+        msg = f"Unsupported operation: {op}"
+        logger.error(msg)
         raise ValueError(msg)
 
-    # Existing methods
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
-        return DataFrame(df[df[self.column_name] == self.filter_value])
+        column = df[self.column_name]
+        filter_value = self.filter_value
+
+        # Handle regular DropdownInput format (just a string value)
+        operator = getattr(self, "filter_operator", "equals")  # Default to equals for backward compatibility
+
+        if operator == "equals":
+            mask = column == filter_value
+        elif operator == "not equals":
+            mask = column != filter_value
+        elif operator == "contains":
+            mask = column.astype(str).str.contains(str(filter_value), na=False)
+        elif operator == "starts with":
+            mask = column.astype(str).str.startswith(str(filter_value), na=False)
+        elif operator == "ends with":
+            mask = column.astype(str).str.endswith(str(filter_value), na=False)
+        elif operator == "greater than":
+            try:
+                # Try to convert filter_value to numeric for comparison
+                numeric_value = pd.to_numeric(filter_value)
+                mask = column > numeric_value
+            except (ValueError, TypeError):
+                # If conversion fails, compare as strings
+                mask = column.astype(str) > str(filter_value)
+        elif operator == "less than":
+            try:
+                # Try to convert filter_value to numeric for comparison
+                numeric_value = pd.to_numeric(filter_value)
+                mask = column < numeric_value
+            except (ValueError, TypeError):
+                # If conversion fails, compare as strings
+                mask = column.astype(str) < str(filter_value)
+        else:
+            mask = column == filter_value  # Fallback to equals
+
+        return DataFrame(df[mask])
 
     def sort_by_column(self, df: DataFrame) -> DataFrame:
         return DataFrame(df.sort_values(by=self.column_name, ascending=self.ascending))
@@ -200,7 +296,6 @@ class DataFrameOperationsComponent(Component):
         columns = [col.strip() for col in self.columns_to_select]
         return DataFrame(df[columns])
 
-    # New methods
     def head(self, df: DataFrame) -> DataFrame:
         return DataFrame(df.head(self.num_rows))
 
@@ -210,3 +305,6 @@ class DataFrameOperationsComponent(Component):
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
+
+    def drop_duplicates(self, df: DataFrame) -> DataFrame:
+        return DataFrame(df.drop_duplicates(subset=self.column_name))

@@ -1,4 +1,4 @@
-import { FlowType } from "../flow";
+import type { FlowType } from "../flow";
 
 export type ChatType = { flow: FlowType };
 export type ChatMessageType = {

@@ -17,6 +17,7 @@ from langflow.template.field.base import Output
 class LLMRouterComponent(Component):
     display_name = "LLM Router"
     description = "Routes the input to the most appropriate LLM based on OpenRouter model specifications"
+    documentation: str = "https://docs.langflow.org/components-processing#llm-router"
     icon = "git-branch"
 
     # Constants for magic values

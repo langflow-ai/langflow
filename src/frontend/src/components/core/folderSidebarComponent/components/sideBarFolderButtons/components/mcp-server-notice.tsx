@@ -1,8 +1,8 @@
+import type { FC } from "react";
 import MCPLangflow from "@/assets/MCPLangflow.png";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { FC } from "react";
 
 export const MCPServerNotice: FC<{
   handleDismissDialog: () => void;
@@ -24,7 +24,7 @@ export const MCPServerNotice: FC<{
         </div>
         <img src={MCPLangflow} alt="MCP Notice Modal" className="rounded-xl" />
         <p className="text-sm text-secondary-foreground">
-          Expose flows as actions from clients like Cursor or Claude.
+          Expose flows as tools from clients like Cursor or Claude.
         </p>
       </div>
 

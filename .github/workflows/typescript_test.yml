@@ -127,6 +127,11 @@ jobs:
                 TAGS+=("@database")
                 echo "Added database suite"
               fi
+              if [[ "${{ steps.filter.outputs.mainpage }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq -c '. += ["mainpage"]')
+                TAGS+=("@mainpage")
+                echo "Added mainpage suite"
+              fi
               if [[ "${{ steps.filter.outputs.development }}" == "true" ]]; then
                 SUITES=$(echo $SUITES | jq -c '. += ["development"]')
                 TAGS+=("@development")
@@ -271,7 +276,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: ./src/frontend/package-lock.json
-
       - name: Install Frontend Dependencies
         run: npm ci
         working-directory: ./src/frontend

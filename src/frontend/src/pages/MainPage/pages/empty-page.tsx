@@ -1,3 +1,6 @@
+import { ExternalLink } from "lucide-react";
+import { FaDiscord, FaGithub } from "react-icons/fa";
+import { useShallow } from "zustand/react/shallow";
 import logoDarkPng from "@/assets/logo_dark.png";
 import logoLightPng from "@/assets/logo_light.png";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
@@ -10,9 +13,6 @@ import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { formatNumber } from "@/utils/utils";
-import { ExternalLink } from "lucide-react";
-import { FaDiscord, FaGithub } from "react-icons/fa";
-import { useShallow } from "zustand/react/shallow";
 import useFileDrop from "../hooks/use-on-file-drop";
 
 const EMPTY_PAGE_TITLE = "Welcome to Langflow";

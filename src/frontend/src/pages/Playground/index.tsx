@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { v4 as uuid } from "uuid";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { CustomIOModal } from "@/customization/components/custom-new-modal";
@@ -5,10 +8,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { CookieOptions, getCookie, setCookie } from "@/utils/utils";
-import { useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { v4 as uuid } from "uuid";
+import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
 export default function PlaygroundPage() {
@@ -31,7 +31,7 @@ export default function PlaygroundPage() {
       const flow = await getFlow({ id: id!, public: true });
       return flow;
     } catch (error: any) {
-      console.log(error);
+      console.error(error);
       navigate("/");
     }
   }

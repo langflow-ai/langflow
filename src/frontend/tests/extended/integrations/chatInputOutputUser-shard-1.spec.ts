@@ -71,7 +71,7 @@ test(
 
     // Get URL node ID
     const urlNode = await page.locator(".react-flow__node").first();
-    const urlNodeId = await urlNode.getAttribute("data-id");
+    const _urlNodeId = await urlNode.getAttribute("data-id");
 
     // Add two chat outputs
     await page.getByTestId("sidebar-search-input").click();

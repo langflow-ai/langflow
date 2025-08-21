@@ -1,13 +1,13 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps, TextAreaComponentType } from "../../types";
+import type { InputProps, TextAreaComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
 
 const inputClasses = {
@@ -74,13 +74,14 @@ export default function TextAreaComponent({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [cursor, setCursor] = useState<number | null>(null);
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
     [nodeInformationMetadata?.nodeType],
   );
 
-  const isMCPSSE = useMemo(
+  const _isMCPSSE = useMemo(
     () => nodeInformationMetadata?.nodeType === "mcp_sse",
     [nodeInformationMetadata?.nodeType],
   );
@@ -100,6 +101,13 @@ export default function TextAreaComponent({
     }
   }, [isWebhook, value, nodeInformationMetadata, handleOnNewValue]);
 
+  // Restore cursor position after value changes
+  useEffect(() => {
+    if (cursor !== null && inputRef.current) {
+      inputRef.current.setSelectionRange(cursor, cursor);
+    }
+  }, [cursor, value]);
+
   const getInputClassName = () => {
     return cn(
       inputClasses.base({ isFocused, password: password! }),
@@ -111,6 +119,7 @@ export default function TextAreaComponent({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCursor(e.target.selectionStart);
     handleOnNewValue({ value: e.target.value });
   };
 

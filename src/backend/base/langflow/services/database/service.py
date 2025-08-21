@@ -27,6 +27,7 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
+from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
@@ -155,7 +156,9 @@ class DatabaseService(Service):
                 "check_same_thread": False,
                 "timeout": settings.db_connect_timeout,
             }
-
+        # For PostgreSQL, set the timezone to UTC
+        if settings.database_url and settings.database_url.startswith(("postgresql", "postgres")):
+            return {"options": "-c timezone=utc"}
         return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
@@ -182,14 +185,17 @@ class DatabaseService(Service):
 
     @asynccontextmanager
     async def with_session(self):
-        async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            # Start of Selection
-            try:
-                yield session
-            except exc.SQLAlchemyError as db_exc:
-                logger.error(f"Database error during session scope: {db_exc}")
-                await session.rollback()
-                raise
+        if self.settings_service.settings.use_noop_database:
+            yield NoopSession()
+        else:
+            async with AsyncSession(self.engine, expire_on_commit=False) as session:
+                # Start of Selection
+                try:
+                    yield session
+                except exc.SQLAlchemyError as db_exc:
+                    logger.error(f"Database error during session scope: {db_exc}")
+                    await session.rollback()
+                    raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
@@ -310,7 +316,6 @@ class DatabaseService(Service):
         command.ensure_version(alembic_cfg)
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
-        logger.info("Alembic initialized")
 
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
@@ -336,9 +341,7 @@ class DatabaseService(Service):
                     logger.exception(msg)
                     raise RuntimeError(msg) from exc
             else:
-                logger.info("Alembic initialized")
-
-            logger.info(f"Running DB migrations in {self.script_location}")
+                logger.debug("Alembic initialized")
 
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")

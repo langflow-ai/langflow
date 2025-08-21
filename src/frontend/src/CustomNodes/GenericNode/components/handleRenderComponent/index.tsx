@@ -1,8 +1,9 @@
+import { type Connection, Handle, Position } from "@xyflow/react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { nodeColorsName } from "@/utils/styleUtils";
-import { Connection, Handle, Position } from "@xyflow/react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,
@@ -179,6 +180,12 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
+  const isLocked = useFlowStore(
+    useShallow((state) => state.currentFlow?.locked),
+  );
+
+  const edges = useFlowStore((state) => state.edges);
+
   const {
     setHandleDragging,
     setFilterType,
@@ -261,11 +268,9 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const openHandle = filterOpenHandle || draggingOpenHandle;
     const filterPresent = handleDragging || filterType;
 
-    const connectedEdge = useFlowStore
-      .getState()
-      .edges.find(
-        (edge) => edge.target === nodeId && edge.targetHandle === myId,
-      );
+    const connectedEdge = edges.find(
+      (edge) => edge.target === nodeId && edge.targetHandle === myId,
+    );
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
     const connectedColor = outputType ? nodeColorsName[outputType] : "gray";
 
@@ -339,6 +344,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     colors,
     colorName,
     tooltipTitle,
+    edges,
   ]);
 
   const handleMouseDown = useCallback(
@@ -384,16 +390,10 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     [],
   );
 
-  // Memoize the validation function
-  const validateConnection = useCallback(
-    (connection: any) => isValidConnection(connection),
-    [],
-  );
-
   return (
     <div>
       <ShadTooltip
-        open={openTooltip}
+        open={openTooltip && !isLocked}
         setOpen={setOpenTooltip}
         styleClasses={cn("tooltip-fixed-width custom-scroll nowheel bottom-2")}
         delayDuration={1000}
@@ -414,13 +414,16 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           position={left ? Position.Left : Position.Right}
           id={myId}
           isValidConnection={(connection) =>
-            isValidConnection(connection as Connection)
+            isLocked ? false : isValidConnection(connection as Connection)
           }
           className={cn(
             `group/handle z-50 transition-all`,
             !showNode && "no-show",
           )}
-          style={BASE_HANDLE_STYLES}
+          style={{
+            ...BASE_HANDLE_STYLES,
+            pointerEvents: isLocked ? "none" : "auto",
+          }}
           onClick={handleClick}
           onMouseUp={handleMouseUp}
           onContextMenu={handleContextMenu}

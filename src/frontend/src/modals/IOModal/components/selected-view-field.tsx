@@ -1,7 +1,7 @@
 import { InputOutput } from "@/constants/enums";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
-import { SelectedViewFieldProps } from "../types/selected-view-field";
+import type { SelectedViewFieldProps } from "../types/selected-view-field";
 import IOFieldView from "./IOFieldView/io-field-view";
 import SessionView from "./session-view";
 

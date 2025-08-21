@@ -166,7 +166,7 @@ async def log_transaction(
 
 async def log_vertex_build(
     *,
-    flow_id: str,
+    flow_id: str | UUID,
     vertex_id: str,
     valid: bool,
     params: Any,
@@ -181,9 +181,15 @@ async def log_vertex_build(
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+        try:
+            if isinstance(flow_id, str):
+                flow_id = UUID(flow_id)
+        except ValueError:
+            msg = f"Invalid flow_id passed to log_vertex_build: {flow_id!r}(type: {type(flow_id)})"
+            raise ValueError(msg) from None
 
         vertex_build = VertexBuildBase(
-            flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
+            flow_id=flow_id,
             id=vertex_id,
             valid=valid,
             params=str(params) if params else None,

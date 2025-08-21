@@ -67,12 +67,13 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             node_data["template"]["code"] = latest_template["code"]
             # skip components that are having dynamic values that need to be persisted for templates
 
-            if node_data.get("key") in SKIPPED_COMPONENTS:
+            if node_type in SKIPPED_COMPONENTS:
                 continue
 
             is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in {
                 "Agent",
                 "LanguageModelComponent",
+                "TypeConverterComponent",
             }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
@@ -1015,7 +1016,7 @@ async def initialize_super_user_if_needed() -> None:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
-    logger.info("Super user initialized")
+    logger.debug("Super user initialized")
 
 
 async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:
@@ -1058,32 +1059,45 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 async def sync_flows_from_fs():
     flow_mtimes = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
-    while True:
-        try:
-            async with session_scope() as session:
-                stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
-                flows = (await session.exec(stmt)).all()
-                for flow in flows:
-                    mtime = flow_mtimes.setdefault(flow.id, 0)
-                    path = anyio.Path(flow.fs_path)
-                    try:
-                        if await path.exists():
-                            new_mtime = (await path.stat()).st_mtime
-                            if new_mtime > mtime:
-                                update_data = orjson.loads(await path.read_text(encoding="utf-8"))
-                                try:
-                                    for field_name in ("name", "description", "data", "locked"):
-                                        if new_value := update_data.get(field_name):
-                                            setattr(flow, field_name, new_value)
-                                    if folder_id := update_data.get("folder_id"):
-                                        flow.folder_id = UUID(folder_id)
-                                    await session.commit()
-                                    await session.refresh(flow)
-                                except Exception:  # noqa: BLE001
-                                    logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
-                                flow_mtimes[flow.id] = new_mtime
-                    except Exception:  # noqa: BLE001
-                        logger.exception(f"Error while handling flow file {path}")
-        except Exception:  # noqa: BLE001
-            logger.exception("Error while syncing flows from database")
-        await asyncio.sleep(fs_flows_polling_interval)
+    try:
+        while True:
+            try:
+                async with session_scope() as session:
+                    stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
+                    flows = (await session.exec(stmt)).all()
+                    for flow in flows:
+                        mtime = flow_mtimes.setdefault(flow.id, 0)
+                        path = anyio.Path(flow.fs_path)
+                        try:
+                            if await path.exists():
+                                new_mtime = (await path.stat()).st_mtime
+                                if new_mtime > mtime:
+                                    update_data = orjson.loads(await path.read_text(encoding="utf-8"))
+                                    try:
+                                        for field_name in ("name", "description", "data", "locked"):
+                                            if new_value := update_data.get(field_name):
+                                                setattr(flow, field_name, new_value)
+                                        if folder_id := update_data.get("folder_id"):
+                                            flow.folder_id = UUID(folder_id)
+                                        await session.commit()
+                                        await session.refresh(flow)
+                                    except Exception:  # noqa: BLE001
+                                        logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
+                                    flow_mtimes[flow.id] = new_mtime
+                        except Exception:  # noqa: BLE001
+                            logger.exception(f"Error while handling flow file {path}")
+            except asyncio.CancelledError:
+                logger.debug("Flow sync cancelled")
+                break
+            except (sa.exc.OperationalError, ValueError) as e:
+                if "no active connection" in str(e) or "connection is closed" in str(e):
+                    logger.debug("Database connection lost, assuming shutdown")
+                    break  # Exit gracefully, don't error
+                raise  # Re-raise if it's a real connection problem
+            except Exception:  # noqa: BLE001
+                logger.exception("Error while syncing flows from database")
+                break
+
+            await asyncio.sleep(fs_flows_polling_interval)
+    except asyncio.CancelledError:
+        logger.debug("Flow sync task cancelled")

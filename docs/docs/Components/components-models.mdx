@@ -1,0 +1,145 @@
+---
+title: Language Model
+slug: /components-models
+---
+
+import Icon from "@site/src/components/icon";
+
+**Language Model** components in Langflow generate text using a specified Large Language Model (LLM).
+
+Langflow includes a **Language Model** core component that has built-in support for many LLMs.
+Alternatively, you can use any [additional language model](#additional-language-models) in place of the core **Language Model** component.
+
+## Use Language Model components in a flow
+
+Use **Language Model** components anywhere you would use an LLM in a flow.
+
+These components accept inputs like chat messages, files, and instructions in order to generate a text response.
+The flow must include [**Chat Input and Output** components](/components-io#chat-io) to allow chat-based interactions with the LLM.
+However, you can also use the **Language Model** component for actions that don't emit chat output directly, such as the **Smart Function** component.
+
+The following example uses the **Language Model** core component to create a chatbot flow similar to the **Basic Prompting** template.
+It also explains how you can replace the core component with another LLM.
+
+1. Add the **Language Model** component to your flow.
+
+2. In the **OpenAI API Key** field, enter your OpenAI API key.
+
+    This example uses the default OpenAI model and a built-in Anthropic model to compare responses from different providers.
+    If you want to use a different provider, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+    :::tip My preferred provider or model isn't listed
+    If you want to use a provider or model that isn't built-in to the **Language Model** core component, you can replace this component with another compatible component, as explained in [Additional language models](#additional-language-models).
+    Then, you can continue following these steps to build your flow.
+    :::
+
+3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, and then click **Close**.
+
+4. Add a [**Prompt Template** component](/components-prompts) to your flow.
+
+5. In the **Template** field, enter some instructions for the LLM, such as `You are an expert in geography who is tutoring high school students`.
+
+6. Connect the **Prompt Template** component's output to the **Language Model** component's **System Message** input.
+
+7. Add [**Chat Input** and **Chat Output** components](/components-io#chat-io) to your flow.
+
+8. Connect the **Chat Input** component to the **Language Model** component's **Input**, and then connect the **Language Model** component's **Message** output to the **Chat Output** component.
+
+    ![A basic prompting flow with Language Model, Prompt Template, Chat Input, and Chat Output components](/img/component-language-model.png)
+
+9. Open the **Playground**, and ask a question to chat with the LLM and test the flow, such as `What is the capital of Utah?`.
+
+    <details>
+    <summary>Result</summary>
+
+    The following response is an example of an OpenAI model's response.
+    Your actual response may vary based on the model version at the time of your request, your template, and input.
+
+    ```
+    The capital of Utah is Salt Lake City. It is not only the largest city in the state but also serves as the cultural and economic center of Utah. Salt Lake City was founded in 1847 by Mormon pioneers and is known for its proximity to the Great Salt Lake and its role in the history of the Church of Jesus Christ of Latter-day Saints. For more information, you can refer to sources such as the U.S. Geological Survey or the official state website of Utah.
+    ```
+
+    </details>
+
+10. Try a different model or provider to see how the response changes. For example:
+
+    1. In the **Language Model** component, change the model provider to **Anthropic**.
+    2. Select an Anthropic model, such as Claude 3.5 Haiku.
+    3. Enter an Anthropic API key.
+
+11. Open the **Playground**, ask the same question as you did before, and then compare the content and format of the responses.
+
+    This helps you understand how different models handle the same request so you can choose the best model for your use case.
+    You can also learn more about different models in each model provider's documentation.
+
+    <details>
+    <summary>Result</summary>
+
+    The following response is an example of an Anthropic model's response.
+    Your actual response may vary based on the model version at the time of your request, your template, and input.
+
+    Note that this response is shorter and includes sources, whereas the OpenAI response was more encyclopedic and didn't cite sources.
+
+    ```
+    The capital of Utah is Salt Lake City. It is also the most populous city in the state. Salt Lake City has been the capital of Utah since 1896, when Utah became a state.
+    Sources:
+    Utah State Government Official Website (utah.gov)
+    U.S. Census Bureau
+    Encyclopedia Britannica
+    ```
+
+    </details>
+
+## Language Model parameters
+
+Some **Language Model** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| provider | String | Input parameter. The model provider to use. |
+| model_name | String | Input parameter. The name of the model to use. Options depend on the selected provider. |
+| api_key | SecretString | Input parameter. The API Key for authentication with the selected provider. |
+| input_value | String | Input parameter. The input text to send to the model. |
+| system_message | String | Input parameter. A system message that helps set the behavior of the assistant. |
+| stream | Boolean | Input parameter. Whether to stream the response. Default: false. |
+| temperature | Float | Input parameter. Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1`. |
+| model | LanguageModel | Output parameter. Alternative output type to the default `Message` output. Produces an instance of Chat configured with the specified parameters. See [Language Model output types](#language-model-output-types). |
+
+## Language Model output types
+
+**Language Model** components, including the core component and bundled components, can produce two types of output:
+
+* **Model Response**: The default output type emits the model's generated response as [`Message` data](/data-types#message).
+Use this output type when you want the typical LLM interaction where the LLM produces a text response based on given input.
+
+* **Language Model**: Change the **Language Model** component's output type to [`LanguageModel`](/data-types#languagemodel) when you need to attach an LLM to another component in your flow.
+This is a specific data type that is only required by certain components, such as the [**Smart Function** component](/components-processing#smart-function).
+
+    With this configuration, the **Language Model** component is meant to support an action completed by another component, rather than producing a text response for a standard chat-based interaction.
+    For an example, the **Smart Function** component uses an LLM to create a function from natural language input.
+
+## Additional language models
+
+If your provider or model isn't supported by the **Language Model** core component, additional provider-specific models are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+
+You can use these provider-specific components directly in your flows in the same place that you would use the **Language Model** core component.
+Or, you can connect them to other components that accept a [`LanguageModel`](/data-types#languagemodel) input, such as the **Smart Function** and **Agent** components.
+
+For example, to connect a provider-specific component to the **Agent** component, do the following:
+
+1. In the **Components** menu, search for your preferred model provider, and then add the provider's LLM component to your flow.
+The component may not have `model` in the name.
+For example, Azure OpenAI LLMs are in the [**Azure OpenAI** component](/bundles-azure#azure-openai).
+
+2. Configure the LLM component as needed to connect to your preferred model.
+
+3. Change the LLM component's output type from **Model Response** to **Language Model**.
+The output port changes to a `LanguageModel` port.
+For more information, see [Language Model output types](#language-model-output-types).
+
+2. Add an **Agent** component to the flow, and then set **Model Provider** to **Custom**.
+The **Model Provider** field changes to a **Language Model** field with a `LanguageModel` port.
+
+4. Connect the LLM component's output to the **Agent** component's **Language Model** input.
+The **Agent** component now inherits the LLM settings from the connected LLM component instead of using any of the built-in models.
