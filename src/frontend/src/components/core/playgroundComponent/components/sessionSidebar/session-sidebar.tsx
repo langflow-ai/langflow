@@ -1,9 +1,18 @@
+import { useShallow } from "zustand/react/shallow";
 import { Separator } from "@/components/ui/separator";
+import useFlowStore from "@/stores/flowStore";
+import { useEditSessionInfo } from "../../hooks/use-edit-session-info";
 import { useGetAddSessions } from "../../hooks/use-get-add-sessions";
 import { HeaderButton } from "../playgroundHeader/components/header-button";
 
 export default function SessionSidebar() {
-  const { sessions, addNewSession } = useGetAddSessions();
+  const flowId = useFlowStore(useShallow((state) => state.currentFlow?.id));
+
+  const { sessions, addNewSession } = useGetAddSessions({ flowId });
+  const { isEditing, handleEditSave, handleEditStart, handleDelete } =
+    useEditSessionInfo({
+      flowId,
+    });
 
   return (
     <>
@@ -12,7 +21,7 @@ export default function SessionSidebar() {
           <span className="text-xs font-semibold text-muted-foreground">
             Sessions
           </span>
-          <HeaderButton icon="Plus" />
+          <HeaderButton icon="Plus" onClick={addNewSession} />
         </div>
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
