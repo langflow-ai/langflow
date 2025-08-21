@@ -1,8 +1,10 @@
 import json
-from unittest.mock import MagicMock, patch
+import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
+from langflow.base.data.kb_utils import get_knowledge_bases
 from langflow.components.data.kb_ingest import KBIngestionComponent
 from langflow.schema.data import Data
 
@@ -21,8 +23,43 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         with patch("langflow.components.data.kb_ingest.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
+    class MockUser:
+        def __init__(self, user_id):
+            self.id = user_id
+            self.username = "langflow"
+
     @pytest.fixture
-    def default_kwargs(self, tmp_path):
+    def mock_user_data(self):
+        """Create mock user data that persists for the test function."""
+        mock_uuid = uuid.uuid4()
+        mock_user = self.MockUser(mock_uuid)
+        return {"user_id": mock_uuid, "user": mock_user.username, "user_obj": mock_user}
+
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self, mock_user_data):
+        """Mock the component's user_id attribute and User object."""
+        with (
+            patch.object(KBIngestionComponent, "user_id", mock_user_data["user_id"]),
+            patch(
+                "langflow.components.data.kb_ingest.get_user_by_id",
+                new_callable=AsyncMock,
+                return_value=mock_user_data["user_obj"],
+            ),
+            patch(
+                "langflow.base.data.kb_utils.get_user_by_id",
+                new_callable=AsyncMock,
+                return_value=mock_user_data["user_obj"],
+            ),
+        ):
+            yield
+
+    @pytest.fixture
+    def mock_user_id(self, mock_user_data):
+        """Get the mock user data."""
+        return {"user_id": mock_user_data["user_id"], "user": mock_user_data["user"]}
+
+    @pytest.fixture
+    def default_kwargs(self, tmp_path, mock_user_id):
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
         data_df = pd.DataFrame(
@@ -38,8 +75,8 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
 
         # Create knowledge base directory
         kb_name = "test_kb"
-        kb_path = tmp_path / kb_name
-        kb_path.mkdir(exist_ok=True)
+        kb_path = tmp_path / mock_user_id["user"] / kb_name
+        kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create embedding metadata file
         metadata = {
@@ -206,7 +243,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         assert "text" in metadata["summary"]["vectorized_columns"]
         assert "category" in metadata["summary"]["identifier_columns"]
 
-    def test_convert_df_to_data_objects(self, component_class, default_kwargs):
+    async def test_convert_df_to_data_objects(self, component_class, default_kwargs):
         """Test converting DataFrame to Data objects."""
         component = component_class(**default_kwargs)
         data_df = default_kwargs["input_df"]
@@ -218,7 +255,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
             mock_chroma_instance.get.return_value = {"metadatas": []}
             mock_chroma.return_value = mock_chroma_instance
 
-            data_objects = component._convert_df_to_data_objects(data_df, config_list)
+            data_objects = await component._convert_df_to_data_objects(data_df, config_list)
 
         assert len(data_objects) == 2
         assert all(isinstance(obj, Data) for obj in data_objects)
@@ -230,7 +267,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         assert "category" in first_obj.data
         assert "_id" in first_obj.data
 
-    def test_convert_df_to_data_objects_no_duplicates(self, component_class, default_kwargs):
+    async def test_convert_df_to_data_objects_no_duplicates(self, component_class, default_kwargs):
         """Test converting DataFrame to Data objects with duplicate prevention."""
         default_kwargs["allow_duplicates"] = False
         component = component_class(**default_kwargs)
@@ -251,7 +288,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
                 mock_hash_obj.hexdigest.side_effect = [existing_hash, "different_hash"]
                 mock_hash.return_value = mock_hash_obj
 
-                data_objects = component._convert_df_to_data_objects(data_df, config_list)
+                data_objects = await component._convert_df_to_data_objects(data_df, config_list)
 
         # Should only return one object (second row) since first is duplicate
         assert len(data_objects) == 1
@@ -274,7 +311,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
 
     @patch("langflow.components.data.kb_ingest.json.loads")
     @patch("langflow.components.data.kb_ingest.decrypt_api_key")
-    def test_build_kb_info_success(self, mock_decrypt, mock_json_loads, component_class, default_kwargs):
+    async def test_build_kb_info_success(self, mock_decrypt, mock_json_loads, component_class, default_kwargs):
         """Test successful KB info building."""
         component = component_class(**default_kwargs)
 
@@ -287,7 +324,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
 
         # Mock vector store creation
         with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
-            result = component.build_kb_info()
+            result = await component.build_kb_info()
 
         assert isinstance(result, Data)
         assert "kb_id" in result.data
@@ -295,32 +332,21 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         assert "rows" in result.data
         assert result.data["rows"] == 2
 
-    def test_get_knowledge_bases(self, component_class, default_kwargs, tmp_path):
+    async def test_get_knowledge_bases(self, tmp_path, mock_user_id):
         """Test getting list of knowledge bases."""
-        component = component_class(**default_kwargs)
-
         # Create additional test directories
-        (tmp_path / "kb1").mkdir()
-        (tmp_path / "kb2").mkdir()
-        (tmp_path / ".hidden").mkdir()  # Should be ignored
+        (tmp_path / mock_user_id["user"] / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / mock_user_id["user"] / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
-        kb_list = component._get_knowledge_bases()
+        kb_list = await get_knowledge_bases(tmp_path, user_id=mock_user_id["user_id"])
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
 
-    @patch("langflow.components.data.kb_ingest.Path.exists")
-    def test_get_knowledge_bases_no_path(self, mock_exists, component_class, default_kwargs):
-        """Test getting knowledge bases when path doesn't exist."""
-        component = component_class(**default_kwargs)
-        mock_exists.return_value = False
-
-        kb_list = component._get_knowledge_bases()
-        assert kb_list == []
-
-    def test_update_build_config_new_kb(self, component_class, default_kwargs):
+    async def test_update_build_config_new_kb(self, component_class, default_kwargs):
         """Test updating build config for new knowledge base creation."""
         component = component_class(**default_kwargs)
 
@@ -329,26 +355,24 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_api_key": None,
+            "03_api_key": "abc123",  # Mock API key
         }
 
         # Mock embedding validation
         with (
             patch.object(component, "_build_embeddings") as mock_build_emb,
             patch.object(component, "_save_embedding_metadata"),
-            patch.object(component, "_get_knowledge_bases") as mock_get_kbs,
         ):
             mock_embeddings = MagicMock()
             mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
             mock_build_emb.return_value = mock_embeddings
-            mock_get_kbs.return_value = ["new_test_kb"]
 
-            result = component.update_build_config(build_config, field_value, "knowledge_base")
+            result = await component.update_build_config(build_config, field_value, "knowledge_base")
 
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
 
-    def test_update_build_config_invalid_kb_name(self, component_class, default_kwargs):
+    async def test_update_build_config_invalid_kb_name(self, component_class, default_kwargs):
         """Test updating build config with invalid KB name."""
         component = component_class(**default_kwargs)
 
@@ -360,4 +384,4 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         }
 
         with pytest.raises(ValueError, match="Invalid knowledge base name"):
-            component.update_build_config(build_config, field_value, "knowledge_base")
+            await component.update_build_config(build_config, field_value, "knowledge_base")

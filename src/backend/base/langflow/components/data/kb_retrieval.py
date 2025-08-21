@@ -5,13 +5,16 @@ from typing import Any
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
+from pydantic import SecretStr
 
+from langflow.base.data.kb_utils import get_knowledge_bases
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.deps import get_settings_service
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_settings_service, session_scope
 
 settings = get_settings_service().settings
 knowledge_directory = settings.knowledge_bases_dir
@@ -33,11 +36,7 @@ class KBRetrievalComponent(Component):
             display_name="Knowledge",
             info="Select the knowledge to load data from.",
             required=True,
-            options=[
-                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
-            ]
-            if KNOWLEDGE_BASES_ROOT_PATH.exists()
-            else [],
+            options=[],
             refresh_button=True,
             real_time_refresh=True,
         ),
@@ -79,21 +78,13 @@ class KBRetrievalComponent(Component):
         ),
     ]
 
-    def _get_knowledge_bases(self) -> list[str]:
-        """Retrieve a list of available knowledge bases.
-
-        Returns:
-            A list of knowledge base names.
-        """
-        if not KNOWLEDGE_BASES_ROOT_PATH.exists():
-            return []
-
-        return [str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()]
-
-    def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+    async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
-            build_config["knowledge_base"]["options"] = self._get_knowledge_bases()
+            build_config["knowledge_base"]["options"] = await get_knowledge_bases(
+                KNOWLEDGE_BASES_ROOT_PATH,
+                user_id=self.user_id,  # Use the user_id from the component context
+            )
 
             # If the selected knowledge base is not available, reset it
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
@@ -129,14 +120,11 @@ class KBRetrievalComponent(Component):
 
     def _build_embeddings(self, metadata: dict):
         """Build embedding model from metadata."""
+        runtime_api_key = self.api_key.get_secret_value() if isinstance(self.api_key, SecretStr) else self.api_key
         provider = metadata.get("embedding_provider")
         model = metadata.get("embedding_model")
-        api_key = metadata.get("api_key")
+        api_key = runtime_api_key or metadata.get("api_key")
         chunk_size = metadata.get("chunk_size")
-
-        # If user provided a key in the input, it overrides the stored one.
-        if self.api_key and self.api_key.get_secret_value():
-            api_key = self.api_key.get_secret_value()
 
         # Handle various providers
         if provider == "OpenAI":
@@ -174,13 +162,23 @@ class KBRetrievalComponent(Component):
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
 
-    def get_chroma_kb_data(self) -> DataFrame:
+    async def get_chroma_kb_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base by reading the Chroma collection.
 
         Returns:
             A DataFrame containing the data rows from the knowledge base.
         """
-        kb_path = KNOWLEDGE_BASES_ROOT_PATH / self.knowledge_base
+        # Get the current user
+        async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required for fetching Knowledge Base data."
+                raise ValueError(msg)
+            current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
+            kb_user = current_user.username
+        kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / self.knowledge_base
 
         metadata = self._get_kb_metadata(kb_path)
         if not metadata:
