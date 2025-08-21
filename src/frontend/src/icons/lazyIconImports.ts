@@ -316,7 +316,9 @@ export const lazyIconsMapping = {
   Vectara: () =>
     import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
   VectorStores: () =>
-    import("@/icons/vectorstores").then((mod) => ({ default: mod.VectorStoresIcon })),
+    import("@/icons/vectorstores").then((mod) => ({
+      default: mod.VectorStoresIcon,
+    })),
   VertexAI: () =>
     import("@/icons/VertexAI").then((mod) => ({ default: mod.VertexAIIcon })),
   WatsonxAI: () =>
