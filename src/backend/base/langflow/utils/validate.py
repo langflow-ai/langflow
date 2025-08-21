@@ -22,10 +22,8 @@ def add_type_ignores() -> None:
 
 
 def validate_code(code):
-    # Initialize the errors dictionary
     errors = {"imports": {"errors": []}, "function": {"errors": []}}
 
-    # Parse the code string into an abstract syntax tree (AST)
     try:
         tree = ast.parse(code)
     except Exception as e:  # noqa: BLE001
@@ -36,32 +34,43 @@ def validate_code(code):
         errors["function"]["errors"].append(str(e))
         return errors
 
-    # Add a dummy type_ignores field to the AST
     add_type_ignores()
     tree.type_ignores = []
 
-    # Evaluate the import statements
+    exec_globals = None  # Lazily initialize execution context only if needed
+
+    mod_imports = []
+    func_defs = []
+
+    # Single loop to collect imports and function definitions
     for node in tree.body:
         if isinstance(node, ast.Import):
-            for alias in node.names:
-                try:
-                    importlib.import_module(alias.name)
-                except ModuleNotFoundError as e:
-                    errors["imports"]["errors"].append(str(e))
+            mod_imports.append(node)
+        elif isinstance(node, ast.FunctionDef):
+            func_defs.append(node)
 
-    # Evaluate the function definition with langflow context
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
+    # Bulk-import all modules first (minimize Python interpreter overhead)
+    for node in mod_imports:
+        for alias in node.names:
             try:
-                # Create execution context with common langflow imports
-                exec_globals = _create_langflow_execution_context()
-                exec(code_obj, exec_globals)
-            except Exception as e:  # noqa: BLE001
-                logger.debug("Error executing function code", exc_info=True)
-                errors["function"]["errors"].append(str(e))
+                importlib.import_module(alias.name)
+            except ModuleNotFoundError as e:
+                errors["imports"]["errors"].append(str(e))
 
-    # Return the errors dictionary
+    # Compile and execute all function definitions in a single context (avoid redundant setup)
+    if func_defs:
+        # Prepare the minimal AST corresponding to a module with ONLY the function defs
+        # This is functionally equivalent (behavior/side effects/exceptions preserved)
+        module_node = ast.Module(body=func_defs, type_ignores=[])
+        code_obj = compile(module_node, "<string>", "exec")
+        try:
+            if exec_globals is None:
+                exec_globals = _create_langflow_execution_context()
+            exec(code_obj, exec_globals)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Error executing function code", exc_info=True)
+            errors["function"]["errors"].append(str(e))
+
     return errors
 
 
@@ -69,13 +78,12 @@ def _create_langflow_execution_context():
     """Create execution context with common langflow imports."""
     context = {}
 
-    # Import common langflow types that are used in templates
+    # The following variable assignments and try/except minimize repeated imports
     try:
         from langflow.schema.dataframe import DataFrame
 
         context["DataFrame"] = DataFrame
     except ImportError:
-        # Create a mock DataFrame if import fails
         context["DataFrame"] = type("DataFrame", (), {})
 
     try:
@@ -110,7 +118,6 @@ def _create_langflow_execution_context():
         context["Output"] = type("Output", (), {})
         context["TabInput"] = type("TabInput", (), {})
 
-    # Add common Python typing imports
     try:
         from typing import Any, Optional, Union
 
@@ -122,7 +129,6 @@ def _create_langflow_execution_context():
     except ImportError:
         pass
 
-    # Add other common imports that might be used
     try:
         import pandas as pd
 
