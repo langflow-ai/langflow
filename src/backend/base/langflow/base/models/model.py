@@ -288,7 +288,7 @@ class LCModelComponent(Component):
             else:
                 session_id = None
             model_message = Message(
-                text=await runnable.astream(inputs),
+                text=runnable.astream(inputs),
                 sender=MESSAGE_SENDER_AI,
                 sender_name="AI",
                 properties={"icon": self.icon, "state": "partial"},
