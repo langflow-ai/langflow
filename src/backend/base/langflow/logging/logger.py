@@ -331,5 +331,28 @@ def setup_gunicorn_logger() -> None:
     logging.getLogger("gunicorn.access").propagate = True
 
 
+class InterceptHandler(logging.Handler):
+    """Intercept standard logging messages and route them to structlog."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record by passing it to structlog."""
+        # Get corresponding structlog logger
+        logger_name = record.name
+        structlog_logger = structlog.get_logger(logger_name)
+
+        # Map log levels
+        level = record.levelno
+        if level >= logging.CRITICAL:
+            structlog_logger.critical(record.getMessage())
+        elif level >= logging.ERROR:
+            structlog_logger.error(record.getMessage())
+        elif level >= logging.WARNING:
+            structlog_logger.warning(record.getMessage())
+        elif level >= logging.INFO:
+            structlog_logger.info(record.getMessage())
+        else:
+            structlog_logger.debug(record.getMessage())
+
+
 # Initialize logger - will be reconfigured when configure() is called
 logger = structlog.get_logger()
