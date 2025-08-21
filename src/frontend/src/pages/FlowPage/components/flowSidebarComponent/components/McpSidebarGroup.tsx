@@ -2,75 +2,83 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
-import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
 type McpSidebarGroupProps = {
-  dataFilter: any;
+  mcpComponents?: any[];
   nodeColors: any;
   onDragStart: (
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },
   ) => void;
-  sensitiveSort: (a: any, b: any) => number;
+  openCategories: string[];
+  setOpenCategories: React.Dispatch<React.SetStateAction<string[]>>;
+  mcpServers?: any[];
+  mcpLoading?: boolean;
+  mcpSuccess?: boolean;
+  mcpError?: boolean;
+  search: string;
 };
 
 const McpSidebarGroup = ({
-  dataFilter,
+  mcpComponents,
   nodeColors,
   onDragStart,
-  sensitiveSort,
+  openCategories,
+  setOpenCategories,
+  mcpServers,
+  mcpLoading,
+  mcpSuccess,
+  mcpError,
+  search,
 }: McpSidebarGroupProps) => {
-  const {
-    data: mcpServers,
-    isLoading,
-    isSuccess,
-    isError,
-  } = useGetMCPServers();
+  // Use props instead of hook call
+  const isLoading = mcpLoading;
+  const isSuccess = mcpSuccess;
 
-  const mcpComponent = dataFilter["agents"]["MCPTools"];
+  const categoryName = "MCP";
+  const isOpen = openCategories.includes(categoryName);
 
-  const updatedMcpComponent = (mcpServer: any) => {
-    const updatedMcpComponent = {
-      ...mcpComponent,
-      template: {
-        ...mcpComponent.template,
-        mcp_server: {
-          ...mcpComponent.template.mcp_server,
-          value: mcpServer,
-        },
-      },
-    };
-
-    return updatedMcpComponent;
-  };
+  // Only render if the MCP category is open (when not searching) or if we have search results
+  if (!isOpen && search === "") {
+    return null;
+  }
 
   return (
     <SidebarGroup className="p-3">
+      <SidebarGroupLabel className="cursor-default">
+        MCP Servers
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {isLoading && <span>Loading...</span>}
           {isSuccess &&
-            mcpServers.map((mcpServer, idx) => (
-              <ShadTooltip content={mcpServer.name} side="right" key={idx}>
+            mcpComponents &&
+            mcpComponents.map((mcpComponent, idx) => (
+              <ShadTooltip
+                content={mcpComponent.display_name || mcpComponent.name}
+                side="right"
+                key={idx}
+              >
                 <SidebarDraggableComponent
                   sectionName={"mcp"}
                   apiClass={mcpComponent}
-                  icon={mcpComponent.icon ?? "Unknown"}
+                  icon={mcpComponent.icon ?? "Mcp"}
                   onDragStart={(event) =>
                     onDragStart(event, {
                       type: removeCountFromString("MCP"),
-                      node: updatedMcpComponent(mcpServer),
+                      node: mcpComponent,
                     })
                   }
                   color={nodeColors["agents"]}
                   itemName={"MCP"}
                   error={!!mcpComponent.error}
-                  display_name={mcpServer.name}
+                  display_name={mcpComponent.display_name}
                   official={mcpComponent.official === false ? false : true}
                   beta={mcpComponent.beta ?? false}
                   legacy={mcpComponent.legacy ?? false}

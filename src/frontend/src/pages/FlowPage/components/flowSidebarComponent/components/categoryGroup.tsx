@@ -1,7 +1,8 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
@@ -21,14 +22,18 @@ export const CategoryGroup = memo(function CategoryGroup({
 }: CategoryGroupProps) {
   return (
     <SidebarGroup className="p-3">
+      <SidebarGroupLabel className="cursor-default">
+        Components
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {Object.entries(dataFilter)
             .filter(
               ([categoryName, items]) =>
-                // filter out bundles
+                // filter out bundles and MCP
                 !SIDEBAR_BUNDLES.some((cat) => cat.name === categoryName) &&
                 categoryName !== "custom_component" &&
+                categoryName !== "MCP" &&
                 Object.keys(items).length > 0,
             )
             .sort(([aName], [bName]) => {

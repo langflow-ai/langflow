@@ -9,6 +9,7 @@ import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
+import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
 
 export const MemoizedBackground = memo(() => (
@@ -52,6 +53,7 @@ export const MemoizedCanvasControls = memo(
 
 export const MemoizedSidebarTrigger = memo(() => {
   const { open, toggleSidebar, setActiveSection } = useSidebar();
+  const { focusSearch, isSearchFocused } = useSearchContext();
   if (ENABLE_NEW_SIDEBAR) {
     return (
       <Panel
@@ -70,6 +72,10 @@ export const MemoizedSidebarTrigger = memo(() => {
               setActiveSection(item.id);
               if (!open) {
                 toggleSidebar();
+              }
+              if (item.id === "search") {
+                // Add a small delay to ensure the sidebar is open and input is rendered
+                setTimeout(() => focusSearch(), 100);
               }
             }}
             testId={item.id}
