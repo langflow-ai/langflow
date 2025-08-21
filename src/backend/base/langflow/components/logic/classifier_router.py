@@ -417,7 +417,15 @@ class ClassifierRouterComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="no matches", name="no_matches", method="no_matches_response", group_outputs=True),
+        Output(
+            display_name="no matches",
+            name="no_matches",
+            method="no_matches_response",
+            group_outputs=True,
+            types=[
+                "Message",
+            ],
+        ),
     ]
 
     def __init__(self, **kwargs) -> None:
@@ -447,20 +455,20 @@ class ClassifierRouterComponent(Component):
         return self.message.text if getattr(self.message, "text", None) else self.input_text
 
     def base_check(self, value) -> Callable:
-        def check() -> Message:
+        def check() -> Message | None:
             if value in self.top_n_values_name:
                 return self._return_message()
             self.stop(value)
             logger.debug(f"stop output '{value}'")
-            return None  # type: ignore
+            return None
 
         return check
 
-    def no_matches_response(self) -> Message:
+    def no_matches_response(self) -> Message | None:
         if not self.top_n_values_name:
             return self._return_message()
         self.stop("no_matches")
-        return None  # type: ignore
+        return None
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
         categories_descriptions = getattr(self, "categories_descriptions", []) or []

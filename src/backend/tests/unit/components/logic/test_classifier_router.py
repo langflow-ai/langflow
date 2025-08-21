@@ -232,7 +232,7 @@ class TestClassifierRouterComponent:
         else:
             assert no_matches_result is None
 
-    def test_classifier_type_embedding_gates_llm(self, sample_categories, test_embedding, mock_llm):
+    def test_classifier_type_embedding_gates_llm(self, sample_categories, test_embedding):
         component = ClassifierRouterComponent()
         # component.llm = mock_llm  # present but should not be used
         component.embedding = test_embedding
