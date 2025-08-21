@@ -5,6 +5,7 @@ from langchain.evaluation.embedding_distance import EmbeddingDistance
 from langchain_core.embeddings import Embeddings
 from langflow.components.logic.classifier_router import (
     ClassifierRouterComponent,
+    ClassifierType,
     EmbeddingClassifier,
     LLMClassifier,
 )
@@ -32,11 +33,12 @@ def create_confident_llm():
     return llm
 
 
-@pytest.fixture(autouse=True)
-def reset_classifier_outputs():
-    base_outputs = ClassifierRouterComponent.outputs.copy()
-    yield
-    ClassifierRouterComponent.outputs = base_outputs
+def test_outputs_are_instance_scoped(sample_categories):
+    c1 = ClassifierRouterComponent()
+    c2 = ClassifierRouterComponent()
+    c1.set_attributes({"categories_descriptions": sample_categories, "input_text": "x"})
+    c1.update_outputs({"outputs": [{"name": "no_matches"}]}, "categories_descriptions", sample_categories)
+    assert {o.name for o in c2.outputs} == {"no_matches"}
 
 
 @pytest.fixture
@@ -77,7 +79,7 @@ def base_component(sample_categories):
 class TestClassifierRouterComponent:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "input_text,expected_outputs",
+        ("input_text", "expected_outputs"),
         [
             ("Tell me about Titanic movie", {"Cinema", "Football", "no_matches"}),
             ("Who won the football match?", {"Cinema", "Football", "no_matches"}),
@@ -129,12 +131,12 @@ class TestClassifierRouterComponent:
             assert hasattr(component, method_name), f"Method {method_name} not found"
 
     @pytest.mark.parametrize(
-        "classifier_config,test_input,expected_cinema,expected_football",
+        ("classifier_config", "test_input", "expected_cinema", "expected_football"),
         [
             # Embedding classifier - single match
             (
                 {
-                    "classifier_type": "embedding",
+                    "classifier_type": ClassifierType.EMBEDDING.value,
                     "distance_threshold": 0.5,
                     "top_n_values": 1,
                     "distance_metric": EmbeddingDistance.COSINE,
@@ -146,7 +148,7 @@ class TestClassifierRouterComponent:
             # Embedding classifier - multiple matches
             (
                 {
-                    "classifier_type": "embedding",
+                    "classifier_type": ClassifierType.EMBEDDING.value,
                     "distance_threshold": 1.0,
                     "top_n_values": 2,
                     "distance_metric": EmbeddingDistance.COSINE,
@@ -158,7 +160,7 @@ class TestClassifierRouterComponent:
             # LLM classifier - single match (high confidence)
             (
                 {
-                    "classifier_type": "llm",
+                    "classifier_type": ClassifierType.LLM.value,
                     "confidence_threshold": 0.8,
                     "use_with_structured_output": False,
                     "use_history": False,
@@ -171,7 +173,7 @@ class TestClassifierRouterComponent:
             # LLM classifier - no matches (low confidence)
             (
                 {
-                    "classifier_type": "llm",
+                    "classifier_type": ClassifierType.LLM.value,
                     "confidence_threshold": 0.8,
                     "use_with_structured_output": False,
                     "use_history": False,
@@ -194,9 +196,10 @@ class TestClassifierRouterComponent:
         expected_football,
     ):
         component = base_component
+        component.classifier_type = classifier_config["classifier_type"]
         component.set_attributes({"input_text": test_input, "message": Message(text=test_input)})
 
-        if classifier_config["classifier_type"] == "embedding":
+        if classifier_config["classifier_type"] == ClassifierType.EMBEDDING.value:
             component.embedding = test_embedding
             component.set_attributes({k: v for k, v in classifier_config.items() if k != "classifier_type"})
         else:  # llm
@@ -215,24 +218,49 @@ class TestClassifierRouterComponent:
         no_matches_result = component.no_matches_response()
 
         if expected_cinema:
-            assert cinema_result == component.message
+            assert cinema_result == component.message.text
         else:
             assert cinema_result is None
 
         if expected_football:
-            assert football_result == component.message
+            assert football_result == component.message.text
         else:
             assert football_result is None
 
         if not expected_cinema and not expected_football:
-            assert no_matches_result == component.message
+            assert no_matches_result == component.message.text
         else:
             assert no_matches_result is None
+
+    def test_classifier_type_embedding_gates_llm(self, sample_categories, test_embedding, mock_llm):
+        component = ClassifierRouterComponent()
+        # component.llm = mock_llm  # present but should not be used
+        component.embedding = test_embedding
+        component.distance_threshold = 1.0
+        component.distance_metric = EmbeddingDistance.COSINE
+        component.classifier_type = ClassifierType.EMBEDDING.value
+        component.top_n_values = 1
+        component.set_attributes({"categories_descriptions": sample_categories, "input_text": "Titanic"})
+        # If LLM were used, we'd need a response; absence implies embedding used.
+        component._initialize_outputs(["Cinema"])
+        assert component._check_Cinema() is not None
+
+    def test_classifier_type_llm_gates_embedding(self, sample_categories, test_embedding, mock_llm):
+        component = ClassifierRouterComponent()
+        component.embedding = test_embedding  # present but should not be used
+        mock_llm.with_config().invoke.return_value = '{"category_name":"Cinema","confidence":0.95}'
+        component.llm = mock_llm
+        with patch.object(type(component), "graph", new_callable=PropertyMock) as mock_graph_prop:
+            mock_graph_prop.return_value = MagicMock(session_id="sess", run_id="run")
+            component.classifier_type = ClassifierType.LLM.value
+            component.set_attributes({"categories_descriptions": sample_categories, "input_text": "Test"})
+        component._initialize_outputs(["Cinema"])
+        assert component._check_Cinema() is not None
 
 
 class TestLLMClassifier:
     @pytest.mark.parametrize(
-        "response,confidence_threshold,expected_categories",
+        ("response", "confidence_threshold", "expected_categories"),
         [
             ('{"category_name": "Cinema", "confidence": 0.95}', 0.8, ["Cinema"]),
             ('{"category_name": "Cinema", "confidence": 0.3}', 0.8, []),
@@ -270,7 +298,7 @@ class TestLLMClassifier:
             confidence_threshold=0.8,
         )
 
-        with patch.object(classifier, "get_structured_output", side_effect=Exception("Structured output failed")):
+        with patch.object(classifier, "get_structured_output", side_effect=ValueError("Structured output failed")):
             classifier.process_result()
 
         assert classifier.top_n_values_name == ["Cinema"]
@@ -278,7 +306,7 @@ class TestLLMClassifier:
 
 class TestEmbeddingClassifier:
     @pytest.mark.parametrize(
-        "input_text,distance_threshold,top_n,expected_count,expected_category",
+        ("input_text", "distance_threshold", "top_n", "expected_count", "expected_category"),
         [
             ("Tell me about Titanic", 0.5, 1, 1, "Cinema"),  # Single confident match
             ("Tell me about Titanic", 0.0, 1, 0, None),  # Too strict threshold

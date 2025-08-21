@@ -31,6 +31,7 @@ from langflow.memory import aget_messages
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
+from langflow.schema.table import Column
 from langflow.utils.async_helpers import run_until_complete
 
 CLASSIFIER_PROMPT = """
@@ -38,19 +39,19 @@ CLASSIFIER_PROMPT = """
 You are a text classification engine that analyzes user input and dialogue history to assign exactly one category from a given list.
 
 ### Objective
-- Assign **only one category** to the input text.  
-- Extract **keywords** from the input text that are relevant to the classification.  
-- If the user responds briefly (e.g., "yes", "no", "1", "let’s continue"), treat it as a continuation of the dialogue and classify it in the context of the ongoing conversation.  
+- Assign **only one category** to the input text.
+- Extract **keywords** from the input text that are relevant to the classification.
+- If the user responds briefly (e.g., "yes", "no", "1", "let's continue"), treat it as a continuation of the dialogue and classify it in the context of the ongoing conversation.
 - Provide a **confidence score** between 0.00 and 1.00 (step 0.01) under the `"confidence"` field.
 
 ### Input Format
-- User message is given in `input_text`.  
-- List of available categories is provided in `categories`.  
-- Descriptions of categories are provided in `descriptions`.  
+- User message is given in `input_text`.
+- List of available categories is provided in `categories`.
+- Descriptions of categories are provided in `descriptions`.
 - Additional classification instructions may appear in `classification_instruction`.
 
 ### Output Format
-- Return **only a JSON object**, no extra text or explanations.  
+- Return **only a JSON object**, no extra text or explanations.
 
 ### Example
 <example>
@@ -84,7 +85,7 @@ Assistant:{{
 <example>
 User:{{
     "input_text": [
-        "What’s the weather like in St. Petersburg?"
+        "What's the weather like in St. Petersburg?"
     ],
     "categories": [
         {{
@@ -111,7 +112,7 @@ Assistant:{{
 ### End of Examples
 
 ## Dialogue History
-Here is the dialogue history inside XML tags <histories></histories>.  
+Here is the dialogue history inside XML tags <histories></histories>.
 If the user provides a short reply (e.g., "yes", "no", "1", "continue", "okay"), this means it is a continuation of the previous topic. In that case, the classification must remain in the same category as the last relevant user question.
 
 <histories>
@@ -127,7 +128,29 @@ If the user provides a short reply (e.g., "yes", "no", "1", "continue", "okay"),
     "classification_instruction" : ["Use only the given categories, no others"]
 }}
 ##Assistant:
-"""
+"""  # noqa:E501
+
+STRUCTURED_OUTPUT_SCHEMA = [
+    {
+        "name": "keywords",
+        "description": "the key words from the text that are related to the classification",
+        "type": "text",
+        "multiple": True,
+    },
+    {
+        "name": "category_name",
+        "description": "Assigned category",
+        "type": "text",
+        "multiple": False,
+    },
+    {
+        "name": "confidence",
+        "description": "Indication the confidence level in the correctness of the chosen category."
+        " The confidence level is a float from 0.00 to 1.00.",
+        "type": "float",
+        "multiple": False,
+    },
+]
 
 
 class ClassifierType(Enum):
@@ -150,12 +173,13 @@ class EmbeddingClassifier:
             info="0.0 is a full match",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
-            value=0.19,
+            value=0.23,
         ),
         IntInput(
             name="top_n_values",
             display_name="Top N",
-            info="The number of elements whose similarity is close to input_text and whose similarity value exceeds distance_threshold.",
+            info="The number of elements whose similarity is close to input_text and whose similarity value exceeds"
+            " distance_threshold.",
             advanced=True,
             value=1,
         ),
@@ -171,7 +195,7 @@ class EmbeddingClassifier:
     embedding: Any
     input_text: str
     categories_descriptions: list[dict[str, str]]
-    distance_threshold: float = 0.19
+    distance_threshold: float = 0.23
     top_n_values: int = 1
     distance_metric: EmbeddingDistance = EmbeddingDistance.COSINE
     input_text_embedded: np.ndarray | None = field(default=None, init=False)
@@ -257,31 +281,14 @@ class LLMClassifier:
     top_n_values_name: list[str] = field(default_factory=list, init=False)
 
     def get_structured_output(self, prompt_value: str) -> tuple:
-        self.structured_output.output_schema = [
-            {
-                "name": "keywords",
-                "description": "the key words from the text that are related to the classification",
-                "type": "text",
-                "multiple": True,
-            },
-            {"name": "category_name", "description": "Assigned category", "type": "text", "multiple": False},
-            {
-                "name": "confidence",
-                "description": "Indication the confidence level in the correctness of the chosen category. The confidence level is a float from 0.00 to 1.00.",
-                "type": "float",
-                "multiple": False,
-            },
-        ]
         self.structured_output.set(
             llm=self.llm,
             schema_name="result",
-            description="classification",
-            display_name="Classifier",
-            multiple=False,
             input_value=prompt_value,
         )
-        df = self.structured_output.build_structured_dataframe()
-        best_row = df.sort_values(by="confidence", ascending=False).iloc[0]
+        self.structured_output.output_schema = STRUCTURED_OUTPUT_SCHEMA
+        df_output = self.structured_output.build_structured_dataframe()
+        best_row = df_output.sort_values(by="confidence", ascending=False).iloc[0]
         return best_row["category_name"], best_row["confidence"]
 
     def get_raw_output(self, prompt_value: str) -> tuple[str, float]:
@@ -310,7 +317,7 @@ class LLMClassifier:
                 try:
                     category_name, confidence = self.get_structured_output(prompt_value)
                     logger.debug("Structured output used success")
-                except Exception as ex:
+                except ValueError as ex:
                     logger.warning(f"Error while get structured output: {ex}. Try to get json from raw data")
                     category_name, confidence = self.get_raw_output(prompt_value)
             else:
@@ -318,7 +325,7 @@ class LLMClassifier:
             logger.debug(f"{category_name=}, {confidence=}")
             if self._is_confident_match(category_name, confidence):
                 self.top_n_values_name.append(category_name)
-        except Exception as e:
+        except Exception as e:  # noqa:BLE001
             logger.error(f"Unexpected error in _llm_result: {e}")
 
     def _build_prompt_value(self) -> str:
@@ -335,7 +342,7 @@ class LLMClassifier:
 
     def _is_confident_match(self, category_name: str, confidence: float) -> bool:
         categories = [v["category"] for v in self.categories_descriptions]
-        return confidence > self.confidence_threshold and category_name in categories
+        return confidence >= self.confidence_threshold and category_name in categories
 
     def _get_memory_data(self) -> str:
         if not self.use_history:
@@ -379,19 +386,19 @@ class ClassifierRouterComponent(Component):
             refresh_button=True,
             real_time_refresh=True,
             table_schema=[
-                {
-                    "name": "category",
-                    "display_name": "Category",
-                    "type": "str",
-                    "description": "Name of category",
-                },
-                {
-                    "name": "description",
-                    "display_name": "Description",
-                    "type": "str",
-                    "description": "Describe the purpose of the category.",
-                },
-            ],  # type: ignore
+                Column(
+                    name="category",
+                    display_name="Category",
+                    type="str",
+                    description="Name of category",
+                ),
+                Column(
+                    name="description",
+                    display_name="Description",
+                    type="str",
+                    description="Describe the purpose of the category.",
+                ),
+            ],
             value=[],
         ),
         MessageTextInput(
@@ -414,10 +421,11 @@ class ClassifierRouterComponent(Component):
     ]
 
     def __init__(self, **kwargs) -> None:
+        self.outputs = list(type(self).outputs)
         parameters = kwargs.get("_parameters", {})
         try:
             categories: list[str] = [value[0] for value in parameters.get("categories_descriptions").values]
-        except:
+        except (AttributeError, KeyError, TypeError):
             categories = []
 
         self.embedding_classifier = None
@@ -435,10 +443,13 @@ class ClassifierRouterComponent(Component):
             Output(display_name=value, name=value, method=f"_check_{value}", group_outputs=True) for value in categories
         ]
 
+    def _return_message(self):
+        return self.message.text if getattr(self.message, "text", None) else self.input_text
+
     def base_check(self, value) -> Callable:
         def check() -> Message:
             if value in self.top_n_values_name:
-                return self.message if self.message.text else self.input_text
+                return self._return_message()
             self.stop(value)
             logger.debug(f"stop output '{value}'")
             return None  # type: ignore
@@ -447,15 +458,15 @@ class ClassifierRouterComponent(Component):
 
     def no_matches_response(self) -> Message:
         if not self.top_n_values_name:
-            return self.message if self.message.text else self.input_text
+            return self._return_message()
         self.stop("no_matches")
         return None  # type: ignore
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
-        self.categories_descriptions: list[dict[str, str]]
+        categories_descriptions = getattr(self, "categories_descriptions", []) or []
         categories = []
         additional_outputs = []
-        for value in self.categories_descriptions:
+        for value in categories_descriptions:
             category = value["category"]
             if category:
                 categories.append(category)
@@ -472,15 +483,18 @@ class ClassifierRouterComponent(Component):
                     }
                 )
 
+        self.outputs = [out for out in self.outputs if out.name == "no_matches"]
         self._initialize_outputs(categories=categories)
-        frontend_node["outputs"] += additional_outputs
+        base = [o for o in frontend_node["outputs"] if o["name"] == "no_matches"]
+        frontend_node["outputs"] = base + additional_outputs
         return frontend_node
 
     @override
     def set_attributes(self, params: dict) -> None:
         super().set_attributes(params)
+        selected_type = getattr(self, "classifier_type", ClassifierType.LLM.value)
 
-        if hasattr(self, "embedding") and self.embedding:
+        if selected_type == ClassifierType.EMBEDDING.value and hasattr(self, "embedding") and self.embedding:
             self.embedding_classifier = EmbeddingClassifier(
                 embedding=self.embedding,
                 input_text=self.input_text,
@@ -493,7 +507,7 @@ class ClassifierRouterComponent(Component):
             self.embedding_classifier.calculate_distance()
             self.top_n_values_name = self.embedding_classifier.top_n_values_name
 
-        if hasattr(self, "llm") and self.llm:
+        elif selected_type == ClassifierType.LLM.value and hasattr(self, "llm") and self.llm:
             self.llm_classifier = LLMClassifier(
                 llm=self.llm,
                 input_text=self.input_text,
@@ -510,10 +524,12 @@ class ClassifierRouterComponent(Component):
             self.llm_classifier.structured_output._tracing_service = self._tracing_service
             self.llm_classifier.process_result()
             self.top_n_values_name = self.llm_classifier.top_n_values_name
+        else:
+            logger.debug("ClassifierRouterComponent: no classifier executed for current configuration.")
 
     def _delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
-        for field in fields:
-            build_config.pop(field, None)
+        for f in fields:
+            build_config.pop(f, None)
 
     @staticmethod
     def _get_model(fileds_list: list[InputTypes]) -> dict[str | None, dict[str, Any]]:
