@@ -38,7 +38,6 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
 });
 
 export default function ChatView({
-  sendMessage,
   visibleSession,
   playgroundPage,
 }: chatViewProps): JSX.Element {
@@ -312,10 +311,6 @@ export default function ChatView({
         <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
-          sendMessage={async ({ repeat, files }) => {
-            await sendMessage({ repeat, files });
-            track("Playground Message Sent");
-          }}
           inputRef={ref}
           files={files}
           setFiles={setFiles}
