@@ -16,7 +16,7 @@ from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
 
-from langflow.base.data.kb_utils import _get_current_user, get_knowledge_bases
+from langflow.base.data.kb_utils import get_knowledge_bases
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.custom import Component
 from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
@@ -24,7 +24,8 @@ from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
-from langflow.services.deps import get_settings_service, get_variable_service
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_settings_service, get_variable_service, session_scope
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
@@ -155,13 +156,6 @@ class KBIngestionComponent(Component):
             info="API key for the embedding provider to generate embeddings.",
             advanced=True,
             required=False,
-        ),
-        SecretStrInput(
-            name="langflow_api_key",
-            display_name="Langflow API Key",
-            info="Langflow API key for authentication when saving the knowledge base.",
-            required=False,
-            advanced=True,
         ),
         BoolInput(
             name="allow_duplicates",
@@ -472,13 +466,28 @@ class KBIngestionComponent(Component):
         # Check allowed characters (condition 3)
         return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
 
+    _cached_kb_path: Path
+
     async def _kb_path(self) -> Path:
-        current_user = await _get_current_user(self.langflow_api_key)
+        # Check if we already have the path cached
+        cached_path = getattr(self, "_cached_kb_path", None)
+        if cached_path is not None:
+            if isinstance(cached_path, Path):
+                return cached_path
+            msg = "Cached KB path is not a valid Path object."
+            raise RuntimeError(msg)
+
+        # If not cached, compute it
+        async with session_scope() as db:
+            current_user = await get_user_by_id(db, self.user_id)
 
         kb_root = self._get_kb_root()
         kb_user = current_user.username
 
-        return kb_root / kb_user / self.knowledge_base
+        # Cache the result
+        self._cached_kb_path = kb_root / kb_user / self.knowledge_base
+
+        return self._cached_kb_path
 
     # ---------------------------------------------------------------------
     #                         OUTPUT METHODS
@@ -545,7 +554,7 @@ class KBIngestionComponent(Component):
 
     async def _get_api_key_variable(self, field_value: dict[str, Any]):
         async with session_scope() as db:
-            current_user = await _get_current_user(self.langflow_api_key)
+            current_user = await get_user_by_id(db, self.user_id)
             variable_service = get_variable_service()
 
             # Process the api_key field variable
@@ -566,7 +575,8 @@ class KBIngestionComponent(Component):
         """Update build configuration based on provider selection."""
         # Create a new knowledge base
         if field_name == "knowledge_base":
-            current_user = await _get_current_user(langflow_api_key=self.langflow_api_key)
+            async with session_scope() as db:
+                current_user = await get_user_by_id(db, self.user_id)
             kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 # Validate the knowledge base name - Make sure it follows these rules:
@@ -610,7 +620,7 @@ class KBIngestionComponent(Component):
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
                 KNOWLEDGE_BASES_ROOT_PATH,
-                langflow_api_key=self.langflow_api_key,
+                user_id=self.user_id,
             )
 
             # If the selected knowledge base is not available, reset it

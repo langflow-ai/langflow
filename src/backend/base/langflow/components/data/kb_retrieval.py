@@ -7,13 +7,14 @@ from langchain_chroma import Chroma
 from loguru import logger
 from pydantic import SecretStr
 
-from langflow.base.data.kb_utils import _get_current_user, get_knowledge_bases
+from langflow.base.data.kb_utils import get_knowledge_bases
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.deps import get_settings_service
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_settings_service, session_scope
 
 settings = get_settings_service().settings
 knowledge_directory = settings.knowledge_bases_dir
@@ -45,13 +46,6 @@ class KBRetrievalComponent(Component):
             info="API key for the embedding provider to generate embeddings.",
             advanced=True,
             required=False,
-        ),
-        SecretStrInput(
-            name="langflow_api_key",
-            display_name="Langflow API Key",
-            info="Langflow API key for authentication when accessing the knowledge base.",
-            required=False,
-            advanced=True,
         ),
         MessageTextInput(
             name="search_query",
@@ -89,7 +83,7 @@ class KBRetrievalComponent(Component):
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
                 KNOWLEDGE_BASES_ROOT_PATH,
-                langflow_api_key=self.langflow_api_key,
+                user_id=self.user_id,  # Use the user_id from the component context
             )
 
             # If the selected knowledge base is not available, reset it
@@ -175,7 +169,8 @@ class KBRetrievalComponent(Component):
             A DataFrame containing the data rows from the knowledge base.
         """
         # Get the current user
-        current_user = await _get_current_user(self.langflow_api_key)
+        async with session_scope() as db:
+            current_user = await get_user_by_id(db, self.user_id)
 
         # Set up vector store directory
         kb_user = current_user.username

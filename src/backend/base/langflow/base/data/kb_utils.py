@@ -1,10 +1,9 @@
 import math
 from collections import Counter
 from pathlib import Path
+from uuid import UUID
 
-from langflow.services.auth.utils import create_user_longterm_token, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
 
@@ -110,29 +109,7 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
     return scores
 
 
-async def _get_current_user(langflow_api_key: str | None = None) -> User:
-    """Get the current user based on the provided API key or create a new user."""
-    async with session_scope() as db:
-        if langflow_api_key:
-            current_user = await get_current_user(
-                token="",
-                query_param=langflow_api_key,
-                header_param="",
-                db=db,
-            )
-        else:
-            user_id, _ = await create_user_longterm_token(db)
-            current_user = await get_user_by_id(db, user_id)
-
-        # Fail if the user is not found
-        if not current_user:
-            msg = "User not found. Please provide a valid Langflow API key or ensure the user exists."
-            raise ValueError(msg)
-
-    return current_user
-
-
-async def get_knowledge_bases(kb_root: Path, langflow_api_key: str | None = None) -> list[str]:
+async def get_knowledge_bases(kb_root: Path, user_id: UUID | str) -> list[str]:
     """Retrieve a list of available knowledge bases.
 
     Returns:
@@ -142,7 +119,8 @@ async def get_knowledge_bases(kb_root: Path, langflow_api_key: str | None = None
         return []
 
     # Get the current user
-    current_user = await _get_current_user(langflow_api_key)
+    async with session_scope() as db:
+        current_user = await get_user_by_id(db, user_id)
 
     # Set up vector store directory
     kb_user = current_user.username
