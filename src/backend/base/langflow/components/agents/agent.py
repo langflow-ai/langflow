@@ -200,12 +200,15 @@ class AgentComponent(ToolCallingAgentComponent):
             self._agent_result = result
 
         except (ValueError, TypeError, KeyError) as e:
-            logger.error(f"{type(e).__name__}: {e!s}")
+            await logger.aerror(f"{type(e).__name__}: {e!s}")
             raise
         except ExceptionWithMessageError as e:
-            logger.error(f"ExceptionWithMessageError occurred: {e}")
+            await logger.aerror(f"ExceptionWithMessageError occurred: {e}")
             raise
         # Avoid catching blind Exception; let truly unexpected exceptions propagate
+        except Exception as e:
+            await logger.aerror(f"Unexpected error: {e!s}")
+            raise
         else:
             return result
 
@@ -318,7 +321,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     )
                     system_components.append(schema_info)
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
-                    logger.error(f"Could not build schema for prompt: {e}", exc_info=True)
+                    await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
 
             # Combine all components
             combined_instructions = "\n\n".join(system_components) if system_components else ""
@@ -336,12 +339,12 @@ class AgentComponent(ToolCallingAgentComponent):
             try:
                 structured_agent = self.create_agent_runnable()
             except (NotImplementedError, ValueError, TypeError) as e:
-                logger.error(f"Error with structured chat agent: {e}")
+                await logger.aerror(f"Error with structured chat agent: {e}")
                 raise
             try:
                 result = await self.run_agent(structured_agent)
             except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
-                logger.error(f"Error with structured agent result: {e}")
+                await logger.aerror(f"Error with structured agent result: {e}")
                 raise
             logger.debug(f"Combined instructions: {combined_instructions}")
             # Extract content from structured agent result
@@ -353,7 +356,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 content = str(result)
 
         except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
-            logger.error(f"Error with structured chat agent: {e}")
+            await logger.aerror(f"Error with structured chat agent: {e}")
             # Fallback to regular agent
             content_str = "No content returned from agent"
             return Data(data={"content": content_str, "error": str(e)})
@@ -372,7 +375,7 @@ class AgentComponent(ToolCallingAgentComponent):
             return Data(data={"content": content})
 
         except (ValueError, TypeError) as e:
-            logger.error(f"Error in structured output processing: {e}")
+            await logger.aerror(f"Error in structured output processing: {e}")
             return Data(data={"content": content, "error": str(e)})
 
     async def get_memory_data(self):
