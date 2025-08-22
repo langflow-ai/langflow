@@ -11,11 +11,13 @@ jest.mock("@/components/ui/button", () => ({
 // Simplify Radix Form to a native form that respects onSubmit
 jest.mock("@radix-ui/react-form", () => ({
   __esModule: true,
-  Root: React.forwardRef<HTMLFormElement, any>(({ children, onSubmit }, ref) => (
-    <form onSubmit={onSubmit} ref={ref}>
-      {children}
-    </form>
-  )),
+  Root: React.forwardRef<HTMLFormElement, any>(
+    ({ children, onSubmit }, ref) => (
+      <form onSubmit={onSubmit} ref={ref}>
+        {children}
+      </form>
+    ),
+  ),
   Submit: ({ asChild, children }) => {
     if (asChild && React.isValidElement(children)) {
       return React.cloneElement(children as any, { type: "submit" });
@@ -71,10 +73,21 @@ jest.mock("@/components/core/editFlowSettingsComponent", () => ({
     setLocked?: (v: boolean) => void;
   }) => (
     <div>
-      <button data-testid="set-name-new" onClick={() => setName?.("New Name")}>set name</button>
-      <button data-testid="set-name-taken" onClick={() => setName?.("Taken")}>set taken</button>
-      <button data-testid="set-desc-new" onClick={() => setDescription?.("New Desc")}>set desc</button>
-      <button data-testid="toggle-lock" onClick={() => setLocked?.(true)}>toggle lock</button>
+      <button data-testid="set-name-new" onClick={() => setName?.("New Name")}>
+        set name
+      </button>
+      <button data-testid="set-name-taken" onClick={() => setName?.("Taken")}>
+        set taken
+      </button>
+      <button
+        data-testid="set-desc-new"
+        onClick={() => setDescription?.("New Desc")}
+      >
+        set desc
+      </button>
+      <button data-testid="toggle-lock" onClick={() => setLocked?.(true)}>
+        toggle lock
+      </button>
     </div>
   ),
 }));
@@ -96,9 +109,7 @@ describe("FlowSettingsComponent", () => {
   });
 
   it("renders and disables save when no changes", () => {
-    render(
-      <FlowSettingsComponent flowData={baseFlow} open close={() => {}} />,
-    );
+    render(<FlowSettingsComponent flowData={baseFlow} open close={() => {}} />);
     const saveBtn = screen.getByTestId("save-flow-settings");
     expect(saveBtn).toBeDisabled();
   });
@@ -108,9 +119,7 @@ describe("FlowSettingsComponent", () => {
     mockSave.mockResolvedValueOnce(undefined);
     const onClose = jest.fn();
 
-    render(
-      <FlowSettingsComponent flowData={baseFlow} open close={onClose} />,
-    );
+    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
 
     fireEvent.click(screen.getByTestId("set-name-new"));
     const saveBtn = screen.getByTestId("save-flow-settings");
@@ -134,9 +143,7 @@ describe("FlowSettingsComponent", () => {
     mockAutoSaving = false;
     const onClose = jest.fn();
 
-    render(
-      <FlowSettingsComponent flowData={baseFlow} open close={onClose} />,
-    );
+    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
 
     fireEvent.click(screen.getByTestId("set-desc-new"));
     const saveBtn = screen.getByTestId("save-flow-settings");
@@ -152,9 +159,7 @@ describe("FlowSettingsComponent", () => {
   it("prevents saving when name is taken", () => {
     mockFlows = [{ name: "Taken" }, { name: "Flow" }];
 
-    render(
-      <FlowSettingsComponent flowData={baseFlow} open close={() => {}} />,
-    );
+    render(<FlowSettingsComponent flowData={baseFlow} open close={() => {}} />);
 
     fireEvent.click(screen.getByTestId("set-name-taken"));
     expect(screen.getByTestId("save-flow-settings")).toBeDisabled();
@@ -162,12 +167,8 @@ describe("FlowSettingsComponent", () => {
 
   it("clicking cancel calls close", () => {
     const onClose = jest.fn();
-    render(
-      <FlowSettingsComponent flowData={baseFlow} open close={onClose} />,
-    );
+    render(<FlowSettingsComponent flowData={baseFlow} open close={onClose} />);
     fireEvent.click(screen.getByTestId("cancel-flow-settings"));
     expect(onClose).toHaveBeenCalled();
   });
 });
-
-
