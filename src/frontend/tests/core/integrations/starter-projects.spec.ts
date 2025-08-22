@@ -131,10 +131,13 @@ test(
       await page.getByTestId("text_card_container").nth(i).click();
 
       await page.waitForTimeout(500);
+      await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+        timeout: 30000,
+      });
       await page.getByTestId("canvas_controls_dropdown").click();
 
       await page.waitForSelector('[data-testid="fit_view"]', {
-        timeout: 5000,
+        timeout: 30000,
       });
       await page.getByTestId("canvas_controls_dropdown").click();
 

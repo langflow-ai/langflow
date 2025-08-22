@@ -33,30 +33,29 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify the lock switch is initially unchecked
       const lockSwitch = page.getByTestId("lock-flow-switch");
-
+      await expect(lockSwitch).toBeVisible();
       await expect(lockSwitch).toHaveAttribute("data-state", "unchecked");
 
       // Verify that name and description inputs are enabled when not locked
       const nameInput = page.getByTestId("input-flow-name");
       const descriptionInput = page.getByTestId("input-flow-description");
 
-      await expect(nameInput).not.toHaveAttribute("disabled");
-      await expect(descriptionInput).not.toHaveAttribute("disabled");
+      await expect(nameInput).toBeEnabled();
+      await expect(descriptionInput).toBeEnabled();
 
-      // Enable the lock by clicking the switch
-      await lockSwitch.click();
-      await page.waitForTimeout(5000);
+      // Enable the lock (use keyboard to avoid any click flakiness)
+      await lockSwitch.focus();
+      await lockSwitch.press("Space");
 
       // Verify the switch is now checked
       await expect(lockSwitch).toHaveAttribute("data-state", "checked");
 
       // Verify that inputs become disabled when locked
-      await expect(nameInput).toHaveAttribute("disabled");
-      await expect(descriptionInput).toHaveAttribute("disabled");
-
-      await page.waitForTimeout(1000);
+      await expect(nameInput).toBeDisabled();
+      await expect(descriptionInput).toBeDisabled();
 
       // Save the settings by clicking the save button
+      await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
       await page.getByTestId("save-flow-settings").click();
 
       // Wait for the modal to close by waiting for the popover to be detached
@@ -83,20 +82,22 @@ test.describe("Flow Lock Feature", () => {
       await expect(lockSwitch).toHaveAttribute("data-state", "checked");
 
       // Verify inputs are still disabled
-      await expect(nameInput).toHaveAttribute("disabled");
-      await expect(descriptionInput).toHaveAttribute("disabled");
+      await expect(nameInput).toBeDisabled();
+      await expect(descriptionInput).toBeDisabled();
 
-      // Unlock the flow by clicking the switch
-      await lockSwitch.click();
+      // Unlock the flow
+      await lockSwitch.focus();
+      await lockSwitch.press("Space");
 
       // Verify the switch is now unchecked
       await expect(lockSwitch).toHaveAttribute("data-state", "unchecked");
 
       // Verify that inputs become enabled again when unlocked
-      await expect(nameInput).not.toHaveAttribute("disabled");
-      await expect(descriptionInput).not.toHaveAttribute("disabled");
+      await expect(nameInput).toBeEnabled();
+      await expect(descriptionInput).toBeEnabled();
 
       // Save the unlocked state by clicking the save button
+      await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
       await page.getByTestId("save-flow-settings").click();
 
       // Wait for the modal to close by waiting for the popover to be detached
