@@ -33,6 +33,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify the lock switch is initially unchecked
       const lockSwitch = page.getByTestId("lock-flow-switch");
+
       await expect(lockSwitch).toHaveAttribute("data-state", "unchecked");
 
       // Verify that name and description inputs are enabled when not locked
@@ -44,6 +45,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Enable the lock by clicking the switch
       await lockSwitch.click();
+      await page.waitForTimeout(5000);
 
       // Verify the switch is now checked
       await expect(lockSwitch).toHaveAttribute("data-state", "checked");
