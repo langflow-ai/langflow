@@ -8,5 +8,5 @@ export type PlaygroundStoreType = {
   setIsFullscreen: (isFullscreen: boolean) => void;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  reset: () => void;
+  reset: (flowId: string) => void;
 };

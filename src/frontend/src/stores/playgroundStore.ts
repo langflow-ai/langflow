@@ -13,9 +13,9 @@ export const usePlaygroundStore = create<PlaygroundStoreType>((set) => ({
   setIsFullscreen: (isFullscreen: boolean) => set({ isFullscreen }),
   isOpen: false,
   setIsOpen: (isOpen: boolean) => set({ isOpen }),
-  reset: () =>
+  reset: (flowId: string) =>
     set({
-      selectedSession: undefined,
+      selectedSession: flowId,
       isFullscreen: false,
       isOpen: false,
     }),
