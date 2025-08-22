@@ -9,7 +9,14 @@ jest.mock("@/components/ui/button", () => ({
 jest.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children, open, onOpenChange }) => (
     <div data-testid="dropdown-menu" data-open={open}>
-      <div onClick={() => onOpenChange?.(!open)}>{children}</div>
+      <button 
+        onClick={() => onOpenChange?.(!open)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        type="button"
+      >
+        {children}
+      </button>
     </div>
   ),
   DropdownMenuContent: ({ children }) => (
