@@ -69,18 +69,18 @@ test(
       });
 
       await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last()
+        page.getByTestId(`checkbox-${sourceFileName}`).last(),
       ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
 
       // Create DataTransfer object and file
-      const dataTransfer = await page.evaluateHandle(jsonFileName => {
+      const dataTransfer = await page.evaluateHandle((jsonFileName) => {
         const data = new DataTransfer();
         const file = new File(
           ['{ "test": "content" }'],
           `${jsonFileName}.json`,
           {
             type: "application/json",
-          }
+          },
         );
         data.items.add(file);
         return data;
@@ -92,7 +92,7 @@ test(
         "dragover",
         {
           dataTransfer,
-        }
+        },
       );
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
@@ -103,25 +103,25 @@ test(
       });
 
       await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last()
+        page.getByTestId(`checkbox-${sourceFileName}`).last(),
       ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
 
       // Test checkbox
 
       await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last()
+        page.getByTestId(`checkbox-${sourceFileName}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${jsonFileName}`).last()
+        page.getByTestId(`checkbox-${jsonFileName}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await page.getByTestId(`checkbox-${sourceFileName}`).last().click();
       await page.getByTestId(`checkbox-${jsonFileName}`).last().click();
 
       await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last()
+        page.getByTestId(`checkbox-${sourceFileName}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
       await expect(
-        page.getByTestId(`checkbox-${jsonFileName}`).last()
+        page.getByTestId(`checkbox-${jsonFileName}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
 
       // Test search
@@ -138,7 +138,7 @@ test(
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeVisible(
         {
           timeout: 1000,
-        }
+        },
       );
       await expect(page.getByText(`${jsonFileName}.json`).first()).toBeHidden({
         timeout: 1000,
@@ -148,7 +148,7 @@ test(
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeVisible(
         {
           timeout: 1000,
-        }
+        },
       );
       await expect(page.getByText(`${jsonFileName}.json`).first()).toBeHidden({
         timeout: 1000,
@@ -166,7 +166,7 @@ test(
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeVisible(
         {
           timeout: 1000,
-        }
+        },
       );
       await expect(page.getByText(`${jsonFileName}.json`).first()).toBeVisible({
         timeout: 1000,
@@ -179,7 +179,7 @@ test(
         .fill(renamedJsonFile);
       await page.getByTestId(`rename-input-${jsonFileName}`).blur();
       await expect(
-        page.getByText(`${renamedJsonFile}.json`).first()
+        page.getByText(`${renamedJsonFile}.json`).first(),
       ).toBeVisible({
         timeout: 1000,
       });
@@ -196,7 +196,7 @@ test(
       await expect(page.getByText(`${renamedTxtFile}.txt`).first()).toBeVisible(
         {
           timeout: 1000,
-        }
+        },
       );
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeHidden({
         timeout: 1000,
@@ -206,10 +206,10 @@ test(
       await page.getByTestId(`checkbox-${renamedJsonFile}`).last().click();
 
       await expect(
-        page.getByTestId(`checkbox-${renamedTxtFile}`).last()
+        page.getByTestId(`checkbox-${renamedTxtFile}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${renamedJsonFile}`).last()
+        page.getByTestId(`checkbox-${renamedJsonFile}`).last(),
       ).toHaveAttribute("data-state", "checked");
 
       await page.getByTestId("select-files-modal-button").click();
@@ -217,10 +217,10 @@ test(
       await expect(page.getByText(`${renamedTxtFile}.txt`).first()).toBeVisible(
         {
           timeout: 1000,
-        }
+        },
       );
       await expect(
-        page.getByText(`${renamedJsonFile}.json`).first()
+        page.getByText(`${renamedJsonFile}.json`).first(),
       ).toBeVisible({
         timeout: 1000,
       });
@@ -281,10 +281,10 @@ test(
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
           timeout: 1000,
-        }
+        },
       );
 
-      const dataTransfer = await page.evaluateHandle(newTxtFile => {
+      const dataTransfer = await page.evaluateHandle((newTxtFile) => {
         const data = new DataTransfer();
         const file = new File(["this is a new test"], `${newTxtFile}.txt`, {
           type: "text/plain",
@@ -299,7 +299,7 @@ test(
         "dragover",
         {
           dataTransfer,
-        }
+        },
       );
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
@@ -309,14 +309,14 @@ test(
       });
 
       await expect(
-        page.getByTestId(`checkbox-${newTxtFile}`).last()
+        page.getByTestId(`checkbox-${newTxtFile}`).last(),
       ).toHaveAttribute("data-state", "checked", { timeout: 3000 });
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
           timeout: 3000,
-        }
+        },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
         timeout: 1000,
@@ -355,7 +355,7 @@ test(
         timeout: 3000,
       });
     }
-  }
+  },
 );
 
 test(
@@ -413,15 +413,15 @@ test(
       const createFileTransfer = async (
         filename: string,
         content: string,
-        type: string
+        type: string,
       ) => {
         return page.evaluateHandle(
-          params => {
+          (params) => {
             const data = new DataTransfer();
             const file = new File(
               [params.content],
               `${params.filename}.${params.type}`,
-              { type: params.mimeType }
+              { type: params.mimeType },
             );
             data.items.add(file);
             return data;
@@ -431,7 +431,7 @@ test(
             content,
             type,
             mimeType: type === "txt" ? "text/plain" : "application/json",
-          }
+          },
         );
       };
 
@@ -448,24 +448,24 @@ test(
         const dataTransfer = await createFileTransfer(
           file.name,
           file.content,
-          file.type
+          file.type,
         );
 
         // Trigger drag events
         await page.dispatchEvent(
           '[data-testid="drag-files-component"]',
           "dragover",
-          { dataTransfer }
+          { dataTransfer },
         );
         await page.dispatchEvent(
           '[data-testid="drag-files-component"]',
           "drop",
-          { dataTransfer }
+          { dataTransfer },
         );
 
         // Verify file was uploaded
         await expect(
-          page.getByText(`${file.name}.${file.type}`).last()
+          page.getByText(`${file.name}.${file.type}`).last(),
         ).toBeVisible({
           timeout: 1000,
         });
@@ -494,19 +494,19 @@ test(
 
       // Verify files 1, 2, and 3 are selected
       await expect(
-        page.getByTestId(`checkbox-${file1}`).last()
+        page.getByTestId(`checkbox-${file1}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file2}`).last()
+        page.getByTestId(`checkbox-${file2}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file3}`).last()
+        page.getByTestId(`checkbox-${file3}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file4}`).last()
+        page.getByTestId(`checkbox-${file4}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
       await expect(
-        page.getByTestId(`checkbox-${file5}`).last()
+        page.getByTestId(`checkbox-${file5}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
 
       // Test 2: Shift-click to extend selection to file 5
@@ -516,19 +516,19 @@ test(
 
       // Verify all files are selected
       await expect(
-        page.getByTestId(`checkbox-${file1}`).last()
+        page.getByTestId(`checkbox-${file1}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file2}`).last()
+        page.getByTestId(`checkbox-${file2}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file3}`).last()
+        page.getByTestId(`checkbox-${file3}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file4}`).last()
+        page.getByTestId(`checkbox-${file4}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file5}`).last()
+        page.getByTestId(`checkbox-${file5}`).last(),
       ).toHaveAttribute("data-state", "checked");
 
       // Test 3: Unselect a range with shift-click
@@ -552,19 +552,19 @@ test(
 
       // Verify files 2, 3, and 4 are selected
       await expect(
-        page.getByTestId(`checkbox-${file1}`).last()
+        page.getByTestId(`checkbox-${file1}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
       await expect(
-        page.getByTestId(`checkbox-${file2}`).last()
+        page.getByTestId(`checkbox-${file2}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file3}`).last()
+        page.getByTestId(`checkbox-${file3}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file4}`).last()
+        page.getByTestId(`checkbox-${file4}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file5}`).last()
+        page.getByTestId(`checkbox-${file5}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
 
       // Now use shift-click on an already selected range to deselect
@@ -574,25 +574,25 @@ test(
 
       // Verify the range is now deselected
       await expect(
-        page.getByTestId(`checkbox-${file1}`).last()
+        page.getByTestId(`checkbox-${file1}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
       await expect(
-        page.getByTestId(`checkbox-${file2}`).last()
+        page.getByTestId(`checkbox-${file2}`).last(),
       ).toHaveAttribute("data-state", "checked");
       await expect(
-        page.getByTestId(`checkbox-${file3}`).last()
+        page.getByTestId(`checkbox-${file3}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
       await expect(
-        page.getByTestId(`checkbox-${file4}`).last()
+        page.getByTestId(`checkbox-${file4}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
       await expect(
-        page.getByTestId(`checkbox-${file5}`).last()
+        page.getByTestId(`checkbox-${file5}`).last(),
       ).toHaveAttribute("data-state", "unchecked");
 
       // Close the modal
       await page.getByTestId("select-files-modal-button").click();
     }
-  }
+  },
 );
 
 test(
@@ -608,7 +608,7 @@ test(
     // Create PNG content (a simple 1x1 transparent PNG)
     const pngFileContent = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-      "base64"
+      "base64",
     );
 
     // Read the test file content for text file
@@ -700,12 +700,12 @@ test(
 
     // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${pngFileName}`)).toHaveClass(
-      /flex w-full shrink-0 items-center justify-between gap-2 overflow-hidden rounded-lg py-2 cursor-pointer px-3 hover:bg-accent/
+      /flex w-full shrink-0 items-center justify-between gap-2 overflow-hidden rounded-lg py-2 cursor-pointer px-3 hover:bg-accent/,
     );
 
     // Check that the TXT file is not disabled
     await expect(page.getByTestId(`file-item-${txtFileName}`)).not.toHaveClass(
-      /pointer-events-none cursor-not-allowed opacity-50/
+      /pointer-events-none cursor-not-allowed opacity-50/,
     );
 
     // Verify the tooltip for PNG file states it's not supported
@@ -715,7 +715,7 @@ test(
       .hover();
 
     await expect(
-      page.getByText("Type not supported by component")
+      page.getByText("Type not supported by component"),
     ).toBeVisible();
 
     // Try to select the PNG file (should not change its state)
@@ -724,7 +724,7 @@ test(
     // Verify the PNG file checkbox remains unchecked
     await expect(page.getByTestId(`checkbox-${pngFileName}`)).toHaveAttribute(
       "data-state",
-      "unchecked"
+      "unchecked",
     );
 
     // Select the TXT file (should work normally)
@@ -733,7 +733,7 @@ test(
     // Verify the TXT file checkbox becomes checked
     await expect(page.getByTestId(`checkbox-${txtFileName}`)).toHaveAttribute(
       "data-state",
-      "checked"
+      "checked",
     );
 
     // Submit the file selection
@@ -742,5 +742,5 @@ test(
     // Verify that only the TXT file was selected in the component
     await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
     await expect(page.getByText(`${pngFileName}.png`)).not.toBeVisible();
-  }
+  },
 );
