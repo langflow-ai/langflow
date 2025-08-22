@@ -17,7 +17,7 @@ test(
       '[data-testid="sidebar-custom-component-button"]',
       {
         timeout: 3000,
-      },
+      }
     );
 
     // Add URL component
@@ -27,7 +27,9 @@ test(
       timeout: 1000,
     });
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("dataURL")
@@ -236,7 +238,7 @@ test(
       '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
-      },
+      }
     );
     await page
       .getByTestId("output-inspection-output message-chatoutput")
@@ -249,5 +251,5 @@ test(
     // Count occurrences of modified_value in output
     const matches = output?.match(/modified_value/g) || [];
     expect(matches).toHaveLength(2);
-  },
+  }
 );
