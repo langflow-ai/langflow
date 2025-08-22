@@ -16,6 +16,10 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from lfx.graph.graph.base import Graph
+from lfx.graph.utils import log_vertex_build
+from lfx.schema.schema import InputValueRequest
+from lfx.services.cache.utils import CacheMiss
 from loguru import logger
 
 from langflow.api.build import (
@@ -39,17 +43,13 @@ from langflow.api.utils import (
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
-    InputValueRequest,
     ResultDataResponse,
     StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
-from langflow.graph.graph.base import Graph
-from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
-from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
@@ -63,7 +63,7 @@ from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueS
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.vertex_types import InterfaceVertex
+    from lfx.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
 

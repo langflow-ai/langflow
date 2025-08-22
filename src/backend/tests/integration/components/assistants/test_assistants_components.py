@@ -1,12 +1,12 @@
 import pytest
-from langflow.components.datastax import (
+
+from lfx.components.datastax import (
     AssistantsCreateAssistant,
     AssistantsCreateThread,
     AssistantsGetAssistantName,
     AssistantsListAssistants,
     AssistantsRun,
 )
-
 from tests.integration.utils import run_single_component
 
 

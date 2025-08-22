@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
 from jose import JWTError
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
@@ -33,7 +34,6 @@ from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.auth.utils import check_key, get_current_user_by_jwt
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release

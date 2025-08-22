@@ -54,7 +54,7 @@ async def test_initialize_super_user():
 
 async def test_get_and_cache_all_types_dict():
     """Benchmark get_and_cache_all_types_dict function."""
-    from langflow.interface.components import get_and_cache_all_types_dict
+    from lfx.interface.components import get_and_cache_all_types_dict
 
     settings_service = get_settings_service()
     result = await get_and_cache_all_types_dict(settings_service)
@@ -65,8 +65,9 @@ async def test_get_and_cache_all_types_dict():
 async def test_create_starter_projects():
     """Benchmark creation of starter projects."""
     from langflow.initial_setup.setup import create_or_update_starter_projects
-    from langflow.interface.components import get_and_cache_all_types_dict
     from langflow.services.utils import initialize_services
+
+    from lfx.interface.components import get_and_cache_all_types_dict
 
     await initialize_services(fix_migration=False)
     settings_service = get_settings_service()
