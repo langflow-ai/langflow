@@ -240,62 +240,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       return "";
     }
 
-    switch (currentAuthSettings.auth_type) {
-      case "apikey":
-        return `
+    if (currentAuthSettings.auth_type === "apikey") {
+      return `
         "--headers",
         "x-api-key",
         "${currentAuthSettings.api_key || "YOUR_API_KEY"}",`;
-      case "basic":
-        return `
-        "--headers",
-        "Authorization",
-        "Basic ${btoa(
-          `${currentAuthSettings.username || "USERNAME"}:${
-            currentAuthSettings.password || "PASSWORD"
-          }`,
-        )}",`;
-      case "bearer":
-        return `
-        "--headers",
-        "Authorization",
-        "Bearer ${currentAuthSettings.bearer_token || "YOUR_BEARER_TOKEN"}",`;
-      case "iam":
-        return `
-        "--headers",
-        "x-api-key",
-        "${currentAuthSettings.api_key || "YOUR_IAM_TOKEN"}",
-        "--headers",
-        "x-iam-endpoint",
-        "${currentAuthSettings.iam_endpoint || "YOUR_IAM_ENDPOINT"}",`;
-      case "oauth":
-        return `
-        "--auth_type",
-        "oauth",
-        "--sse-url",`;
-      default:
-        return "";
     }
-  };
 
-  const getEnvVars = () => {
-    if (!ENABLE_MCP_COMPOSER || currentAuthSettings?.auth_type === "none")
-      return "";
-    if (currentAuthSettings?.auth_type === "oauth") {
-      return `
-      "env": {
-        "OAUTH_HOST": "${currentAuthSettings.oauth_host || "YOUR_OAUTH_HOST"}",
-        "OAUTH_PORT": "${currentAuthSettings.oauth_port || "YOUR_OAUTH_PORT"}",
-        "OAUTH_SERVER_URL": "${currentAuthSettings.oauth_server_url || "YOUR_OAUTH_SERVER_URL"}",
-        "OAUTH_CALLBACK_PATH": "${currentAuthSettings.oauth_callback_path || "YOUR_OAUTH_CALLBACK_PATH"}",
-        "OAUTH_CLIENT_ID": "${currentAuthSettings.oauth_client_id || "YOUR_OAUTH_CLIENT_ID"}",
-        "OAUTH_CLIENT_SECRET": "${currentAuthSettings.oauth_client_secret || "YOUR_OAUTH_CLIENT_SECRET"}",
-        "OAUTH_AUTH_URL": "${currentAuthSettings.oauth_auth_url || "YOUR_OAUTH_AUTH_URL"}",
-        "OAUTH_TOKEN_URL": "${currentAuthSettings.oauth_token_url || "YOUR_OAUTH_TOKEN_URL"}",
-        "OAUTH_MCP_SCOPE": "${currentAuthSettings.oauth_mcp_scope || "YOUR_OAUTH_MCP_SCOPE"}",
-        "OAUTH_PROVIDER_SCOPE": "${currentAuthSettings.oauth_provider_scope || "YOUR_OAUTH_PROVIDER_SCOPE"}"
-      }`;
-    }
     return "";
   };
 
@@ -323,9 +274,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               ? `"uvx",
         `
               : ""
-        }"${ENABLE_MCP_COMPOSER ? "mcp-composer" : "mcp-proxy"}",${getAuthHeaders()}
+        }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
-      ]${ENABLE_MCP_COMPOSER && currentAuthSettings?.auth_type === "oauth" ? `,` : ""}${getEnvVars()}
+      ]
     }
   }
 }`;

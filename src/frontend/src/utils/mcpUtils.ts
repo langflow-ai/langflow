@@ -3,21 +3,12 @@ import { MCPServerType } from "@/types/mcp";
 export enum AuthMethodId {
   NONE = "none",
   API_KEY = "apikey",
-  BASIC = "basic",
-  BEARER = "bearer",
-  IAM = "iam",
   OAUTH = "oauth",
 }
 
 export const AUTH_METHODS = {
   [AuthMethodId.NONE]: { id: AuthMethodId.NONE, label: "None" },
   [AuthMethodId.API_KEY]: { id: AuthMethodId.API_KEY, label: "API Key" },
-  [AuthMethodId.BASIC]: {
-    id: AuthMethodId.BASIC,
-    label: "Basic",
-  },
-  [AuthMethodId.BEARER]: { id: AuthMethodId.BEARER, label: "Bearer Token" },
-  [AuthMethodId.IAM]: { id: AuthMethodId.IAM, label: "IAM" },
   [AuthMethodId.OAUTH]: { id: AuthMethodId.OAUTH, label: "OAuth" },
 } as const;
 
