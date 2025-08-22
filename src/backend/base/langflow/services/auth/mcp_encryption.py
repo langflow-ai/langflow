@@ -38,12 +38,12 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
                     auth_utils.decrypt_api_key(encrypted_settings[field], settings_service)
                     # If decrypt succeeds, it's already encrypted
                     logger.debug(f"Field {field} is already encrypted")
-                except Exception:
+                except (ValueError, TypeError, KeyError):
                     # If decrypt fails, the value is plaintext and needs encryption
                     encrypted_value = auth_utils.encrypt_api_key(encrypted_settings[field], settings_service)
                     encrypted_settings[field] = encrypted_value
                     logger.debug(f"Encrypted field {field}")
-            except Exception as e:
+            except (ValueError, TypeError, KeyError) as e:
                 logger.error(f"Failed to encrypt field {field}: {e}")
                 raise
 
@@ -71,7 +71,7 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
                 decrypted_value = auth_utils.decrypt_api_key(decrypted_settings[field], settings_service)
                 decrypted_settings[field] = decrypted_value
                 logger.debug(f"Decrypted field {field}")
-            except Exception as e:
+            except (ValueError, TypeError, KeyError) as e:
                 # If decryption fails, assume the value is already plaintext
                 # This handles backward compatibility with existing unencrypted data
                 logger.debug(f"Field {field} appears to be plaintext or decryption failed: {e}")
@@ -92,11 +92,12 @@ def is_encrypted(value: str) -> bool:
     if not value:
         return False
 
+    settings_service = get_settings_service()
     try:
-        settings_service = get_settings_service()
         # Try to decrypt - if it succeeds, it's encrypted
         auth_utils.decrypt_api_key(value, settings_service)
-        return True
-    except Exception:
+    except (ValueError, TypeError, KeyError):
         # If decryption fails, it's not encrypted
         return False
+    else:
+        return True

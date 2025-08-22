@@ -467,7 +467,7 @@ async def test_update_project_auth_settings_encryption(
             "oauth_server_url": "http://localhost:3000",
             "oauth_callback_path": "/callback",
             "oauth_client_id": "test-client-id",
-            "oauth_client_secret": "super-secret-password-123",
+            "oauth_client_secret": "test-oauth-secret-value-456",
             "oauth_auth_url": "https://oauth.example.com/auth",
             "oauth_token_url": "https://oauth.example.com/token",
             "oauth_mcp_scope": "read write",
@@ -492,7 +492,7 @@ async def test_update_project_auth_settings_encryption(
         # Check that sensitive field is encrypted (not plaintext)
         stored_secret = updated_project.auth_settings.get("oauth_client_secret")
         assert stored_secret is not None
-        assert stored_secret != "super-secret-password-123"  # Should be encrypted
+        assert stored_secret != "test-oauth-secret-value-456"  # Should be encrypted
 
         # The encrypted value should be a base64-like string (Fernet token)
         assert len(stored_secret) > 50  # Encrypted values are longer
@@ -506,7 +506,7 @@ async def test_update_project_auth_settings_encryption(
     data = response.json()
 
     # The decrypted value should match the original
-    assert data["auth_settings"]["oauth_client_secret"] == "super-secret-password-123"
+    assert data["auth_settings"]["oauth_client_secret"] == "test-oauth-secret-value-456"
     assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
     assert data["auth_settings"]["auth_type"] == "oauth"
 
