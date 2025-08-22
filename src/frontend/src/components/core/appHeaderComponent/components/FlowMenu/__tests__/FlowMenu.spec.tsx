@@ -12,17 +12,67 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
   default: ({ children }) => <div>{children}</div>,
 }));
-jest.mock("@/components/core/flowSettingsComponent", () => ({ __esModule: true, default: () => <div data-testid="flow-settings" /> }));
-jest.mock("@/controllers/API/queries/flows/use-get-refresh-flows-query", () => ({ __esModule: true, useGetRefreshFlowsQuery: () => ({}) }));
-jest.mock("@/controllers/API/queries/folders/use-get-folders", () => ({ __esModule: true, useGetFoldersQuery: () => ({ data: [{ id: "f1", name: "Folder" }], isFetched: true }) }));
+jest.mock("@/components/core/flowSettingsComponent", () => ({
+  __esModule: true,
+  default: () => <div data-testid="flow-settings" />,
+}));
+jest.mock(
+  "@/controllers/API/queries/flows/use-get-refresh-flows-query",
+  () => ({ __esModule: true, useGetRefreshFlowsQuery: () => ({}) }),
+);
+jest.mock("@/controllers/API/queries/folders/use-get-folders", () => ({
+  __esModule: true,
+  useGetFoldersQuery: () => ({
+    data: [{ id: "f1", name: "Folder" }],
+    isFetched: true,
+  }),
+}));
 const mockSave = jest.fn(() => Promise.resolve());
-jest.mock("@/hooks/flows/use-save-flow", () => ({ __esModule: true, default: () => mockSave }));
-jest.mock("@/hooks/use-unsaved-changes", () => ({ __esModule: true, useUnsavedChanges: () => true }));
-jest.mock("@/customization/hooks/use-custom-navigate", () => ({ __esModule: true, useCustomNavigate: () => jest.fn() }));
-jest.mock("@/stores/flowsManagerStore", () => ({ __esModule: true, default: (sel) => sel({ autoSaving: false, saveLoading: false, currentFlow: { updated_at: new Date().toISOString() } }) }));
-jest.mock("@/stores/alertStore", () => ({ __esModule: true, default: (sel) => sel({ setSuccessData: jest.fn() }) }));
-jest.mock("@/stores/flowStore", () => ({ __esModule: true, default: (sel) => sel({ onFlowPage: true, isBuilding: false, currentFlow: { id: "1", name: "Flow", folder_id: "f1", icon: "Workflow", gradient: "0", locked: false } }) }));
-jest.mock("@/stores/shortcuts", () => ({ __esModule: true, useShortcutsStore: (sel) => sel({ changesSave: "mod+s" }) }));
+jest.mock("@/hooks/flows/use-save-flow", () => ({
+  __esModule: true,
+  default: () => mockSave,
+}));
+jest.mock("@/hooks/use-unsaved-changes", () => ({
+  __esModule: true,
+  useUnsavedChanges: () => true,
+}));
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  __esModule: true,
+  useCustomNavigate: () => jest.fn(),
+}));
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (sel) =>
+    sel({
+      autoSaving: false,
+      saveLoading: false,
+      currentFlow: { updated_at: new Date().toISOString() },
+    }),
+}));
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (sel) => sel({ setSuccessData: jest.fn() }),
+}));
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: (sel) =>
+    sel({
+      onFlowPage: true,
+      isBuilding: false,
+      currentFlow: {
+        id: "1",
+        name: "Flow",
+        folder_id: "f1",
+        icon: "Workflow",
+        gradient: "0",
+        locked: false,
+      },
+    }),
+}));
+jest.mock("@/stores/shortcuts", () => ({
+  __esModule: true,
+  useShortcutsStore: (sel) => sel({ changesSave: "mod+s" }),
+}));
 
 // Avoid pulling utils that depend on darkStore
 jest.mock("@/utils/utils", () => ({
@@ -52,5 +102,3 @@ describe("FlowMenu MenuBar", () => {
     expect(mockSave).toHaveBeenCalled();
   });
 });
-
-

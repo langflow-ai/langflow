@@ -19,7 +19,10 @@ jest.mock("@/components/ui/switch", () => ({
     />
   ),
 }));
-jest.mock("@/components/common/genericIconComponent", () => ({ __esModule: true, default: () => <span /> }));
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: () => <span />,
+}));
 // Mock Radix Form to avoid context requirement
 jest.mock("@radix-ui/react-form", () => ({
   __esModule: true,
@@ -94,5 +97,3 @@ describe("EditFlowSettings", () => {
     expect(setLocked).toHaveBeenCalledWith(true);
   });
 });
-
-

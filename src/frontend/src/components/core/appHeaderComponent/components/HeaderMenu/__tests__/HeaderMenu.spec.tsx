@@ -1,24 +1,30 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import {
-    HeaderMenu,
-    HeaderMenuItemButton,
-    HeaderMenuItemLink,
-    HeaderMenuItems,
-    HeaderMenuItemsSection,
-    HeaderMenuItemsTitle,
-    HeaderMenuToggle,
+  HeaderMenu,
+  HeaderMenuItemButton,
+  HeaderMenuItemLink,
+  HeaderMenuItems,
+  HeaderMenuItemsSection,
+  HeaderMenuItemsTitle,
+  HeaderMenuToggle,
 } from "../index";
 
 jest.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }) => <div data-testid="dm">{children}</div>,
   DropdownMenuTrigger: ({ children, ...rest }) => (
-    <button data-testid="trigger" {...rest}>{children}</button>
+    <button data-testid="trigger" {...rest}>
+      {children}
+    </button>
   ),
   DropdownMenuContent: ({ children, ...rest }) => (
-    <div data-testid="content" {...rest}>{children}</div>
+    <div data-testid="content" {...rest}>
+      {children}
+    </div>
   ),
   DropdownMenuItem: ({ children, ...rest }) => (
-    <div role="menuitem" {...rest}>{children}</div>
+    <div role="menuitem" {...rest}>
+      {children}
+    </div>
   ),
   DropdownMenuSeparator: (props) => <hr data-testid="sep" {...props} />,
 }));
@@ -41,7 +47,9 @@ describe("HeaderMenu primitives", () => {
         <HeaderMenuItems position="right">
           <HeaderMenuItemsTitle subTitle="sub">Title</HeaderMenuItemsTitle>
           <HeaderMenuItemsSection>
-            <HeaderMenuItemLink href="#" newPage>Docs</HeaderMenuItemLink>
+            <HeaderMenuItemLink href="#" newPage>
+              Docs
+            </HeaderMenuItemLink>
             <HeaderMenuItemButton icon="logout" onClick={() => {}}>
               Logout
             </HeaderMenuItemButton>
@@ -82,5 +90,3 @@ describe("HeaderMenu primitives", () => {
     expect(onClick).toHaveBeenCalled();
   });
 });
-
-
