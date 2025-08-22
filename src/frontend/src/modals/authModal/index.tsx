@@ -18,7 +18,7 @@ interface AuthModalProps {
 
 const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   const [authType, setAuthType] = useState<string>(
-    authSettings?.auth_type || "none"
+    authSettings?.auth_type || "none",
   );
   const [authFields, setAuthFields] = useState<{
     oauthHost?: string;
@@ -233,7 +233,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                       onChange={(e) =>
                         handleAuthFieldChange(
                           "oauthCallbackPath",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />
@@ -270,7 +270,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                       onChange={(e) =>
                         handleAuthFieldChange(
                           "oauthClientSecret",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />
@@ -341,7 +341,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                       onChange={(e) =>
                         handleAuthFieldChange(
                           "oauthProviderScope",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />
