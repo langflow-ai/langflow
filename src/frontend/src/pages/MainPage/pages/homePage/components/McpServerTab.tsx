@@ -14,6 +14,7 @@ import {
 } from "@/controllers/API/queries/mcp";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
+import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
@@ -140,6 +141,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+  
+  // Get composer URL for this project
+  const { data: composerUrlData } = useGetProjectComposerUrl(projectId);
 
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
@@ -223,7 +227,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = customGetMCPUrl(projectId);
+  // Use composer passthrough URL if available, otherwise fallback to direct SSE
+  const apiUrl = customGetMCPUrl(
+    projectId, 
+    ENABLE_MCP_COMPOSER && !!composerUrlData?.passthrough_url,
+    composerUrlData?.passthrough_url
+  );
 
   // Generate auth headers based on the authentication type
   const getAuthHeaders = () => {
@@ -481,6 +490,24 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   setup guide
                 </a>
                 .
+                {ENABLE_MCP_COMPOSER && composerUrlData?.passthrough_url && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-accent-emerald-foreground">
+                    <ForwardedIconComponent
+                      name="Network"
+                      className="h-3 w-3"
+                    />
+                    Using MCP Composer (Port: {composerUrlData.composer_port})
+                  </div>
+                )}
+                {ENABLE_MCP_COMPOSER && !composerUrlData?.passthrough_url && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <ForwardedIconComponent
+                      name="AlertCircle"
+                      className="h-3 w-3"
+                    />
+                    MCP Composer not started for this project
+                  </div>
+                )}
               </div>
             </>
           )}

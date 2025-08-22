@@ -35,7 +35,8 @@ from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure, logger
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
+from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -187,6 +188,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Starting telemetry service")
             telemetry_service.start()
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting MCP Composer service")
+            mcp_composer_service = get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            await mcp_composer_service.start()
+            await logger.adebug(f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")
