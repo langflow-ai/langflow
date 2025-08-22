@@ -260,24 +260,24 @@ async def update_project_mcp_settings(
                     # Use python mode to get raw values without SecretStr masking
                     auth_model = request.auth_settings
                     auth_dict = auth_model.model_dump(mode="python", exclude_none=True)
-                    
+
                     # Extract actual secret values before encryption
                     from pydantic import SecretStr
-                    
+
                     # Handle api_key if it's a SecretStr
                     api_key_val = getattr(auth_model, "api_key", None)
                     if isinstance(api_key_val, SecretStr):
                         auth_dict["api_key"] = api_key_val.get_secret_value()
-                    
+
                     # Handle oauth_client_secret if it's a SecretStr
                     client_secret_val = getattr(auth_model, "oauth_client_secret", None)
                     if isinstance(client_secret_val, SecretStr):
                         auth_dict["oauth_client_secret"] = client_secret_val.get_secret_value()
-                    
+
                     # Encrypt and store
                     encrypted_settings = encrypt_auth_settings(auth_dict)
                     project.auth_settings = encrypted_settings
-            
+
             session.add(project)
 
             # Query flows in the project
