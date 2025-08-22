@@ -30,6 +30,7 @@ from langflow.api.v1.mcp_utils import (
     handle_read_resource,
 )
 from langflow.api.v1.schemas import (
+    AuthSettings,
     MCPInstallRequest,
     MCPProjectResponse,
     MCPProjectUpdateRequest,
@@ -38,6 +39,8 @@ from langflow.api.v1.schemas import (
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.database.models import Flow, Folder
+from langflow.services.database.models.api_key.crud import create_api_key
+from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.deps import get_settings_service, session_scope
 
 logger = logging.getLogger(__name__)
@@ -357,6 +360,17 @@ async def install_mcp_config(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
+            # Check if project requires API key authentication
+            generated_api_key = None
+            if project.auth_settings:
+                auth_settings = AuthSettings(**project.auth_settings)
+                if auth_settings.auth_type == "apikey":
+                    # Generate API key with specific name format
+                    api_key_name = f"MCP Project {project.name} - {body.client}"
+                    api_key_create = ApiKeyCreate(name=api_key_name)
+                    unmasked_api_key = await create_api_key(session, api_key_create, current_user.id)
+                    generated_api_key = unmasked_api_key.api_key
+
         # Get settings service to build the SSE URL
         settings_service = get_settings_service()
         host = getattr(settings_service.settings, "host", "localhost")
@@ -396,8 +410,13 @@ async def install_mcp_config(
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
                 except OSError as e:
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
-        else:
-            args = ["mcp-proxy", sse_url]
+
+        # Build the base args for mcp-proxy
+        args = ["mcp-proxy", sse_url]
+
+        # Add API key to args if generated
+        if generated_api_key:
+            args.extend(["--api-key", generated_api_key])
 
         if os_type == "Windows":
             command = "cmd"
@@ -509,6 +528,8 @@ async def install_mcp_config(
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
         message = f"Successfully installed MCP configuration for {body.client}"
+        if generated_api_key:
+            message += f" with API key authentication (key name: 'MCP Project {project.name} - {body.client}')"
         logger.info(message)
         return {"message": message}
 
