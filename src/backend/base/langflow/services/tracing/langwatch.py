@@ -4,9 +4,9 @@ import os
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
-from loguru import logger
 from typing_extensions import override
 
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
 
