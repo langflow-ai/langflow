@@ -549,7 +549,9 @@ class ComposioBaseComponent(Component):
                     clean_field_name = f"{self.app_name}_status"
                     # Update the field schema description to reflect the name change
                     field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get("description", "")
+                    field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get(
+                        "description", ""
+                    )
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -607,8 +609,8 @@ class ComposioBaseComponent(Component):
                     for top_name, top_schema in parameters_schema.get("properties", {}).items():
                         if isinstance(top_schema, dict) and top_schema.get("type") in {"object", "array"}:
                             top_props_for_json.add(top_name)
-                except Exception:
-                    pass
+                except (AttributeError, TypeError, ValueError) as e:
+                    logger.debug(f"Failed to inspect top-level JSON props: {e}")
 
                 for inp in result:
                     if hasattr(inp, "name") and inp.name is not None:
@@ -695,14 +697,15 @@ class ComposioBaseComponent(Component):
                                 required=top_name in required_fields_set,
                             )
                         )
-                except Exception:
-                    pass
+                except (AttributeError, TypeError, ValueError) as e:
+                    logger.debug(f"Failed to append JSON parent field: {e}")
 
                 return processed_inputs
-            return result
         except ValueError as e:
             logger.warning(f"Error generating inputs for {action_key}: {e}")
             return []
+        else:
+            return result
 
     def _get_inputs_for_all_actions(self) -> dict[str, list[InputTypes]]:
         """Return a mapping action_key → list[InputTypes] for every action."""
@@ -797,7 +800,8 @@ class ComposioBaseComponent(Component):
                 # Fallback to first available if none matched
                 if auth_config_id is None and items:
                     auth_config_id = getattr(items[0], "id", None)
-            except Exception:
+            except (AttributeError, TypeError) as e:
+                logger.debug(f"Could not inspect auth_configs items: {e}")
                 auth_config_id = None
 
             # If none found, create a new composio-managed auth config
@@ -821,12 +825,12 @@ class ComposioBaseComponent(Component):
                 raise ValueError(msg)
 
             logger.info(f"OAuth connection initiated for {app_name}: {redirect_url} (ID: {connection_id})")
-            return redirect_url, connection_id
-
-        except Exception as e:
+        except (ValueError, ConnectionError) as e:
             logger.error(f"Error initiating connection for {app_name}: {e}")
             msg = f"Failed to initiate OAuth connection: {e}"
             raise ValueError(msg) from e
+        else:
+            return redirect_url, connection_id
 
     def _check_connection_status_by_id(self, connection_id: str) -> str | None:
         """Check status of a specific connection by ID. Returns status or None if not found."""
@@ -873,10 +877,11 @@ class ComposioBaseComponent(Component):
                 auth_config = getattr(connection.__dict__, "auth_config", None)
             scheme = getattr(auth_config, "auth_scheme", None) if auth_config else None
             is_managed = getattr(auth_config, "is_composio_managed", None) if auth_config else None
-            return scheme, is_managed
-        except Exception as e:
+        except (AttributeError, ValueError) as e:
             logger.debug(f"Could not retrieve auth info for connection {connection_id}: {e}")
             return None, None
+        else:
+            return scheme, is_managed
 
     def _disconnect_specific_connection(self, connection_id: str) -> None:
         """Disconnect a specific Composio connection by ID."""
@@ -895,20 +900,21 @@ class ComposioBaseComponent(Component):
         try:
             if isinstance(obj, dict):
                 return {k: self._to_plain_dict(v) for k, v in obj.items()}
-            if isinstance(obj, (list, tuple, set)):
+            if isinstance(obj, list | tuple | set):
                 return [self._to_plain_dict(v) for v in obj]
             if hasattr(obj, "model_dump"):
                 try:
                     return self._to_plain_dict(obj.model_dump())
-                except Exception:
-                    pass
-            if hasattr(obj, "__dict__") and not isinstance(obj, (str, bytes)):
+                except (AttributeError, TypeError, ValueError):
+                    logger.debug("model_dump() failed during plain dict conversion")
+            if hasattr(obj, "__dict__") and not isinstance(obj, str | bytes):
                 try:
                     return self._to_plain_dict({k: v for k, v in obj.__dict__.items() if not k.startswith("_")})
-                except Exception:
-                    pass
+                except (AttributeError, TypeError):
+                    logger.debug("__dict__ conversion failed during plain dict conversion")
+        except (AttributeError, TypeError, ValueError):
             return obj
-        except Exception:
+        else:
             return obj
 
     def _get_toolkit_schema(self) -> dict[str, Any] | None:
@@ -923,7 +929,7 @@ class ComposioBaseComponent(Component):
                 return None
             try:
                 schema = composio.toolkits.retrieve(slug=app_slug)
-            except Exception:
+            except (AttributeError, TypeError, ValueError):
                 schema = None
                 for method_name, kwargs in (
                     ("retrieve", {"toolkit_slug": app_slug}),
@@ -935,13 +941,15 @@ class ComposioBaseComponent(Component):
                         schema = method(**kwargs)
                         if schema:
                             break
-                    except Exception:
+                    except (AttributeError, TypeError, ValueError) as e:
+                        logger.debug(f"Toolkit schema fallback failed via {method_name}: {e}")
                         continue
             self._toolkit_schema = self._to_plain_dict(schema)
-            return self._toolkit_schema
-        except Exception as e:
+        except (AttributeError, TypeError, ValueError) as e:
             logger.debug(f"Could not retrieve toolkit schema for {getattr(self, 'app_name', '')}: {e}")
             return None
+        else:
+            return self._toolkit_schema
 
     def _extract_auth_modes_from_schema(self, schema: dict[str, Any] | None) -> list[str]:
         """Return available auth modes (e.g., OAUTH2, API_KEY) from toolkit schema."""
@@ -987,7 +995,7 @@ class ComposioBaseComponent(Component):
                     ).to_dict()
                     pill["show"] = True
                     build_config["auth_mode_pill"] = pill
-                except Exception:
+                except (AttributeError, TypeError, ValueError):
                     build_config["auth_mode_pill"] = {
                         "name": "auth_mode_pill",
                         "display_name": "Auth Mode",
@@ -1005,7 +1013,7 @@ class ComposioBaseComponent(Component):
                 if "auth_mode_display" in build_config:
                     build_config["auth_mode_display"]["show"] = False
             auth_mode_cfg["helper_text"] = "Choose how to authenticate with the toolkit."
-        except Exception as e:
+        except (KeyError, TypeError, AttributeError, ValueError) as e:
             logger.debug(f"Failed to render auth_mode dropdown: {e}")
 
     def _clear_auth_dynamic_fields(self, build_config: dict) -> None:
@@ -1020,6 +1028,7 @@ class ComposioBaseComponent(Component):
         name: str,
         display_name: str,
         info: str | None,
+        *,
         required: bool,
         default_value: str | None = None,
     ) -> None:
@@ -1173,8 +1182,8 @@ class ComposioBaseComponent(Component):
                 if selected_mode and not (isinstance(managed, list) and selected_mode in managed):
                     self._clear_auth_dynamic_fields(build_config)
                     self._render_custom_auth_fields(build_config, schema or {}, selected_mode)
-            except Exception:
-                pass
+            except (KeyError, TypeError, AttributeError, ValueError) as e:
+                logger.debug(f"Failed rendering custom auth fields: {e}")
 
         # CRITICAL: Set action options if we have actions (either from fresh population or cache)
         if self._actions_data:
@@ -1222,6 +1231,7 @@ class ComposioBaseComponent(Component):
             build_config["auth_link"]["value"] = "connect"
             build_config["auth_link"]["auth_tooltip"] = "Connect"
             build_config["auth_link"].pop("connection_id", None)
+            build_config["auth_link"].pop("initiation_locked", None)
             build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
             build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
             return build_config
@@ -1240,6 +1250,7 @@ class ComposioBaseComponent(Component):
             # Reset connection state when switching modes
             build_config["auth_link"].pop("connection_id", None)
             build_config["auth_link"].pop("auth_config_id", None)
+            build_config["auth_link"].pop("initiation_locked", None)
             build_config["auth_link"]["value"] = "connect"
             build_config["auth_link"]["auth_tooltip"] = "Connect"
             # If an ACTIVE connection already exists, don't render any auth fields
@@ -1252,6 +1263,7 @@ class ComposioBaseComponent(Component):
                 build_config["auth_link"]["value"] = "validated"
                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                 build_config["auth_link"]["connection_id"] = connection_id
+                build_config["auth_link"]["initiation_locked"] = False
                 # Reflect the connected auth scheme in the UI
                 scheme, is_managed = self._get_connection_auth_info(connection_id)
                 if scheme:
@@ -1270,7 +1282,7 @@ class ComposioBaseComponent(Component):
                         ).to_dict()
                         pill["show"] = True
                         build_config["auth_mode_pill"] = pill
-                    except Exception:
+                    except (AttributeError, TypeError, ValueError):
                         build_config["auth_mode_pill"] = {
                             "name": "auth_mode_pill",
                             "display_name": "Auth Mode",
@@ -1311,16 +1323,81 @@ class ComposioBaseComponent(Component):
                     build_config["auth_link"]["value"] = "validated"
                     build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                     build_config["auth_link"]["connection_id"] = connection_id
+                    build_config["auth_link"]["initiation_locked"] = False
                     build_config["action_button"]["helper_text"] = ""
                     build_config["action_button"]["helper_text_metadata"] = {}
                     logger.info(f"Using existing ACTIVE connection {connection_id} for {toolkit_slug}")
                     return build_config
 
-                # Only reuse ACTIVE connections; otherwise create a new connection
-                stored_connection_id = None
+                # Guard: reuse existing INITIATED connection
+                build_config.setdefault("auth_link", {})
+                stored_connection_id = build_config.get("auth_link", {}).get("connection_id")
+                if build_config["auth_link"].get("initiation_locked") and stored_connection_id:
+                    status = self._check_connection_status_by_id(stored_connection_id)
+                    if status == "INITIATED":
+                        try:
+                            composio = self._build_wrapper()
+                            connection = composio.connected_accounts.get(nanoid=stored_connection_id)
+                            state = getattr(connection, "state", None)
+                            if state and hasattr(state, "val"):
+                                redirect_url = getattr(state.val, "redirect_url", None)
+                                if redirect_url:
+                                    build_config["auth_link"]["value"] = redirect_url
+                                    logger.info(
+                                        "Reusing locked INITIATED connection for %s: %s",
+                                        toolkit_slug,
+                                        stored_connection_id,
+                                    )
+                                    return build_config
+                        except (AttributeError, ValueError, ConnectionError) as e:
+                            logger.debug(f"Failed to reuse locked INITIATED connection: {e}")
+
+                # Probe server for any INITIATED connection to reuse
+                try:
+                    composio = self._build_wrapper()
+                    connection_list = composio.connected_accounts.list(
+                        user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]
+                    )
+                    for connection in getattr(connection_list, "items", []) or []:
+                        status = getattr(connection, "status", None)
+                        if status == "INITIATED":
+                            cid = getattr(connection, "id", None)
+                            if cid:
+                                build_config["auth_link"]["connection_id"] = cid
+                                build_config["auth_link"]["initiation_locked"] = True
+                                state = getattr(connection, "state", None)
+                                if state and hasattr(state, "val"):
+                                    redirect_url = getattr(state.val, "redirect_url", None)
+                                    if redirect_url:
+                                        build_config["auth_link"]["value"] = redirect_url
+                                logger.info(f"Reusing existing INITIATED connection for {toolkit_slug}: {cid}")
+                                return build_config
+                except (AttributeError, ValueError, ConnectionError) as e:
+                    logger.debug(f"INITIATED lookup failed: {e}")
+
+                # Check if we have a stored connection ID with INITIATED status
+                stored_connection_id = build_config.get("auth_link", {}).get("connection_id")
+                if stored_connection_id:
+                    # Check status of existing connection
+                    status = self._check_connection_status_by_id(stored_connection_id)
+                    if status == "INITIATED":
+                        # Get redirect URL from stored connection
+                        try:
+                            composio = self._build_wrapper()
+                            connection = composio.connected_accounts.get(nanoid=stored_connection_id)
+                            state = getattr(connection, "state", None)
+                            if state and hasattr(state, "val"):
+                                redirect_url = getattr(state.val, "redirect_url", None)
+                                if redirect_url:
+                                    build_config["auth_link"]["value"] = redirect_url
+                                    logger.info(f"Reusing existing OAuth URL for {toolkit_slug}: {redirect_url}")
+                                    return build_config
+                        except (AttributeError, ValueError, ConnectionError) as e:
+                            logger.debug(f"Could not retrieve connection {stored_connection_id}: {e}")
+                            # Continue to create new connection below
 
                 # Create new connection ONLY if we truly have no usable connection yet
-                if existing_active is None:
+                if existing_active is None and not (stored_connection_id and status in ("ACTIVE", "INITIATED")):
                     try:
                         # Determine auth mode
                         schema = self._get_toolkit_schema()
@@ -1331,7 +1408,11 @@ class ComposioBaseComponent(Component):
                         managed = (schema or {}).get("composio_managed_auth_schemes") or []
                         if isinstance(managed, list) and "OAUTH2" in managed and (mode is None or mode == "OAUTH2"):
                             redirect_url, connection_id = self._initiate_connection(toolkit_slug)
+                            build_config.setdefault("auth_link", {})
                             build_config["auth_link"]["value"] = redirect_url
+                            if connection_id:
+                                build_config["auth_link"]["connection_id"] = connection_id
+                            build_config["auth_link"]["initiation_locked"] = True
                             logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
                             return build_config
                         if not mode:
@@ -1376,8 +1457,7 @@ class ComposioBaseComponent(Component):
                                     build_config[fname]["helper_text_metadata"] = {"variant": "destructive"}
                                     # Also reflect in info for guaranteed visibility
                                     existing_info = build_config[fname].get("info") or ""
-                                    prefix = "Required: " if not existing_info else "Required: "
-                                    build_config[fname]["info"] = f"{prefix}{existing_info}".strip()
+                                    build_config[fname]["info"] = f"Required: {existing_info}".strip()
                                     build_config[fname]["show"] = True
                             # Add a visible top-level hint near Auth Mode as well
                             build_config.setdefault("auth_mode", {})
@@ -1541,7 +1621,7 @@ class ComposioBaseComponent(Component):
                                 ).to_dict()
                                 pill["show"] = True
                                 build_config["auth_mode_pill"] = pill
-                            except Exception:
+                            except (AttributeError, TypeError, ValueError):
                                 build_config["auth_mode_pill"] = {
                                     "name": "auth_mode_pill",
                                     "display_name": "Auth Mode",
@@ -1601,7 +1681,7 @@ class ComposioBaseComponent(Component):
                             ).to_dict()
                             pill["show"] = True
                             build_config["auth_mode_pill"] = pill
-                        except Exception:
+                        except (AttributeError, TypeError, ValueError):
                             build_config["auth_mode_pill"] = {
                                 "name": "auth_mode_pill",
                                 "display_name": "Auth Mode",
@@ -1673,7 +1753,7 @@ class ComposioBaseComponent(Component):
                         ).to_dict()
                         pill["show"] = True
                         build_config["auth_mode_pill"] = pill
-                    except Exception:
+                    except (AttributeError, TypeError, ValueError):
                         build_config["auth_mode_pill"] = {
                             "name": "auth_mode_pill",
                             "display_name": "Auth Mode",
@@ -1737,11 +1817,14 @@ class ComposioBaseComponent(Component):
                 schema = self._get_toolkit_schema()
                 mode = (build_config.get("auth_mode") or {}).get("value")
                 managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                if mode and not (isinstance(managed, list) and mode in managed):
-                    if not getattr(self, "_auth_dynamic_fields", set()):
-                        self._render_custom_auth_fields(build_config, schema or {}, mode)
-            except Exception:
-                pass
+                if (
+                    mode
+                    and not (isinstance(managed, list) and mode in managed)
+                    and not getattr(self, "_auth_dynamic_fields", set())
+                ):
+                    self._render_custom_auth_fields(build_config, schema or {}, mode)
+            except (KeyError, TypeError, AttributeError, ValueError) as e:
+                logger.debug(f"Tool mode custom auth rendering failed: {e}")
             # Do NOT return here; allow auth flow to run in Tool Mode
 
         if field_name == "tool_mode":
@@ -1764,9 +1847,7 @@ class ComposioBaseComponent(Component):
                     return True
                 if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict) and not val[0].get("name"):
                     return True
-                if isinstance(val, str) and val in ("", "disabled", "placeholder"):
-                    return True
-                return False
+                return isinstance(val, str) and val in ("", "disabled", "placeholder")
 
             if _is_cleared(field_value):
                 self._hide_all_action_fields(build_config)
@@ -2024,7 +2105,7 @@ class ComposioBaseComponent(Component):
                 if isinstance(value, str) and prop_schema.get("type") in {"array", "object"}:
                     try:
                         value = json.loads(value)
-                    except Exception:
+                    except json.JSONDecodeError:
                         # Fallback for simple arrays of primitives
                         if prop_schema.get("type") == "array":
                             value = [item.strip() for item in value.split(",") if item.strip() != ""]
@@ -2124,11 +2205,7 @@ class ComposioBaseComponent(Component):
             )
             req = section.get("required", []) or []
             # Normalize dict-like entries
-            result = []
-            for entry in req:
-                if isinstance(entry, dict):
-                    result.append(entry)
-            return result
+            return [entry for entry in req if isinstance(entry, dict)]
         return []
 
     def _hide_all_action_fields(self, build_config: dict) -> None:
