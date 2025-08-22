@@ -515,7 +515,7 @@ class TestLogProcessors:
         """Test remove_exception_in_production() keeps exception info in dev."""
         event_dict = {"event": "Test message", "exception": "Some exception", "exc_info": "Some exc info"}
 
-        with patch("langflow.logging.logger.DEV", True):  # noqa: FBT003
+        with patch("langflow.settings.DEV", True):  # noqa: FBT003
             result = remove_exception_in_production(None, "error", event_dict)
 
         # Should keep exception info in development
