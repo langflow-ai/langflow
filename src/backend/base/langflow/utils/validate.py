@@ -6,10 +6,10 @@ from types import FunctionType
 from typing import Optional, Union
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
-from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
+from langflow.logging.logger import logger
 
 
 def add_type_ignores() -> None:
@@ -30,7 +30,7 @@ def validate_code(code):
         tree = ast.parse(code)
     except Exception as e:  # noqa: BLE001
         if hasattr(logger, "opt"):
-            logger.opt(exception=True).debug("Error parsing code")
+            logger.debug("Error parsing code", exc_info=True)
         else:
             logger.debug("Error parsing code")
         errors["function"]["errors"].append(str(e))
@@ -58,7 +58,7 @@ def validate_code(code):
                 exec_globals = _create_langflow_execution_context()
                 exec(code_obj, exec_globals)
             except Exception as e:  # noqa: BLE001
-                logger.opt(exception=True).debug("Error executing function code")
+                logger.debug("Error executing function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
