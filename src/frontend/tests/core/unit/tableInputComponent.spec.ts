@@ -22,7 +22,7 @@ test(
       '[data-testid="sidebar-custom-component-button"]',
       {
         timeout: 3000,
-      }
+      },
     );
 
     await page.getByTestId("canvas_controls_dropdown").click();
@@ -193,5 +193,5 @@ class CustomComponent(Component):
       const count = await page.getByText(text).count();
       expect(count).toBe(0);
     }
-  }
+  },
 );

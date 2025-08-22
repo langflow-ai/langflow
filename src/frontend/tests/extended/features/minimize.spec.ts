@@ -46,11 +46,11 @@ test(
     await page.getByTestId("minimize-button-modal").first().click();
 
     await expect(
-      page.locator(".react-flow__handle-left.no-show").first()
+      page.locator(".react-flow__handle-left.no-show").first(),
     ).toBeVisible({ timeout: 3000 });
 
     await expect(
-      page.locator(".react-flow__handle-right.no-show").first()
+      page.locator(".react-flow__handle-right.no-show").first(),
     ).toBeVisible();
 
     await page.getByTestId("more-options-modal").click();
@@ -66,7 +66,7 @@ test(
     });
 
     await expect(
-      page.locator(".react-flow__handle-right").first()
+      page.locator(".react-flow__handle-right").first(),
     ).toBeVisible();
-  }
+  },
 );
