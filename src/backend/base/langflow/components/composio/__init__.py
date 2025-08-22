@@ -5,35 +5,35 @@ from typing import TYPE_CHECKING, Any
 from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .composio_api import ComposioAPIComponent
-    from .github_composio import ComposioGitHubAPIComponent
-    from .gmail_composio import ComposioGmailAPIComponent
-    from .googlecalendar_composio import ComposioGoogleCalendarAPIComponent
-    from .googlemeet_composio import ComposioGooglemeetAPIComponent
-    from .googletasks_composio import ComposioGoogleTasksAPIComponent
-    from .linear_composio import ComposioLinearAPIComponent
-    from .outlook_composio import ComposioOutlookAPIComponent
-    from .reddit_composio import ComposioRedditAPIComponent
-    from .slack_composio import ComposioSlackAPIComponent
-    from .slackbot_composio import ComposioSlackbotAPIComponent
-    from .supabase_composio import ComposioSupabaseAPIComponent
-    from .todoist_composio import ComposioTodoistAPIComponent
-    from .youtube_composio import ComposioYoutubeAPIComponent
-    from .googledocs_composio import ComposioGoogleDocsAPIComponent
-    from .googlesheets_composio import ComposioGoogleSheetsAPIComponent
-    from .klaviyo_composio import ComposioKlaviyoAPIComponent
-    from .notion_composio import ComposioNotionAPIComponent
-    from .onedrive_composio import ComposioOneDriveAPIComponent
-    from .salesforce_composio import ComposioSalesforceAPIComponent
     from .airtable_composio import ComposioAirtableAPIComponent
     from .asana_composio import ComposioAsanaAPIComponent
     from .attio_composio import ComposioAttioAPIComponent
     from .calendly_composio import ComposioCalendlyAPIComponent
+    from .composio_api import ComposioAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
     from .discord_composio import ComposioDiscordAPIComponent
     from .figma_composio import ComposioFigmaAPIComponent
+    from .github_composio import ComposioGitHubAPIComponent
+    from .gmail_composio import ComposioGmailAPIComponent
+    from .googlecalendar_composio import ComposioGoogleCalendarAPIComponent
+    from .googledocs_composio import ComposioGoogleDocsAPIComponent
+    from .googlemeet_composio import ComposioGooglemeetAPIComponent
+    from .googlesheets_composio import ComposioGoogleSheetsAPIComponent
+    from .googletasks_composio import ComposioGoogleTasksAPIComponent
+    from .klaviyo_composio import ComposioKlaviyoAPIComponent
+    from .linear_composio import ComposioLinearAPIComponent
     from .miro_composio import ComposioMiroAPIComponent
+    from .notion_composio import ComposioNotionAPIComponent
+    from .onedrive_composio import ComposioOneDriveAPIComponent
+    from .outlook_composio import ComposioOutlookAPIComponent
+    from .reddit_composio import ComposioRedditAPIComponent
+    from .salesforce_composio import ComposioSalesforceAPIComponent
+    from .slack_composio import ComposioSlackAPIComponent
+    from .slackbot_composio import ComposioSlackbotAPIComponent
+    from .supabase_composio import ComposioSupabaseAPIComponent
+    from .todoist_composio import ComposioTodoistAPIComponent
     from .wrike_composio import ComposioWrikeAPIComponent
+    from .youtube_composio import ComposioYoutubeAPIComponent
 
 _dynamic_imports = {
     "ComposioAPIComponent": "composio_api",
@@ -69,25 +69,6 @@ _dynamic_imports = {
 
 __all__ = [
     "ComposioAPIComponent",
-    "ComposioGitHubAPIComponent",
-    "ComposioGmailAPIComponent",
-    "ComposioGoogleCalendarAPIComponent",
-    "ComposioGoogleTasksAPIComponent",
-    "ComposioGooglemeetAPIComponent",
-    "ComposioLinearAPIComponent",
-    "ComposioOutlookAPIComponent",
-    "ComposioRedditAPIComponent",
-    "ComposioSlackAPIComponent",
-    "ComposioSlackbotAPIComponent",
-    "ComposioSupabaseAPIComponent",
-    "ComposioTodoistAPIComponent",
-    "ComposioYoutubeAPIComponent",
-    "ComposioGoogleDocsAPIComponent",
-    "ComposioGoogleSheetsAPIComponent",
-    "ComposioKlaviyoAPIComponent",
-    "ComposioNotionAPIComponent",
-    "ComposioOneDriveAPIComponent",
-    "ComposioSalesforceAPIComponent",
     "ComposioAirtableAPIComponent",
     "ComposioAsanaAPIComponent",
     "ComposioAttioAPIComponent",
@@ -95,8 +76,27 @@ __all__ = [
     "ComposioContentfulAPIComponent",
     "ComposioDiscordAPIComponent",
     "ComposioFigmaAPIComponent",
+    "ComposioGitHubAPIComponent",
+    "ComposioGmailAPIComponent",
+    "ComposioGoogleCalendarAPIComponent",
+    "ComposioGoogleDocsAPIComponent",
+    "ComposioGoogleSheetsAPIComponent",
+    "ComposioGoogleTasksAPIComponent",
+    "ComposioGooglemeetAPIComponent",
+    "ComposioKlaviyoAPIComponent",
+    "ComposioLinearAPIComponent",
     "ComposioMiroAPIComponent",
+    "ComposioNotionAPIComponent",
+    "ComposioOneDriveAPIComponent",
+    "ComposioOutlookAPIComponent",
+    "ComposioRedditAPIComponent",
+    "ComposioSalesforceAPIComponent",
+    "ComposioSlackAPIComponent",
+    "ComposioSlackbotAPIComponent",
+    "ComposioSupabaseAPIComponent",
+    "ComposioTodoistAPIComponent",
     "ComposioWrikeAPIComponent",
+    "ComposioYoutubeAPIComponent",
 ]
 
 
