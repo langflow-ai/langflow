@@ -129,6 +129,7 @@ dependencies = [
     "jigsawstack==0.2.7",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
+    "traceloop-sdk>=0.43.1",
 ]
 
 [dependency-groups]
@@ -179,6 +180,7 @@ dev = [
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
+    "docling>=2.36.1"
 ]
 
 [tool.uv.sources]
@@ -201,9 +203,6 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
-docling = [
-    "docling>=2.36.1",
-]
 
 audio = [
     "webrtcvad>=2.0.10",

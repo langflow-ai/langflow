@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import json
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -58,7 +59,7 @@ if TYPE_CHECKING:
 _ComponentToolkit = None
 
 
-def get_component_toolkit():
+def _get_component_toolkit():
     global _ComponentToolkit  # noqa: PLW0603
     if _ComponentToolkit is None:
         from lfx.base.tools.component_tool import ComponentToolkit
@@ -163,48 +164,6 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
 
-    @classmethod
-    def get_base_inputs(cls):
-        if not hasattr(cls, "_base_inputs"):
-            return []
-        return cls._base_inputs
-
-    @classmethod
-    def get_base_outputs(cls):
-        if not hasattr(cls, "_base_outputs"):
-            return []
-        return cls._base_outputs
-
-    def get_results(self) -> dict[str, Any]:
-        return self._results
-
-    def get_artifacts(self) -> dict[str, Any]:
-        return self._artifacts
-
-    def get_event_manager(self) -> EventManager | None:
-        return self._event_manager
-
-    def get_undesrcore_inputs(self) -> dict[str, InputTypes]:
-        return self._inputs
-
-    def get_id(self) -> str:
-        return self._id
-
-    def set_id(self, id_: str) -> None:
-        self._id = id_
-
-    def get_edges(self) -> list[EdgeData]:
-        return self._edges
-
-    def get_components(self) -> list[Component]:
-        return self._components
-
-    def get_outputs_map(self) -> dict[str, Output]:
-        return self._outputs_map
-
-    def get_output_logs(self) -> dict[str, Any]:
-        return self._output_logs
-
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
         if id_:
@@ -277,7 +236,7 @@ class Component(CustomComponent):
         return {
             "_user_id": self.user_id,
             "_session_id": self.graph.session_id,
-            "_tracing_service": self.tracing_service,
+            "_tracing_service": self._tracing_service,
         }
 
     @property
@@ -344,7 +303,7 @@ class Component(CustomComponent):
         for output in self._outputs_map.values():
             fields[output.name] = getattr(self, output.method)
         # Lazy import to avoid circular dependency
-        from lfx.graph.state.model import create_state_model
+        from langflow.graph.state.model import create_state_model
 
         self._state_model = create_state_model(model_name=model_name, **fields)
         return self._state_model
@@ -846,7 +805,7 @@ class Component(CustomComponent):
             methods = ", ".join([f"'{output.method}'" for output in value.outputs])
             msg = f"You set {value.display_name} as value for `{key}`. You should pass one of the following: {methods}"
             raise TypeError(msg)
-        self.set_input_value(key, value)
+        self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
 
@@ -891,7 +850,7 @@ class Component(CustomComponent):
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
-    def set_input_value(self, name: str, value: Any) -> None:
+    def _set_input_value(self, name: str, value: Any) -> None:
         if name in self._inputs:
             input_value = self._inputs[name].value
             if isinstance(input_value, Component):
@@ -957,8 +916,8 @@ class Component(CustomComponent):
         # ! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
-        # for key in self._inputs:
-        #     frontend_node.set_field_load_from_db_in_template(key, value=False)
+        for key in self._inputs:
+            frontend_node.set_field_load_from_db_in_template(key, value=False)
         self._map_parameters_on_frontend_node(frontend_node)
 
         frontend_node_dict = frontend_node.to_dict(keep_name=False)
@@ -1061,18 +1020,31 @@ class Component(CustomComponent):
         return {**predefined_inputs, **runtime_inputs}
 
     def get_trace_as_metadata(self):
+        def safe_list_values(items):
+            return [v if isinstance(v, str | int | float | bool) or v is None else str(v) for v in items]
+
+        def safe_value(val):
+            if isinstance(val, str | int | float | bool) or val is None:
+                return val
+            if isinstance(val, list | tuple):
+                return safe_list_values(val)
+            try:
+                return json.dumps(val)
+            except (TypeError, ValueError):
+                return str(val)
+
         return {
-            input_.name: input_.value
+            input_.name: safe_value(getattr(self, input_.name, input_.value))
             for input_ in self.inputs
-            if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata
+            if getattr(input_, "trace_as_metadata", False)
         }
 
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
-        async with self.tracing_service.trace_component(self, self.trace_name, inputs, metadata):
+        async with self._tracing_service.trace_component(self, self.trace_name, inputs, metadata):
             results, artifacts = await self._build_results()
-            self.tracing_service.set_outputs(self.trace_name, results)
+            self._tracing_service.set_outputs(self.trace_name, results)
 
         return results, artifacts
 
@@ -1088,7 +1060,7 @@ class Component(CustomComponent):
         else:
             session_id = None
         try:
-            if self.tracing_service:
+            if self._tracing_service:
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except StreamingError as e:
@@ -1271,8 +1243,8 @@ class Component(CustomComponent):
     def _finalize_results(self, results, artifacts):
         self._artifacts = artifacts
         self._results = results
-        if self.tracing_service:
-            self.tracing_service.set_outputs(self.trace_name, results)
+        if self._tracing_service:
+            self._tracing_service.set_outputs(self.trace_name, results)
 
     def custom_repr(self):
         if self.repr_value == "":
@@ -1311,7 +1283,7 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_toolkit(self) -> list[Tool]:
+    async def to_toolkit(self) -> list[Tool]:
         """Convert component to a list of tools.
 
         This is a template method that defines the skeleton of the toolkit creation
@@ -1325,7 +1297,7 @@ class Component(CustomComponent):
                 - tags: List of tags associated with the tool
         """
         # Get tools from subclass implementation
-        tools = self._get_tools()
+        tools = await self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = self._filter_tools_by_status(tools=tools, metadata=self.tools_metadata)
@@ -1334,7 +1306,7 @@ class Component(CustomComponent):
         # If no metadata exists yet, filter based on enabled_tools
         return self._filter_tools_by_status(tools=tools, metadata=None)
 
-    def _get_tools(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
 
         This method can be overridden by subclasses to provide custom tool implementations.
@@ -1343,7 +1315,7 @@ class Component(CustomComponent):
         Returns:
             list[Tool]: List of tools provided by this component
         """
-        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
 
     def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
@@ -1352,7 +1324,7 @@ class Component(CustomComponent):
 
     def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
         """Update tools with provided metadata."""
-        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
@@ -1413,19 +1385,14 @@ class Component(CustomComponent):
 
     async def _build_tools_metadata_input(self):
         try:
-            from lfx.inputs.inputs import ToolsInput
+            from langflow.io import ToolsInput
         except ImportError as e:
-            msg = "Failed to import ToolsInput from lfx.inputs.inputs"
+            msg = "Failed to import ToolsInput from langflow.io"
             raise ImportError(msg) from e
         placeholder = None
         tools = []
         try:
-            # Handle both sync and async _get_tools methods
-            if asyncio.iscoroutinefunction(self._get_tools):
-                tools = await self._get_tools()
-            else:
-                tools = self._get_tools()
-
+            tools = await self._get_tools()
             placeholder = "Loading actions..." if len(tools) == 0 else ""
         except (TimeoutError, asyncio.TimeoutError):
             placeholder = "Timeout loading actions"
@@ -1467,8 +1434,8 @@ class Component(CustomComponent):
         )
 
     def get_project_name(self):
-        if hasattr(self, "_tracing_service") and self.tracing_service:
-            return self.tracing_service.project_name
+        if hasattr(self, "_tracing_service") and self._tracing_service:
+            return self._tracing_service.project_name
         return "Langflow"
 
     def log(self, message: LoggableType | list[LoggableType], name: str | None = None) -> None:
@@ -1482,8 +1449,8 @@ class Component(CustomComponent):
             name = f"Log {len(self._logs) + 1}"
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        if self.tracing_service and self._vertex:
-            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+        if self._tracing_service and self._vertex:
+            self._tracing_service.add_log(trace_name=self.trace_name, log=log)
         if self._event_manager is not None and self._current_output:
             data = log.model_dump()
             data["output"] = self._current_output
@@ -1503,7 +1470,7 @@ class Component(CustomComponent):
 
     def is_connected_to_chat_output(self) -> bool:
         # Lazy import to avoid circular dependency
-        from lfx.graph.utils import has_chat_output
+        from langflow.graph.utils import has_chat_output
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 
@@ -1516,43 +1483,16 @@ class Component(CustomComponent):
             and not isinstance(message, ErrorMessage)
         )
 
-    def _ensure_message_required_fields(self, message: Message) -> None:
-        """Ensure message has required fields for storage (session_id, sender, sender_name).
-
-        Only sets default values if the fields are not already provided.
-        """
-        from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
-
-        # Set default session_id from graph if not already set
-        if (
-            not message.session_id
-            and hasattr(self, "graph")
-            and hasattr(self.graph, "session_id")
-            and self.graph.session_id
-        ):
+    async def send_message(self, message: Message, id_: str | None = None):
+        if self._should_skip_message(message):
+            return message
+        if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
             session_id = (
                 UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
             )
             message.session_id = session_id
-
-        # Set default sender if not set (preserves existing values)
-        if not message.sender:
-            message.sender = MESSAGE_SENDER_AI
-
-        # Set default sender_name if not set (preserves existing values)
-        if not message.sender_name:
-            message.sender_name = MESSAGE_SENDER_NAME_AI
-
-    async def send_message(self, message: Message, id_: str | None = None):
-        if self._should_skip_message(message):
-            return message
-
         if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
             message.flow_id = UUID(message.flow_id)
-
-        # Ensure required fields for message storage are set
-        self._ensure_message_required_fields(message)
-
         stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
@@ -1800,9 +1740,3 @@ class Component(CustomComponent):
             str: The formatted error message with component display name.
         """
         return f"[Component: {self.display_name or self.__class__.__name__}] {message}"
-
-
-def _get_component_toolkit():
-    from lfx.base.tools.component_tool import ComponentToolkit
-
-    return ComponentToolkit
