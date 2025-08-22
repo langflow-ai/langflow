@@ -135,13 +135,13 @@ class AgentComponent(ToolCallingAgentComponent):
             # return result
 
         except (ValueError, TypeError, KeyError) as e:
-            logger.error(f"{type(e).__name__}: {e!s}")
+            await logger.aerror(f"{type(e).__name__}: {e!s}")
             raise
         except ExceptionWithMessageError as e:
-            logger.error(f"ExceptionWithMessageError occurred: {e}")
+            await logger.aerror(f"ExceptionWithMessageError occurred: {e}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error: {e!s}")
+            await logger.aerror(f"Unexpected error: {e!s}")
             raise
         else:
             return result

@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import os
 import platform
 from asyncio.subprocess import create_subprocess_exec
@@ -39,6 +38,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
+from langflow.logging import logger
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
@@ -198,7 +198,7 @@ async def list_project_tools(
                     tools.append(tool)
                 except Exception as e:  # noqa: BLE001
                     msg = f"Error in listing project tools: {e!s} from flow: {name}"
-                    logger.warning(msg)
+                    await logger.awarning(msg)
                     continue
 
             # Get project-level auth settings
@@ -210,14 +210,14 @@ async def list_project_tools(
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return MCPProjectResponse(tools=tools, auth_settings=auth_settings)
 
 
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
-async def im_alive():
+async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
 
 
@@ -231,7 +231,7 @@ async def handle_project_sse(
     # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
     project_server = get_project_mcp_server(project_id)
-    logger.debug("Project MCP server name: %s", project_server.server.name)
+    await logger.adebug("Project MCP server name: %s", project_server.server.name)
 
     # Set context variables
     user_token = current_user_ctx.set(current_user)
@@ -240,7 +240,7 @@ async def handle_project_sse(
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
             try:
-                logger.debug("Starting SSE connection for project %s", project_id)
+                await logger.adebug("Starting SSE connection for project %s", project_id)
 
                 notification_options = NotificationOptions(
                     prompts_changed=True, resources_changed=True, tools_changed=True
@@ -249,15 +249,15 @@ async def handle_project_sse(
 
                 try:
                     await project_server.server.run(streams[0], streams[1], init_options)
-                except Exception:
-                    logger.exception("Error in project MCP")
+                except Exception:  # noqa: BLE001
+                    await logger.aexception("Error in project MCP")
             except BrokenResourceError:
-                logger.info("Client disconnected from project SSE connection")
+                await logger.ainfo("Client disconnected from project SSE connection")
             except asyncio.CancelledError:
-                logger.info("Project SSE connection was cancelled")
+                await logger.ainfo("Project SSE connection was cancelled")
                 raise
             except Exception:
-                logger.exception("Error in project MCP")
+                await logger.aexception("Error in project MCP")
                 raise
     finally:
         current_user_ctx.reset(user_token)
@@ -281,7 +281,7 @@ async def handle_project_messages(
         sse = get_project_sse(project_id)
         await sse.handle_post_message(request.scope, request.receive, request._send)
     except BrokenResourceError as e:
-        logger.info("Project MCP Server disconnected for project %s", project_id)
+        await logger.ainfo("Project MCP Server disconnected for project %s", project_id)
         raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e
     finally:
         current_user_ctx.reset(user_token)
@@ -351,7 +351,7 @@ async def update_project_mcp_settings(
 
     except Exception as e:
         msg = f"Error updating project MCP settings: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -467,7 +467,7 @@ async def install_mcp_config(
         is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
 
         if is_wsl:
-            logger.debug("WSL detected, using Windows-specific configuration")
+            await logger.adebug("WSL detected, using Windows-specific configuration")
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
             # so Windows applications can reach the WSL service
@@ -486,11 +486,11 @@ async def install_mcp_config(
 
                     if proc.returncode == 0 and stdout.strip():
                         wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
-                        logger.debug("Using WSL IP for external access: %s", wsl_ip)
+                        await logger.adebug("Using WSL IP for external access: %s", wsl_ip)
                         # Replace the localhost with the WSL IP in the URL
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
                 except OSError as e:
-                    logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
+                    await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
         # Build the base args for mcp-proxy
         args = ["mcp-proxy"]
@@ -514,7 +514,7 @@ async def install_mcp_config(
         if os_type == "Windows":
             command = "cmd"
             args = ["/c", "uvx", *args]
-            logger.debug("Windows detected, using cmd command")
+            await logger.adebug("Windows detected, using cmd command")
 
         name = project.name
 
@@ -529,7 +529,7 @@ async def install_mcp_config(
         }
 
         server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
-        logger.debug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
+        await logger.adebug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
 
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
@@ -581,7 +581,7 @@ async def install_mcp_config(
                                     status_code=400, detail="Windows C: drive not mounted at /mnt/c in WSL"
                                 )
                     except (OSError, CalledProcessError) as e:
-                        logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
+                        await logger.awarning("Failed to determine Windows user path in WSL: %s", str(e))
                         raise HTTPException(
                             status_code=400, detail=f"Could not determine Windows Claude config path in WSL: {e!s}"
                         ) from e
@@ -626,7 +626,7 @@ async def install_mcp_config(
 
     except Exception as e:
         msg = f"Error installing MCP configuration: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
         action = "reinstalled" if removed_servers else "installed"
@@ -636,7 +636,7 @@ async def install_mcp_config(
         if generated_api_key:
             auth_type = "API key" if FEATURE_FLAGS.mcp_composer else "legacy API key"
             message += f" with {auth_type} authentication (key name: 'MCP Project {project.name} - {body.client}')"
-        logger.info(message)
+        await logger.ainfo(message)
         return {"message": message}
 
 
@@ -659,33 +659,37 @@ async def check_installed_mcp_servers(
         # Generate the SSE URL for this project
         project_sse_url = await get_project_sse_url(project_id)
 
-        logger.debug("Checking for installed MCP servers for project: %s (SSE URL: %s)", project.name, project_sse_url)
+        await logger.adebug(
+            "Checking for installed MCP servers for project: %s (SSE URL: %s)", project.name, project_sse_url
+        )
 
         # Check configurations for different clients
         results = []
 
         # Check Cursor configuration
         cursor_config_path = Path.home() / ".cursor" / "mcp.json"
-        logger.debug("Checking Cursor config at: %s (exists: %s)", cursor_config_path, cursor_config_path.exists())
+        await logger.adebug(
+            "Checking Cursor config at: %s (exists: %s)", cursor_config_path, cursor_config_path.exists()
+        )
         if cursor_config_path.exists():
             try:
                 with cursor_config_path.open("r") as f:
                     cursor_config = json.load(f)
                     if config_contains_sse_url(cursor_config, project_sse_url):
-                        logger.debug("Found Cursor config with matching SSE URL: %s", project_sse_url)
+                        await logger.adebug("Found Cursor config with matching SSE URL: %s", project_sse_url)
                         results.append("cursor")
                     else:
-                        logger.debug(
+                        await logger.adebug(
                             "Cursor config exists but no server with SSE URL: %s (available servers: %s)",
                             project_sse_url,
                             list(cursor_config.get("mcpServers", {}).keys()),
                         )
             except json.JSONDecodeError:
-                logger.warning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
+                await logger.awarning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
 
         # Check Windsurf configuration
         windsurf_config_path = Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
-        logger.debug(
+        await logger.adebug(
             "Checking Windsurf config at: %s (exists: %s)", windsurf_config_path, windsurf_config_path.exists()
         )
         if windsurf_config_path.exists():
@@ -693,16 +697,16 @@ async def check_installed_mcp_servers(
                 with windsurf_config_path.open("r") as f:
                     windsurf_config = json.load(f)
                     if config_contains_sse_url(windsurf_config, project_sse_url):
-                        logger.debug("Found Windsurf config with matching SSE URL: %s", project_sse_url)
+                        await logger.adebug("Found Windsurf config with matching SSE URL: %s", project_sse_url)
                         results.append("windsurf")
                     else:
-                        logger.debug(
+                        await logger.adebug(
                             "Windsurf config exists but no server with SSE URL: %s (available servers: %s)",
                             project_sse_url,
                             list(windsurf_config.get("mcpServers", {}).keys()),
                         )
             except json.JSONDecodeError:
-                logger.warning("Failed to parse Windsurf config JSON at: %s", windsurf_config_path)
+                await logger.awarning("Failed to parse Windsurf config JSON at: %s", windsurf_config_path)
 
         # Check Claude configuration
         claude_config_path = None
@@ -747,7 +751,7 @@ async def check_installed_mcp_servers(
                                     user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
                                 )
                 except (OSError, CalledProcessError) as e:
-                    logger.warning(
+                    await logger.awarning(
                         "Failed to determine Windows user path in WSL for checking Claude config: %s", str(e)
                     )
                     # Don't set claude_config_path, so it will be skipped
@@ -756,27 +760,27 @@ async def check_installed_mcp_servers(
                 claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
 
         if claude_config_path and claude_config_path.exists():
-            logger.debug("Checking Claude config at: %s", claude_config_path)
+            await logger.adebug("Checking Claude config at: %s", claude_config_path)
             try:
                 with claude_config_path.open("r") as f:
                     claude_config = json.load(f)
                     if config_contains_sse_url(claude_config, project_sse_url):
-                        logger.debug("Found Claude config with matching SSE URL: %s", project_sse_url)
+                        await logger.adebug("Found Claude config with matching SSE URL: %s", project_sse_url)
                         results.append("claude")
                     else:
-                        logger.debug(
+                        await logger.adebug(
                             "Claude config exists but no server with SSE URL: %s (available servers: %s)",
                             project_sse_url,
                             list(claude_config.get("mcpServers", {}).keys()),
                         )
             except json.JSONDecodeError:
-                logger.warning("Failed to parse Claude config JSON at: %s", claude_config_path)
+                await logger.awarning("Failed to parse Claude config JSON at: %s", claude_config_path)
         else:
-            logger.debug("Claude config path not found or doesn't exist: %s", claude_config_path)
+            await logger.adebug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
     except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
     return results
 
@@ -980,11 +984,11 @@ async def init_mcp_servers():
                 try:
                     get_project_sse(project.id)
                     get_project_mcp_server(project.id)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     msg = f"Failed to initialize MCP server for project {project.id}: {e}"
-                    logger.exception(msg)
+                    await logger.aexception(msg)
                     # Continue to next project even if this one fails
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         msg = f"Failed to initialize MCP servers: {e}"
-        logger.exception(msg)
+        await logger.aexception(msg)
