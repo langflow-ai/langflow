@@ -11,11 +11,11 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from loguru import logger
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.logging.logger import logger
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
@@ -488,7 +488,7 @@ async def delete_file(
         raise
     except Exception as e:
         # Log and return a generic server error
-        logger.error("Error deleting file %s: %s", file_id, e)
+        await logger.aerror("Error deleting file %s: %s", file_id, e)
         raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
     return {"detail": f"File {file_to_delete.name} deleted successfully"}
 

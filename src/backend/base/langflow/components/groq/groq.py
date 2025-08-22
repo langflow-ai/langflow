@@ -1,5 +1,4 @@
 import requests
-from loguru import logger
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.groq_constants import (
@@ -11,6 +10,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.logging.logger import logger
 
 
 class GroqModel(LCModelComponent):
@@ -74,7 +74,7 @@ class GroqModel(LCModelComponent):
         ),
     ]
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             url = f"{self.base_url}/openai/v1/models"
             headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
