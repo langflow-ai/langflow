@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import CanvasControlsDropdown, { KEYBOARD_SHORTCUTS } from "../CanvasControlsDropdown";
+import CanvasControlsDropdown, {
+  KEYBOARD_SHORTCUTS,
+} from "../CanvasControlsDropdown";
 
 jest.mock("@/components/ui/button", () => ({
   Button: ({ children, ...rest }) => <button {...rest}>{children}</button>,
@@ -113,5 +115,3 @@ describe("CanvasControlsDropdown", () => {
     expect(zoomTo).toHaveBeenCalledWith(1);
   });
 });
-
-

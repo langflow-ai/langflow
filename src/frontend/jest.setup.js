@@ -65,7 +65,10 @@ jest.mock("react-markdown", () => ({ __esModule: true, default: () => null }));
 jest.mock("lucide-react/dynamicIconImports", () => ({}), { virtual: true });
 
 // Avoid darkStore import in tests via genericIconComponent
-jest.mock("@/components/common/genericIconComponent", () => ({ __esModule: true, default: () => null }));
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: () => null,
+}));
 
 // Stub custom icon that uses JSX file to avoid transform issues in Jest
 jest.mock("@/icons/BotMessageSquare", () => ({

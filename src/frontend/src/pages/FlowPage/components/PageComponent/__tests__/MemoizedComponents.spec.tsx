@@ -1,9 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoizedCanvasControls, MemoizedLogCanvasControls, MemoizedSidebarTrigger } from "../MemoizedComponents";
+import {
+  MemoizedCanvasControls,
+  MemoizedLogCanvasControls,
+  MemoizedSidebarTrigger,
+} from "../MemoizedComponents";
 
 jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
   __esModule: true,
-  default: ({ children }) => <div data-testid="canvas-controls">{children}</div>,
+  default: ({ children }) => (
+    <div data-testid="canvas-controls">{children}</div>
+  ),
 }));
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -13,12 +19,26 @@ jest.mock("@/components/ui/button", () => ({
   Button: ({ children, ...rest }) => <button {...rest}>{children}</button>,
 }));
 jest.mock("@xyflow/react", () => ({
-  Panel: ({ children, ...rest }) => <div data-testid="panel" {...rest}>{children}</div>,
+  Panel: ({ children, ...rest }) => (
+    <div data-testid="panel" {...rest}>
+      {children}
+    </div>
+  ),
 }));
-jest.mock("@/components/core/logCanvasControlsComponent", () => ({ __esModule: true, default: () => <div data-testid="log-controls" /> }));
-jest.mock("@/components/ui/sidebar", () => ({ SidebarTrigger: ({ children, ...rest }) => <button {...rest}>{children}</button> }));
+jest.mock("@/components/core/logCanvasControlsComponent", () => ({
+  __esModule: true,
+  default: () => <div data-testid="log-controls" />,
+}));
+jest.mock("@/components/ui/sidebar", () => ({
+  SidebarTrigger: ({ children, ...rest }) => (
+    <button {...rest}>{children}</button>
+  ),
+}));
 // Avoid utils importing darkStore
-jest.mock("@/utils/utils", () => ({ __esModule: true, cn: (...args) => args.filter(Boolean).join(" ") }));
+jest.mock("@/utils/utils", () => ({
+  __esModule: true,
+  cn: (...args) => args.filter(Boolean).join(" "),
+}));
 
 describe("MemoizedComponents", () => {
   it("clicking add note sets state and positions shadow box", () => {
@@ -47,5 +67,3 @@ describe("MemoizedComponents", () => {
     expect(screen.getByTestId("log-controls")).toBeInTheDocument();
   });
 });
-
-
