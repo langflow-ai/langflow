@@ -42,6 +42,7 @@ from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 logger = logging.getLogger(__name__)
 
@@ -360,16 +361,25 @@ async def install_mcp_config(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-            # Check if project requires API key authentication
+            # Check if project requires API key authentication and generate if needed
             generated_api_key = None
-            if project.auth_settings:
+
+            # Determine if we need to generate an API key based on feature flag
+            should_generate_api_key = False
+            if not FEATURE_FLAGS.mcp_composer:
+                # When MCP_COMPOSER is disabled, always generate API key (matches frontend !isAutoLogin check)
+                should_generate_api_key = True
+            elif project.auth_settings:
+                # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
                 auth_settings = AuthSettings(**project.auth_settings)
-                if auth_settings.auth_type == "apikey":
-                    # Generate API key with specific name format
-                    api_key_name = f"MCP Project {project.name} - {body.client}"
-                    api_key_create = ApiKeyCreate(name=api_key_name)
-                    unmasked_api_key = await create_api_key(session, api_key_create, current_user.id)
-                    generated_api_key = unmasked_api_key.api_key
+                should_generate_api_key = auth_settings.auth_type == "apikey"
+
+            if should_generate_api_key:
+                # Generate API key with specific name format
+                api_key_name = f"MCP Project {project.name} - {body.client}"
+                api_key_create = ApiKeyCreate(name=api_key_name)
+                unmasked_api_key = await create_api_key(session, api_key_create, current_user.id)
+                generated_api_key = unmasked_api_key.api_key
 
         # Get settings service to build the SSE URL
         settings_service = get_settings_service()
@@ -412,11 +422,22 @@ async def install_mcp_config(
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
         # Build the base args for mcp-proxy
-        args = ["mcp-proxy", sse_url]
+        args = ["mcp-proxy"]
 
-        # Add API key to args if generated
-        if generated_api_key:
-            args.extend(["--api-key", generated_api_key])
+        # Add authentication args based on MCP_COMPOSER feature flag and auth settings
+        if not FEATURE_FLAGS.mcp_composer:
+            # When MCP_COMPOSER is disabled, always use headers format if API key was generated
+            if generated_api_key:
+                args.extend(["--headers", "x-api-key", generated_api_key])
+        elif project.auth_settings:
+            # When MCP_COMPOSER is enabled, only add headers if auth_type is "apikey"
+            auth_settings = AuthSettings(**project.auth_settings)
+            if auth_settings.auth_type == "apikey" and generated_api_key:
+                args.extend(["--headers", "x-api-key", generated_api_key])
+            # If no auth_settings or auth_type is "none", don't add any auth headers
+
+        # Add the SSE URL
+        args.append(sse_url)
 
         if os_type == "Windows":
             command = "cmd"
@@ -529,7 +550,8 @@ async def install_mcp_config(
     else:
         message = f"Successfully installed MCP configuration for {body.client}"
         if generated_api_key:
-            message += f" with API key authentication (key name: 'MCP Project {project.name} - {body.client}')"
+            auth_type = "API key" if FEATURE_FLAGS.mcp_composer else "legacy API key"
+            message += f" with {auth_type} authentication (key name: 'MCP Project {project.name} - {body.client}')"
         logger.info(message)
         return {"message": message}
 
