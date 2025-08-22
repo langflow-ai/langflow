@@ -168,9 +168,13 @@ test(
       .nth(1);
     await elementCombineTextInput1.click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTitle("fit view").click();
 
     await zoomOut(page, 2);
+
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("title-Combine Text")

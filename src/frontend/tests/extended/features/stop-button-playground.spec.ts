@@ -26,7 +26,11 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-custom-component-button").click();
+        await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTitle("fit view").click();
+        await page.getByTestId("canvas_controls_dropdown").click();
+
 
     await page.getByTestId("sidebar-search-input").click();
     await page.waitForTimeout(500);
