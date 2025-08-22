@@ -323,7 +323,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         (Object.keys(items).length > 0 &&
           (CATEGORIES.find((c) => c.name === category) ||
             BUNDLES.find((b) => b.name === category))) ||
-        category === "MCP",
+        (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0),
     );
   }, [dataFilter]);
 
@@ -371,12 +371,15 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   useEffect(() => {
     const options = {
-      keys: ["display_name", "description", "type", "category"],
-      threshold: 0.4, // More lenient threshold for better partial matching
+      keys: [
+        "display_name",
+        "description",
+        "type",
+        "category",
+        "mcpServerName",
+      ],
+      threshold: 0.2,
       includeScore: true,
-      // Add more fuzzy search options
-      location: 0, // Start searching from the beginning of strings
-      distance: 100, // How far to search
     };
 
     const fuseData = Object.entries(baseData).flatMap(([category, items]) =>
@@ -392,8 +395,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       const mcpComponent = data["agents"]["MCPTools"];
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
-        display_name: mcpServer.name,
-        description: `MCP Server: ${mcpServer.name}`,
+        mcpServerName: mcpServer.name, // adds this field and makes it searchable
         category: "MCP",
         key: `mcp_${mcpServer.name}`,
         template: {
@@ -480,24 +482,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
     );
     const result = categoriesWithItems.length > 0;
-    console.log("hasCoreComponents check:");
-    console.log(
-      "  CATEGORIES names:",
-      CATEGORIES.map((c) => c.name),
-    );
-    console.log(
-      "  categories with items:",
-      categoriesWithItems.map((c) => c.name),
-    );
-    console.log(
-      "  category item counts:",
-      CATEGORIES.map((c) => ({
-        name: c.name,
-        hasData: !!dataFilter[c.name],
-        count: dataFilter[c.name] ? Object.keys(dataFilter[c.name]).length : 0,
-      })),
-    );
-    console.log("  result:", result);
     return result;
   }, [dataFilter]);
 
@@ -507,28 +491,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
     );
     const result = bundlesWithItems.length > 0;
-    console.log("hasBundleItems check:");
-    console.log(
-      "  BUNDLES names:",
-      BUNDLES.map((b) => b.name),
-    );
-    console.log(
-      "  bundles with items:",
-      bundlesWithItems.map((b) => b.name),
-    );
-    console.log(
-      "  bundle item counts:",
-      BUNDLES.map((b) => ({
-        name: b.name,
-        hasData: !!dataFilter[b.name],
-        count: dataFilter[b.name] ? Object.keys(dataFilter[b.name]).length : 0,
-      })),
-    );
-    console.log("  result:", result);
     return result;
   }, [dataFilter]);
 
   const { activeSection } = useSidebar();
+
+  const hasMcpComponents = useMemo(() => {
+    return dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0;
+  }, [dataFilter]);
 
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
@@ -544,7 +514,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     !ENABLE_NEW_SIDEBAR;
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
-    (search !== "" && dataFilter["MCP"].length > 0 && ENABLE_NEW_SIDEBAR);
+    (search !== "" && hasMcpComponents && ENABLE_NEW_SIDEBAR);
 
   return (
     <Sidebar
@@ -629,6 +599,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         mcpError={mcpError}
                         search={search}
                         hasMcpServers={hasMcpServers}
+                        showSearchConfigTrigger={
+                          activeSection !== "mcp" &&
+                          !showComponents &&
+                          showBundles
+                        }
+                        showConfig={showConfig}
+                        setShowConfig={setShowConfig}
                       />
                     )}
                     {showBundles && (
@@ -643,6 +620,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         openCategories={openCategories}
                         setOpenCategories={setOpenCategories}
                         handleKeyDownInput={handleKeyDownInput}
+                        showSearchConfigTrigger={
+                          activeSection === "bundles" ||
+                          (!showComponents && !showMcp)
+                        }
+                        showConfig={showConfig}
+                        setShowConfig={setShowConfig}
                       />
                     )}
                   </>

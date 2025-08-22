@@ -43,6 +43,9 @@ export interface SidebarGroupProps {
   ) => void;
   openCategories: string[];
   setOpenCategories: Dispatch<SetStateAction<string[]>>;
+  showSearchConfigTrigger: boolean;
+  showConfig: boolean;
+  setShowConfig: (show: boolean) => void;
 }
 
 export interface BundleItemProps {

@@ -1,7 +1,4 @@
 import { memo } from "react";
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -11,6 +8,7 @@ import {
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
+import { SearchConfigTrigger } from "./searchConfigTrigger";
 
 export const CategoryGroup = memo(function CategoryGroup({
   dataFilter,
@@ -29,21 +27,10 @@ export const CategoryGroup = memo(function CategoryGroup({
     <SidebarGroup className="p-3">
       <SidebarGroupLabel className="cursor-default flex items-center justify-between">
         <span>Components</span>
-        <div>
-          <ShadTooltip content="Component settings" styleClasses="z-50">
-            <Button
-              variant={showConfig ? "ghostActive" : "ghost"}
-              size="iconMd"
-              data-testid="sidebar-options-trigger"
-              onClick={() => setShowConfig(!showConfig)}
-            >
-              <ForwardedIconComponent
-                name="SlidersHorizontal"
-                className="h-4 w-4"
-              />
-            </Button>
-          </ShadTooltip>
-        </div>
+        <SearchConfigTrigger
+          showConfig={showConfig}
+          setShowConfig={setShowConfig}
+        />
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>

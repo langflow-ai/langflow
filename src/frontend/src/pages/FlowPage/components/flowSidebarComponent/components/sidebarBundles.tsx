@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { SidebarGroupProps } from "../types";
 import { BundleItem } from "./bundleItems";
+import { SearchConfigTrigger } from "./searchConfigTrigger";
 
 export const MemoizedSidebarGroup = memo(
   ({
@@ -20,6 +21,9 @@ export const MemoizedSidebarGroup = memo(
     handleKeyDownInput,
     openCategories,
     setOpenCategories,
+    showSearchConfigTrigger,
+    showConfig,
+    setShowConfig,
   }: SidebarGroupProps) => {
     const sortedBundles = useMemo(() => {
       return BUNDLES.toSorted((a, b) => {
@@ -37,8 +41,14 @@ export const MemoizedSidebarGroup = memo(
 
     return (
       <SidebarGroup className="p-3">
-        <SidebarGroupLabel className="cursor-default">
-          Bundles
+        <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
+          <span>Bundles</span>
+          {showSearchConfigTrigger && (
+            <SearchConfigTrigger
+              showConfig={showConfig}
+              setShowConfig={setShowConfig}
+            />
+          )}
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>

@@ -10,6 +10,7 @@ import {
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
+import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
 type McpSidebarGroupProps = {
@@ -27,6 +28,9 @@ type McpSidebarGroupProps = {
   mcpError?: boolean;
   search: string;
   hasMcpServers: boolean;
+  showSearchConfigTrigger: boolean;
+  showConfig: boolean;
+  setShowConfig: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
@@ -66,6 +70,9 @@ const McpSidebarGroup = ({
   mcpError,
   search,
   hasMcpServers,
+  showSearchConfigTrigger,
+  showConfig,
+  setShowConfig,
 }: McpSidebarGroupProps) => {
   // Use props instead of hook call
   const isLoading = mcpLoading;
@@ -80,14 +87,22 @@ const McpSidebarGroup = ({
   }
 
   return (
-    <SidebarGroup className="p-3 h-full">
+    <SidebarGroup className={`p-3${!hasMcpServers ? " h-full" : ""}`}>
       {hasMcpServers && (
-        <SidebarGroupLabel className="cursor-default">
-          MCP Servers
-        </SidebarGroupLabel>
+        <>
+          <SidebarGroupLabel className="cursor-default">
+            MCP Servers
+          </SidebarGroupLabel>
+          {showSearchConfigTrigger && (
+            <SearchConfigTrigger
+              showConfig={showConfig}
+              setShowConfig={setShowConfig}
+            />
+          )}
+        </>
       )}
       <SidebarGroupContent className="h-full">
-        <SidebarMenu className="h-full">
+        <SidebarMenu className={!hasMcpServers ? " h-full" : ""}>
           {isLoading && <span>Loading...</span>}
           {isSuccess && !hasMcpServers && (
             <McpEmptyState isLoading={isLoading} />
@@ -114,7 +129,9 @@ const McpSidebarGroup = ({
                   color={nodeColors["agents"]}
                   itemName={"MCP"}
                   error={!!mcpComponent.error}
-                  display_name={mcpComponent.display_name}
+                  display_name={
+                    mcpComponent.mcpServerName ?? mcpComponent.display_name
+                  }
                   official={mcpComponent.official === false ? false : true}
                   beta={mcpComponent.beta ?? false}
                   legacy={mcpComponent.legacy ?? false}

@@ -26,7 +26,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   data,
 }: SidebarHeaderComponentProps) {
   return (
-    <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1 group-data-[collapsible=icon]:hidden">
+    <SidebarHeader className="flex w-full flex-col gap-2 p-4 pb-1 group-data-[collapsible=icon]:hidden">
       <SearchInput
         searchInputRef={searchInputRef}
         isInputFocused={isInputFocused}
