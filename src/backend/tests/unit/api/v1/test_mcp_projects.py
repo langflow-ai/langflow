@@ -490,7 +490,7 @@ async def test_update_project_auth_settings_encryption(
         assert updated_project.auth_settings is not None
 
         # Check that sensitive field is encrypted (not plaintext)
-        stored_value = updated_project.auth_settings.get("oauth_client_secret")  # noqa: S105
+        stored_value = updated_project.auth_settings.get("oauth_client_secret")
         assert stored_value is not None
         assert stored_value != "test-oauth-secret-value-456"  # Should be encrypted
 
