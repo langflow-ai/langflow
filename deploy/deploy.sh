@@ -127,6 +127,23 @@ http_ok() {
   [[ "$code" -ge 200 && "$code" -lt 400 ]]
 }
 
+# ---------- Docker cleanup (keep last 2 images only) ----------
+cleanup_old_images() {
+step "Cleaning up old Docker images (keeping last 2)"
+local images
+images=$(docker images --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}' \
+| sort -k3 -r \
+| awk 'NR>2 {print $2}')
+
+
+if [[ -n "$images" ]]; then
+echo "$images" | xargs -r docker rmi -f
+ok "Old images removed"
+else
+ok "No old images to remove"
+fi
+}
+
 # Paths used by Nginx toggling
 NGINX_SITE="/etc/nginx/sites-available/${APP_NAME}.conf"
 NGINX_SITE_LINK="/etc/nginx/sites-enabled/${APP_NAME}.conf"
@@ -181,6 +198,7 @@ docker info >/dev/null 2>&1 || { err "Docker daemon not reachable"; exit 1; }
 ok "Docker daemon reachable"
 
 # ---------- Pull image (with retries) ----------
+cleanup_old_images
 step "Pulling Docker image: ${DOCKER_IMAGE}"
 retry "${RETRY_MAX}" "${RETRY_SLEEP}" docker pull "${DOCKER_IMAGE}"
 ok "Image pulled"

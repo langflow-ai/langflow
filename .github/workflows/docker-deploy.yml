@@ -76,7 +76,7 @@ jobs:
     needs: build-and-push
     steps:
       - name: Docker Hub Cleanup
-        uses: DataDog/action-docker-cleanup@v2
+        uses: docker-prune/action-docker-cleanup@v2
         with:
           repository: forwardemailforaifirstdesk/langflow
           keep-last: 2
