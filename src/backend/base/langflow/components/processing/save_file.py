@@ -1,7 +1,6 @@
 import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import orjson
 import pandas as pd
@@ -10,15 +9,11 @@ from fastapi.encoders import jsonable_encoder
 
 from langflow.api.v2.files import upload_user_file
 from langflow.custom import Component
-from langflow.io import DropdownInput, HandleInput, SecretStrInput, StrInput
+from langflow.io import DropdownInput, HandleInput, StrInput
 from langflow.schema import Data, DataFrame, Message
-from langflow.services.auth.utils import create_user_longterm_token, get_current_user
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service, get_storage_service
+from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.template.field.base import Output
-
-if TYPE_CHECKING:
-    from langflow.services.database.models.user.model import User
 
 
 class SaveToFileComponent(Component):
@@ -53,13 +48,6 @@ class SaveToFileComponent(Component):
             options=list(dict.fromkeys(DATA_FORMAT_CHOICES + MESSAGE_FORMAT_CHOICES)),
             info="Select the file format to save the input. If not provided, the default format will be used.",
             value="",
-            advanced=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="Langflow API Key",
-            info="Langflow API key for authentication when saving the file.",
-            required=False,
             advanced=True,
         ),
     ]
@@ -148,25 +136,11 @@ class SaveToFileComponent(Component):
             raise FileNotFoundError(msg)
 
         with file_path.open("rb") as f:
-            async for db in get_session():
-                # TODO: In 1.6, this may need to be removed or adjusted
-                # Try to get the super user token, if possible
-                current_user: User | None = None
-                if self.api_key:
-                    current_user = await get_current_user(
-                        token="",
-                        query_param=self.api_key,
-                        header_param="",
-                        db=db,
-                    )
-                else:
-                    user_id, _ = await create_user_longterm_token(db)
-                    current_user = await get_user_by_id(db, user_id)
-
-                # Fail if the user is not found
-                if not current_user:
-                    msg = "User not found. Please provide a valid API key or ensure the user exists."
+            async with session_scope() as db:
+                if not self.user_id:
+                    msg = "User ID is required for file saving."
                     raise ValueError(msg)
+                current_user = await get_user_by_id(db, self.user_id)
 
                 await upload_user_file(
                     file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
