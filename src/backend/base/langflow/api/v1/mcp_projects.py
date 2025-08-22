@@ -422,8 +422,9 @@ async def install_mcp_config(
                 except OSError as e:
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
         else:
-            args = ["mcp-proxy", sse_url]
+            args = ["mcp-composer", "--sse-url", sse_url]
 
+        oauth_env = None
         if project.auth_settings:
             from langflow.api.v1.schemas import AuthSettings
 
@@ -444,7 +445,6 @@ async def install_mcp_config(
                 "OAUTH_MCP_SCOPE": auth_settings.oauth_mcp_scope or "",
                 "OAUTH_PROVIDER_SCOPE": auth_settings.oauth_provider_scope or "",
             }
-            oauth_env = {k: v for k, v in oauth_env.items() if v is not None}
 
         if os_type == "Windows":
             command = "cmd"
@@ -457,8 +457,9 @@ async def install_mcp_config(
         server_config = {
             "command": command,
             "args": args,
-            "env": oauth_env,
         }
+        if oauth_env:
+            server_config["env"] = {k: v for k, v in oauth_env.items() if v is not None}
 
         mcp_config = {
             "mcpServers": {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": server_config}
