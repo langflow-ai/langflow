@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
-    from langflow.services.socket.service import SocketIOService
     from langflow.services.state.service import StateService
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
@@ -80,15 +79,6 @@ def get_state_service() -> StateService:
     from langflow.services.state.factory import StateServiceFactory
 
     return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())
-
-
-def get_socket_service() -> SocketIOService:
-    """Get the SocketIOService instance from the service manager.
-
-    Returns:
-        SocketIOService: The SocketIOService instance.
-    """
-    return get_service(ServiceType.SOCKETIO_SERVICE)  # type: ignore[attr-defined]
 
 
 def get_storage_service() -> StorageService:
