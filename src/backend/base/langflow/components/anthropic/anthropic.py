@@ -177,8 +177,9 @@ class AnthropicModelComponent(LCModelComponent):
                     except (ImportError, ValueError, requests.exceptions.RequestException) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = ANTHROPIC_MODELS
+                build_config.setdefault("model_name", {})
                 build_config["model_name"]["options"] = ids
-                build_config["model_name"]["value"] = ids[0]
+                build_config["model_name"].setdefault("value", ids[0])
                 build_config["model_name"]["combobox"] = True
             except Exception as e:
                 msg = f"Error getting model names: {e}"
