@@ -9,7 +9,7 @@ test(
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
+      "OPENAI_API_KEY required to run this test"
     );
 
     if (!process.env.CI) {
@@ -28,7 +28,9 @@ test(
     });
     await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("lock_unlock").click();
+    await page.getByTestId("flow_name").click();
+    await page.getByTestId("lock-flow-switch").click();
+    await page.getByTestId("save-flow-settings").click();
 
     //ensure the UI is updated
     await page.waitForTimeout(500);
@@ -43,10 +45,12 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
+    await page.getByTestId("canvas_controls_dropdown").click();
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
       state: "visible",
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     //ensure the UI is updated
     await page.waitForTimeout(1000);
@@ -55,10 +59,12 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("lock_unlock").click();
-    await page.waitForSelector('[data-testid="icon-LockOpen"]', {
+    await page.getByTestId("flow_name").click();
+    await page.getByTestId("lock-flow-switch").click();
+    await page.waitForSelector('[data-testid="icon-Lock"]', {
       timeout: 3000,
     });
+    await page.getByTestId("save-flow-settings").click();
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -66,16 +72,13 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
       state: "visible",
     });
-
-    await page.waitForSelector('[data-testid="icon-LockOpen"]', {
-      timeout: 3000,
-      state: "visible",
-    });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await tryDeleteEdge(page);
     await page.locator(".react-flow__edge-path").nth(0).click();
@@ -109,18 +112,21 @@ test(
 
     await page
       .getByTestId(
-        "handle-languagemodelcomponent-shownode-model response-right",
+        "handle-languagemodelcomponent-shownode-model response-right"
       )
       .click();
     await page.getByTestId("handle-chatoutput-shownode-inputs-left").click();
     numberOfEdges = await page.locator(".react-flow__edge-path").count();
 
     expect(numberOfEdges).toBe(3);
-  },
+  }
 );
 
 async function tryConnectNodes(page: Page) {
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
+  await page.getByTestId("icon-Unlock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 
   const numberOfTries = 5;
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
@@ -138,7 +144,7 @@ async function tryConnectNodes(page: Page) {
     try {
       await page
         .getByTestId(
-          "handle-languagemodelcomponent-shownode-system message-left",
+          "handle-languagemodelcomponent-shownode-system message-left"
         )
         .click({
           timeout: 500,
@@ -148,12 +154,18 @@ async function tryConnectNodes(page: Page) {
       expect(numberOfEdges).toBe(0);
     }
   }
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
 
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("lock_Unlock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 }
 
 async function tryDeleteEdge(page: Page) {
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
+  await page.getByTestId("icon-Lock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
   expect(numberOfEdges).toBe(3);
@@ -170,5 +182,8 @@ async function tryDeleteEdge(page: Page) {
     expect(numberOfEdges).toBe(3);
   }
   //unlock the flow
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
+  await page.getByTestId("lock_Unlock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 }
