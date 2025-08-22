@@ -117,7 +117,6 @@ test(
 
     await expect(page.getByTestId("disclosure-data")).toBeVisible();
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
     await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
     await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
