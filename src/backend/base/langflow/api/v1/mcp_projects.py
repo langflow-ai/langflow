@@ -129,9 +129,6 @@ async def verify_project_auth_conditional(
         # Call the MCP auth function directly
         from langflow.services.auth.utils import get_current_user_mcp
 
-        if not token and not api_key_query_value and not api_key_header_value:
-            raise HTTPException(status_code=401, detail="No authentication provided")
-
         user = await get_current_user_mcp(
             token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
         )
