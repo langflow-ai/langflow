@@ -16,24 +16,19 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarInset,
-  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
-import { ENABLE_API, ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { useStoreStore } from "@/stores/storeStore";
-import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
-import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
@@ -164,7 +159,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     })),
   );
 
-  const hasStore = useStoreStore((state) => state.hasStore);
   const { setOpen } = useSidebar();
   const addComponent = useAddComponent();
 
@@ -188,7 +182,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     handleInputFocus = () => {},
     handleInputBlur = () => {},
     handleInputChange = () => {},
-    focusSearch = () => {},
   } = context;
 
   // State
@@ -246,21 +239,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       item: { ...result.item, score: result.score },
     }));
 
-    // Debug logging for search
-    console.log("Search term:", search);
-    console.log("Fuse results:", fuseResults);
-    console.log(
-      "MCP results:",
-      fuseResults.filter((r) => r.item.category === "MCP"),
-    );
-
     const fuseCategories = fuseResults.map((result) => result.item.category);
     const combinedResults = combinedResultsFn(fuseResults, baseData);
     const traditionalResults = traditionalSearchMetadata(baseData, searchTerm);
-
-    console.log("Fuse categories:", fuseCategories);
-    console.log("Combined results:", combinedResults);
-    console.log("Traditional results:", traditionalResults);
 
     return {
       fuseResults,
@@ -277,13 +258,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       baseData,
       searchResults.combinedResults,
       searchResults.traditionalResults,
-    );
-
-    console.log("Original baseData keys:", Object.keys(baseData));
-    console.log("Search filtered data:", filteredData);
-    console.log(
-      "MCP in filtered data:",
-      filteredData["MCP"] || "No MCP category found",
     );
 
     return filteredData;
@@ -319,7 +293,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [searchFilteredData, getFilterEdge, showBeta, showLegacy]);
 
   const hasResults = useMemo(() => {
-    console.log("dataFilter", dataFilter);
     return Object.entries(dataFilter).some(
       ([category, items]) =>
         (Object.keys(items).length > 0 &&
@@ -414,8 +387,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     } else {
       setMcpSearchData([]);
     }
-
-    console.log("fuseData", fuseData);
     setFuse(new Fuse(fuseData, options));
   }, [baseData, mcpSuccess, mcpServers]);
 
@@ -520,7 +491,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   return (
     <Sidebar
-      collapsible={"offcanvas"}
+      collapsible="offcanvas"
       data-testid="shad-sidebar"
       className="noflow select-none"
     >

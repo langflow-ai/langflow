@@ -40,6 +40,9 @@ jest.mock("@/components/ui/sidebar", () => ({
       {children}
     </div>
   ),
+  useSidebar: () => ({
+    activeSection: "components",
+  }),
 }));
 
 jest.mock("@/customization/components/custom-link", () => ({
@@ -56,9 +59,26 @@ jest.mock("@/customization/components/custom-link", () => ({
   ),
 }));
 
-// Mock feature flag
+// Mock feature flags
 jest.mock("@/customization/feature-flags", () => ({
   ENABLE_LANGFLOW_STORE: true,
+  ENABLE_NEW_SIDEBAR: true,
+}));
+
+// Mock navigation hook
+const mockNavigate = jest.fn();
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  useCustomNavigate: () => mockNavigate,
+}));
+
+// Mock modal component
+jest.mock("@/modals/addMcpServerModal", () => ({
+  __esModule: true,
+  default: ({ open, setOpen }: any) => (
+    <div data-testid="add-mcp-server-modal" data-open={open}>
+      <button onClick={() => setOpen(false)}>Close Modal</button>
+    </div>
+  ),
 }));
 
 describe("SidebarMenuButtons", () => {
@@ -75,10 +95,12 @@ describe("SidebarMenuButtons", () => {
     customComponent: mockCustomComponent,
     addComponent: mockAddComponent,
     isLoading: false,
+    hasMcpServers: false,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNavigate.mockClear();
   });
 
   describe("Basic Rendering", () => {
@@ -569,6 +591,178 @@ describe("SidebarMenuButtons", () => {
       expect(async () => {
         await user.click(customButton);
       }).not.toThrow();
+    });
+  });
+
+  describe("MCP Functionality", () => {
+    beforeEach(() => {
+      // Mock the sidebar to be in MCP section
+      jest
+        .mocked(require("@/components/ui/sidebar").useSidebar)
+        .mockReturnValue({
+          activeSection: "mcp",
+        });
+    });
+
+    it("should not render MCP buttons when hasMcpServers is false", () => {
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={false} />);
+
+      expect(
+        screen.queryByTestId("sidebar-add-mcp-server-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("sidebar-manage-servers-button"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should render MCP buttons when hasMcpServers is true and in MCP section", () => {
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      expect(
+        screen.getByTestId("sidebar-add-mcp-server-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("sidebar-manage-servers-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should render Add MCP Server button with correct content", () => {
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      expect(addButton).toHaveTextContent("Add MCP Server");
+      expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
+    });
+
+    it("should render Manage Servers button with correct content", () => {
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+      expect(manageButton).toHaveTextContent("Manage Servers");
+      expect(screen.getByTestId("icon-ArrowUpRight")).toBeInTheDocument();
+    });
+
+    it("should open modal when Add MCP Server button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "false",
+      );
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      await user.click(addButton);
+
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "true",
+      );
+    });
+
+    it("should navigate to settings when Manage Servers button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+      await user.click(manageButton);
+
+      expect(mockNavigate).toHaveBeenCalledWith("/settings/mcp-servers");
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+    });
+
+    it("should disable MCP buttons when loading", () => {
+      render(
+        <SidebarMenuButtons
+          {...defaultProps}
+          hasMcpServers={true}
+          isLoading={true}
+        />,
+      );
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+
+      expect(addButton).toBeDisabled();
+      expect(manageButton).toBeDisabled();
+    });
+
+    it("should close modal when close button is clicked", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      // Open modal first
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      await user.click(addButton);
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "true",
+      );
+
+      // Close modal
+      const closeButton = screen.getByText("Close Modal");
+      await user.click(closeButton);
+      expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
+        "data-open",
+        "false",
+      );
+    });
+
+    it("should not render MCP buttons in non-MCP sections", () => {
+      // Mock the sidebar to be in components section
+      jest
+        .mocked(require("@/components/ui/sidebar").useSidebar)
+        .mockReturnValue({
+          activeSection: "components",
+        });
+
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      expect(
+        screen.queryByTestId("sidebar-add-mcp-server-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("sidebar-manage-servers-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should apply correct styling to MCP buttons", () => {
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
+      const manageButton = screen.getByTestId("sidebar-manage-servers-button");
+
+      expect(addButton).toHaveClass("flex", "items-center", "gap-2");
+      expect(addButton).toHaveAttribute("data-unstyled", "true");
+      expect(manageButton).toHaveClass("flex", "items-center", "gap-2");
+      expect(manageButton).toHaveAttribute("data-unstyled", "true");
+    });
+
+    it("should render MCP icons with correct styling", () => {
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      const plusIcon = screen.getByTestId("icon-Plus");
+      const arrowIcon = screen.getByTestId("icon-ArrowUpRight");
+
+      expect(plusIcon).toHaveClass("h-4", "w-4", "text-muted-foreground");
+      expect(arrowIcon).toHaveClass("h-4", "w-4", "text-muted-foreground");
+    });
+
+    it("should render MCP button text with correct styling", () => {
+      render(<SidebarMenuButtons {...defaultProps} hasMcpServers={true} />);
+
+      const addSpan = screen.getByText("Add MCP Server");
+      const manageSpan = screen.getByText("Manage Servers");
+
+      expect(addSpan).toHaveClass(
+        "group-data-[state=open]/collapsible:font-semibold",
+      );
+      expect(manageSpan).toHaveClass(
+        "group-data-[state=open]/collapsible:font-semibold",
+      );
     });
   });
 });
