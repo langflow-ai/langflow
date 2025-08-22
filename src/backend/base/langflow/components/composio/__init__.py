@@ -19,6 +19,21 @@ if TYPE_CHECKING:
     from .supabase_composio import ComposioSupabaseAPIComponent
     from .todoist_composio import ComposioTodoistAPIComponent
     from .youtube_composio import ComposioYoutubeAPIComponent
+    from .googledocs_composio import ComposioGoogleDocsAPIComponent
+    from .googlesheets_composio import ComposioGoogleSheetsAPIComponent
+    from .klaviyo_composio import ComposioKlaviyoAPIComponent
+    from .notion_composio import ComposioNotionAPIComponent
+    from .onedrive_composio import ComposioOneDriveAPIComponent
+    from .salesforce_composio import ComposioSalesforceAPIComponent
+    from .airtable_composio import ComposioAirtableAPIComponent
+    from .asana_composio import ComposioAsanaAPIComponent
+    from .attio_composio import ComposioAttioAPIComponent
+    from .calendly_composio import ComposioCalendlyAPIComponent
+    from .contentful_composio import ComposioContentfulAPIComponent
+    from .discord_composio import ComposioDiscordAPIComponent
+    from .figma_composio import ComposioFigmaAPIComponent
+    from .miro_composio import ComposioMiroAPIComponent
+    from .wrike_composio import ComposioWrikeAPIComponent
 
 _dynamic_imports = {
     "ComposioAPIComponent": "composio_api",
@@ -35,6 +50,21 @@ _dynamic_imports = {
     "ComposioSupabaseAPIComponent": "supabase_composio",
     "ComposioTodoistAPIComponent": "todoist_composio",
     "ComposioYoutubeAPIComponent": "youtube_composio",
+    "ComposioGoogleDocsAPIComponent": "googledocs_composio",
+    "ComposioGoogleSheetsAPIComponent": "googlesheets_composio",
+    "ComposioKlaviyoAPIComponent": "klaviyo_composio",
+    "ComposioNotionAPIComponent": "notion_composio",
+    "ComposioOneDriveAPIComponent": "onedrive_composio",
+    "ComposioSalesforceAPIComponent": "salesforce_composio",
+    "ComposioAirtableAPIComponent": "airtable_composio",
+    "ComposioAsanaAPIComponent": "asana_composio",
+    "ComposioAttioAPIComponent": "attio_composio",
+    "ComposioCalendlyAPIComponent": "calendly_composio",
+    "ComposioContentfulAPIComponent": "contentful_composio",
+    "ComposioDiscordAPIComponent": "discord_composio",
+    "ComposioFigmaAPIComponent": "figma_composio",
+    "ComposioMiroAPIComponent": "miro_composio",
+    "ComposioWrikeAPIComponent": "wrike_composio",
 }
 
 __all__ = [
@@ -52,6 +82,21 @@ __all__ = [
     "ComposioSupabaseAPIComponent",
     "ComposioTodoistAPIComponent",
     "ComposioYoutubeAPIComponent",
+    "ComposioGoogleDocsAPIComponent",
+    "ComposioGoogleSheetsAPIComponent",
+    "ComposioKlaviyoAPIComponent",
+    "ComposioNotionAPIComponent",
+    "ComposioOneDriveAPIComponent",
+    "ComposioSalesforceAPIComponent",
+    "ComposioAirtableAPIComponent",
+    "ComposioAsanaAPIComponent",
+    "ComposioAttioAPIComponent",
+    "ComposioCalendlyAPIComponent",
+    "ComposioContentfulAPIComponent",
+    "ComposioDiscordAPIComponent",
+    "ComposioFigmaAPIComponent",
+    "ComposioMiroAPIComponent",
+    "ComposioWrikeAPIComponent",
 ]
 
 
