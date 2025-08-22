@@ -335,6 +335,11 @@ class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
 
 
+class ChatMessageOpenAI(BaseModel):
+    role: Literal["system", "user", "assistant", "tool", "function", "developer"]
+    content: str
+
+
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
     input_value: str | None = None
@@ -368,6 +373,48 @@ class InputValueRequest(BaseModel):
         },
         extra="forbid",
     )
+    chat_history: list[ChatMessageOpenAI] | None = Field(
+        default=None, description="A list of OpenAI-style chat messages with 'role' and 'content'."
+    )
+
+
+class OpenAIModel(BaseModel):
+    id: str
+    object: Literal["model"] = Field("model")
+    created: int
+    owned_by: str
+    name: str
+
+
+class OpenAIList(BaseModel):
+    object: Literal["list"] = Field("list")
+    data: list[OpenAIModel]
+
+
+class OpenAIChatCompletionRequest(BaseModel):
+    model: str
+    messages: list[ChatMessageOpenAI]
+    stream: bool | None = False
+    temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int | None = None
+    stop: list[str] | None = None
+    tweaks: Tweaks | None = Field(default=None, description="The tweaks")
+
+
+# OpenAI-compatible response format (simplified)
+class ChatCompletionChoice(BaseModel):
+    index: int
+    message: ChatMessageOpenAI
+    finish_reason: str | None = "stop"
+
+
+class ChatCompletionResponse(BaseModel):
+    id: str
+    object: str = "chat.completion"
+    created: int
+    model: str
+    choices: list[ChatCompletionChoice]
 
 
 class SimplifiedAPIRequest(BaseModel):
@@ -380,6 +427,9 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
+    chat_history: list[ChatMessageOpenAI] | None = Field(
+        default=None, description="A list of OpenAI-style chat messages with 'role' and 'content'."
+    )
 
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
