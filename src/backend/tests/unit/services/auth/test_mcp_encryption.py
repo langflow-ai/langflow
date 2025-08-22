@@ -3,12 +3,13 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from pydantic import SecretStr
+
 from langflow.services.auth.mcp_encryption import (
     decrypt_auth_settings,
     encrypt_auth_settings,
     is_encrypted,
 )
-from pydantic import SecretStr
 
 
 @pytest.fixture
