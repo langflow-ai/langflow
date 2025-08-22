@@ -80,19 +80,19 @@ class TestMCPEncryption:
         assert decrypted == sample_auth_settings
 
     @patch("langflow.services.auth.mcp_encryption.get_settings_service")
-    def test_encrypt_none_returns_none(self, mock_get_settings):
+    def test_encrypt_none_returns_none(self):
         """Test that encrypting None returns None."""
         result = encrypt_auth_settings(None)
         assert result is None
 
     @patch("langflow.services.auth.mcp_encryption.get_settings_service")
-    def test_decrypt_none_returns_none(self, mock_get_settings):
+    def test_decrypt_none_returns_none(self):
         """Test that decrypting None returns None."""
         result = decrypt_auth_settings(None)
         assert result is None
 
     @patch("langflow.services.auth.mcp_encryption.get_settings_service")
-    def test_encrypt_empty_dict(self, mock_get_settings):
+    def test_encrypt_empty_dict(self):
         """Test that encrypting empty dict returns empty dict."""
         result = encrypt_auth_settings({})
         assert result == {}
