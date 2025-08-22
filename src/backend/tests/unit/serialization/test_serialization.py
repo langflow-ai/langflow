@@ -16,8 +16,8 @@ from pydantic.v1 import BaseModel as PydanticV1BaseModel
 text_strategy = st.text(min_size=0, max_size=MAX_TEXT_LENGTH * 3)
 bytes_strategy = st.binary(min_size=0, max_size=MAX_TEXT_LENGTH * 3)
 datetime_strategy = st.datetimes(
-    min_value=datetime.min.replace(tzinfo=timezone.utc),
-    max_value=datetime.max.replace(tzinfo=timezone.utc),
+    min_value=datetime.min,  # noqa: DTZ901 - Hypothesis requires naive datetime bounds
+    max_value=datetime.max,  # noqa: DTZ901 - Hypothesis requires naive datetime bounds
     timezones=st.sampled_from([timezone.utc, None]),
 )
 decimal_strategy = st.decimals(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False, places=10)
