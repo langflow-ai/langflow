@@ -122,14 +122,14 @@ class ComposioBaseComponent(Component):
             result = [result]
         # Build DataFrame and avoid exposing a 'data' attribute via column access,
         # which interferes with logging utilities that probe for '.data'.
-        result_df = DataFrame(result)
-        try:
-            if "data" in result_df.columns:
-                result_df = result_df.rename(columns={"data": "_data"})
-        except Exception as exc:
-            # If any unexpected structure, return the DataFrame as-is
-            logger.debug(f"DataFrame rename safeguard failed: {exc}")
-        return result_df
+        result_dataframe = DataFrame(result)
+        if hasattr(result_dataframe, "columns"):
+            try:
+                if "data" in result_dataframe.columns:
+                    result_dataframe = result_dataframe.rename(columns={"data": "_data"})
+            except (AttributeError, TypeError, ValueError, KeyError) as e:
+                logger.debug(f"Failed to rename 'data' column: {e}")
+        return result_dataframe
 
     def as_data(self) -> Data:
         result = self.execute_action()
@@ -808,7 +808,8 @@ class ComposioBaseComponent(Component):
                 auth_config_id = self.create_new_auth_config(app_name)
 
             connection_request = composio.connected_accounts.initiate(
-                user_id=self.entity_id, auth_config_id=auth_config_id
+                user_id=self.entity_id,
+                auth_config_id=auth_config_id,
             )
 
             redirect_url = getattr(connection_request, "redirect_url", None)
@@ -1329,7 +1330,7 @@ class ComposioBaseComponent(Component):
                         mode = None
                         if isinstance(build_config.get("auth_mode"), dict):
                             mode = build_config["auth_mode"].get("value")
-                        # If there's no managed default (400 “Default auth config”), ask the user to pick a mode
+                        # If there's no managed default (400 "Default auth config"), ask the user to pick a mode
                         managed = (schema or {}).get("composio_managed_auth_schemes") or []
                         if isinstance(managed, list) and "OAUTH2" in managed and (mode is None or mode == "OAUTH2"):
                             redirect_url, connection_id = self._initiate_connection(toolkit_slug)
@@ -1513,8 +1514,8 @@ class ComposioBaseComponent(Component):
                                 auth_config_id=auth_config_id,
                                 config={"auth_scheme": "API_KEY", "val": val_payload},
                             )
+                            connection_id_opt3 = getattr(initiation, "id", None)
                             redirect_url_opt3 = getattr(initiation, "redirect_url", None)
-                            # Do not store connection_id on initiation; only when ACTIVE
                             if redirect_url_opt3:
                                 build_config["auth_link"]["value"] = redirect_url_opt3
                                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
@@ -1522,6 +1523,36 @@ class ComposioBaseComponent(Component):
                                 # No redirect for API_KEY; mark as connected
                                 build_config["auth_link"]["value"] = "validated"
                                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                            if connection_id_opt3:
+                                build_config["auth_link"]["connection_id"] = connection_id_opt3
+                            # Treat as connected immediately: hide custom fields and reflect mode in UI
+                            schema = self._get_toolkit_schema()
+                            self._clear_auth_fields_from_schema(build_config, schema)
+                            build_config["auth_link"]["show"] = False
+                            build_config["action_button"]["helper_text"] = ""
+                            build_config["action_button"]["helper_text_metadata"] = {}
+                            build_config.setdefault("auth_mode", {})
+                            build_config["auth_mode"]["value"] = "API_KEY"
+                            build_config["auth_mode"]["options"] = ["API_KEY"]
+                            build_config["auth_mode"]["show"] = False
+                            try:
+                                pill = TabInput(
+                                    name="auth_mode_pill",
+                                    display_name="Auth Mode",
+                                    options=["API_KEY"],
+                                    value="API_KEY",
+                                ).to_dict()
+                                pill["show"] = True
+                                build_config["auth_mode_pill"] = pill
+                            except Exception:
+                                build_config["auth_mode_pill"] = {
+                                    "name": "auth_mode_pill",
+                                    "display_name": "Auth Mode",
+                                    "type": "tab",
+                                    "options": ["API_KEY"],
+                                    "value": "API_KEY",
+                                    "show": True,
+                                }
                             return build_config
                         # Generic custom auth flow for any other mode (treat like API_KEY)
                         ac = composio.auth_configs.create(
@@ -1544,14 +1575,44 @@ class ComposioBaseComponent(Component):
                             auth_config_id=auth_config_id,
                             config={"auth_scheme": mode, "val": val_payload},
                         )
+                        connection_id_opt4 = getattr(initiation, "id", None)
                         redirect_url_opt4 = getattr(initiation, "redirect_url", None)
-                        # Do not store connection_id on initiation; only when ACTIVE
                         if redirect_url_opt4:
                             build_config["auth_link"]["value"] = redirect_url_opt4
                             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                         else:
                             build_config["auth_link"]["value"] = "validated"
                             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                        if connection_id_opt4:
+                            build_config["auth_link"]["connection_id"] = connection_id_opt4
+                        # Treat as connected immediately for custom modes
+                        schema = self._get_toolkit_schema()
+                        self._clear_auth_fields_from_schema(build_config, schema)
+                        build_config["auth_link"]["show"] = False
+                        build_config["action_button"]["helper_text"] = ""
+                        build_config["action_button"]["helper_text_metadata"] = {}
+                        build_config.setdefault("auth_mode", {})
+                        build_config["auth_mode"]["value"] = mode
+                        build_config["auth_mode"]["options"] = [mode]
+                        build_config["auth_mode"]["show"] = False
+                        try:
+                            pill = TabInput(
+                                name="auth_mode_pill",
+                                display_name="Auth Mode",
+                                options=[mode],
+                                value=mode,
+                            ).to_dict()
+                            pill["show"] = True
+                            build_config["auth_mode_pill"] = pill
+                        except Exception:
+                            build_config["auth_mode_pill"] = {
+                                "name": "auth_mode_pill",
+                                "display_name": "Auth Mode",
+                                "type": "tab",
+                                "options": [mode],
+                                "value": mode,
+                                "show": True,
+                            }
                         return build_config
                     except (ValueError, ConnectionError, Exception) as e:
                         logger.error(f"Error creating connection: {e}")
