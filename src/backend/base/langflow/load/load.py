@@ -8,7 +8,7 @@ from dotenv import dotenv_values
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.load.utils import replace_tweaks_with_env
-from langflow.logging.logger import configure, logger
+from langflow.logging.logger import configure
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import update_settings
@@ -176,7 +176,7 @@ async def arun_flow_from_json(
         cache=cache,
         disable_logs=disable_logs,
     )
-    result = await run_graph(
+    return await run_graph(
         graph=graph,
         session_id=session_id,
         input_value=input_value,
@@ -185,8 +185,6 @@ async def arun_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    await logger.complete()
-    return result
 
 
 def run_flow_from_json(
