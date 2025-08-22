@@ -4,11 +4,14 @@ import json
 import math
 import os
 import types
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from loguru import logger
 from opentelemetry import trace
+from opentelemetry.trace import Span, use_span
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from traceloop.sdk import Traceloop
 from traceloop.sdk.instruments import Instruments
 from typing_extensions import override
@@ -20,6 +23,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from opentelemetry.propagators.textmap import CarrierT
+    from opentelemetry.trace import Span
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
@@ -43,7 +48,7 @@ class TraceloopTracer(BaseTracer):
         self.project_name = project_name
         self.user_id = user_id
         self.session_id = session_id
-        self._span_map: dict[str, trace.Span] = {}
+        self.child_spans: dict[str, Span] = {}
 
         if not self._validate_configuration():
             self._ready = False
@@ -60,9 +65,21 @@ class TraceloopTracer(BaseTracer):
             )
             self._ready = True
             self._tracer = trace.get_tracer("langflow")
-            logger.info("Traceloop tracer initialized successfully")
-        except (ValueError, RuntimeError, OSError) as e:
-            logger.error(f"Failed to initialize Traceloop tracer: {e}")
+            self.propagator = TraceContextTextMapPropagator()
+            self.carrier: CarrierT = {}
+
+            # ✅ Root span with trace_name instead of undefined flow_id
+            self.root_span = self._tracer.start_span(
+                name=trace_name,
+                start_time=self._get_current_timestamp(),
+            )
+
+            # Inject root span context into carrier for child spans
+            with use_span(self.root_span, end_on_exit=False):
+                self.propagator.inject(carrier=self.carrier)
+
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error setting up Traceloop tracer")
             self._ready = False
 
     @property
@@ -84,7 +101,6 @@ class TraceloopTracer(BaseTracer):
         return True
 
     def _convert_to_traceloop_type(self, value: Any) -> str | int | float | bool | None:
-        """Convert any value into an OTel/Traceloop-compatible type (primitive or JSON string)."""
         from langchain.schema import BaseMessage, Document, HumanMessage, SystemMessage
 
         from langflow.schema.message import Message
@@ -99,21 +115,26 @@ class TraceloopTracer(BaseTracer):
             if isinstance(value, types.GeneratorType):
                 return str(value)
             if value is None:
-                return None
+                return ""
             if isinstance(value, float) and not math.isfinite(value):
                 return "NaN"
             if isinstance(value, str | bool | int | float):
                 return value
 
-            # fallback: JSON serialize (dicts, lists, custom objects)
             return json.dumps(value, default=str)
         except (TypeError, ValueError) as e:
             logger.warning(f"Failed to convert value {value!r} to traceloop type: {e}")
             return str(value)
 
-    def _convert_to_traceloop_dict(self, io_dict: dict[str, Any]) -> dict[str, Any]:
-        """Ensure all values in dict are OTel-compatible."""
-        return {str(k): self._convert_to_traceloop_type(v) for k, v in (io_dict or {}).items()}
+    def _convert_to_traceloop_dict(self, io_dict: Any) -> dict[str, Any]:
+        """Ensure values are OTel-compatible. Dicts stay dicts, lists get JSON-serialized."""
+        if isinstance(io_dict, dict):
+            return {str(k): self._convert_to_traceloop_type(v) for k, v in io_dict.items()}
+        if isinstance(io_dict, list):
+            # ✅ Keep structure by serializing list once
+            return {"list": json.dumps([self._convert_to_traceloop_type(v) for v in io_dict], default=str)}
+        # ✅ Wrap everything else into a single field
+        return {"value": self._convert_to_traceloop_type(io_dict)}
 
     @override
     def add_trace(
@@ -128,24 +149,27 @@ class TraceloopTracer(BaseTracer):
         if not self.ready:
             return
 
-        span_name = f"component.{trace_name}"
-        span = self._tracer.start_span(span_name)
-
-        safe_inputs = self._convert_to_traceloop_dict(inputs)
-        safe_metadata = self._convert_to_traceloop_dict(metadata or {})
-
-        span.set_attributes(
-            {
-                "trace_id": trace_id,
-                "trace_name": trace_name,
-                "trace_type": trace_type,
-                "inputs": json.dumps(safe_inputs, default=str),
-                "vertex_id": vertex.id if vertex else None,
-                **safe_metadata,
-            }
+        span_context = self.propagator.extract(carrier=self.carrier)
+        child_span = self._tracer.start_span(
+            name=trace_name,
+            context=span_context,
+            start_time=self._get_current_timestamp(),
         )
 
-        self._span_map[trace_name] = span
+        attributes = {
+            "trace_id": trace_id,
+            "trace_name": trace_name,
+            "trace_type": trace_type,
+            "inputs": json.dumps(self._convert_to_traceloop_dict(inputs), default=str),
+            **self._convert_to_traceloop_dict(metadata or {}),
+        }
+        if vertex and vertex.id is not None:
+            attributes["vertex_id"] = vertex.id
+
+        child_span.set_attributes(attributes)
+
+        # ✅ Save in child_spans dict by trace_id
+        self.child_spans[trace_id] = child_span
 
     @override
     def end_trace(
@@ -156,22 +180,19 @@ class TraceloopTracer(BaseTracer):
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ) -> None:
-        if not self.ready:
+        if not self._ready or trace_id not in self.child_spans:
             return
 
-        span = self._span_map.pop(trace_name, None)
-        if span is None:
-            logger.warning(f"No active span found for {trace_name}")
-            return
+        child_span = self.child_spans.pop(trace_id)
 
         if outputs:
-            span.set_attributes({"outputs": json.dumps(self._convert_to_traceloop_dict(outputs), default=str)})
+            child_span.set_attribute("outputs", json.dumps(self._convert_to_traceloop_dict(outputs), default=str))
         if logs:
-            span.set_attributes({"logs": json.dumps(self._convert_to_traceloop_type(logs), default=str)})
+            child_span.set_attribute("logs", json.dumps(self._convert_to_traceloop_dict(list(logs)), default=str))
         if error:
-            span.record_exception(error)
+            child_span.record_exception(error)
 
-        span.end()
+        child_span.end()
 
     @override
     def end(
@@ -187,17 +208,23 @@ class TraceloopTracer(BaseTracer):
         safe_outputs = self._convert_to_traceloop_dict(outputs)
         safe_metadata = self._convert_to_traceloop_dict(metadata or {})
 
-        with self._tracer.start_as_current_span("workflow.end") as span:
-            span.set_attributes(
-                {
-                    "workflow_name": self.trace_name,
-                    "workflow_id": str(self.trace_id),
-                    "outputs": json.dumps(safe_outputs, default=str),
-                    **safe_metadata,
-                }
-            )
-            if error:
-                span.record_exception(error)
+        # ✅ Close root span properly
+        self.root_span.set_attributes(
+            {
+                "workflow_name": self.trace_name,
+                "workflow_id": str(self.trace_id),
+                "outputs": json.dumps(safe_outputs, default=str),
+                **safe_metadata,
+            }
+        )
+        if error:
+            self.root_span.record_exception(error)
+
+        self.root_span.end()
+
+    @staticmethod
+    def _get_current_timestamp() -> int:
+        return int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
