@@ -46,8 +46,6 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
