@@ -31,7 +31,6 @@ _dynamic_imports = {
     "AstraDBToolComponent": "astradb_tool",
     "AstraDBVectorStoreComponent": "astradb",
     "AstraVectorizeComponent": "astra_vectorize",
-    "CassandraChatMemory": "cassandra",
     "Dotenv": "dotenv",
     "GetEnvVar": "getenvvar",
 }
@@ -48,7 +47,6 @@ __all__ = [
     "AstraDBToolComponent",
     "AstraDBVectorStoreComponent",
     "AstraVectorizeComponent",
-    "CassandraChatMemory",
     "Dotenv",
     "GetEnvVar",
 ]

@@ -6,14 +6,17 @@ from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .cassandra import CassandraVectorStoreComponent
+    from .cassandra_chat import CassandraChatMemory
     from .cassandra_graph import CassandraGraphVectorStoreComponent
 
 _dynamic_imports = {
     "CassandraVectorStoreComponent": "cassandra",
     "CassandraGraphVectorStoreComponent": "cassandra_graph",
+    "CassandraChatMemory": "cassandra_chat",
 }
 
 __all__ = [
+    "CassandraChatMemory",
     "CassandraGraphVectorStoreComponent",
     "CassandraVectorStoreComponent",
 ]
