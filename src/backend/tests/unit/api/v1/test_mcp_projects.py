@@ -490,12 +490,12 @@ async def test_update_project_auth_settings_encryption(
         assert updated_project.auth_settings is not None
 
         # Check that sensitive field is encrypted (not plaintext)
-        stored_secret = updated_project.auth_settings.get("oauth_client_secret")
-        assert stored_secret is not None
-        assert stored_secret != "test-oauth-secret-value-456"  # Should be encrypted
+        stored_value = updated_project.auth_settings.get("oauth_client_secret")  # noqa: S105
+        assert stored_value is not None
+        assert stored_value != "test-oauth-secret-value-456"  # Should be encrypted
 
         # The encrypted value should be a base64-like string (Fernet token)
-        assert len(stored_secret) > 50  # Encrypted values are longer
+        assert len(stored_value) > 50  # Encrypted values are longer
 
     # Now test that the GET endpoint decrypts the data correctly
     response = await client.get(
@@ -506,7 +506,7 @@ async def test_update_project_auth_settings_encryption(
     data = response.json()
 
     # The decrypted value should match the original
-    assert data["auth_settings"]["oauth_client_secret"] == "test-oauth-secret-value-456"
+    assert data["auth_settings"]["oauth_client_secret"] == "test-oauth-secret-value-456"  # noqa: S105
     assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
     assert data["auth_settings"]["auth_type"] == "oauth"
 
