@@ -411,7 +411,7 @@ async def generate_flow_events(
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
-            logger.error(f"Build cancelled: {exc}")
+            logger.info(f"Build cancelled: {exc}")
             raise
 
         # send built event or error event
