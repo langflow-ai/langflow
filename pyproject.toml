@@ -260,6 +260,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-p no:benchmark"
 
 [tool.coverage.run]
 command_line = """
