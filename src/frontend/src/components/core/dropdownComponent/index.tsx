@@ -1,6 +1,3 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -12,6 +9,9 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
 import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
@@ -335,29 +335,34 @@ export default function Dropdown({
             "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
-          {!waitingForResponse ? (
-            <span
-              className="flex w-full items-center gap-2 overflow-hidden"
-              data-testid={`value-dropdown-${id}`}
-            >
-              {value && <>{renderSelectedIcon()}</>}
-              <span className="truncate">
-                {disabled ? (
-                  RECEIVING_INPUT_VALUE
-                ) : (
-                  <>
-                    {value && filteredOptions.includes(value)
-                      ? value
-                      : placeholder || SELECT_AN_OPTION}{" "}
-                  </>
-                )}
-              </span>
+          <span
+            className="flex w-full items-center gap-2 overflow-hidden"
+            data-testid={`value-dropdown-${id}`}
+          >
+            {value && <>{renderSelectedIcon()}</>}
+            <span className="truncate">
+              {disabled ? (
+                RECEIVING_INPUT_VALUE
+              ) : (
+                <>
+                 {/* this logic is used for the agents component, if you update make sure to test the agent component */}
+                  {options?.includes(value) ? (
+                    value && filteredOptions.includes(value) ? (
+                      value
+                    ) : (
+                      placeholder || SELECT_AN_OPTION
+                    )
+                  ) : (
+                    <span className="text-muted-foreground">
+                      <LoadingTextComponent
+                        text={placeholder || SELECT_AN_OPTION}
+                      />
+                    </span>
+                  )}
+                </>
+              )}
             </span>
-          ) : (
-            <span className="text-muted-foreground">
-              <LoadingTextComponent text="Awaiting response" />
-            </span>
-          )}
+          </span>
 
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
