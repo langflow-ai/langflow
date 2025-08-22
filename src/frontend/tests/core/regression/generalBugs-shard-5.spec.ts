@@ -102,17 +102,17 @@ test(
       .getByTestId("div-handle-textoutput-shownode-output text-right")
       .first();
 
-    const hasGradient = await blockedHandle?.evaluate(el => {
+    const hasGradient = await blockedHandle?.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.backgroundColor === "rgb(228, 228, 231)";
     });
 
-    const secondHasGradient = await secondBlockedHandle?.evaluate(el => {
+    const secondHasGradient = await secondBlockedHandle?.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.backgroundColor === "rgb(228, 228, 231)";
     });
 
-    const thirdHasGradient = await thirdBlockedHandle?.evaluate(el => {
+    const thirdHasGradient = await thirdBlockedHandle?.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.backgroundColor === "rgb(228, 228, 231)";
     });
@@ -134,28 +134,28 @@ test(
       .getByTestId("div-handle-textoutput-shownode-inputs-left")
       .first();
 
-    const hasGradientUnlocked = await unlockedHandle?.evaluate(el => {
+    const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.backgroundColor === "rgb(79, 70, 229)";
     });
 
     const secondHasGradientUnlocked = await secondUnlockedHandle?.evaluate(
-      el => {
+      (el) => {
         const style = window.getComputedStyle(el);
         return style.backgroundColor === "rgb(79, 70, 229)";
-      }
+      },
     );
 
-    const thirdHasGradientLocked = await thirdUnlockedHandle?.evaluate(el => {
+    const thirdHasGradientLocked = await thirdUnlockedHandle?.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.backgroundColor === "rgb(228, 228, 231)";
     });
 
     const fourthHasGradientUnlocked = await fourthUnlockedHandle?.evaluate(
-      el => {
+      (el) => {
         const style = window.getComputedStyle(el);
         return style.backgroundColor === "rgb(79, 70, 229)";
-      }
+      },
     );
 
     expect(hasGradientUnlocked).toBe(true);
@@ -190,7 +190,7 @@ test(
       .nth(0);
     await elementTextOutput0.click();
     const elementGroupInput0 = page.getByTestId(
-      "handle-groupnode-shownode-first text-left"
+      "handle-groupnode-shownode-first text-left",
     );
     await elementGroupInput0.click();
 
@@ -246,7 +246,7 @@ test(
     expect(
       await page
         .getByTestId("output-inspection-combined text-groupnode")
-        .first()
+        .first(),
     ).not.toBeDisabled();
     await page
       .getByTestId("output-inspection-combined text-groupnode")
@@ -266,10 +266,10 @@ test(
       `${secondRandomName}-${thirdRandomName}-${randomName}`,
     ];
 
-    const isPermutationIncluded = permutations.some(permutation =>
-      text!.includes(permutation)
+    const isPermutationIncluded = permutations.some((permutation) =>
+      text!.includes(permutation),
     );
 
     expect(isPermutationIncluded).toBe(true);
-  }
+  },
 );

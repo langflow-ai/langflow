@@ -17,7 +17,7 @@ test(
       '[data-testid="sidebar-custom-component-button"]',
       {
         timeout: 3000,
-      }
+      },
     );
 
     // Add URL component
@@ -236,7 +236,7 @@ test(
       '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
-      }
+      },
     );
     await page
       .getByTestId("output-inspection-output message-chatoutput")
@@ -249,5 +249,5 @@ test(
     // Count occurrences of modified_value in output
     const matches = output?.match(/modified_value/g) || [];
     expect(matches).toHaveLength(2);
-  }
+  },
 );

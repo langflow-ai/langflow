@@ -232,5 +232,5 @@ test(
       timeout: 10000,
       visible: false,
     });
-  }
+  },
 );
