@@ -283,6 +283,16 @@ class Settings(BaseSettings):
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
+    verify_ssl: bool | str = Field(default=True)
+    """Whether Langflow should verify TLS certificates when making HTTP(S)
+    requests (MCP SSE/REST, web-hooks, etc.).
+
+    The value can be supplied through the environment variable
+    ``LANGFLOW_VERIFY_SSL`` (all settings use the common ``LANGFLOW_`` prefix):
+
+    - ``True``   verify against the system CA bundle (default)
+    - ``False``  **do not** verify (development / self-signed certificates)
+    - ``<path>`` path to a custom CA bundle (``.pem``)"""
     # Starter Projects
     create_starter_projects: bool = True
     """If set to True, Langflow will create starter projects. If False, skips all starter project setup.
@@ -474,6 +484,21 @@ class Settings(BaseSettings):
 
         logger.debug(f"Components path: {value}")
         return value
+
+    @field_validator("verify_ssl", mode="before")
+    @classmethod
+    def _coerce_verify_ssl(cls, v):
+        env_v = os.getenv("VERIFY_SSL")
+        # Always prefer the explicit env-var when present
+        if env_v is not None:
+            v = env_v
+        if isinstance(v, str):
+            lowered = v.lower()
+            if lowered in {"false", "0", "no"}:
+                return False
+            if lowered in {"true", "1", "yes"}:
+                return True
+        return v
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 

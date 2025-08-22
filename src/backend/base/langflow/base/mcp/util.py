@@ -7,6 +7,7 @@ import re
 import shutil
 import unicodedata
 from collections.abc import Awaitable, Callable
+from ssl import SSLContext
 from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
@@ -21,8 +22,12 @@ from mcp.shared.exceptions import McpError
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
+# from langflow internal modules
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service
+
+settings = get_settings_service().settings
+
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
@@ -478,7 +483,7 @@ class MCPSessionManager:
     4. Periodic cleanup of stale sessions
     """
 
-    def __init__(self):
+    def __init__(self, ssl_verify: bool | str | SSLContext | None = None):
         # Structure: server_key -> {"sessions": {session_id: session_info}, "last_cleanup": timestamp}
         self.sessions_by_server = {}
         self._background_tasks = set()  # Keep references to background tasks
@@ -488,6 +493,7 @@ class MCPSessionManager:
         self._session_refcount: dict[tuple[str, str], int] = {}
         self._cleanup_task = None
         self._start_cleanup_task()
+        self._ssl_verify = ssl_verify if ssl_verify is not None else getattr(settings, "verify_ssl", True)
 
     def _start_cleanup_task(self):
         """Start the periodic cleanup task."""
@@ -745,6 +751,7 @@ class MCPSessionManager:
                     connection_params["headers"],
                     connection_params["timeout_seconds"],
                     connection_params["sse_read_timeout_seconds"],
+                    verify=self._ssl_verify,
                 ) as (read, write):
                     session = ClientSession(read, write)
                     async with session:
@@ -1131,12 +1138,19 @@ class MCPStdioClient:
 
 
 class MCPSseClient:
-    def __init__(self, component_cache=None):
+    # If ssl_verify is omitted we fall back to global Settings.verify_ssl
+    def __init__(
+        self,
+        ssl_verify: bool | str | SSLContext | None = None,
+        component_cache=None,
+    ):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        # Pull global default from Settings when caller doesn't provide one
+        self._ssl_verify = ssl_verify if ssl_verify is not None else getattr(settings, "verify_ssl", True)
 
     def _get_session_manager(self) -> MCPSessionManager:
         """Get or create session manager from component cache."""
@@ -1161,7 +1175,7 @@ class MCPSseClient:
             if not parsed.scheme or not parsed.netloc:
                 return False, "Invalid URL format. Must include scheme (http/https) and host."
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(verify=self._ssl_verify) as client:
                 try:
                     # For SSE endpoints, try a GET request with short timeout
                     # Many SSE servers don't support HEAD requests and return 404
@@ -1204,7 +1218,7 @@ class MCPSseClient:
         if url is None:
             return url
         try:
-            async with httpx.AsyncClient(follow_redirects=False) as client:
+            async with httpx.AsyncClient(follow_redirects=False, verify=self._ssl_verify) as client:
                 # Use GET with SSE headers instead of HEAD since many SSE servers don't support HEAD
                 response = await client.get(
                     url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
@@ -1245,6 +1259,23 @@ class MCPSseClient:
             "sse_read_timeout_seconds": sse_read_timeout_seconds,
         }
 
+        # try:
+        #     async with (
+        #         sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds, verify=self._ssl_verify) as (
+        #             read,
+        #             write,
+        #         ),
+        #         ClientSession(read, write) as session,
+        #     ):
+        #         await session.initialize()
+        #         response = await session.list_tools()
+        #         self._connected = True
+        #         return response.tools
+        # except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+        #     logger.error(f"Failed to connect to MCP SSE server: {e}")
+        #     self._connection_params = None
+        #     self._connected = False
+        #     return []
         # If no session context is set, create a default one
         if not self._session_context:
             # Generate a fallback context based on connection parameters
@@ -1454,8 +1485,14 @@ async def update_tools(
         return "", [], {}
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
+    # Pick per-server override if present, otherwise fall back to global VERIFY_SSL
+    global_verify_ssl = getattr(settings, "verify_ssl", True)
+    ssl_verify = server_config.get("ssl_verify", global_verify_ssl)
     if mcp_sse_client is None:
-        mcp_sse_client = MCPSseClient()
+        mcp_sse_client = MCPSseClient(ssl_verify)
+    else:
+        # Keep the client's SSL setting in sync with the current config
+        mcp_sse_client._ssl_verify = ssl_verify
 
     # Fetch server config from backend
     mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
