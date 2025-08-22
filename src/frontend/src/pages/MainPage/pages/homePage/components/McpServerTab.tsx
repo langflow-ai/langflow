@@ -20,7 +20,6 @@ import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import AuthModal from "@/modals/authModal";
 import useAlertStore from "@/stores/alertStore";
-import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
 import { AUTH_METHODS } from "@/utils/mcpUtils";
@@ -176,8 +175,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       ?.name
   );
 
-  const isAutoLogin = useAuthStore((state) => state.autoLogin);
-
   // Check if the current connection is local
   const isLocalConnection = useCustomIsLocalConnection();
 
@@ -250,7 +247,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const getAuthHeaders = () => {
     // If MCP auth is disabled, use the previous API key behavior
     if (!ENABLE_MCP_COMPOSER) {
-      if (isAutoLogin) return "";
       return `
         "--headers",
         "x-api-key",
