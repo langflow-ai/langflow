@@ -242,7 +242,6 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Apify", name: "apify", icon: "Apify" },
-
   { display_name: "arXiv", name: "arxiv", icon: "arXiv" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   { display_name: "Azure", name: "azure", icon: "Azure" },
@@ -258,7 +257,6 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Docling", name: "docling", icon: "Docling" },
   { display_name: "DuckDuckGo", name: "duckduckgo", icon: "DuckDuckGo" },
-  { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Exa", name: "exa", icon: "Exa" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
@@ -302,6 +300,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
   {
