@@ -27,12 +27,42 @@ import { AUTH_METHODS } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
 
+interface MemoizedApiKeyButtonProps {
+  apiKey: string;
+  isGeneratingApiKey: boolean;
+  generateApiKey: () => void;
+}
+
+const MemoizedApiKeyButton = memo(
+  ({
+    apiKey,
+    isGeneratingApiKey,
+    generateApiKey,
+  }: MemoizedApiKeyButtonProps) => (
+    <Button
+      unstyled
+      className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+      disabled={apiKey !== ""}
+      loading={isGeneratingApiKey}
+      onClick={generateApiKey}
+    >
+      <ForwardedIconComponent
+        name={"key"}
+        className="h-4 w-4"
+        aria-hidden="true"
+      />
+      <span>{apiKey === "" ? "Generate API key" : "API key generated"}</span>
+    </Button>
+  )
+);
+MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
+
 // Define interface for MemoizedCodeTag props
 interface MemoizedCodeTagProps {
   children: ReactNode;
   isCopied: boolean;
   copyToClipboard: () => void;
-  isAutoLogin: boolean | null;
+  isAuthApiKey: boolean | null;
   apiKey: string;
   isGeneratingApiKey: boolean;
   generateApiKey: () => void;
@@ -44,30 +74,19 @@ const MemoizedCodeTag = memo(
     children,
     isCopied,
     copyToClipboard,
-    isAutoLogin,
+    isAuthApiKey,
     apiKey,
     isGeneratingApiKey,
     generateApiKey,
   }: MemoizedCodeTagProps) => (
     <div className="relative bg-background text-[13px]">
       <div className="absolute right-4 top-4 flex items-center gap-6">
-        {!isAutoLogin && (
-          <Button
-            unstyled
-            className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-            disabled={apiKey !== ""}
-            loading={isGeneratingApiKey}
-            onClick={generateApiKey}
-          >
-            <ForwardedIconComponent
-              name={"key"}
-              className="h-4 w-4"
-              aria-hidden="true"
-            />
-            <span>
-              {apiKey === "" ? "Generate API key" : "API key generated"}
-            </span>
-          </Button>
+        {isAuthApiKey && (
+          <MemoizedApiKeyButton
+            apiKey={apiKey}
+            isGeneratingApiKey={isGeneratingApiKey}
+            generateApiKey={generateApiKey}
+          />
         )}
         <Button
           unstyled
@@ -86,7 +105,7 @@ const MemoizedCodeTag = memo(
         <span>{children}</span>
       </div>
     </div>
-  ),
+  )
 );
 MemoizedCodeTag.displayName = "MemoizedCodeTag";
 
@@ -144,6 +163,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
+
+  const isAuthApiKey = currentAuthSettings?.auth_type === "apikey";
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
   });
@@ -152,7 +173,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
-      ?.name,
+      ?.name
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
@@ -161,7 +182,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
-    isLocalConnection ? "Auto install" : "JSON",
+    isLocalConnection ? "Auto install" : "JSON"
   );
 
   const handleOnNewValue = (value: any) => {
@@ -244,7 +265,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       return `
         "--headers",
         "x-api-key",
-        "${currentAuthSettings.api_key || "YOUR_API_KEY"}",`;
+        "${apiKey || "YOUR_API_KEY"}",`;
     }
 
     return "";
@@ -261,8 +282,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
+          ? "wsl"
+          : "uvx"
       }",
       "args": [
         ${
@@ -271,9 +292,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
+            : ""
         }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
       ]
@@ -456,7 +477,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       <MemoizedCodeTag
                         isCopied={isCopied}
                         copyToClipboard={copyToClipboard}
-                        isAutoLogin={isAutoLogin}
+                        isAuthApiKey={isAuthApiKey}
                         apiKey={apiKey}
                         isGeneratingApiKey={isGeneratingApiKey}
                         generateApiKey={generateApiKey}
@@ -523,9 +544,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
                           });
                           setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
+                            loadingMCP.filter((name) => name !== installer.name)
                           );
                         },
                         onError: (e) => {
@@ -534,12 +553,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             list: [e.message],
                           });
                           setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
+                            loadingMCP.filter((name) => name !== installer.name)
                           );
                         },
-                      },
+                      }
                     );
                   }}
                 >
@@ -557,12 +574,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       installedMCP?.includes(installer.name)
                         ? "Check"
                         : loadingMCP.includes(installer.name)
-                          ? "Loader2"
-                          : "Plus"
+                        ? "Loader2"
+                        : "Plus"
                     }
                     className={cn(
                       "h-4 w-4",
-                      loadingMCP.includes(installer.name) && "animate-spin",
+                      loadingMCP.includes(installer.name) && "animate-spin"
                     )}
                   />
                 </Button>
