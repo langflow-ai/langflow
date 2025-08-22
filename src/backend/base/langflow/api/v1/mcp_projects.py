@@ -424,7 +424,7 @@ async def install_mcp_config(
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
                 except OSError as e:
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
-        
+
         # Initialize args list
         args = ["mcp-composer", "--sse-url", sse_url]
 
