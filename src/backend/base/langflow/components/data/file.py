@@ -510,7 +510,7 @@ class FileComponent(BaseFileComponent):
             serialized_data = processed_data.serialize_model()
 
             # Now, if doc is nested, we need to unravel it
-            clean_data = [processed_data]
+            clean_data: list[Data | None] = [processed_data]
 
             # This is where we've manually processed the data
             try:
