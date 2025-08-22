@@ -276,7 +276,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               : ""
         }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
-      ]${ENABLE_MCP_COMPOSER && currentAuthSettings?.auth_type === "oauth" ? `,` : ""}
+      ]
     }
   }
 }`;
