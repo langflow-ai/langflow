@@ -596,17 +596,17 @@ test(
 );
 
 test(
-  "should show PNG file as disabled in file component",
+  "should show PSD file as disabled in file component",
   {
     tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     // Generate unique filenames for this test run
-    const pngFileName = generateRandomFilename();
+    const psdFileName = generateRandomFilename();
     const txtFileName = generateRandomFilename();
 
-    // Create PNG content (a simple 1x1 transparent PNG)
-    const pngFileContent = Buffer.from(
+    // Create PSD content (just a mock)
+    const psdFileContent = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
       "base64",
     );
@@ -626,24 +626,24 @@ test(
     const title = await page.getByTestId("mainpage_title");
     expect(await title.textContent()).toContain("Files");
 
-    // Upload the PNG file
-    const fileChooserPromisePng = page.waitForEvent("filechooser");
+    // Upload the PSD file
+    const fileChooserPromisePsd = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
-    const fileChooserPng = await fileChooserPromisePng;
-    await fileChooserPng.setFiles([
+    const fileChooserPsd = await fileChooserPromisePsd;
+    await fileChooserPsd.setFiles([
       {
-        name: `${pngFileName}.png`,
-        mimeType: "image/png",
-        buffer: pngFileContent,
+        name: `${psdFileName}.psd`,
+        mimeType: "image/vnd.adobe.photoshop",
+        buffer: psdFileContent,
       },
     ]);
 
     // Wait for upload success message
     await expect(page.getByText("File uploaded successfully")).toBeVisible();
 
-    // Verify PNG file appears in the list
-    await expect(page.getByText(`${pngFileName}.png`)).toBeVisible();
+    // Verify PSD file appears in the list
+    await expect(page.getByText(`${psdFileName}.psd`)).toBeVisible();
 
     // Upload the TXT file
     const fileChooserPromiseTxt = page.waitForEvent("filechooser");
@@ -664,7 +664,7 @@ test(
     // Verify TXT file appears in the list
     await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
 
-    // Step 2: Create a flow with File component and check if PNG file is disabled
+    // Step 2: Create a flow with File component and check if PSD file is disabled
     // Navigate to workspace page
     await page.getByText("Starter Project").first().click();
 
@@ -696,7 +696,7 @@ test(
 
     // Open the file management modal
     await page.getByTestId("button_open_file_management").click();
-    console.warn(pngFileName);
+    console.warn(psdFileName);
 
     // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${pngFileName}`)).toHaveClass(
@@ -708,9 +708,9 @@ test(
       /pointer-events-none cursor-not-allowed opacity-50/,
     );
 
-    // Verify the tooltip for PNG file states it's not supported
+    // Verify the tooltip for PSD file states it's not supported
     await page
-      .locator(`[data-testid="file-item-${pngFileName}"]`)
+      .locator(`[data-testid="file-item-${psdFileName}"]`)
       .locator("..")
       .hover();
 
@@ -728,6 +728,6 @@ test(
 
     // Verify that only the TXT file was selected in the component
     await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
-    await expect(page.getByText(`${pngFileName}.png`)).not.toBeVisible();
+    await expect(page.getByText(`${psdFileName}.psd`)).not.toBeVisible();
   },
 );
