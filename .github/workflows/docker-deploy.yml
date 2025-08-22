@@ -79,7 +79,7 @@ jobs:
 
           DIGESTS=$(curl -s -H "Authorization: JWT $TOKEN" \
             "https://hub.docker.com/v2/repositories/forwardemailforaifirstdesk/langflow/tags?page_size=100" \
-            | jq -r '.results[] | {last_updated: .last_updated, digest: .images[0].digest} | @tsv' \
+            | jq -r '.results[] | [.last_updated, .images[0].digest] | @tsv' \
             | sort -k1 -r \
             | awk '{print $2}')
 
