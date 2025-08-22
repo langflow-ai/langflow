@@ -121,7 +121,6 @@ class ComposioBaseComponent(Component):
         if isinstance(result, dict):
             result = [result]
         # Build DataFrame and avoid exposing a 'data' attribute via column access,
-        # which interferes with logging utilities that probe for '.data'.
         result_dataframe = DataFrame(result)
         if hasattr(result_dataframe, "columns"):
             try:
@@ -550,9 +549,7 @@ class ComposioBaseComponent(Component):
                     clean_field_name = f"{self.app_name}_status"
                     # Update the field schema description to reflect the name change
                     field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get(
-                        "description", ""
-                    )
+                    field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get("description", "")
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
