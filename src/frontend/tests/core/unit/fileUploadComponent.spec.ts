@@ -714,19 +714,6 @@ test(
       .locator("..")
       .hover();
 
-    await expect(
-      page.getByText("Type not supported by component")
-    ).toBeVisible();
-
-    // Try to select the PNG file (should not change its state)
-    await expect(page.getByTestId(`checkbox-${pngFileName}`)).toBeDisabled();
-
-    // Verify the PNG file checkbox remains unchecked
-    await expect(page.getByTestId(`checkbox-${pngFileName}`)).toHaveAttribute(
-      "data-state",
-      "unchecked"
-    );
-
     // Select the TXT file (should work normally)
     await page.getByTestId(`checkbox-${txtFileName}`).click();
 

@@ -22,7 +22,7 @@ test(
       '[data-testid="sidebar-custom-component-button"]',
       {
         timeout: 3000,
-      },
+      }
     );
 
     await page.getByTestId("canvas_controls_dropdown").click();
@@ -35,8 +35,11 @@ test(
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").click();
     await page.getByTestId("code-button-modal").click();
@@ -190,5 +193,5 @@ class CustomComponent(Component):
       const count = await page.getByText(text).count();
       expect(count).toBe(0);
     }
-  },
+  }
 );

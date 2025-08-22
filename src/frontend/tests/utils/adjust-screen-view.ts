@@ -6,12 +6,8 @@ export async function adjustScreenView(
     numberOfZoomOut = 1,
   }: {
     numberOfZoomOut?: number;
-  } = {},
+  } = {}
 ) {
-  await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-    timeout: 100000,
-  });
-
   await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("fit_view").click();
   for (let i = 0; i < numberOfZoomOut; i++) {

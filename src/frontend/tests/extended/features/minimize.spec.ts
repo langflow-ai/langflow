@@ -21,7 +21,6 @@ test(
       .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-    await page.getByTestId("zoom_out").click();
     await page
       .locator('//*[@id="react-flow-id"]')
       .hover()
@@ -33,8 +32,8 @@ test(
     await page.mouse.up();
 
     await adjustScreenView(page);
-
     await page.getByTestId("canvas_controls_dropdown").click();
+
     await zoomOut(page, 4);
     await page.getByTestId("canvas_controls_dropdown").click();
 
@@ -47,11 +46,11 @@ test(
     await page.getByTestId("minimize-button-modal").first().click();
 
     await expect(
-      page.locator(".react-flow__handle-left.no-show").first(),
+      page.locator(".react-flow__handle-left.no-show").first()
     ).toBeVisible({ timeout: 3000 });
 
     await expect(
-      page.locator(".react-flow__handle-right.no-show").first(),
+      page.locator(".react-flow__handle-right.no-show").first()
     ).toBeVisible();
 
     await page.getByTestId("more-options-modal").click();
@@ -67,7 +66,7 @@ test(
     });
 
     await expect(
-      page.locator(".react-flow__handle-right").first(),
+      page.locator(".react-flow__handle-right").first()
     ).toBeVisible();
-  },
+  }
 );
