@@ -130,7 +130,7 @@ class FileComponent(BaseFileComponent):
             real_time_refresh=True,
             info=(
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
-                "Available only for single file processing. Requires installation: uv pip install docling"
+                "Available only for single file processing."
             ),
             show=False,
         ),
