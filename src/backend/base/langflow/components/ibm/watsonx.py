@@ -3,13 +3,13 @@ from typing import Any
 
 import requests
 from langchain_ibm import ChatWatsonx
-from loguru import logger
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 
 

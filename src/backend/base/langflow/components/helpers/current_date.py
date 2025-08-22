@@ -1,10 +1,9 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo, available_timezones
 
-from loguru import logger
-
 from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, Output
+from langflow.logging.logger import logger
 from langflow.schema.message import Message
 
 
@@ -37,7 +36,7 @@ class CurrentDateComponent(Component):
             self.status = result
             return Message(text=result)
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error getting current date")
+            logger.debug("Error getting current date", exc_info=True)
             error_message = f"Error: {e}"
             self.status = error_message
             return Message(text=error_message)

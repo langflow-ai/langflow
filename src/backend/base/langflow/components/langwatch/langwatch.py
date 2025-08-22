@@ -3,7 +3,6 @@ import os
 from typing import Any
 
 import httpx
-from loguru import logger
 
 from langflow.base.langwatch.utils import get_cached_evaluators
 from langflow.custom.custom_component.component import Component
@@ -18,6 +17,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 
@@ -226,7 +226,7 @@ class LangWatchComponent(Component):
         if not evaluator_name:
             if self.evaluators:
                 evaluator_name = next(iter(self.evaluators))
-                logger.info(f"No evaluator was selected. Using default: {evaluator_name}")
+                await logger.ainfo(f"No evaluator was selected. Using default: {evaluator_name}")
             else:
                 return Data(
                     data={"error": "No evaluator selected and no evaluators available. Please choose an evaluator."}
@@ -237,7 +237,7 @@ class LangWatchComponent(Component):
             if not evaluator:
                 return Data(data={"error": f"Selected evaluator '{evaluator_name}' not found."})
 
-            logger.info(f"Evaluating with evaluator: {evaluator_name}")
+            await logger.ainfo(f"Evaluating with evaluator: {evaluator_name}")
 
             endpoint = f"/api/evaluations/{evaluator_name}/evaluate"
             url = f"{os.getenv('LANGWATCH_ENDPOINT', 'https://app.langwatch.ai')}{endpoint}"

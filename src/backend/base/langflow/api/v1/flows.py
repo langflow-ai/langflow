@@ -55,7 +55,7 @@ async def _save_flow_to_fs(flow: Flow) -> None:
             try:
                 await f.write(flow.model_dump_json())
             except OSError:
-                logger.exception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+                await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
 
 
 async def _new_flow(

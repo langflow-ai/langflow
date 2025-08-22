@@ -4,13 +4,13 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from langchain.tools import StructuredTool
-from loguru import logger
 from markdown import markdown
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 MIN_ROWS_IN_TABLE = 3
@@ -84,7 +84,7 @@ class AddContentToPage(LCToolComponent):
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error adding content to Notion page")
+            logger.debug("Error adding content to Notion page", exc_info=True)
             return f"Error: An unexpected error occurred while adding content to Notion page. {e}"
 
     def process_node(self, node):

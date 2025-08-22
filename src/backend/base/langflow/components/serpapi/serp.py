@@ -2,12 +2,12 @@ from typing import Any
 
 from langchain_community.utilities.serpapi import SerpAPIWrapper
 from langchain_core.tools import ToolException
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from langflow.io import Output
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 

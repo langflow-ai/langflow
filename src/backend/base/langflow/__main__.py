@@ -162,7 +162,7 @@ def wait_for_server_ready(host, port, protocol) -> None:
         except HTTPError:
             time.sleep(1)
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
+            logger.debug("Error while waiting for the server to become ready.", exc_info=True)
             time.sleep(1)
 
 

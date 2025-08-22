@@ -7,9 +7,8 @@ import pkgutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
 from langflow.custom.utils import abuild_custom_components, create_component_template
+from langflow.logging.logger import logger
 from langflow.services.settings.base import BASE_COMPONENTS_PATH
 
 if TYPE_CHECKING:
@@ -49,7 +48,7 @@ async def import_langflow_components():
     try:
         import langflow.components as components_pkg
     except ImportError as e:
-        logger.error(f"Failed to import langflow.components package: {e}", exc_info=True)
+        await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
         return {"components": modules_dict}
 
     # Collect all module names to process
@@ -69,13 +68,13 @@ async def import_langflow_components():
     try:
         module_results = await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:  # noqa: BLE001
-        logger.error(f"Error during parallel module processing: {e}", exc_info=True)
+        await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
         return {"components": modules_dict}
 
     # Merge results from all modules
     for result in module_results:
         if isinstance(result, Exception):
-            logger.warning(f"Module processing failed: {result}")
+            await logger.awarning(f"Module processing failed: {result}")
             continue
 
         if result and isinstance(result, tuple) and len(result) == EXPECTED_RESULT_LENGTH:
@@ -165,7 +164,7 @@ async def _determine_loading_strategy(settings_service: SettingsService) -> dict
     component_cache.all_types_dict = {}
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
-        logger.debug("Using partial component loading")
+        await logger.adebug("Using partial component loading")
         component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
     elif settings_service.settings.components_path:
         # Traditional full loading - filter out base components path to only load custom components
@@ -177,7 +176,9 @@ async def _determine_loading_strategy(settings_service: SettingsService) -> dict
     components_dict = component_cache.all_types_dict or {}
     component_count = sum(len(comps) for comps in components_dict.get("components", {}).values())
     if component_count > 0 and settings_service.settings.components_path:
-        logger.debug(f"Built {component_count} custom components from {settings_service.settings.components_path}")
+        await logger.adebug(
+            f"Built {component_count} custom components from {settings_service.settings.components_path}"
+        )
 
     return component_cache.all_types_dict
 
@@ -193,7 +194,7 @@ async def get_and_cache_all_types_dict(
     resulting dictionary.
     """
     if component_cache.all_types_dict is None:
-        logger.debug("Building components cache")
+        await logger.adebug("Building components cache")
 
         langflow_components = await import_langflow_components()
         custom_components_dict = await _determine_loading_strategy(settings_service)
@@ -204,7 +205,7 @@ async def get_and_cache_all_types_dict(
             **custom_components_dict,
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
-        logger.debug(f"Loaded {component_count} components")
+        await logger.adebug(f"Loaded {component_count} components")
     return component_cache.all_types_dict
 
 
@@ -235,7 +236,7 @@ async def aget_component_metadata(components_paths: list[str]):
 
     # Get all component types
     component_types = await discover_component_types(components_paths)
-    logger.debug(f"Discovered {len(component_types)} component types: {', '.join(component_types)}")
+    await logger.adebug(f"Discovered {len(component_types)} component types: {', '.join(component_types)}")
 
     # For each component type directory
     for component_type in component_types:
@@ -243,7 +244,7 @@ async def aget_component_metadata(components_paths: list[str]):
 
         # Get list of components in this type
         component_names = await discover_component_names(component_type, components_paths)
-        logger.debug(f"Found {len(component_names)} components for type {component_type}")
+        await logger.adebug(f"Found {len(component_names)} components for type {component_type}")
 
         # Create stub entries with just basic metadata
         for name in component_names:
@@ -365,7 +366,7 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
 
     # Check if component is marked for lazy loading
     if component_cache.all_types_dict["components"][component_type][component_name].get("lazy_loaded", False):
-        logger.debug(f"Fully loading component {component_type}:{component_name}")
+        await logger.adebug(f"Fully loading component {component_type}:{component_name}")
 
         # Load just this specific component
         full_component = await load_single_component(
@@ -381,9 +382,9 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
 
             # Mark as fully loaded
             component_cache.fully_loaded_components[component_key] = True
-            logger.debug(f"Component {component_type}:{component_name} fully loaded")
+            await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
         else:
-            logger.warning(f"Failed to fully load component {component_type}:{component_name}")
+            await logger.awarning(f"Failed to fully load component {component_type}:{component_name}")
 
 
 async def load_single_component(component_type: str, component_name: str, components_paths: list[str]):
@@ -396,32 +397,32 @@ async def load_single_component(component_type: str, component_name: str, compon
         return await get_single_component_dict(component_type, component_name, components_paths)
     except (ImportError, ModuleNotFoundError) as e:
         # Handle issues with importing the component or its dependencies
-        logger.error(f"Import error loading component {component_type}:{component_name}: {e!s}")
+        await logger.aerror(f"Import error loading component {component_type}:{component_name}: {e!s}")
         return None
     except (AttributeError, TypeError) as e:
         # Handle issues with component structure or type errors
-        logger.error(f"Component structure error for {component_type}:{component_name}: {e!s}")
+        await logger.aerror(f"Component structure error for {component_type}:{component_name}: {e!s}")
         return None
     except FileNotFoundError as e:
         # Handle missing files
-        logger.error(f"File not found for component {component_type}:{component_name}: {e!s}")
+        await logger.aerror(f"File not found for component {component_type}:{component_name}: {e!s}")
         return None
     except ValueError as e:
         # Handle invalid values or configurations
-        logger.error(f"Invalid configuration for component {component_type}:{component_name}: {e!s}")
+        await logger.aerror(f"Invalid configuration for component {component_type}:{component_name}: {e!s}")
         return None
     except (KeyError, IndexError) as e:
         # Handle data structure access errors
-        logger.error(f"Data structure error for component {component_type}:{component_name}: {e!s}")
+        await logger.aerror(f"Data structure error for component {component_type}:{component_name}: {e!s}")
         return None
     except RuntimeError as e:
         # Handle runtime errors
-        logger.error(f"Runtime error loading component {component_type}:{component_name}: {e!s}")
-        logger.debug("Full traceback for runtime error", exc_info=True)
+        await logger.aerror(f"Runtime error loading component {component_type}:{component_name}: {e!s}")
+        await logger.adebug("Full traceback for runtime error", exc_info=True)
         return None
     except OSError as e:
         # Handle OS-related errors (file system, permissions, etc.)
-        logger.error(f"OS error loading component {component_type}:{component_name}: {e!s}")
+        await logger.aerror(f"OS error loading component {component_type}:{component_name}: {e!s}")
         return None
 
 

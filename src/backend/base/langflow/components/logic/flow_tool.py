@@ -1,6 +1,5 @@
 from typing import Any
 
-from loguru import logger
 from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -9,6 +8,7 @@ from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
 from langflow.io import BoolInput, DropdownInput, Output, StrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 
@@ -91,7 +91,7 @@ class FlowToolComponent(LCToolComponent):
         try:
             graph.set_run_id(self.graph.run_id)
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).warning("Failed to set run_id")
+            logger.warning("Failed to set run_id", exc_info=True)
         inputs = get_flow_inputs(graph)
         tool_description = self.tool_description.strip() or flow_data.description
         tool = FlowTool(

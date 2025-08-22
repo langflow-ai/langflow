@@ -7,9 +7,9 @@ from string import Formatter
 
 import yaml
 from langchain_core.language_models import BaseLanguageModel
-from loguru import logger
 from PIL.Image import Image
 
+from langflow.logging.logger import logger
 from langflow.services.chat.config import ChatConfig
 from langflow.services.deps import get_settings_service
 

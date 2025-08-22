@@ -51,7 +51,7 @@ def test_str_input_valid():
 
 
 def test_str_input_invalid():
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Invalid value type.*for input"):
         StrInput(name="invalid_str", value=1234)
 
 

@@ -117,12 +117,12 @@ class MCPToolsComponent(ComponentWithCache):
             schema_inputs = schema_to_langflow_inputs(input_schema)
             if not schema_inputs:
                 msg = f"No input parameters defined for tool '{tool_obj.name}'"
-                logger.warning(msg)
+                await logger.awarning(msg)
                 return []
 
         except Exception as e:
             msg = f"Error validating schema inputs: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
         else:
             return schema_inputs
@@ -202,11 +202,11 @@ class MCPToolsComponent(ComponentWithCache):
 
         except (TimeoutError, asyncio.TimeoutError) as e:
             msg = f"Timeout updating tool list: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise TimeoutError(msg) from e
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
         else:
             return tool_list, {"name": server_name, "config": server_config}
@@ -223,7 +223,7 @@ class MCPToolsComponent(ComponentWithCache):
                             build_config["tool"]["placeholder"] = "Select a tool"
                         except (TimeoutError, asyncio.TimeoutError) as e:
                             msg = f"Timeout updating tool list: {e!s}"
-                            logger.exception(msg)
+                            await logger.aexception(msg)
                             if not build_config["tools_metadata"]["show"]:
                                 build_config["tool"]["show"] = True
                                 build_config["tool"]["options"] = []
@@ -249,7 +249,7 @@ class MCPToolsComponent(ComponentWithCache):
                             break
                     if tool_obj is None:
                         msg = f"Tool {field_value} not found in available tools: {self.tools}"
-                        logger.warning(msg)
+                        await logger.awarning(msg)
                         return build_config
                     await self._update_tool_config(build_config, field_value)
                 except Exception as e:
@@ -333,7 +333,7 @@ class MCPToolsComponent(ComponentWithCache):
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
         else:
             return build_config
@@ -386,7 +386,7 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
             self.remove_non_default_keys(build_config)
             build_config["tool"]["value"] = ""
-            logger.warning(msg)
+            await logger.awarning(msg)
             return
 
         try:
@@ -404,14 +404,14 @@ class MCPToolsComponent(ComponentWithCache):
             self.schema_inputs = await self._validate_schema_inputs(tool_obj)
             if not self.schema_inputs:
                 msg = f"No input parameters to configure for tool '{tool_name}'"
-                logger.info(msg)
+                await logger.ainfo(msg)
                 return
 
             # Add new inputs to build config
             for schema_input in self.schema_inputs:
                 if not schema_input or not hasattr(schema_input, "name"):
                     msg = "Invalid schema input detected, skipping"
-                    logger.warning(msg)
+                    await logger.awarning(msg)
                     continue
 
                 try:
@@ -428,16 +428,16 @@ class MCPToolsComponent(ComponentWithCache):
 
                 except (AttributeError, KeyError, TypeError) as e:
                     msg = f"Error processing schema input {schema_input}: {e!s}"
-                    logger.exception(msg)
+                    await logger.aexception(msg)
                     continue
         except ValueError as e:
             msg = f"Schema validation error for tool {tool_name}: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             self.schema_inputs = []
             return
         except (AttributeError, KeyError, TypeError) as e:
             msg = f"Error updating tool config: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
 
     async def build_output(self) -> DataFrame:
@@ -474,7 +474,7 @@ class MCPToolsComponent(ComponentWithCache):
             return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
             msg = f"Error in build_output: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
 
     def _get_session_context(self) -> str | None:

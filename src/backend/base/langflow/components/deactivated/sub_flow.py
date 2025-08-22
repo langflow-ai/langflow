@@ -1,12 +1,11 @@
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
@@ -36,7 +35,7 @@ class SubFlowComponent(CustomComponent):
         return None
 
     async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        logger.debug(f"Updating build config with field value {field_value} and field name {field_name}")
+        await logger.adebug(f"Updating build config with field value {field_value} and field name {field_name}")
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = await self.get_flow_names()
         # Clean up the build config
@@ -47,11 +46,11 @@ class SubFlowComponent(CustomComponent):
             try:
                 flow_data = await self.get_flow(field_value)
             except Exception:  # noqa: BLE001
-                logger.exception(f"Error getting flow {field_value}")
+                await logger.aexception(f"Error getting flow {field_value}")
             else:
                 if not flow_data:
                     msg = f"Flow {field_value} not found."
-                    logger.error(msg)
+                    await logger.aerror(msg)
                 else:
                     try:
                         graph = Graph.from_payload(flow_data.data["data"])
@@ -60,7 +59,7 @@ class SubFlowComponent(CustomComponent):
                         # Add inputs to the build config
                         build_config = self.add_inputs_to_build_config(inputs, build_config)
                     except Exception:  # noqa: BLE001
-                        logger.exception(f"Error building graph for flow {field_value}")
+                        await logger.aexception(f"Error building graph for flow {field_value}")
 
         return build_config
 
@@ -121,5 +120,5 @@ class SubFlowComponent(CustomComponent):
                     data.extend(build_data_from_result_data(output))
 
         self.status = data
-        logger.debug(data)
+        await logger.adebug(data)
         return data

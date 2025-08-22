@@ -1,4 +1,4 @@
-from loguru import logger
+from langflow.logging.logger import logger
 
 LOGGING_CONFIGURED = False
 

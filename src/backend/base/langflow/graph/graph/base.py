@@ -15,8 +15,6 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
-from loguru import logger
-
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.edge.base import CycleEdge, Edge
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -36,7 +34,7 @@ from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
-from langflow.logging.logger import LogConfig, configure
+from langflow.logging.logger import LogConfig, configure, logger
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from langflow.services.cache.utils import CacheMiss
@@ -848,7 +846,7 @@ class Graph:
                 event_manager=event_manager,
             )
             run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
-            logger.debug(f"Run outputs: {run_output_object}")
+            await logger.adebug(f"Run outputs: {run_output_object}")
             vertex_outputs.append(run_output_object)
         return vertex_outputs
 
@@ -1449,7 +1447,7 @@ class Graph:
                             if vertex.result is not None:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
-                            logger.opt(exception=True).debug("Error finalizing build")
+                            logger.debug("Error finalizing build", exc_info=True)
                             should_build = True
                     except KeyError:
                         should_build = True
@@ -1476,7 +1474,7 @@ class Graph:
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):
-                logger.exception("Error building Component")
+                await logger.aexception("Error building Component")
             raise
 
         if vertex.result is not None:
@@ -1557,20 +1555,20 @@ class Graph:
                 tasks.append(task)
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
 
-            logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
+            await logger.adebug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
             try:
                 next_runnable_vertices = await self._execute_tasks(
                     tasks, lock=lock, has_webhook_component=has_webhook_component
                 )
             except Exception:
-                logger.exception(f"Error executing tasks in layer {layer_index}")
+                await logger.aexception(f"Error executing tasks in layer {layer_index}")
                 raise
             if not next_runnable_vertices:
                 break
             to_process.extend(next_runnable_vertices)
             layer_index += 1
 
-        logger.debug("Graph processing complete")
+        await logger.adebug("Graph processing complete")
         return self
 
     def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
@@ -1634,7 +1632,7 @@ class Graph:
             from langflow.api.utils import format_exception_message
 
             tb = traceback.format_exc()
-            logger.exception("Error building Component")
+            await logger.aexception("Error building Component")
 
             params = format_exception_message(result)
         message = {"errorMessage": params, "stackTrace": tb}
@@ -1680,7 +1678,7 @@ class Graph:
             vertex_id = tasks[i].get_name().split(" ")[0]
 
             if isinstance(result, Exception):
-                logger.error(f"Task {task_name} failed with exception: {result}")
+                await logger.aerror(f"Task {task_name} failed with exception: {result}")
                 if has_webhook_component:
                     await self._log_vertex_build_from_exception(vertex_id, result)
 
@@ -1710,7 +1708,7 @@ class Graph:
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
 
-            logger.debug(f"Vertex {v.id}, result: {v.built_result}, object: {v.built_object}")
+            await logger.adebug(f"Vertex {v.id}, result: {v.built_result}, object: {v.built_object}")
 
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
@@ -1995,6 +1993,10 @@ class Graph:
             f"Edges ({len(self.edges)}):\n"
             f"{edges_repr}"
         )
+
+    def __hash__(self) -> int:
+        """Return hash of the graph based on its string representation."""
+        return hash(self.__repr__())
 
     def get_vertex_predecessors_ids(self, vertex_id: str) -> list[str]:
         """Get the predecessor IDs of a vertex."""

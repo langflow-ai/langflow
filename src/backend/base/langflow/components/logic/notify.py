@@ -85,4 +85,4 @@ class NotifyComponent(Component):
             self.status = "No record provided."
         self._vertex.is_state = True
         self.graph.activate_state_vertices(name=self.context_key, caller=self._id)
-        return cast(Data, input_value)
+        return cast("Data", input_value)

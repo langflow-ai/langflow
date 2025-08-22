@@ -1,33 +1,43 @@
+"""Logging configuration for Langflow using structlog."""
+
 import json
 import logging
+import logging.handlers
 import os
 import sys
 from collections import deque
+from datetime import datetime
 from pathlib import Path
 from threading import Lock, Semaphore
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import orjson
-from loguru import logger
+import structlog
 from platformdirs import user_cache_dir
-from rich.logging import RichHandler
-from typing_extensions import NotRequired, override
+from typing_extensions import NotRequired
 
 from langflow.settings import DEV
 
-VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-# Human-readable
-DEFAULT_LOG_FORMAT = (
-    "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
-)
+VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+# Map log level names to integers
+LOG_LEVEL_MAP = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
 
 
 class SizedLogBuffer:
+    """A buffer for storing log messages for the log retrieval API."""
+
     def __init__(
         self,
         max_readers: int = 20,  # max number of concurrent readers for the buffer
     ):
-        """A buffer for storing log messages for the log retrieval API.
+        """Initialize the buffer.
 
         The buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
         because the logger is initialized before the settings_service are loaded.
@@ -40,12 +50,28 @@ class SizedLogBuffer:
         self._max = 0
 
     def get_write_lock(self) -> Lock:
+        """Get the write lock."""
         return self._wlock
 
     def write(self, message: str) -> None:
+        """Write a message to the buffer."""
         record = json.loads(message)
-        log_entry = record["text"]
-        epoch = int(record["record"]["time"]["timestamp"] * 1000)
+        log_entry = record.get("event", record.get("msg", record.get("text", "")))
+
+        # Extract timestamp - support both direct timestamp and nested record.time.timestamp
+        timestamp = record.get("timestamp", 0)
+        if timestamp == 0 and "record" in record:
+            # Support nested structure from tests: record.time.timestamp
+            time_info = record["record"].get("time", {})
+            timestamp = time_info.get("timestamp", 0)
+
+        if isinstance(timestamp, str):
+            # Parse ISO format timestamp
+            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            epoch = int(dt.timestamp() * 1000)
+        else:
+            epoch = int(timestamp * 1000)
+
         with self._wlock:
             if len(self.buffer) >= self.max:
                 for _ in range(len(self.buffer) - self.max + 1):
@@ -53,9 +79,11 @@ class SizedLogBuffer:
             self.buffer.append((epoch, log_entry))
 
     def __len__(self) -> int:
+        """Get the length of the buffer."""
         return len(self.buffer)
 
     def get_after_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
+        """Get log entries after a timestamp."""
         rc = {}
 
         self._rsemaphore.acquire()
@@ -73,6 +101,7 @@ class SizedLogBuffer:
         return rc
 
     def get_before_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
+        """Get log entries before a timestamp."""
         self._rsemaphore.acquire()
         try:
             with self._wlock:
@@ -94,6 +123,7 @@ class SizedLogBuffer:
             self._rsemaphore.release()
 
     def get_last_n(self, last_idx: int) -> dict[int, str]:
+        """Get the last n log entries."""
         self._rsemaphore.acquire()
         try:
             with self._wlock:
@@ -104,6 +134,7 @@ class SizedLogBuffer:
 
     @property
     def max(self) -> int:
+        """Get the maximum buffer size."""
         # Get it dynamically to allow for env variable changes
         if self._max == 0:
             env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
@@ -113,12 +144,15 @@ class SizedLogBuffer:
 
     @max.setter
     def max(self, value: int) -> None:
+        """Set the maximum buffer size."""
         self._max = value
 
     def enabled(self) -> bool:
+        """Check if the buffer is enabled."""
         return self.max > 0
 
     def max_size(self) -> int:
+        """Get the maximum buffer size."""
         return self.max
 
 
@@ -126,52 +160,44 @@ class SizedLogBuffer:
 log_buffer = SizedLogBuffer()
 
 
-def serialize_log(record):
-    subset = {
-        "timestamp": record["time"].timestamp(),
-        "message": record["message"],
-        "level": record["level"].name,
-        "module": record["module"],
-    }
-    return orjson.dumps(subset)
+def add_serialized(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Add serialized version of the log entry."""
+    # Only add serialized if we're in JSON mode (for log buffer)
+    if log_buffer.enabled():
+        subset = {
+            "timestamp": event_dict.get("timestamp", 0),
+            "message": event_dict.get("event", ""),
+            "level": _method_name.upper(),
+            "module": event_dict.get("module", ""),
+        }
+        event_dict["serialized"] = orjson.dumps(subset)
+    return event_dict
 
 
-def patching(record) -> None:
-    record["extra"]["serialized"] = serialize_log(record)
+def remove_exception_in_production(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Remove exception details in production."""
     if DEV is False:
-        record.pop("exception", None)
+        event_dict.pop("exception", None)
+        event_dict.pop("exc_info", None)
+    return event_dict
+
+
+def buffer_writer(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Write to log buffer if enabled."""
+    if log_buffer.enabled():
+        # Create a JSON representation for the buffer
+        log_buffer.write(json.dumps(event_dict))
+    return event_dict
 
 
 class LogConfig(TypedDict):
+    """Configuration for logging."""
+
     log_level: NotRequired[str]
     log_file: NotRequired[Path]
     disable: NotRequired[bool]
     log_env: NotRequired[str]
     log_format: NotRequired[str]
-
-
-def is_valid_log_format(format_string) -> bool:
-    """Validates a logging format string by attempting to format it with a dummy LogRecord.
-
-    Args:
-        format_string (str): The format string to validate.
-
-    Returns:
-        bool: True if the format string is valid, False otherwise.
-    """
-    record = logging.LogRecord(
-        name="dummy", level=logging.INFO, pathname="dummy_path", lineno=0, msg="dummy message", args=None, exc_info=None
-    )
-
-    formatter = logging.Formatter(format_string)
-
-    try:
-        # Attempt to format the record
-        formatter.format(record)
-    except (KeyError, ValueError, TypeError):
-        logger.error("Invalid log format string passed, fallback to default")
-        return False
-    return True
 
 
 def configure(
@@ -181,11 +207,9 @@ def configure(
     disable: bool | None = False,
     log_env: str | None = None,
     log_format: str | None = None,
-    async_file: bool = False,
     log_rotation: str | None = None,
 ) -> None:
-    if disable and log_level is None and log_file is None:
-        logger.disable("langflow")
+    """Configure the logger."""
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
     if log_level is None:
@@ -198,96 +222,148 @@ def configure(
     if log_env is None:
         log_env = os.getenv("LANGFLOW_LOG_ENV", "")
 
-    logger.remove()  # Remove default handlers
-    logger.patch(patching)
-    if log_env.lower() == "container" or log_env.lower() == "container_json":
-        logger.add(sys.stdout, format="{message}", serialize=True)
-    elif log_env.lower() == "container_csv":
-        logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {file} {line} {function} {message}")
-    else:
-        if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
-            log_format = os.getenv("LANGFLOW_LOG_FORMAT")
+    # Get log format from env if not provided
+    if log_format is None:
+        log_format = os.getenv("LANGFLOW_LOG_FORMAT")
 
-        if log_format is None or not is_valid_log_format(log_format):
-            log_format = DEFAULT_LOG_FORMAT
-        # pretty print to rich stdout development-friendly but poor performance, It's better for debugger.
-        # suggest directly print to stdout in production
+    # Configure processors based on environment
+    processors = [
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        add_serialized,
+        remove_exception_in_production,
+        buffer_writer,
+    ]
+
+    # Configure output based on environment
+    if log_env.lower() == "container" or log_env.lower() == "container_json":
+        processors.append(structlog.processors.JSONRenderer())
+    elif log_env.lower() == "container_csv":
+        processors.append(
+            structlog.processors.KeyValueRenderer(
+                key_order=["timestamp", "level", "module", "event"], drop_missing=True
+            )
+        )
+    else:
+        # Use rich console for pretty printing based on environment variable
         log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
         if log_stdout_pretty:
-            logger.configure(
-                handlers=[
-                    {
-                        "sink": RichHandler(rich_tracebacks=True, markup=True),
-                        "format": log_format,
-                        "level": log_level.upper(),
-                    }
-                ]
-            )
+            # If custom format is provided, use KeyValueRenderer with custom format
+            if log_format:
+                processors.append(structlog.processors.KeyValueRenderer())
+            else:
+                processors.append(structlog.dev.ConsoleRenderer(colors=True))
         else:
-            logger.add(sys.stdout, level=log_level.upper(), format=log_format, backtrace=True, diagnose=True)
+            processors.append(structlog.processors.JSONRenderer())
 
-        if not log_file:
+    # Get numeric log level
+    numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
+
+    # Configure structlog
+    structlog.configure(
+        processors=processors,
+        wrapper_class=structlog.make_filtering_bound_logger(numeric_level),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout)
+        if not log_file
+        else structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
+    # Set up file logging if needed
+    if log_file:
+        if not log_file.parent.exists():
             cache_dir = Path(user_cache_dir("langflow"))
-            logger.debug(f"Cache directory: {cache_dir}")
             log_file = cache_dir / "langflow.log"
-            logger.debug(f"Log file: {log_file}")
 
-        if os.getenv("LANGFLOW_LOG_ROTATION") and log_rotation is None:
-            log_rotation = os.getenv("LANGFLOW_LOG_ROTATION")
-        elif log_rotation is None:
-            log_rotation = "1 day"
+        # Parse rotation settings
+        if log_rotation:
+            # Handle rotation like "1 day", "100 MB", etc.
+            max_bytes = 10 * 1024 * 1024  # Default 10MB
+            if "MB" in log_rotation.upper():
+                try:
+                    # Look for pattern like "100 MB" (with space)
+                    parts = log_rotation.split()
+                    expected_parts = 2
+                    if len(parts) >= expected_parts and parts[1].upper() == "MB":
+                        mb = int(parts[0])
+                        if mb > 0:  # Only use valid positive values
+                            max_bytes = mb * 1024 * 1024
+                except (ValueError, IndexError):
+                    pass
+        else:
+            max_bytes = 10 * 1024 * 1024  # Default 10MB
 
-        try:
-            logger.add(
-                sink=log_file,
-                level=log_level.upper(),
-                format=log_format,
-                serialize=True,
-                enqueue=async_file,
-                rotation=log_rotation,
-            )
-        except Exception:  # noqa: BLE001
-            logger.exception("Error setting up log file")
+        # Since structlog doesn't have built-in rotation, we'll use stdlib logging for file output
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_file,
+            maxBytes=max_bytes,
+            backupCount=5,
+        )
+        file_handler.setFormatter(logging.Formatter("%(message)s"))
 
-    if log_buffer.enabled():
-        logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)
+        # Add file handler to root logger
+        logging.root.addHandler(file_handler)
+        logging.root.setLevel(numeric_level)
 
-    logger.debug(f"Logger set up with log level: {log_level}")
-
+    # Set up interceptors for uvicorn and gunicorn
     setup_uvicorn_logger()
     setup_gunicorn_logger()
 
+    # Create the global logger instance
+    global logger  # noqa: PLW0603
+    logger = structlog.get_logger()
+
+    if disable:
+        # In structlog, we can set a very high filter level to effectively disable logging
+        structlog.configure(
+            wrapper_class=structlog.make_filtering_bound_logger(logging.CRITICAL),
+        )
+
+    logger.debug("Logger set up with log level: %s", log_level)
+
 
 def setup_uvicorn_logger() -> None:
+    """Redirect uvicorn logs through structlog."""
     loggers = (logging.getLogger(name) for name in logging.root.manager.loggerDict if name.startswith("uvicorn."))
     for uvicorn_logger in loggers:
         uvicorn_logger.handlers = []
-    logging.getLogger("uvicorn").handlers = [InterceptHandler()]
+        uvicorn_logger.propagate = True
 
 
 def setup_gunicorn_logger() -> None:
-    logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
-    logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
+    """Redirect gunicorn logs through structlog."""
+    logging.getLogger("gunicorn.error").handlers = []
+    logging.getLogger("gunicorn.error").propagate = True
+    logging.getLogger("gunicorn.access").handlers = []
+    logging.getLogger("gunicorn.access").propagate = True
 
 
 class InterceptHandler(logging.Handler):
-    """Default handler from examples in loguru documentation.
+    """Intercept standard logging messages and route them to structlog."""
 
-    See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging.
-    """
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record by passing it to structlog."""
+        # Get corresponding structlog logger
+        logger_name = record.name
+        structlog_logger = structlog.get_logger(logger_name)
 
-    @override
-    def emit(self, record) -> None:
-        # Get corresponding Loguru level if it exists
-        try:
-            level = logger.level(record.levelname).name
-        except ValueError:
-            level = record.levelno
+        # Map log levels
+        level = record.levelno
+        if level >= logging.CRITICAL:
+            structlog_logger.critical(record.getMessage())
+        elif level >= logging.ERROR:
+            structlog_logger.error(record.getMessage())
+        elif level >= logging.WARNING:
+            structlog_logger.warning(record.getMessage())
+        elif level >= logging.INFO:
+            structlog_logger.info(record.getMessage())
+        else:
+            structlog_logger.debug(record.getMessage())
 
-        # Find caller from where originated the logged message
-        frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__ and frame.f_back:
-            frame = frame.f_back
-            depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+# Initialize logger - will be reconfigured when configure() is called
+# Set it to critical level
+logger: structlog.BoundLogger = structlog.get_logger()
+configure(log_level="CRITICAL", disable=True)

@@ -5,11 +5,11 @@ from uuid import UUID
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
-from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.logging.logger import logger
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
@@ -123,7 +123,7 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
             messages_models = await aadd_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
     except Exception as e:
-        logger.exception(e)
+        await logger.aexception(e)
         raise
 
 
@@ -146,7 +146,7 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 updated_messages.append(msg)
             else:
                 error_message = f"Message with id {message.id} not found"
-                logger.warning(error_message)
+                await logger.awarning(error_message)
                 raise ValueError(error_message)
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
@@ -166,11 +166,11 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         for message in messages:
             await session.refresh(message)
     except asyncio.CancelledError as e:
-        logger.exception(e)
+        await logger.aexception(e)
         error_msg = "Operation cancelled"
         raise ValueError(error_msg) from e
     except Exception as e:
-        logger.exception(e)
+        await logger.aexception(e)
         raise
 
     new_messages = []
@@ -262,7 +262,7 @@ async def astore_message(
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
     if not message:
-        logger.warning("No message provided.")
+        await logger.awarning("No message provided.")
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
@@ -277,7 +277,7 @@ async def astore_message(
         try:
             return await aupdate_messages([message])
         except ValueError as e:
-            logger.error(e)
+            await logger.aerror(e)
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id)
