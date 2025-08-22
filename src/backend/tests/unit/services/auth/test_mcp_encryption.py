@@ -15,15 +15,18 @@ from pydantic import SecretStr
 def mock_settings_service():
     """Mock settings service for testing."""
     from cryptography.fernet import Fernet
+    import base64
 
     mock_service = Mock()
-    # Generate a valid Fernet key
-    valid_key = Fernet.generate_key().decode()
+    # Generate a valid Fernet key that's already properly formatted
+    # Fernet.generate_key() returns a URL-safe base64-encoded 32-byte key
+    valid_key = Fernet.generate_key()
+    # Decode it to string for storage
+    valid_key_str = valid_key.decode('utf-8')
 
-    # Create a SecretStr mock
-    secret_key_mock = Mock(spec=SecretStr)
-    secret_key_mock.get_secret_value.return_value = valid_key
-    mock_service.auth_settings.SECRET_KEY = secret_key_mock
+    # Create a proper SecretStr object
+    secret_key_obj = SecretStr(valid_key_str)
+    mock_service.auth_settings.SECRET_KEY = secret_key_obj
     return mock_service
 
 
@@ -117,15 +120,15 @@ class TestMCPEncryption:
         mock_get_settings.return_value = mock_settings_service
 
         partial_settings = {
-            "auth_type": "basic",
-            "password": "my-password",
+            "auth_type": "api",
+            "api_key": "sk-test-api-key-123",
             "username": "admin",
         }
 
         encrypted = encrypt_auth_settings(partial_settings)
 
-        # Password should be encrypted
-        assert encrypted["password"] != partial_settings["password"]
+        # API key should be encrypted
+        assert encrypted["api_key"] != partial_settings["api_key"]
 
         # Other fields unchanged
         assert encrypted["auth_type"] == partial_settings["auth_type"]
