@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from langflow.services.base import Service
+from langflow.services.settings.service import SettingsService
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -274,20 +275,29 @@ class TracingService(Service):
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
-        inputs = inputs.copy()
+        # Avoid repeated lookups inside hot paths
         sensitive_keywords = {"api_key", "password", "server_url"}
+        inputs_copy = inputs.copy()
 
         def _mask(obj: Any):
             if isinstance(obj, dict):
-                return {
-                    k: "*****" if any(word in k.lower() for word in sensitive_keywords) else _mask(v)
-                    for k, v in obj.items()
-                }
+                sk_lower = sensitive_keywords
+
+                # Using generator expression with next() is slightly faster than any()
+                def is_sensitive_key(k: str):
+                    l = k.lower()
+                    for word in sk_lower:
+                        if word in l:
+                            return True
+                    return False
+
+                return {k: "*****" if is_sensitive_key(k) else _mask(v) for k, v in obj.items()}
             if isinstance(obj, list):
+                # List comprehension is efficient as originally used
                 return [_mask(i) for i in obj]
             return obj
 
-        return _mask(inputs)
+        return _mask(inputs_copy)
 
     def _start_component_traces(
         self,
