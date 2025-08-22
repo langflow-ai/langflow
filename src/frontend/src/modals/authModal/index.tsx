@@ -21,10 +21,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   );
   const [authFields, setAuthFields] = useState<{
     apiKey?: string;
-    iamEndpoint?: string;
-    username?: string;
-    password?: string;
-    bearerToken?: string;
     oauthHost?: string;
     oauthPort?: string;
     oauthServerUrl?: string;
@@ -37,10 +33,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     oauthProviderScope?: string;
   }>({
     apiKey: authSettings?.api_key || "",
-    iamEndpoint: authSettings?.iam_endpoint || "",
-    username: authSettings?.username || "",
-    password: authSettings?.password || "",
-    bearerToken: authSettings?.bearer_token || "",
     oauthHost: authSettings?.oauth_host || "",
     oauthPort: authSettings?.oauth_port || "",
     oauthServerUrl: authSettings?.oauth_server_url || "",
@@ -59,10 +51,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
       setAuthType(authSettings.auth_type || "none");
       setAuthFields({
         apiKey: authSettings.api_key || "",
-        iamEndpoint: authSettings.iam_endpoint || "",
-        username: authSettings.username || "",
-        password: authSettings.password || "",
-        bearerToken: authSettings.bearer_token || "",
         oauthHost: authSettings.oauth_host || "",
         oauthPort: authSettings.oauth_port || "",
         oauthServerUrl: authSettings.oauth_server_url || "",
@@ -93,15 +81,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     const authSettingsToSave: AuthSettingsType = {
       auth_type: authType,
       ...(authType === "apikey" && { api_key: authFields.apiKey }),
-      ...(authType === "basic" && {
-        username: authFields.username,
-        password: authFields.password,
-      }),
-      ...(authType === "iam" && {
-        iam_endpoint: authFields.iamEndpoint,
-        api_key: authFields.apiKey,
-      }),
-      ...(authType === "bearer" && { bearer_token: authFields.bearerToken }),
       ...(authType === "oauth" && {
         oauth_host: authFields.oauthHost,
         oauth_port: authFields.oauthPort,
@@ -185,95 +164,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                       handleAuthFieldChange("apiKey", e.target.value)
                     }
                   />
-                </div>
-              )}
-
-              {authType === "basic" && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="username" className="!text-mmd font-medium">
-                      Username
-                    </Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="Enter Username"
-                      value={authFields.username || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("username", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="password" className="!text-mmd font-medium">
-                      Password
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter Password"
-                      value={authFields.password || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("password", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {authType === "bearer" && (
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="bearer-token"
-                    className="!text-mmd font-medium"
-                  >
-                    Bearer Token
-                  </Label>
-                  <Input
-                    id="bearer-token"
-                    type="password"
-                    placeholder="Enter Bearer Token"
-                    value={authFields.bearerToken || ""}
-                    onChange={(e) =>
-                      handleAuthFieldChange("bearerToken", e.target.value)
-                    }
-                  />
-                </div>
-              )}
-
-              {authType === "iam" && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label
-                      htmlFor="iam-endpoint"
-                      className="!text-mmd font-medium"
-                    >
-                      IAM Endpoint
-                    </Label>
-                    <Input
-                      id="iam-endpoint"
-                      type="text"
-                      placeholder="Enter IAM Endpoint"
-                      value={authFields.iamEndpoint || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("iamEndpoint", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="api-key" className="!text-mmd font-medium">
-                      API Key or Token
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter API Key or Token"
-                      value={authFields.apiKey || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("apiKey", e.target.value)
-                      }
-                    />
-                  </div>
                 </div>
               )}
 
