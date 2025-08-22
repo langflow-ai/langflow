@@ -941,6 +941,3 @@ def test_max_size(sized_log_buffer):
     assert sized_log_buffer.max_size() == 0
     sized_log_buffer.max = 100
     assert sized_log_buffer.max_size() == 100
-
-
-# Additional comprehensive tests for logger module
