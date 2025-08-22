@@ -56,7 +56,7 @@ test(
             slider_buttons=False,
             slider_buttons_options=[],
             slider_input=False,
-            advanced=False,`
+            advanced=False,`,
     );
     // make sure codes are different
     expect(cleanCode).not.toEqual(newCode);
@@ -84,7 +84,7 @@ test(
     await page.getByTestId("more-options-modal").click();
     await page.getByText("Controls", { exact: true }).last().click();
     await expect(
-      page.getByTestId("default_slider_display_value_advanced")
+      page.getByTestId("default_slider_display_value_advanced"),
     ).toHaveText("19.00");
 
     await moveSlider(page, "left", true);
@@ -92,21 +92,21 @@ test(
     await page.waitForTimeout(500);
 
     await expect(
-      page.getByTestId("default_slider_display_value_advanced")
+      page.getByTestId("default_slider_display_value_advanced"),
     ).toHaveText("14.00");
 
     await page.getByText("Close").last().click();
 
     await expect(page.getByTestId("default_slider_display_value")).toHaveText(
-      "14.00"
+      "14.00",
     );
-  }
+  },
 );
 
 async function extractAndCleanCode(page: Page): Promise<string> {
   const outerHTML = await page
     .locator('//*[@id="codeValue"]')
-    .evaluate(el => el.outerHTML);
+    .evaluate((el) => el.outerHTML);
 
   const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
   if (!valueMatch) {
@@ -126,7 +126,7 @@ async function extractAndCleanCode(page: Page): Promise<string> {
 
 async function mutualValidation(page: Page) {
   await expect(page.getByTestId("default_slider_display_value")).toHaveText(
-    "3.00"
+    "3.00",
   );
   await expect(page.getByTestId("min_label")).toHaveText("test");
   await expect(page.getByTestId("max_label")).toHaveText("test2");
@@ -136,7 +136,7 @@ async function mutualValidation(page: Page) {
 async function moveSlider(
   page: Page,
   side: "left" | "right",
-  advanced: boolean = false
+  advanced: boolean = false,
 ) {
   const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
   const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
