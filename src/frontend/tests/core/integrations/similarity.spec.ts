@@ -10,7 +10,7 @@ test(
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
+      "OPENAI_API_KEY required to run this test"
     );
 
     await awaitBootstrapTest(page);
@@ -32,8 +32,10 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 0 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 5);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text embedder");
@@ -196,7 +198,7 @@ test(
     await page.mouse.down();
     const embeddingSimilarityInput = await page
       .getByTestId(
-        "handle-embeddingsimilaritycomponent-shownode-embedding vectors-left",
+        "handle-embeddingsimilaritycomponent-shownode-embedding vectors-left"
       )
       .nth(0);
     await embeddingSimilarityInput.hover();
@@ -214,7 +216,7 @@ test(
     //connection 5
     const embeddingSimilarityOutput = await page
       .getByTestId(
-        "handle-embeddingsimilaritycomponent-shownode-similarity data-right",
+        "handle-embeddingsimilaritycomponent-shownode-similarity data-right"
       )
       .nth(0);
     await embeddingSimilarityOutput.hover();
@@ -263,5 +265,5 @@ test(
     expect(valueSimilarity).toContain("cosine_similarity");
     const valueLength = valueSimilarity!.length;
     expect(valueLength).toBeGreaterThan(20);
-  },
+  }
 );

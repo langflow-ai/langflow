@@ -12,7 +12,7 @@ test(
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
+      "OPENAI_API_KEY required to run this test"
     );
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -32,9 +32,9 @@ test(
     await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
-
+    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 6);
-
+    await page.getByTestId("canvas_controls_dropdown").click();
     await page
       .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -220,10 +220,7 @@ test(
 
     //---------------------------------- EDIT PROMPT
     await page.getByTestId("promptarea_prompt_template").first().click();
-    await page
-      .getByTestId("modal-promptarea_prompt_template")
-      .first()
-      .fill(`
+    await page.getByTestId("modal-promptarea_prompt_template").first().fill(`
       {Condition}
   Answer with either TRUE or FALSE (and nothing else).
   TRUE Examples:
@@ -375,5 +372,5 @@ test(
     });
 
     await page.getByTestId("button-send").last().click();
-  },
+  }
 );
