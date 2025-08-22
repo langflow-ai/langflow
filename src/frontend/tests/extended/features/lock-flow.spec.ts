@@ -9,7 +9,7 @@ test(
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test"
+      "OPENAI_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -112,14 +112,14 @@ test(
 
     await page
       .getByTestId(
-        "handle-languagemodelcomponent-shownode-model response-right"
+        "handle-languagemodelcomponent-shownode-model response-right",
       )
       .click();
     await page.getByTestId("handle-chatoutput-shownode-inputs-left").click();
     numberOfEdges = await page.locator(".react-flow__edge-path").count();
 
     expect(numberOfEdges).toBe(3);
-  }
+  },
 );
 
 async function tryConnectNodes(page: Page) {
@@ -144,7 +144,7 @@ async function tryConnectNodes(page: Page) {
     try {
       await page
         .getByTestId(
-          "handle-languagemodelcomponent-shownode-system message-left"
+          "handle-languagemodelcomponent-shownode-system message-left",
         )
         .click({
           timeout: 500,
