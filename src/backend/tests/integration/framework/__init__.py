@@ -1,39 +1,45 @@
 """Langflow Integration Test Framework.
 
-Simple framework for writing integration tests in Langflow:
+Simple templates and generators for creating integration tests.
 
-- Test individual components with ComponentTest base class
-- Create end-to-end flow tests with FlowTest base class
-- Use decorators for common test patterns (@timeout, @requires_api_key)
-- Built-in assertion helpers
+Usage:
+    from tests.integration.framework.generator import generate_test
+    from tests.integration.framework.templates import CHAT_INPUT_TEST
 
-Example Usage:
-    from tests.integration.framework import ComponentTest
+    # Generate test code
+    test_code = generate_test("component", "MyComponent")
 
-    class TestChatInput(ComponentTest):
-        component_class = ChatInput
-
-        async def test_basic_functionality(self):
-            result = await self.run_component(run_input="Hello")
-            self.assert_message_output(result, "Hello")
+    # Use pre-made templates
+    print(CHAT_INPUT_TEST)
 """
 
-from .assertions import AssertionHelpers
-from .base import ComponentTest, FlowTest, IntegrationTestCase
-from .decorators import auto_cleanup, leak_detection, requires_api_key, skip_if_no_env, timeout
-from .runners import APITestRunner, ComponentRunner, FlowRunner
+from .generator import create_test_file, generate_test
+from .templates import (
+    AGENT_COMPONENT_TEMPLATE,
+    API_COMPONENT_TEMPLATE,
+    BASIC_FLOW_TEST,
+    CHAT_INPUT_TEST,
+    CHAT_OUTPUT_TEST,
+    COMPONENT_TEST_TEMPLATE,
+    HELPER_COMPONENT_TEMPLATE,
+    PROCESSING_COMPONENT_TEMPLATE,
+    PROMPT_TEST,
+    generate_component_test,
+    generate_flow_test,
+)
 
 __all__ = [
-    "APITestRunner",
-    "AssertionHelpers",
-    "ComponentRunner",
-    "ComponentTest",
-    "FlowRunner",
-    "FlowTest",
-    "IntegrationTestCase",
-    "auto_cleanup",
-    "leak_detection",
-    "requires_api_key",
-    "skip_if_no_env",
-    "timeout",
+    "AGENT_COMPONENT_TEMPLATE",
+    "API_COMPONENT_TEMPLATE",
+    "BASIC_FLOW_TEST",
+    "CHAT_INPUT_TEST",
+    "CHAT_OUTPUT_TEST",
+    "COMPONENT_TEST_TEMPLATE",
+    "HELPER_COMPONENT_TEMPLATE",
+    "PROCESSING_COMPONENT_TEMPLATE",
+    "PROMPT_TEST",
+    "create_test_file",
+    "generate_component_test",
+    "generate_flow_test",
+    "generate_test",
 ]
