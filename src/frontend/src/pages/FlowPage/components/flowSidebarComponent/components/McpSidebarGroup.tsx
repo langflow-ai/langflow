@@ -1,10 +1,13 @@
+import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import AddMcpServerModal from "@/modals/addMcpServerModal";
 import { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
@@ -23,6 +26,32 @@ type McpSidebarGroupProps = {
   mcpSuccess?: boolean;
   mcpError?: boolean;
   search: string;
+  hasMcpServers: boolean;
+};
+
+const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
+  const [addMcpOpen, setAddMcpOpen] = useState(false);
+
+  const handleAddMcpServerClick = () => {
+    setAddMcpOpen(true);
+  };
+
+  return (
+    <>
+      <div className="flex flex-col h-full w-full items-center justify-center py-8 px-4 text-center min-h-[200px]">
+        <p className="text-muted-foreground mb-4">No MCP Servers Added</p>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isLoading}
+          onClick={handleAddMcpServerClick}
+        >
+          Add MCP Server
+        </Button>
+      </div>
+      <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
+    </>
+  );
 };
 
 const McpSidebarGroup = ({
@@ -36,29 +65,36 @@ const McpSidebarGroup = ({
   mcpSuccess,
   mcpError,
   search,
+  hasMcpServers,
 }: McpSidebarGroupProps) => {
   // Use props instead of hook call
   const isLoading = mcpLoading;
   const isSuccess = mcpSuccess;
 
   const categoryName = "MCP";
-  const isOpen = openCategories.includes(categoryName);
+  const isOpen = search === "" || openCategories.includes(categoryName);
 
   // Only render if the MCP category is open (when not searching) or if we have search results
-  if (!isOpen && search === "") {
+  if (!isOpen) {
     return null;
   }
 
   return (
-    <SidebarGroup className="p-3">
-      <SidebarGroupLabel className="cursor-default">
-        MCP Servers
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
+    <SidebarGroup className="p-3 h-full">
+      {hasMcpServers && (
+        <SidebarGroupLabel className="cursor-default">
+          MCP Servers
+        </SidebarGroupLabel>
+      )}
+      <SidebarGroupContent className="h-full">
+        <SidebarMenu className="h-full">
           {isLoading && <span>Loading...</span>}
+          {isSuccess && !hasMcpServers && (
+            <McpEmptyState isLoading={isLoading} />
+          )}
           {isSuccess &&
             mcpComponents &&
+            hasMcpServers &&
             mcpComponents.map((mcpComponent, idx) => (
               <ShadTooltip
                 content={mcpComponent.display_name || mcpComponent.name}

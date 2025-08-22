@@ -530,10 +530,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const { activeSection } = useSidebar();
 
+  const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
+
   const showComponents =
     (ENABLE_NEW_SIDEBAR &&
       hasCoreComponents &&
-      activeSection === "components") ||
+      (activeSection === "components" || activeSection === "search")) ||
     (search !== "" && hasCoreComponents && ENABLE_NEW_SIDEBAR) ||
     !ENABLE_NEW_SIDEBAR;
   const showBundles =
@@ -624,6 +626,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         mcpSuccess={mcpSuccess}
                         mcpError={mcpError}
                         search={search}
+                        hasMcpServers={hasMcpServers}
                       />
                     )}
                     {showBundles && (
@@ -647,15 +650,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               </>
             )}
           </SidebarContent>
-
-          <SidebarFooter className="border-t p-4 py-3 group-data-[collapsible=icon]:hidden">
-            <SidebarMenuButtons
-              hasStore={hasStore}
-              customComponent={customComponent}
-              addComponent={addComponent}
-              isLoading={isLoading}
-            />
-          </SidebarFooter>
+          {ENABLE_NEW_SIDEBAR &&
+          activeSection === "mcp" &&
+          !hasMcpServers ? null : (
+            <SidebarFooter className="border-t p-4 py-3 group-data-[collapsible=icon]:hidden">
+              <SidebarMenuButtons
+                customComponent={customComponent}
+                addComponent={addComponent}
+                isLoading={isLoading}
+              />
+            </SidebarFooter>
+          )}
         </div>
       </div>
     </Sidebar>
