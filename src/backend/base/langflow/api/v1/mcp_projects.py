@@ -417,7 +417,7 @@ async def install_mcp_config(
     if not is_local_ip(client_ip):
         raise HTTPException(status_code=500, detail="MCP configuration can only be installed from a local connection")
 
-    removed_servers = []  # Track removed servers for reinstallation
+    removed_servers: list[str] = []  # Track removed servers for reinstallation
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
