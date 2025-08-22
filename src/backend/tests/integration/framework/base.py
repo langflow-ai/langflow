@@ -10,7 +10,8 @@ from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 from .assertions import AssertionHelpers
-from .fixtures import TestDataFactory
+
+# from .fixtures import TestDataFactory  # Removed for simplicity
 from .runners import ComponentRunner, FlowRunner
 
 
@@ -22,7 +23,7 @@ class IntegrationTestCase:
         self.session_id = str(uuid.uuid4())
         self.user_id = str(uuid.uuid4())
         self.assertions = AssertionHelpers()
-        self.test_data = TestDataFactory()
+        # self.test_data = TestDataFactory()  # Removed for simplicity
 
     def teardown_method(self):
         """Teardown method called after each test method."""

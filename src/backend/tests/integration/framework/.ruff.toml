@@ -1,9 +1,0 @@
-exclude = [
-    "examples/",
-]
-
-[lint]
-ignore = [
-    "T201",  # Allow print statements in demo files
-    "E402",  # Allow imports not at top in demo files
-]
