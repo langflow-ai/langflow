@@ -38,7 +38,7 @@ on:
         type: string
         default: "['3.10']"
   pull_request:
-    types: [synchronize, labeled]
+    types: [opened, synchronize]
   merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -120,7 +120,7 @@ jobs:
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
-      should-run-ci: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
+      should-run-ci: ${{ github.event.pull_request.draft == false || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
       should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
     steps:
       #  Do anything just to make the job run
@@ -208,7 +208,7 @@ jobs:
   test-templates:
     needs: [path-filter, set-ci-condition]
     name: Test Starter Templates
-    if: ${{ needs.path-filter.outputs.starter-projects == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: ${{ (needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
