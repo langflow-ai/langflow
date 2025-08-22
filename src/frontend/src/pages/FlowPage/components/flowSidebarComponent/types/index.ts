@@ -22,6 +22,8 @@ export interface CategoryGroupProps {
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
+  showConfig: boolean;
+  setShowConfig: (show: boolean) => void;
 }
 
 export interface SidebarGroupProps {

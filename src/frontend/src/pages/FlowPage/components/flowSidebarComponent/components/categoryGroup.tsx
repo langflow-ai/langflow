@@ -1,4 +1,7 @@
 import { memo } from "react";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -19,11 +22,28 @@ export const CategoryGroup = memo(function CategoryGroup({
   nodeColors,
   onDragStart,
   sensitiveSort,
+  showConfig,
+  setShowConfig,
 }: CategoryGroupProps) {
   return (
     <SidebarGroup className="p-3">
-      <SidebarGroupLabel className="cursor-default">
-        Components
+      <SidebarGroupLabel className="cursor-default flex items-center justify-between">
+        <span>Components</span>
+        <div>
+          <ShadTooltip content="Component settings" styleClasses="z-50">
+            <Button
+              variant={showConfig ? "ghostActive" : "ghost"}
+              size="iconMd"
+              data-testid="sidebar-options-trigger"
+              onClick={() => setShowConfig(!showConfig)}
+            >
+              <ForwardedIconComponent
+                name="SlidersHorizontal"
+                className="h-4 w-4"
+              />
+            </Button>
+          </ShadTooltip>
+        </div>
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>

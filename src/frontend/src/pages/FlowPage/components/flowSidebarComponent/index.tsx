@@ -608,6 +608,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         nodeColors={nodeColors}
                         onDragStart={onDragStart}
                         sensitiveSort={sensitiveSort}
+                        showConfig={showConfig}
+                        setShowConfig={setShowConfig}
                       />
                     )}
                     {showMcp && (
