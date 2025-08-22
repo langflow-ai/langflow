@@ -8,8 +8,8 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
-import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
@@ -17,7 +17,6 @@ import useTabVisibility from "../../../../../../shared/hooks/use-tab-visibility"
 import useFlowStore from "../../../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 import type { ChatMessageType } from "../../../../../../types/chat";
-import type { chatViewProps } from "../../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
@@ -37,13 +36,12 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   );
 });
 
-export default function ChatView({
-  visibleSession,
-  playgroundPage,
-}: chatViewProps): JSX.Element {
+export default function ChatView(): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
   const clientId = useUtilityStore((state) => state.clientId);
   const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const playgroundPage = usePlaygroundStore((state) => state.isPlayground);
+  const visibleSession = usePlaygroundStore((state) => state.selectedSession);
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;

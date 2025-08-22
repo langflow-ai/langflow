@@ -6,10 +6,6 @@ import { PlaygroundHeader } from "./components/playgroundHeader/playground-heade
 import SessionSidebar from "./components/sessionSidebar/session-sidebar";
 
 export function PlaygroundComponent(): JSX.Element {
-  const isPlayground = usePlaygroundStore((state) => state.isPlayground);
-
-  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
-
   const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
 
   const isMobile = useIsMobile();
@@ -27,10 +23,7 @@ export function PlaygroundComponent(): JSX.Element {
       <div className="flex flex-col w-full h-full transition-all duration-300">
         <PlaygroundHeader />
         <div className="flex flex-grow p-4">
-          <ChatView
-            visibleSession={selectedSession}
-            playgroundPage={isPlayground}
-          />
+          <ChatView />
         </div>
       </div>
     </div>

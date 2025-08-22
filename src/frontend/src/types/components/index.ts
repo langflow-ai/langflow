@@ -823,11 +823,6 @@ export type IOFieldViewProps = {
 
 export type UndrawCardComponentProps = { flow: FlowType };
 
-export type chatViewProps = {
-  visibleSession?: string;
-  playgroundPage?: boolean;
-};
-
 export type IOFileInputProps = {
   field: InputFieldType;
   updateValue: (e: any, type: string) => void;
