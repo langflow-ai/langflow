@@ -127,7 +127,10 @@ async def list_project_tools(
 
                 # Decrypt sensitive fields before returning
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
-                auth_settings = AuthSettings(**decrypted_settings)
+                if decrypted_settings:
+                    auth_settings = AuthSettings(**decrypted_settings)
+                else:
+                    auth_settings = None
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
@@ -421,16 +424,20 @@ async def install_mcp_config(
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
                 except OSError as e:
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
-        else:
-            args = ["mcp-composer", "--sse-url", sse_url]
+        
+        # Initialize args list
+        args = ["mcp-composer", "--sse-url", sse_url]
 
         oauth_env = None
         if project.auth_settings:
             from langflow.api.v1.schemas import AuthSettings
 
             # Decrypt sensitive fields before using them
-            decrypted_settings = decrypt_auth_settings(project.auth_settings) or {}
-            auth_settings = AuthSettings(**decrypted_settings)
+            decrypted_settings = decrypt_auth_settings(project.auth_settings)
+            if decrypted_settings:
+                auth_settings = AuthSettings(**decrypted_settings)
+            else:
+                auth_settings = AuthSettings()
             args.extend(["--auth_type", auth_settings.auth_type])
 
             oauth_env = {
