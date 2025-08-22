@@ -160,7 +160,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
-        llm_model, display_name = self.get_llm()
+        llm_model, display_name = await self.get_llm()
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
             raise ValueError(msg)
@@ -228,7 +228,7 @@ class AgentComponent(ToolCallingAgentComponent):
             processed_schema.append(processed_field)
         return processed_schema
 
-    def build_structured_output_base(self, content: str):
+    async def build_structured_output_base(self, content: str):
         """Build structured output with optional BaseModel validation."""
         json_pattern = r"\{.*\}"
         schema_error_msg = "Try setting an output schema"
@@ -249,12 +249,10 @@ class AgentComponent(ToolCallingAgentComponent):
 
         # If no output schema provided, return parsed JSON without validation
         if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
-            logger.debug("No output schema provided, returning parsed JSON without validation")
             return json_data
 
         # Use BaseModel validation with schema
         try:
-            logger.debug(f"Validating against schema: {self.output_schema}")
             processed_schema = self._preprocess_schema(self.output_schema)
             output_model = build_model_from_schema(processed_schema)
 
@@ -267,7 +265,7 @@ class AgentComponent(ToolCallingAgentComponent):
                         validated_obj = output_model.model_validate(item)
                         validated_objects.append(validated_obj.model_dump())
                     except ValidationError as e:
-                        logger.warning(f"Validation error for item: {e}")
+                        await logger.aerror(f"Validation error for item: {e}")
                         # Include invalid items with error info
                         validated_objects.append({"data": item, "validation_error": str(e)})
                 return validated_objects
@@ -277,11 +275,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 validated_obj = output_model.model_validate(json_data)
                 return [validated_obj.model_dump()]  # Return as list for consistency
             except ValidationError as e:
-                logger.warning(f"Validation error: {e}")
+                await logger.aerror(f"Validation error: {e}")
                 return [{"data": json_data, "validation_error": str(e)}]
 
         except (TypeError, ValueError) as e:
-            logger.error(f"Error building structured output: {e}")
+            await logger.aerror(f"Error building structured output: {e}")
             # Fallback to parsed JSON without validation
             return json_data
 
@@ -304,7 +302,6 @@ class AgentComponent(ToolCallingAgentComponent):
             # 3. Schema Information from BaseModel
             if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
                 try:
-                    logger.debug(f"Building schema from: {self.output_schema}")
                     processed_schema = self._preprocess_schema(self.output_schema)
                     output_model = build_model_from_schema(processed_schema)
                     schema_dict = output_model.model_json_schema()
@@ -325,7 +322,6 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Combine all components
             combined_instructions = "\n\n".join(system_components) if system_components else ""
-            logger.debug(f"Combined instructions: {combined_instructions}")
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
             self.set(
                 llm=llm_model,
@@ -346,7 +342,6 @@ class AgentComponent(ToolCallingAgentComponent):
             except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
                 await logger.aerror(f"Error with structured agent result: {e}")
                 raise
-            logger.debug(f"Combined instructions: {combined_instructions}")
             # Extract content from structured agent result
             if hasattr(result, "content"):
                 content = result.content
@@ -363,7 +358,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
         # Process with structured output validation
         try:
-            structured_output = self.build_structured_output_base(content)
+            structured_output = await self.build_structured_output_base(content)
 
             # Handle different output formats
             if isinstance(structured_output, list) and structured_output:
@@ -389,7 +384,7 @@ class AgentComponent(ToolCallingAgentComponent):
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
 
-    def get_llm(self):
+    async def get_llm(self):
         if not isinstance(self.agent_llm, str):
             return self.agent_llm, None
 
@@ -407,7 +402,7 @@ class AgentComponent(ToolCallingAgentComponent):
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
         except (AttributeError, ValueError, TypeError, RuntimeError) as e:
-            logger.error(f"Error building {self.agent_llm} language model: {e!s}")
+            await logger.aerror(f"Error building {self.agent_llm} language model: {e!s}")
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
 
