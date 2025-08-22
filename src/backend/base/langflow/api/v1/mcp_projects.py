@@ -902,8 +902,8 @@ def remove_server_by_sse_url(config_data: dict, sse_url: str) -> tuple[dict, lis
     if "mcpServers" not in config_data:
         return config_data, []
 
-    removed_servers = []
-    servers_to_remove = []
+    removed_servers: list[str] = []
+    servers_to_remove: list[str] = []
 
     # Find servers to remove
     for server_name, server_config in config_data["mcpServers"].items():
