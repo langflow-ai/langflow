@@ -182,8 +182,15 @@ This output attempts to parse the agent's response as JSON and returns it as str
 * If no valid JSON is found, the output returns the raw content with an error indicator `Could not parse as JSON`.
 
 This structured response can be used to further use an Agent's response in downstream applications.
-For example, using the Simple Agent starter template, instruct the Agent to return a JSON response that your application can consume from Langflow's output.
+
+### Agent structured response example
+
+Using the Simple Agent starter template, instruct the Agent to return a JSON response that your application can consume from Langflow's output.
 Select the **Structured Output** mode, and connect the **Data** port to the **Chat Output** component to view the results.
+
+In the **Agent Instructions** field, enter the following prompt.
+This prompt instructs the agent to always return responses in valid JSON format, with fields for `agent_response` and `follow_up_questions`, and additional guidelines to control responses.
+You can re-use and modify this prompt for any flow where you want the agent to provide follow-up questions.
 
 ```text
 You are a helpful assistant. Your task is to take a user query and return a JSON object with two fields:
