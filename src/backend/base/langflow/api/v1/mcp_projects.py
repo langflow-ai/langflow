@@ -54,9 +54,9 @@ async def verify_project_auth(
     query_param: str | None = None,
     header_param: str | None = None,
 ) -> User:
-    """Custom authentication for MCP project endpoints when API key is required.
+    """Custom authentication for MCP project endpoints.
 
-    This is only used when MCP composer is enabled and project requires API key auth.
+    Checks project auth settings and validates access accordingly.
     """
     async with session_scope() as session:
         # First, get the project to check its auth settings
@@ -65,7 +65,29 @@ async def verify_project_auth(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        # For MCP composer enabled, only use API key
+        # Determine authentication requirements based on project settings
+        auth_required = False
+        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
+            auth_settings = AuthSettings(**project.auth_settings)
+            auth_required = auth_settings.auth_type == "apikey"
+        elif not FEATURE_FLAGS.mcp_composer:
+            # When MCP_COMPOSER is disabled, only require auth if autologin is disabled
+            settings_service = get_settings_service()
+            auth_required = not settings_service.auth_settings.AUTO_LOGIN
+
+        # If no auth required, allow access without API key
+        if not auth_required:
+            # For "none" auth type, we still need a user context, so we'll use the superuser
+            settings_service = get_settings_service()
+            if settings_service.auth_settings.SUPERUSER:
+                from langflow.services.database.models.user.crud import get_user_by_username
+
+                user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+                if user:
+                    return user
+            raise HTTPException(status_code=500, detail="No superuser configured for public access")
+
+        # Auth is required - validate API key
         api_key = query_param or header_param
         if not api_key:
             raise HTTPException(
@@ -89,59 +111,17 @@ async def verify_project_auth(
         return user
 
 
-# Smart authentication dependency that chooses method based on project settings
-async def verify_project_auth_conditional(
+# Create a dependency that validates project auth from request
+async def verify_project_auth_from_request(
     project_id: UUID,
     request: Request,
 ) -> User:
-    """Choose authentication method based on project settings.
+    """Verify project authentication from request headers/query parameters."""
+    # Extract API key from headers or query params
+    api_key_header_value = request.headers.get("x-api-key")
+    api_key_query_value = request.query_params.get("x-api-key")
 
-    - MCP Composer enabled + API key auth: Only allow API keys
-    - All other cases: Use standard MCP auth (JWT + API keys)
-    """
-    async with session_scope() as session:
-        # Get project to check auth settings
-        project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
-
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-
-        # Check if this project requires API key only authentication
-        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
-            auth_settings = AuthSettings(**project.auth_settings)
-            if auth_settings.auth_type == "apikey":
-                # For MCP composer projects with API key auth, use custom API key validation
-                api_key_header_value = request.headers.get("x-api-key")
-                api_key_query_value = request.query_params.get("x-api-key")
-                return await verify_project_auth(project_id, api_key_query_value, api_key_header_value)
-
-        # For all other cases, use standard MCP authentication (allows JWT + API keys)
-        # Extract token
-        token: str | None = None
-        auth_header = request.headers.get("authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-
-        # Extract API keys
-        api_key_query_value = request.query_params.get("x-api-key")
-        api_key_header_value = request.headers.get("x-api-key")
-
-        # Call the MCP auth function directly
-        from langflow.services.auth.utils import get_current_user_mcp
-
-        user = await get_current_user_mcp(
-            token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
-        )
-
-        # Verify project access
-        project_access = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == user.id))
-        ).first()
-
-        if not project_access:
-            raise HTTPException(status_code=404, detail="Project not found")
-
-        return user
+    return await verify_project_auth(project_id, api_key_query_value, api_key_header_value)
 
 
 # Create project-specific context variable
@@ -222,6 +202,8 @@ async def list_project_tools(
             # Get project-level auth settings
             auth_settings = None
             if project.auth_settings:
+                from langflow.api.v1.schemas import AuthSettings
+
                 auth_settings = AuthSettings(**project.auth_settings)
 
     except Exception as e:
@@ -241,7 +223,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
 ):
     """Handle SSE connections for a specific project."""
     # Get project-specific SSE transport and MCP server
@@ -286,7 +268,7 @@ async def handle_project_sse(
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
 ):
     """Handle POST messages for a project-specific MCP server."""
     # Set context variables
@@ -308,7 +290,7 @@ async def handle_project_messages(
 async def handle_project_messages_with_slash(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
 ):
     """Handle POST messages for a project-specific MCP server with trailing slash."""
     # Call the original handler
@@ -917,23 +899,28 @@ def remove_server_by_sse_url(config_data: dict, sse_url: str) -> tuple[dict, lis
     Returns:
         tuple: (updated_config, list_of_removed_server_names)
     """
-    if "mcpServers" not in config_data:
+    mcpServers = config_data.get("mcpServers")
+    if not mcpServers:
         return config_data, []
 
     removed_servers: list[str] = []
-    servers_to_remove: list[str] = []
+    # Build a list of servers to remove using a more efficient comprehension
+    servers_to_remove = [
+        server_name
+        for server_name, server_config in mcpServers.items()
+        if (args := server_config.get("args")) and args[-1] == sse_url
+    ]
 
-    # Find servers to remove
-    for server_name, server_config in config_data["mcpServers"].items():
-        args = server_config.get("args", [])
-        if args and args[-1] == sse_url:
-            servers_to_remove.append(server_name)
-
-    # Remove the servers
+    # Avoid repeated dict lookups, and reduce list appends by using extend at the end
     for server_name in servers_to_remove:
-        del config_data["mcpServers"][server_name]
-        removed_servers.append(server_name)
-        logger.debug("Removed existing server with matching SSE URL: %s", server_name)
+        del mcpServers[server_name]
+    removed_servers.extend(servers_to_remove)
+    # Use a single batched logging call to minimize logger overhead (if servers were actually removed)
+    if servers_to_remove:
+        logger.debug(
+            "Removed existing servers with matching SSE URL: %s",
+            ", ".join(servers_to_remove),
+        )
 
     return config_data, removed_servers
 
