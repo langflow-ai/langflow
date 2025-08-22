@@ -3,7 +3,7 @@ from multiprocessing import Queue, get_context
 from queue import Empty
 
 from langflow.base.data import BaseFileComponent
-from langflow.components.docling import docling_worker
+from langflow.base.data.docling_utils import docling_worker
 from langflow.inputs import DropdownInput
 from langflow.schema import Data
 
