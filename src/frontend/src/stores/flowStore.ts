@@ -230,10 +230,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     unselectAllNodesEdges(nodes, newEdges);
     if (flow?.id) {
-      useTweaksStore.getState().initialSetup(nodes, flow?.id);
+      useTweaksStore.getState().initialSetup(nodes, flow.id);
+      usePlaygroundStore.getState().reset(flow.id);
     }
-    console.log("resetting playground store");
-    usePlaygroundStore.getState().reset();
     set({
       nodes,
       edges: newEdges,
