@@ -177,19 +177,6 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
 
 
 @pytest.fixture
-def caplog(caplog: pytest.LogCaptureFixture):
-    handler_id = logger.add(
-        caplog.handler,
-        format="{message}",
-        level=0,
-        filter=lambda record: record["level"].no >= caplog.handler.level,
-        enqueue=False,  # Set to 'True' if your test is spawning child processes.
-    )
-    yield caplog
-    logger.remove(handler_id)
-
-
-@pytest.fixture
 async def async_client() -> AsyncGenerator:
     app = create_app()
     async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
