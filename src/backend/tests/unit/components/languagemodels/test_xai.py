@@ -23,16 +23,19 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         return XAIModelComponent
 
     @pytest.fixture
-    def default_kwargs(self):
-        return {
-            "temperature": 0.1,
-            "max_tokens": 50,
-            "api_key": "dummy-key",
-            "model_name": "grok-2-latest",
-            "model_kwargs": {},
-            "base_url": "https://api.x.ai/v1",
-            "seed": 42,
-        }
+    def default_kwargs(self, openai_default_kwargs):
+        # Customize shared kwargs for XAI
+        kwargs = openai_default_kwargs.copy()
+        kwargs.update(
+            {
+                "max_tokens": 50,
+                "model_name": "grok-2-latest",
+                "model_kwargs": {},
+                "base_url": "https://api.x.ai/v1",
+                "seed": 42,
+            }
+        )
+        return kwargs
 
     @pytest.fixture
     def file_names_mapping(self):
