@@ -133,7 +133,7 @@ async def verify_project_auth_conditional(
             raise HTTPException(status_code=401, detail="No authentication provided")
 
         user = await get_current_user_mcp(
-            token=token, query_param=api_key_query_value, header_param=api_key_header_value, db=session
+            token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
         )
 
         # Verify project access
