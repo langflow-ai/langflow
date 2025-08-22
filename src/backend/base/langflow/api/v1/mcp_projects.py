@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
+from typing import Any
 from uuid import UUID
 
 from anyio import BrokenResourceError
@@ -127,10 +128,7 @@ async def list_project_tools(
 
                 # Decrypt sensitive fields before returning
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
-                if decrypted_settings:
-                    auth_settings = AuthSettings(**decrypted_settings)
-                else:
-                    auth_settings = None
+                auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else None
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
@@ -434,10 +432,7 @@ async def install_mcp_config(
 
             # Decrypt sensitive fields before using them
             decrypted_settings = decrypt_auth_settings(project.auth_settings)
-            if decrypted_settings:
-                auth_settings = AuthSettings(**decrypted_settings)
-            else:
-                auth_settings = AuthSettings()
+            auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else AuthSettings()
             args.extend(["--auth_type", auth_settings.auth_type])
 
             oauth_env = {
@@ -461,7 +456,7 @@ async def install_mcp_config(
         name = project.name
 
         # Create the MCP configuration
-        server_config = {
+        server_config: dict[str, Any] = {
             "command": command,
             "args": args,
         }
