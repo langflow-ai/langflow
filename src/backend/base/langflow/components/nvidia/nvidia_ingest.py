@@ -24,8 +24,8 @@ class NvidiaIngestComponent(BaseFileComponent):
             "NVIDIA Retriever Extraction (nv-ingest) is an optional dependency. "
             "Install with `uv pip install 'langflow[nv-ingest]'` "
             "(requires Python 3.12>=)"
-        )
-        VALID_EXTENSIONS = [msg]
+            )
+       VALID_EXTENSIONS = [msg]
 
     inputs = [
         *BaseFileComponent._base_inputs,
