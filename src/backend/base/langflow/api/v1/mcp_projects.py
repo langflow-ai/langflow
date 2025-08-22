@@ -54,9 +54,9 @@ async def verify_project_auth(
     query_param: str | None = None,
     header_param: str | None = None,
 ) -> User:
-    """Custom authentication for MCP project endpoints.
+    """Custom authentication for MCP project endpoints when API key is required.
 
-    Checks project auth settings and validates access accordingly.
+    This is only used when MCP composer is enabled and project requires API key auth.
     """
     async with session_scope() as session:
         # First, get the project to check its auth settings
@@ -65,29 +65,7 @@ async def verify_project_auth(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        # Determine authentication requirements based on project settings
-        auth_required = False
-        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
-            auth_settings = AuthSettings(**project.auth_settings)
-            auth_required = auth_settings.auth_type == "apikey"
-        elif not FEATURE_FLAGS.mcp_composer:
-            # When MCP_COMPOSER is disabled, only require auth if autologin is disabled
-            settings_service = get_settings_service()
-            auth_required = not settings_service.auth_settings.AUTO_LOGIN
-
-        # If no auth required, allow access without API key
-        if not auth_required:
-            # For "none" auth type, we still need a user context, so we'll use the superuser
-            settings_service = get_settings_service()
-            if settings_service.auth_settings.SUPERUSER:
-                from langflow.services.database.models.user.crud import get_user_by_username
-
-                user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
-                if user:
-                    return user
-            raise HTTPException(status_code=500, detail="No superuser configured for public access")
-
-        # Auth is required - validate API key
+        # For MCP composer enabled, only use API key
         api_key = query_param or header_param
         if not api_key:
             raise HTTPException(
@@ -111,17 +89,59 @@ async def verify_project_auth(
         return user
 
 
-# Create a dependency that validates project auth from request
-async def verify_project_auth_from_request(
+# Smart authentication dependency that chooses method based on project settings
+async def verify_project_auth_conditional(
     project_id: UUID,
     request: Request,
 ) -> User:
-    """Verify project authentication from request headers/query parameters."""
-    # Extract API key from headers or query params
-    api_key_header_value = request.headers.get("x-api-key")
-    api_key_query_value = request.query_params.get("x-api-key")
+    """Choose authentication method based on project settings.
 
-    return await verify_project_auth(project_id, api_key_query_value, api_key_header_value)
+    - MCP Composer enabled + API key auth: Only allow API keys
+    - All other cases: Use standard MCP auth (JWT + API keys)
+    """
+    async with session_scope() as session:
+        # Get project to check auth settings
+        project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
+
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Check if this project requires API key only authentication
+        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
+            auth_settings = AuthSettings(**project.auth_settings)
+            if auth_settings.auth_type == "apikey":
+                # For MCP composer projects with API key auth, use custom API key validation
+                api_key_header_value = request.headers.get("x-api-key")
+                api_key_query_value = request.query_params.get("x-api-key")
+                return await verify_project_auth(project_id, api_key_query_value, api_key_header_value)
+
+        # For all other cases, use standard MCP authentication (allows JWT + API keys)
+        # Extract token
+        token = None
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+        # Extract API keys
+        api_key_query_value = request.query_params.get("x-api-key")
+        api_key_header_value = request.headers.get("x-api-key")
+
+        # Call the MCP auth function directly
+        from langflow.services.auth.utils import get_current_user_mcp
+
+        user = await get_current_user_mcp(
+            token=token, query_param=api_key_query_value, header_param=api_key_header_value, db=session
+        )
+
+        # Verify project access
+        project_access = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == user.id))
+        ).first()
+
+        if not project_access:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        return user
 
 
 # Create project-specific context variable
@@ -202,8 +222,6 @@ async def list_project_tools(
             # Get project-level auth settings
             auth_settings = None
             if project.auth_settings:
-                from langflow.api.v1.schemas import AuthSettings
-
                 auth_settings = AuthSettings(**project.auth_settings)
 
     except Exception as e:
@@ -223,7 +241,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle SSE connections for a specific project."""
     # Get project-specific SSE transport and MCP server
@@ -268,7 +286,7 @@ async def handle_project_sse(
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle POST messages for a project-specific MCP server."""
     # Set context variables
@@ -290,7 +308,7 @@ async def handle_project_messages(
 async def handle_project_messages_with_slash(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle POST messages for a project-specific MCP server with trailing slash."""
     # Call the original handler
