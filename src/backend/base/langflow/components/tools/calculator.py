@@ -3,12 +3,12 @@ import operator
 
 from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import MessageTextInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
@@ -87,7 +87,7 @@ class CalculatorToolComponent(LCToolComponent):
             self.status = error_message
             return [Data(data={"error": error_message, "input": expression})]
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error evaluating expression")
+            logger.debug("Error evaluating expression", exc_info=True)
             error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message, "input": expression})]
