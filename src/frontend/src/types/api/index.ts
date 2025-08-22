@@ -108,7 +108,6 @@ export type OutputFieldType = {
   group_outputs?: boolean;
   method?: string;
   display_name: string;
-  hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
   options?: { [key: string]: any };
