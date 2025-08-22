@@ -20,6 +20,7 @@ from httpx import ASGITransport, AsyncClient
 from langflow.components.input_output import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.logging.logger import logger
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
@@ -30,7 +31,6 @@ from langflow.services.database.models.user.model import User, UserCreate, UserR
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
-from loguru import logger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -174,19 +174,6 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
             await delete_transactions_by_flow_id(session, flow_id)
         except Exception as e:
             logger.debug(f"Error deleting transactions for flow {flow_id}: {e}")
-
-
-@pytest.fixture
-def caplog(caplog: pytest.LogCaptureFixture):
-    handler_id = logger.add(
-        caplog.handler,
-        format="{message}",
-        level=0,
-        filter=lambda record: record["level"].no >= caplog.handler.level,
-        enqueue=False,  # Set to 'True' if your test is spawning child processes.
-    )
-    yield caplog
-    logger.remove(handler_id)
 
 
 @pytest.fixture
