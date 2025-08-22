@@ -9,10 +9,11 @@ from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
+from typing import Annotated
 from uuid import UUID
 
 from anyio import BrokenResourceError
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -39,14 +40,91 @@ from langflow.api.v1.schemas import (
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.api_key.crud import create_api_key
+from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
+
+
+async def verify_project_auth(
+    project_id: UUID,
+    query_param: str | None = None,
+    header_param: str | None = None,
+) -> User:
+    """Custom authentication for MCP project endpoints.
+
+    Checks project auth settings and validates access accordingly.
+    """
+    async with session_scope() as session:
+        # First, get the project to check its auth settings
+        project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
+
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Determine authentication requirements based on project settings
+        auth_required = False
+        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
+            auth_settings = AuthSettings(**project.auth_settings)
+            auth_required = auth_settings.auth_type == "apikey"
+        elif not FEATURE_FLAGS.mcp_composer:
+            # When MCP_COMPOSER is disabled, only require auth if autologin is disabled
+            settings_service = get_settings_service()
+            auth_required = not settings_service.auth_settings.AUTO_LOGIN
+
+        # If no auth required, allow access without API key
+        if not auth_required:
+            # For "none" auth type, we still need a user context, so we'll use the superuser
+            settings_service = get_settings_service()
+            if settings_service.auth_settings.SUPERUSER:
+                from langflow.services.database.models.user.crud import get_user_by_username
+
+                user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+                if user:
+                    return user
+            raise HTTPException(status_code=500, detail="No superuser configured for public access")
+
+        # Auth is required - validate API key
+        api_key = query_param or header_param
+        if not api_key:
+            raise HTTPException(
+                status_code=401,
+                detail="API key required for this project. Provide x-api-key header or query parameter.",
+            )
+
+        # Validate the API key
+        user = await check_key(session, api_key)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid API key")
+
+        # Verify user has access to the project
+        project_access = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == user.id))
+        ).first()
+
+        if not project_access:
+            raise HTTPException(status_code=403, detail="Access denied to this project")
+
+        return user
+
+
+# Create a dependency that validates project auth from request
+async def verify_project_auth_from_request(
+    project_id: UUID,
+    request: Request,
+) -> User:
+    """Verify project authentication from request headers/query parameters."""
+    # Extract API key from headers or query params
+    api_key_header_value = request.headers.get("x-api-key")
+    api_key_query_value = request.query_params.get("x-api-key")
+
+    return await verify_project_auth(project_id, api_key_query_value, api_key_header_value)
+
 
 # Create project-specific context variable
 current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx", default=None)
@@ -147,18 +225,9 @@ async def im_alive():
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
-    current_user: CurrentActiveMCPUser,
+    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
 ):
     """Handle SSE connections for a specific project."""
-    # Verify project exists and user has access
-    async with session_scope() as session:
-        project = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-        ).first()
-
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-
     # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
     project_server = get_project_mcp_server(project_id)
@@ -198,17 +267,12 @@ async def handle_project_sse(
 
 
 @router.post("/{project_id}")
-async def handle_project_messages(project_id: UUID, request: Request, current_user: CurrentActiveMCPUser):
+async def handle_project_messages(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
+):
     """Handle POST messages for a project-specific MCP server."""
-    # Verify project exists and user has access
-    async with session_scope() as session:
-        project = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-        ).first()
-
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-
     # Set context variables
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
@@ -225,7 +289,11 @@ async def handle_project_messages(project_id: UUID, request: Request, current_us
 
 
 @router.post("/{project_id}/")
-async def handle_project_messages_with_slash(project_id: UUID, request: Request, current_user: CurrentActiveMCPUser):
+async def handle_project_messages_with_slash(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(verify_project_auth_from_request)],
+):
     """Handle POST messages for a project-specific MCP server with trailing slash."""
     # Call the original handler
     return await handle_project_messages(project_id, request, current_user)
@@ -351,6 +419,7 @@ async def install_mcp_config(
     if not is_local_ip(client_ip):
         raise HTTPException(status_code=500, detail="MCP configuration can only be installed from a local connection")
 
+    removed_servers = []  # Track removed servers for reinstallation
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
@@ -367,8 +436,10 @@ async def install_mcp_config(
             # Determine if we need to generate an API key based on feature flag
             should_generate_api_key = False
             if not FEATURE_FLAGS.mcp_composer:
-                # When MCP_COMPOSER is disabled, always generate API key (matches frontend !isAutoLogin check)
-                should_generate_api_key = True
+                # When MCP_COMPOSER is disabled, only generate API key if autologin is disabled
+                # (matches frontend !isAutoLogin check)
+                settings_service = get_settings_service()
+                should_generate_api_key = not settings_service.auth_settings.AUTO_LOGIN
             elif project.auth_settings:
                 # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
                 auth_settings = AuthSettings(**project.auth_settings)
@@ -426,7 +497,8 @@ async def install_mcp_config(
 
         # Add authentication args based on MCP_COMPOSER feature flag and auth settings
         if not FEATURE_FLAGS.mcp_composer:
-            # When MCP_COMPOSER is disabled, always use headers format if API key was generated
+            # When MCP_COMPOSER is disabled, only use headers format if API key was generated
+            # (when autologin is disabled)
             if generated_api_key:
                 args.extend(["--headers", "x-api-key", generated_api_key])
         elif project.auth_settings:
@@ -534,9 +606,18 @@ async def install_mcp_config(
                 # If file exists but is invalid JSON, start fresh
                 existing_config = {"mcpServers": {}}
 
-        # Merge new config with existing config
+        # Ensure mcpServers section exists
         if "mcpServers" not in existing_config:
             existing_config["mcpServers"] = {}
+
+        # Remove any existing servers with the same SSE URL (for reinstalling)
+        project_sse_url = await get_project_sse_url(project_id)
+        existing_config, removed_servers = remove_server_by_sse_url(existing_config, project_sse_url)
+
+        if removed_servers:
+            logger.info("Removed existing MCP servers with same SSE URL for reinstall: %s", removed_servers)
+
+        # Merge new config with existing config
         existing_config["mcpServers"].update(mcp_config["mcpServers"])
 
         # Write the updated config
@@ -548,7 +629,10 @@ async def install_mcp_config(
         logger.exception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
-        message = f"Successfully installed MCP configuration for {body.client}"
+        action = "reinstalled" if removed_servers else "installed"
+        message = f"Successfully {action} MCP configuration for {body.client}"
+        if removed_servers:
+            message += f" (replaced existing servers: {', '.join(removed_servers)})"
         if generated_api_key:
             auth_type = "API key" if FEATURE_FLAGS.mcp_composer else "legacy API key"
             message += f" with {auth_type} authentication (key name: 'MCP Project {project.name} - {body.client}')"
@@ -572,13 +656,10 @@ async def check_installed_mcp_servers(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-        # Project server name pattern (must match the logic in install function)
-        name = project.name
-        project_server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        # Generate the SSE URL for this project
+        project_sse_url = await get_project_sse_url(project_id)
 
-        logger.debug(
-            "Checking for installed MCP servers for project: %s (server name: %s)", project.name, project_server_name
-        )
+        logger.debug("Checking for installed MCP servers for project: %s (SSE URL: %s)", project.name, project_sse_url)
 
         # Check configurations for different clients
         results = []
@@ -590,13 +671,13 @@ async def check_installed_mcp_servers(
             try:
                 with cursor_config_path.open("r") as f:
                     cursor_config = json.load(f)
-                    if "mcpServers" in cursor_config and project_server_name in cursor_config["mcpServers"]:
-                        logger.debug("Found Cursor config for project server: %s", project_server_name)
+                    if config_contains_sse_url(cursor_config, project_sse_url):
+                        logger.debug("Found Cursor config with matching SSE URL: %s", project_sse_url)
                         results.append("cursor")
                     else:
                         logger.debug(
-                            "Cursor config exists but no entry for server: %s (available servers: %s)",
-                            project_server_name,
+                            "Cursor config exists but no server with SSE URL: %s (available servers: %s)",
+                            project_sse_url,
                             list(cursor_config.get("mcpServers", {}).keys()),
                         )
             except json.JSONDecodeError:
@@ -611,13 +692,13 @@ async def check_installed_mcp_servers(
             try:
                 with windsurf_config_path.open("r") as f:
                     windsurf_config = json.load(f)
-                    if "mcpServers" in windsurf_config and project_server_name in windsurf_config["mcpServers"]:
-                        logger.debug("Found Windsurf config for project server: %s", project_server_name)
+                    if config_contains_sse_url(windsurf_config, project_sse_url):
+                        logger.debug("Found Windsurf config with matching SSE URL: %s", project_sse_url)
                         results.append("windsurf")
                     else:
                         logger.debug(
-                            "Windsurf config exists but no entry for server: %s (available servers: %s)",
-                            project_server_name,
+                            "Windsurf config exists but no server with SSE URL: %s (available servers: %s)",
+                            project_sse_url,
                             list(windsurf_config.get("mcpServers", {}).keys()),
                         )
             except json.JSONDecodeError:
@@ -679,13 +760,13 @@ async def check_installed_mcp_servers(
             try:
                 with claude_config_path.open("r") as f:
                     claude_config = json.load(f)
-                    if "mcpServers" in claude_config and project_server_name in claude_config["mcpServers"]:
-                        logger.debug("Found Claude config for project server: %s", project_server_name)
+                    if config_contains_sse_url(claude_config, project_sse_url):
+                        logger.debug("Found Claude config with matching SSE URL: %s", project_sse_url)
                         results.append("claude")
                     else:
                         logger.debug(
-                            "Claude config exists but no entry for server: %s (available servers: %s)",
-                            project_server_name,
+                            "Claude config exists but no server with SSE URL: %s (available servers: %s)",
+                            project_sse_url,
                             list(claude_config.get("mcpServers", {}).keys()),
                         )
             except json.JSONDecodeError:
@@ -698,6 +779,143 @@ async def check_installed_mcp_servers(
         logger.exception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
     return results
+
+
+def config_contains_sse_url(config_data: dict, sse_url: str) -> bool:
+    """Check if any MCP server in the config uses the specified SSE URL."""
+    mcp_servers = config_data.get("mcpServers", {})
+    for server_name, server_config in mcp_servers.items():
+        args = server_config.get("args", [])
+        # The SSE URL is typically the last argument in mcp-proxy configurations
+        if args and args[-1] == sse_url:
+            logger.debug("Found matching SSE URL in server: %s", server_name)
+            return True
+    return False
+
+
+async def get_project_sse_url(project_id: UUID) -> str:
+    """Generate the SSE URL for a project, including WSL handling."""
+    # Get settings service to build the SSE URL
+    settings_service = get_settings_service()
+    host = getattr(settings_service.settings, "host", "localhost")
+    port = getattr(settings_service.settings, "port", 3000)
+    base_url = f"http://{host}:{port}".rstrip("/")
+    project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
+
+    # Handle WSL case - must match the logic in install function
+    os_type = platform.system()
+    is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+    if is_wsl and host in {"localhost", "127.0.0.1"}:
+        try:
+            proc = await create_subprocess_exec(
+                "/usr/bin/hostname",
+                "-I",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await proc.communicate()
+
+            if proc.returncode == 0 and stdout.strip():
+                wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
+                logger.debug("Using WSL IP for external access: %s", wsl_ip)
+                # Replace the localhost with the WSL IP in the URL
+                project_sse_url = project_sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
+        except OSError as e:
+            logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
+
+    return project_sse_url
+
+
+async def get_config_path(client: str) -> Path:
+    """Get the configuration file path for a given client and operating system."""
+    os_type = platform.system()
+    is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+    if client.lower() == "cursor":
+        return Path.home() / ".cursor" / "mcp.json"
+    if client.lower() == "windsurf":
+        return Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
+    if client.lower() == "claude":
+        if os_type == "Darwin":  # macOS
+            return Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        if os_type == "Windows" or is_wsl:  # Windows or WSL (Claude runs on Windows host)
+            if is_wsl:
+                # In WSL, we need to access the Windows APPDATA directory
+                try:
+                    # First try to get the Windows username
+                    proc = await create_subprocess_exec(
+                        "/mnt/c/Windows/System32/cmd.exe",
+                        "/c",
+                        "echo %USERNAME%",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await proc.communicate()
+
+                    if proc.returncode == 0 and stdout.strip():
+                        windows_username = stdout.decode().strip()
+                        return Path(
+                            f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"
+                        )
+
+                    # Fallback: try to find the Windows user directory
+                    users_dir = Path("/mnt/c/Users")
+                    if users_dir.exists():
+                        # Get the first non-system user directory
+                        user_dirs = [
+                            d
+                            for d in users_dir.iterdir()
+                            if d.is_dir() and not d.name.startswith(("Default", "Public", "All Users"))
+                        ]
+                        if user_dirs:
+                            return user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+
+                    if not Path("/mnt/c").exists():
+                        msg = "Windows C: drive not mounted at /mnt/c in WSL"
+                        raise ValueError(msg)
+
+                    msg = "Could not find valid Windows user directory in WSL"
+                    raise ValueError(msg)
+                except (OSError, CalledProcessError) as e:
+                    logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
+                    msg = f"Could not determine Windows Claude config path in WSL: {e!s}"
+                    raise ValueError(msg) from e
+            # Regular Windows
+            return Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+
+        msg = "Unsupported operating system for Claude configuration"
+        raise ValueError(msg)
+
+    msg = "Unsupported client"
+    raise ValueError(msg)
+
+
+def remove_server_by_sse_url(config_data: dict, sse_url: str) -> tuple[dict, list[str]]:
+    """Remove any MCP servers that use the specified SSE URL from config data.
+
+    Returns:
+        tuple: (updated_config, list_of_removed_server_names)
+    """
+    if "mcpServers" not in config_data:
+        return config_data, []
+
+    removed_servers = []
+    servers_to_remove = []
+
+    # Find servers to remove
+    for server_name, server_config in config_data["mcpServers"].items():
+        args = server_config.get("args", [])
+        if args and args[-1] == sse_url:
+            servers_to_remove.append(server_name)
+
+    # Remove the servers
+    for server_name in servers_to_remove:
+        del config_data["mcpServers"][server_name]
+        removed_servers.append(server_name)
+        logger.debug("Removed existing server with matching SSE URL: %s", server_name)
+
+    return config_data, removed_servers
 
 
 # Project-specific MCP server instance for handling project-specific tools
