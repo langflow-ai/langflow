@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 from loguru import logger
 
@@ -6,6 +7,7 @@ from langflow.custom.custom_component.component import Component
 from langflow.io import (
     DropdownInput,
     FileInput,
+    IntInput,
     MessageTextInput,
     Output,
     SecretStrInput,
@@ -65,6 +67,21 @@ class VLMRunTranscription(Component):
             required=False,
             advanced=True,
         ),
+        IntInput(
+            name="timeout_seconds",
+            display_name="Timeout (seconds)",
+            value=600,
+            info="Maximum time to wait for processing completion",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="domain",
+            display_name="Processing Domain",
+            options=["transcription"],
+            value="transcription",
+            info="Select the processing domain",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -93,19 +110,21 @@ class VLMRunTranscription(Component):
 
     def _generate_media_response(self, client, media_source):
         """Generate response for audio or video media."""
+        domain_str = f"{self.media_type}.{self.domain}"
+
         if self.media_type == "audio":
             if isinstance(media_source, Path):
-                return client.audio.generate(file=media_source, domain="audio.transcription", batch=True)
-            return client.audio.generate(url=media_source, domain="audio.transcription", batch=True)
+                return client.audio.generate(file=media_source, domain=domain_str, batch=True)
+            return client.audio.generate(url=media_source, domain=domain_str, batch=True)
         # video
         if isinstance(media_source, Path):
-            return client.video.generate(file=media_source, domain="video.transcription", batch=True)
-        return client.video.generate(url=media_source, domain="video.transcription", batch=True)
+            return client.video.generate(file=media_source, domain=domain_str, batch=True)
+        return client.video.generate(url=media_source, domain=domain_str, batch=True)
 
     def _wait_for_response(self, client, response):
         """Wait for batch processing to complete if needed."""
         if hasattr(response, "id"):
-            return client.predictions.wait(response.id, timeout=600)
+            return client.predictions.wait(response.id, timeout=self.timeout_seconds)
         return response
 
     def _extract_transcription(self, segments: list) -> list[str]:
@@ -134,12 +153,13 @@ class VLMRunTranscription(Component):
                 "media_type": self.media_type,
                 "duration": response_data.get("metadata", {}).get("duration", 0),
             },
-            "usage": response.usage.__dict__ if hasattr(response, "usage") else None,
+            "usage": response.usage if hasattr(response, "usage") else None,
             "status": response.status if hasattr(response, "status") else "completed",
         }
 
         # Add source-specific field
-        if source_name.startswith("http"):
+        parsed_url = urlparse(source_name)
+        if parsed_url.scheme in ["http", "https", "s3", "gs", "ftp", "ftps"]:
             result["source"] = source_name
         else:
             result["filename"] = source_name
@@ -154,19 +174,6 @@ class VLMRunTranscription(Component):
         segments = response_data.get("segments", [])
         transcription_parts = self._extract_transcription(segments)
         return self._create_result_dict(response, transcription_parts, source_name)
-
-    def _format_output(self, all_results: list) -> dict:
-        """Format the output based on number of results."""
-        if len(all_results) == 1:
-            return all_results[0]
-
-        return {
-            "results": all_results,
-            "total_files": len(all_results),
-            "combined_transcription": "\n\n---\n\n".join(
-                [f"[{r.get('filename', r.get('source', 'Unknown'))}]\n{r['transcription']}" for r in all_results]
-            ),
-        }
 
     def process_media(self) -> Data:
         """Process audio or video file and extract structured data."""
@@ -195,8 +202,11 @@ class VLMRunTranscription(Component):
                 result = self._process_single_media(client, self.media_url, self.media_url)
                 all_results.append(result)
 
-            # Format and return output
-            output_data = self._format_output(all_results)
+            # Return clean, flexible output structure
+            output_data = {
+                "results": all_results,
+                "total_files": len(all_results),
+            }
             self.status = f"Successfully processed {len(all_results)} file(s)"
             return Data(data=output_data)
 
