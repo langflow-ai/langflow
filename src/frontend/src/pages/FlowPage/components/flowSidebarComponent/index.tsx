@@ -178,10 +178,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   // Get search state from context
   const context = useSearchContext();
+  // Unconditional fallback ref to satisfy Rules of Hooks
+  const fallbackSearchInputRef = useRef<HTMLInputElement | null>(null);
   const {
     search = "",
     setSearch = () => {},
-    searchInputRef = useRef<HTMLInputElement | null>(null),
+    searchInputRef = fallbackSearchInputRef,
     isSearchFocused = false,
     handleInputFocus = () => {},
     handleInputBlur = () => {},
