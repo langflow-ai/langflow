@@ -1,7 +1,7 @@
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
-import ChatView from "./components/chatView/components/chat-view";
+import ChatView from "./components/chatView/chat-view";
 import { PlaygroundHeader } from "./components/playgroundHeader/playground-header";
 import SessionSidebar from "./components/sessionSidebar/session-sidebar";
 

@@ -13,15 +13,15 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import useTabVisibility from "../../../../../../shared/hooks/use-tab-visibility";
-import useFlowStore from "../../../../../../stores/flowStore";
-import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
-import type { ChatMessageType } from "../../../../../../types/chat";
-import FlowRunningSqueleton from "../../flow-running-squeleton";
-import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
-import { useFileHandler } from "../chatInput/hooks/use-file-handler";
-import ChatMessage from "../chatMessage/chat-message";
-import { ChatScrollAnchor } from "./chat-scroll-anchor";
+import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
+import useFlowStore from "../../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import type { ChatMessageType } from "../../../../../types/chat";
+import FlowRunningSqueleton from "../flow-running-squeleton";
+import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
+import { useFileHandler } from "./chatInput/hooks/use-file-handler";
+import ChatMessage from "./chatMessage/chat-message";
+import { ChatScrollAnchor } from "./components/chat-scroll-anchor";
 
 const TIME_TO_DISABLE_SCROLL = 2000;
 
