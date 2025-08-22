@@ -199,7 +199,7 @@ class FileComponent(BaseFileComponent):
     ]
 
     outputs = [
-        *BaseFileComponent._base_outputs,
+        Output(display_name="Raw Content", name="message", method="load_files_message"),
     ]
 
     def _path_value(self, template) -> list[str]:
