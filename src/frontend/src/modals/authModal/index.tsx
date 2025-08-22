@@ -14,9 +14,16 @@ interface AuthModalProps {
   setOpen: (open: boolean) => void;
   authSettings?: AuthSettingsType;
   onSave: (authSettings: AuthSettingsType) => void;
+  installedClients?: string[];
 }
 
-const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
+const AuthModal = ({
+  open,
+  setOpen,
+  authSettings,
+  onSave,
+  installedClients,
+}: AuthModalProps) => {
   const [authType, setAuthType] = useState<string>(
     authSettings?.auth_type || "none",
   );
@@ -113,7 +120,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
         </div>
         <div className="flex h-full p-0 border-t rounded-none">
           {/* Left column - Radio buttons */}
-          <div className="flex flex-col p-4 gap-2 flex-1 items-start min-h-[250px]">
+          <div className="flex flex-col p-4 gap-2 flex-1 items-start min-h-[250px] transition-all">
             <span className="text-mmd font-medium text-muted-foreground">
               Auth type
             </span>
@@ -146,17 +153,18 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
           </div>
           {/* Right column - Input fields */}
           {authType !== "none" && (
-            <div className="w-[70%] flex flex-col overflow-y-auto h-fit max-h-[250px] p-4">
+            <div className="w-[70%] flex flex-col overflow-y-auto h-fit max-h-[400px] p-4">
               {authType === "apikey" && (
                 <span className="block items-start gap-2 text-mmd text-muted-foreground">
-                  You can generate an API key in the JSON or Auto Install tab,
-                  or you can use an existing one generated in the{" "}
+                  You can generate an API key in the JSON tab, or you can create
+                  one in{" "}
                   <CustomLink
                     className="text-accent-pink-foreground underline inline-block"
                     to="/settings/api-keys"
                   >
-                    settings.
+                    settings
                   </CustomLink>
+                  . The API key is generated automatically for Auto Install.
                 </span>
               )}
 
@@ -358,7 +366,21 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
           onClick: handleSave,
         }}
         className="p-4 border-t"
-      />
+      >
+        <div className="flex items-center text-accent-amber-foreground gap-2 text-sm pr-2">
+          <ForwardedIconComponent
+            name="AlertTriangle"
+            className="h-4 w-4 shrink-0 text-accent-amber-foreground"
+          />
+          <span className="text-mmd text-muted-foreground">
+            You will need to reinstall this MCP server to{" "}
+            {installedClients && installedClients.length >= 1
+              ? `${installedClients.map((client) => client).join(", ")} and `
+              : ""}
+            any other clients you installed it in.
+          </span>
+        </div>
+      </BaseModal.Footer>
     </BaseModal>
   );
 };
