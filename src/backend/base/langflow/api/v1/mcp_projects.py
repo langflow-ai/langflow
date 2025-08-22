@@ -32,8 +32,8 @@ from langflow.api.v1.mcp_utils import (
 from langflow.api.v1.schemas import MCPInstallRequest, MCPProjectResponse, MCPProjectUpdateRequest, MCPSettings
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
-=from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
-=from langflow.logging import logger
+from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.logging import logger
 from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, session_scope
 
