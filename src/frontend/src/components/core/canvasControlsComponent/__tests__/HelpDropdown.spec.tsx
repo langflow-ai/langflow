@@ -33,7 +33,12 @@ jest.mock("@/components/ui/separator", () => ({
 jest.mock("../DropdownControlButton", () => ({
   __esModule: true,
   default: ({ label, onClick, disabled, testId }) => (
-    <button aria-label={label} onClick={onClick} disabled={disabled} data-testid={testId}>
+    <button
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={testId}
+    >
       {label}
     </button>
   ),
@@ -97,5 +102,3 @@ describe("HelpDropdownView", () => {
     expect(onToggleHelperLines).toHaveBeenCalled();
   });
 });
-
-

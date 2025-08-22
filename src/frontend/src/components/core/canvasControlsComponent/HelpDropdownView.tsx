@@ -47,7 +47,11 @@ export const HelpDropdownView = ({
           />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="end" className="flex flex-col w-full">
+      <DropdownMenuContent
+        side="top"
+        align="end"
+        className="flex flex-col w-full"
+      >
         <DropdownControlButton
           iconName="book-open"
           testId="canvas_controls_dropdown_docs"
@@ -90,5 +94,3 @@ export const HelpDropdownView = ({
 };
 
 export default HelpDropdownView;
-
-

@@ -1,3 +1,5 @@
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { HelpDropdownView } from "@/components/core/canvasControlsComponent/HelpDropdownView";
 import {
   BUG_REPORT_URL,
@@ -7,8 +9,6 @@ import {
 } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const HelpDropdown = () => {
   const navigate = useNavigate();
