@@ -1,23 +1,61 @@
-import * as Form from "@radix-ui/react-form";
-import { cloneDeep } from "lodash";
-import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
+import * as Form from "@radix-ui/react-form";
+import { cloneDeep } from "lodash";
+import { useEffect, useRef, useState } from "react";
 import EditFlowSettings from "../editFlowSettingsComponent";
 
-export default function FlowSettingsComponent({
-  flowData,
-  close,
-  open,
-}: {
+type FlowSettingsComponentProps = {
   flowData?: FlowType;
   close: () => void;
   open: boolean;
-}): JSX.Element {
+};
+
+const updateFlowWithFormValues = (
+  baseFlow: FlowType,
+  newName: string,
+  newDescription: string,
+  newLocked: boolean,
+): FlowType => {
+  const newFlow = cloneDeep(baseFlow);
+  newFlow.name = newName;
+  newFlow.description = newDescription;
+  newFlow.locked = newLocked;
+  return newFlow;
+};
+
+const buildInvalidNameList = (
+  allFlows: FlowType[] | undefined,
+  currentFlowName: string | undefined,
+): string[] => {
+  if (!allFlows) return [];
+  const names = allFlows.map((f) => f?.name ?? "");
+  return names.filter((n) => n !== (currentFlowName ?? ""));
+};
+
+const isSaveDisabled = (
+  flow: FlowType | undefined,
+  invalidNameList: string[],
+  name: string,
+  description: string,
+  locked: boolean,
+): boolean => {
+  if (!flow) return true;
+  const isNameChangedAndValid = !invalidNameList.includes(name) && flow.name !== name;
+  const isDescriptionChanged = flow.description !== description;
+  const isLockedChanged = flow.locked !== locked;
+  return !(isNameChangedAndValid || isDescriptionChanged || isLockedChanged);
+};
+
+const FlowSettingsComponent = ({
+  flowData,
+  close,
+  open,
+}: FlowSettingsComponentProps): JSX.Element => {
   const saveFlow = useSaveFlow();
   const currentFlow = useFlowStore((state) =>
     flowData ? undefined : state.currentFlow,
@@ -44,10 +82,7 @@ export default function FlowSettingsComponent({
     if (event) event.preventDefault();
     setIsSaving(true);
     if (!flow) return;
-    const newFlow = cloneDeep(flow);
-    newFlow.name = name;
-    newFlow.description = description;
-    newFlow.locked = locked;
+    const newFlow = updateFlowWithFormValues(flow, name, description, locked);
 
     if (autoSaving) {
       saveFlow(newFlow)
@@ -73,25 +108,11 @@ export default function FlowSettingsComponent({
   const [nameLists, setNameList] = useState<string[]>([]);
 
   useEffect(() => {
-    if (flows) {
-      const tempNameList: string[] = [];
-      flows.forEach((flow: FlowType) => {
-        tempNameList.push(flow?.name ?? "");
-      });
-      setNameList(tempNameList.filter((name) => name !== (flow?.name ?? "")));
-    }
+    setNameList(buildInvalidNameList(flows, flow?.name));
   }, [flows]);
 
   useEffect(() => {
-    if (
-      (!nameLists.includes(name) && flow?.name !== name) ||
-      flow?.description !== description ||
-      flow?.locked !== locked
-    ) {
-      setDisableSave(false);
-    } else {
-      setDisableSave(true);
-    }
+    setDisableSave(isSaveDisabled(flow, nameLists, name, description, locked));
   }, [nameLists, flow, description, name, locked]);
   return (
     <Form.Root onSubmit={handleSubmit} ref={formRef}>
@@ -133,4 +154,6 @@ export default function FlowSettingsComponent({
       </div>
     </Form.Root>
   );
-}
+};
+
+export default FlowSettingsComponent;
