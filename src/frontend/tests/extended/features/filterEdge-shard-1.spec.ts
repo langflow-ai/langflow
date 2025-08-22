@@ -89,10 +89,11 @@ test(
     );
 
     await Promise.all(
-      elementTestIds.map((id) => {
+      elementTestIds.map(async (id) => {
         if (!expect(page.getByTestId(id).first()).toBeVisible()) {
           console.error(`${id} is not visible`);
         }
+        return expect(page.getByTestId(id).first()).toBeVisible();
       }),
     );
 
