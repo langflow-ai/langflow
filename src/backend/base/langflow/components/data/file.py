@@ -532,21 +532,22 @@ class FileComponent(BaseFileComponent):
                 raise ValueError(serialized_data) from None
 
             # Repeat file_list to match the number of processed data elements
-            return self.rollup_data(file_list, clean_data)
+            final_data: list[Data | None] = clean_data
+            return self.rollup_data(file_list, final_data)
 
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
         file_count = len(file_list)
 
         self.log(f"Starting parallel processing of {file_count} files with concurrency: {concurrency}.")
         file_paths = [str(file.path) for file in file_list]
-        processed_data = parallel_load_data(
+        my_data = parallel_load_data(
             file_paths,
             silent_errors=self.silent_errors,
             load_function=process_file_standard,
             max_concurrency=concurrency,
         )
 
-        return self.rollup_data(file_list, processed_data)
+        return self.rollup_data(file_list, my_data)
 
     def load_files_advanced(self) -> DataFrame:
         """Load files using advanced Docling processing and export to an advanced format."""
