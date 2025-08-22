@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { CustomLink } from "@/customization/components/custom-link";
 import type { AuthSettingsType } from "@/types/mcp";
 import { AUTH_METHODS_ARRAY } from "@/utils/mcpUtils";
+import { toSpaceCase } from "@/utils/stringManipulation";
 import BaseModal from "../baseModal";
 
 interface AuthModalProps {
@@ -15,12 +16,14 @@ interface AuthModalProps {
   authSettings?: AuthSettingsType;
   onSave: (authSettings: AuthSettingsType) => void;
   installedClients?: string[];
+  autoInstall?: boolean;
 }
 
 const AuthModal = ({
   open,
   setOpen,
   authSettings,
+  autoInstall,
   onSave,
   installedClients,
 }: AuthModalProps) => {
@@ -155,16 +158,27 @@ const AuthModal = ({
           {authType !== "none" && (
             <div className="w-[70%] flex flex-col overflow-y-auto h-fit max-h-[400px] p-4">
               {authType === "apikey" && (
-                <span className="block items-start gap-2 text-mmd text-muted-foreground">
-                  You can generate an API key in the JSON tab, or you can create
-                  one in{" "}
-                  <CustomLink
-                    className="text-accent-pink-foreground underline inline-block"
-                    to="/settings/api-keys"
-                  >
-                    settings
-                  </CustomLink>
-                  . The API key is generated automatically for Auto Install.
+                <span className="flex flex-col items-start gap-1 text-mmd text-muted-foreground">
+                  <p>
+                    Create a key in{" "}
+                    <CustomLink
+                      className="text-accent-pink-foreground underline inline-block"
+                      to="/settings/api-keys"
+                    >
+                      Settings
+                    </CustomLink>{" "}
+                    and include it in the{" "}
+                    <span className="font-semibold">install JSON</span>. Or,
+                    create a key automatically from the{" "}
+                    <span className="font-semibold">JSON tab</span>.
+                  </p>
+                  {autoInstall && (
+                    <p>
+                      <span className="font-semibold">Auto Install</span>{" "}
+                      creates and injects a key into the selected client profile
+                      on this machine.
+                    </p>
+                  )}
                 </span>
               )}
 
@@ -373,11 +387,11 @@ const AuthModal = ({
             className="h-4 w-4 shrink-0 text-accent-amber-foreground"
           />
           <span className="text-mmd text-muted-foreground">
-            You will need to reinstall this MCP server to{" "}
-            {installedClients && installedClients.length >= 1
-              ? `${installedClients.map((client) => client).join(", ")} and `
-              : ""}
-            any other clients you installed it in.
+            {installedClients && installedClients.length > 0
+              ? `Changing auth type requires reinstalling this server in ${installedClients
+                  .map((client) => toSpaceCase(client))
+                  .join(", ")} and any other clients where it's used.`
+              : "Changing auth type requires reinstalling this server in all clients where it's used."}
           </span>
         </div>
       </BaseModal.Footer>
