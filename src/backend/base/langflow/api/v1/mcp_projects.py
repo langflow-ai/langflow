@@ -393,7 +393,7 @@ async def install_mcp_config(
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                     )
-                    stdout, stderr = await proc.communicate()
+                    stdout, _ = await proc.communicate()
 
                     if proc.returncode == 0 and stdout.strip():
                         wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
@@ -402,31 +402,30 @@ async def install_mcp_config(
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
                 except OSError as e:
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
-
-        args = ["mcp-proxy", "--sse-url", sse_url]
-
-        oauth_env = None
+        else:
+            args = ["mcp-proxy", sse_url]
 
         if project.auth_settings:
             from langflow.api.v1.schemas import AuthSettings
 
             # Decrypt sensitive fields before using them
-            decrypted_settings = decrypt_auth_settings(project.auth_settings)
+            decrypted_settings = decrypt_auth_settings(project.auth_settings) or {}
             auth_settings = AuthSettings(**decrypted_settings)
             args.extend(["--auth_type", auth_settings.auth_type])
 
             oauth_env = {
-                "OAUTH_HOST": auth_settings.oauth_host,
-                "OAUTH_PORT": auth_settings.oauth_port,
-                "OAUTH_SERVER_URL": auth_settings.oauth_server_url,
-                "OAUTH_CALLBACK_PATH": auth_settings.oauth_callback_path,
-                "OAUTH_CLIENT_ID": auth_settings.oauth_client_id,
-                "OAUTH_CLIENT_SECRET": auth_settings.oauth_client_secret,
-                "OAUTH_AUTH_URL": auth_settings.oauth_auth_url,
-                "OAUTH_TOKEN_URL": auth_settings.oauth_token_url,
-                "OAUTH_MCP_SCOPE": auth_settings.oauth_mcp_scope,
-                "OAUTH_PROVIDER_SCOPE": auth_settings.oauth_provider_scope,
+                "OAUTH_HOST": str(auth_settings.oauth_host or ""),
+                "OAUTH_PORT": str(auth_settings.oauth_port or ""),
+                "OAUTH_SERVER_URL": auth_settings.oauth_server_url or "",
+                "OAUTH_CALLBACK_PATH": auth_settings.oauth_callback_path or "",
+                "OAUTH_CLIENT_ID": auth_settings.oauth_client_id or "",
+                "OAUTH_CLIENT_SECRET": auth_settings.oauth_client_secret or "",  # omit for PKCE
+                "OAUTH_AUTH_URL": auth_settings.oauth_auth_url or "",
+                "OAUTH_TOKEN_URL": auth_settings.oauth_token_url or "",
+                "OAUTH_MCP_SCOPE": auth_settings.oauth_mcp_scope or "",
+                "OAUTH_PROVIDER_SCOPE": auth_settings.oauth_provider_scope or "",
             }
+            oauth_env = {k: v for k, v in oauth_env.items() if v is not None}
 
         if os_type == "Windows":
             command = "cmd"
@@ -439,6 +438,7 @@ async def install_mcp_config(
         server_config = {
             "command": command,
             "args": args,
+            "env": oauth_env,
         }
 
         mcp_config = {

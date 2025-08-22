@@ -10,12 +10,7 @@ from langflow.services.deps import get_settings_service
 # Fields that should be encrypted when stored
 SENSITIVE_FIELDS = [
     "oauth_client_secret",
-    "oauth_token",
-    "bearer_token",
-    "password",
     "api_key",
-    "access_token",
-    "refresh_token",
 ]
 
 
