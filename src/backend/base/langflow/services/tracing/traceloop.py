@@ -68,13 +68,11 @@ class TraceloopTracer(BaseTracer):
             self.propagator = TraceContextTextMapPropagator()
             self.carrier: CarrierT = {}
 
-            # ✅ Root span with trace_name instead of undefined flow_id
             self.root_span = self._tracer.start_span(
                 name=trace_name,
                 start_time=self._get_current_timestamp(),
             )
 
-            # Inject root span context into carrier for child spans
             with use_span(self.root_span, end_on_exit=False):
                 self.propagator.inject(carrier=self.carrier)
 
@@ -100,40 +98,47 @@ class TraceloopTracer(BaseTracer):
 
         return True
 
-    def _convert_to_traceloop_type(self, value: Any) -> str | int | float | bool | None:
+    def _convert_to_traceloop_type(self, value):
+        """Recursively converts a value to a Traceloop compatible type."""
         from langchain.schema import BaseMessage, Document, HumanMessage, SystemMessage
 
         from langflow.schema.message import Message
 
         try:
-            if isinstance(value, Message):
-                return value.text
-            if isinstance(value, BaseMessage | HumanMessage | SystemMessage):
-                return value.content
-            if isinstance(value, Document):
-                return value.page_content
-            if isinstance(value, types.GeneratorType):
-                return str(value)
-            if value is None:
-                return ""
-            if isinstance(value, float) and not math.isfinite(value):
-                return "NaN"
-            if isinstance(value, str | bool | int | float):
-                return value
+            if isinstance(value, dict):
+                value = {key: self._convert_to_traceloop_type(val) for key, val in value.items()}
 
-            return json.dumps(value, default=str)
+            elif isinstance(value, list):
+                value = [self._convert_to_traceloop_type(v) for v in value]
+
+            elif isinstance(value, Message):
+                value = value.text
+
+            elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):
+                value = str(value.content) if value.content is not None else ""
+
+            elif isinstance(value, Document):
+                value = value.page_content
+
+            elif isinstance(value, (types.GeneratorType | types.NoneType)):
+                value = str(value)
+
+            elif isinstance(value, float) and not math.isfinite(value):
+                value = "NaN"
+
         except (TypeError, ValueError) as e:
             logger.warning(f"Failed to convert value {value!r} to traceloop type: {e}")
             return str(value)
+        else:
+            return value
 
     def _convert_to_traceloop_dict(self, io_dict: Any) -> dict[str, Any]:
         """Ensure values are OTel-compatible. Dicts stay dicts, lists get JSON-serialized."""
         if isinstance(io_dict, dict):
             return {str(k): self._convert_to_traceloop_type(v) for k, v in io_dict.items()}
         if isinstance(io_dict, list):
-            # ✅ Keep structure by serializing list once
             return {"list": json.dumps([self._convert_to_traceloop_type(v) for v in io_dict], default=str)}
-        # ✅ Wrap everything else into a single field
+
         return {"value": self._convert_to_traceloop_type(io_dict)}
 
     @override
@@ -168,7 +173,6 @@ class TraceloopTracer(BaseTracer):
 
         child_span.set_attributes(attributes)
 
-        # ✅ Save in child_spans dict by trace_id
         self.child_spans[trace_id] = child_span
 
     @override
@@ -208,7 +212,6 @@ class TraceloopTracer(BaseTracer):
         safe_outputs = self._convert_to_traceloop_dict(outputs)
         safe_metadata = self._convert_to_traceloop_dict(metadata or {})
 
-        # ✅ Close root span properly
         self.root_span.set_attributes(
             {
                 "workflow_name": self.trace_name,
