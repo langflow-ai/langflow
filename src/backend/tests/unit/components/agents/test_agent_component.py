@@ -276,7 +276,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         # Test valid JSON that matches schema
         valid_content = '{"name": "test", "count": 42}'
-        result = component.build_structured_output_base(valid_content)
+        result = await component.build_structured_output_base(valid_content)
         assert result == [{"name": "test", "count": 42}]
 
     async def test_build_structured_output_base_without_schema(self, component_class, default_kwargs):
@@ -285,7 +285,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         # Test with no output_schema
         content = '{"any": "data", "number": 123}'
-        result = component.build_structured_output_base(content)
+        result = await component.build_structured_output_base(content)
         assert result == {"any": "data", "number": 123}
 
     async def test_build_structured_output_base_embedded_json(self, component_class, default_kwargs):
@@ -293,7 +293,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
 
         content = 'Here is some text with {"embedded": "json"} inside it.'
-        result = component.build_structured_output_base(content)
+        result = await component.build_structured_output_base(content)
         assert result == {"embedded": "json"}
 
     async def test_build_structured_output_base_no_json(self, component_class, default_kwargs):
@@ -301,7 +301,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
 
         content = "This is just plain text with no JSON at all."
-        result = component.build_structured_output_base(content)
+        result = await component.build_structured_output_base(content)
         assert "error" in result
         assert result["content"] == content
 
