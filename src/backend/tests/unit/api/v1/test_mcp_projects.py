@@ -269,8 +269,10 @@ async def test_update_project_mcp_settings_other_user_project(
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
 
     # Verify the response
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Project not found"
+    assert response.status_code == 401
+    assert (
+        response.json()["detail"] == "API key required for this project. Provide x-api-key header or query parameter."
+    )
 
 
 async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers):
