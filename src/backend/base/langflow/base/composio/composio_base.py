@@ -135,7 +135,15 @@ class ComposioBaseComponent(Component):
 
         if isinstance(result, dict):
             result = [result]
-        return DataFrame(result)
+        # Build DataFrame and avoid exposing a 'data' attribute via column access,
+        result_dataframe = DataFrame(result)
+        if hasattr(result_dataframe, "columns"):
+            try:
+                if "data" in result_dataframe.columns:
+                    result_dataframe = result_dataframe.rename(columns={"data": "_data"})
+            except (AttributeError, TypeError, ValueError, KeyError) as e:
+                logger.debug(f"Failed to rename 'data' column: {e}")
+        return result_dataframe
 
     def as_data(self) -> Data:
         result = self.execute_action()
@@ -379,6 +387,8 @@ class ComposioBaseComponent(Component):
                             # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
                             if clean_field == "user_id":
                                 clean_field = f"{self.app_name}_user_id"
+                            elif clean_field == "status":
+                                clean_field = f"{self.app_name}_status"
 
                             action_fields.append(clean_field)
 
@@ -526,10 +536,17 @@ class ComposioBaseComponent(Component):
                 # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
                 if clean_field_name == "user_id":
                     clean_field_name = f"{self.app_name}_user_id"
-                    # Update the field schema description to reflect the name change
+                    # Update
                     field_schema_copy = field_schema.copy()
                     field_schema_copy["description"] = (
                         f"User ID for {self.app_name.title()}: " + field_schema["description"]
+                    )
+                elif clean_field_name == "status":
+                    clean_field_name = f"{self.app_name}_status"
+                    # Update
+                    field_schema_copy = field_schema.copy()
+                    field_schema_copy["description"] = (
+                        f"Status for {self.app_name.title()}: " + field_schema["description"]
                     )
                 else:
                     # Use the original field schema for all other fields
@@ -1240,6 +1257,8 @@ class ComposioBaseComponent(Component):
                 final_field_name = field
                 if field.endswith("_user_id") and field.startswith(self.app_name):
                     final_field_name = "user_id"
+                elif field.endswith("_status") and field.startswith(self.app_name):
+                    final_field_name = "status"
 
                 arguments[final_field_name] = value
 
