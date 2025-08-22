@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { CustomLink } from "@/customization/components/custom-link";
 import type { AuthSettingsType } from "@/types/mcp";
 import { AUTH_METHODS_ARRAY } from "@/utils/mcpUtils";
 import BaseModal from "../baseModal";
@@ -17,10 +18,9 @@ interface AuthModalProps {
 
 const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   const [authType, setAuthType] = useState<string>(
-    authSettings?.auth_type || "none",
+    authSettings?.auth_type || "none"
   );
   const [authFields, setAuthFields] = useState<{
-    apiKey?: string;
     oauthHost?: string;
     oauthPort?: string;
     oauthServerUrl?: string;
@@ -32,7 +32,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     oauthMcpScope?: string;
     oauthProviderScope?: string;
   }>({
-    apiKey: authSettings?.api_key || "",
     oauthHost: authSettings?.oauth_host || "",
     oauthPort: authSettings?.oauth_port || "",
     oauthServerUrl: authSettings?.oauth_server_url || "",
@@ -50,7 +49,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     if (authSettings) {
       setAuthType(authSettings.auth_type || "none");
       setAuthFields({
-        apiKey: authSettings.api_key || "",
         oauthHost: authSettings.oauth_host || "",
         oauthPort: authSettings.oauth_port || "",
         oauthServerUrl: authSettings.oauth_server_url || "",
@@ -80,7 +78,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   const handleSave = () => {
     const authSettingsToSave: AuthSettingsType = {
       auth_type: authType,
-      ...(authType === "apikey" && { api_key: authFields.apiKey }),
       ...(authType === "oauth" && {
         oauth_host: authFields.oauthHost,
         oauth_port: authFields.oauthPort,
@@ -116,7 +113,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
         </div>
         <div className="flex h-full p-0 border-t rounded-none">
           {/* Left column - Radio buttons */}
-          <div className="flex flex-col p-4 gap-2 flex-1 items-start min-h-[400px]">
+          <div className="flex flex-col p-4 gap-2 flex-1 items-start min-h-[250px]">
             <span className="text-mmd font-medium text-muted-foreground">
               Auth type
             </span>
@@ -149,22 +146,18 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
           </div>
           {/* Right column - Input fields */}
           {authType !== "none" && (
-            <div className="w-[70%] flex flex-col overflow-y-auto h-fit max-h-[400px] p-4">
+            <div className="w-[70%] flex flex-col overflow-y-auto h-fit max-h-[250px] p-4">
               {authType === "apikey" && (
-                <div className="flex flex-col items-start gap-2">
-                  <Label htmlFor="api-key" className="!text-mmd font-medium">
-                    API Key Value
-                  </Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder="Enter API Key"
-                    value={authFields.apiKey || ""}
-                    onChange={(e) =>
-                      handleAuthFieldChange("apiKey", e.target.value)
-                    }
-                  />
-                </div>
+                <span className="block items-start gap-2 text-mmd text-muted-foreground">
+                  You can generate an API key in the JSON or Auto Install tab,
+                  or you can use an existing one generated in the{" "}
+                  <CustomLink
+                    className="text-accent-pink-foreground underline inline-block"
+                    to="/settings/api-keys"
+                  >
+                    settings.
+                  </CustomLink>
+                </span>
               )}
 
               {authType === "oauth" && (
@@ -240,7 +233,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                       onChange={(e) =>
                         handleAuthFieldChange(
                           "oauthCallbackPath",
-                          e.target.value,
+                          e.target.value
                         )
                       }
                     />
@@ -277,7 +270,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                       onChange={(e) =>
                         handleAuthFieldChange(
                           "oauthClientSecret",
-                          e.target.value,
+                          e.target.value
                         )
                       }
                     />
@@ -348,7 +341,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
                       onChange={(e) =>
                         handleAuthFieldChange(
                           "oauthProviderScope",
-                          e.target.value,
+                          e.target.value
                         )
                       }
                     />
