@@ -37,6 +37,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
+from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, session_scope
 
@@ -119,12 +120,14 @@ async def list_project_tools(
                     logger.warning(msg)
                     continue
 
-            # Get project-level auth settings
+            # Get project-level auth settings and decrypt sensitive fields
             auth_settings = None
             if project.auth_settings:
                 from langflow.api.v1.schemas import AuthSettings
 
-                auth_settings = AuthSettings(**project.auth_settings)
+                # Decrypt sensitive fields before returning
+                decrypted_settings = decrypt_auth_settings(project.auth_settings)
+                auth_settings = AuthSettings(**decrypted_settings)
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
@@ -248,9 +251,12 @@ async def update_project_mcp_settings(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-            # Update project-level auth settings
+            # Update project-level auth settings with encryption
             if request.auth_settings:
-                project.auth_settings = request.auth_settings.model_dump(mode="json")
+                # Encrypt sensitive fields before storing
+                auth_dict = request.auth_settings.model_dump(mode="json")
+                encrypted_settings = encrypt_auth_settings(auth_dict)
+                project.auth_settings = encrypted_settings
             else:
                 project.auth_settings = None
             session.add(project)
@@ -396,8 +402,31 @@ async def install_mcp_config(
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
                 except OSError as e:
                     logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
-        else:
-            args = ["mcp-proxy", sse_url]
+
+        args = ["mcp-proxy", "--sse-url", sse_url]
+
+        oauth_env = None
+
+        if project.auth_settings:
+            from langflow.api.v1.schemas import AuthSettings
+
+            # Decrypt sensitive fields before using them
+            decrypted_settings = decrypt_auth_settings(project.auth_settings)
+            auth_settings = AuthSettings(**decrypted_settings)
+            args.extend(["--auth_type", auth_settings.auth_type])
+
+            oauth_env = {
+                "OAUTH_HOST": auth_settings.oauth_host,
+                "OAUTH_PORT": auth_settings.oauth_port,
+                "OAUTH_SERVER_URL": auth_settings.oauth_server_url,
+                "OAUTH_CALLBACK_PATH": auth_settings.oauth_callback_path,
+                "OAUTH_CLIENT_ID": auth_settings.oauth_client_id,
+                "OAUTH_CLIENT_SECRET": auth_settings.oauth_client_secret,
+                "OAUTH_AUTH_URL": auth_settings.oauth_auth_url,
+                "OAUTH_TOKEN_URL": auth_settings.oauth_token_url,
+                "OAUTH_MCP_SCOPE": auth_settings.oauth_mcp_scope,
+                "OAUTH_PROVIDER_SCOPE": auth_settings.oauth_provider_scope,
+            }
 
         if os_type == "Windows":
             command = "cmd"
