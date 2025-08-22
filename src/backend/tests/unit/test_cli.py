@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 import typer
-
 from langflow.__main__ import _create_superuser, app
 from langflow.services import deps
 

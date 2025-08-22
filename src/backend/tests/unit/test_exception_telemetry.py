@@ -5,7 +5,6 @@ import traceback
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from langflow.services.telemetry.schema import ExceptionPayload
 from langflow.services.telemetry.service import TelemetryService
 

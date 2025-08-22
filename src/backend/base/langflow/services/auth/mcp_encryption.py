@@ -21,10 +21,10 @@ SENSITIVE_FIELDS = [
 
 def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any] | None:
     """Encrypt sensitive fields in auth_settings dictionary.
-    
+
     Args:
         auth_settings: Dictionary containing authentication settings
-        
+
     Returns:
         Dictionary with sensitive fields encrypted, or None if input is None
     """
@@ -45,10 +45,7 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
                     logger.debug(f"Field {field} is already encrypted")
                 except Exception:
                     # If decrypt fails, the value is plaintext and needs encryption
-                    encrypted_value = auth_utils.encrypt_api_key(
-                        encrypted_settings[field],
-                        settings_service
-                    )
+                    encrypted_value = auth_utils.encrypt_api_key(encrypted_settings[field], settings_service)
                     encrypted_settings[field] = encrypted_value
                     logger.debug(f"Encrypted field {field}")
             except Exception as e:
@@ -60,10 +57,10 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
 
 def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any] | None:
     """Decrypt sensitive fields in auth_settings dictionary.
-    
+
     Args:
         auth_settings: Dictionary containing encrypted authentication settings
-        
+
     Returns:
         Dictionary with sensitive fields decrypted, or None if input is None
     """
@@ -76,10 +73,7 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     for field in SENSITIVE_FIELDS:
         if decrypted_settings.get(field):
             try:
-                decrypted_value = auth_utils.decrypt_api_key(
-                    decrypted_settings[field],
-                    settings_service
-                )
+                decrypted_value = auth_utils.decrypt_api_key(decrypted_settings[field], settings_service)
                 decrypted_settings[field] = decrypted_value
                 logger.debug(f"Decrypted field {field}")
             except Exception as e:
@@ -93,10 +87,10 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
 
 def is_encrypted(value: str) -> bool:
     """Check if a value appears to be encrypted.
-    
+
     Args:
         value: String value to check
-        
+
     Returns:
         True if the value appears to be encrypted (base64 Fernet token)
     """

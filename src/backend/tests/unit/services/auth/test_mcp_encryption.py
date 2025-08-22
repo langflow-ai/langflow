@@ -3,13 +3,12 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from pydantic import SecretStr
-
 from langflow.services.auth.mcp_encryption import (
     decrypt_auth_settings,
     encrypt_auth_settings,
     is_encrypted,
 )
+from pydantic import SecretStr
 
 
 @pytest.fixture
@@ -162,5 +161,6 @@ class TestMCPEncryption:
 
         # Test with encrypted value
         from langflow.services.auth import utils as auth_utils
+
         encrypted_value = auth_utils.encrypt_api_key("secret-value", mock_settings_service)
         assert is_encrypted(encrypted_value)

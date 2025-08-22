@@ -4,8 +4,6 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from mcp.server.sse import SseServerTransport
-
 from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
     get_project_sse,
@@ -18,6 +16,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user import User
 from langflow.services.deps import session_scope
+from mcp.server.sse import SseServerTransport
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -473,7 +472,7 @@ async def test_update_project_auth_settings_encryption(
             "oauth_token_url": "https://oauth.example.com/token",
             "oauth_mcp_scope": "read write",
             "oauth_provider_scope": "user:email",
-        }
+        },
     }
 
     # Send the update request
@@ -489,15 +488,15 @@ async def test_update_project_auth_settings_encryption(
         updated_project = await session.get(Folder, user_test_project.id)
         assert updated_project is not None
         assert updated_project.auth_settings is not None
-        
+
         # Check that sensitive field is encrypted (not plaintext)
         stored_secret = updated_project.auth_settings.get("oauth_client_secret")
         assert stored_secret is not None
         assert stored_secret != "super-secret-password-123"  # Should be encrypted
-        
+
         # The encrypted value should be a base64-like string (Fernet token)
         assert len(stored_secret) > 50  # Encrypted values are longer
-        
+
     # Now test that the GET endpoint decrypts the data correctly
     response = await client.get(
         f"/api/v1/mcp/project/{user_test_project.id}",
@@ -505,7 +504,7 @@ async def test_update_project_auth_settings_encryption(
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     # The decrypted value should match the original
     assert data["auth_settings"]["oauth_client_secret"] == "super-secret-password-123"
     assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
