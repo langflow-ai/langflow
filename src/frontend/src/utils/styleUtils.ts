@@ -299,6 +299,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
+  { display_name: "VLM Run", name: "vlmrun", icon: "VLMRun" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },

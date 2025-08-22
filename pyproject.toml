@@ -129,6 +129,7 @@ dependencies = [
     "jigsawstack==0.2.7",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
+    "vlmrun[all]>=0.2.0",
 ]
 
 [dependency-groups]
@@ -201,6 +202,7 @@ Documentation = "https://docs.langflow.org"
 audio = [
     "webrtcvad>=2.0.10",
 ]
+
 
 couchbase = [
     "couchbase>=4.2.1"
