@@ -71,7 +71,7 @@ test(
     const elementTestIds = [
       "input_outputChat Output",
       "dataAPI Request",
-      "vectorstoresAstra DB",
+      "vectorstoresAstra DB Graph",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "mem0Mem0 Chat Memory",
@@ -90,10 +90,11 @@ test(
     );
 
     await Promise.all(
-      elementTestIds.map((id) => {
+      elementTestIds.map(async (id) => {
         if (!expect(page.getByTestId(id).first()).toBeVisible()) {
           console.error(`${id} is not visible`);
         }
+        return expect(page.getByTestId(id).first()).toBeVisible();
       }),
     );
 
