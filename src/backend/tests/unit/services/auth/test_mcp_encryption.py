@@ -3,26 +3,25 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from cryptography.fernet import Fernet
+from pydantic import SecretStr
+
 from langflow.services.auth.mcp_encryption import (
     decrypt_auth_settings,
     encrypt_auth_settings,
     is_encrypted,
 )
-from pydantic import SecretStr
 
 
 @pytest.fixture
 def mock_settings_service():
     """Mock settings service for testing."""
-    from cryptography.fernet import Fernet
-    import base64
-
     mock_service = Mock()
     # Generate a valid Fernet key that's already properly formatted
     # Fernet.generate_key() returns a URL-safe base64-encoded 32-byte key
     valid_key = Fernet.generate_key()
     # Decode it to string for storage
-    valid_key_str = valid_key.decode('utf-8')
+    valid_key_str = valid_key.decode("utf-8")
 
     # Create a proper SecretStr object
     secret_key_obj = SecretStr(valid_key_str)
