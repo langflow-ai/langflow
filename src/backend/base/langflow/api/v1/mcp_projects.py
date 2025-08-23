@@ -307,11 +307,14 @@ async def update_project_mcp_settings(
 
             await session.commit()
             
-            # Re-register project with MCP Composer after auth settings update
-            try:
-                await register_project_with_composer(project)
-            except Exception as e:  # noqa: BLE001
-                await logger.awarning(f"Failed to re-register project {project_id} with MCP Composer after update: {e}")
+            # Re-register project with MCP Composer after auth settings update in the background
+            async def _register_with_logging():
+                try:
+                    await register_project_with_composer(project)
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to re-register project {project_id} with MCP Composer after update: {e}")
+            
+            asyncio.create_task(_register_with_logging())
 
             return {"message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"}
 

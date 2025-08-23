@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import zipfile
@@ -90,8 +91,9 @@ async def create_project(
             await session.exec(update_statement_flows)
             await session.commit()
 
-        # Register the new project with MCP Composer
-        await register_project_with_composer(new_project)
+        # Register the new project with MCP Composer in the background
+        # This avoids blocking the response while the composer starts up
+        asyncio.create_task(register_project_with_composer(new_project))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -347,8 +349,9 @@ async def upload_file(
     await session.commit()
     await session.refresh(new_project)
 
-    # Register the new project with MCP Composer
-    await register_project_with_composer(new_project)
+    # Register the new project with MCP Composer in the background
+    # This avoids blocking the response while the composer starts up
+    asyncio.create_task(register_project_with_composer(new_project))
 
     del data["folder_name"]
     del data["folder_description"]
