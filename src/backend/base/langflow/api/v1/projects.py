@@ -22,6 +22,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.logging import logger
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -32,6 +33,7 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.api.v1.mcp_projects import register_project_with_composer
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -87,6 +89,9 @@ async def create_project(
             )
             await session.exec(update_statement_flows)
             await session.commit()
+
+        # Register the new project with MCP Composer
+        await register_project_with_composer(new_project)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -341,6 +346,9 @@ async def upload_file(
     session.add(new_project)
     await session.commit()
     await session.refresh(new_project)
+
+    # Register the new project with MCP Composer
+    await register_project_with_composer(new_project)
 
     del data["folder_name"]
     del data["folder_description"]

@@ -21,6 +21,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveMCPUser
+from langflow.services.auth.utils import get_current_user_mcp
 from langflow.api.v1.mcp_utils import (
     current_user_ctx,
     handle_call_tool,
@@ -40,6 +41,7 @@ from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, session_scope
 from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.schema import ServiceType
@@ -144,6 +146,7 @@ async def list_project_tools(
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
+
 
 
 @router.get("/{project_id}/sse", response_class=HTMLResponse)
@@ -306,7 +309,7 @@ async def update_project_mcp_settings(
             
             # Re-register project with MCP Composer after auth settings update
             try:
-                await _register_project_with_composer(project)
+                await register_project_with_composer(project)
             except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"Failed to re-register project {project_id} with MCP Composer after update: {e}")
 
@@ -812,7 +815,7 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
     return project_mcp_servers[project_id_str]
 
-async def _register_project_with_composer(project: Folder):
+async def register_project_with_composer(project: Folder):
     """Register a project with MCP Composer by starting a dedicated composer instance."""
     try:
         # Get MCP Composer service
@@ -858,7 +861,7 @@ async def init_mcp_servers():
                     get_project_mcp_server(project.id)
                     
                     # Register project with MCP Composer if it's running
-                    await _register_project_with_composer(project)
+                    await register_project_with_composer(project)
                     
                 except Exception as e:  # noqa: BLE001
                     msg = f"Failed to initialize MCP server for project {project.id}: {e}"

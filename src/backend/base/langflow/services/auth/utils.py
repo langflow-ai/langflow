@@ -510,6 +510,22 @@ async def get_current_user_mcp(
     # MCP-specific authentication logic - always behaves as if skip_auth_auto_login is True
     settings_service = get_settings_service()
     result: ApiKey | User | None
+    
+    # For internal MCP Composer connections, allow fallback to superuser if no auth provided
+    if not query_param and not header_param and settings_service.auth_settings.AUTO_LOGIN:
+        if not settings_service.auth_settings.SUPERUSER:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing first superuser credentials",
+            )
+        result: User | None = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing first superuser credentials",
+            )
+        logger.debug("MCP internal connection using superuser fallback")
+        return result
 
     if settings_service.auth_settings.AUTO_LOGIN:
         # Get the first user

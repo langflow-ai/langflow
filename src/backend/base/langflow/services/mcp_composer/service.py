@@ -127,14 +127,15 @@ class MCPComposerService(Service):
         # Build the command to start mcp-composer for this project
         cmd = [
             "uvx", "mcp-composer",
-            "--mode", "sse",
+            "--mode", "sse", 
             "--host", self.composer_host,
             "--port", str(port),
             "--sse-url", sse_url,
         ]
         
-        # Add auth configuration if provided
-        if auth_config:
+        # Skip auth configuration - let MCP Composer connect without authentication
+        # The SSE endpoint will be modified to allow internal connections
+        if False and auth_config:  # Disabled auth config
             auth_type = auth_config.get("auth_type")
             if auth_type == "oauth":
                 cmd.extend(["--auth_type", "oauth"])
@@ -168,8 +169,6 @@ class MCPComposerService(Service):
                 if "api_key" in auth_config:
                     # Configure for token-based authentication
                     cmd.extend(["--env", "API_KEY", str(auth_config["api_key"])])
-                    # Add token endpoint URL (we'll need to create this endpoint)
-                    cmd.extend(["--env", "TOKEN_URL", f"http://localhost:7860/api/v1/mcp/project/{project_id}/token"])
                     cmd.extend(["--env", "MEDIA_TYPE", "application/json"])
 
         # Set environment variables
@@ -211,8 +210,8 @@ class MCPComposerService(Service):
                 "--sse-url", sse_url,
             ]
             
-            # Add auth configuration if provided  
-            if auth_config:
+            # Skip auth configuration - disabled for internal connections
+            if False and auth_config:  # Disabled auth config
                 auth_type = auth_config.get("auth_type")
                 if auth_type == "oauth":
                     cmd.extend(["--auth_type", "oauth"])
@@ -292,4 +291,5 @@ class MCPComposerService(Service):
 
     def teardown(self):
         """Clean up resources when the service is torn down."""
+        # TODO: FRAZ - never awaited
         asyncio.run(self.stop())
