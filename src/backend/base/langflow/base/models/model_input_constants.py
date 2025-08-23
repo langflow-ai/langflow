@@ -106,9 +106,16 @@ def _get_openai_inputs_and_fields():
         from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
+
+        for input_ in openai_inputs:
+            if input_.name == "model":
+                input_.options.append("o3-mini")
+                input_.value = "gpt-4-turbo"
+
     except ImportError as e:
         msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
         raise ImportError(msg) from e
+
     return openai_inputs, create_input_fields_dict(openai_inputs, "")
 
 
