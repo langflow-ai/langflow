@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
@@ -7,7 +8,15 @@ from typing_extensions import override
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FloatInput,
+    HandleInput,
+    IntInput,
+    NestedDictInput,
+    StrInput,
+)
 from langflow.schema.data import Data
 
 if TYPE_CHECKING:
@@ -15,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
-    """Chroma Vector Store with search capabilities."""
+    """Chroma Vector Store with search capabilities, including similarity+score and metadata filtering."""
 
     display_name: str = "Chroma DB"
     description: str = "Chroma Vector Store with search capabilities"
@@ -68,7 +77,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="search_type",
             display_name="Search Type",
-            options=["Similarity", "MMR"],
+            options=["Similarity", "Similarity with Score", "MMR"],
             value="Similarity",
             advanced=True,
         ),
@@ -85,7 +94,38 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             info="Limit the number of records to compare when Allow Duplicates is False.",
         ),
+        FloatInput(
+            name="sim_threshold",
+            display_name="Similarity Threshold",
+            info=(
+                "Minimum similarity score (0 to 1) to include a document. Only applies to "
+                "'Similarity with Score' search."
+            ),
+            value=0.0,
+            range_spec={"min": 0.0, "max": 1.0},
+            advanced=True,
+        ),
+        NestedDictInput(
+            name="search_filter",
+            display_name="Metadata Filter",
+            input_types=["Data"],
+            info="Dictionary of metadata filter to refine search results.",
+            tool_mode=True,
+        ),
     ]
+
+    @override
+    def set_attributes(self, params: dict):
+        super().set_attributes(params)
+        raw_filter = params.get("search_filter", "")
+        if raw_filter:
+            try:
+                self.advance_search_filter = raw_filter
+            except json.JSONDecodeError as err:
+                msg = "The metadata filter must be a valid JSON dictionary."
+                raise ValueError(msg) from err
+        else:
+            self.advance_search_filter = None
 
     @override
     @check_cached_vector_store
@@ -97,7 +137,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         except ImportError as e:
             msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
             raise ImportError(msg) from e
-        # Chroma settings
+
         chroma_settings = None
         client = None
         if self.chroma_server_host:
@@ -110,7 +150,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             )
             client = Client(settings=chroma_settings)
 
-        # Check persist_directory and expand it if it is a relative path
         persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None
 
         chroma = Chroma(
@@ -131,7 +170,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             self.status = ""
             return
 
-        # Convert DataFrame to Data if needed using parent's method
         ingest_data = self._prepare_ingest_data()
 
         stored_documents_without_id = []
@@ -165,3 +203,68 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 vector_store.add_documents(documents)
         else:
             self.log("No documents to add to the Vector Store.")
+
+    def search_documents(self) -> list[Data]:
+        """Search for documents in the vector store, with optional score and metadata filter."""
+        vs = self._get_or_build_vector_store()
+        query = self.search_query
+
+        if not query:
+            self.status = ""
+            return []
+
+        mode = self.search_type
+        k = self.number_of_results
+        filt = self.advance_search_filter
+        threshold = float(self.sim_threshold or 0.0)
+
+        if self._use_similarity_with_score(mode, vs):
+            return self._search_with_score(vs, query, k, filt, threshold)
+
+        self._log_search_params(query, mode, k, threshold, filt)
+
+        if self._use_standard_search(mode, vs):
+            return self._search_standard(vs, query, mode, k, filt)
+
+        return []
+
+    # --- Helper methods below ---
+
+    def _get_or_build_vector_store(self):
+        if self._cached_vector_store is not None:
+            return self._cached_vector_store
+        self._cached_vector_store = self.build_vector_store()
+        return self._cached_vector_store
+
+    def _use_similarity_with_score(self, mode: str, vs) -> bool:
+        return mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_relevance_scores")
+
+    def _search_with_score(self, vs, query, k, filt, threshold) -> list[Data]:
+        docs_and_scores = vs.similarity_search_with_relevance_scores(query, k=k, filter=filt or None)
+        results: list[Data] = [
+            Data(metadata={**getattr(doc, "metadata", {})}, score={"score": score}, text=doc.page_content)
+            for doc, score in docs_and_scores
+            if score >= threshold
+        ]
+        self.status = results
+        return results
+
+    def _log_search_params(self, query, mode, k, threshold, filt):
+        if filt:
+            self.log(f"Filter: {filt}")
+        self.log(f"Search input: {query}")
+        self.log(f"Search type: {mode}")
+        self.log(f"Number of results: {k}")
+        self.log(f"Similarity threshold: {threshold}")
+
+    def _use_standard_search(self, mode: str, vs) -> bool:
+        return mode.lower() in ["similarity", "mmr"] and hasattr(vs, "search")
+
+    def _search_standard(self, vs, query, mode, k, filt) -> list[Data]:
+        search_args = {"query": query, "search_type": mode.lower(), "k": k}
+        if filt:
+            search_args["filter"] = filt
+        docs = vs.search(**search_args)
+        data_list = [Data(metadata={**getattr(d, "metadata", {})}, text=d.page_content) for d in docs]
+        self.status = data_list
+        return data_list
