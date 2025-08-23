@@ -91,10 +91,6 @@ class MCPComposerService(Service):
         Returns:
             int: The port number assigned to this project's composer
         """
-        # Validate that we have an SSE URL to connect to Langflow
-        if not sse_url or not sse_url.strip():
-            raise ValueError(f"SSE URL is required to start MCP Composer for project {project_id}")
-        
         # Check if already running
         if project_id in self.project_composers:
             logger.debug(f"MCP Composer already running for project {project_id}")
@@ -142,6 +138,7 @@ class MCPComposerService(Service):
             auth_type = auth_config.get("auth_type")
             if auth_type == "oauth":
                 cmd.extend(["--auth_type", "oauth"])
+                cmd.extend(["--env", "ENABLE_OAUTH", "True"])
                 
                 # Map auth config to environment variables for OAuth
                 oauth_env_mapping = {
@@ -161,11 +158,19 @@ class MCPComposerService(Service):
                 for config_key, env_key in oauth_env_mapping.items():
                     if config_key in auth_config:
                         cmd.extend(["--env", env_key, str(auth_config[config_key])])
+                
+                # Add server_url as workaround for MCP Composer internal ServerSettings bug
+                if "oauth_server_url" in auth_config:
+                    cmd.extend(["--env", "server_url", str(auth_config["oauth_server_url"])])
                         
             elif auth_type == "apikey":
                 cmd.extend(["--auth_type", "apikey"])
                 if "api_key" in auth_config:
+                    # Configure for token-based authentication
                     cmd.extend(["--env", "API_KEY", str(auth_config["api_key"])])
+                    # Add token endpoint URL (we'll need to create this endpoint)
+                    cmd.extend(["--env", "TOKEN_URL", f"http://localhost:7860/api/v1/mcp/project/{project_id}/token"])
+                    cmd.extend(["--env", "MEDIA_TYPE", "application/json"])
 
         # Set environment variables
         env = os.environ.copy()
@@ -211,6 +216,7 @@ class MCPComposerService(Service):
                 auth_type = auth_config.get("auth_type")
                 if auth_type == "oauth":
                     cmd.extend(["--auth_type", "oauth"])
+                    cmd.extend(["--env", "ENABLE_OAUTH", "True"])
                     
                     # Map auth config to environment variables for OAuth
                     oauth_env_mapping = {
@@ -230,11 +236,17 @@ class MCPComposerService(Service):
                     for config_key, env_key in oauth_env_mapping.items():
                         if config_key in auth_config:
                             cmd.extend(["--env", env_key, str(auth_config[config_key])])
+                    
+                    # Add server_url as workaround for MCP Composer internal ServerSettings bug
+                    if "oauth_server_url" in auth_config:
+                        cmd.extend(["--env", "server_url", str(auth_config["oauth_server_url"])])
                             
                 elif auth_type == "apikey":
                     cmd.extend(["--auth_type", "apikey"])
                     if "api_key" in auth_config:
+                        # Configure for token-based authentication
                         cmd.extend(["--env", "API_KEY", str(auth_config["api_key"])])
+                        cmd.extend(["--env", "MEDIA_TYPE", "application/json"])
 
             process = subprocess.Popen(
                 cmd,
