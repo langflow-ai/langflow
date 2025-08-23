@@ -38,7 +38,7 @@ on:
         type: string
         default: "['3.10']"
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, labeled]
   merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
