@@ -142,7 +142,7 @@ const CanvasControls = ({ children }) => {
       {/* Zoom To Fit */}
       <CustomControlButton
         iconName="maximize"
-        tooltipText="Fit To Zoom"
+        tooltipText="Zoom To Fit"
         onClick={fitView}
         testId="fit_view"
       />
