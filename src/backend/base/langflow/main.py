@@ -193,7 +193,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Starting MCP Composer service")
             mcp_composer_service = get_service(ServiceType.MCP_COMPOSER_SERVICE)
             await mcp_composer_service.start()
-            await logger.adebug(f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(
+                f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")

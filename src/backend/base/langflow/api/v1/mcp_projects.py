@@ -146,7 +146,6 @@ async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
 
 
-
 @router.get("/{project_id}/sse", response_class=HTMLResponse)
 async def handle_project_sse(
     project_id: UUID,
@@ -308,7 +307,9 @@ async def update_project_mcp_settings(
                 try:
                     await register_project_with_composer(project)
                 except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to re-register project {project_id} with MCP Composer after update: {e}")
+                    await logger.awarning(
+                        f"Failed to re-register project {project_id} with MCP Composer after update: {e}"
+                    )
 
             asyncio.create_task(_register_with_logging())
 
@@ -439,7 +440,9 @@ async def install_mcp_config(
 
         # Initialize args list - use mcp-proxy to connect to project-specific MCP Composer's SSE endpoint
         # Each project has its own MCP Composer instance on a unique port
-        mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
         composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
 
         if not composer_port:
@@ -582,7 +585,6 @@ async def install_mcp_config(
         return {"message": message}
 
 
-
 @router.get("/{project_id}/composer-url")
 async def get_project_composer_url(
     project_id: UUID,
@@ -601,7 +603,9 @@ async def get_project_composer_url(
                 raise HTTPException(status_code=404, detail="Project not found")
 
         # Get MCP Composer service
-        mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
         composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
         if not composer_port:
             error = f"Project {project_id} MCP Composer not running"
@@ -828,10 +832,13 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
     return project_mcp_servers[project_id_str]
 
+
 async def register_project_with_composer(project: Folder):
     """Register a project with MCP Composer by starting a dedicated composer instance."""
     try:
-        mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
 
         settings = get_settings_service().settings
         if not settings.host or not settings.port:
@@ -848,12 +855,12 @@ async def register_project_with_composer(project: Folder):
 
         # Register with MCP Composer (starts a dedicated composer for this project)
         composer_port = await mcp_composer_service.start_project_composer(
-            project_id=str(project.id),
-            sse_url=sse_url,
-            auth_config=auth_config
+            project_id=str(project.id), sse_url=sse_url, auth_config=auth_config
         )
 
-        await logger.adebug(f"Registered project {project.name} ({project.id}) with MCP Composer on port {composer_port}")
+        await logger.adebug(
+            f"Registered project {project.name} ({project.id}) with MCP Composer on port {composer_port}"
+        )
 
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"Failed to register project {project.id} with MCP Composer: {e}")

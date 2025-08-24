@@ -509,10 +509,10 @@ async def test_update_project_auth_settings_encryption(
     assert data["auth_settings"]["oauth_client_secret"] == "**********"  # noqa: S105
     assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
     assert data["auth_settings"]["auth_type"] == "oauth"
-    
+
     # Verify that decryption is working by checking the actual decrypted value in the backend
     from langflow.services.auth.mcp_encryption import decrypt_auth_settings
-    
+
     async with session_scope() as session:
         project = await session.get(Folder, user_test_project.id)
         decrypted_settings = decrypt_auth_settings(project.auth_settings)

@@ -70,7 +70,9 @@ class MCPComposerService(Service):
                     await asyncio.sleep(1)  # Give it time to shut down gracefully
 
                     if process.poll() is None:
-                        logger.warning(f"MCP Composer for project {project_id} did not terminate gracefully, force killing")
+                        logger.warning(
+                            f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
+                        )
                         process.kill()
                         await asyncio.sleep(0.5)  # Brief pause after force kill
 
@@ -85,9 +87,11 @@ class MCPComposerService(Service):
         # Remove from tracking
         del self.project_composers[project_id]
 
-    async def start_project_composer(self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None) -> int:
+    async def start_project_composer(
+        self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None
+    ) -> int:
         """Start an MCP Composer instance for a specific project.
-        
+
         Returns:
             int: The port number assigned to this project's composer
         """
@@ -109,7 +113,7 @@ class MCPComposerService(Service):
                 "process": process,
                 "port": project_port,
                 "sse_url": sse_url,
-                "auth_config": auth_config
+                "auth_config": auth_config,
             }
 
             logger.info(f"MCP Composer started for project {project_id} on port {project_port}")
@@ -120,16 +124,22 @@ class MCPComposerService(Service):
             logger.error(error)
             raise
 
-
-    async def _start_project_composer_process(self, project_id: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None) -> subprocess.Popen:
+    async def _start_project_composer_process(
+        self, project_id: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None
+    ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
         # Build the command to start mcp-composer for this project
         cmd = [
-            "uvx", "mcp-composer",
-            "--mode", "sse",
-            "--endpoint", sse_url,
-            "--host", self.composer_host,
-            "--port", str(port),
+            "uvx",
+            "mcp-composer",
+            "--mode",
+            "sse",
+            "--endpoint",
+            sse_url,
+            "--host",
+            self.composer_host,
+            "--port",
+            str(port),
             "--disable-composer-tools",
         ]
         print(f"FRAZIER: MCP COMPOSER CMD: {cmd}")
@@ -153,7 +163,7 @@ class MCPComposerService(Service):
                     "oauth_auth_url": "OAUTH_AUTH_URL",
                     "oauth_token_url": "OAUTH_TOKEN_URL",
                     "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
-                    "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE"
+                    "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
                 }
 
                 # Add environment variables to the command
@@ -177,13 +187,7 @@ class MCPComposerService(Service):
 
         try:
             # Start the subprocess
-            process = subprocess.Popen(
-                cmd,
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             # Give it a moment to start
             await asyncio.sleep(2)
@@ -196,7 +200,9 @@ class MCPComposerService(Service):
                     error_msg = stderr.strip() if stderr else stdout.strip() if stdout else "Unknown error"
                     raise RuntimeError(f"MCP Composer failed to start for project {project_id}: {error_msg}")
                 except subprocess.TimeoutExpired:
-                    raise RuntimeError(f"MCP Composer for project {project_id} terminated but couldn't read error output")
+                    raise RuntimeError(
+                        f"MCP Composer for project {project_id} terminated but couldn't read error output"
+                    )
 
             return process
 
@@ -204,11 +210,17 @@ class MCPComposerService(Service):
             logger.warning("uvx not found. Trying to run mcp-composer directly with Python...")
             # Try running as a Python module if uvx is not available
             cmd = [
-                "python", "-m", "mcp_composer",
-                "--mode", "sse",
-                "--host", self.composer_host,
-                "--port", str(port),
-                "--sse-url", sse_url,
+                "python",
+                "-m",
+                "mcp_composer",
+                "--mode",
+                "sse",
+                "--host",
+                self.composer_host,
+                "--port",
+                str(port),
+                "--sse-url",
+                sse_url,
             ]
 
             # Skip auth configuration - disabled for internal connections
@@ -229,7 +241,7 @@ class MCPComposerService(Service):
                         "oauth_auth_url": "OAUTH_AUTH_URL",
                         "oauth_token_url": "OAUTH_TOKEN_URL",
                         "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
-                        "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE"
+                        "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
                     }
 
                     # Add environment variables to the command
@@ -248,17 +260,11 @@ class MCPComposerService(Service):
                         cmd.extend(["--env", "API_KEY", str(auth_config["api_key"])])
                         cmd.extend(["--env", "MEDIA_TYPE", "application/json"])
 
-            process = subprocess.Popen(
-                cmd,
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             return process
 
     def teardown(self):
         """Clean up resources when the service is torn down."""
-        # TODO: FRAZ - never awaited ? 
+        # TODO: FRAZ - never awaited ?
         asyncio.run(self.stop())
