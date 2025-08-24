@@ -510,7 +510,7 @@ async def get_current_user_mcp(
     # MCP-specific authentication logic
     settings_service = get_settings_service()
     result: ApiKey | User | None
-    
+
     # For internal MCP Composer connections, always allow fallback to superuser if no auth provided
     # This is needed because MCP Composer runs as a separate process and connects via HTTP
     # TODO: FRAZ - This is obviously a security risk. We need to find a better way to handle this.
@@ -535,12 +535,11 @@ async def get_current_user_mcp(
     # Check API keys
     if settings_service.auth_settings.AUTO_LOGIN:
         result = await check_key(db, query_param or header_param)
+    # Check the provided API key
+    elif query_param:
+        result = await check_key(db, query_param)
     else:
-        # Check the provided API key
-        if query_param:
-            result = await check_key(db, query_param)
-        else:
-            result = await check_key(db, header_param)
+        result = await check_key(db, header_param)
 
     if not result:
         raise HTTPException(

@@ -17,11 +17,11 @@ from fastapi.responses import HTMLResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
+from pydantic import SecretStr
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveMCPUser
-from langflow.services.auth.utils import get_current_user_mcp
 from langflow.api.v1.mcp_utils import (
     current_user_ctx,
     handle_call_tool,
@@ -31,17 +31,17 @@ from langflow.api.v1.mcp_utils import (
     handle_read_resource,
 )
 from langflow.api.v1.schemas import (
+    AuthSettings,
     MCPInstallRequest,
-    MCPProjectResponse, 
+    MCPProjectResponse,
     MCPProjectUpdateRequest,
-    MCPSettings
+    MCPSettings,
 )
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, session_scope
 from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.schema import ServiceType
@@ -59,7 +59,7 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     """Get or create an SSE transport for a specific project."""
     if not project_id:
         raise HTTPException(status_code=400, detail="Project ID is required to start MCP server")
-    
+
     project_id_str = str(project_id)
     if project_id_str not in project_sse_transports:
         project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
@@ -129,8 +129,6 @@ async def list_project_tools(
             # Get project-level auth settings and decrypt sensitive fields
             auth_settings = None
             if project.auth_settings:
-                from langflow.api.v1.schemas import AuthSettings
-
                 # Decrypt sensitive fields before returning
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
                 auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else None
@@ -269,8 +267,6 @@ async def update_project_mcp_settings(
                     auth_dict = auth_model.model_dump(mode="python", exclude_none=True)
 
                     # Extract actual secret values before encryption
-                    from pydantic import SecretStr
-
                     # Handle api_key if it's a SecretStr
                     api_key_val = getattr(auth_model, "api_key", None)
                     if isinstance(api_key_val, SecretStr):
@@ -306,14 +302,14 @@ async def update_project_mcp_settings(
                     updated_flows.append(flow)
 
             await session.commit()
-            
+
             # Re-register project with MCP Composer after auth settings update in the background
             async def _register_with_logging():
                 try:
                     await register_project_with_composer(project)
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"Failed to re-register project {project_id} with MCP Composer after update: {e}")
-            
+
             asyncio.create_task(_register_with_logging())
 
             return {"message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"}
@@ -400,10 +396,13 @@ async def install_mcp_config(
 
         # Get settings service to build the SSE URL
         settings_service = get_settings_service()
-        host = getattr(settings_service.settings, "host", "localhost")
-        port = getattr(settings_service.settings, "port", 3000)
-        base_url = f"http://{host}:{port}".rstrip("/")
-        sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
+        settings = settings_service.settings
+        host = settings.host or None
+        port = settings.port or None
+        if not host or not port:
+            raise HTTPException(status_code=500, detail="Host and port are not set in settings")
+
+        sse_url = f"http://{host}:{port}/api/v1/mcp/project/{project_id}/sse"
 
         # Determine command and args based on operating system
         os_type = platform.system()
@@ -438,22 +437,33 @@ async def install_mcp_config(
                 except OSError as e:
                     await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
-        # Initialize args list - use mcp-proxy to connect to project-specific MCP Composer's passthrough endpoint
+        # Initialize args list - use mcp-proxy to connect to project-specific MCP Composer's SSE endpoint
         # Each project has its own MCP Composer instance on a unique port
-        from langflow.services.deps import get_service
-        from langflow.services.schema import ServiceType
-        
-        mcp_composer_service = get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
         composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-        
-        if not composer_port:
-            raise HTTPException(status_code=500, detail="Project MCP Composer not running")
-            
-        composer_host = getattr(settings_service.settings, "mcp_composer_host", "localhost")
-        passthrough_url = f"http://{composer_host}:{composer_port}/mcp/project/{project_id}/passthrough"
-        args = ["mcp-proxy", passthrough_url]
 
-        # For mcp-proxy, authentication is handled by the passthrough endpoint
+        if not composer_port:
+            error = f"Project {project_id} MCP Composer not running"
+            raise HTTPException(status_code=500, detail=error)
+
+        composer_host = getattr(settings_service.settings, "mcp_composer_host", "localhost")
+        sse_url = f"http://{composer_host}:{composer_port}/sse"
+
+        # Get auth settings for the project
+        auth_settings = {}
+        if project.auth_settings:
+            auth_settings = decrypt_auth_settings(project.auth_settings) or {}
+
+        # Build args based on auth type
+        args = ["mcp-proxy"]
+
+        # Add headers for API key authentication
+        if auth_settings.get("auth_type") == "apikey" and auth_settings.get("api_key"):
+            args.extend(["--headers", "x-api-key", auth_settings["api_key"]])
+
+        args.append(sse_url)
+
+        # No environment variables needed with direct SSE connection
         oauth_env = None
 
         if os_type == "Windows":
@@ -579,6 +589,7 @@ async def get_project_composer_url(
     current_user: CurrentActiveMCPUser,
 ):
     """Get the MCP Composer URL for a specific project."""
+    print("FRAZIER: get_project_composer_url")
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
@@ -590,26 +601,25 @@ async def get_project_composer_url(
                 raise HTTPException(status_code=404, detail="Project not found")
 
         # Get MCP Composer service
-        mcp_composer_service = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
+        mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
         composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-        
         if not composer_port:
-            raise HTTPException(status_code=404, detail="Project MCP Composer not running")
-            
-        # Get settings for host
+            error = f"Project {project_id} MCP Composer not running"
+            raise HTTPException(status_code=500, detail=error)
+
         settings = get_settings_service().settings
-        composer_host = getattr(settings, "mcp_composer_host", "localhost")
-        
-        # Return the passthrough URL for this project's composer
-        passthrough_url = f"http://{composer_host}:{composer_port}/mcp/project/{project_id}/passthrough"
+        composer_host = settings.mcp_composer_host or None
+        if not composer_host:
+            error = f"Composer host is not set in settings for project {project_id}"
+            raise HTTPException(status_code=500, detail=error)
+
         composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
-        
+
         return {
             "project_id": str(project_id),
             "composer_port": composer_port,
-            "passthrough_url": passthrough_url,
+            "composer_host": composer_host,
             "composer_sse_url": composer_sse_url,
-            "direct_sse_url": f"http://{composer_host}:7860/api/v1/mcp/project/{project_id}/sse"
         }
 
     except Exception as e:
@@ -812,7 +822,7 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     """Get or create an MCP server for a specific project."""
     if project_id is None:
         raise ValueError("Project ID cannot be None when getting project MCP server")
-    
+
     project_id_str = str(project_id)
     if project_id_str not in project_mcp_servers:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
@@ -821,33 +831,30 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
 async def register_project_with_composer(project: Folder):
     """Register a project with MCP Composer by starting a dedicated composer instance."""
     try:
-        # Get MCP Composer service
         mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
-        
-        # Get settings to construct the base URL
+
         settings = get_settings_service().settings
         if not settings.host or not settings.port:
-            raise ValueError("Host and port must be set in settings to register project with MCP Composer")
-        
-        base_url = f"http://{settings.host}:{settings.port}".rstrip("/")
-        sse_url = f"{base_url}/api/v1/mcp/project/{project.id}/sse"
-        
+            raise ValueError("Langflow host and port must be set in settings to register project with MCP Composer")
+
+        sse_url = f"http://{settings.host}:{settings.port}/api/v1/mcp/project/{project.id}/sse"
+
         # Prepare auth config if project has auth settings
         auth_config = None
         if project.auth_settings:
             decrypted_settings = decrypt_auth_settings(project.auth_settings)
             if decrypted_settings:
                 auth_config = decrypted_settings
-        
+
         # Register with MCP Composer (starts a dedicated composer for this project)
         composer_port = await mcp_composer_service.start_project_composer(
             project_id=str(project.id),
             sse_url=sse_url,
             auth_config=auth_config
         )
-        
+
         await logger.adebug(f"Registered project {project.name} ({project.id}) with MCP Composer on port {composer_port}")
-        
+
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"Failed to register project {project.id} with MCP Composer: {e}")
 
@@ -862,10 +869,10 @@ async def init_mcp_servers():
                 try:
                     get_project_sse(project.id)
                     get_project_mcp_server(project.id)
-                    
+
                     # Register project with MCP Composer if it's running
                     await register_project_with_composer(project)
-                    
+
                 except Exception as e:  # noqa: BLE001
                     msg = f"Failed to initialize MCP server for project {project.id}: {e}"
                     await logger.aexception(msg)

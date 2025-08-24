@@ -21,11 +21,11 @@ class MCPComposerService(Service):
         # Track multiple composer processes - one per project
         self.project_composers: dict[str, dict] = {}  # project_id -> {process, port, sse_url, auth_config}
         self.next_port: int = 8001  # Starting port for composers
-        
+
         # Get settings for host configuration
         settings = get_settings_service().settings
         self.composer_host: str = settings.mcp_composer_host or "localhost"
-        
+
         # Check for user-defined port from environment variable first
         self.initial_mcp_port: int = settings.mcp_composer_port or 8001
 
@@ -43,7 +43,7 @@ class MCPComposerService(Service):
             self.next_port = self.initial_mcp_port
             logger.info("MCP Composer service initialized (per-project composers will start on demand)")
 
-        except Exception as e:  # noqa: B904
+        except Exception as e:
             logger.error(f"Failed to start MCP Composer service: {e}")
             raise
 
@@ -51,17 +51,17 @@ class MCPComposerService(Service):
         """Stop all MCP Composer instances."""
         for project_id in list(self.project_composers.keys()):
             await self.stop_project_composer(project_id)
-        
+
         logger.info("All MCP Composer instances stopped")
 
     async def stop_project_composer(self, project_id: str):
         """Stop the MCP Composer instance for a specific project."""
         if project_id not in self.project_composers:
             return
-            
+
         composer_info = self.project_composers[project_id]
         process = composer_info.get("process")
-        
+
         if process:
             try:
                 # Check if process is still running before trying to terminate
@@ -95,15 +95,15 @@ class MCPComposerService(Service):
         if project_id in self.project_composers:
             logger.debug(f"MCP Composer already running for project {project_id}")
             return self.project_composers[project_id]["port"]
-        
+
         # Assign a port for this project
         project_port = self.next_port
         self.next_port += 1
-        
+
         try:
             # Start the composer process for this project
             process = await self._start_project_composer_process(project_id, project_port, sse_url, auth_config)
-            
+
             # Track the composer instance
             self.project_composers[project_id] = {
                 "process": process,
@@ -111,28 +111,29 @@ class MCPComposerService(Service):
                 "sse_url": sse_url,
                 "auth_config": auth_config
             }
-            
+
             logger.info(f"MCP Composer started for project {project_id} on port {project_port}")
             return project_port
-            
-        except Exception as e:  # noqa: B904
-            logger.error(f"Failed to start MCP Composer for project {project_id}: {e}")
+
+        except Exception as e:
+            error = f"Failed to start MCP Composer for project {project_id}: {e}"
+            logger.error(error)
             raise
 
 
     async def _start_project_composer_process(self, project_id: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
-        settings = get_settings_service().settings
-
         # Build the command to start mcp-composer for this project
         cmd = [
             "uvx", "mcp-composer",
-            "--mode", "sse", 
+            "--mode", "sse",
+            "--endpoint", sse_url,
             "--host", self.composer_host,
             "--port", str(port),
-            "--sse-url", sse_url,
+            "--disable-composer-tools",
         ]
-        
+        print(f"FRAZIER: MCP COMPOSER CMD: {cmd}")
+
         # Skip auth configuration - let MCP Composer connect without authentication
         # The SSE endpoint will be modified to allow internal connections
         if False and auth_config:  # Disabled auth config
@@ -140,11 +141,11 @@ class MCPComposerService(Service):
             if auth_type == "oauth":
                 cmd.extend(["--auth_type", "oauth"])
                 cmd.extend(["--env", "ENABLE_OAUTH", "True"])
-                
+
                 # Map auth config to environment variables for OAuth
                 oauth_env_mapping = {
                     "oauth_host": "OAUTH_HOST",
-                    "oauth_port": "OAUTH_PORT", 
+                    "oauth_port": "OAUTH_PORT",
                     "oauth_server_url": "OAUTH_SERVER_URL",
                     "oauth_callback_path": "OAUTH_CALLBACK_PATH",
                     "oauth_client_id": "OAUTH_CLIENT_ID",
@@ -154,16 +155,16 @@ class MCPComposerService(Service):
                     "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
                     "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE"
                 }
-                
+
                 # Add environment variables to the command
                 for config_key, env_key in oauth_env_mapping.items():
                     if config_key in auth_config:
                         cmd.extend(["--env", env_key, str(auth_config[config_key])])
-                
+
                 # Add server_url as workaround for MCP Composer internal ServerSettings bug
                 if "oauth_server_url" in auth_config:
                     cmd.extend(["--env", "server_url", str(auth_config["oauth_server_url"])])
-                        
+
             elif auth_type == "apikey":
                 cmd.extend(["--auth_type", "apikey"])
                 if "api_key" in auth_config:
@@ -209,18 +210,18 @@ class MCPComposerService(Service):
                 "--port", str(port),
                 "--sse-url", sse_url,
             ]
-            
+
             # Skip auth configuration - disabled for internal connections
             if False and auth_config:  # Disabled auth config
                 auth_type = auth_config.get("auth_type")
                 if auth_type == "oauth":
                     cmd.extend(["--auth_type", "oauth"])
                     cmd.extend(["--env", "ENABLE_OAUTH", "True"])
-                    
+
                     # Map auth config to environment variables for OAuth
                     oauth_env_mapping = {
                         "oauth_host": "OAUTH_HOST",
-                        "oauth_port": "OAUTH_PORT", 
+                        "oauth_port": "OAUTH_PORT",
                         "oauth_server_url": "OAUTH_SERVER_URL",
                         "oauth_callback_path": "OAUTH_CALLBACK_PATH",
                         "oauth_client_id": "OAUTH_CLIENT_ID",
@@ -230,16 +231,16 @@ class MCPComposerService(Service):
                         "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
                         "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE"
                     }
-                    
+
                     # Add environment variables to the command
                     for config_key, env_key in oauth_env_mapping.items():
                         if config_key in auth_config:
                             cmd.extend(["--env", env_key, str(auth_config[config_key])])
-                    
+
                     # Add server_url as workaround for MCP Composer internal ServerSettings bug
                     if "oauth_server_url" in auth_config:
                         cmd.extend(["--env", "server_url", str(auth_config["oauth_server_url"])])
-                            
+
                 elif auth_type == "apikey":
                     cmd.extend(["--auth_type", "apikey"])
                     if "api_key" in auth_config:
@@ -254,42 +255,10 @@ class MCPComposerService(Service):
                 stderr=subprocess.PIPE,
                 text=True
             )
-            
+
             return process
-
-
-    def get_project_composer_url(self, project_id: str) -> str | None:
-        """Get the URL for a specific project's MCP Composer service."""
-        if project_id not in self.project_composers:
-            return None
-        port = self.project_composers[project_id]["port"]
-        return f"http://{self.composer_host}:{port}"
-    
-    def get_project_composer_sse_url(self, project_id: str) -> str | None:
-        """Get the SSE URL that MCP clients should connect to for a specific project."""
-        if project_id not in self.project_composers:
-            return None
-        port = self.project_composers[project_id]["port"]
-        return f"http://{self.composer_host}:{port}/sse"
-    
-    def get_project_composer_port(self, project_id: str) -> int | None:
-        """Get the port number for a specific project's composer."""
-        if project_id not in self.project_composers:
-            return None
-        return self.project_composers[project_id]["port"]
-    
-    def list_project_composers(self) -> dict[str, dict]:
-        """List all running project composers."""
-        return {
-            project_id: {
-                "port": info["port"],
-                "sse_url": info["sse_url"],
-                "composer_url": f"http://{self.composer_host}:{info['port']}/sse"
-            }
-            for project_id, info in self.project_composers.items()
-        }
 
     def teardown(self):
         """Clean up resources when the service is torn down."""
-        # TODO: FRAZ - never awaited
+        # TODO: FRAZ - never awaited ? 
         asyncio.run(self.stop())
