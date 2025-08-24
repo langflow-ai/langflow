@@ -12,9 +12,9 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
-import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
@@ -141,7 +141,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
-  
+
   // Get composer URL for this project
   const { data: composerUrlData } = useGetProjectComposerUrl(projectId);
 
@@ -229,9 +229,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   // Use composer passthrough URL if available, otherwise fallback to direct SSE
   const apiUrl = customGetMCPUrl(
-    projectId, 
+    projectId,
     ENABLE_MCP_COMPOSER && !!composerUrlData?.passthrough_url,
-    composerUrlData?.passthrough_url
+    composerUrlData?.passthrough_url,
   );
 
   // Generate auth headers based on the authentication type
