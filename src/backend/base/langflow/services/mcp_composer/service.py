@@ -202,7 +202,9 @@ class MCPComposerService(Service):
             str(port),
             "--disable-composer-tools",
         ]
-        logger.debug(f"Starting MCP Composer for project {project_id} on host {self.composer_host} port {port} with SSE URL {sse_url}")
+        logger.debug(
+            f"Starting MCP Composer for project {project_id} on host {self.composer_host} port {port} with SSE URL {sse_url}"
+        )
 
         # Skip auth configuration - let MCP Composer connect without authentication
         # The SSE endpoint will be modified to allow internal connections
