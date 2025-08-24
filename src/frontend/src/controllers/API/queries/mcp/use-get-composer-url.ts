@@ -9,7 +9,9 @@ interface ComposerUrlResponse {
   composer_sse_url: string;
 }
 
-async function getProjectComposerUrl(projectId: string): Promise<ComposerUrlResponse> {
+async function getProjectComposerUrl(
+  projectId: string,
+): Promise<ComposerUrlResponse> {
   const response = await api.get(`${getURL("MCP")}/${projectId}/composer-url`);
   return response.data;
 }

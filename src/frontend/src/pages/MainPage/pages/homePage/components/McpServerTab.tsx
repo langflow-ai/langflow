@@ -229,9 +229,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   // Use the per-project MCP Composer SSE URL if available, otherwise fallback to direct SSE
   const apiUrl = customGetMCPUrl(
-    projectId, 
+    projectId,
     ENABLE_MCP_COMPOSER && !!composerUrlData?.composer_sse_url,
-    composerUrlData?.composer_sse_url
+    composerUrlData?.composer_sse_url,
   );
 
   // Generate auth headers for Langflow authentication
@@ -241,7 +241,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     if (isAutoLogin) {
       return ""; // No API key needed when auto-login is enabled
     }
-    
+
     return `
         "--headers",
         "x-api-key",
@@ -494,7 +494,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       name="AlertCircle"
                       className="h-3 w-3"
                     />
-                    MCP Composer not started for this project. Using direct SSE URL.
+                    MCP Composer not started for this project. Using direct SSE
+                    URL.
                   </div>
                 )}
               </div>
