@@ -42,6 +42,8 @@ from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
+from langflow.services.database.models.api_key.crud import create_api_key
+from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.deps import get_service, get_settings_service, session_scope
 from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.schema import ServiceType
@@ -460,9 +462,18 @@ async def install_mcp_config(
         # Build args based on auth type
         args = ["mcp-proxy"]
 
-        # Add headers for API key authentication
-        if auth_settings.get("auth_type") == "apikey" and auth_settings.get("api_key"):
-            args.extend(["--headers", "x-api-key", auth_settings["api_key"]])
+        # Check if we need to add Langflow API key headers
+        # The x-api-key header is needed when AUTO_LOGIN=false to authenticate WITH Langflow
+        # This is separate from MCP-specific authentication
+        auth_settings = get_settings_service().auth_settings
+        
+        # Generate a Langflow API key for auto-install if needed
+        if not auth_settings.AUTO_LOGIN:
+            async with session_scope() as api_key_session:
+                api_key_create = ApiKeyCreate(name=f"MCP Server {project.name}")
+                api_key_response = await create_api_key(api_key_session, api_key_create, current_user.id)
+                langflow_api_key = api_key_response.api_key
+                args.extend(["--headers", "x-api-key", langflow_api_key])
 
         args.append(sse_url)
 

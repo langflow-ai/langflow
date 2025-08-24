@@ -6,7 +6,7 @@ export const customGetMCPUrl = (
   composerUrl?: string,
 ) => {
   if (useComposer && composerUrl) {
-    // Use the per-project MCP Composer passthrough URL
+    // Use the per-project MCP Composer SSE URL
     return composerUrl;
   }
 

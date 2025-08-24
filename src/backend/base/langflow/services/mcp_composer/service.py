@@ -264,6 +264,12 @@ class MCPComposerService(Service):
 
             return process
 
+    def get_project_composer_port(self, project_id: str) -> int | None:
+        """Get the port number for a specific project's composer."""
+        if project_id not in self.project_composers:
+            return None
+        return self.project_composers[project_id]["port"]
+
     def teardown(self):
         """Clean up resources when the service is torn down."""
         # TODO: FRAZ - never awaited ?
