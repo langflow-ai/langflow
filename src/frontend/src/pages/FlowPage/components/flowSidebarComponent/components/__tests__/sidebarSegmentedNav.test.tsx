@@ -44,7 +44,7 @@ jest.mock("@/components/ui/sidebar", () => ({
   ),
 }));
 
-jest.mock("../index", () => ({
+jest.mock("../../index", () => ({
   useSearchContext: () => mockUseSearchContext,
 }));
 
