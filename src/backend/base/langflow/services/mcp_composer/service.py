@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import socket
 import subprocess
 from typing import Any
 
@@ -20,14 +21,43 @@ class MCPComposerService(Service):
         super().__init__()
         # Track multiple composer processes - one per project
         self.project_composers: dict[str, dict] = {}  # project_id -> {process, port, sse_url, auth_config}
-        self.next_port: int = 8001  # Starting port for composers
 
         # Get settings for host configuration
         settings = get_settings_service().settings
         self.composer_host: str = settings.mcp_composer_host or "localhost"
 
         # Check for user-defined port from environment variable first
-        self.initial_mcp_port: int = settings.mcp_composer_port or 8001
+        self.base_port: int = settings.mcp_composer_port or 8001
+
+    def _is_port_available(self, port: int) -> bool:
+        """Check if a port is available (not in use)."""
+        try:
+            with socket.create_connection((self.composer_host, port), timeout=1.0):
+                return False  # Port is in use
+        except (OSError, ConnectionRefusedError):
+            return True  # Port is available
+
+    def _find_available_port(self, start_port: int, max_attempts: int = 100) -> int:
+        """Find an available port starting from start_port.
+
+        Args:
+            start_port: The port to start searching from
+            max_attempts: Maximum number of ports to try
+
+        Returns:
+            int: An available port number
+
+        Raises:
+            RuntimeError: If no available port is found within max_attempts
+        """
+        for attempt in range(max_attempts):
+            port = start_port + attempt
+            if self._is_port_available(port):
+                logger.debug(f"Found available port: {port} (tried {attempt + 1} ports)")
+                return port
+
+        msg = f"Could not find an available port after trying {max_attempts} ports starting from {start_port}"
+        raise RuntimeError(msg)
 
     async def start(self):
         """Start the MCP Composer service (per-project composers started on demand)."""
@@ -39,8 +69,6 @@ class MCPComposerService(Service):
                 logger.info("MCP Composer is disabled in settings")
                 return
 
-            # Initialize port allocation
-            self.next_port = self.initial_mcp_port
             logger.info("MCP Composer service initialized (per-project composers will start on demand)")
 
         except Exception as e:
@@ -100,29 +128,61 @@ class MCPComposerService(Service):
             logger.debug(f"MCP Composer already running for project {project_id}")
             return self.project_composers[project_id]["port"]
 
-        # Assign a port for this project
-        project_port = self.next_port
-        self.next_port += 1
+        # Find an available port starting from the base port
+        # Use a higher starting port for subsequent projects to avoid conflicts
+        used_ports = {info["port"] for info in self.project_composers.values()}
+        start_port = max([self.base_port, *list(used_ports)], default=self.base_port)
+        if used_ports:
+            start_port += 1  # Start from the next port after the highest used port
 
         try:
-            # Start the composer process for this project
-            process = await self._start_project_composer_process(project_id, project_port, sse_url, auth_config)
-
-            # Track the composer instance
-            self.project_composers[project_id] = {
-                "process": process,
-                "port": project_port,
-                "sse_url": sse_url,
-                "auth_config": auth_config,
-            }
-
-            logger.info(f"MCP Composer started for project {project_id} on port {project_port}")
-            return project_port
-
-        except Exception as e:
-            error = f"Failed to start MCP Composer for project {project_id}: {e}"
-            logger.error(error)
+            project_port = self._find_available_port(start_port)
+        except RuntimeError as e:
+            logger.error(f"Could not find available port for project {project_id}: {e}")
             raise
+
+        max_retries = 3
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                # Start the composer process for this project
+                process = await self._start_project_composer_process(project_id, project_port, sse_url, auth_config)
+
+                # Track the composer instance
+                self.project_composers[project_id] = {
+                    "process": process,
+                    "port": project_port,
+                    "sse_url": sse_url,
+                    "auth_config": auth_config,
+                }
+
+                logger.info(f"MCP Composer started for project {project_id} on port {project_port}")
+                return project_port
+
+            except Exception as e:
+                last_error = e
+
+                # If it's a port-related error, try to find another port
+                if "port" in str(e).lower() or "bind" in str(e).lower() or "address already in use" in str(e).lower():
+                    logger.warning(f"Port {project_port} failed for project {project_id} (attempt {attempt + 1}): {e}")
+
+                    if attempt < max_retries - 1:  # Don't find new port on last attempt
+                        try:
+                            # Try to find another available port
+                            project_port = self._find_available_port(project_port + 1)
+                            logger.info(f"Retrying with port {project_port} for project {project_id}")
+                            continue
+                        except RuntimeError:
+                            logger.error(f"Could not find alternative port for project {project_id}")
+                            break
+                else:
+                    # Non-port related error, don't retry
+                    break
+
+        error = f"Failed to start MCP Composer for project {project_id} after {max_retries} attempts: {last_error}"
+        logger.error(error)
+        raise RuntimeError(error) from last_error
 
     async def _start_project_composer_process(
         self, project_id: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None
@@ -142,7 +202,7 @@ class MCPComposerService(Service):
             str(port),
             "--disable-composer-tools",
         ]
-        print(f"FRAZIER: MCP COMPOSER CMD: {cmd}")
+        logger.debug(f"Starting MCP Composer for project {project_id} on host {self.composer_host} port {port} with SSE URL {sse_url}")
 
         # Skip auth configuration - let MCP Composer connect without authentication
         # The SSE endpoint will be modified to allow internal connections

@@ -602,7 +602,6 @@ async def get_project_composer_url(
     current_user: CurrentActiveMCPUser,
 ):
     """Get the MCP Composer URL for a specific project."""
-    print("FRAZIER: get_project_composer_url")
     try:
         # Verify project exists and user has access
         async with session_scope() as session:

@@ -234,7 +234,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     composerUrlData?.composer_sse_url,
   );
 
-  // Generate auth headers for Langflow authentication
+  // Generate auth headers based on authentication type
   const getAuthHeaders = () => {
     // The x-api-key header is needed when AUTO_LOGIN=false to authenticate WITH Langflow
     // This is separate from MCP-specific authentication
