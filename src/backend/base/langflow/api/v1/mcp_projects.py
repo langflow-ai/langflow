@@ -466,7 +466,7 @@ async def install_mcp_config(
         # The x-api-key header is needed when AUTO_LOGIN=false to authenticate WITH Langflow
         # This is separate from MCP-specific authentication
         auth_settings = get_settings_service().auth_settings
-        
+
         # Generate a Langflow API key for auto-install if needed
         if not auth_settings.AUTO_LOGIN:
             async with session_scope() as api_key_session:
