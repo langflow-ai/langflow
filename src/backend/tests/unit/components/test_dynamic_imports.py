@@ -209,17 +209,17 @@ class TestPerformanceCharacteristics:
 
     def test_lazy_loading_performance(self):
         """Test that components can be accessed and cached properly."""
-        from langflow.components import vectorstores
+        from langflow.components import chroma as chromamodules
 
         # Test that we can access a component
-        chroma = vectorstores.ChromaVectorStoreComponent
+        chroma = chromamodules.ChromaVectorStoreComponent
         assert chroma is not None
 
         # After access, it should be cached in the module's globals
-        assert "ChromaVectorStoreComponent" in vectorstores.__dict__
+        assert "ChromaVectorStoreComponent" in chromamodules.__dict__
 
         # Subsequent access should return the same cached object
-        chroma_2 = vectorstores.ChromaVectorStoreComponent
+        chroma_2 = chromamodules.ChromaVectorStoreComponent
         assert chroma_2 is chroma
 
     def test_caching_behavior(self):

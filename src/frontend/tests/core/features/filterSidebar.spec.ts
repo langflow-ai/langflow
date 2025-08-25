@@ -121,7 +121,7 @@ test(
     await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
     await expect(page.getByTestId("dataAPI Request")).toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
+    await expect(page.getByTestId("datastaxAstra DB")).toBeVisible();
     await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
@@ -137,7 +137,7 @@ test(
     await page.getByTestId("icon-X").first().click();
 
     await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
+    await expect(page.getByTestId("datastaxAstra DB")).not.toBeVisible();
     await expect(
       page.getByTestId("logicSub Flow [Deprecated]"),
     ).not.toBeVisible();

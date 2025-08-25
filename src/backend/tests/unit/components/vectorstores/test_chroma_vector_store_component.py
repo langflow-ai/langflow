@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from langflow.components.vectorstores.chroma import ChromaVectorStoreComponent
+from langflow.components.chroma import ChromaVectorStoreComponent
 from langflow.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
