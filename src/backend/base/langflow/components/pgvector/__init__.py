@@ -5,19 +5,19 @@ from typing import TYPE_CHECKING, Any
 from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .local_db import LocalDBComponent
+    from .pgvector import PGVectorStoreComponent
 
 _dynamic_imports = {
-    "LocalDBComponent": "local_db",
+    "PGVectorStoreComponent": "pgvector",
 }
 
 __all__ = [
-    "LocalDBComponent",
+    "PGVectorStoreComponent",
 ]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import vectorstore components on attribute access."""
+    """Lazily import pgvector components on attribute access."""
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)

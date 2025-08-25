@@ -2222,20 +2222,7 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "ed38680af3a6",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.vectorstores.faiss.FaissVectorStoreComponent"
+              "module": "langflow.components.FAISS.faiss.FaissVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],

@@ -2775,28 +2775,7 @@
             "legacy": false,
             "metadata": {
               "code_hash": "23fbe9daca09",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.0.1"
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.0"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.72"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
+              "module": "langflow.components.datastax.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -3572,28 +3551,7 @@
             "legacy": false,
             "metadata": {
               "code_hash": "23fbe9daca09",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.0.1"
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.0"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.72"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
+              "module": "langflow.components.datastax.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
