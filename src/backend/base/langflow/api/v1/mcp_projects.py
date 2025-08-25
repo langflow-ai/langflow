@@ -577,8 +577,6 @@ async def install_mcp_config(
             "command": command,
             "args": args,
         }
-        if oauth_env:
-            server_config["env"] = {k: v for k, v in oauth_env.items() if v is not None}
 
         mcp_config = {
             "mcpServers": {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": server_config}
