@@ -50,6 +50,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Manage dependencies in the UI
+
+  Packages can now be installed and uninstalled in Langflow's **Package Manager** pane, found in the **Settings** page.
+  If you experience a conflict with your installed packages, use the **Restore Langflow** option to remove your installed packages and revert Langflow to the dependencies listed in `uv.lock`.
+
 - Increased max file upload size
 
   Increased the default max file upload size from `100 MB` to `1024 MB`.
@@ -60,16 +65,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   The **Create knowledge** component ingests knowledge into a knowledge base. The **Retrieve knowledge** component is added to flows to access a knowledge base.
   For more information, see Knowledge bases.
 
-- LFX engine
-
-  The LFX engine runs flows in headless mode with reduced dependencies and no local database.
-  This allows you to run flows with just a JSON file and a PyPI package, making it easier to integrate Langflow into CI/CD pipelines or scaling deplpoyments.
-  For more information, see Run flows with the Langflow Executor (LFX).
-
 - Additional Structured Output for Agent component
 
   In addition to the `Message` output, the Agent component now includes a structured output.
   This output parses JSON into a structured `Data` object to make it easier to work with the Agent's output downstream.
+
+- Advanced parsing available for File component
+
+  The File component includes advanced parsing capabilities powered by the Docling library.
 
 ### Deprecations
 
