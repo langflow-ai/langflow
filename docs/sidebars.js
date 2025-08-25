@@ -71,7 +71,7 @@ module.exports = {
           type: "doc",
           id: "Concepts/concepts-flows-import",
           label: "Import and export flows"
-        }
+        },
       ],
     },
     {
