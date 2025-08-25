@@ -536,10 +536,7 @@ async def install_mcp_config(
                     await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
         # Base args
-        if FEATURE_FLAGS.mcp_composer:
-            args = ["mcp-composer"]
-        else:
-            args = ["mcp-proxy"]
+        args = ["mcp-composer"] if FEATURE_FLAGS.mcp_composer else ["mcp-proxy"]
 
         # Add authentication args based on MCP_COMPOSER feature flag and auth settings
         if not FEATURE_FLAGS.mcp_composer:
