@@ -34,13 +34,13 @@ test(
     expect(response.status()).toBe(200);
     const responseBody = await response.json();
 
-    const astraStarterProject = responseBody.find((project) => {
+    const astraStarterProject = responseBody.find(project => {
       if (project.data.nodes) {
-        return project.data.nodes.some((node) => node.id.includes("Astra"));
+        return project.data.nodes.some(node => node.id.includes("Astra"));
       }
     });
 
-    await page.route("**/api/v1/flows/", async (route) => {
+    await page.route("**/api/v1/flows/", async route => {
       if (route.request().method() === "GET") {
         try {
           // Add authorization header to the request
@@ -52,7 +52,7 @@ test(
           });
           const flowsData = await response.json();
 
-          const modifiedFlows = flowsData.map((flow) => {
+          const modifiedFlows = flowsData.map(flow => {
             if (flow.name === "Vector Store RAG" && flow.user_id === null) {
               return {
                 ...flow,
@@ -102,10 +102,10 @@ test(
     const nodesFromServer = astraStarterProject?.data.nodes.length;
 
     expect(
-      edges === edgesFromServer || edges === edgesFromServer - 1,
+      edges === edgesFromServer || edges === edgesFromServer - 1
     ).toBeTruthy();
     expect(nodes).toBe(nodesFromServer);
-  },
+  }
 );
 
 test(
@@ -130,16 +130,20 @@ test(
 
       await page.getByTestId("text_card_container").nth(i).click();
 
-      await page.waitForTimeout(500);
-      await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-        timeout: 30000,
-      });
-      await page.getByTestId("canvas_controls_dropdown").click();
+      // Check if fit_view is visible
+      const fitViewVisible = await page
+        .getByTestId("fit_view")
+        .isVisible()
+        .catch(() => false);
 
-      await page.waitForSelector('[data-testid="fit_view"]', {
-        timeout: 30000,
-      });
-      await page.getByTestId("canvas_controls_dropdown").click();
+      if (fitViewVisible) {
+        await page.getByTestId("fit_view").click();
+        await page.getByTestId("canvas_controls_dropdown").click();
+      } else {
+        await page.getByTestId("canvas_controls_dropdown").click();
+        await page.getByTestId("fit_view").click();
+        await page.getByTestId("canvas_controls_dropdown").click();
+      }
 
       if ((await page.getByTestId("update-all-button").count()) > 0) {
         console.error(`
@@ -151,7 +155,7 @@ test(
       }
 
       await Promise.all([
-        page.waitForURL((url) => url.pathname === "/", { timeout: 30000 }),
+        page.waitForURL(url => url.pathname === "/", { timeout: 30000 }),
         page.getByTestId("icon-ChevronLeft").click(),
       ]);
 
@@ -171,12 +175,12 @@ test(
         '[data-testid="side_nav_options_all-templates"]',
         {
           timeout: 5000,
-        },
+        }
       );
 
       await page.getByTestId("side_nav_options_all-templates").click();
     }
 
     expect(numberOfOutdatedComponents).toBe(0);
-  },
+  }
 );
