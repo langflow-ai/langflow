@@ -327,9 +327,8 @@ class TestMetadataWithDependencies:
     def test_build_component_metadata_includes_dependencies(self):
         """Test that build_component_metadata includes dependency analysis."""
 
-    @patch("langflow.custom.utils.ComponentFrontendNode")
     def test_build_from_inputs_without_module_generates_default(self):
-        """Test that build_custom_component_template_from_inputs generates default module when module_name is None."""
+        """Test that build_component_metadata includes dependency analysis results."""
         from langflow.custom.custom_component.component import Component
 
         # Setup mock frontend node
@@ -366,7 +365,6 @@ class TestComponent:
     def test_build_component_metadata_handles_analysis_error(self):
         """Test that build_component_metadata handles dependency analysis errors gracefully."""
         from langflow.custom.custom_component.component import Component
-        from langflow.custom.utils import build_component_metadata
 
         # Setup mock frontend node
         mock_frontend = Mock()
@@ -388,7 +386,6 @@ class TestComponent:
     def test_build_component_metadata_with_external_dependencies(self):
         """Test dependency analysis with external packages."""
         from langflow.custom.custom_component.component import Component
-        from langflow.custom.utils import build_component_metadata
 
         # Setup mock frontend node
         mock_frontend = Mock()
@@ -420,7 +417,6 @@ class TestComponent(CustomComponent):
     def test_build_component_metadata_with_optional_dependencies(self):
         """Test dependency analysis with optional dependencies."""
         from langflow.custom.custom_component.component import Component
-        from langflow.custom.utils import build_component_metadata
 
         # Setup mock frontend node
         mock_frontend = Mock()
@@ -453,7 +449,7 @@ class TestComponent:
         assert "some_optional_package" in package_names
         assert "os" not in package_names  # os is stdlib, should be filtered out
 
-    def test_build_component_metadata_with_real_component(self, mock_frontend_class):
+    def test_build_component_metadata_with_real_component(self):
         """Test dependency analysis with a real component."""
         from langflow.custom.custom_component.component import Component
         from langflow.custom.utils import build_component_metadata
@@ -516,7 +512,6 @@ class LMStudioModelComponent(LCModelComponent):
         mock_frontend.validate_component = Mock()
         mock_frontend.set_base_classes_from_outputs = Mock()
         mock_frontend.display_name = "My Test Component"
-        mock_frontend_class.from_inputs.return_value = mock_frontend
 
         # Create test component
         test_component = Mock(spec=Component)
@@ -537,7 +532,7 @@ class LMStudioModelComponent(LCModelComponent):
                 patch("langflow.custom.utils.reorder_fields"),
             ):
                 # Call the function without module_name
-                template, _ = build_custom_component_template_from_inputs(test_component, module_name=None)
+                _, _ = build_custom_component_template_from_inputs(test_component, module_name=None)
 
         # Verify metadata was added with generated module name
         assert "module" in mock_frontend.metadata
