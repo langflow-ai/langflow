@@ -763,6 +763,21 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "langwatch",
   "YouTube",
   "youtube",
+  "pinecone",
+  "weaviate",
+  "qdrant",
+  "mongodb",
+  "elastic",
+  "supabase",
+  "milvus",
+  "chroma",
+  "clickhouse",
+  "couchbase",
+  "upstash",
+  "vectara",
+  "cassandra",
+  "FAISS",
+  "pgvector",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
