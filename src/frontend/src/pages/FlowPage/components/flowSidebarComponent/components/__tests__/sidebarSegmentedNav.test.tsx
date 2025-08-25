@@ -1,9 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { SidebarSection } from "@/components/ui/sidebar";
 import SidebarSegmentedNav, { NAV_ITEMS } from "../sidebarSegmentedNav";
 
 // Mock the hooks and components
-const mockUseSidebar = {
-  activeSection: "components" as const,
+const mockUseSidebar: {
+  activeSection: SidebarSection;
+  setActiveSection: jest.Mock;
+  toggleSidebar: jest.Mock;
+  open: boolean;
+} = {
+  activeSection: "components" as SidebarSection,
   setActiveSection: jest.fn(),
   toggleSidebar: jest.fn(),
   open: true,

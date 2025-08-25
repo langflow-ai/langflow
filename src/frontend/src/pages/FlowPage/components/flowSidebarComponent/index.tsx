@@ -159,7 +159,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     })),
   );
 
-  const { setOpen } = useSidebar();
+  const { activeSection, setOpen, setActiveSection } = useSidebar();
   const addComponent = useAddComponent();
 
   // Get MCP servers for search functionality (only when new sidebar is enabled)
@@ -325,6 +325,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   useEffect(() => {
     if (filterType) {
       setOpen(true);
+      setActiveSection("search");
     }
   }, [filterType, setOpen]);
 
@@ -467,27 +468,28 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     return result;
   }, [dataFilter]);
 
-  const { activeSection } = useSidebar();
-
   const hasMcpComponents = useMemo(() => {
     return dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0;
   }, [dataFilter]);
 
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
+  const hasSearchInput = search !== "" || filterType !== undefined;
+  console.log("hasSearchInput", hasSearchInput);
+
   const showComponents =
     (ENABLE_NEW_SIDEBAR &&
       hasCoreComponents &&
       (activeSection === "components" || activeSection === "search")) ||
-    (search !== "" && hasCoreComponents && ENABLE_NEW_SIDEBAR) ||
+    (hasSearchInput && hasCoreComponents && ENABLE_NEW_SIDEBAR) ||
     !ENABLE_NEW_SIDEBAR;
   const showBundles =
     (hasBundleItems && ENABLE_NEW_SIDEBAR && activeSection === "bundles") ||
-    (search !== "" && hasBundleItems && ENABLE_NEW_SIDEBAR) ||
+    (hasSearchInput && hasBundleItems && ENABLE_NEW_SIDEBAR) ||
     !ENABLE_NEW_SIDEBAR;
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
-    (search !== "" && hasMcpComponents && ENABLE_NEW_SIDEBAR);
+    (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
 
   return (
     <Sidebar
@@ -519,7 +521,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             filterType={filterType}
             setFilterEdge={setFilterEdge}
             setFilterData={setFilterData}
-            data={data}
+            data={baseData}
           />
 
           <SidebarContent
@@ -558,7 +560,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                     {showMcp && (
                       <McpSidebarGroup
                         mcpComponents={
-                          search !== ""
+                          hasSearchInput
                             ? Object.values(dataFilter["MCP"] || {})
                             : mcpSearchData
                         }
