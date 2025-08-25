@@ -346,7 +346,7 @@ class Graph:
             for key, value in _input.items():
                 vertex = self.get_vertex(key)
                 vertex.set_input_value(key, value)
-        # I want to keep a counter of how many tyimes result.vertex.id
+        # I want to keep a counter of how many times result.vertex.id
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
 
