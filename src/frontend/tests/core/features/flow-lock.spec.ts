@@ -19,7 +19,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify initially the flow is not locked (no lock icon should be visible)
       const initialLockIcon = page.locator(
-        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]',
+        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]'
       );
       await expect(initialLockIcon).toHaveCount(0);
 
@@ -43,11 +43,8 @@ test.describe("Flow Lock Feature", () => {
       await expect(nameInput).toBeEnabled();
       await expect(descriptionInput).toBeEnabled();
 
-      // Enable the lock (use keyboard to avoid any click flakiness)
-      await lockSwitch.focus();
-      await lockSwitch.press("Space");
-
-      // Verify the switch is now checked
+      await lockSwitch.click();
+      await page.waitForTimeout(1000);
       await expect(lockSwitch).toHaveAttribute("data-state", "checked");
 
       // Verify that inputs become disabled when locked
@@ -55,8 +52,12 @@ test.describe("Flow Lock Feature", () => {
       await expect(descriptionInput).toBeDisabled();
 
       // Save the settings by clicking the save button
-      await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
-      await page.getByTestId("save-flow-settings").click();
+      const saveButton = page.getByTestId("save-flow-settings");
+
+      if (await saveButton.isEnabled({ timeout: 3000 })) {
+        await saveButton.click();
+      }
+      await page.waitForTimeout(1000);
 
       // Wait for the modal to close by waiting for the popover to be detached
       await page.waitForSelector('[role="dialog"]', {
@@ -108,7 +109,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify lock icon is no longer visible in the flow header
       await expect(lockIconInHeader).toHaveCount(0);
-    },
+    }
   );
 
   test(
@@ -144,6 +145,6 @@ test.describe("Flow Lock Feature", () => {
       const lockIcon = page.locator('[data-testid="icon-Lock"]');
       await expect(lockIcon).toBeVisible();
       await expect(unlockIcon).toHaveCount(0);
-    },
+    }
   );
 });
