@@ -5,6 +5,7 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
@@ -25,13 +26,15 @@ export const CategoryGroup = memo(function CategoryGroup({
 }: CategoryGroupProps) {
   return (
     <SidebarGroup className="p-3">
-      <SidebarGroupLabel className="cursor-default flex items-center justify-between">
-        <span>Components</span>
-        <SearchConfigTrigger
-          showConfig={showConfig}
-          setShowConfig={setShowConfig}
-        />
-      </SidebarGroupLabel>
+      {ENABLE_NEW_SIDEBAR && (
+        <SidebarGroupLabel className="cursor-default flex items-center justify-between">
+          <span>Components</span>
+          <SearchConfigTrigger
+            showConfig={showConfig}
+            setShowConfig={setShowConfig}
+          />
+        </SidebarGroupLabel>
+      )}
       <SidebarGroupContent>
         <SidebarMenu>
           {Object.entries(dataFilter)

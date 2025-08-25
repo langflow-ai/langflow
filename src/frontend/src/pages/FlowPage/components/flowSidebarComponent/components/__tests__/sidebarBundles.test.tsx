@@ -48,6 +48,11 @@ jest.mock("@/stores/darkStore", () => ({
   useDarkStore: () => ({ isDark: false }),
 }));
 
+// Mock feature flags
+jest.mock("@/customization/feature-flags", () => ({
+  ENABLE_NEW_SIDEBAR: true, // Set to true for SearchConfigTrigger tests
+}));
+
 describe("MemoizedSidebarGroup (SidebarBundles)", () => {
   const mockSetOpenCategories = jest.fn();
   const mockOnDragStart = jest.fn();

@@ -17,11 +17,50 @@ jest.mock("@/components/ui/disclosure", () => ({
   DisclosureContent: ({ children }: any) => (
     <div data-testid="disclosure-content">{children}</div>
   ),
+  DisclosureTrigger: ({ children }: any) => (
+    <div data-testid="disclosure-trigger">{children}</div>
+  ),
+}));
+
+jest.mock("@/components/ui/button", () => ({
+  Button: ({ children, onClick, variant, size, className, ...props }: any) => (
+    <button
+      onClick={onClick}
+      className={className}
+      data-variant={variant}
+      data-size={size}
+      {...props}
+    >
+      {children}
+    </button>
+  ),
+}));
+
+jest.mock("@/components/common/genericIconComponent", () => ({
+  ForwardedIconComponent: ({ name, className }: any) => (
+    <div data-testid={`icon-${name}`} className={className}>
+      {name}
+    </div>
+  ),
+}));
+
+jest.mock("@/components/common/shadTooltipComponent", () => ({
+  __esModule: true,
+  default: ({ children, content, styleClasses }: any) => (
+    <div data-testid="tooltip" data-content={content} className={styleClasses}>
+      {children}
+    </div>
+  ),
 }));
 
 jest.mock("@/components/ui/sidebar", () => ({
   SidebarHeader: ({ children, className }: any) => (
     <div data-testid="sidebar-header" className={className}>
+      {children}
+    </div>
+  ),
+  SidebarTrigger: ({ children, className }: any) => (
+    <div data-testid="sidebar-trigger" className={className}>
       {children}
     </div>
   ),
@@ -78,6 +117,11 @@ jest.mock("../sidebarFilterComponent", () => ({
   ),
 }));
 
+// Mock feature flags
+jest.mock("@/customization/feature-flags", () => ({
+  ENABLE_NEW_SIDEBAR: false, // Default to old sidebar for most tests
+}));
+
 describe("SidebarHeaderComponent", () => {
   const mockSetShowConfig = jest.fn();
   const mockSetShowBeta = jest.fn();
@@ -112,14 +156,58 @@ describe("SidebarHeaderComponent", () => {
   });
 
   describe("Basic Rendering", () => {
-    it("should render sidebar header with correct structure", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
+    describe("Legacy Sidebar (!ENABLE_NEW_SIDEBAR)", () => {
+      it("should render sidebar header with legacy structure", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
 
-      expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
-      expect(screen.getByTestId("search-input")).toBeInTheDocument();
-      expect(screen.getByTestId("disclosure")).toBeInTheDocument();
-      expect(screen.getByTestId("disclosure-content")).toBeInTheDocument();
-      expect(screen.getByTestId("feature-toggles")).toBeInTheDocument();
+        expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
+        expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
+        expect(screen.getByText("Components")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("sidebar-options-trigger"),
+        ).toBeInTheDocument();
+        expect(screen.getByTestId("disclosure-trigger")).toBeInTheDocument();
+        expect(screen.getByTestId("search-input")).toBeInTheDocument();
+        expect(screen.getByTestId("disclosure")).toBeInTheDocument();
+        expect(screen.getByTestId("disclosure-content")).toBeInTheDocument();
+        expect(screen.getByTestId("feature-toggles")).toBeInTheDocument();
+      });
+
+      it("should render sidebar trigger with correct icon", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
+
+        expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
+        expect(screen.getByTestId("icon-PanelLeftClose")).toBeInTheDocument();
+      });
+
+      it("should render settings button with correct props", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
+
+        const settingsButton = screen.getByTestId("sidebar-options-trigger");
+        expect(settingsButton).toHaveAttribute("data-variant", "ghost");
+        expect(settingsButton).toHaveAttribute("data-size", "iconMd");
+        expect(
+          screen.getByTestId("icon-SlidersHorizontal"),
+        ).toBeInTheDocument();
+      });
+
+      it("should show ghostActive variant when config is open", () => {
+        const propsWithOpenConfig = { ...defaultProps, showConfig: true };
+        render(<SidebarHeaderComponent {...propsWithOpenConfig} />);
+
+        const settingsButton = screen.getByTestId("sidebar-options-trigger");
+        expect(settingsButton).toHaveAttribute("data-variant", "ghostActive");
+      });
+
+      it("should render tooltip with correct content", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
+
+        expect(screen.getByTestId("tooltip")).toHaveAttribute(
+          "data-content",
+          "Component settings",
+        );
+        expect(screen.getByTestId("tooltip")).toHaveClass("z-50");
+      });
     });
 
     it("should apply correct CSS classes to header", () => {
