@@ -11,9 +11,8 @@ from langflow.api.v2.files import upload_user_file
 from langflow.custom import Component
 from langflow.io import DropdownInput, HandleInput, StrInput
 from langflow.schema import Data, DataFrame, Message
-from langflow.services.auth.utils import create_user_longterm_token
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service, get_storage_service
+from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.template.field.base import Output
 
 
@@ -137,9 +136,11 @@ class SaveToFileComponent(Component):
             raise FileNotFoundError(msg)
 
         with file_path.open("rb") as f:
-            async for db in get_session():
-                user_id, _ = await create_user_longterm_token(db)
-                current_user = await get_user_by_id(db, user_id)
+            async with session_scope() as db:
+                if not self.user_id:
+                    msg = "User ID is required for file saving."
+                    raise ValueError(msg)
+                current_user = await get_user_by_id(db, self.user_id)
 
                 await upload_user_file(
                     file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
