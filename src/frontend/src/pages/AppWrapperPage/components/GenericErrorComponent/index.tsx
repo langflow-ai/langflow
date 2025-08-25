@@ -6,8 +6,18 @@ import {
   TIMEOUT_ERROR_MESSAGE,
 } from "@/constants/constants";
 import CustomFetchErrorComponent from "@/customization/components/custom-fetch-error-component";
+import { usePackageManagerStore } from "@/stores/packageManagerStore";
 
 export function GenericErrorComponent({ healthCheckTimeout, fetching, retry }) {
+  const isInstallingPackage = usePackageManagerStore(
+    (state) => state.isInstallingPackage,
+  );
+
+  // Don't show error dialogs during package installation
+  if (isInstallingPackage) {
+    return <></>;
+  }
+
   switch (healthCheckTimeout) {
     case "serverDown":
       return (

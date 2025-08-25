@@ -5,6 +5,7 @@ import {
   SERVER_HEALTH_INTERVAL,
 } from "@/constants/constants";
 import { HEALTH_CHECK_URL } from "@/customization/config-constants";
+import { usePackageManagerStore } from "@/stores/packageManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
 import type { useQueryFunctionType } from "../../../../types/api";
@@ -34,6 +35,9 @@ export const useGetHealthQuery: useQueryFunctionType<
   const healthCheckTimeout = useUtilityStore(
     (state) => state.healthCheckTimeout,
   );
+  const isInstallingPackage = usePackageManagerStore(
+    (state) => state.isInstallingPackage,
+  );
   /**
    * Fetches the health status of the API.
    *
@@ -60,9 +64,10 @@ export const useGetHealthQuery: useQueryFunctionType<
         healthCheckTimeout === null &&
         (error as AxiosError)?.response?.status === 503;
 
-      if (isServerBusy) {
+      // Don't show timeout dialog if we're installing a package
+      if (isServerBusy && !isInstallingPackage) {
         setHealthCheckTimeout("timeout");
-      } else if (healthCheckTimeout === null) {
+      } else if (healthCheckTimeout === null && !isInstallingPackage) {
         setHealthCheckTimeout("serverDown");
       }
       throw error;
