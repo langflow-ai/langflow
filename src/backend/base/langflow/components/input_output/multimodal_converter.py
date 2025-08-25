@@ -1,16 +1,17 @@
-from typing import Any
 import base64
-import requests
 import time
-from openai import OpenAI
+from typing import Any
 
-from langflow.custom import Component
-from langflow.io import HandleInput, Output, TabInput, MessageTextInput, SecretStrInput, DropdownInput, IntInput
-from langflow.schema import Data, Message
+import requests
 
 # Import Google GenAI for Veo video generation
 from google import genai
 from google.genai import types
+from openai import OpenAI
+
+from langflow.custom import Component
+from langflow.io import DropdownInput, HandleInput, IntInput, Output, SecretStrInput, TabInput
+from langflow.schema import Data, Message
 
 
 class ModalConverterComponent(Component):
@@ -35,7 +36,7 @@ class ModalConverterComponent(Component):
             real_time_refresh=True,
             value="Audio",
         ),
-        # Model provider for Audio and Image 
+        # Model provider for Audio and Image
         DropdownInput(
             name="audio_image_provider",
             display_name="Model Provider",
@@ -248,7 +249,20 @@ class ModalConverterComponent(Component):
             }
 
             # Hide all dynamic fields first
-            for field_name in ["audio_image_provider", "video_provider", "openai_api_key", "gemini_api_key", "voice", "audio_format", "speed", "image_model", "image_size", "num_images", "video_model", "aspect_ratio"]:
+            for field_name in [
+                "audio_image_provider",
+                "video_provider",
+                "openai_api_key",
+                "gemini_api_key",
+                "voice",
+                "audio_format",
+                "speed",
+                "image_model",
+                "image_size",
+                "num_images",
+                "video_model",
+                "aspect_ratio",
+            ]:
                 if field_name in build_config:
                     build_config[field_name]["show"] = False
 
@@ -286,20 +300,20 @@ class ModalConverterComponent(Component):
             return input_value
 
         # Handle Message input
-        if hasattr(input_value, 'text'):
+        if hasattr(input_value, "text"):
             return input_value.text
 
         # Handle Data input
-        if hasattr(input_value, 'data'):
-            if isinstance(input_value.data, dict) and 'text' in input_value.data:
-                return input_value.data['text']
-            elif isinstance(input_value.data, str):
+        if hasattr(input_value, "data"):
+            if isinstance(input_value.data, dict) and "text" in input_value.data:
+                return input_value.data["text"]
+            if isinstance(input_value.data, str):
                 return input_value.data
 
         # Handle DataFrame input
-        if hasattr(input_value, 'to_message'):
+        if hasattr(input_value, "to_message"):
             message = input_value.to_message()
-            return message.text if hasattr(message, 'text') else str(message)
+            return message.text if hasattr(message, "text") else str(message)
 
         # Fallback
         return str(input_value)
@@ -307,13 +321,13 @@ class ModalConverterComponent(Component):
     def _get_api_key(self):
         """Get API key based on selected provider and output type."""
         # For video generation, always use Gemini API
-        if hasattr(self, 'output_type') and self.output_type == "Video":
+        if hasattr(self, "output_type") and self.output_type == "Video":
             api_key = self.gemini_api_key
         else:
             # For audio and image, always use OpenAI
             api_key = self.openai_api_key
-            
-        if hasattr(api_key, 'get_secret_value'):
+
+        if hasattr(api_key, "get_secret_value"):
             return api_key.get_secret_value()
         return str(api_key)
 
@@ -325,50 +339,48 @@ class ModalConverterComponent(Component):
                 return Data(data={"error": "No text provided for audio generation"})
 
             api_key = self._get_api_key()
-            voice = getattr(self, 'voice', 'alloy') or 'alloy'
-            format_ = getattr(self, 'audio_format', 'mp3') or 'mp3'
-            speed = getattr(self, 'speed', 1) or 1
+            voice = getattr(self, "voice", "alloy") or "alloy"
+            format_ = getattr(self, "audio_format", "mp3") or "mp3"
+            speed = getattr(self, "speed", 1) or 1
 
             url = "https://api.openai.com/v1/audio/speech"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
             payload = {
                 "model": "tts-1",
                 "input": text,
                 "voice": voice,
                 "response_format": format_,
-                "speed": float(speed)
+                "speed": float(speed),
             }
 
             self.status = f"Generating audio with voice '{voice}' in '{format_}' format at speed {speed}x..."
             self.log(f"Making TTS request with voice: {voice}, format: {format_}, speed: {speed}")
 
             response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
+
             if response.status_code == 200 and response.content:
-                audio_base64 = base64.b64encode(response.content).decode('utf-8')
+                audio_base64 = base64.b64encode(response.content).decode("utf-8")
                 audio_size_kb = len(response.content) / 1024
-                
+
                 self.status = f"Audio generated successfully! Size: {audio_size_kb:.1f} KB"
                 self.log(f"Audio generated successfully. Size: {len(response.content)} bytes")
-                
-                return Data(data={
-                    "audio_base64": audio_base64,
-                    "format": format_,
-                    "voice": voice,
-                    "speed": speed,
-                    "size_bytes": len(response.content),
-                    "text": text[:100] + "..." if len(text) > 100 else text,
-                })
-            else:
-                error_msg = f"API Error {response.status_code}: {response.text}"
-                self.status = f"Error: {error_msg}"
-                return Data(data={"error": error_msg})
+
+                return Data(
+                    data={
+                        "audio_base64": audio_base64,
+                        "format": format_,
+                        "voice": voice,
+                        "speed": speed,
+                        "size_bytes": len(response.content),
+                        "text": text[:100] + "..." if len(text) > 100 else text,
+                    }
+                )
+            error_msg = f"API Error {response.status_code}: {response.text}"
+            self.status = f"Error: {error_msg}"
+            return Data(data={"error": error_msg})
 
         except Exception as e:
-            error_msg = f"Error generating audio: {str(e)}"
+            error_msg = f"Error generating audio: {e!s}"
             self.status = f"Error: {error_msg}"
             return Data(data={"error": error_msg})
 
@@ -380,43 +392,39 @@ class ModalConverterComponent(Component):
                 return Message(text="Error: No text provided for audio generation")
 
             api_key = self._get_api_key()
-            voice = getattr(self, 'voice', 'alloy') or 'alloy'
-            format_ = getattr(self, 'audio_format', 'mp3') or 'mp3'
-            speed = getattr(self, 'speed', 1) or 1
+            voice = getattr(self, "voice", "alloy") or "alloy"
+            format_ = getattr(self, "audio_format", "mp3") or "mp3"
+            speed = getattr(self, "speed", 1) or 1
 
             url = "https://api.openai.com/v1/audio/speech"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
             payload = {
                 "model": "tts-1",
                 "input": text,
                 "voice": voice,
                 "response_format": format_,
-                "speed": float(speed)
+                "speed": float(speed),
             }
 
             self.status = f"Generating audio with voice '{voice}' in '{format_}' format at speed {speed}x..."
             self.log(f"Making TTS request with voice: {voice}, format: {format_}, speed: {speed}")
 
             response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
+
             if response.status_code == 200 and response.content:
-                audio_base64 = base64.b64encode(response.content).decode('utf-8')
+                audio_base64 = base64.b64encode(response.content).decode("utf-8")
                 audio_size_kb = len(response.content) / 1024
-                
+
                 self.status = f"Audio generated successfully! Size: {audio_size_kb:.1f} KB"
                 self.log(f"Audio generated successfully. Size: {len(response.content)} bytes")
-                
+
                 return Message(text=audio_base64)
-            else:
-                error_msg = f"API Error {response.status_code}: {response.text}"
-                self.status = f"Error: {error_msg}"
-                return Message(text=f"Error: {error_msg}")
+            error_msg = f"API Error {response.status_code}: {response.text}"
+            self.status = f"Error: {error_msg}"
+            return Message(text=f"Error: {error_msg}")
 
         except Exception as e:
-            error_msg = f"Error generating audio: {str(e)}"
+            error_msg = f"Error generating audio: {e!s}"
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
 
@@ -427,19 +435,18 @@ class ModalConverterComponent(Component):
             if not text or not text.strip():
                 return Message(text="Error: No text provided for markdown generation")
 
-            output_type = getattr(self, 'output_type', 'Audio') or 'Audio'
+            output_type = getattr(self, "output_type", "Audio") or "Audio"
 
             if output_type == "Audio":
                 return self._generate_audio_markdown(text)
-            elif output_type == "Image":
+            if output_type == "Image":
                 return self._generate_image_markdown(text)
-            elif output_type == "Video":
+            if output_type == "Video":
                 return self._generate_video_markdown(text)
-            else:
-                return Message(text="Error: Unknown output type")
+            return Message(text="Error: Unknown output type")
 
         except Exception as e:
-            error_msg = f"Error generating markdown: {str(e)}"
+            error_msg = f"Error generating markdown: {e!s}"
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
 
@@ -447,46 +454,42 @@ class ModalConverterComponent(Component):
         """Generate HTML audio player code for the generated audio."""
         try:
             api_key = self._get_api_key()
-            voice = getattr(self, 'voice', 'alloy') or 'alloy'
-            format_ = getattr(self, 'audio_format', 'mp3') or 'mp3'
-            speed = getattr(self, 'speed', 1) or 1
+            voice = getattr(self, "voice", "alloy") or "alloy"
+            format_ = getattr(self, "audio_format", "mp3") or "mp3"
+            speed = getattr(self, "speed", 1) or 1
 
             url = "https://api.openai.com/v1/audio/speech"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
             payload = {
                 "model": "tts-1",
                 "input": text,
                 "voice": voice,
                 "response_format": format_,
-                "speed": float(speed)
+                "speed": float(speed),
             }
 
             self.status = f"Generating audio with voice '{voice}' in '{format_}' format at speed {speed}x..."
             self.log(f"Making TTS request with voice: {voice}, format: {format_}, speed: {speed}")
 
             response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
+
             if response.status_code == 200 and response.content:
-                audio_base64 = base64.b64encode(response.content).decode('utf-8')
+                audio_base64 = base64.b64encode(response.content).decode("utf-8")
                 audio_size_kb = len(response.content) / 1024
-                
+
                 self.status = f"Audio generated successfully! Size: {audio_size_kb:.1f} KB"
                 self.log(f"Audio generated successfully. Size: {len(response.content)} bytes")
-                
+
                 # Generate HTML audio player code
                 html_code = f'<audio controls>\n  <source src="data:audio/{format_};base64,{audio_base64}" type="audio/{format_}">\n</audio>'
-                
+
                 return Message(text=html_code)
-            else:
-                error_msg = f"API Error {response.status_code}: {response.text}"
-                self.status = f"Error: {error_msg}"
-                return Message(text=f"Error: {error_msg}")
+            error_msg = f"API Error {response.status_code}: {response.text}"
+            self.status = f"Error: {error_msg}"
+            return Message(text=f"Error: {error_msg}")
 
         except Exception as e:
-            error_msg = f"Error generating audio markdown: {str(e)}"
+            error_msg = f"Error generating audio markdown: {e!s}"
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
 
@@ -494,25 +497,22 @@ class ModalConverterComponent(Component):
         """Generate markdown image code for the generated image."""
         try:
             # Check if only one image is requested
-            n = getattr(self, 'num_images', 1) or 1
+            n = getattr(self, "num_images", 1) or 1
             if n != 1:
-                return Message(text="Markdown Image output is only available when generating a single image (Number of Images = 1)")
+                return Message(
+                    text="Markdown Image output is only available when generating a single image (Number of Images = 1)"
+                )
 
             api_key = self._get_api_key()
-            model = getattr(self, 'image_model', 'dall-e-3') or 'dall-e-3'
-            size = getattr(self, 'image_size', '1024x1024') or '1024x1024'
+            model = getattr(self, "image_model", "dall-e-3") or "dall-e-3"
+            size = getattr(self, "image_size", "1024x1024") or "1024x1024"
 
             client = OpenAI(api_key=api_key)
 
             self.status = f"Generating image using {model} model..."
             self.log(f"Making image generation request with model: {model}, size: {size}, count: {n}")
 
-            response = client.images.generate(
-                model=model,
-                prompt=text,
-                n=n,
-                size=size
-            )
+            response = client.images.generate(model=model, prompt=text, n=n, size=size)
 
             # Return markdown image code for the first image
             if response.data and len(response.data) > 0:
@@ -520,18 +520,17 @@ class ModalConverterComponent(Component):
                 # Create a description from the prompt
                 description = text[:50] + "..." if len(text) > 50 else text
                 markdown_code = f"![{description}]({image_url})"
-                
-                self.status = f"Generated image markdown successfully!"
+
+                self.status = "Generated image markdown successfully!"
                 self.log(f"Generated image markdown: {markdown_code}")
-                
+
                 return Message(text=markdown_code)
-            else:
-                error_msg = "No image URL generated"
-                self.status = f"Error: {error_msg}"
-                return Message(text=f"Error: {error_msg}")
+            error_msg = "No image URL generated"
+            self.status = f"Error: {error_msg}"
+            return Message(text=f"Error: {error_msg}")
 
         except Exception as e:
-            error_msg = f"Error generating image markdown: {str(e)}"
+            error_msg = f"Error generating image markdown: {e!s}"
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
 
@@ -540,36 +539,37 @@ class ModalConverterComponent(Component):
         try:
             # First, generate the video using the main method
             video_result = self.generate_video()
-            
+
             # Check if video generation was successful
-            if hasattr(video_result, 'data') and isinstance(video_result.data, dict):
-                if 'error' in video_result.data:
+            if hasattr(video_result, "data") and isinstance(video_result.data, dict):
+                if "error" in video_result.data:
                     return Message(text=f"Error: {video_result.data['error']}")
-                
+
                 # Get the primary video URL
-                video_url = video_result.data.get('video_url')
+                video_url = video_result.data.get("video_url")
                 if not video_url:
                     return Message(text="Error: No video URL generated")
-                
+
                 # Determine aspect ratio for dimensions
-                aspect_ratio = getattr(self, 'aspect_ratio', '16:9') or '16:9'
+                aspect_ratio = getattr(self, "aspect_ratio", "16:9") or "16:9"
                 if aspect_ratio == "16:9":
                     width, height = 640, 360
                 elif aspect_ratio == "9:16":
                     width, height = 360, 640
                 else:
                     width, height = 640, 360  # Default to 16:9
-                
+
                 # Generate HTML video player code
-                html_code = f'<video width="{width}" height="{height}" controls>\n  <source src="{video_url}">\n</video>'
-                
+                html_code = (
+                    f'<video width="{width}" height="{height}" controls>\n  <source src="{video_url}">\n</video>'
+                )
+
                 self.status = f"Generated video HTML for {aspect_ratio} aspect ratio"
                 return Message(text=html_code)
-            else:
-                return Message(text="Error: Invalid video generation result")
-                
+            return Message(text="Error: Invalid video generation result")
+
         except Exception as e:
-            error_msg = f"Error generating video markdown: {str(e)}"
+            error_msg = f"Error generating video markdown: {e!s}"
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
 
@@ -581,21 +581,16 @@ class ModalConverterComponent(Component):
                 return Data(data={"error": "No text provided for image generation"})
 
             api_key = self._get_api_key()
-            model = getattr(self, 'image_model', 'dall-e-3') or 'dall-e-3'
-            size = getattr(self, 'image_size', '1024x1024') or '1024x1024'
-            n = getattr(self, 'num_images', 1) or 1
+            model = getattr(self, "image_model", "dall-e-3") or "dall-e-3"
+            size = getattr(self, "image_size", "1024x1024") or "1024x1024"
+            n = getattr(self, "num_images", 1) or 1
 
             client = OpenAI(api_key=api_key)
 
             self.status = f"Generating image using {model} model..."
             self.log(f"Making image generation request with model: {model}, size: {size}, count: {n}")
 
-            response = client.images.generate(
-                model=model,
-                prompt=text,
-                n=n,
-                size=size
-            )
+            response = client.images.generate(model=model, prompt=text, n=n, size=size)
 
             image_urls = [data.url for data in response.data]
             self.status = f"Generated {len(image_urls)} image(s) successfully!"
@@ -603,24 +598,27 @@ class ModalConverterComponent(Component):
 
             # Se apenas uma imagem foi gerada, retornar a URL diretamente
             if n == 1 and len(image_urls) == 1:
-                return Data(data={
-                    "image_url": image_urls[0],
-                    "model": model,
-                    "size": size,
-                    "count": n,
-                    "prompt": text[:100] + "..." if len(text) > 100 else text,
-                })
-            else:
-                return Data(data={
+                return Data(
+                    data={
+                        "image_url": image_urls[0],
+                        "model": model,
+                        "size": size,
+                        "count": n,
+                        "prompt": text[:100] + "..." if len(text) > 100 else text,
+                    }
+                )
+            return Data(
+                data={
                     "image_urls": image_urls,
                     "model": model,
                     "size": size,
                     "count": n,
                     "prompt": text[:100] + "..." if len(text) > 100 else text,
-                })
+                }
+            )
 
         except Exception as e:
-            error_msg = f"Error generating image: {str(e)}"
+            error_msg = f"Error generating image: {e!s}"
             self.status = f"Error: {error_msg}"
             return Data(data={"error": error_msg})
 
@@ -632,40 +630,32 @@ class ModalConverterComponent(Component):
                 return Message(text="Error: No text provided for image generation")
 
             api_key = self._get_api_key()
-            model = getattr(self, 'image_model', 'dall-e-3') or 'dall-e-3'
-            size = getattr(self, 'image_size', '1024x1024') or '1024x1024'
-            n = getattr(self, 'num_images', 1) or 1
+            model = getattr(self, "image_model", "dall-e-3") or "dall-e-3"
+            size = getattr(self, "image_size", "1024x1024") or "1024x1024"
+            n = getattr(self, "num_images", 1) or 1
 
             client = OpenAI(api_key=api_key)
 
             self.status = f"Generating image using {model} model..."
             self.log(f"Making image generation request with model: {model}, size: {size}, count: {n}")
 
-            response = client.images.generate(
-                model=model,
-                prompt=text,
-                n=n,
-                size=size
-            )
+            response = client.images.generate(model=model, prompt=text, n=n, size=size)
 
             # Return only the first image URL as text
             if response.data and len(response.data) > 0:
                 image_url = response.data[0].url
-                self.status = f"Generated image URL successfully!"
+                self.status = "Generated image URL successfully!"
                 self.log(f"Generated image URL: {image_url}")
-                
-                return Message(text=image_url)
-            else:
-                error_msg = "No image URL generated"
-                self.status = f"Error: {error_msg}"
-                return Message(text=f"Error: {error_msg}")
 
-        except Exception as e:
-            error_msg = f"Error generating image URL: {str(e)}"
+                return Message(text=image_url)
+            error_msg = "No image URL generated"
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
 
-
+        except Exception as e:
+            error_msg = f"Error generating image URL: {e!s}"
+            self.status = f"Error: {error_msg}"
+            return Message(text=f"Error: {error_msg}")
 
     def generate_video(self) -> Data:
         """Generate video from text using Google Veo."""
@@ -673,11 +663,11 @@ class ModalConverterComponent(Component):
             text = self._extract_text_from_input()
             if not text or not text.strip():
                 return Data(data={"error": "No text provided for video generation"})
-            
+
             return self._generate_video_with_veo(text)
 
         except Exception as e:
-            error_msg = f"Error generating video: {str(e)}"
+            error_msg = f"Error generating video: {e!s}"
             self.status = f"Error: {error_msg}"
             return Data(data={"error": error_msg})
 
@@ -685,8 +675,8 @@ class ModalConverterComponent(Component):
         """Generate video using Google Veo."""
         try:
             api_key = self._get_api_key()
-            model = getattr(self, 'video_model', 'veo-3.0-generate-preview') or 'veo-3.0-generate-preview'
-            aspect_ratio = getattr(self, 'aspect_ratio', '16:9') or '16:9'
+            model = getattr(self, "video_model", "veo-3.0-generate-preview") or "veo-3.0-generate-preview"
+            aspect_ratio = getattr(self, "aspect_ratio", "16:9") or "16:9"
 
             # Create client with API key
             client = genai.Client(api_key=api_key)
@@ -704,7 +694,7 @@ class ModalConverterComponent(Component):
             )
 
             self.status = f"Waiting for video generation completion using {model}..."
-            
+
             # Poll for completion with proper interval (20 seconds as per documentation)
             while not operation.done:
                 time.sleep(20)
@@ -713,80 +703,78 @@ class ModalConverterComponent(Component):
             # Process generated videos
             video_urls = []
             video_data = []
-            
+
             for n, generated_video in enumerate(operation.response.generated_videos):
-                if hasattr(generated_video, 'video') and generated_video.video:
-                    video_info = {
-                        "video_id": n,
-                        "video_object": generated_video.video
-                    }
-                    
+                if hasattr(generated_video, "video") and generated_video.video:
+                    video_info = {"video_id": n, "video_object": generated_video.video}
+
                     # Add URI if available (needs API key appended for download)
-                    if hasattr(generated_video.video, 'uri'):
+                    if hasattr(generated_video.video, "uri"):
                         video_url = f"{generated_video.video.uri}&key={api_key}"
                         video_info["video_uri"] = video_url
                         video_urls.append(video_url)
-                    
+
                     video_data.append(video_info)
 
             if not video_data:
                 raise ValueError("No video was generated.")
 
             self.status = f"Video(s) generated successfully using {model}. Total: {len(video_data)}"
-            
+
             # Return the first video URL as main output, with detailed data available
             primary_video_url = video_urls[0] if video_urls else None
-            
-            return Data(data={
-                "video_url": primary_video_url,  # Direct link to first video
-                "video_urls": video_urls,        # List of all links
-                "video_count": len(video_data),
-                "videos": video_data,            # Complete data
-                "model_used": model,             # Model used
-                "prompt_used": text,
-                "aspect_ratio": aspect_ratio,
-                "provider": "Gemini"
-            })
+
+            return Data(
+                data={
+                    "video_url": primary_video_url,  # Direct link to first video
+                    "video_urls": video_urls,  # List of all links
+                    "video_count": len(video_data),
+                    "videos": video_data,  # Complete data
+                    "model_used": model,  # Model used
+                    "prompt_used": text,
+                    "aspect_ratio": aspect_ratio,
+                    "provider": "Gemini",
+                }
+            )
 
         except Exception as e:
             error_message = str(e)
             self.status = f"Error with model {model}: {error_message}"
-            
+
             # Provide helpful error info
-            return Data(data={
-                "error": error_message,
-                "model_attempted": model,
-                "video_count": 0,
-                "provider": "Gemini",
-                "suggestion": "Try using veo-3.0-generate-preview for the latest model, or check your API key and billing setup"
-            })
+            return Data(
+                data={
+                    "error": error_message,
+                    "model_attempted": model,
+                    "video_count": 0,
+                    "provider": "Gemini",
+                    "suggestion": "Try using veo-3.0-generate-preview for the latest model, or check your API key and billing setup",
+                }
+            )
 
     def generate_video_urls(self) -> Message:
         """Generate video and return only the URLs as text message."""
         try:
             # First, generate the video using the main method
             video_result = self.generate_video()
-            
+
             # Check if video generation was successful
-            if hasattr(video_result, 'data') and isinstance(video_result.data, dict):
-                if 'error' in video_result.data:
+            if hasattr(video_result, "data") and isinstance(video_result.data, dict):
+                if "error" in video_result.data:
                     return Message(text=f"Error: {video_result.data['error']}")
-                
+
                 # Get video URLs
-                video_urls = video_result.data.get('video_urls', [])
+                video_urls = video_result.data.get("video_urls", [])
                 if not video_urls:
                     return Message(text="Error: No video URLs generated")
-                
+
                 # Return URLs as comma-separated text
                 urls_text = ", ".join(video_urls)
                 self.status = f"Generated {len(video_urls)} video URL(s) successfully!"
                 return Message(text=urls_text)
-            else:
-                return Message(text="Error: Invalid video generation result")
-                
+            return Message(text="Error: Invalid video generation result")
+
         except Exception as e:
-            error_msg = f"Error generating video URLs: {str(e)}"
+            error_msg = f"Error generating video URLs: {e!s}"
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
-
-
