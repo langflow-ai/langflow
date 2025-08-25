@@ -7,17 +7,13 @@ import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
 import type { DropDownComponent } from "../../../types/components";
-import {
-  cn,
-  filterNullOptions,
-  formatName,
-  formatPlaceholderName,
-} from "../../../utils/utils";
+import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -53,6 +49,7 @@ export default function Dropdown({
   handleNodeClass,
   name,
   dialogInputs,
+  externalOptions,
   handleOnNewValue,
   toggle,
   ...baseInputProps
@@ -65,7 +62,10 @@ export default function Dropdown({
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
+  const nodes = useFlowStore((state) => state.nodes);
+
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
     if (value && !validOptions.includes(value) && combobox) {
@@ -88,9 +88,8 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const _placeholderName = name
-    ? formatPlaceholderName(name)
-    : "Choose an option...";
+
+  const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
@@ -173,6 +172,21 @@ export default function Dropdown({
     } else {
       setFilteredMetadata(undefined);
     }
+  };
+
+  const handleSourceOptions = async (value: string) => {
+    setWaitingForResponse(true);
+    setOpen(false);
+
+    await mutateTemplate(
+      value,
+      nodeId,
+      nodeClass!,
+      handleNodeClass,
+      postTemplateValue,
+      setErrorData,
+      name,
+    );
   };
 
   const handleRefreshButtonPress = async () => {
@@ -304,9 +318,9 @@ export default function Dropdown({
             disabled ||
             (Object.keys(validOptions).length === 0 &&
               !combobox &&
-              !dialogInputs?.fields?.data?.node?.template &&
+              !sourceOptions?.fields?.data?.node?.template &&
               !hasRefreshButton &&
-              !dialogInputs?.fields)
+              !sourceOptions?.fields)
           }
           variant="primary"
           size="xs"
@@ -331,13 +345,25 @@ export default function Dropdown({
                 RECEIVING_INPUT_VALUE
               ) : (
                 <>
-                  {value && filteredOptions.includes(value)
-                    ? value
-                    : placeholder || SELECT_AN_OPTION}{" "}
+                  {/* this logic is used for the agents component, if you update make sure to test the agent component */}
+                  {options?.includes(value) ? (
+                    value && filteredOptions.includes(value) ? (
+                      value
+                    ) : (
+                      placeholder || SELECT_AN_OPTION
+                    )
+                  ) : (
+                    <span className="text-muted-foreground">
+                      <LoadingTextComponent
+                        text={placeholder || SELECT_AN_OPTION}
+                      />
+                    </span>
+                  )}
                 </>
               )}
             </span>
           </span>
+
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
@@ -391,6 +417,7 @@ export default function Dropdown({
                   onSelect={(currentValue) => {
                     onSelect(currentValue);
                     setOpen(false);
+                    setWaitingForResponse(false);
                   }}
                   className="w-full items-center rounded-none"
                   data-testid={`${option}-${index}-option`}
@@ -488,40 +515,51 @@ export default function Dropdown({
         )}
       </CommandGroup>
       <CommandSeparator />
-      {dialogInputs && dialogInputs?.fields && (
+      {sourceOptions && sourceOptions?.fields && (
         <CommandGroup className="p-0">
-          <Button
-            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-            unstyled
-            onClick={() => {
-              setOpenDialog(true);
+          <CommandItem
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            onSelect={(value) => {
+              if (dialogInputs?.fields) {
+                setOpenDialog(true);
+              } else {
+                handleSourceOptions(
+                  sourceOptions?.fields?.data?.node?.name! || value,
+                );
+              }
             }}
           >
-            <div className="flex items-center gap-2 pl-1">
-              <ForwardedIconComponent
-                name="Plus"
-                className="h-3 w-3 text-primary"
-              />
-              {`New ${firstWord}`}
+            <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
+              <ForwardedIconComponent name="Plus" className="h-3 w-3 " />
+              {sourceOptions?.fields?.data?.node?.display_name}
             </div>
-          </Button>
+            {sourceOptions?.fields?.data?.node?.icon && (
+              <div className="ml-auto">
+                <ForwardedIconComponent
+                  name={sourceOptions?.fields?.data?.node?.icon}
+                  className="h-3 w-3 "
+                />
+              </div>
+            )}
+          </CommandItem>
 
-          <Button
-            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none p-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-            unstyled
-            data-testid={`refresh-dropdown-list-${name}`}
-            onClick={() => {
-              handleRefreshButtonPress();
-            }}
-          >
-            <div className="flex items-center gap-2 pl-1">
-              <ForwardedIconComponent
-                name="RefreshCcw"
-                className={cn("refresh-icon h-3 w-3 text-primary")}
-              />
-              Refresh list
-            </div>
-          </Button>
+          {hasRefreshButton && (
+            <CommandItem
+              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+              onSelect={() => {
+                handleRefreshButtonPress();
+              }}
+              data-testid={`refresh-dropdown-list-${name}`}
+            >
+              <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
+                <ForwardedIconComponent
+                  name="RefreshCcw"
+                  className={cn("h-3 w-3")}
+                />
+                Refresh list
+              </div>
+            </CommandItem>
+          )}
           <NodeDialog
             open={openDialog}
             dialogInputs={dialogInputs}
@@ -550,7 +588,7 @@ export default function Dropdown({
       <Command className="flex flex-col">
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
-        {!dialogInputs?.fields && hasRefreshButton && (
+        {!sourceOptions?.fields && hasRefreshButton && (
           <div className="sticky bottom-0 border-t bg-background">
             <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
               <Button
