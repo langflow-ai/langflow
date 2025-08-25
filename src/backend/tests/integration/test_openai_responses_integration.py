@@ -4,11 +4,12 @@ import os
 import pathlib
 
 import pytest
-from dotenv import load_dotenv, find_dotenv
+from dotenv import find_dotenv, load_dotenv
 from httpx import AsyncClient
 from loguru import logger
 
 load_dotenv(find_dotenv())
+
 
 async def create_global_variable(client: AsyncClient, headers, name, value, variable_type="credential"):
     """Create a global variable in Langflow."""

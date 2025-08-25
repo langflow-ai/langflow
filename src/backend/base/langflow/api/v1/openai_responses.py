@@ -38,6 +38,7 @@ def has_chat_input(flow_data: dict | None) -> bool:
 
     return any(node.get("data", {}).get("type") in ["ChatInput", "Chat Input"] for node in flow_data["nodes"])
 
+
 def has_chat_output(flow_data: dict | None) -> bool:
     """Check if the flow has a chat input component."""
     if not flow_data or "nodes" not in flow_data:
