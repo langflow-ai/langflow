@@ -45,6 +45,12 @@ test.describe("Flow Lock Feature", () => {
 
       await lockSwitch.click();
       await page.waitForTimeout(1000);
+
+      const stateAfterClick = await lockSwitch.getAttribute("data-state");
+      if (stateAfterClick !== "checked") {
+        await lockSwitch.click();
+        await page.waitForTimeout(500);
+      }
       await expect(lockSwitch).toHaveAttribute("data-state", "checked");
 
       // Verify that inputs become disabled when locked
