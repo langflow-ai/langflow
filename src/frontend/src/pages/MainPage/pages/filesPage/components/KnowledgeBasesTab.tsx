@@ -5,7 +5,10 @@ import type {
 } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { useDeleteKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base";
@@ -13,8 +16,14 @@ import {
   type KnowledgeBaseInfo,
   useGetKnowledgeBases,
 } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
+import { updateIds } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
 import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
@@ -46,6 +55,13 @@ const KnowledgeBasesTab = ({
     setErrorData: state.setErrorData,
     setSuccessData: state.setSuccessData,
   }));
+
+  const examples = useFlowsManagerStore((state) => state.examples);
+  const addFlow = useAddFlow();
+  const navigate = useCustomNavigate();
+  const { folderId } = useParams();
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const folderIdUrl = folderId ?? myCollectionId;
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [knowledgeBaseToDelete, setKnowledgeBaseToDelete] =
@@ -119,6 +135,22 @@ const KnowledgeBasesTab = ({
     }
   };
 
+  const handleCreateKnowledge = async () => {
+    const knowledgeBasesExample = examples.find(
+      (example) => example.name === "Knowledge Ingestion",
+    );
+
+    if (knowledgeBasesExample && knowledgeBasesExample.data) {
+      updateIds(knowledgeBasesExample.data);
+      addFlow({ flow: knowledgeBasesExample }).then((id) => {
+        navigate(`/flow/${id}/folder/${folderIdUrl}`);
+      });
+      track("New Flow Created", {
+        template: `${knowledgeBasesExample.name} Template`,
+      });
+    }
+  };
+
   const clearSelection = () => {
     setQuantitySelected(0);
     setSelectedFiles([]);
@@ -142,7 +174,9 @@ const KnowledgeBasesTab = ({
   }
 
   if (knowledgeBases.length === 0) {
-    return <KnowledgeBaseEmptyState />;
+    return (
+      <KnowledgeBaseEmptyState handleCreateKnowledge={handleCreateKnowledge} />
+    );
   }
 
   return (
@@ -159,6 +193,12 @@ const KnowledgeBasesTab = ({
             onChange={(event) => setQuickFilterText(event.target.value)}
           />
         </div>
+        <Button
+          className="flex items-center gap-2 font-semibold"
+          onClick={handleCreateKnowledge}
+        >
+          <ForwardedIconComponent name="Plus" /> Create knowledge
+        </Button>
       </div>
 
       <div className="flex h-full flex-col pt-4">
