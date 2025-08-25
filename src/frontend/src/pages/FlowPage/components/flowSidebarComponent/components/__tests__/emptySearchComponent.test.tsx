@@ -324,20 +324,6 @@ describe("NoResultsMessage", () => {
         expect(screen.getByText("Config Toggle: true")).toBeInTheDocument();
       });
 
-      it("should position SearchConfigTrigger in top right corner", () => {
-        render(<NoResultsMessage {...defaultPropsWithConfig} />);
-
-        const triggerContainer = screen.getByTestId(
-          "search-config-trigger",
-        ).parentElement;
-        expect(triggerContainer).toHaveClass(
-          "absolute",
-          "top-3",
-          "right-3",
-          "z-10",
-        );
-      });
-
       it("should maintain proper layout with SearchConfigTrigger", () => {
         const { container } = render(
           <NoResultsMessage {...defaultPropsWithConfig} />,

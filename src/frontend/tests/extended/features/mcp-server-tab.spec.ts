@@ -56,6 +56,8 @@ test(
         // Verify actions modal is open
         await expect(page.getByText("MCP Server Tools")).toBeVisible();
 
+        await page.waitForSelector("text=Flow Name", { timeout: 3000 });
+
         // Select some actions
         const rowsCount = await page.getByRole("row").count();
         expect(rowsCount).toBeGreaterThan(0);
