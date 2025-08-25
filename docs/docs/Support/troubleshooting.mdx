@@ -124,6 +124,55 @@ There are two possible reasons for this error:
 Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
 To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
+### Access Langflow Desktop startup logs
+
+If you encounter issues with Langflow Desktop and need to access startup logs for debugging, follow these steps for your operating system.
+
+The log file is only created when Langflow Desktop runs. If you don't see a log file, try starting Langflow Desktop first, then check for the log file.
+
+<Tabs>
+<TabItem value="macos" label="macOS">
+
+1. Open Terminal and run:
+   ```bash
+   cd ~/Library/Logs/com.Langflow
+   ```
+
+2. Open the log contents to display the log files:
+   ```bash
+   open .
+   ```
+
+3. Locate the `langflow.log` file and send it to support for debugging assistance.
+
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+1. Open the Command Prompt (CMD) and run:
+   ```cmd
+   cd %LOCALAPPDATA%\com.langflow\logs
+   ```
+
+2. Run the command:
+   ```cmd
+   start .
+   ```
+
+3. Locate the `Langflow.log` file and send it to support for debugging assistance.
+
+</TabItem>
+</Tabs>
+
+### `User not found or inactive` when running multiple flows
+
+When running multiple Langflow instances locally on different ports (for example, one on `localhost:7860` and another on `localhost:7861`), you might see authentication errors in the logs:
+
+```text
+[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - utils - User not found or inactive.
+```
+
+To resolve this error, use separate browser instances or browser profiles for each Langflow instance.
+
 ### Package is not installed
 
 In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
@@ -152,6 +201,15 @@ For more information and default filepaths, see [Memory management options](/mem
 Clearing the cache erases your settings.
 If you want to retain your settings files, create a backup of those files before clearing the cache folder.
 :::
+
+### Langflow Desktop shows "latest version" but is outdated
+
+If Langflow Desktop shows you're on the latest version (for example, version `1.3.3`) but a newer version (like `1.5.0`) is available, this is likely because you're running a version prior to `1.4.2`.
+
+The automatic update feature through the graphical interface was introduced in version `1.4.2`.
+Versions prior to `1.4.2` don't include the necessary functionality to perform updates.
+
+To resolve, uninstall Langflow Desktop and download the latest version from the [official website](https://langflow.org/desktop).
 
 ## Langflow uninstall issues
 
