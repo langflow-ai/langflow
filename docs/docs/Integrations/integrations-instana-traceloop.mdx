@@ -45,19 +45,19 @@ Warning: Never commit your `.env` file to source control. If your keys are expos
 3. Save the `.env` file.
 4. Make sure the OpenTelemetry (OTel) Collector is running.
    - In your Collector’s `config.yaml`, add the following (update to match your Instana endpoint and service names):
-     ```yaml
-     # Example values — update to your environment
-     llm.application: "LLM_DC"
-     instances:
-       - otel.agentless.mode: true
-         # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
-         otel.backend.url: "<INSTANA_ENDPOINT>"
-         otel.backend.using.http: false
-         callback.interval: 10
-         otel.service.name: "DC1"
-         otel.service.port: 8000
-         currency: "USD"
-     ```
+   ```yaml
+   # Example values — update to your environment
+   llm.application: "LLM_DC"
+   instances:
+      - otel.agentless.mode: true
+      # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
+      otel.backend.url: "<INSTANA_ENDPOINT>"
+      otel.backend.using.http: false
+      callback.interval: 10
+      otel.service.name: "DC1"
+      otel.service.port: 8000
+      currency: "USD"
+   ```
 
 ### Step 2: Start Langflow with Environment Variables
 Launch your Langflow application using the environment file:
