@@ -16,7 +16,6 @@ from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.custom import Component
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
-from tests.unit.mock_language_model import MockLanguageModel
 
 # Load environment variables from .env file
 
@@ -37,12 +36,12 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         return component_instance
 
     @pytest.fixture
-    def default_kwargs(self):
+    def default_kwargs(self, mock_llm):
         return {
             "_type": "Agent",
             "add_current_date_tool": True,
             "agent_description": "A helpful agent",
-            "agent_llm": MockLanguageModel(),
+            "agent_llm": mock_llm,
             "handle_parsing_errors": True,
             "input_value": "",
             "max_iterations": 10,

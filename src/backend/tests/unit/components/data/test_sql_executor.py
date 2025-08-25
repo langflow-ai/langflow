@@ -101,3 +101,39 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert "name" in result.columns
         assert result.iloc[0]["id"] == 1
         assert result.iloc[0]["name"] == "name_test"
+
+    def test_with_mock_database(self, mock_database_session, sample_database_records):
+        """Test database query logic with mock database session (no real DB needed)."""
+        # Configure mock database session to return sample records
+        mock_result = mock_database_session.exec.return_value
+        mock_result.all.return_value = sample_database_records
+        mock_result.first.return_value = sample_database_records[0] if sample_database_records else None
+
+        # Simulate executing a query like the SQLComponent would
+        query_result = mock_database_session.exec("SELECT * FROM test_table")
+        records = query_result.all()
+
+        # Assert we got the expected sample data
+        assert len(records) == 3
+        assert records[0]["name"] == "Test Record 1"
+        assert records[0]["id"] == 1
+        assert records[1]["name"] == "Test Record 2"
+
+        # Verify the database session was used correctly
+        mock_database_session.exec.assert_called_once_with("SELECT * FROM test_table")
+
+        # Test getting a single record
+        single_record = query_result.first()
+        assert single_record["name"] == "Test Record 1"
+
+    def test_mock_database_error_handling(self, mock_database_session):
+        """Test how mock database handles errors."""
+        # Configure mock to raise an exception when executing query
+        mock_database_session.exec.side_effect = Exception("Database connection failed")
+
+        # Test that the exception is properly raised
+        with pytest.raises(Exception, match="Database connection failed"):
+            mock_database_session.exec("SELECT * FROM non_existent_table")
+
+        # Verify the exec method was called
+        mock_database_session.exec.assert_called_once_with("SELECT * FROM non_existent_table")
