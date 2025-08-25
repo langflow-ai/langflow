@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Any, Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from anyio import BrokenResourceError
@@ -535,7 +535,7 @@ async def install_mcp_config(
                 except OSError as e:
                     await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
-        # Base args 
+        # Base args
         if FEATURE_FLAGS.mcp_composer:
             args = ["mcp-composer"]
         else:
