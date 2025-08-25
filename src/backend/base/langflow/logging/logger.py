@@ -366,4 +366,4 @@ class InterceptHandler(logging.Handler):
 # Initialize logger - will be reconfigured when configure() is called
 # Set it to critical level
 logger: structlog.BoundLogger = structlog.get_logger()
-configure(log_level="CRITICAL", disable=True)
+configure(log_level=os.getenv("LANGFLOW_LOG_LEVEL", "INFO"))
