@@ -124,12 +124,10 @@ test(
         .getAttribute("role");
 
       await page.getByTestId("text_card_container").nth(i).click();
-      await page.waitForTimeout(2000);
 
-      await page.getByTestId("canvas_controls_dropdown").click();
-      await page.waitForSelector('[data-testid="fit_view"]', { timeout: 2000 });
-      await page.getByTestId("fit_view").click();
-      await page.getByTestId("canvas_controls_dropdown").click();
+      await page.waitForSelector('[data-testid="div-generic-node"]', {
+        timeout: 5000,
+      });
 
       if ((await page.getByTestId("update-all-button").count()) > 0) {
         console.error(`
