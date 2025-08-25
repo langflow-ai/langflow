@@ -27,6 +27,7 @@ dependencies = [
     "langchain-core~=0.3.45",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
+    "structlog>=25.4.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.3.4,<1.0.0",
     "sqlmodel==0.0.22",
