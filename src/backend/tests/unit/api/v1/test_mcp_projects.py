@@ -138,34 +138,24 @@ async def other_test_project(other_test_user):
 
 
 async def test_handle_project_messages_success(
-    client: AsyncClient, mock_project, mock_sse_transport, logged_in_headers
+    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
     """Test successful handling of project messages."""
-    with patch("langflow.api.v1.mcp_projects.session_scope") as mock_db:
-        mock_session = AsyncMock()
-        mock_db.return_value.__aenter__.return_value = mock_session
-        mock_session.exec.return_value.first.return_value = mock_project
-
-        response = await client.post(
-            f"api/v1/mcp/project/{mock_project.id}",
-            headers=logged_in_headers,
-            json={"type": "test", "content": "message"},
-        )
-        assert response.status_code == status.HTTP_200_OK
-        mock_sse_transport.handle_post_message.assert_called_once()
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}",
+        headers=logged_in_headers,
+        json={"type": "test", "content": "message"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, mock_project, logged_in_headers):
+async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, user_test_project, logged_in_headers):
     """Test updating MCP settings with invalid JSON."""
-    with patch("langflow.api.v1.mcp_projects.session_scope") as mock_db:
-        mock_session = AsyncMock()
-        mock_db.return_value.__aenter__.return_value = mock_session
-        mock_session.exec.return_value.first.return_value = mock_project
-
-        response = await client.patch(
-            f"api/v1/mcp/project/{mock_project.id}", headers=logged_in_headers, json="invalid"
-        )
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    response = await client.patch(
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json="invalid"
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 @pytest.fixture
