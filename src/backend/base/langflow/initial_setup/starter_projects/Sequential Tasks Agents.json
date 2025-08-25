@@ -2809,7 +2809,7 @@
             "icon": "trending-up",
             "legacy": false,
             "metadata": {
-              "code_hash": "436519c08bd4",
+              "code_hash": "6e61ed5ad81b",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2821,10 +2821,6 @@
                     "version": "0.3.72"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "pydantic",
                     "version": "2.10.6"
                   },
@@ -2833,7 +2829,7 @@
                     "version": null
                   }
                 ],
-                "total_dependencies": 5
+                "total_dependencies": 4
               },
               "module": "langflow.components.yahoosearch.yahoo.YfinanceComponent"
             },
@@ -3214,7 +3210,7 @@
             "icon": "TavilyIcon",
             "legacy": false,
             "metadata": {
-              "code_hash": "6843645056d9",
+              "code_hash": "4c76fb76d395",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3222,15 +3218,11 @@
                     "version": "0.27.2"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 2
               },
               "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
             },

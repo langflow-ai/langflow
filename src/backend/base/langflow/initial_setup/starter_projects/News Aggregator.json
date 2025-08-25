@@ -205,7 +205,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "ce845cc47ae8",
+              "code_hash": "ab828f4cdff2",
               "dependencies": {
                 "dependencies": [
                   {
@@ -213,15 +213,11 @@
                     "version": "0.27.2"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 2
               },
               "module": "langflow.components.agentql.agentql_api.AgentQL"
             },
@@ -1251,7 +1247,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "d9af728ce02a",
+              "code_hash": "1bcc6faaaa62",
               "dependencies": {
                 "dependencies": [
                   {

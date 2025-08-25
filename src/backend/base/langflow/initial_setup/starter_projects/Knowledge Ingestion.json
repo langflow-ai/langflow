@@ -352,7 +352,7 @@
             "legacy": false,
             "lf_version": "1.5.0.post1",
             "metadata": {
-              "code_hash": "a81817a7f244",
+              "code_hash": "252132357639",
               "dependencies": {
                 "dependencies": [
                   {
@@ -368,15 +368,11 @@
                     "version": "0.3.21"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 5
+                "total_dependencies": 4
               },
               "module": "langflow.components.data.url.URLComponent"
             },
@@ -740,7 +736,7 @@
             "last_updated": "2025-08-13T19:45:49.122Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "e1ebcd66ecbc",
+              "code_hash": "6c62063f2c09",
               "dependencies": {
                 "dependencies": [
                   {

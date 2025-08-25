@@ -558,7 +558,7 @@
             "last_updated": "2025-08-14T17:19:22.182Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "ee2b66958f09",
+              "code_hash": "6fcf86be1aca",
               "dependencies": {
                 "dependencies": [
                   {
@@ -572,6 +572,10 @@
                   {
                     "name": "loguru",
                     "version": "0.7.3"
+                  },
+                  {
+                    "name": "pydantic",
+                    "version": "2.10.6"
                   },
                   {
                     "name": "langflow",
@@ -590,7 +594,7 @@
                     "version": "0.3.3"
                   }
                 ],
-                "total_dependencies": 7
+                "total_dependencies": 8
               },
               "module": "langflow.components.data.kb_retrieval.KBRetrievalComponent"
             },

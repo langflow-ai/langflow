@@ -793,7 +793,7 @@
             "legacy": false,
             "lf_version": "1.3.2",
             "metadata": {
-              "code_hash": "6843645056d9",
+              "code_hash": "4c76fb76d395",
               "dependencies": {
                 "dependencies": [
                   {
@@ -801,15 +801,11 @@
                     "version": "0.27.2"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 2
               },
               "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
             },
@@ -1211,7 +1207,7 @@
             "legacy": false,
             "lf_version": "1.3.2",
             "metadata": {
-              "code_hash": "ce845cc47ae8",
+              "code_hash": "ab828f4cdff2",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1219,15 +1215,11 @@
                     "version": "0.27.2"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 2
               },
               "module": "langflow.components.agentql.agentql_api.AgentQL"
             },

@@ -1013,7 +1013,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "a81817a7f244",
+              "code_hash": "252132357639",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1029,15 +1029,11 @@
                     "version": "0.3.21"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 5
+                "total_dependencies": 4
               },
               "module": "langflow.components.data.url.URLComponent"
             },

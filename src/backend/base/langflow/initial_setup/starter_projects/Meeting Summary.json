@@ -314,7 +314,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "6fd1a65a4904",
+              "code_hash": "3e67a5940263",
               "dependencies": {
                 "dependencies": [
                   {
@@ -322,15 +322,11 @@
                     "version": "0.35.1"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 2
               },
               "module": "langflow.components.assemblyai.assemblyai_poll_transcript.AssemblyAITranscriptionJobPoller"
             },
@@ -1786,7 +1782,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "5ca89b168f3f",
+              "code_hash": "464cc8b8fdd2",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2552,7 +2548,7 @@
             "key": "AssemblyAITranscriptionJobCreator",
             "legacy": false,
             "metadata": {
-              "code_hash": "03525d13fcc0",
+              "code_hash": "03d20eaf49f4",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2560,15 +2556,11 @@
                     "version": "0.35.1"
                   },
                   {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
                     "name": "langflow",
                     "version": null
                   }
                 ],
-                "total_dependencies": 3
+                "total_dependencies": 2
               },
               "module": "langflow.components.assemblyai.assemblyai_start_transcript.AssemblyAITranscriptionJobCreator"
             },
