@@ -1,7 +1,8 @@
 // frontend/src/MFEEntry.tsx
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Import all the styles that are needed
 import "@xyflow/react/dist/style.css";
@@ -10,8 +11,8 @@ import "./style/index.css";
 import "./App.css";
 import "./style/applies.css";
 
-import App from "./App";
 import { useEffect } from "react";
+import App from "./App";
 import { useFolderStore } from "./stores/foldersStore";
 
 // uncomment if you need to run this independently
