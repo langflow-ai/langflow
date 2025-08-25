@@ -9,12 +9,16 @@ import Icon from "@site/src/components/icon";
 
 A knowledge base is a local repository of vector embeddings created from your data that agents can reference to answer domain-specific questions.
 
-Knowledge bases are distinct from vector database components. Most vector database components provide a connection to a database, while knowledge bases store vector data locally, allowing each knowledge base to be re-used in new flows without requiring re-ingestion of the data in every flow.
+Knowledge bases are distinct from [**Vector Store** components](/components-vector-stores). **Vector Store** components provide a connection to a vector database, while knowledge bases store vector data locally, allowing each knowledge base to be re-used in new flows without requiring re-ingestion of the data in every flow.
 
 Knowledge bases are created with the [**Create Knowledge** component](/components-data#create-knowledge), and knowledge is retrieved using the [**Retrieve Knowledge** component](/components-data#retrieve-knowledge).
 
-For example, you could create a knowledge base with customer sales data from a specific month with the [**Create Knowledge** component](/components-data#create-knowledge).
-Then, when you create flows that need customer data from this time period, add a [**Retrieve Knowledge** component](/components-data#retrieve-knowledge) to access the knowledge base.
+For example, you could create a knowledge base with customer sales data from a specific month with the **Create Knowledge** component.
+Then, when you create flows that need customer data from this time period, add a **Retrieve Knowledge** component to access the knowledge base.
+
+## Knowledge base examples
+
+For examples of knowledge bases in flows, see the **Create Knowledge** and **Retrieve Knowledge** [templates](/concepts-flows#create-a-flow) in Langflow.
 
 ## Create and retrieve a knowledge base
 
@@ -147,3 +151,8 @@ You can customize the parent directory where the `knowledge_bases` directory is 
     ```
 
 If you have set the `LANGFLOW_CONFIG_DIR` environment variable, knowledge bases are stored in a `knowledge_bases` subdirectory within that location.
+
+## See also
+
+* [Use Langflow agents](/agents)
+* [**Vector Stores** components](/components-vector-stores)
