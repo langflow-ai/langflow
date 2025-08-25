@@ -2183,7 +2183,7 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "ed38680af3a6",
-              "module": "langflow.components.vectorstores.faiss.FaissVectorStoreComponent"
+              "module": "langflow.components.FAISS.faiss.FaissVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
