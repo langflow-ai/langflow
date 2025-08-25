@@ -12,7 +12,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -100,6 +100,31 @@ class DatabaseVariableService(VariableService, Service):
             variables_read.append(variable_read)
         return variables_read
 
+    async def get_by_category(
+        self,
+        user_id: UUID | str,
+        category: str,
+        session: AsyncSession,
+    ) -> list[VariableRead]:
+        stmt = select(Variable).where(Variable.user_id == user_id, Variable.category == category)
+        variables = list((await session.exec(stmt)).all())
+
+        variables_read: list[VariableRead] = []
+        for variable in variables:
+            value = None
+            if variable.type == GENERIC_TYPE:
+                try:
+                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(
+                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
+                    )
+                    value = variable.value
+            variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            variable_read.value = value
+            variables_read.append(variable_read)
+        return variables_read
+
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         variables = await self.get_all(user_id=user_id, session=session)
         return [variable.name for variable in variables if variable]
@@ -134,9 +159,13 @@ class DatabaseVariableService(VariableService, Service):
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
 
+        if variable.category is not None:
+            db_variable.category = variable.category
+
         variable.value = variable.value or ""
-        encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
-        variable.value = encrypted
+        if variable.type == CREDENTIAL_TYPE:
+            encrypted = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
+            variable.value = encrypted
 
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
@@ -177,6 +206,7 @@ class DatabaseVariableService(VariableService, Service):
         user_id: UUID | str,
         name: str,
         value: str,
+        category: str = CATEGORY_GLOBAL,
         *,
         default_fields: Sequence[str] = (),
         type_: str = CREDENTIAL_TYPE,
@@ -187,6 +217,7 @@ class DatabaseVariableService(VariableService, Service):
             type=type_,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
             default_fields=list(default_fields),
+            category=category,
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)
