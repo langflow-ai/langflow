@@ -21,6 +21,7 @@ class LocalDBComponent(LCVectorStoreComponent):
     description: str = "Local Vector Store with search capabilities"
     name = "LocalDB"
     icon = "database"
+    legacy = True
 
     inputs = [
         TabInput(
