@@ -33,8 +33,26 @@ Before setting up observability, ensure you have:
    TRACELOOP_API_KEY=<your_traceloop_api_key>
    TRACELOOP_BASE_URL=<Instana_endpoint> (Eg: https://otlp-magenta-saas.instana.rocks:4318)
    TRACELOOP_HEADERS="x-instana-key=<your_instana_key>"
+   OTEL_EXPORTER_OTLP_INSECURE=true
+   TRACELOOP_METRICS_ENDPOINT=host.docker.internal:8000
+   TRACELOOP_METRICS_ENABLED=true
+   OTEL_METRIC_EXPORT_INTERVAL=10000
    ```
 3. Save the `.env` file
+4. Make sure OTEL Data Collector is up and running.
+   - In otel-dc `config.yaml`, add the following:
+     ```
+     llm.application: LLM_DC
+
+      instances:
+      - otel.agentless.mode: true
+         otel.backend.url: <Instana_endpoint> (Eg: https://otlp-magenta-saas.instana.rocks:4318)
+         otel.backend.using.http: false
+         callback.interval: 10
+         otel.service.name: DC1
+         otel.service.port: 8000
+         currency: USD
+     ```
 
 ### Step 2: Start Langflow with Environment Variables
 Launch your Langflow application using the environment file:
@@ -57,6 +75,12 @@ To verify that observability is working correctly:
    - Click on `Services` tab in the Navbar (Top).
    - Search for `Langflow` and click on it to view and analyze the associated calls.
 
+3. **View Metrics in Instana:**
+   - Open Instana and select `Infrastructure`.
+   - Click on `Analyse Infrastructure`.
+   - Search for `Otel LLMonitor`.
+   - Select `LLM:DC1@your_machine_name.local` to view your Metrics dashboard.
+
 ## Troubleshooting
 
 If you don't see traces appearing:
@@ -64,5 +88,11 @@ If you don't see traces appearing:
 - Ensure the `.env` file is in the correct root directory
 - Confirm that Langflow is starting with the `--env-file .env` parameter
 - Check that you've generated sufficient test traffic through the Playground
+
+If you don’t see metrics appearing:
+- Ensure the OpenTelemetry (Otel) Data Collector is running without errors.
+- Verify that the Otel DC config.yaml is configured as described above.
+- Confirm that the Instana endpoint and the service port (e.g., service.port: 8000) are correctly exposed and accessible.
+- Check whether the metrics are being logged in the Otel DC terminal output.
 
 For additional configuration options and advanced features, refer to the respective platform documentation for [Traceloop](https://www.traceloop.com/docs/introduction) or [Instana](https://www.ibm.com/docs/en/instana-observability/current).
