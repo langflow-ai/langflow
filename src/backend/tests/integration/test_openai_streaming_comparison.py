@@ -52,7 +52,7 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
 
     # Create OPENAI_API_KEY global variable
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
+    if not openai_api_key or openai_api_key == "dummy":
         pytest.skip("OPENAI_API_KEY environment variable not set")
 
     await create_global_variable(client, headers, "OPENAI_API_KEY", openai_api_key)
