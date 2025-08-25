@@ -1,8 +1,11 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 
-const KnowledgeBaseEmptyState = ({ handleCreateKnowledge }: { handleCreateKnowledge: () => void }) => {
-
+const KnowledgeBaseEmptyState = ({
+  handleCreateKnowledge,
+}: {
+  handleCreateKnowledge: () => void;
+}) => {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
       <div className="flex flex-col items-center gap-2">
