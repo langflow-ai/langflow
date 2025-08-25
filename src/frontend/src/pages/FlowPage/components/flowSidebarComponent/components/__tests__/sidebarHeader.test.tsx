@@ -101,7 +101,7 @@ describe("SidebarHeaderComponent", () => {
     handleInputFocus: mockHandleInputFocus,
     handleInputBlur: mockHandleInputBlur,
     handleInputChange: mockHandleInputChange,
-    filterType: null,
+    filterType: undefined,
     setFilterEdge: mockSetFilterEdge,
     setFilterData: mockSetFilterData,
     data: mockAPIData,
@@ -270,7 +270,14 @@ describe("SidebarHeaderComponent", () => {
     it("should render filter component when filterType is provided", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: { source: true, type: "input", color: "#FF0000" },
+        filterType: {
+          source: "input",
+          sourceHandle: "input",
+          target: undefined,
+          targetHandle: undefined,
+          type: "input",
+          color: "#FF0000",
+        },
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
@@ -285,7 +292,14 @@ describe("SidebarHeaderComponent", () => {
     it("should pass correct props to filter component for output", () => {
       const propsWithOutputFilter = {
         ...defaultProps,
-        filterType: { source: false, type: "output", color: "#00FF00" },
+        filterType: {
+          source: undefined,
+          sourceHandle: undefined,
+          target: "output",
+          targetHandle: "output",
+          type: "output",
+          color: "#00FF00",
+        },
       };
 
       render(<SidebarHeaderComponent {...propsWithOutputFilter} />);
@@ -299,7 +313,14 @@ describe("SidebarHeaderComponent", () => {
     it("should handle filter reset correctly", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: { source: true, type: "input", color: "#FF0000" },
+        filterType: {
+          source: "input",
+          sourceHandle: "input",
+          target: "output",
+          targetHandle: "output",
+          type: "input",
+          color: "#FF0000",
+        },
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
@@ -331,7 +352,14 @@ describe("SidebarHeaderComponent", () => {
     it("should maintain structure with filter component", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: { source: true, type: "input", color: "#FF0000" },
+        filterType: {
+          source: "input",
+          sourceHandle: "input",
+          target: "output",
+          targetHandle: "output",
+          type: "input",
+          color: "#FF0000",
+        },
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
@@ -406,20 +434,10 @@ describe("SidebarHeaderComponent", () => {
       }).not.toThrow();
     });
 
-    it("should handle null filterType gracefully", () => {
-      const propsWithNullFilter = {
-        ...defaultProps,
-        filterType: null,
-      };
-
-      render(<SidebarHeaderComponent {...propsWithNullFilter} />);
-      expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
-    });
-
     it("should handle undefined filterType gracefully", () => {
       const propsWithUndefinedFilter = {
         ...defaultProps,
-        filterType: undefined as any,
+        filterType: undefined,
       };
 
       render(<SidebarHeaderComponent {...propsWithUndefinedFilter} />);
@@ -430,7 +448,10 @@ describe("SidebarHeaderComponent", () => {
       const propsWithComplexFilter = {
         ...defaultProps,
         filterType: {
-          source: true,
+          source: "input",
+          sourceHandle: "input",
+          target: undefined,
+          targetHandle: undefined,
           type: "complex-input",
           color: "#ABCDEF",
           additionalProp: "ignored",
@@ -473,7 +494,14 @@ describe("SidebarHeaderComponent", () => {
         showBeta: true,
         showLegacy: false,
         isInputFocused: true,
-        filterType: { source: true, type: "input", color: "#123456" },
+        filterType: {
+          source: "input",
+          sourceHandle: "input",
+          target: undefined,
+          targetHandle: undefined,
+          type: "input",
+          color: "#123456",
+        },
       };
 
       render(<SidebarHeaderComponent {...fullProps} />);

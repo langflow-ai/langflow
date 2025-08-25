@@ -48,7 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 export default function SidebarSegmentedNav() {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
-  const { focusSearch, isSearchFocused } = useSearchContext();
+  const { focusSearch, isSearchFocused, setSearch } = useSearchContext();
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2 p-1">
@@ -58,6 +58,7 @@ export default function SidebarSegmentedNav() {
               <SidebarMenuButton
                 size="md"
                 onClick={() => {
+                  setSearch?.("");
                   if (activeSection === item.id && open) {
                     toggleSidebar();
                   } else {

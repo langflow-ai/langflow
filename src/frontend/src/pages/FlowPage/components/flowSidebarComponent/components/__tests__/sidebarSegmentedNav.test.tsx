@@ -12,6 +12,7 @@ const mockUseSidebar = {
 const mockUseSearchContext = {
   focusSearch: jest.fn(),
   isSearchFocused: false,
+  setSearch: jest.fn(),
 };
 
 jest.mock("@/components/ui/sidebar", () => ({
@@ -149,6 +150,16 @@ describe("SidebarSegmentedNav", () => {
     expect(mockUseSidebar.setActiveSection).toHaveBeenCalledTimes(1);
   });
 
+  it("resets search when changing active sections", () => {
+    render(<SidebarSegmentedNav />);
+
+    const mcpButton = screen.getByTestId("sidebar-nav-mcp");
+    fireEvent.click(mcpButton);
+
+    expect(mockUseSearchContext.setSearch).toHaveBeenCalledWith("");
+    expect(mockUseSearchContext.setSearch).toHaveBeenCalledTimes(1);
+  });
+
   it("toggles sidebar when clicking on currently active section", () => {
     mockUseSidebar.activeSection = "components";
     render(<SidebarSegmentedNav />);
@@ -160,6 +171,17 @@ describe("SidebarSegmentedNav", () => {
     expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
   });
 
+  it("resets search when toggling sidebar on active section", () => {
+    mockUseSidebar.activeSection = "components";
+    render(<SidebarSegmentedNav />);
+
+    const componentsButton = screen.getByTestId("sidebar-nav-components");
+    fireEvent.click(componentsButton);
+
+    expect(mockUseSearchContext.setSearch).toHaveBeenCalledWith("");
+    expect(mockUseSearchContext.setSearch).toHaveBeenCalledTimes(1);
+  });
+
   it("opens sidebar and sets active section when sidebar is closed", () => {
     mockUseSidebar.open = false;
     render(<SidebarSegmentedNav />);
@@ -169,6 +191,17 @@ describe("SidebarSegmentedNav", () => {
 
     expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("bundles");
     expect(mockUseSidebar.toggleSidebar).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets search when opening sidebar and changing sections", () => {
+    mockUseSidebar.open = false;
+    render(<SidebarSegmentedNav />);
+
+    const bundlesButton = screen.getByTestId("sidebar-nav-bundles");
+    fireEvent.click(bundlesButton);
+
+    expect(mockUseSearchContext.setSearch).toHaveBeenCalledWith("");
+    expect(mockUseSearchContext.setSearch).toHaveBeenCalledTimes(1);
   });
 
   it("focuses search input when search section is clicked", async () => {
