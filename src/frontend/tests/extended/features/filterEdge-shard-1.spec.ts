@@ -59,19 +59,19 @@ test(
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
-      "disclosure-vector stores",
       "disclosure-agents",
       "disclosure-logic",
       "disclosure-tools",
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
       "disclosure-bundles-datastax",
+      "disclosure-bundles-vector stores",
     ];
 
     const elementTestIds = [
       "input_outputChat Output",
       "dataAPI Request",
-      "vectorstoresAstra DB",
+      "vectorstoresAstra DB Graph",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "mem0Mem0 Chat Memory",
@@ -90,10 +90,11 @@ test(
     );
 
     await Promise.all(
-      elementTestIds.map((id) => {
+      elementTestIds.map(async (id) => {
         if (!expect(page.getByTestId(id).first()).toBeVisible()) {
           console.error(`${id} is not visible`);
         }
+        return expect(page.getByTestId(id).first()).toBeVisible();
       }),
     );
 

@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
-from loguru import logger
 from pydantic import BaseModel
 
 from langflow.custom.custom_component.component import Component
@@ -26,6 +25,7 @@ from langflow.custom.eval import eval_custom_component_code
 from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
@@ -515,7 +515,7 @@ def build_component_metadata(
         if code_hash:
             frontend_node.metadata["code_hash"] = code_hash
     except Exception as exc:  # noqa: BLE001
-        logger.opt(exception=exc).debug(f"Error generating code hash for {custom_component.__class__.__name__}")
+        logger.debug(f"Error generating code hash for {custom_component.__class__.__name__}", exc_info=exc)
 
     # Analyze component dependencies
     try:
@@ -664,7 +664,7 @@ async def abuild_custom_components(components_paths: list[str]):
     if not components_paths:
         return {}
 
-    logger.debug(f"Building custom components from {components_paths}")
+    await logger.adebug(f"Building custom components from {components_paths}")
     custom_components_from_file: dict = {}
     processed_paths = set()
     for path in components_paths:
@@ -675,7 +675,7 @@ async def abuild_custom_components(components_paths: list[str]):
         custom_component_dict = await abuild_custom_component_list_from_path(path_str)
         if custom_component_dict:
             category = next(iter(custom_component_dict))
-            logger.debug(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
+            await logger.adebug(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
@@ -763,18 +763,18 @@ async def get_single_component_dict(component_type: str, component_name: str, co
                     if hasattr(module, "template"):
                         return module.template
             except ImportError as e:
-                logger.error(f"Import error loading component {module_path}: {e!s}")
+                await logger.aerror(f"Import error loading component {module_path}: {e!s}")
             except AttributeError as e:
-                logger.error(f"Attribute error loading component {module_path}: {e!s}")
+                await logger.aerror(f"Attribute error loading component {module_path}: {e!s}")
             except ValueError as e:
-                logger.error(f"Value error loading component {module_path}: {e!s}")
+                await logger.aerror(f"Value error loading component {module_path}: {e!s}")
             except (KeyError, IndexError) as e:
-                logger.error(f"Data structure error loading component {module_path}: {e!s}")
+                await logger.aerror(f"Data structure error loading component {module_path}: {e!s}")
             except RuntimeError as e:
-                logger.error(f"Runtime error loading component {module_path}: {e!s}")
-                logger.debug("Full traceback for runtime error", exc_info=True)
+                await logger.aerror(f"Runtime error loading component {module_path}: {e!s}")
+                await logger.adebug("Full traceback for runtime error", exc_info=True)
             except OSError as e:
-                logger.error(f"OS error loading component {module_path}: {e!s}")
+                await logger.aerror(f"OS error loading component {module_path}: {e!s}")
 
     # If we get here, the component wasn't found or couldn't be loaded
     return None
@@ -829,43 +829,43 @@ async def load_custom_component(component_name: str, components_paths: list[str]
                                     if hasattr(module, "get_template"):
                                         return module.get_template()
                             except ImportError as e:
-                                logger.error(f"Import error loading component {component_file}: {e!s}")
-                                logger.debug("Import error traceback", exc_info=True)
+                                await logger.aerror(f"Import error loading component {component_file}: {e!s}")
+                                await logger.adebug("Import error traceback", exc_info=True)
                             except AttributeError as e:
-                                logger.error(f"Attribute error loading component {component_file}: {e!s}")
-                                logger.debug("Attribute error traceback", exc_info=True)
+                                await logger.aerror(f"Attribute error loading component {component_file}: {e!s}")
+                                await logger.adebug("Attribute error traceback", exc_info=True)
                             except (ValueError, TypeError) as e:
-                                logger.error(f"Value/Type error loading component {component_file}: {e!s}")
-                                logger.debug("Value/Type error traceback", exc_info=True)
+                                await logger.aerror(f"Value/Type error loading component {component_file}: {e!s}")
+                                await logger.adebug("Value/Type error traceback", exc_info=True)
                             except (KeyError, IndexError) as e:
-                                logger.error(f"Data structure error loading component {component_file}: {e!s}")
-                                logger.debug("Data structure error traceback", exc_info=True)
+                                await logger.aerror(f"Data structure error loading component {component_file}: {e!s}")
+                                await logger.adebug("Data structure error traceback", exc_info=True)
                             except RuntimeError as e:
-                                logger.error(f"Runtime error loading component {component_file}: {e!s}")
-                                logger.debug("Runtime error traceback", exc_info=True)
+                                await logger.aerror(f"Runtime error loading component {component_file}: {e!s}")
+                                await logger.adebug("Runtime error traceback", exc_info=True)
                             except OSError as e:
-                                logger.error(f"OS error loading component {component_file}: {e!s}")
-                                logger.debug("OS error traceback", exc_info=True)
+                                await logger.aerror(f"OS error loading component {component_file}: {e!s}")
+                                await logger.adebug("OS error traceback", exc_info=True)
 
     except ImportError as e:
-        logger.error(f"Import error loading custom component {component_name}: {e!s}")
+        await logger.aerror(f"Import error loading custom component {component_name}: {e!s}")
         return None
     except AttributeError as e:
-        logger.error(f"Attribute error loading custom component {component_name}: {e!s}")
+        await logger.aerror(f"Attribute error loading custom component {component_name}: {e!s}")
         return None
     except ValueError as e:
-        logger.error(f"Value error loading custom component {component_name}: {e!s}")
+        await logger.aerror(f"Value error loading custom component {component_name}: {e!s}")
         return None
     except (KeyError, IndexError) as e:
-        logger.error(f"Data structure error loading custom component {component_name}: {e!s}")
+        await logger.aerror(f"Data structure error loading custom component {component_name}: {e!s}")
         return None
     except RuntimeError as e:
-        logger.error(f"Runtime error loading custom component {component_name}: {e!s}")
+        await logger.aerror(f"Runtime error loading custom component {component_name}: {e!s}")
         logger.debug("Full traceback for runtime error", exc_info=True)
         return None
 
     # If we get here, the component wasn't found in any of the paths
-    logger.warning(f"Component {component_name} not found in any of the provided paths")
+    await logger.awarning(f"Component {component_name} not found in any of the provided paths")
     return None
 
 
