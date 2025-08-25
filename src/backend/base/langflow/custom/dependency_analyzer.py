@@ -40,7 +40,7 @@ class _ImportVisitor(ast.NodeVisitor):
     def __init__(self):
         self.results: list[DependencyInfo] = []
 
-    def visit_Import(self, node: ast.Import):  # noqa: N802
+    def visit_Import(self, node: ast.Import):
         for alias in node.names:
             full = alias.name
             dep = DependencyInfo(
@@ -50,7 +50,7 @@ class _ImportVisitor(ast.NodeVisitor):
             )
             self.results.append(dep)
 
-    def visit_ImportFrom(self, node: ast.ImportFrom):  # noqa: N802
+    def visit_ImportFrom(self, node: ast.ImportFrom):
         # Reconstruct full module name with proper relative import handling
         if node.level > 0:
             # Relative import: from .module import x or from ..parent import x
