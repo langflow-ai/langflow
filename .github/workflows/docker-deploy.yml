@@ -71,24 +71,58 @@ jobs:
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file
 
-      - name: Cleanup old Docker images (keep last 2 in repo)
+      - name: Clean up Docker Hub images (tagged + untagged)
+        env:
+          DOCKERHUB_USERNAME: forwardemailforaifirstdesk
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+          REPOSITORY: "forwardemailforaifirstdesk/langflow"
+          KEEP_RECENT: 2
         run: |
-          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
-            -d '{"username": "forwardemailforaifirstdesk", "password": "'"${{ secrets.DOCKERHUB_TOKEN }}"'"}' \
+          set -e
+          
+          echo "=== Getting Docker Hub token ==="
+          TOKEN=$(curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d '{"username": "'$DOCKERHUB_USERNAME'", "password": "'$DOCKERHUB_PASSWORD'"}' \
             https://hub.docker.com/v2/users/login/ | jq -r .token)
 
-          DIGESTS=$(curl -s -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/forwardemailforaifirstdesk/langflow/tags?page_size=100" \
-            | jq -r '.results[] | [.last_updated, .images[0].digest] | @tsv' \
-            | sort -k1 -r \
-            | awk '{print $2}')
-
+          echo "=== CLEANING UP TAGGED IMAGES ==="
+          TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/$REPOSITORY/tags/?page_size=100" | jq -r '.results[].name')
+          
           COUNT=0
-          for DIGEST in $DIGESTS; do
+          for tag in $TAGS; do
             COUNT=$((COUNT+1))
-            if [ $COUNT -gt 2 ]; then
-              echo "Deleting old digest: $DIGEST"
+            if [ "$COUNT" -gt "$KEEP_RECENT" ]; then
+              echo "Deleting old tagged image: $tag"
               curl -s -X DELETE -H "Authorization: JWT $TOKEN" \
-                "https://hub.docker.com/v2/repositories/forwardemailforaifirstdesk/langflow/manifests/$DIGEST/"
+                "https://hub.docker.com/v2/repositories/$REPOSITORY/tags/$tag/" \
+                && echo "  ✅ Deleted $tag" || echo "  ❌ Failed to delete $tag"
             fi
           done
+
+          echo "=== CLEANING UP UNTAGGED IMAGES ==="
+          IMAGE_DATA=$(curl -s -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/$REPOSITORY/images/")
+
+          UNTAGGED_COUNT=$(echo "$IMAGE_DATA" | jq '[.results[] | select(.tags | length == 0)] | length')
+
+          if [ "$UNTAGGED_COUNT" -gt 0 ]; then
+            echo "Found $UNTAGGED_COUNT untagged images to delete"
+            echo "$IMAGE_DATA" | jq -r '.results[] | select(.tags | length == 0) | .digest' | while read digest; do
+              if [ -n "$digest" ]; then
+                echo "Deleting untagged image: $digest"
+                DELETE_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null \
+                  -H "Authorization: JWT $TOKEN" \
+                  -X DELETE \
+                  "https://hub.docker.com/v2/repositories/$REPOSITORY/images/$digest/")
+                if [ "$DELETE_RESPONSE" = "204" ]; then
+                  echo "  ✅ Successfully deleted"
+                else
+                  echo "  ❌ Failed (HTTP: $DELETE_RESPONSE)"
+                fi
+              fi
+            done
+          else
+            echo "No untagged images found"
+          fi
