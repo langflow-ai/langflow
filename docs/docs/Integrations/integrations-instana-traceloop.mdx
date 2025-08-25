@@ -16,44 +16,72 @@ This guide demonstrates how to integrate the Instana observability platform with
 - Create an [Instana endpoint and Instana key](https://www.ibm.com/docs/en/instana-observability/1.0.302)
 - [Install and start Langflow](/get-started-installation)
 
-## Configure environment variables
+## Configure Environment Variables
 
-1. In the root directory of your Langflow application, create a `.env` file.
-2. Add your Traceloop and Instana credentials to the `.env` file:
+### Step 1: Create Environment File
+Create a `.env` file in your Langflow application root directory.
 
-   ```text
-   TRACELOOP_API_KEY=**YOUR_TRACELOOP_API_KEY**
-   # Example: https://otlp-magenta-saas.instana.rocks:4318
-   TRACELOOP_BASE_URL=<instana_endpoint>
-   TRACELOOP_HEADERS="x-instana-key=<your_instana_key>"
-   # Set to true only for plain HTTP endpoints. For HTTPS, use false.
-   OTEL_EXPORTER_OTLP_INSECURE=false
-   # If your Traceloop version requires a URL, use: http://host.docker.internal:8000
-   TRACELOOP_METRICS_ENDPOINT=host.docker.internal:8000
-   TRACELOOP_METRICS_ENABLED=true
-   OTEL_METRIC_EXPORT_INTERVAL=10000
-   ```
+### Step 2: Add Traceloop API Key
+```dotenv
+TRACELOOP_API_KEY=<your_traceloop_api_key>
+```
+Authenticates your application with Traceloop's monitoring service.
 
-3. Save the `.env` file.
-4. Make sure the OpenTelemetry (OTel) Collector is running.
+### Step 3: Set Base URL
+```dotenv
+TRACELOOP_BASE_URL=<instana_endpoint>
+```
+Configures the Instana endpoint for telemetry data. Example: `https://otlp-magenta-saas.instana.rocks:4318`
+
+### Step 4: Add Instana Headers
+```dotenv
+TRACELOOP_HEADERS="x-instana-key=<your_instana_key>"
+```
+Provides authentication for Instana data collection.
+
+### Step 5: Configure OTLP Security
+```dotenv
+OTEL_EXPORTER_OTLP_INSECURE=false
+```
+Set to `false` for HTTPS endpoints, `true` only for plain HTTP endpoints.
+
+### Step 6: Set Metrics Endpoint
+```dotenv
+TRACELOOP_METRICS_ENDPOINT=host.docker.internal:8000
+```
+Configures separate metrics endpoint (typically for Docker environments).
+
+### Step 7: Enable Metrics Collection
+```dotenv
+TRACELOOP_METRICS_ENABLED=true
+OTEL_METRIC_EXPORT_INTERVAL=10000
+```
+Enables metrics collection with 10-second export intervals.
+
+### Step 8: Save the `.env` file.
+
+### Step 9: Configure OpenTelemetry Collector
+Ensure your OpenTelemetry (OTel) Collector is running and add the following configuration to your Collector's `config.yaml`:
 In your Collector’s `config.yaml`, add the following values.
    ```yaml
    # Example values — update to your environment
    llm.application: "LLM_DC"
    instances:
-      - otel.agentless.mode: true
-      # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
-      otel.backend.url: "<INSTANA_ENDPOINT>"
-      otel.backend.using.http: false
-      callback.interval: 10
-      otel.service.name: "DC1"
-      otel.service.port: 8000
-      currency: "USD"
+      -  otel.agentless.mode: true
+         # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
+         otel.backend.url: "<INSTANA_ENDPOINT>"
+         otel.backend.using.http: false
+         callback.interval: 10
+         otel.service.name: "DC1"
+         otel.service.port: 8000
+         currency: "USD"
    ```
+   This configures the OTel Collector to operate in agentless mode and route telemetry data to your Instana backend.
+   The configuration specifies the Instana endpoint, service identification, and collection intervals needed for proper monitoring integration.
 
 ## Start Langflow with environment variables
 
-1. Launch your Langflow application using the environment file:
+Launch your Langflow application using the environment file:
 ```bash
 uv run langflow run --env-file .env
 ```
@@ -62,13 +90,13 @@ Traceloop automatically begins monitoring and collecting telemetry data from you
 
 To verify that observability is working correctly, do the following:
 
-2. Run a flow in Langflow to generate traffic.
-3. To view traces in Instana, open Instana and select **Applications**.
-4. In **Services**, search for `Langflow`. 
-5. Select Langflow to view and analyze the associated calls.
-6. To view metrics in Instana, open Instana and select **Infrastructure**.
-7. In **Analyze Infrastructure**, select **Otel LLMonitor**.
-8. To view your Metrics dashboard, select `LLM:DC1@your_machine_name.local` 
+1. Run a flow in Langflow to generate traffic.
+2. To view traces in Instana, open Instana and select **Applications**.
+3. In **Services**, search for `Langflow`.
+4. Select Langflow to view and analyze the associated calls.
+5. To view metrics in Instana, open Instana and select **Infrastructure**.
+6. In **Analyze Infrastructure**, select **Otel LLMonitor**.
+7. To view your Metrics dashboard, select `LLM:DC1@your_machine_name.local`
 
 ## See also
 
