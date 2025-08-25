@@ -3,7 +3,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from typing import Annotated, Any
 
 from backend.base.langflow.services.telemetry.service import TelemetryService
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -333,7 +333,7 @@ async def run_flow_for_openai_responses(
 
     # Extract output text and tool calls from result
     output_text = ""
-    tool_calls = []
+    tool_calls: list[dict[str, Any]] = []
 
     if result.outputs:
         for run_output in result.outputs:
