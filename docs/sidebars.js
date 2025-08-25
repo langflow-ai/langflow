@@ -80,6 +80,7 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
+        "Concepts/knowledge",
       ],
     },
     {
