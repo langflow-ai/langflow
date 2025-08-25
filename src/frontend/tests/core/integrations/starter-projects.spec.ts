@@ -87,11 +87,6 @@ test(
       .click();
 
     await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
     await page.getByTestId("fit_view").click();
     await page.getByTestId("canvas_controls_dropdown").click();
 
@@ -130,20 +125,11 @@ test(
 
       await page.getByTestId("text_card_container").nth(i).click();
 
-      // Check if fit_view is visible
-      const fitViewVisible = await page
-        .getByTestId("fit_view")
-        .isVisible()
-        .catch(() => false);
-
-      if (fitViewVisible) {
-        await page.getByTestId("fit_view").click();
-        await page.getByTestId("canvas_controls_dropdown").click();
-      } else {
+    
         await page.getByTestId("canvas_controls_dropdown").click();
         await page.getByTestId("fit_view").click();
         await page.getByTestId("canvas_controls_dropdown").click();
-      }
+      
 
       if ((await page.getByTestId("update-all-button").count()) > 0) {
         console.error(`
