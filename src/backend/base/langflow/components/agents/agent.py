@@ -23,6 +23,7 @@ from langflow.field_typing import Tool
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, TableInput
 from langflow.logging import logger
+from langflow.memory import aget_messages_excluding_id
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -374,15 +375,12 @@ class AgentComponent(ToolCallingAgentComponent):
             return Data(data={"content": content, "error": str(e)})
 
     async def get_memory_data(self):
-        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
-        messages = (
-            await MemoryComponent(**self.get_base_args())
-            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
-            .retrieve_messages()
+        return await aget_messages_excluding_id(
+            id_=self.input_value.id,
+            session_id=self.graph.session_id,
+            order="ASC",
+            limit=self.n_messages,
         )
-        return [
-            message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
-        ]
 
     async def get_llm(self):
         if not isinstance(self.agent_llm, str):
