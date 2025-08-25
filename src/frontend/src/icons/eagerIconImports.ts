@@ -58,6 +58,7 @@ import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
 import { LangChainIcon } from "@/icons/LangChain";
 import { LangwatchIcon } from "@/icons/Langwatch";
+import { LinkupIcon } from "@/icons/Linkup";
 import { LMStudioIcon } from "@/icons/LMStudio";
 import { MaritalkIcon } from "@/icons/Maritalk";
 import { Mem0 } from "@/icons/Mem0";
@@ -177,6 +178,7 @@ export const eagerIconsMapping = {
   LangChain: LangChainIcon,
   Langwatch: LangwatchIcon,
   LMStudio: LMStudioIcon,
+  Linkup: LinkupIcon,
   Maritalk: MaritalkIcon,
   Mem0: Mem0,
   Meta: MetaIcon,

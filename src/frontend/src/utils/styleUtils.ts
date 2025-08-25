@@ -403,6 +403,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ElasticsearchStore: "ElasticsearchStore",
   EverNoteLoader: "Evernote",
   ExaSearch: "Exa",
+  LinkupSearch: "Linkup",
   FacebookChatLoader: "FacebookMessenger",
   FAISS: "Meta",
   FaissSearch: "Meta",
