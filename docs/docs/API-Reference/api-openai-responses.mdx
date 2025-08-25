@@ -1,0 +1,238 @@
+---
+title: OpenAI Responses API
+slug: /api-openai-responses
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/Tabs';
+
+Langflow includes an OpenAI-compatible API endpoints that allow you to use your Langflow flows as if they were OpenAI models.
+This enables seamless integration with existing OpenAI-compatible applications and libraries.
+
+The OpenAI Responses API allows you to execute Langflow flows using OpenAI-compatible request and response formats.
+This enables you to use existing OpenAI client libraries with minimal code changes - just change the `model` name to your `flow_id`.
+Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
+
+## Requirements
+
+Your Langflow flow must contain a **ChatInput** component to be compatible with the OpenAI Responses API.
+Flows without this component will return an error. The component types `ChatInput` and `Chat Input` are recognized as chat inputs.
+
+- **Tools**: The `tools` parameter is not yet supported and will return an error if provided.
+- **Flow Requirements**: Flows must contain a ChatInput component.
+- **Model Names**: The `model` field must contain a valid flow ID or endpoint name.
+- **Authentication**: All requests require an API key passed in the `x-api-key` header:
+
+    ```bash
+    curl -X POST \
+      "$LANGFLOW_SERVER_URL/api/v1/responses" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "your-flow-id",
+        "input": "Hello, how are you?"
+      }'
+    ```
+
+## Request
+
+```
+POST /api/v1/responses
+```
+
+## Headers
+
+| Header | Required | Description | Example |
+|--------|----------|-------------|---------|
+| Content-Type | Yes | Specifies the JSON format | "application/json" |
+| x-api-key | Yes | Your Langflow API key for authentication | "sk-..." |
+| X-LANGFLOW-GLOBAL-VAR-* | No | Global variables for the flow | "X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-..." |
+
+
+## Example request
+
+## Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| model | string | Yes | - | The flow ID to execute (used instead of OpenAI model) |
+| input | string | Yes | - | The input text to process |
+| stream | boolean | No | false | Whether to stream the response |
+| background | boolean | No | false | Whether to process in background |
+| tools | list[Any] | No | null | Tools are not supported yet |
+| previous_response_id | string | No | null | ID of previous response to continue conversation |
+| include | list[string] | No | null | Additional response data to include, e.g., ['tool_call.results'] |
+
+## Response
+
+```curl
+
+```
+
+## Response body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Unique response identifier |
+| object | string | Always "response" |
+| created_at | int | Unix timestamp of response creation |
+| status | string | Response status: "completed", "in_progress", or "failed" |
+| error | dict | Error details (if any) |
+| incomplete_details | dict | Incomplete response details (if any) |
+| instructions | string | Response instructions (if any) |
+| max_output_tokens | int | Maximum output tokens (if any) |
+| model | string | The flow ID that was executed |
+| output | list[dict] | Array of output items (messages, tool calls, etc.) |
+| parallel_tool_calls | boolean | Whether parallel tool calls are enabled |
+| previous_response_id | string | ID of previous response if continuing conversation |
+| reasoning | dict | Reasoning information with effort and summary |
+| store | boolean | Whether response is stored |
+| temperature | float | Temperature setting |
+| text | dict | Text format configuration |
+| tool_choice | string | Tool choice setting |
+| tools | list[dict] | Available tools |
+| top_p | float | Top-p setting |
+| truncation | string | Truncation setting |
+| usage | dict | Usage statistics (if any) |
+| user | string | User identifier (if any) |
+| metadata | dict | Additional metadata |
+
+## Streaming response body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Unique response identifier |
+| object | string | Always "response.chunk" |
+| created | int | Unix timestamp of chunk creation |
+| model | string | The flow ID that was executed |
+| delta | dict | The new content chunk |
+| status | string | Response status: "completed", "in_progress", or "failed" (optional) |
+
+## Pass global variables to your flows in headers
+
+Global variables allow you to pass dynamic values to your flows that can be used by components within the flow.
+This is useful for passing API keys, user IDs, or any other configuration that might change between requests.
+
+The `/responses` endpoint accepts global variables as custom HTTP headers with the format `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`.
+Variable names are automatically converted to uppercase.
+
+This example passes three global variables as headers.
+In your flow, these variables will be available as `API_KEY` (from `X-LANGFLOW-GLOBAL-VAR-API_KEY`), `USER_ID` (from `X-LANGFLOW-GLOBAL-VAR-USER_ID`), and `ENVIRONMENT` (from `X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT`).
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-..." \
+  -H "X-LANGFLOW-GLOBAL-VAR-USER_ID: user123" \
+  -H "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT: production" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "Hello"
+  }'
+```
+
+## Retrieve tool call results
+
+When your flow includes tools or function calls, you can get detailed information about their execution by including `"tool_call.results"` in the `include` parameter.
+
+#### Basic Tool Call Response (Default)
+Without the `include` parameter, tool calls return basic function call information:
+
+```json
+{
+  "id": "fc_1",
+  "type": "function_call",
+  "status": "completed",
+  "name": "get_weather",
+  "arguments": "{\"location\": \"New York\"}"
+}
+```
+
+With `include: ["tool_call.results"]`, you get comprehensive information about tool execution:
+
+```json
+{
+  "id": "get_weather_fc_1",
+  "queries": ["New York"],
+  "status": "completed",
+  "tool_name": "get_weather",
+  "type": "tool_call",
+  "results": {
+    "temperature": 72,
+    "condition": "sunny",
+    "humidity": 45,
+    "wind_speed": 8
+  }
+}
+```
+
+## Conversation continuity using `previous_response_id`
+
+Conversation continuity allows you to maintain context across multiple API calls, enabling multi-turn conversations with your flows. This is essential for building chat applications where users can have ongoing conversations.
+
+When you make a request, the API returns a response with an `id` field. You can use this `id` as the `previous_response_id` in your next request to continue the conversation from where it left off.
+
+**First Message:**
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "Hello, my name is Alice"
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": "response-abc123",
+  "object": "response",
+  "status": "completed",
+  "model": "your-flow-id",
+  "output": [...],
+  "previous_response_id": null
+}
+```
+
+**Follow-up Message:**
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "What's my name?",
+    "previous_response_id": "response-abc123"
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": "response-def456",
+  "object": "response",
+  "status": "completed",
+  "model": "your-flow-id",
+  "output": [...],
+  "previous_response_id": "response-abc123"
+}
+```
+
+You can also use your own session IDs instead of the response ID:
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "What's my name?",
+    "previous_response_id": "session-alice-123"
+  }'
+```
