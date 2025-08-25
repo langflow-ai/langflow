@@ -13,21 +13,24 @@ import {
  *
  * @param {Object} options - The options for generating the cURL command.
  * @param {string} options.flowId - The ID of the flow.
- * @param {boolean} options.isAuth - Indicates whether authentication is required.
+ * @param {boolean} options.webhookAuthEnable - Indicates whether authentication is required for webhooks.
  * @param {string} options.endpointName - The name of the webhook endpoint.
  * @returns {string} The cURL command.
  */
 export function getCurlWebhookCode({
   flowId,
-  isAuth,
+  webhookAuthEnable,
   endpointName,
   format = "multiline",
-}: GetCodeType & { format?: "multiline" | "singleline" }) {
+}: GetCodeType & {
+  webhookAuthEnable: boolean;
+  format?: "multiline" | "singleline";
+}) {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}/api/v1/webhook/${
     endpointName || flowId
   }`;
-  const authHeader = !isAuth ? `-H 'x-api-key: <your api key>'` : "";
+  const authHeader = webhookAuthEnable ? `-H 'x-api-key: <your api key>'` : "";
 
   if (format === "singleline") {
     return `curl -X POST "${baseUrl}" -H 'Content-Type: application/json' ${authHeader} -d '{"any": "data"}'`.trim();
@@ -36,7 +39,7 @@ export function getCurlWebhookCode({
   return `curl -X POST \\
   "${baseUrl}" \\
   -H 'Content-Type: application/json' \\${
-    isAuth ? `\n  -H 'x-api-key: <your api key>' \\` : ""
+    webhookAuthEnable ? `\n  -H 'x-api-key: <your api key>' \\` : ""
   }${
     ENABLE_DATASTAX_LANGFLOW
       ? `\n  -H 'Authorization: Bearer <YOUR_APPLICATION_TOKEN>' \\`
