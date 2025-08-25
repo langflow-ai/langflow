@@ -11,7 +11,7 @@ withEventDeliveryModes(
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test"
+      "OPENAI_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -32,7 +32,7 @@ withEventDeliveryModes(
 
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(
-      path.join(__dirname, "../../assets/test_file.txt")
+      path.join(__dirname, "../../assets/test_file.txt"),
     );
     await page.getByText("test_file.txt").last().isVisible();
 
@@ -60,5 +60,5 @@ withEventDeliveryModes(
 
     const textAnalysis = await page.locator(".markdown").last().textContent();
     expect(textAnalysis?.length).toBeGreaterThan(50);
-  }
+  },
 );
