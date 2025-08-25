@@ -605,7 +605,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                     )}
                   </>
                 ) : (
-                  <NoResultsMessage onClearSearch={handleClearSearch} />
+                  <NoResultsMessage
+                    onClearSearch={handleClearSearch}
+                    showConfig={showConfig}
+                    setShowConfig={setShowConfig}
+                  />
                 )}
               </>
             )}

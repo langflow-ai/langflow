@@ -65,6 +65,7 @@ export const MemoizedSidebarTrigger = memo(() => {
       >
         {NAV_ITEMS.map((item) => (
           <CustomControlButton
+            data-testid={`sidebar-trigger-${item.id}`}
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
             tooltipText={item.tooltip}
