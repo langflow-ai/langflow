@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.5.0.post1"
+version = "1.5.0.post2"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -66,8 +66,8 @@ dependencies = [
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
     "astra-assistants[tools]~=2.2.12",
-    "composio-langchain==0.7.15",
-    "composio-core==0.7.15",
+    "composio-langchain==0.8.5",
+    "composio==0.8.5",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
@@ -77,6 +77,7 @@ dependencies = [
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
+    "langchain-huggingface==0.3.1",
     "langchain-anthropic==0.3.14",
     "langchain-astradb~=0.6.0",
     "langchain-openai>=0.2.12",
@@ -106,14 +107,12 @@ dependencies = [
     "openinference-instrumentation-langchain>=0.1.29",
     # "crewai>=0.126.0",
     "mcp>=1.10.1",
-    "uv>=0.5.7",
+    "uv==0.7.20",
     "scipy>=1.14.1",
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
-    "pylint>=3.3.4",
-    "ruff>=0.9.7",
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
     "ibm-watsonx-ai>=1.3.1",
@@ -126,6 +125,10 @@ dependencies = [
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
+    "structlog>=25.4.0",
+    "aiosqlite==0.21.0",
+    "fastparquet>=2024.11.0",
+    "traceloop-sdk>=0.43.1",
 ]
 
 [dependency-groups]
@@ -134,7 +137,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.9.7,<0.10",
+    "ruff>=0.12.7",
     "httpx>=0.27.0",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
@@ -176,6 +179,7 @@ dev = [
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
+    "docling>=2.36.1"
 ]
 
 [tool.uv.sources]
@@ -193,9 +197,6 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
-docling = [
-    "docling>=2.36.1",
-]
 
 audio = [
     "webrtcvad>=2.0.10",
@@ -242,7 +243,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
-timeout = 120
+timeout = 150
 timeout_method = "signal"
 minversion = "6.0"
 testpaths = ["src/backend/tests"]
@@ -296,7 +297,9 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
+    "D10", # Missing docstrings
+    "PLW1641", # Object does not implement `__hash__` method (mutable objects shouldn't be hashable)
     # Rules that are TODOs
     "ANN",
 ]
@@ -306,6 +309,7 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",

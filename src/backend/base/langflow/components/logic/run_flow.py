@@ -1,9 +1,8 @@
 from typing import Any
 
-from loguru import logger
-
 from langflow.base.tools.run_flow import RunFlowBaseComponent
 from langflow.helpers.flow import run_flow
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 
 
@@ -34,7 +33,7 @@ class RunFlowComponent(RunFlowBaseComponent):
                     build_config = self.update_build_config_from_graph(build_config, graph)
                 except Exception as e:
                     msg = f"Error building graph for flow {field_value}"
-                    logger.exception(msg)
+                    await logger.aexception(msg)
                     raise RuntimeError(msg) from e
         return build_config
 
