@@ -25,10 +25,12 @@ test(
 
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await expect(page.getByText("api_key")).toBeVisible({
       timeout: 3000,
@@ -52,8 +54,10 @@ test(
     await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
       timeout: 1000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("searchapiSearchApi")
@@ -76,7 +80,13 @@ test(
         targetPosition: { x: 300, y: 300 },
       });
 
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
+
+    await page.getByTestId("canvas_controls_dropdown").click();
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("title-SearchApi").first().click();
     await page.getByTestId("tool-mode-button").click();

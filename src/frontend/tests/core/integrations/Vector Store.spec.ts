@@ -28,11 +28,14 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[title="fit view"]', {
       timeout: 20000,
     });
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page);
 
@@ -41,8 +44,11 @@ withEventDeliveryModes(
     });
 
     await page.waitForTimeout(500);
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     // Astra DB tokens
     await page
       .getByTestId("popover-anchor-input-token")

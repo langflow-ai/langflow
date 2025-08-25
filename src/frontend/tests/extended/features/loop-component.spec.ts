@@ -27,7 +27,9 @@ test(
       timeout: 1000,
     });
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("dataURL")
@@ -110,10 +112,12 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 940, y: 100 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 2);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Loop Item -> Update Data
 
@@ -157,7 +161,10 @@ test(
       .first()
       .click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
