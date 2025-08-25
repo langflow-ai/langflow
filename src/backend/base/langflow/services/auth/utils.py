@@ -10,10 +10,11 @@ from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
-from loguru import logger
+from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
+from langflow.logging.logger import logger
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
@@ -299,8 +300,17 @@ async def create_super_user(
         )
 
         db.add(super_user)
-        await db.commit()
-        await db.refresh(super_user)
+        try:
+            await db.commit()
+            await db.refresh(super_user)
+        except IntegrityError:
+            # Race condition - another worker created the user
+            await db.rollback()
+            super_user = await get_user_by_username(db, username)
+            if not super_user:
+                raise  # Re-raise if it's not a race condition
+        except Exception:  # noqa: BLE001
+            logger.debug("Error creating superuser.", exc_info=True)
 
     return super_user
 

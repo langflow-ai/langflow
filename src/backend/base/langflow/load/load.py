@@ -4,7 +4,6 @@ from pathlib import Path
 
 from aiofile import async_open
 from dotenv import dotenv_values
-from loguru import logger
 
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
@@ -21,6 +20,7 @@ async def aload_flow_from_json(
     tweaks: dict | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
+    log_rotation: str | None = None,
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
@@ -33,6 +33,7 @@ async def aload_flow_from_json(
         tweaks (Optional[dict]): Optional tweaks to apply to the loaded flow graph.
         log_level (Optional[str]): Optional log level to configure for the flow processing.
         log_file (Optional[str]): Optional log file to configure for the flow processing.
+        log_rotation (Optional[str]): Optional log rotation(Time/Size) to configure for the flow processing.
         env_file (Optional[str]): Optional .env file to override environment variables.
         cache (Optional[str]): Optional cache path to update the flow settings.
         disable_logs (Optional[bool], default=True): Optional flag to disable logs during flow processing.
@@ -47,7 +48,7 @@ async def aload_flow_from_json(
     """
     # If input is a file path, load JSON from the file
     log_file_path = Path(log_file) if log_file else None
-    configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, async_file=True)
+    configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, log_rotation=log_rotation)
 
     # override env variables with .env file
     if env_file and tweaks is not None:
@@ -83,6 +84,7 @@ def load_flow_from_json(
     tweaks: dict | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
+    log_rotation: str | None = None,
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
@@ -95,6 +97,7 @@ def load_flow_from_json(
         tweaks (Optional[dict]): Optional tweaks to apply to the loaded flow graph.
         log_level (Optional[str]): Optional log level to configure for the flow processing.
         log_file (Optional[str]): Optional log file to configure for the flow processing.
+        log_rotation (Optional[str]): Optional log rotation(Time/Size) to configure for the flow processing.
         env_file (Optional[str]): Optional .env file to override environment variables.
         cache (Optional[str]): Optional cache path to update the flow settings.
         disable_logs (Optional[bool], default=True): Optional flag to disable logs during flow processing.
@@ -113,6 +116,7 @@ def load_flow_from_json(
             tweaks=tweaks,
             log_level=log_level,
             log_file=log_file,
+            log_rotation=log_rotation,
             env_file=env_file,
             cache=cache,
             disable_logs=disable_logs,
@@ -131,6 +135,7 @@ async def arun_flow_from_json(
     output_component: str | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
+    log_rotation: str | None = None,
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
@@ -148,6 +153,7 @@ async def arun_flow_from_json(
         output_component (Optional[str], optional): The specific component to output. Defaults to None.
         log_level (Optional[str], optional): The log level to use. Defaults to None.
         log_file (Optional[str], optional): The log file to write logs to. Defaults to None.
+        log_rotation (Optional[str], optional): The log rotation to use. Defaults to None.
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
@@ -165,11 +171,12 @@ async def arun_flow_from_json(
         tweaks=tweaks,
         log_level=log_level,
         log_file=log_file,
+        log_rotation=log_rotation,
         env_file=env_file,
         cache=cache,
         disable_logs=disable_logs,
     )
-    result = await run_graph(
+    return await run_graph(
         graph=graph,
         session_id=session_id,
         input_value=input_value,
@@ -178,8 +185,6 @@ async def arun_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    await logger.complete()
-    return result
 
 
 def run_flow_from_json(
@@ -193,6 +198,7 @@ def run_flow_from_json(
     output_component: str | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
+    log_rotation: str | None = None,
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
@@ -214,6 +220,7 @@ def run_flow_from_json(
         output_component (Optional[str], optional): The specific component to output. Defaults to None.
         log_level (Optional[str], optional): The log level to use. Defaults to None.
         log_file (Optional[str], optional): The log file to write logs to. Defaults to None.
+        log_rotation (Optional[str], optional): The log rotation to use. Defaults to None.
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
@@ -234,6 +241,7 @@ def run_flow_from_json(
             output_component=output_component,
             log_level=log_level,
             log_file=log_file,
+            log_rotation=log_rotation,
             env_file=env_file,
             cache=cache,
             disable_logs=disable_logs,

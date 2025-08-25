@@ -3,7 +3,6 @@ title: Langflow release notes
 slug: /release-notes
 ---
 
-
 This page summarizes significant changes to Langflow in each release.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
@@ -28,17 +27,13 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
       -H "x-api-key: $LANGFLOW_API_KEY"
     ```
 
-   To export flows from the Langflow UI, see [Import and export flows](/concepts-flows-import).
+   To export flows from the visual editor, see [Import and export flows](/concepts-flows-import).
 
 2. Install the new version:
 
    * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
    * **Langflow Docker image**: Run the new image in a separate container.
-   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
-
-   <!-- :::tip
-   If you experience data loss after an in-place upgrade of Langflow Desktop, see [Unexpected data loss after Langflow Desktop upgrade](/troubleshoot#data-loss).
-   :::-->
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the Langflow header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
 
 3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
 
@@ -50,7 +45,8 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
 ## 1.5.0
 
-The following updates are included in this version:
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
 ### New features and enhancements
 
@@ -58,82 +54,90 @@ The following updates are included in this version:
 
     To enhance security and ensure proper authentication for automatic login features, most API endpoints now require authentication with a Langflow API key, regardless of the `AUTO_LOGIN` setting.
     The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
-    For more information, see [API keys](/configuration-api-keys).
+    For more information, see [API keys and authentication](/api-keys-and-authentication).
 
-- New Language Model and Embedding Model components
+- Centralized **Language Model** and **Embedding Model** components
 
-    The **Language Model** and **Embedding Model** components have been promoted to be the main components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment without swapping out single-provider components.
-    The single-provider components are still available for your flows in the components sidebar under [Bundles](/components-bundle-components).
-    For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-models) components.
+    The [**Language Model** component](/components-models) and [**Embedding Model** component](/components-embedding-models) are now core components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment with different models without swapping out single-provider components.
+    Find them in the **Components** menu in the **Models** category.
 
-- MCP one-click installation
+    The single-provider components are still available for your flows in the **Components** menu in the [**Bundles**](/components-bundle-components) section, and you can use them to replace the **Language Model** and **Embedding Model** core components, or connect them to the **Agent** component with the **Custom** provider option.
 
-    In the **MCP server** page, click **Auto install** to install your Langflow MCP server to MCP clients with just one click.
+- MCP server one-click installation
+
+    On your Langflow project's **MCP server** page, click **Auto install** to install your Langflow MCP server to MCP clients with just one click.
     The option to install with a JSON configuration file is available for macOS, Windows, and WSL.
-    For more information, see [MCP server](/mcp-server).
+    For more information, see [Use Langflow as an MCP server](/mcp-server).
 
 - MCP server management
 
-    Add, remove, and edit your MCP servers in the **MCP Tools** and **Settings** page.
-    For more information, see [MCP client](/mcp-client).
+    You can now add, remove, and edit your MCP servers in the **MCP Tools** components and through your Langflow **Settings** page.
+    For more information, see [Use Langflow as an MCP client](/mcp-client).
 
 - Input schema replaces temporary overrides
 
     The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow's code snippets, providing ready-to-use templates for making requests in your preferred programming language.
 
-- Tools category is now legacy
+- **Tools** components are redistributed
 
-    All components in the **Tools** category are now **Legacy** or have moved to [Bundles](/components-bundle-components).
+    All components in the **Tools** category were moved to other component categories, such as **Helpers** and [bundles](/components-bundle-components), or marked as legacy.
 
-    The [MCP Tools](/mcp-client) component is available in the components sidebar under **Agents**.
+    The [**MCP Tools** component](/mcp-client) is now under the **Agents** category.
 
-    Many of the **Tools** components performed the same functions, like web search and API requests, so we combined this functionality into single components:
+    Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/components-data#web-search) and the [**News Search** component](/components-data#news-search).
 
-    * To replace legacy search components, use the [Web search](/components-data#web-search) component.
-    * To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
+    For more information, see [**Tools** components](/components-tools).
 
 - Stability improvements
 
     General stability improvements and bug fixes for enhanced reliability.
     See an issue? [Raise it on GitHub](https://github.com/langflow-ai/langflow/issues).
 
-### New integrations and bundles
+- New integrations and bundles
 
-- [Cleanlab integration](/integrations-cleanlab)
+   - [**Cleanlab** bundle](/integrations-cleanlab)
 
 ## 1.4.2
 
-The following updates are included in this version:
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
 ### New features and enhancements
+
 - Enhanced file and flow management system with improved bulk capabilities.
+- Added the **BigQuery** component
+- Added the **Twelve Labs** bundle
+- Added the **NVIDIA System Assistant** component
 
-### New integrations and bundles
-- BigQuery component for connecting to BQ datasets.
-- Twelve Labs integration bundle.
-- NVIDIA system assistant component.
+### Deprecations
 
-### Deprecated features
-
-- Deprecated the Combine text component.
+- Deprecated the **Combine Text** component.
 
 ## 1.4.1
 
-The following updates are included in this version:
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
 ### New features and enhancements
 
-- Added an enhanced "Breaking Changes" feature to help update components during version updates without breaking flows.
+- Added an enhanced **Breaking Changes** feature to help update components without breaking flows after updating Langflow.
 
 ## 1.4.0
 
-The following updates are included in this version:
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
 ### New features and enhancements
 
 - Introduced MCP server functionality to serve Langflow tools to MCP-compatible clients.
-- Renamed "Folders" to "Projects". The `/folders` endpoints now redirect to `/projects`.
+- Renamed **Folders** to **Projects** in the visual editor.
+- The `/folders` endpoints now redirect to `/projects`.
 
-### Deprecated features
+### Deprecations
 
-- Deprecated the Google Gmail, Drive, and Search components.
+- Deprecated the **Gmail**, **Google Drive**, and **Google Search** components.
+For alternatives, see the [**Google** bundle](/bundles-google).
+
+## Earlier releases
+
+See the [Changelog](https://github.com/langflow-ai/langflow/releases).

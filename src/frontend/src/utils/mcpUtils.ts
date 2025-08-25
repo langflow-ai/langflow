@@ -1,5 +1,19 @@
 import { MCPServerType } from "@/types/mcp";
 
+export enum AuthMethodId {
+  NONE = "none",
+  API_KEY = "apikey",
+  OAUTH = "oauth",
+}
+
+export const AUTH_METHODS = {
+  [AuthMethodId.NONE]: { id: AuthMethodId.NONE, label: "None" },
+  [AuthMethodId.API_KEY]: { id: AuthMethodId.API_KEY, label: "API Key" },
+  [AuthMethodId.OAUTH]: { id: AuthMethodId.OAUTH, label: "OAuth" },
+} as const;
+
+export const AUTH_METHODS_ARRAY = Object.values(AUTH_METHODS);
+
 /**
  * Extracts all MCP servers from a JSON string or object.
  * Supports:
@@ -72,5 +86,9 @@ export function extractMcpServersFromJson(
     args: server.args || [],
     env: server.env && typeof server.env === "object" ? server.env : {},
     url: server.url,
+    headers:
+      server.headers && typeof server.headers === "object"
+        ? server.headers
+        : {},
   }));
 }

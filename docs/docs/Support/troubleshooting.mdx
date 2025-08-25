@@ -14,7 +14,7 @@ As Langflow development continues, components are often recategorized or depreca
 
 If a component appears to be missing from the expected location on the **Components** menu, try the following:
 
-* Search for the component or check other component categories, including [Bundles](/components-bundle-components).
+* Search for the component or check other component categories, including [bundles](/components-bundle-components).
 * [Expose legacy components](/concepts-components#component-menus), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
 * Make sure the component isn't already present in your flow if it is a single-use component.
@@ -23,13 +23,17 @@ If you still cannot locate the component, see [Langflow GitHub Issues and Discus
 
 ## No input in the Playground
 
-If there is no text box for input in the Playground, make sure your flow has a [Input component](/components-io) that is connected to the **Input** port of another component.
+If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/components-io#chat-io) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
+
+Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground** chat interface.
+
+For more information, see [Test flows in the Playground](/concepts-playground).
 
 ## Missing key, no key found, or invalid API key
 
 If you get an API key error when running a flow, try the following:
 
-* For all components that require credentials, make sure those components have a valid credential in the component's settings, such as the **API key** field.
+* For all components that require credentials, make sure those components have a valid credential in the component's settings, such as the **API Key** field.
 * If you store your credentials in [Langflow global variables](/configuration-global-variables), make sure you selected the correct global variable and that the variable contains a valid credential.
 * Make sure the provided credentials are active, have the required permissions, and, if applicable, have sufficient funds in the account to execute the required action. For example, model providers require credits to use their LLMs.
 
@@ -117,7 +121,7 @@ There are two possible reasons for this error:
 
 ### Environment variables not available from terminal
 
-Environment variables set in your terminal are not automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
+Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
 To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
 ### Package is not installed
@@ -140,51 +144,14 @@ The following error can occur during Langflow upgrades when the new version can'
 > Something went wrong running migrations. Please, run 'langflow migration --fix'
 ```
 
-To resolve this error, clear the cache by deleting the contents of the Langflow cache folder.
+To resolve this error, clear the cache by deleting the contents of your Langflow cache folder.
+The filepath depends on your operating system, installation type, and configuration options.
+For more information and default filepaths, see [Memory management options](/memory).
 
 :::important
 Clearing the cache erases your settings.
 If you want to retain your settings files, create a backup of those files before clearing the cache folder.
 :::
-
-The cache folder location depends on your OS:
-
-- **Linux**: `home/<username>/.cache/langflow/`
-- **WSL2 on Windows**: `home/<username>/.cache/langflow/`
-- **macOS**: `/Users/<username>/Library/Caches/langflow/`
-
-<!--
-### Unexpected data loss after Langflow Desktop upgrade {#data-loss}
-
-If you upgrade Langflow Desktop and find that your projects, flows, and settings have been replaced by a fresh installation, follow these steps to attempt to recover the data from the prior version:
-
-:::important
-Any projects, flows, and settings you created after the upgrade will be overwritten when you recover the data from your previous installation.
-:::
-
-<Tabs>
-   <TabItem value="Linux and macOS" label="Linux and macOS" default>
-
-1. Navigate to `~/.langflow/.langflow-venv/lib/python3.12/site-packages/langflow`.
-
-2. Copy `langflow.db`, paste it in `~/.langflow/data`, and then rename it to `database.db`.
-This overwrites the existing `database.db` with your previous version's internal Langflow database.
-
-3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
-
-  </TabItem>
-  <TabItem value="Windows" label="Windows">
-
-1. Navigate to `C:\Users\USERNAME\.langflow\.langflow-venv\Lib\site-packages\langflow`.
-
-2. Copy `langflow.db`, paste it in `C:\Users\<name>\AppData\Roaming\com.Langflow\data`, and then rename it to `database.db`.
-This overwrites the existing `database.db` with your previous version's internal Langflow database.
-
-3. Launch Langflow Desktop to verify that your projects, flows, and settings have been restored.
-
-  </TabItem>
-</Tabs>
--->
 
 ## Langflow uninstall issues
 
@@ -212,6 +179,30 @@ To fully remove a Langflow Desktop macOS installation, you must also delete `~/.
 For troubleshooting advice for a third-party integration, see the information about that integration in the Langflow documentation and the provider's documentation.
 
 If you are building a custom component, see [Error handling and logging for custom Python components](/components-custom-components#error-handling-and-logging).
+
+### Custom components not appearing in the visual editor
+
+If your custom components are not appearing in the Langflow visual editor, try the following troubleshooting steps:
+
+1. Ensure your components follow the [required directory structure](https://docs.langflow.org/components-custom-components#directory-structure-requirements).
+    ```
+    /your/custom/components/path/       # Base directory set by LANGFLOW_COMPONENTS_PATH
+        └── category_name/              # Required category subfolder that determines menu name
+            ├── __init__.py             # Required
+            └── custom_component.py     # Component file
+    ```
+
+2. Verify each category directory includes an `__init__.py` file.
+This is required for Python to recognize the directory as a module.
+
+3. Use the command line argument instead of the environment variable for `LANGFLOW_COMPONENTS_PATH`.
+If you're using the `LANGFLOW_COMPONENTS_PATH` environment variable and components aren't loading, try the `--components-path` command line argument instead:
+
+    ```bash
+    uv run langflow run --components-path /path/to/your/custom/components
+    ```
+
+If you continue to experience issues, please [report them on GitHub](https://github.com/langflow-ai/langflow/issues) with details about your directory structure and component setup.
 
 ## See also
 

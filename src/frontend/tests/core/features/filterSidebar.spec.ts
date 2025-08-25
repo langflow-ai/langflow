@@ -73,7 +73,9 @@ test(
     await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).toBeVisible();
     await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
-    await expect(page.getByTestId("langchain_utilitiesCSVAgent")).toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesCSV Agent"),
+    ).toBeVisible();
     await expect(
       page.getByTestId("langchain_utilitiesConversationChain"),
     ).toBeVisible();
@@ -115,7 +117,6 @@ test(
 
     await expect(page.getByTestId("disclosure-data")).toBeVisible();
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
     await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
     await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 

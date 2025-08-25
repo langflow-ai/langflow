@@ -5,9 +5,9 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
 from typing_extensions import override
 
+from langflow.logging.logger import logger
 from langflow.serialization.serialization import serialize
 from langflow.services.tracing.base import BaseTracer
 
