@@ -1,14 +1,14 @@
 @echo off
 echo Starting Langflow build and run process...
 
-REM Check if .env file exists and set env file parameter
-set "ENV_FILE_PARAM="
+REM Check if .env file exists and set env file flag
+set "USE_ENV_FILE="
 REM Get the script directory and resolve project root
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
 set "ENV_PATH=%PROJECT_ROOT%\.env"
 if exist "%ENV_PATH%" (
     echo Found .env file at: %ENV_PATH%
-    set "ENV_FILE_PARAM=--env-file \"%ENV_PATH%\""
+    set "USE_ENV_FILE=1"
 ) else (
     echo .env file not found at: %ENV_PATH%
     echo Langflow will use default configuration
@@ -85,8 +85,8 @@ echo Step 4: Running Langflow...
 echo.
 echo Attention: Wait until uvicorn is running before opening the browser
 echo.
-if defined ENV_FILE_PARAM (
-    uv run langflow run %ENV_FILE_PARAM%
+if defined USE_ENV_FILE (
+    uv run --env-file "%ENV_PATH%" langflow run
 ) else (
     uv run langflow run
 )
