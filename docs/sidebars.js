@@ -80,6 +80,7 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
+        "Concepts/knowledge",
       ],
     },
     {
@@ -107,6 +108,11 @@ module.exports = {
               type: "doc",
               id: "Concepts/concepts-file-management",
               label: "Manage files"
+            },
+            {
+              type: "doc",
+              id: "Concepts/knowledge",
+              label: "Manage knowledge bases"
             },
             {
               type: "doc",
