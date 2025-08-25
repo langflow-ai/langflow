@@ -6,6 +6,7 @@ import {
 import { useEffect, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import KeyPairInput from "@/components/core/keyPairInputComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,6 @@ import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-serve
 import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-server";
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
-import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
@@ -363,7 +363,7 @@ export default function AddMcpServerModal({
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="!text-mmd">Environment Variables</Label>
-                      <IOKeyPairInput
+                      <KeyPairInput
                         value={stdioEnv}
                         onChange={setStdioEnv}
                         duplicateKey={false}
@@ -402,7 +402,7 @@ export default function AddMcpServerModal({
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="!text-mmd">Headers</Label>
-                      <IOKeyPairInput
+                      <KeyPairInput
                         value={sseHeaders}
                         onChange={setSseHeaders}
                         duplicateKey={false}
@@ -413,7 +413,7 @@ export default function AddMcpServerModal({
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="!text-mmd">Environment Variables</Label>
-                      <IOKeyPairInput
+                      <KeyPairInput
                         value={sseEnv}
                         onChange={setSseEnv}
                         duplicateKey={false}

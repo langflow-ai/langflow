@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
+import { AnimatedConditional } from "@/components/ui/animated-close";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { SimpleSidebarProvider } from "@/components/ui/simple-sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -8,12 +10,17 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
+import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import FlowBorderWrapperComponent from "./components/flowBorderWrapperComponent";
 import { FlowSidebarComponent } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+import { MemoizedSidebarTrigger } from "./components/PageComponent/MemoizedComponents";
+import { PlaygroundSidebar } from "./components/PlaygroundSidebar";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -155,20 +162,48 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const isMobile = useIsMobile();
 
+  const openPlayground = useShortcutsStore((state) => state.openPlayground);
+
+  const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
+  const setIsFullscreen = usePlaygroundStore((state) => state.setIsFullscreen);
+
+  const isOpen = usePlaygroundStore((state) => state.isOpen);
+  const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
+
+  const onMaxWidth = (attemptedWidth: number, maxWidth: number) => {
+    if (attemptedWidth > maxWidth + 50) {
+      setIsFullscreen(true);
+    }
+  };
+
   return (
     <>
-      <div className="flow-page-positioning">
+      <div className="flex h-full w-full">
         {currentFlow && (
-          <div className="flex h-full overflow-hidden">
-            <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
-              {!view && <FlowSidebarComponent isLoading={isLoading} />}
-              <main className="flex w-full overflow-hidden">
-                <div className="h-full w-full">
-                  <Page setIsLoading={setIsLoading} />
-                </div>
-              </main>
-            </SidebarProvider>
-          </div>
+          <>
+            <div className="flex h-full w-fit">
+              <AnimatedConditional isOpen={!isFullscreen || !isOpen}>
+                <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
+                  {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                  <MemoizedSidebarTrigger />
+                </SidebarProvider>
+              </AnimatedConditional>
+            </div>
+
+            <SimpleSidebarProvider
+              width="400px"
+              minWidth={0.22}
+              maxWidth={0.8}
+              onMaxWidth={onMaxWidth}
+              fullscreen={isFullscreen}
+              defaultOpen={false}
+              open={isOpen}
+              onOpenChange={setIsOpen}
+              shortcut={openPlayground}
+            >
+              <FlowBorderWrapperComponent setIsLoading={setIsLoading} />
+            </SimpleSidebarProvider>
+          </>
         )}
       </div>
       {blocker.state === "blocked" && (
