@@ -149,7 +149,7 @@ At this point, you can navigate to http://localhost:3000/ in a browser and acces
 ### Build and display documentation
 
 > [!IMPORTANT]
-> **Dev Container Users**: If you're using a dev container, run the documentation build from your **host terminal** (outside the container), not from within the dev container workspace. The documentation build may not work properly when run inside the dev container.
+> If you're using a dev container, run the documentation build from outside the container in your host terminal, not from within the dev container workspace. The documentation build may not work properly when run inside the dev container.
 
 If you are contributing changes to documentation (always welcome!), these are built using [Docusaurus](https://docusaurus.io/) and served separately, also using Node.js.
 
@@ -168,7 +168,6 @@ If the frontend service is running on port `3000` you might be prompted `Would y
 ```
 
 Navigate to http://localhost:3001/ in a browser and view the documentation. Documentation updates will be visible as they are saved, though sometimes the browser page will also need to be refreshed.
-
 
 
 ## Adding or Modifying a Component
