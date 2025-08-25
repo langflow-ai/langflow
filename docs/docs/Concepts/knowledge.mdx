@@ -16,11 +16,9 @@ Knowledge bases are created with the [**Knowledge Ingestion** component](/compon
 For example, you could create a knowledge base with customer sales data from a specific month with the **Knowledge Ingestion** component.
 Then, when you create flows that need customer data from this time period, add a **Knowledge Retrieval** component to access the knowledge base.
 
-## Knowledge base examples
-
 For examples of knowledge bases in flows, see the **Knowledge Ingestion** and **Knowledge Retrieval** [templates](/concepts-flows#create-a-flow) in Langflow.
 
-## Create and retrieve a knowledge base
+## Create a knowledge base
 
 Create a knowledge base from a record of customer purchases.
 You can adapt the tutorial to suit your data, or, to follow along with the tutorial, you can download [`customer-orders.csv`](/files/customer_orders/customer_orders.csv) and save it on your local machine.
@@ -119,7 +117,9 @@ For example, to load `customer-orders.csv` from local memory, connect the [**Fil
     ```
     </details>
 
-8. Now that your knowledge base is created, you can use the [**Knowledge Retrieval** component](/components-data#retrieve-knowledge) in any flow to search and retrieve data from the `customer-sales` knowledge base.
+## Retrieve a knowledge base
+
+Now that your knowledge base is created, you can use the [**Knowledge Retrieval** component](/components-data#retrieve-knowledge) in any flow to search and retrieve data from the `customer-sales` knowledge base.
 To retrieve knowledge from a knowledge base:
 
     1. Add a **Knowledge Retrieval** component to your flow.
@@ -129,7 +129,68 @@ To retrieve knowledge from a knowledge base:
 
     This makes your data searchable across all your Langflow flows without needing to re-ingest the data each time.
 
-## Local database configuration
+## Knowledge ingestion component
+
+The **Create Knowledge** component creates or appends rows to a knowledge base from a [DataFrame](/data-types#dataframe).
+
+### Knowledge ingestion parameters
+
+Some **Knowledge Ingestion** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name             | Display Name                  | Info                                                                                  |
+|------------------|------------------------------|---------------------------------------------------------------------------------------|
+| knowledge_base   | Knowledge                     | Select or create a knowledge base to ingest data into.                                |
+| input_df         | Data                          | The DataFrame containing your data that is already chunked or processed.                       |
+| column_config    | Column Configuration          | Configure which columns are vectorized and which are used as unique identifiers. Default: `text`.     |
+| chunk_size       | Chunk Size                    | Batch size for processing embeddings. Default: `1000`.                                   |
+| api_key          | Embedding Provider API Key    | API key for the embedding provider. Supports OpenAI, HuggingFace, or Cohere models.                   |
+| allow_duplicates | Allow Duplicates              | Allow duplicate rows in the knowledge base. Default: `false`.                            |
+
+### Knowledge ingestion output
+
+Returns a [Data](/data-types#data) object containing metadata about the ingestion, including:
+
+* Knowledge base name and path
+* Number of rows ingested
+* Column configuration summary
+* Timestamp
+
+## Retrieve knowledge component
+
+Use the [**Knowledge Retrieval** component](/components-data#retrieve-knowledge) in any flow to search and retrieve data from a knowledge base.
+To retrieve knowledge from a knowledge base:
+
+    1. Add a **Knowledge Retrieval** component to your flow.
+    2. Select your knowledge base in the Retrieval component's **Knowledge** menu.
+    3. Connect the **Results** port to a **Chat Output** component to view the search results.
+    4. Enter a query and view the results.
+
+    This makes your data searchable across all your Langflow flows without needing to re-ingest the data each time.
+
+The **Knowledge Retrieval** component retrieves data and performs searches on a knowledge base.
+Use this component to query your ingested knowledge bases, perform semantic search, and return relevant results as a DataFrame.
+
+### Knowledge retrieval parameters
+
+Some **Knowledge Retrieval** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name             | Display Name                  | Info                                                                                  |
+|------------------|------------------------------|---------------------------------------------------------------------------------------|
+| knowledge_base   | Knowledge                     | Select the knowledge base to retrieve data from.                                      |
+| api_key          | Embedding Provider API Key    | API key for the embedding provider. Overrides the stored key if provided.             |
+| search_query     | Search Query                  | Optional search query to filter knowledge base data using semantic similarity.         |
+| top_k            | Top K Results                 | Number of top results to return from the knowledge base. Default: `5`.                |
+| include_metadata | Include Metadata              | Whether to include all metadata and embeddings in the output. Default: `true`.        |
+
+### Knowledge retrieval output
+
+Returns a [DataFrame](/data-types#dataframe) containing the top matching results from the selected knowledge base.
+If **Include Metadata** is enabled, each row includes all metadata, embeddings, and content.
+If disabled, only the content is returned.
+
+## Configure knowledge bases
 
 Each knowledge base is a [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector database stored as a separate directory containing:
 
@@ -152,52 +213,6 @@ You can customize the parent directory where the `knowledge_bases` directory is 
 
 If you have set the `LANGFLOW_CONFIG_DIR` environment variable, knowledge bases are stored in a `knowledge_bases` subdirectory within that location.
 
-### Knowledge Ingestion parameters
-
-Some **Knowledge Ingestion** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
-
-| Name             | Display Name                  | Info                                                                                  |
-|------------------|------------------------------|---------------------------------------------------------------------------------------|
-| knowledge_base   | Knowledge                     | Select or create a knowledge base to ingest data into.                                |
-| input_df         | Data                          | The DataFrame containing your data that is already chunked or processed.                       |
-| column_config    | Column Configuration          | Configure which columns are vectorized and which are used as unique identifiers. Default: `text`.     |
-| chunk_size       | Chunk Size                    | Batch size for processing embeddings. Default: `1000`.                                   |
-| api_key          | Embedding Provider API Key    | API key for the embedding provider. Supports OpenAI, HuggingFace, or Cohere models.                   |
-| allow_duplicates | Allow Duplicates              | Allow duplicate rows in the knowledge base. Default: `false`.                            |
-
-### Knowledge Ingestion output
-
-Returns a [Data](/data-types#data) object containing metadata about the ingestion, including:
-
-* Knowledge base name and path
-* Number of rows ingested
-* Column configuration summary
-* Timestamp
-
-## Knowledge Retrieval
-
-The **Knowledge Retrieval** component retrieves data and performs searches on a knowledge base.
-Use this component to query your ingested knowledge bases, perform semantic search, and return relevant results as a DataFrame.
-
-### Knowledge Retrieval parameters
-
-Some **Knowledge Retrieval** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
-
-| Name             | Display Name                  | Info                                                                                  |
-|------------------|------------------------------|---------------------------------------------------------------------------------------|
-| knowledge_base   | Knowledge                     | Select the knowledge base to retrieve data from.                                      |
-| api_key          | Embedding Provider API Key    | API key for the embedding provider. Overrides the stored key if provided.             |
-| search_query     | Search Query                  | Optional search query to filter knowledge base data using semantic similarity.         |
-| top_k            | Top K Results                 | Number of top results to return from the knowledge base. Default: `5`.                |
-| include_metadata | Include Metadata              | Whether to include all metadata and embeddings in the output. Default: `true`.        |
-
-### Knowledge Retrieval output
-
-Returns a [DataFrame](/data-types#dataframe) containing the top matching results from the selected knowledge base.
-If **Include Metadata** is enabled, each row includes all metadata, embeddings, and content.
-If disabled, only the content is returned.
 
 ## See also
 
