@@ -38,6 +38,13 @@ def has_chat_input(flow_data: dict | None) -> bool:
 
     return any(node.get("data", {}).get("type") in ["ChatInput", "Chat Input"] for node in flow_data["nodes"])
 
+def has_chat_output(flow_data: dict | None) -> bool:
+    """Check if the flow has a chat input component."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    return any(node.get("data", {}).get("type") in ["ChatOutput", "Chat Output"] for node in flow_data["nodes"])
+
 
 async def run_flow_for_openai_responses(
     flow: FlowRead,
@@ -51,6 +58,10 @@ async def run_flow_for_openai_responses(
     # Check if flow has chat input
     if not has_chat_input(flow.data):
         msg = "Flow must have a ChatInput component to be compatible with OpenAI Responses API"
+        raise ValueError(msg)
+
+    if not has_chat_output(flow.data):
+        msg = "Flow must have a ChatOutput component to be compatible with OpenAI Responses API"
         raise ValueError(msg)
 
     # Use previous_response_id as session_id for conversation continuity
