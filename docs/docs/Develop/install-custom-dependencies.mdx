@@ -10,14 +10,6 @@ The Langflow codebase uses two `pyproject.toml` files to manage dependencies, wi
 * The `main` package is managed by the root level `pyproject.toml`, and it includes end-user features and main application code, such as Langchain and OpenAI.
 * The `base` package is managed at `src/backend/base/pyproject.toml`, and it includes core infrastructure, such as the FastAPI web framework.
 
-## Install custom dependencies in the Langflow UI
-
-As of Langflow version 1.6, dependency packages can be installed and uninstalled **Package Manager**.
-
-The **Package Manager** pane is available in the **Settings** page.
-
-This pane includes the option to **Restore Langflow**, which removes all user-installed packages and restores Langflow to the initial dependencies listed in `uv.lock`.
-
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
 
 To add dependencies to Langflow Desktop, add an entry for the package to the application's `requirements.txt` file:

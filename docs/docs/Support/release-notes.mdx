@@ -50,29 +50,46 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
-- Manage dependencies in the UI
-
-  Packages can now be installed and uninstalled in Langflow's **Package Manager** pane, found in the **Settings** page.
-  If you experience a conflict with your installed packages, use the **Restore Langflow** option to remove your installed packages and revert Langflow to the dependencies listed in `uv.lock`.
-
-- Increased max file upload size
-
-  Increased the default max file upload size from `100 MB` to `1024 MB`.
-
 - Knowledge bases
 
   Knowledge bases create a local vector database of your data, and allow it to be re-used across flows, similar to using a File component.
   The **Create knowledge** component ingests knowledge into a knowledge base. The **Retrieve knowledge** component is added to flows to access a knowledge base.
   For more information, see Knowledge bases.
 
-- Additional Structured Output for Agent component
-
-  In addition to the `Message` output, the Agent component now includes a structured output.
-  This output parses JSON into a structured `Data` object to make it easier to work with the Agent's output downstream.
-
 - Advanced parsing available for File component
 
   The File component includes advanced parsing capabilities powered by the Docling library.
+
+  The Docling dependency is now included with the Langflow OSS package.
+
+- Additional Structured Output for Agent component
+
+  In addition to the `Message` output, the Agent component now includes a structured output for `Data`.
+  This output parses JSON into a structured `Data` object to make it easier to work with the Agent's output downstream.
+
+- Increased max file upload size
+
+  Increased the default max file upload size from `100 MB` to `1024 MB`.
+
+- The Langflow `config_dir` default directory is moved
+
+  The default Langflow `config_dir` is now moved.
+  The directory location can still be modified with the `LANGFLOW_CONFIG_DIR` [environment variable](/environment-variables).
+
+  ```
+  Current:
+  macOS | ~/Library/Caches/langflow/
+  Linux | ~/.cache/langflow/
+  Windows | %LOCALAPPDATA%\langflow\Cache\
+  1.6:
+  macOS | ~/Library/Application Support/langflow/
+  Linux | ~/.config/langflow/
+  Windows | %APPDATA%\langflow\
+  ```
+
+- New integrations and bundles
+
+   - Traceloop
 
 ### Deprecations
 
