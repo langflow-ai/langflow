@@ -4,34 +4,11 @@ import os
 import pathlib
 
 import pytest
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from httpx import AsyncClient
 from loguru import logger
 
-
-# Load environment variables from .env file
-def load_env_vars():
-    """Load environment variables from .env files."""
-    # Try to find .env file in various locations
-    possible_paths = [
-        pathlib.Path(".env"),  # Current directory
-        pathlib.Path("../../.env"),  # Project root
-        pathlib.Path("../../../.env"),  # One level up from project root
-    ]
-
-    for env_path in possible_paths:
-        if env_path.exists():
-            logger.info(f"Loading environment variables from {env_path.absolute()}")
-            load_dotenv(env_path)
-            return True
-
-    logger.warning("No .env file found. Using existing environment variables.")
-    return False
-
-
-# Load environment variables at module import time
-load_env_vars()
-
+load_dotenv(find_dotenv())
 
 async def create_global_variable(client: AsyncClient, headers, name, value, variable_type="credential"):
     """Create a global variable in Langflow."""
