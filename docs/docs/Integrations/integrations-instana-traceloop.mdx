@@ -23,33 +23,42 @@ Before setting up observability, ensure you have:
 - A running Langflow application setup
 
 ## Integration Setup
-
 ### Step 1: Configure Environment Variables
-1. Create a `.env` file in the root directory of your Langflow application (if it doesn't exist already)
+1. Create a `.env` file in the root directory of your Langflow application (if it doesn't exist already).
 2. Add your Traceloop and Instana credentials to the `.env` file:
-   ```
+
+   ```dotenv
    TRACELOOP_API_KEY=<your_traceloop_api_key>
-   TRACELOOP_BASE_URL=<Instana_endpoint> (Eg: https://otlp-magenta-saas.instana.rocks:4318)
+   # Example: https://otlp-magenta-saas.instana.rocks:4318
+   TRACELOOP_BASE_URL=<instana_endpoint>
    TRACELOOP_HEADERS="x-instana-key=<your_instana_key>"
-   OTEL_EXPORTER_OTLP_INSECURE=true
+   # Set to true only for plain HTTP endpoints. For HTTPS, use false.
+   OTEL_EXPORTER_OTLP_INSECURE=false
+   # If your Traceloop version requires a URL, use: http://host.docker.internal:8000
    TRACELOOP_METRICS_ENDPOINT=host.docker.internal:8000
    TRACELOOP_METRICS_ENABLED=true
    OTEL_METRIC_EXPORT_INTERVAL=10000
    ```
-3. Save the `.env` file
-4. Make sure OTEL Data Collector is up and running.
-   - In otel-dc `config.yaml`, add the following:
-     ```
-     llm.application: LLM_DC
 
-      instances:
-      - otel.agentless.mode: true
-         otel.backend.url: <Instana_endpoint> (Eg: https://otlp-magenta-saas.instana.rocks:4318)
+   :::warning Security
+   Never commit your `.env` file to source control. If your keys are exposed, rotate them immediately.
+   :::
+
+3. Save the `.env` file.
+4. Make sure the OpenTelemetry (OTel) Collector is running.
+   - In your Collector’s `config.yaml`, add the following (update to match your Instana endpoint and service names):
+     ```yaml
+     # Example values — update to your environment
+     llm.application: "LLM_DC"
+     instances:
+       - otel.agentless.mode: true
+         # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
+         otel.backend.url: "<INSTANA_ENDPOINT>"
          otel.backend.using.http: false
          callback.interval: 10
-         otel.service.name: DC1
+         otel.service.name: "DC1"
          otel.service.port: 8000
-         currency: USD
+         currency: "USD"
      ```
 
 ### Step 2: Start Langflow with Environment Variables
