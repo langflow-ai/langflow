@@ -25,9 +25,9 @@
         },
         "id": "xy-edge__KnowledgeRetrieval-kgwih{œdataTypeœ:œKnowledgeRetrievalœ,œidœ:œKnowledgeRetrieval-kgwihœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-OG4M9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OG4M9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "KnowledgeRetrieval-kgwih",
-        "sourceHandle": "{œdataTypeœ:œKnowledgeRetrievalœ,œidœ:œKnowledgeRetrieval-kgwihœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œKnowledgeRetrievalœ, œidœ: œKnowledgeRetrieval-kgwihœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-OG4M9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-OG4M9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-OG4M9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -51,9 +51,9 @@
         },
         "id": "xy-edge__TextInput-k48NL{œdataTypeœ:œTextInputœ,œidœ:œTextInput-k48NLœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-KnowledgeRetrieval-kgwih{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledgeRetrieval-kgwihœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "TextInput-k48NL",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-k48NLœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-k48NLœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "KnowledgeRetrieval-kgwih",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledgeRetrieval-kgwihœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKnowledgeRetrieval-kgwihœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -607,8 +607,6 @@
                 "group_outputs": false,
                 "method": "retrieve_data",
                 "name": "retrieve_data",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [

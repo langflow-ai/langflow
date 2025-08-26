@@ -27,9 +27,9 @@
         "id": "reactflow__edge-URLComponent-gIu1h{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-gIu1hœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-9BS47{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-9BS47œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-gIu1h",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-gIu1hœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-gIu1hœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "SplitText-9BS47",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-9BS47œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-9BS47œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -54,9 +54,9 @@
         },
         "id": "xy-edge__SplitText-9BS47{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-9BS47œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KnowledgeIngestion-Hnwnk{œfieldNameœ:œinput_dfœ,œidœ:œKnowledgeIngestion-Hnwnkœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "source": "SplitText-9BS47",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-9BS47œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-9BS47œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "KnowledgeIngestion-Hnwnk",
-        "targetHandle": "{œfieldNameœ:œinput_dfœ,œidœ:œKnowledgeIngestion-Hnwnkœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKnowledgeIngestion-Hnwnkœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -785,8 +785,6 @@
                 "group_outputs": false,
                 "method": "build_kb_info",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
