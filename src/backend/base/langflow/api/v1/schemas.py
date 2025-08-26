@@ -445,7 +445,6 @@ class AuthSettings(BaseModel):
     """Model representing authentication settings for MCP."""
 
     auth_type: Literal["none", "apikey", "oauth"] = "none"
-    api_key: SecretStr | None = None
     oauth_host: str | None = None
     oauth_port: str | None = None
     oauth_server_url: str | None = None
