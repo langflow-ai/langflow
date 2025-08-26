@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import zipfile
@@ -18,6 +19,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
 from langflow.api.v1.flows import create_flows
+from langflow.api.v1.mcp_projects import register_project_with_composer
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
@@ -87,6 +89,10 @@ async def create_project(
             )
             await session.exec(update_statement_flows)
             await session.commit()
+
+        # Register the new project with MCP Composer in the background
+        # This avoids blocking the response while the composer starts up
+        asyncio.create_task(register_project_with_composer(new_project))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -341,6 +347,10 @@ async def upload_file(
     session.add(new_project)
     await session.commit()
     await session.refresh(new_project)
+
+    # Register the new project with MCP Composer in the background
+    # This avoids blocking the response while the composer starts up
+    asyncio.create_task(register_project_with_composer(new_project))
 
     del data["folder_name"]
     del data["folder_description"]

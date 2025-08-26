@@ -12,6 +12,7 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
@@ -160,6 +161,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
 
+  // Get composer URL for this project
+  const { data: composerUrlData } = useGetProjectComposerUrl(projectId);
+
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
@@ -246,31 +250,26 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = customGetMCPUrl(projectId);
+  // Use the per-project MCP Composer SSE URL if available, otherwise fallback to direct SSE
+  const apiUrl = customGetMCPUrl(
+    projectId,
+    ENABLE_MCP_COMPOSER && !!composerUrlData?.composer_sse_url,
+    composerUrlData?.composer_sse_url,
+  );
 
-  // Generate auth headers based on the authentication type
+  // Generate auth headers based on authentication type
   const getAuthHeaders = () => {
-    // If MCP auth is disabled, use the previous API key behavior
-    if (!ENABLE_MCP_COMPOSER) {
-      if (isAutoLogin) return "";
-      return `
+    // The x-api-key header is needed when AUTO_LOGIN=false to authenticate WITH Langflow
+    // This is separate from MCP-specific authentication
+    if (isAutoLogin) {
+      return ""; // No API key needed when auto-login is enabled
+    }
+
+    return `
         "--headers",
         "x-api-key",
         "${apiKey || "YOUR_API_KEY"}",`;
     }
-
-    if (!currentAuthSettings || currentAuthSettings.auth_type === "none") {
-      return "";
-    }
-
-    if (currentAuthSettings.auth_type === "apikey") {
-      return `
-        "--headers",
-        "x-api-key",
-        "${apiKey || "YOUR_API_KEY"}",`;
-    }
-
-    return "";
   };
 
   const MCP_SERVER_JSON = `{
@@ -504,6 +503,25 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   setup guide
                 </a>
                 .
+                {ENABLE_MCP_COMPOSER && composerUrlData?.composer_sse_url && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-accent-emerald-foreground">
+                    <ForwardedIconComponent
+                      name="Network"
+                      className="h-3 w-3"
+                    />
+                    Using MCP Composer for this project.
+                  </div>
+                )}
+                {ENABLE_MCP_COMPOSER && !composerUrlData?.composer_sse_url && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <ForwardedIconComponent
+                      name="AlertCircle"
+                      className="h-3 w-3"
+                    />
+                    MCP Composer not started for this project. Using direct SSE
+                    URL.
+                  </div>
+                )}
               </div>
             </>
           )}
