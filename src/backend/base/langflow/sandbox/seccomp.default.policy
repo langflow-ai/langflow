@@ -1,0 +1,25 @@
+POLICY base_sandbox {
+    ERRNO(1) {
+        ptrace, process_vm_readv, process_vm_writev,
+        mount, umount, pivot_root, chroot,
+        swapon, swapoff, reboot, sethostname, setdomainname,
+        init_module, finit_module, delete_module,
+        capset, setuid, setgid, setreuid, setregid,
+        setresuid, setresgid, setfsuid, setfsgid,
+        add_key, request_key, keyctl,
+        unshare, setns,
+        chmod, fchmod, fchmodat,
+        chown, fchown, fchownat, lchown,
+        setxattr, lsetxattr, fsetxattr,
+        removexattr, lremovexattr, fremovexattr,
+        link, linkat, symlink, symlinkat,
+        mkdir, mkdirat, rmdir, rename, renameat, renameat2,
+        mknod, mknodat,
+        perf_event_open, bpf,
+        msgget, msgctl, msgsnd, msgrcv,
+        semget, semctl, semop, semtimedop,
+        shmget, shmat, shmdt, shmctl
+    }
+}
+
+USE base_sandbox DEFAULT ALLOW

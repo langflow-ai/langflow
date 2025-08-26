@@ -7,3 +7,6 @@ dist/
 src/backend/langflow/frontend
 **/langflow-pre.db
 **/langflow.db
+# Sandbox environment-specific files
+src/backend/base/langflow/sandbox/component_signatures.json
+src/backend/base/langflow/sandbox/config.json

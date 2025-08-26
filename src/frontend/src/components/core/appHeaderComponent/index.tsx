@@ -15,6 +15,8 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
 import FlowMenu from "./components/FlowMenu";
+import { SandboxIndicator } from "./components/sandbox-indicator";
+import { LockedIndicator } from "./components/locked-indicator";
 
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -90,6 +92,8 @@ export default function AppHeader(): JSX.Element {
         data-testid="header_right_section_wrapper"
       >
         <>
+          <SandboxIndicator />
+          <LockedIndicator />
           <Button
             unstyled
             className="hidden items-center whitespace-nowrap pr-2 lg:inline"

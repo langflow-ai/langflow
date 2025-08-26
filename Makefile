@@ -344,6 +344,12 @@ dcdev_up:
 	docker compose -f docker/dev.docker-compose.yml down || true
 	docker compose -f docker/dev.docker-compose.yml up --remove-orphans
 
+dcdev_sandbox_up:
+	@echo 'Running docker compose up for sandbox'
+	docker compose -f docker/dev.sandbox.docker-compose.yml down || true
+	docker compose -f docker/dev.sandbox.docker-compose.yml up --remove-orphans
+
+
 lock_base:
 	cd src/backend/base && uv lock
 

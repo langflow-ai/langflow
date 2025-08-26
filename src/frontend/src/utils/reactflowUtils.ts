@@ -1796,6 +1796,29 @@ export function removeGlobalVariableFromComponents(flow: FlowType) {
   });
 }
 
+export function removeSandboxFlagsFromComponents(flow: FlowType) {
+  /**
+   * Remove sandbox flags from flow components before export.
+   * 
+   * Sandbox flags (sandboxed, locked, blocked) are computed dynamically
+   * based on the current sandbox state and should not be exported as they
+   * would become stale and cause issues when importing the flow.
+   */
+  flow.data!.nodes.forEach((node: AllNodeType) => {
+    if (node.type === "genericNode" && node.data) {
+      // Remove sandbox flags from node data
+      delete node.data.sandboxed;
+      delete node.data.locked;
+      delete node.data.blocked;
+      
+      // Recursively clean nested flows (for sub-flows)
+      if (node.data.node?.flow) {
+        removeSandboxFlagsFromComponents(node.data.node.flow);
+      }
+    }
+  });
+}
+
 export function typesGenerator(data: APIObjectType) {
   return Object.keys(data)
     .reverse()
@@ -1914,6 +1937,7 @@ export async function downloadFlow(
     const clonedFlow = cloneDeep(flow);
 
     removeFileNameFromComponents(clonedFlow);
+    removeSandboxFlagsFromComponents(clonedFlow);
 
     const flowData = {
       ...clonedFlow,

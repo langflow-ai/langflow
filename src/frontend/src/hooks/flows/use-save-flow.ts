@@ -96,6 +96,27 @@ const useSaveFlow = () => {
                       }),
                     );
                     setCurrentFlow(updatedFlow);
+                    
+                    // Update the sandbox flags from the server response
+                    if (updatedFlow.data?.nodes) {
+                      const currentNodes = useFlowStore.getState().nodes;
+                      const updatedNodes = currentNodes.map(node => {
+                        const updatedNode = updatedFlow.data?.nodes.find(n => n.id === node.id);
+                        if (updatedNode && (updatedNode.data.sandboxed !== undefined || updatedNode.data.locked !== undefined)) {
+                          return {
+                            ...node,
+                            data: {
+                              ...node.data,
+                              sandboxed: updatedNode.data.sandboxed,
+                              locked: updatedNode.data.locked,
+                            }
+                          };
+                        }
+                        return node;
+                      });
+                      useFlowStore.getState().setNodes(updatedNodes);
+                    }
+                    
                     resolve();
                   } else {
                     setErrorData({
