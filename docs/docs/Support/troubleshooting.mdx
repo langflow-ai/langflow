@@ -127,46 +127,12 @@ To set environment variables for Langflow Desktop, see [Set environment variable
 ### Access Langflow Desktop startup logs
 
 If you encounter issues with Langflow Desktop, you might need to access startup logs for debugging.
-Follow the steps for your operating system.
 
-The log file is only created when Langflow Desktop runs. If you don't see a log file, try starting Langflow Desktop first, then check for the log file.
-
-<Tabs>
-<TabItem value="macos" label="macOS">
-
-1. Open Terminal and run:
-   ```bash
-   cd ~/Library/Logs/com.Langflow
-   ```
-
-2. Open the log contents to view the log files:
-   ```bash
-   open .
-   ```
-
-3. Locate the `langflow.log` file and send it to support for debugging assistance.
-
-</TabItem>
-<TabItem value="windows" label="Windows">
-
-1. Open the Command Prompt (CMD), and then run the following command:
-   ```cmd
-   cd %LOCALAPPDATA%\com.langflow\logs
-   ```
-
-2. Run the command:
-   ```cmd
-   start .
-   ```
-
-3. Locate the `Langflow.log` file, and then send it to support for debugging assistance.
-
-</TabItem>
-</Tabs>
+For more information, see [Access Langflow Desktop startup logs](/logging#desktop-logs).
 
 ### User not found or inactive when running multiple flows
 
-When running multiple local Langflow instances on different ports, such as `localhost:7860` and `localhost:7861`, you might see authentication errors in the logs.
+When running multiple local Langflow OSS instances on different ports, such as `localhost:7860` and `localhost:7861`, you might see authentication errors in the logs.
 For example:
 
 ```text
@@ -233,6 +199,11 @@ To fully remove a Langflow Desktop macOS installation, you must also delete `~/.
 
 - [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
 - [Troubleshooting MCP server](/mcp-server#troubleshooting-mcp-server)
+
+## Token length limit errors in Embedding Model components
+
+Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.
+For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size).
 
 ## Custom components and integrations issues
 
