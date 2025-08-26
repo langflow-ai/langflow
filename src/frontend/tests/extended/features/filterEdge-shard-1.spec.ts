@@ -103,7 +103,6 @@ test(
       "groqGroq",
       "lmstudioLM Studio",
       "maritalkMariTalk",
-      "mistralMistralAI",
       "perplexityPerplexity",
       "baiduQianfan",
       "sambanovaSambaNova",
