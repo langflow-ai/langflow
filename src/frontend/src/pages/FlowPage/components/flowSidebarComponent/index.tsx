@@ -1,17 +1,3 @@
-import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
-import {
-  createContext,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +15,20 @@ import {
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
+import Fuse from "fuse.js";
+import { cloneDeep } from "lodash";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
@@ -48,7 +48,6 @@ import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
-import { UniqueInputsComponents } from "./types";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -475,7 +474,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
   const hasSearchInput = search !== "" || filterType !== undefined;
-  console.log("hasSearchInput", hasSearchInput);
+
 
   const showComponents =
     (ENABLE_NEW_SIDEBAR &&

@@ -1,10 +1,10 @@
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
+import { GradientSave } from "@/icons/GradientSparkles";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
-import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
-import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, any>();
 
@@ -390,7 +390,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   Googlemaps: "Googlemaps",
   Todoist: "Todoist",
   Zoom: "Zoom",
-  AIML: "AI/ML",
+  AIML: "AIML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",
   EmbeddingModels: "Binary",
