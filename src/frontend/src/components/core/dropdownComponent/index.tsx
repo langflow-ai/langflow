@@ -64,9 +64,7 @@ export default function Dropdown({
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
-  const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
-  const nodes = useFlowStore((state) => state.nodes);
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -177,7 +175,6 @@ export default function Dropdown({
   };
 
   const handleSourceOptions = async (value: string) => {
-    setWaitingForResponse(true);
     setOpen(false);
 
     await mutateTemplate(
@@ -210,13 +207,6 @@ export default function Dropdown({
             ? inputTypes.join("\n")
             : templateField.type) || "";
 
-        const myId = scapedJSONStringfy({
-          inputTypes: effectiveInputTypes,
-          type: templateField.type,
-          id: nodeId,
-          fieldName: name,
-          proxy: templateField.proxy,
-        });
 
         const typesData = useTypesStore.getState().data;
         const grouped = groupByFamily(
@@ -259,7 +249,6 @@ export default function Dropdown({
         document.addEventListener("mouseup", clearDrag);
       }
     } finally {
-      setWaitingForResponse(false);
     }
   };
 
@@ -491,7 +480,6 @@ export default function Dropdown({
                   onSelect={(currentValue) => {
                     onSelect(currentValue);
                     setOpen(false);
-                    setWaitingForResponse(false);
                   }}
                   className="w-full items-center rounded-none"
                   data-testid={`${option}-${index}-option`}
