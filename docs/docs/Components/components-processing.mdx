@@ -556,9 +556,14 @@ There are several ways you can address these inconsistencies:
 
 This component allows you to execute Python code with imported packages.
 
+The **Python Interpreter** component can only import packages that are already installed in your Langflow environment.
+If you encounter an `ImportError` when trying to use a package, you need to install it first.
+
+To install custom packages, see [Install custom dependencies](/install-custom-dependencies).
+
 ### Use the Python Interpreter in a flow
 
-1. To use this component in a flow,in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
+1. To use this component in a flow, in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
 At least one import is required.
 2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
 3. Optional: Enable **Tool Mode**, and then connect the **Python Interpreter** component to an **Agent** component as a tool.
