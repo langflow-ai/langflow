@@ -233,7 +233,7 @@ async def list_project_tools(
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
                 auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else None
 
-    except Exception as e: # noqa: BLE001
+    except Exception as e:
         msg = f"Error listing project tools: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -440,7 +440,7 @@ async def update_project_mcp_settings(
                                 "sse_url": composer_sse_url,
                                 "uses_composer": True,
                             }
-                        except Exception as e: # noqa: BLE001
+                        except Exception as e:
                             await logger.awarning(f"Failed to get mcp composer URL for project {project_id}: {e}")
                             raise HTTPException(status_code=500, detail=str(e)) from e
                 elif should_stop_composer:
@@ -466,7 +466,7 @@ async def update_project_mcp_settings(
 
             return response
 
-    except Exception as e: # noqa: BLE001
+    except Exception as e:
         msg = f"Error updating project MCP settings: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -746,7 +746,7 @@ async def install_mcp_config(
         with config_path.open("w") as f:
             json.dump(existing_config, f, indent=2)
 
-    except Exception as e: # noqa: BLE001
+    except Exception as e:
         msg = f"Error installing MCP configuration: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -785,7 +785,7 @@ async def get_project_composer_url(
             "uses_composer": True,
         }
 
-    except Exception as e: # noqa: BLE001
+    except Exception as e:
         msg = f"Error getting composer URL for project {project_id}: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -929,7 +929,7 @@ async def check_installed_mcp_servers(
         else:
             await logger.adebug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
-    except Exception as e: # noqa: BLE001
+    except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e

@@ -7,10 +7,6 @@ from typing import Annotated, cast
 from urllib.parse import quote
 from uuid import UUID
 
-from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-from langflow.services.deps import get_service, get_settings_service
-from langflow.services.mcp_composer.service import MCPComposerService
-from langflow.services.schema import ServiceType
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
@@ -29,6 +25,7 @@ from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
+from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -39,6 +36,9 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.deps import get_service, get_settings_service
+from langflow.services.mcp_composer.service import MCPComposerService
+from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
