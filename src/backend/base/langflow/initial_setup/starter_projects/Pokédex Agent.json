@@ -1340,7 +1340,7 @@
             "icon": "bot",
             "legacy": false,
             "metadata": {
-              "code_hash": "964ea0b7bc96",
+              "code_hash": "50b9618f7019",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1358,7 +1358,7 @@
                 ],
                 "total_dependencies": 3
               },
-              "module": "custom_components.agent"
+              "module": "langflow.components.agents.agent.AgentComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1370,8 +1370,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1384,11 +1382,8 @@
                 "cache": true,
                 "display_name": "Structured Response",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "json_response",
                 "name": "structured_response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": false,
                 "types": [
