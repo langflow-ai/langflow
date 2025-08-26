@@ -3,10 +3,14 @@ import io
 import json
 import zipfile
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, cast
 from urllib.parse import quote
 from uuid import UUID
 
+from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+from langflow.services.deps import get_service, get_settings_service
+from langflow.services.mcp_composer.service import MCPComposerService
+from langflow.services.schema import ServiceType
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
@@ -73,17 +77,13 @@ async def create_project(
                 else:
                     new_project.name = f"{new_project.name} (1)"
 
-        # Set default auth settings based on AUTO_LOGIN configuration
-        from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-        from langflow.services.deps import get_settings_service
-
         settings_service = get_settings_service()
 
         # If AUTO_LOGIN is false, automatically enable API key authentication
         if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
             default_auth = {"auth_type": "apikey"}
             new_project.auth_settings = encrypt_auth_settings(default_auth)
-            await logger.ainfo(
+            await logger.adebug(
                 f"Auto-enabled API key authentication for project {new_project.name} "
                 f"({new_project.id}) due to AUTO_LOGIN=false"
             )
@@ -249,7 +249,7 @@ async def update_project(
 
         # Start MCP Composer if auth changed to OAuth
         if should_start_mcp_composer:
-            await logger.ainfo(
+            await logger.adebug(
                 f"Auth settings changed to OAuth for project {existing_project.name} ({existing_project.id}), "
                 "starting MCP Composer"
             )
@@ -257,12 +257,6 @@ async def update_project(
 
         # Stop MCP Composer if auth changed FROM OAuth to something else
         elif should_stop_mcp_composer:
-            from typing import cast
-
-            from langflow.services.deps import get_service
-            from langflow.services.mcp_composer.service import MCPComposerService
-            from langflow.services.schema import ServiceType
-
             await logger.ainfo(
                 f"Auth settings changed from OAuth for project {existing_project.name} ({existing_project.id}), "
                 "stopping MCP Composer"
@@ -408,17 +402,13 @@ async def upload_file(
     new_project.id = None
     new_project.user_id = current_user.id
 
-    # Set default auth settings based on AUTO_LOGIN configuration
-    from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-    from langflow.services.deps import get_settings_service
-
     settings_service = get_settings_service()
 
     # If AUTO_LOGIN is false, automatically enable API key authentication
     if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
         default_auth = {"auth_type": "apikey"}
         new_project.auth_settings = encrypt_auth_settings(default_auth)
-        await logger.ainfo(
+        await logger.adebug(
             f"Auto-enabled API key authentication for uploaded project {new_project.name} "
             f"({new_project.id}) due to AUTO_LOGIN=false"
         )

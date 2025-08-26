@@ -500,9 +500,6 @@ async def get_current_user_mcp(
 
     This function provides authentication for MCP endpoints with special handling:
     - If a JWT token is provided, it uses standard JWT authentication
-    - For internal MCP Composer connections (no auth provided), it falls back to
-      superuser credentials regardless of AUTO_LOGIN setting
-    - Otherwise, it validates the provided API key (from query param or header)
     """
     if token:
         return await get_current_user_by_jwt(token, db)
@@ -511,12 +508,7 @@ async def get_current_user_mcp(
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
-    # For internal MCP Composer connections, always allow fallback to superuser if no auth provided
-    # This is needed because MCP Composer runs as a separate process and connects via HTTP
-    # TODO: FRAZ - This is obviously a security risk. We need to find a better way to handle this.
     if not query_param and not header_param:
-        # Always fall back to superuser for MCP endpoints when no auth is provided
-        # This allows internal MCP Composer to connect without needing AUTO_LOGIN=true
         if not settings_service.auth_settings.SUPERUSER:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

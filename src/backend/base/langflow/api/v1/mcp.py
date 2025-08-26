@@ -117,7 +117,7 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
             except asyncio.CancelledError:
                 await logger.ainfo("SSE connection was cancelled")
                 raise
-            except Exception as e:
+            except Exception as e: # noqa: BLE001
                 msg = f"Error in MCP: {e!s}"
                 await logger.aexception(msg)
                 raise
@@ -132,6 +132,6 @@ async def handle_messages(request: Request):
     except (BrokenResourceError, BrokenPipeError) as e:
         await logger.ainfo("MCP Server disconnected")
         raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}") from e
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         await logger.aerror(f"Internal server error: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}") from e

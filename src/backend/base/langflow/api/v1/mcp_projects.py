@@ -233,7 +233,7 @@ async def list_project_tools(
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
                 auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else None
 
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         msg = f"Error listing project tools: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -440,7 +440,7 @@ async def update_project_mcp_settings(
                                 "sse_url": composer_sse_url,
                                 "uses_composer": True,
                             }
-                        except Exception as e:
+                        except Exception as e: # noqa: BLE001
                             await logger.awarning(f"Failed to get mcp composer URL for project {project_id}: {e}")
                             raise HTTPException(status_code=500, detail=str(e)) from e
                 elif should_stop_composer:
@@ -466,7 +466,7 @@ async def update_project_mcp_settings(
 
             return response
 
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         msg = f"Error updating project MCP settings: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -538,7 +538,6 @@ async def install_mcp_config(
 
     removed_servers: list[str] = []  # Track removed servers for reinstallation
     try:
-        # Use helper function
         project = await verify_project_access(project_id, current_user)
 
         # Check if project requires API key authentication and generate if needed
@@ -607,14 +606,11 @@ async def install_mcp_config(
                 except OSError as e:
                     await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
-        # Use helper function for OAuth check
         use_mcp_composer = is_oauth_project(project)
 
         if use_mcp_composer:
-            # Use helper function
             composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
             sse_url = f"http://{composer_host}:{composer_port}/sse"
-        # else: use the direct SSE URL that was already set above
 
         # Build args based on whether we're using MCP Composer
         args = ["mcp-composer"] if use_mcp_composer else ["mcp-proxy"]
@@ -741,7 +737,7 @@ async def install_mcp_config(
         existing_config, removed_servers = remove_server_by_sse_url(existing_config, project_sse_url)
 
         if removed_servers:
-            logger.info("Removed existing MCP servers with same SSE URL for reinstall: %s", removed_servers)
+            await logger.adebug("Removed existing MCP servers with same SSE URL for reinstall: %s", removed_servers)
 
         # Merge new config with existing config
         existing_config["mcpServers"].update(mcp_config["mcpServers"])
@@ -750,7 +746,7 @@ async def install_mcp_config(
         with config_path.open("w") as f:
             json.dump(existing_config, f, indent=2)
 
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         msg = f"Error installing MCP configuration: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -762,7 +758,7 @@ async def install_mcp_config(
         if generated_api_key:
             auth_type = "API key" if FEATURE_FLAGS.mcp_composer else "legacy API key"
             message += f" with {auth_type} authentication (key name: 'MCP Project {project.name} - {body.client}')"
-        await logger.ainfo(message)
+        await logger.adebug(message)
         return {"message": message}
 
 
@@ -773,17 +769,13 @@ async def get_project_composer_url(
 ):
     """Get the MCP Composer URL for a specific project."""
     try:
-        # Use helper function
         project = await verify_project_access(project_id, current_user)
-
-        # Use helper function for OAuth check
         if not is_oauth_project(project):
             raise HTTPException(
                 status_code=400,
                 detail="MCP Composer is only available for projects with OAuth authentication",
             )
 
-        # Use helper function
         composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
         composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
 
@@ -793,7 +785,7 @@ async def get_project_composer_url(
             "uses_composer": True,
         }
 
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         msg = f"Error getting composer URL for project {project_id}: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -937,7 +929,7 @@ async def check_installed_mcp_servers(
         else:
             await logger.adebug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         msg = f"Error checking MCP configuration: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
