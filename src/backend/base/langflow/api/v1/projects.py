@@ -24,6 +24,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.logging import logger
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -72,6 +73,20 @@ async def create_project(
                 else:
                     new_project.name = f"{new_project.name} (1)"
 
+        # Set default auth settings based on AUTO_LOGIN configuration
+        from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+        from langflow.services.deps import get_settings_service
+        settings_service = get_settings_service()
+
+        # If AUTO_LOGIN is false, automatically enable API key authentication
+        if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
+            default_auth = {"auth_type": "apikey"}
+            new_project.auth_settings = encrypt_auth_settings(default_auth)
+            await logger.ainfo(
+                f"Auto-enabled API key authentication for project {new_project.name} "
+                f"({new_project.id}) due to AUTO_LOGIN=false"
+            )
+
         session.add(new_project)
         await session.commit()
         await session.refresh(new_project)
@@ -89,11 +104,6 @@ async def create_project(
             )
             await session.exec(update_statement_flows)
             await session.commit()
-
-        # Register the new project with MCP Composer in the background
-        # This avoids blocking the response while the composer starts up
-        asyncio.create_task(register_project_with_composer(new_project))
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -196,20 +206,72 @@ async def update_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     try:
+        # Track if MCP Composer needs to be started or stopped
+        should_start_mcp_composer = False
+        should_stop_mcp_composer = False
+
+        # Check if auth_settings is being updated
+        if "auth_settings" in project.model_fields_set:  # Check if auth_settings was explicitly provided
+            # Get current and new auth types
+            current_auth_type = None
+            if existing_project.auth_settings:
+                current_auth_type = existing_project.auth_settings.get("auth_type")
+
+            new_auth_type = None
+            if project.auth_settings:
+                new_auth_type = project.auth_settings.get("auth_type")
+
+            # Check if auth_type is changing TO oauth
+            if new_auth_type == "oauth" and current_auth_type != "oauth":
+                should_start_mcp_composer = True
+
+            # Check if auth_type is changing FROM oauth (to something else or cleared)
+            elif current_auth_type == "oauth" and new_auth_type != "oauth":
+                should_stop_mcp_composer = True
+
+            # Update auth_settings (could be None to clear it)
+            existing_project.auth_settings = project.auth_settings
+
+        # Handle other updates
         if project.name and project.name != existing_project.name:
             existing_project.name = project.name
-            session.add(existing_project)
-            await session.commit()
-            await session.refresh(existing_project)
-            return existing_project
 
-        project_data = existing_project.model_dump(exclude_unset=True)
-        for key, value in project_data.items():
-            if key not in {"components", "flows"}:
-                setattr(existing_project, key, value)
+        if project.description is not None:
+            existing_project.description = project.description
+
+        if project.parent_id is not None:
+            existing_project.parent_id = project.parent_id
+
         session.add(existing_project)
         await session.commit()
         await session.refresh(existing_project)
+
+        # Start MCP Composer if auth changed to OAuth
+        if should_start_mcp_composer:
+            await logger.ainfo(
+                f"Auth settings changed to OAuth for project {existing_project.name} ({existing_project.id}), "
+                "starting MCP Composer"
+            )
+            _ = asyncio.create_task(register_project_with_composer(existing_project))
+
+        # Stop MCP Composer if auth changed FROM OAuth to something else
+        elif should_stop_mcp_composer:
+            from typing import cast
+
+            from langflow.services.deps import get_service
+            from langflow.services.mcp_composer.service import MCPComposerService
+            from langflow.services.schema import ServiceType
+
+            await logger.ainfo(
+                f"Auth settings changed from OAuth for project {existing_project.name} ({existing_project.id}), "
+                "stopping MCP Composer"
+            )
+
+            # Get the MCP Composer service and stop the project's composer
+            mcp_composer_service: MCPComposerService = cast(
+                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            )
+            await mcp_composer_service.stop_project_composer(str(existing_project.id))
 
         concat_project_components = project.components + project.flows
 
@@ -344,14 +406,24 @@ async def upload_file(
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None
     new_project.user_id = current_user.id
+
+    # Set default auth settings based on AUTO_LOGIN configuration
+    from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+    from langflow.services.deps import get_settings_service
+    settings_service = get_settings_service()
+
+    # If AUTO_LOGIN is false, automatically enable API key authentication
+    if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
+        default_auth = {"auth_type": "apikey"}
+        new_project.auth_settings = encrypt_auth_settings(default_auth)
+        await logger.ainfo(
+            f"Auto-enabled API key authentication for uploaded project {new_project.name} "
+            f"({new_project.id}) due to AUTO_LOGIN=false"
+        )
+
     session.add(new_project)
     await session.commit()
     await session.refresh(new_project)
-
-    # Register the new project with MCP Composer in the background
-    # This avoids blocking the response while the composer starts up
-    asyncio.create_task(register_project_with_composer(new_project))
-
     del data["folder_name"]
     del data["folder_description"]
 
