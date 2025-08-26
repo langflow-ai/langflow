@@ -264,8 +264,7 @@ class MCPComposerService(Service):
 
                 # Add environment variables to the command
                 for config_key, env_key in oauth_env_mapping.items():
-                    if config_key in auth_config:
-                        cmd.extend(["--env", env_key, str(auth_config[config_key])])
+                    cmd.extend(["--env", env_key, str(auth_config[config_key])])
 
                 # Add server_url as workaround for MCP Composer internal ServerSettings bug
                 server_url = auth_config.get("oauth_server_url")
@@ -276,7 +275,13 @@ class MCPComposerService(Service):
         env = os.environ.copy()
 
         # Start the subprocess with stderr captured to PIPE, stdout to DEVNULL
-        process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(
+            cmd,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True
+        )
 
         # Give it a moment to start
         await asyncio.sleep(1)
