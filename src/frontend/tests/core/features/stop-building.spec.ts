@@ -23,7 +23,7 @@ test(
     await page
       .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 100, y: 100 },
       });
 
     await page.getByTestId("canvas_controls_dropdown").click();
