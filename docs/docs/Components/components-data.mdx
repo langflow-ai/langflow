@@ -174,11 +174,13 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 ### Advanced parsing
 
 In Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library.
-Only non-tabular documents can be parsed, and only one document at a time.
+Advanced parsing can process a wide range of document types including PDFs, Office documents, images, and tabular data.
 
-Advanced parsing uses the Docling dependency, which is installed by default in Langflow 1.6.
+When advanced parsing is enabled, the File component processes only the first file from the uploaded files and ignores any additional files.
+For processing multiple files with advanced parsing, use separate **File** components or use the dedicated [**Docling** components](/integrations-docling).
 
-For more Docling features, you can use the [**Docling** components](/integrations-docling).
+The advanced parser option is automatically hidden when you select tabular data files, specifically `.csv`, `.xlsx`, and `.parquet`.
+These formats are better processed using standard parsing methods.
 
 When you enable advanced parsing, you can configure the following advanced parsing parameters:
 
@@ -189,6 +191,8 @@ When you enable advanced parsing, you can configure the following advanced parsi
 | doc_key | Document Key | Input parameter. The key to use for the DoclingDocument column, which holds the structured information extracted from the source document. Default: `doc`. |
 | md_image_placeholder | Markdown Image Placeholder | Input parameter. Defines the placeholder for image files in the output Markdown document. |
 | md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter. Defines the placeholder for page breaks in the output Markdown document. |
+
+For more Docling features, use the [**Docling** components](/integrations-docling).
 
 ### File output
 
