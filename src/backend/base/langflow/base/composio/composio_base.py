@@ -1,7 +1,7 @@
 import copy
+import json
 import re
 from typing import Any
-import json
 
 from composio import Composio
 from composio_langchain import LangchainProvider
@@ -14,12 +14,9 @@ from langflow.inputs.inputs import (
     FileInput,
     InputTypes,
     MessageTextInput,
+    MultilineInput,
     SecretStrInput,
     SortableListInput,
-    DropdownInput,
-    StrInput,
-    TabInput,
-    MultilineInput,
 )
 from langflow.io import Output
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
@@ -593,11 +590,11 @@ class ComposioBaseComponent(Component):
                 # Identify top-level JSON parents (object/array)
                 top_json_parents = set()
                 try:
-                    for top_name, top_schema in parameters_schema.get("properties", {}).items():
+                    for top_name, top_schema in (parameters_schema.get("properties", {}) or {}).items():
                         if isinstance(top_schema, dict) and top_schema.get("type") in {"object", "array"}:
                             top_json_parents.add(top_name)
-                except Exception:
-                    pass
+                except (AttributeError, TypeError, ValueError, KeyError) as e:
+                    logger.debug(f"Failed to collect top-level JSON parents for {action_key}: {e}")
 
                 for inp in result:
                     if hasattr(inp, "name") and inp.name is not None:
@@ -671,7 +668,7 @@ class ComposioBaseComponent(Component):
                     for top_name in top_json_parents:
                         if any(getattr(i, "name", None) == top_name for i in processed_inputs):
                             continue
-                        top_schema = parameters_schema.get("properties", {}).get(top_name, {})
+                        top_schema = (parameters_schema.get("properties", {}) or {}).get(top_name, {})
                         processed_inputs.append(
                             MultilineInput(
                                 name=top_name,
@@ -683,8 +680,8 @@ class ComposioBaseComponent(Component):
                                 required=top_name in required_fields_set,
                             )
                         )
-                except Exception:
-                    pass
+                except (AttributeError, TypeError, ValueError, KeyError) as e:
+                    logger.debug(f"Failed to append MultilineInput for JSON parents in {action_key}: {e}")
 
                 return processed_inputs
             return result  # noqa: TRY300
@@ -1264,7 +1261,8 @@ class ComposioBaseComponent(Component):
                 if isinstance(value, str) and prop_schema.get("type") in {"array", "object"}:
                     try:
                         value = json.loads(value)
-                    except Exception:
+                    except (json.JSONDecodeError, TypeError, ValueError) as e:
+                        logger.debug(f"Failed to parse JSON for field '{field}' in {action_key}: {e}")
                         if prop_schema.get("type") == "array":
                             value = [item.strip() for item in value.split(",") if item.strip() != ""]
 
