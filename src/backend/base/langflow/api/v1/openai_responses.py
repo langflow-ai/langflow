@@ -5,7 +5,6 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
-from langflow.services.telemetry.service import TelemetryService
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -27,6 +26,7 @@ from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
+from langflow.services.telemetry.service import TelemetryService
 
 router = APIRouter(tags=["OpenAI Responses API"])
 
