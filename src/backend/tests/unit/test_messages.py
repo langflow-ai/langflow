@@ -222,7 +222,7 @@ async def test_aupdate_mixed_messages(created_messages):
         flow_id=uuid4(),
     )
 
-    messages_to_update = created_messages[:1] + [nonexistent_message]
+    messages_to_update = [*created_messages[:1], nonexistent_message]
     created_messages[0].text = "Updated existing message"
 
     with pytest.raises(ValueError, match=f"Message with id {nonexistent_uuid} not found"):

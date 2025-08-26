@@ -1,9 +1,9 @@
 import assemblyai as aai
-from loguru import logger
 
 from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import DataInput, FloatInput, Output, SecretStrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
@@ -54,7 +54,7 @@ class AssemblyAITranscriptionJobPoller(Component):
             transcript = aai.Transcript.get_by_id(self.transcript_id.data["transcript_id"])
         except Exception as e:  # noqa: BLE001
             error = f"Getting transcription failed: {e}"
-            logger.opt(exception=True).debug(error)
+            logger.debug(error, exc_info=True)
             self.status = error
             return Data(data={"error": error})
 
