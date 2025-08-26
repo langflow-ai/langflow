@@ -220,7 +220,7 @@ class MemoryComponent(Component):
                 stored = stored[-n_messages:] if order == "ASC" else stored[:n_messages]
 
         # self.status = stored
-        return cast(Data, stored)
+        return cast("Data", stored)
 
     async def retrieve_messages_as_text(self) -> Message:
         stored_text = data_to_text(self.template, await self.retrieve_messages())
