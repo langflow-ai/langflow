@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/minimal-hook.sh",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  },
+  "enableHooks": true,
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/genie-statusline.js"
+  }
+}

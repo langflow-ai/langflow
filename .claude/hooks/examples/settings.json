@@ -1,0 +1,11 @@
+{
+  "project": "langflow",
+  "tdd": {
+    "enabled": true,
+    "testRequired": true
+  },
+  "quality": {
+    "enabled": true,
+    "autofix": true
+  }
+}
