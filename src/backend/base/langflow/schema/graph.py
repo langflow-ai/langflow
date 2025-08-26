@@ -16,7 +16,7 @@ class InputValue(BaseModel):
 
 
 class Tweaks(RootModel):
-    root: dict[str, str | dict[str, Any]] = Field(
+    root: dict[str, str | dict[str, Any] | list[Any]] = Field(
         description="A dictionary of tweaks to adjust the flow's execution. "
         "Allows customizing flow behavior dynamically. "
         "All tweaks are overridden by the input values.",
@@ -28,6 +28,12 @@ class Tweaks(RootModel):
                     "parameter_name": "value",
                     "Component Name": {"parameter_name": "value"},
                     "component_id": {"parameter_name": "value"},
+                    "upload_files": [
+            			{
+            				"file_id": "252991ae3dc74347a96a3494f943e374",
+            				"file_name": "knowledges.txt"
+            			}
+            		]
                 }
             ]
         }
