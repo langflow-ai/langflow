@@ -310,11 +310,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.10.15"
+                    "version": null
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.115.13"
+                    "version": null
                   },
                   {
                     "name": "langflow",
@@ -691,7 +691,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_community",
-                    "version": "0.3.21"
+                    "version": null
                   },
                   {
                     "name": "langflow",

@@ -112,7 +112,7 @@
                   },
                   {
                     "name": "scrapegraph_py",
-                    "version": "1.12.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 2
@@ -618,11 +618,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.10.15"
+                    "version": null
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.115.13"
+                    "version": null
                   },
                   {
                     "name": "langflow",

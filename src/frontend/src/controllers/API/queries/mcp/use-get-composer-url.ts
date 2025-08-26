@@ -15,11 +15,11 @@ async function getProjectComposerUrl(
   return response.data;
 }
 
-export function useGetProjectComposerUrl(projectId: string) {
+export function useGetProjectComposerUrl(projectId: string, enabled: boolean = true) {
   return useQuery({
     queryKey: ["project-composer-url", projectId],
     queryFn: () => getProjectComposerUrl(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && enabled, // Only enabled if projectId exists AND explicitly enabled
     staleTime: 30000, // 30 seconds
     retry: 1,
     // Handle 400 error when project doesn't have OAuth auth

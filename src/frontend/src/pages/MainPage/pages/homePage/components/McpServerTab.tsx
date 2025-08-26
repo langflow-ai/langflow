@@ -161,12 +161,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
 
-  // Get composer URL for this project
-  const { data: composerUrlData } = useGetProjectComposerUrl(projectId);
-
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
+
+  // Only get composer URL for OAuth projects
+  const isOAuthProject = currentAuthSettings?.auth_type === "oauth";
+  const { data: composerUrlData } = useGetProjectComposerUrl(projectId, isOAuthProject);
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,

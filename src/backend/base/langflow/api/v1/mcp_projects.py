@@ -618,12 +618,11 @@ async def install_mcp_config(
         args = ["mcp-composer"] if use_mcp_composer else ["mcp-proxy"]
 
         # Check if we need to add Langflow API key headers
-        # The x-api-key header is needed when AUTO_LOGIN=false to authenticate WITH Langflow
-        # This is separate from MCP-specific authentication
+        # Necessary only when Project API Key Authentication is enabled
         auth_settings = get_settings_service().auth_settings
 
         # Generate a Langflow API key for auto-install if needed
-        if not auth_settings.AUTO_LOGIN:
+        if not auth_settings.AUTO_LOGIN and not use_mcp_composer:
             async with session_scope() as api_key_session:
                 api_key_create = ApiKeyCreate(name=f"MCP Server {project.name}")
                 api_key_response = await create_api_key(api_key_session, api_key_create, current_user.id)
