@@ -94,11 +94,8 @@ For a multi-agent example, see [Use an agent as a tool](/agents-tools#use-an-age
 
 You can configure the **Agent** component to use your preferred provider and model, custom instructions, and tools.
 
-:::tip
 Many optional **Agent** component input parameters are hidden by default in the visual editor.
 You can access all component parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
-:::
-
 ### Provider and model
 
 Use the **Model Provider** (`agent_llm`) and **Model Name** (`llm_model`) settings to select the model provider and LLM that you want the agent to use.
@@ -162,6 +159,8 @@ Some additional input parameters include the following:
 * **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
 * **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
 * **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
+* **Output Format Instructions** (`format_instructions`): System message that guides the agent's LLM's approach to data extraction and JSON formatting. Works with the Output Schema to ensure consistent, properly structured responses. Valid only with Structured response mode.
+* **Output Schema** (`output_schema`): Schema validation table that defines the structure and data types for structured output. The LLM uses this schema along with the format instructions to validate and structure its JSON responses. No validation occurs if no output schema is provided.
 
 To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
@@ -180,58 +179,74 @@ This output attempts to parse the agent's response as JSON and returns it as str
 * If the response contains valid JSON, it is returned as-is.
 * If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
 * If no valid JSON is found, the output returns the raw content with an error indicator `Could not parse as JSON`.
+* When **Output Schema** is configured, the agent's LLM uses the schema along with **Output Format Instructions** to validate and structure its JSON responses.
 
 This structured response can be used to further use an Agent's response in downstream applications.
 
-### Agent structured response example
+### Structured output example
 
-Using the Simple Agent starter template, instruct the Agent to return a JSON response that your application can consume from Langflow's output.
-Select the **Structured Output** mode, and connect the **Data** port to the **Chat Output** component to view the results.
+The **Agent** component supports advanced structured output configurations with the **Output Format Instructions** and **Output Schema** fields.
+When configured together, the agent's LLM uses the format instructions to guide its extraction approach, then validates the output against the schema defined in **Output Schema**.
+To configure advanced structured output, do the following:
 
-In the **Agent Instructions** field, enter the following prompt.
-This prompt instructs the agent to always return responses in valid JSON format, with fields for `agent_response` and `follow_up_questions`, and additional guidelines to control responses.
-You can re-use and modify this prompt for any flow where you want the agent to provide follow-up questions.
+1. In the **Agent** component, select **Structured Response** as the output mode.
+2. In the **Agent** component, click the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+3. Enable **Output Format Instructions** and **Output Schema**, and then click **Close**.
+Two new fields are available:
+    * **Output Format Instructions** contains default instructions for the LLM to guide the output extraction.
+    * **Output Schema** defines the structure and data types for structured output that the LLM uses to validate and structure its JSON responses.
+4. In the **Output Format Instructions** field, you can use the default prompt for this example.
 
-```text
-You are a helpful assistant. Your task is to take a user query and return a JSON object with two fields:
+    <details>
+    <summary>Default format instructions</summary>
+    ```text
+    You are an AI that extracts structured JSON objects from unstructured text.
+    Use a predefined schema with expected types (str, int, float, bool, dict).
+    Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all.
+    Fill missing or ambiguous values with defaults: null for missing values.
+    Remove exact duplicates but keep variations that have different field values.
+    Always return valid JSON in the expected format, never throw errors.
+    If multiple objects can be extracted, return them all in the structured format.
+    ```
+    </details>
+5. In the **Output Schema**, create a table with the following values.
+This example configures the agent to extract structured data about tasks and requirements from chat messages.
 
-{
-  "agent_response": "<Your clear and helpful answer to the user’s query. Be conversational, but concise.>",
-  "follow_up_questions": [
-    "<A follow-up question the user might ask you next>",
-    "<Another follow-up question the user could naturally ask>",
-    "<Something the user might want to explore in more detail>",
-    "<A clarifying or related question the user might ask>",
-    "<(Optional) A task-based or next-step question the user could ask>"
-  ]
-}
+    ```json
+    {
+      "task_description": "str (As List: True)",
+      "deadline": "str (As List: True)",
+      "priority": "str (As List: True)"
+    }
+    ```
+    Enabling `"str (As List: True)",` for a field allows the schema to extract multiple values for that field and return them as an array.
 
-Guidelines:
-- All `follow_up_questions` must be phrased as **user-initiated** questions — they should sound like something the user might type next to continue the conversation.
-- If the user’s input is vague or generic (e.g., “Hi”, “How are you?”), include general-purpose follow-ups the user might ask, such as:
-  - “What can you do?”
-  - “Can you help me write something?”
-  - “Show me examples of what you can assist with.”
-  - “How do I build a GenAI app?”
-  - “Tell me something interesting.”
-- Do not include questions that the assistant would ask the user.
-- Always respond in **valid JSON only** — no extra commentary.
-```
+6. Send a chat message to the agent.
 
-The Agent's response to the input `Tell me about the OpenWeather API` is similar to the following:
+    ```text
+    John needs to take the task to review the marketing materials by EOD, and Sarah should prepare the presentation slides for tomorrow's meeting.
+    Both tasks are very important.
+    ```
 
-```json
-{
-  "agent_response": "Here’s a quick starter for the OpenWeather API. OpenWeather provides weather data via REST APIs. Key endpoints include Current Weather Data, 5 Day / 3 Hour Forecast, and the One Call API (combined current, hourly, and daily data). Authentication is via an API key (appid). Base URL: https://api.openweathermap.org/data/2.5/ . Common parameters: q (city name), lat & lon (coordinates), id (city ID), zip (ZIP code), appid, units (metric/imperial/standard), and lang for localized descriptions.\n\nExamples:\n- Current weather by city name:\n  curl 'https://api.openweathermap.org/data/2.5/weather?q=London&appid=YOUR_API_KEY&units=metric'\n- Current weather by coordinates:\n  curl 'https://api.openweathermap.org/data/2.5/weather?lat=35&lon=139&appid=YOUR_API_KEY&units=metric'\n- One Call API by coordinates (lat/lon):\n  curl 'https://api.openweathermap.org/data/2.5/onecall?lat=35&lon=139&exclude=minutely&appid=YOUR_API_KEY&units=metric'\n\nWhat you get:\n- Current weather: a JSON object with fields like weather[0].description, main.temp, humidity, wind.speed, name, sys.country.\n- One Call: a JSON object with current, hourly[], and daily[] blocks.\n\nNotes:\n- Choose units=metric for Celsius or imperial for Fahrenheit.\n- The free tier has usage limits; check your OpenWeather account for current quotas.\n- You can localize descriptions with the lang parameter (e.g., lang=es for Spanish).\n\nIf you’d like, I can tailor a small example in a language you’re using (Python, JavaScript, etc.) or fetch the official docs and summarize the key pages for you.",
-  "follow_up_questions": [
-    "What can you do?",
-    "Show me a simple curl example for a city I care about.",
-    "Would you like a Python or JavaScript example?",
-    "How do I parse and use the temperature data in an app?",
-    "Would you like me to fetch the official OpenWeather API docs for you?"
-  ]
-}
-```
+7. Inspect the Playground's output.
+The LLM correctly extracts and formats the contextual data based on the **Output Format Instructions** and the structure defined in **Output Schema**.
+
+    ```json
+    {
+      "task_description": [
+        "John needs to take the task to review the marketing materials",
+        "Sarah should prepare the presentation slides for tomorrow's meeting"
+      ],
+      "deadline": [
+        "EOD",
+        "tomorrow"
+      ],
+      "priority": [
+        "very important",
+        "very important"
+      ]
+    }
+    ```
 
 ## See also
 
