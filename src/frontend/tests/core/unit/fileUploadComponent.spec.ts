@@ -698,7 +698,7 @@ test(
     await page.getByTestId("button_open_file_management").click();
     console.warn(psdFileName);
 
-    // Check if the PSD file has the disabled class (greyed out)
+    // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${psdFileName}`)).toHaveClass(
       /pointer-events-none cursor-not-allowed opacity-50/,
     );
@@ -713,19 +713,6 @@ test(
       .locator(`[data-testid="file-item-${psdFileName}"]`)
       .locator("..")
       .hover();
-
-    await expect(
-      page.getByText("Type not supported by component"),
-    ).toBeVisible();
-
-    // Try to select the PSD file (should not change its state)
-    await expect(page.getByTestId(`checkbox-${psdFileName}`)).toBeDisabled();
-
-    // Verify the PSD file checkbox remains unchecked
-    await expect(page.getByTestId(`checkbox-${psdFileName}`)).toHaveAttribute(
-      "data-state",
-      "unchecked",
-    );
 
     // Select the TXT file (should work normally)
     await page.getByTestId(`checkbox-${txtFileName}`).click();

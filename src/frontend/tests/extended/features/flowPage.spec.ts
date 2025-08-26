@@ -15,10 +15,12 @@ test.describe("Flow Page tests", () => {
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTitle("fit view").click();
     await page.getByTitle("zoom out").click();
     await page.getByTitle("zoom out").click();
     await page.getByTitle("zoom out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
   });
 });

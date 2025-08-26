@@ -1,10 +1,12 @@
 import { Background, Panel } from "@xyflow/react";
 import { memo } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import CanvasControls, {
-  CustomControlButton,
-} from "@/components/core/canvasControlsComponent";
+import {
+  default as ForwardedIconComponent,
+  default as IconComponent,
+} from "@/components/common/genericIconComponent";
+import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
 
@@ -29,10 +31,14 @@ export const MemoizedCanvasControls = memo(
     shadowBoxHeight,
   }: MemoizedCanvasControlsProps) => (
     <CanvasControls>
-      <CustomControlButton
-        iconName="sticky-note"
-        tooltipText="Add Note"
-        onClick={() => {
+      <Button
+        variant="ghost"
+        size="icon"
+        data-testid="add_note"
+        className="group flex items-center justify-center px-2 rounded-none"
+        title="Add sticky note"
+        onClick={(e) => {
+          e.stopPropagation();
           setIsAddingNote(true);
           const shadowBox = document.getElementById("shadow-box");
           if (shadowBox) {
@@ -41,8 +47,12 @@ export const MemoizedCanvasControls = memo(
             shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
           }
         }}
-        testId="add_note"
-      />
+      >
+        <IconComponent
+          name="sticky-note"
+          className="!h-5 !w-5 text-muted-foreground group-hover:text-primary"
+        />
+      </Button>
     </CanvasControls>
   ),
 );

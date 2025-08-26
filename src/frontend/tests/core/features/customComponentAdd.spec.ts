@@ -14,9 +14,12 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[data-testid="zoom_out"]', {
       timeout: 3000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
