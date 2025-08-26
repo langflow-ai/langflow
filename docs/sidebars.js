@@ -140,6 +140,7 @@ module.exports = {
                 "Integrations/integrations-langsmith",
                 "Integrations/integrations-langwatch",
                 "Integrations/integrations-opik",
+                "Integrations/integrations-instana-traceloop",
               ],
             },
             "Contributing/contributing-telemetry",
