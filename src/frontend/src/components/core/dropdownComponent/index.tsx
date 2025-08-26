@@ -509,7 +509,7 @@ export default function Dropdown({
             </ShadTooltip>
           ))
         ) : (
-          <CommandItem disabled className="text-center text-sm">
+          <CommandItem disabled className="w-full text-center text-sm text-muted-foreground px-2.5 py-1.5">
             No options found
           </CommandItem>
         )}
