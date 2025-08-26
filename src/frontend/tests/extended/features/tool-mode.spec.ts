@@ -113,10 +113,12 @@ test(
     await page.getByTestId("disclosure-data").click();
 
     await page.getByTestId("disclosure-agents").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 4);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="agentsAgent"]', {
       timeout: 3000,
@@ -127,8 +129,10 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 500 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Move the Agent node a bit
 
