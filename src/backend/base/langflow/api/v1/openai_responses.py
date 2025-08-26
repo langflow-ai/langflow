@@ -333,7 +333,7 @@ async def run_flow_for_openai_responses(
 
     # Extract output text and tool calls from result
     output_text = ""
-    tool_calls = []
+    tool_calls: list[dict] = []
 
     if result.outputs:
         for run_output in result.outputs:
