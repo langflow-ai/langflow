@@ -419,7 +419,9 @@ async def update_project_mcp_settings(
 
             # Handle MCP Composer based on auth changes
 
-            response: dict[str, Any] = {"message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"}
+            response: dict[str, Any] = {
+                "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"
+            }
 
             if should_handle_mcp_composer:
                 if should_start_composer:
@@ -450,18 +452,18 @@ async def update_project_mcp_settings(
                         MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
                     )
                     await mcp_composer_service.stop_project_composer(str(project_id))
-                    
+
                     # Provide the direct SSE URL since we're no longer using composer
                     sse_url = await get_project_sse_url(project_id)
                     if not sse_url:
                         raise HTTPException(status_code=500, detail="Failed to get direct SSE URL")
-                    
+
                     response["result"] = {
                         "project_id": str(project_id),
                         "sse_url": sse_url,
                         "uses_composer": False,
                     }
-           
+
             return response
 
     except Exception as e:
@@ -538,7 +540,7 @@ async def install_mcp_config(
     try:
         # Use helper function
         project = await verify_project_access(project_id, current_user)
-        
+
         # Check if project requires API key authentication and generate if needed
         generated_api_key = None
 
@@ -773,24 +775,24 @@ async def get_project_composer_url(
     try:
         # Use helper function
         project = await verify_project_access(project_id, current_user)
-        
+
         # Use helper function for OAuth check
         if not is_oauth_project(project):
             raise HTTPException(
                 status_code=400,
                 detail="MCP Composer is only available for projects with OAuth authentication",
             )
-        
+
         # Use helper function
         composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
         composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
-        
+
         return {
             "project_id": str(project_id),
             "sse_url": composer_sse_url,
             "uses_composer": True,
         }
-        
+
     except Exception as e:
         msg = f"Error getting composer URL for project {project_id}: {e!s}"
         await logger.aexception(msg)
@@ -1218,10 +1220,10 @@ async def verify_project_access(project_id: UUID, current_user: CurrentActiveMCP
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
-        
+
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
-        
+
         return project
 
 
@@ -1236,24 +1238,22 @@ def is_oauth_project(project: Folder) -> bool:
 
 async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[str, str]:
     """Get MCP Composer port or start it if not running."""
-    mcp_composer_service: MCPComposerService = cast(
-        MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-    )
+    mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
     composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-    
+
     if not composer_port:
         await logger.adebug(f"Starting MCP Composer for project {project.name} ({project_id})")
         await register_project_with_composer(project)
-        
+
         composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
         if not composer_port:
             error = f"Failed to start MCP Composer for project {project_id}"
             raise HTTPException(status_code=500, detail=error)
-    
+
     settings = get_settings_service().settings
     composer_host = settings.mcp_composer_host or None
     if not composer_host:
         error = f"Composer host is not set in settings for project {project_id}"
         raise HTTPException(status_code=500, detail=error)
-    
+
     return (composer_host, str(composer_port))

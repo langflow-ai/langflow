@@ -20,7 +20,9 @@ class MCPComposerService(Service):
     def __init__(self):
         super().__init__()
         self.project_composers: dict[str, dict] = {}  # project_id -> {process, port, sse_url, auth_config}
-        self._start_locks: dict[str, asyncio.Lock] = {}  # Lock to prevent concurrent start operations for the same project
+        self._start_locks: dict[
+            str, asyncio.Lock
+        ] = {}  # Lock to prevent concurrent start operations for the same project
         settings = get_settings_service().settings
         self.composer_host: str = settings.mcp_composer_host or "localhost"
 
@@ -61,7 +63,9 @@ class MCPComposerService(Service):
         """Check if the MCP Composer service is enabled."""
         settings = get_settings_service().settings
         if not settings.mcp_composer_enabled:
-            logger.debug("MCP Composer is disabled in settings. OAuth authentication will not be enabled for MCP Servers.")
+            logger.debug(
+                "MCP Composer is disabled in settings. OAuth authentication will not be enabled for MCP Servers."
+            )
             return
 
     async def stop(self):
@@ -114,7 +118,7 @@ class MCPComposerService(Service):
         # Use a per-project lock to prevent race conditions
         if project_id not in self._start_locks:
             self._start_locks[project_id] = asyncio.Lock()
-        
+
         async with self._start_locks[project_id]:
             # Check if already running (double-check after acquiring lock)
             if project_id in self.project_composers:
@@ -123,10 +127,9 @@ class MCPComposerService(Service):
                 if process and process.poll() is None:
                     logger.debug(f"MCP Composer already running for project {project_id}")
                     return composer_info["port"]
-                else:
-                    logger.warning(f"MCP Composer process for project {project_id} was terminated, restarting")
-                    if project_id in self.project_composers:
-                        del self.project_composers[project_id]
+                logger.warning(f"MCP Composer process for project {project_id} was terminated, restarting")
+                if project_id in self.project_composers:
+                    del self.project_composers[project_id]
 
             # Find an available port starting from the base port
             # Use a higher starting port for subsequent projects to avoid conflicts
@@ -162,8 +165,14 @@ class MCPComposerService(Service):
                     last_error = e
 
                     # If it's a port-related error, try to find another port
-                    if "port" in str(e).lower() or "bind" in str(e).lower() or "address already in use" in str(e).lower():
-                        logger.warning(f"Port {project_port} failed for project {project_id} (attempt {attempt + 1}): {e}")
+                    if (
+                        "port" in str(e).lower()
+                        or "bind" in str(e).lower()
+                        or "address already in use" in str(e).lower()
+                    ):
+                        logger.warning(
+                            f"Port {project_port} failed for project {project_id} (attempt {attempt + 1}): {e}"
+                        )
 
                         if attempt < max_retries - 1:  # Don't find new port on last attempt
                             try:
@@ -246,13 +255,7 @@ class MCPComposerService(Service):
 
         try:
             # Start the subprocess with proper error capturing
-            process = subprocess.Popen(
-                cmd, 
-                env=env, 
-                stdout=subprocess.DEVNULL, 
-                stderr=subprocess.DEVNULL, 
-                text=True
-            )
+            process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
 
             # Give it a moment to start
             await asyncio.sleep(1)
