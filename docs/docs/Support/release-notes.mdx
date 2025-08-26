@@ -63,31 +63,17 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Built-in Docling support
 
     The Docling dependency is now included with the Langflow OSS package.
+    You don't need to manually install it to use the Docling components or the File component's advanced parsing feature.
 
 - Structured output option for the **Agent** component
 
   In addition to the `Message` output, the Agent component now includes a structured output for `Data`.
   This output parses JSON into a structured `Data` object to make it easier to work with the agent's output downstream.
+  The output can be controlled in the component's ** **
 
 - Increased max file upload size
 
   Increased the default max file upload size from `100 MB` to `1024 MB`.
-
-- The Langflow `config_dir` default directory is moved
-
-  The default Langflow `config_dir` is now moved.
-  The directory location can still be modified with the `LANGFLOW_CONFIG_DIR` [environment variable](/environment-variables).
-
-  ```
-  Current:
-  macOS | ~/Library/Caches/langflow/
-  Linux | ~/.cache/langflow/
-  Windows | %LOCALAPPDATA%\langflow\Cache\
-  1.6:
-  macOS | ~/Library/Application Support/langflow/
-  Linux | ~/.config/langflow/
-  Windows | %APPDATA%\langflow\
-  ```
 
 - New integrations and bundles
 
