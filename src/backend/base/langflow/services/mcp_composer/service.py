@@ -88,12 +88,12 @@ class MCPComposerService(Service):
         else:
             # Fallback if no lock exists
             await self._do_stop_project_composer(project_id)
-    
+
     async def _do_stop_project_composer(self, project_id: str):
         """Internal method to stop a project composer."""
         if project_id not in self.project_composers:
             return
-            
+
         composer_info = self.project_composers[project_id]
         process = composer_info.get("process")
 
@@ -103,7 +103,7 @@ class MCPComposerService(Service):
                 if process.poll() is None:
                     logger.debug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
                     process.terminate()
-                    
+
                     # Wait longer for graceful shutdown
                     try:
                         await asyncio.wait_for(self._wait_for_process_exit(process), timeout=3.0)
@@ -131,7 +131,7 @@ class MCPComposerService(Service):
 
         # Remove from tracking
         del self.project_composers[project_id]
-        
+
     async def _wait_for_process_exit(self, process):
         """Wait for a process to exit by polling."""
         while process.poll() is None:
