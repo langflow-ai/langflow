@@ -510,13 +510,14 @@ class KnowledgeIngestionComponent(Component):
         """Main ingestion routine → returns a dict with KB metadata."""
         try:
             # Get source DataFrame
+            df_source: pd.DataFrame = pd.DataFrame()
             if isinstance(self.input_df, Data):
-                df_source: pd.DataFrame = self.input_df.to_dataframe()
+                df_source = self.input_df.to_dataframe()
             elif isinstance(self.input_df, list) and all(isinstance(item, Data) for item in self.input_df):
                 # If input_df is a list of Data objects, concatenate them into a single DataFrame
-                df_source: pd.DataFrame = pd.concat([item.to_dataframe() for item in self.input_df], ignore_index=True)
+                df_source = pd.concat([item.to_dataframe() for item in self.input_df], ignore_index=True)
             else:
-                df_source: pd.DataFrame = self.input_df
+                df_source = self.input_df
 
             # Validate column configuration (using Structured Output patterns)
             config_list = self._validate_column_config(df_source)
