@@ -188,7 +188,6 @@ class MCPComposerService(Service):
         self, project_id: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
-        # Build the command to start mcp-composer for this project
         cmd = [
             "uvx",
             "mcp-composer",
@@ -249,10 +248,10 @@ class MCPComposerService(Service):
 
         try:
             # Start the subprocess
-            process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
 
             # Give it a moment to start
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
 
             # Check if process is still running
             if process.poll() is not None:
@@ -322,9 +321,9 @@ class MCPComposerService(Service):
                         cmd.extend(["--env", "API_KEY", str(auth_config["api_key"])])
                         cmd.extend(["--env", "MEDIA_TYPE", "application/json"])
 
-            process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
+            process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
             return process
+
 
     def get_project_composer_port(self, project_id: str) -> int | None:
         """Get the port number for a specific project's composer."""
