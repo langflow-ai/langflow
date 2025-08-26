@@ -1,0 +1,410 @@
+"""MCP Composer service for proxying and orchestrating MCP servers."""
+
+import asyncio
+import os
+import socket
+import subprocess
+from typing import Any
+
+from loguru import logger
+
+from langflow.services.base import Service
+from langflow.services.deps import get_settings_service
+
+
+class MCPComposerService(Service):
+    """Service for managing per-project MCP Composer instances."""
+
+    name = "mcp_composer_service"
+
+    def __init__(self):
+        super().__init__()
+        self.project_composers: dict[str, dict] = {}  # project_id -> {process, port, sse_url, auth_config}
+        self._start_locks: dict[
+            str, asyncio.Lock
+        ] = {}  # Lock to prevent concurrent start operations for the same project
+        settings = get_settings_service().settings
+        self.composer_host: str = settings.mcp_composer_host or "localhost"
+
+        # Check for user-defined port from environment variable first
+        self.base_port: int = settings.mcp_composer_port or 8001
+
+    def _is_port_available(self, port: int) -> bool:
+        """Check if a port is available (not in use)."""
+        try:
+            with socket.create_connection((self.composer_host, port), timeout=1.0):
+                return False  # Port is in use
+        except (OSError, ConnectionRefusedError):
+            return True  # Port is available
+
+    def _find_available_port(self, start_port: int, max_attempts: int = 100) -> int:
+        """Find an available port starting from start_port.
+
+        Args:
+            start_port: The port to start searching from
+            max_attempts: Maximum number of ports to try
+
+        Returns:
+            int: An available port number
+
+        Raises:
+            RuntimeError: If no available port is found within max_attempts
+        """
+        for attempt in range(max_attempts):
+            port = start_port + attempt
+            if self._is_port_available(port):
+                logger.debug(f"Found available port: {port} (tried {attempt + 1} ports)")
+                return port
+
+        msg = f"Could not find an available port after trying {max_attempts} ports starting from {start_port}"
+        raise RuntimeError(msg)
+
+    async def start(self):
+        """Check if the MCP Composer service is enabled."""
+        settings = get_settings_service().settings
+        if not settings.mcp_composer_enabled:
+            logger.debug(
+                "MCP Composer is disabled in settings. OAuth authentication will not be enabled for MCP Servers."
+            )
+            return
+
+    async def stop(self):
+        """Stop all MCP Composer instances."""
+        for project_id in list(self.project_composers.keys()):
+            await self.stop_project_composer(project_id)
+        logger.debug("All MCP Composer instances stopped")
+
+    async def stop_project_composer(self, project_id: str):
+        """Stop the MCP Composer instance for a specific project."""
+        if project_id not in self.project_composers:
+            return
+
+        # Use the same lock to ensure consistency
+        if project_id in self._start_locks:
+            async with self._start_locks[project_id]:
+                await self._do_stop_project_composer(project_id)
+                # Clean up the lock as well
+                del self._start_locks[project_id]
+        else:
+            # Fallback if no lock exists
+            await self._do_stop_project_composer(project_id)
+
+    async def _do_stop_project_composer(self, project_id: str):
+        """Internal method to stop a project composer."""
+        if project_id not in self.project_composers:
+            return
+
+        composer_info = self.project_composers[project_id]
+        process = composer_info.get("process")
+
+        if process:
+            try:
+                # Check if process is still running before trying to terminate
+                if process.poll() is None:
+                    logger.debug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
+                    process.terminate()
+
+                    # Wait longer for graceful shutdown
+                    try:
+                        await asyncio.wait_for(self._wait_for_process_exit(process), timeout=3.0)
+                        logger.debug(f"MCP Composer for project {project_id} terminated gracefully")
+                    except asyncio.TimeoutError:
+                        logger.warning(
+                            f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
+                        )
+                        process.kill()
+                        # Wait a bit more for force kill to complete
+                        try:
+                            await asyncio.wait_for(self._wait_for_process_exit(process), timeout=2.0)
+                        except asyncio.TimeoutError:
+                            logger.error(f"Failed to kill MCP Composer process {process.pid} for project {project_id}")
+                else:
+                    logger.debug(f"MCP Composer process for project {project_id} was already terminated")
+
+                logger.debug(f"MCP Composer stopped for project {project_id}")
+
+            except ProcessLookupError:
+                # Process already terminated
+                logger.debug(f"MCP Composer process for project {project_id} was already terminated")
+            except Exception as e:
+                logger.error(f"Error stopping MCP Composer for project {project_id}: {e}")
+
+        # Remove from tracking
+        del self.project_composers[project_id]
+
+    async def _wait_for_process_exit(self, process):
+        """Wait for a process to exit by polling."""
+        while process.poll() is None:
+            await asyncio.sleep(0.1)
+
+    def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
+        """Check if auth configuration has changed in a way that requires restart."""
+        # Handle None/empty cases
+        if not existing_auth and not new_auth:
+            return False
+        if bool(existing_auth) != bool(new_auth):
+            return True
+
+        # Avoid repeated .get lookups
+        existing_auth_type = existing_auth.get("auth_type", "")
+        new_auth_type = new_auth.get("auth_type", "")
+
+        # Auth type changed?
+        if existing_auth_type != new_auth_type:
+            logger.debug(f"Auth type changed: '{existing_auth_type}' -> '{new_auth_type}'")
+            return True
+
+        # Define which fields to check for each auth type
+        if new_auth_type == "oauth":
+            # Get all oauth_* fields plus host/port - use generator instead of list for efficiency
+            all_keys = set(existing_auth) | set(new_auth)
+            fields_to_check = (k for k in all_keys if k.startswith("oauth_") or k in ("host", "port"))
+        elif new_auth_type == "apikey":
+            fields_to_check = ("api_key",)
+        else:
+            fields_to_check = ()
+
+        # Compare relevant fields
+        for field in fields_to_check:
+            old_val = existing_auth.get(field)
+            new_val = new_auth.get(field)
+
+            # Normalize None and empty string
+            if old_val is None or old_val == "":
+                old_normalized = None
+            else:
+                old_normalized = old_val
+            if new_val is None or new_val == "":
+                new_normalized = None
+            else:
+                new_normalized = new_val
+
+            if old_normalized != new_normalized:
+                logger.debug(f"OAuth field '{field}' changed: '{old_val}' -> '{new_val}'")
+                return True
+
+        return False
+
+    async def start_project_composer(
+        self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None
+    ) -> int:
+        """Start an MCP Composer instance for a specific project.
+
+        Returns:
+            int: The port number assigned to this project's composer
+        """
+        # Use a per-project lock to prevent race conditions
+        if project_id not in self._start_locks:
+            self._start_locks[project_id] = asyncio.Lock()
+
+        async with self._start_locks[project_id]:
+            # Check if already running (double-check after acquiring lock)
+            existing_port = None
+            if project_id in self.project_composers:
+                composer_info = self.project_composers[project_id]
+                process = composer_info.get("process")
+                existing_port = composer_info.get("port")  # Save the existing port
+
+                # Check if OAuth settings have changed
+                existing_auth = composer_info.get("auth_config", {})
+                auth_changed = self._has_auth_config_changed(existing_auth, auth_config)
+
+                if auth_changed:
+                    logger.info(
+                        f"OAuth settings changed for project {project_id}, restarting MCP Composer on port {existing_port}"
+                    )
+                    # Stop the existing composer but keep the port preference
+                    await self._do_stop_project_composer(project_id)
+                    # Will continue below to restart with new auth config
+                elif process and process.poll() is None:
+                    logger.debug(f"MCP Composer already running for project {project_id} with unchanged settings")
+                    return composer_info["port"]
+                else:
+                    logger.warning(
+                        f"MCP Composer process for project {project_id} was terminated, restarting on port {existing_port}"
+                    )
+                    if project_id in self.project_composers:
+                        del self.project_composers[project_id]
+
+            # Try to use the existing port if we had one, otherwise find a new one
+            try:
+                if existing_port and self._is_port_available(existing_port):
+                    # Reuse the same port if it's available
+                    project_port = existing_port
+                    logger.debug(f"Reusing existing port {project_port} for project {project_id}")
+                else:
+                    # Find a new port
+                    used_ports = {info["port"] for info in self.project_composers.values()}
+                    start_port = max([self.base_port, *list(used_ports)], default=self.base_port)
+                    if used_ports:
+                        start_port += 1  # Start from the next port after the highest used port
+
+                    project_port = self._find_available_port(start_port)
+                    if existing_port:
+                        logger.debug(
+                            f"Could not reuse port {existing_port} for project {project_id}, using {project_port} instead"
+                        )
+            except RuntimeError as e:
+                logger.error(f"Could not find available port for project {project_id}: {e}")
+                raise
+
+            max_retries = 3
+            last_error = None
+
+            for attempt in range(max_retries):
+                try:
+                    process = await self._start_project_composer_process(project_id, project_port, sse_url, auth_config)
+
+                    self.project_composers[project_id] = {
+                        "process": process,
+                        "port": project_port,
+                        "sse_url": sse_url,
+                        "auth_config": auth_config,
+                    }
+
+                    logger.info(f"MCP Composer started for project {project_id} on port {project_port}")
+                    return project_port
+
+                except Exception as e:
+                    last_error = e
+
+                    # If it's a port-related error, try to find another port
+                    if (
+                        "port" in str(e).lower()
+                        or "bind" in str(e).lower()
+                        or "address already in use" in str(e).lower()
+                    ):
+                        logger.warning(
+                            f"Port {project_port} failed for project {project_id} (attempt {attempt + 1}): {e}"
+                        )
+
+                        if attempt < max_retries - 1:  # Don't find new port on last attempt
+                            try:
+                                # Try to find another available port
+                                project_port = self._find_available_port(project_port + 1)
+                                logger.debug(f"Retrying with port {project_port} for project {project_id}")
+                                continue
+                            except RuntimeError:
+                                logger.error(f"Could not find alternative port for project {project_id}")
+                                break
+                    else:
+                        # Non-port related error, don't retry
+                        break
+
+            error = f"Failed to start MCP Composer for project {project_id} after {max_retries} attempts: {last_error}"
+            logger.error(error)
+            raise RuntimeError(error) from last_error
+
+    async def _start_project_composer_process(
+        self, project_id: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None
+    ) -> subprocess.Popen:
+        """Start the MCP Composer subprocess for a specific project."""
+        cmd = [
+            "uvx",
+            "mcp-composer",
+            "--mode",
+            "sse",
+            "--endpoint",
+            sse_url,
+            "--host",
+            self.composer_host,
+            "--port",
+            str(port),
+            "--disable-composer-tools",
+        ]
+        logger.debug(
+            f"Starting MCP Composer for project {project_id} on host {self.composer_host} port {port} with SSE URL {sse_url}"
+        )
+
+        if auth_config:
+            auth_type = auth_config.get("auth_type")
+            if auth_type == "oauth":
+                cmd.extend(["--auth_type", "oauth"])
+                cmd.extend(["--env", "ENABLE_OAUTH", "True"])
+
+                # Map auth config to environment variables for OAuth
+                oauth_env_mapping = {
+                    "oauth_host": "OAUTH_HOST",
+                    "oauth_port": "OAUTH_PORT",
+                    "oauth_server_url": "OAUTH_SERVER_URL",
+                    "oauth_callback_path": "OAUTH_CALLBACK_PATH",
+                    "oauth_client_id": "OAUTH_CLIENT_ID",
+                    "oauth_client_secret": "OAUTH_CLIENT_SECRET",
+                    "oauth_auth_url": "OAUTH_AUTH_URL",
+                    "oauth_token_url": "OAUTH_TOKEN_URL",
+                    "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
+                    "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
+                }
+
+                # Add environment variables to the command
+                for config_key, env_key in oauth_env_mapping.items():
+                    cmd.extend(["--env", env_key, str(auth_config[config_key])])
+
+                # Add server_url as workaround for MCP Composer internal ServerSettings bug
+                server_url = auth_config.get("oauth_server_url")
+                if server_url:
+                    cmd.extend(["--env", "server_url", str(server_url)])
+
+        # Set environment variables
+        env = os.environ.copy()
+
+        # Start the subprocess with stderr captured to PIPE, stdout to DEVNULL
+        process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+
+        # Give it a moment to start
+        await asyncio.sleep(1)
+
+        # Check if process is still running
+        if process.poll() is not None:
+            # Process terminated, get the error from stderr pipe
+            try:
+                _, stderr_content = process.communicate(timeout=5)
+                error_msg = stderr_content.strip() if stderr_content else "Unknown error"
+                logger.error(f"MCP Composer subprocess stderr: {stderr_content}")
+                raise RuntimeError(f"MCP Composer failed to start for project {project_id}: {error_msg}")
+            except subprocess.TimeoutExpired:
+                process.kill()
+                raise RuntimeError(f"MCP Composer for project {project_id} terminated but couldn't read error output")
+        else:
+            # Process is running successfully
+            # Close the stderr pipe to prevent resource leak since we're not reading from it
+            if process.stderr:
+                process.stderr.close()
+            logger.debug(f"MCP Composer started successfully for project {project_id}")
+
+        return process
+
+    def get_project_composer_port(self, project_id: str) -> int | None:
+        """Get the port number for a specific project's composer."""
+        if project_id not in self.project_composers:
+            return None
+        return self.project_composers[project_id]["port"]
+
+    async def ensure_composer_updated(
+        self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None
+    ) -> int | None:
+        """Check if composer needs restart due to config changes and restart if needed.
+
+        Returns:
+            int: The port number if composer is running (after any necessary restart)
+            None: If composer is not running
+        """
+        if project_id not in self.project_composers:
+            return None
+
+        composer_info = self.project_composers[project_id]
+        existing_auth = composer_info.get("auth_config", {})
+
+        # Check if auth config has changed
+        if self._has_auth_config_changed(existing_auth, auth_config):
+            logger.info(f"Auth config changed for project {project_id}, triggering restart")
+            return await self.start_project_composer(project_id, sse_url, auth_config)
+
+        # No changes, just return the current port
+        return composer_info["port"]
+
+    async def teardown(self) -> None:
+        """Clean up resources when the service is torn down."""
+        logger.debug("Tearing down MCP Composer service...")
+        await self.stop()
+        logger.debug("MCP Composer service teardown complete")
