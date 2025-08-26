@@ -1,7 +1,6 @@
 import pytest
-
-from langflow.services.deps import get_db_service, get_settings_service
 from langflow.services.auth.utils import create_user_longterm_token
+from langflow.services.deps import get_db_service, get_settings_service
 from langflow.services.utils import initialize_services
 
 

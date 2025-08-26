@@ -1,12 +1,9 @@
-import asyncio
-
 import pytest
-from sqlmodel import select
-
-from langflow.services.deps import get_db_service, get_settings_service
-from langflow.services.utils import initialize_services, teardown_superuser
-from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.settings.constants import DEFAULT_SUPERUSER
+from langflow.services.utils import initialize_services, teardown_superuser
+from sqlmodel import select
 
 
 @pytest.mark.asyncio
