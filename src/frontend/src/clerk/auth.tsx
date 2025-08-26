@@ -177,7 +177,13 @@ export function useLogout(options?: Parameters<typeof useLogoutMutation>[0]) {
   };
 
   const wrappedMutate: typeof mutate = (...args) => {
-    clerkSignOut().finally(() => mutate(...args));
+    try {
+      clerkSignOut();
+    } catch (err) {
+      console.error("Error occurred during mutation:", err);
+    } finally {
+      mutate(...args);
+    }
   };
 
   const wrappedMutateAsync: typeof mutateAsync = async (...args) => {

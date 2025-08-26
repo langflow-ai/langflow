@@ -30,7 +30,7 @@ class AuthSettings(BaseSettings):
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
     AUTO_LOGIN: bool = True
-    NEW_USER_IS_ACTIVE: bool = False
+    NEW_USER_IS_ACTIVE: bool = True
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
 
