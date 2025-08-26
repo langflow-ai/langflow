@@ -39,11 +39,18 @@ TRACELOOP_HEADERS="x-instana-key=<your_instana_key>"
 ```
 This variable provides authentication for Instana data collection.
 
-### Step 5: Configure OTLP security
+### Step 5: Configure OpenTelemetry Protocol(OTLP) security
+Check your Instana endpoint URL from Step 3.
+#### For secure connections (HTTPS/TLS)
 ```dotenv
 OTEL_EXPORTER_OTLP_INSECURE=false
 ```
-Set to `false` for HTTPS endpoints, `true` only for plain HTTP endpoints.
+
+#### For insecure connections (HTTP, local development)
+```dotenv
+OTEL_EXPORTER_OTLP_INSECURE=true
+```
+For production Instana SaaS endpoints (like https://otlp-magenta-saas.instana.rocks:4318), typically use `false`
 
 ### Step 6: Set metrics endpoint
 ```dotenv
