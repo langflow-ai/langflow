@@ -173,8 +173,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isOAuthProject = currentAuthSettings?.auth_type === "oauth";
   const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
   const { data: composerUrlData } = useGetProjectComposerUrl(
-    projectId,
-    shouldQueryComposerUrl,
+    {
+      projectId,
+    },
+    { enabled: !!projectId && shouldQueryComposerUrl },
   );
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
@@ -302,8 +304,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
+          ? "wsl"
+          : "uvx"
       }",
       "args": [
         ${
@@ -312,9 +314,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
+            : ""
         }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
       ]
@@ -596,8 +598,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         installedMCP?.includes(installer.name)
                           ? "Check"
                           : loadingMCP.includes(installer.name)
-                            ? "Loader2"
-                            : "Plus"
+                          ? "Loader2"
+                          : "Plus"
                       }
                       className={cn(
                         "h-4 w-4 absolute top-0 left-0 opacity-100",
