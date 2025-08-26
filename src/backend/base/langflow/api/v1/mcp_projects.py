@@ -433,11 +433,10 @@ async def update_project_mcp_settings(
                         try:
                             composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
                             composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
-                            response["composer_url"] = {
+                            response["result"] = {
                                 "project_id": str(project_id),
-                                "composer_port": composer_port,
-                                "composer_host": composer_host,
-                                "composer_sse_url": composer_sse_url,
+                                "sse_url": composer_sse_url,
+                                "uses_composer": True,
                             }
                         except Exception as e:
                             await logger.awarning(f"Failed to get mcp composer URL for project {project_id}: {e}")
@@ -451,6 +450,17 @@ async def update_project_mcp_settings(
                         MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
                     )
                     await mcp_composer_service.stop_project_composer(str(project_id))
+                    
+                    # Provide the direct SSE URL since we're no longer using composer
+                    sse_url = await get_project_sse_url(project_id)
+                    if not sse_url:
+                        raise HTTPException(status_code=500, detail="Failed to get direct SSE URL")
+                    
+                    response["result"] = {
+                        "project_id": str(project_id),
+                        "sse_url": sse_url,
+                        "uses_composer": False,
+                    }
            
             return response
 
@@ -778,9 +788,8 @@ async def get_project_composer_url(
         
         return {
             "project_id": str(project_id),
-            "composer_port": composer_port,
-            "composer_host": composer_host,
-            "composer_sse_url": composer_sse_url,
+            "sse_url": composer_sse_url,
+            "uses_composer": True,
         }
         
     except Exception as e:
@@ -950,8 +959,8 @@ async def get_project_sse_url(project_id: UUID) -> str:
     """Generate the SSE URL for a project, including WSL handling."""
     # Get settings service to build the SSE URL
     settings_service = get_settings_service()
-    host = getattr(settings_service.settings, "host", "localhost")
-    port = getattr(settings_service.settings, "port", 3000)
+    host = settings_service.settings.host or "localhost"
+    port = settings_service.settings.port or 7860
     base_url = f"http://{host}:{port}".rstrip("/")
     project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
 

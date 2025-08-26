@@ -16,11 +16,10 @@ interface PatchFlowMCPRequest {
 
 interface PatchFlowMCPResponse {
   message: string;
-  composer_url?: {
+  result?: {
     project_id: string;
-    composer_port: number;
-    composer_host: string;
-    composer_sse_url: string;
+    sse_url: string;
+    uses_composer: boolean;
   };
 }
 
@@ -45,12 +44,24 @@ export const usePatchFlowsMCP: useMutationFunctionType<
     PatchFlowMCPRequest
   > = mutate(["usePatchFlowsMCP"], patchFlowMCP, {
     onSuccess: (data, variables, context) => {
-      // If composer URL is included in response, update the query cache directly
-      if (data.composer_url) {
-        queryClient.setQueryData(
-          ["project-composer-url", params.project_id],
-          data.composer_url
-        );
+      // Update the cache with the exact SSE URL from the backend
+      if (data.result?.sse_url) {
+        if (data.result.uses_composer) {
+          const composerUrlData = {
+            project_id: data.result.project_id,
+            sse_url: data.result.sse_url,
+          };
+          queryClient.setQueryData(
+            ["project-composer-url", params.project_id],
+            composerUrlData
+          );
+        } else {
+          // OAuth disabled - remove composer cache and let UI fall back to direct SSE
+          // The direct SSE URL logic is already in customGetMCPUrl, so we just clear the composer cache
+          queryClient.removeQueries({ 
+            queryKey: ["project-composer-url", params.project_id] 
+          });
+        }
       }
       
       // Call the original onSuccess if provided
@@ -60,9 +71,6 @@ export const usePatchFlowsMCP: useMutationFunctionType<
     },
     onSettled: () => {
       queryClient.refetchQueries({ queryKey: ["useGetFlowsMCP"] });
-      // Only invalidate composer URL query if no composer_url in response
-      // (fallback for non-OAuth projects)
-      queryClient.invalidateQueries({ queryKey: ["project-composer-url", params.project_id] });
     },
     ...options,
   });
