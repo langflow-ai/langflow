@@ -268,98 +268,43 @@ class MCPComposerService(Service):
                         cmd.extend(["--env", env_key, str(auth_config[config_key])])
 
                 # Add server_url as workaround for MCP Composer internal ServerSettings bug
-                if "oauth_server_url" in auth_config:
-                    cmd.extend(["--env", "server_url", str(auth_config["oauth_server_url"])])
-
-            elif auth_type == "apikey":
-                cmd.extend(["--auth_type", "apikey"])
-                if "api_key" in auth_config:
-                    # Configure for token-based authentication
-                    cmd.extend(["--env", "API_KEY", str(auth_config["api_key"])])
-                    cmd.extend(["--env", "MEDIA_TYPE", "application/json"])
+                server_url = auth_config.get("oauth_server_url")
+                if server_url:
+                    cmd.extend(["--env", "server_url", str(server_url)])
 
         # Set environment variables
         env = os.environ.copy()
 
-        try:
-            # Start the subprocess with proper error capturing
-            process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
+        # Start the subprocess with stderr captured to PIPE, stdout to DEVNULL
+        process = subprocess.Popen(
+            cmd,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True
+        )
 
-            # Give it a moment to start
-            await asyncio.sleep(1)
+        # Give it a moment to start
+        await asyncio.sleep(1)
 
-            # Check if process is still running
-            if process.poll() is not None:
-                # Process terminated, get the error
-                try:
-                    stdout, stderr = process.communicate(timeout=5)
-                    error_msg = stderr.strip() if stderr else stdout.strip() if stdout else "Unknown error"
-                    logger.error(f"MCP Composer subprocess output - stdout: {stdout}, stderr: {stderr}")
-                    raise RuntimeError(f"MCP Composer failed to start for project {project_id}: {error_msg}")
-                except subprocess.TimeoutExpired:
-                    process.kill()  # Force kill if timeout
-                    raise RuntimeError(
-                        f"MCP Composer for project {project_id} terminated but couldn't read error output"
-                    )
+        # Check if process is still running
+        if process.poll() is not None:
+            # Process terminated, get the error from stderr pipe
+            try:
+                _, stderr_content = process.communicate(timeout=5)
+                error_msg = stderr_content.strip() if stderr_content else "Unknown error"
+                logger.error(f"MCP Composer subprocess stderr: {stderr_content}")
+                raise RuntimeError(f"MCP Composer failed to start for project {project_id}: {error_msg}")
+            except subprocess.TimeoutExpired:
+                process.kill()
+                raise RuntimeError(
+                    f"MCP Composer for project {project_id} terminated but couldn't read error output"
+                )
+        else:
+            # Process is running successfully
+            logger.debug(f"MCP Composer started successfully for project {project_id}")
 
-            return process
-
-        except FileNotFoundError:
-            logger.warning("uvx not found. Trying to run mcp-composer directly with Python...")
-            # Try running as a Python module if uvx is not available
-            cmd = [
-                "python",
-                "-m",
-                "mcp_composer",
-                "--mode",
-                "sse",
-                "--host",
-                self.composer_host,
-                "--port",
-                str(port),
-                "--sse-url",
-                sse_url,
-            ]
-
-            if auth_config:
-                auth_type = auth_config.get("auth_type")
-                if auth_type == "oauth":
-                    cmd.extend(["--auth_type", "oauth"])
-                    cmd.extend(["--env", "ENABLE_OAUTH", "True"])
-
-                    # Map auth config to environment variables for OAuth
-                    oauth_env_mapping = {
-                        "oauth_host": "OAUTH_HOST",
-                        "oauth_port": "OAUTH_PORT",
-                        "oauth_server_url": "OAUTH_SERVER_URL",
-                        "oauth_callback_path": "OAUTH_CALLBACK_PATH",
-                        "oauth_client_id": "OAUTH_CLIENT_ID",
-                        "oauth_client_secret": "OAUTH_CLIENT_SECRET",
-                        "oauth_auth_url": "OAUTH_AUTH_URL",
-                        "oauth_token_url": "OAUTH_TOKEN_URL",
-                        "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
-                        "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
-                    }
-
-                    # Add environment variables to the command
-                    for config_key, env_key in oauth_env_mapping.items():
-                        if config_key in auth_config:
-                            cmd.extend(["--env", env_key, str(auth_config[config_key])])
-
-                    # Add server_url as workaround for MCP Composer internal ServerSettings bug
-                    if "oauth_server_url" in auth_config:
-                        cmd.extend(["--env", "server_url", str(auth_config["oauth_server_url"])])
-
-                elif auth_type == "apikey":
-                    cmd.extend(["--auth_type", "apikey"])
-                    if "api_key" in auth_config:
-                        # Configure for token-based authentication
-                        cmd.extend(["--env", "API_KEY", str(auth_config["api_key"])])
-                        cmd.extend(["--env", "MEDIA_TYPE", "application/json"])
-
-            process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
-            return process
-
+        return process
     def get_project_composer_port(self, project_id: str) -> int | None:
         """Get the port number for a specific project's composer."""
         if project_id not in self.project_composers:
