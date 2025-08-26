@@ -27,12 +27,42 @@ import { AUTH_METHODS } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
 
+interface MemoizedApiKeyButtonProps {
+  apiKey: string;
+  isGeneratingApiKey: boolean;
+  generateApiKey: () => void;
+}
+
+const MemoizedApiKeyButton = memo(
+  ({
+    apiKey,
+    isGeneratingApiKey,
+    generateApiKey,
+  }: MemoizedApiKeyButtonProps) => (
+    <Button
+      unstyled
+      className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
+      disabled={apiKey !== ""}
+      loading={isGeneratingApiKey}
+      onClick={generateApiKey}
+    >
+      <ForwardedIconComponent
+        name={"key"}
+        className="h-4 w-4"
+        aria-hidden="true"
+      />
+      <span>{apiKey === "" ? "Generate API key" : "API key generated"}</span>
+    </Button>
+  ),
+);
+MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
+
 // Define interface for MemoizedCodeTag props
 interface MemoizedCodeTagProps {
   children: ReactNode;
   isCopied: boolean;
   copyToClipboard: () => void;
-  isAutoLogin: boolean | null;
+  isAuthApiKey: boolean | null;
   apiKey: string;
   isGeneratingApiKey: boolean;
   generateApiKey: () => void;
@@ -44,30 +74,19 @@ const MemoizedCodeTag = memo(
     children,
     isCopied,
     copyToClipboard,
-    isAutoLogin,
+    isAuthApiKey,
     apiKey,
     isGeneratingApiKey,
     generateApiKey,
   }: MemoizedCodeTagProps) => (
     <div className="relative bg-background text-[13px]">
       <div className="absolute right-4 top-4 flex items-center gap-6">
-        {!isAutoLogin && (
-          <Button
-            unstyled
-            className="flex items-center gap-2 font-sans text-muted-foreground hover:text-foreground"
-            disabled={apiKey !== ""}
-            loading={isGeneratingApiKey}
-            onClick={generateApiKey}
-          >
-            <ForwardedIconComponent
-              name={"key"}
-              className="h-4 w-4"
-              aria-hidden="true"
-            />
-            <span>
-              {apiKey === "" ? "Generate API key" : "API key generated"}
-            </span>
-          </Button>
+        {isAuthApiKey && (
+          <MemoizedApiKeyButton
+            apiKey={apiKey}
+            isGeneratingApiKey={isGeneratingApiKey}
+            generateApiKey={generateApiKey}
+          />
         )}
         <Button
           unstyled
@@ -144,6 +163,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
+
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
   });
@@ -156,6 +176,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
+  const isAuthApiKey = ENABLE_MCP_COMPOSER
+    ? currentAuthSettings?.auth_type === "apikey"
+    : !isAutoLogin;
 
   // Check if the current connection is local
   const isLocalConnection = useCustomIsLocalConnection();
@@ -244,7 +267,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       return `
         "--headers",
         "x-api-key",
-        "${currentAuthSettings.api_key || "YOUR_API_KEY"}",`;
+        "${apiKey || "YOUR_API_KEY"}",`;
     }
 
     return "";
@@ -456,7 +479,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       <MemoizedCodeTag
                         isCopied={isCopied}
                         copyToClipboard={copyToClipboard}
-                        isAutoLogin={isAutoLogin}
+                        isAuthApiKey={isAuthApiKey}
                         apiKey={apiKey}
                         isGeneratingApiKey={isGeneratingApiKey}
                         generateApiKey={generateApiKey}
@@ -505,11 +528,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 <Button
                   key={installer.name}
                   variant="ghost"
-                  className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
+                  className="group flex items-center justify-between disabled:text-foreground disabled:opacity-50"
                   disabled={
-                    installedMCP?.includes(installer.name) ||
-                    loadingMCP.includes(installer.name) ||
-                    !isLocalConnection
+                    loadingMCP.includes(installer.name) || !isLocalConnection
                   }
                   onClick={() => {
                     setLoadingMCP([...loadingMCP, installer.name]);
@@ -551,20 +572,31 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     />
                     {installer.title}
                   </div>
-
-                  <ForwardedIconComponent
-                    name={
-                      installedMCP?.includes(installer.name)
-                        ? "Check"
-                        : loadingMCP.includes(installer.name)
-                          ? "Loader2"
-                          : "Plus"
-                    }
-                    className={cn(
-                      "h-4 w-4",
-                      loadingMCP.includes(installer.name) && "animate-spin",
+                  <div className="relative h-4 w-4">
+                    <ForwardedIconComponent
+                      name={
+                        installedMCP?.includes(installer.name)
+                          ? "Check"
+                          : loadingMCP.includes(installer.name)
+                            ? "Loader2"
+                            : "Plus"
+                      }
+                      className={cn(
+                        "h-4 w-4 absolute top-0 left-0 opacity-100",
+                        loadingMCP.includes(installer.name) && "animate-spin",
+                        installedMCP?.includes(installer.name) &&
+                          "group-hover:opacity-0",
+                      )}
+                    />
+                    {installedMCP?.includes(installer.name) && (
+                      <ForwardedIconComponent
+                        name={"RefreshCw"}
+                        className={cn(
+                          "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100",
+                        )}
+                      />
                     )}
-                  />
+                  </div>
                 </Button>
               ))}
             </div>
@@ -576,7 +608,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           open={authModalOpen}
           setOpen={setAuthModalOpen}
           authSettings={currentAuthSettings}
+          autoInstall={isLocalConnection}
           onSave={handleAuthSave}
+          installedClients={installedMCP ?? []}
         />
       )}
     </div>
