@@ -20,7 +20,7 @@ export function useGetProjectComposerUrl(projectId: string) {
   return useQuery({
     queryKey: ["project-composer-url", projectId],
     queryFn: () => getProjectComposerUrl(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId, // TODO: FRAZ - ?? 
     staleTime: 30000, // 30 seconds
     retry: 1,
   });

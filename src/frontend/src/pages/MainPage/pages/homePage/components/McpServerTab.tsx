@@ -259,17 +259,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   // Generate auth headers based on authentication type
   const getAuthHeaders = () => {
-    // The x-api-key header is needed when AUTO_LOGIN=false to authenticate WITH Langflow
-    // This is separate from MCP-specific authentication
-    if (isAutoLogin) {
-      return ""; // No API key needed when auto-login is enabled
-    }
-
-    return `
+        // If MCP auth is disabled, use the previous API key behavior
+    if (!ENABLE_MCP_COMPOSER) {
+      if (isAutoLogin) return "";
+      return `
         "--headers",
         "x-api-key",
         "${apiKey || "YOUR_API_KEY"}",`;
     }
+
+    if (!currentAuthSettings || currentAuthSettings.auth_type === "none") {
+      return "";
+    }
+
+    if (currentAuthSettings.auth_type === "apikey") {
+      return `
+        "--headers",
+        "x-api-key",
+        "${apiKey || "YOUR_API_KEY"}",`;
+    }
+
+    return "";
   };
 
   const MCP_SERVER_JSON = `{
@@ -503,25 +513,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   setup guide
                 </a>
                 .
-                {ENABLE_MCP_COMPOSER && composerUrlData?.composer_sse_url && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-accent-emerald-foreground">
-                    <ForwardedIconComponent
-                      name="Network"
-                      className="h-3 w-3"
-                    />
-                    Using MCP Composer for this project.
-                  </div>
-                )}
-                {ENABLE_MCP_COMPOSER && !composerUrlData?.composer_sse_url && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    <ForwardedIconComponent
-                      name="AlertCircle"
-                      className="h-3 w-3"
-                    />
-                    MCP Composer not started for this project. Using direct SSE
-                    URL.
-                  </div>
-                )}
               </div>
             </>
           )}

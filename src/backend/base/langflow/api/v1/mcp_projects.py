@@ -418,24 +418,31 @@ async def update_project_mcp_settings(
             await session.commit()
 
             # Handle MCP Composer based on auth changes
+
+            response: dict[str, Any] = {"message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"}
+
             if should_handle_mcp_composer:
                 if should_start_composer:
-                    # Start MCP Composer for OAuth
-                    await logger.ainfo(
+                    # Log the auth change (composer will be started when getting URL below)
+                    await logger.adebug(
                         f"Auth settings changed to OAuth for project {project.name} ({project_id}), "
                         "starting MCP Composer"
                     )
 
-                    async def _register_with_logging():
+                    if is_oauth_project(project):
                         try:
-                            await register_project_with_composer(project)
-                        except Exception as e:  # noqa: BLE001
-                            await logger.awarning(f"Failed to start MCP Composer for project {project_id}: {e}")
-
-                    asyncio.create_task(_register_with_logging())
-
+                            composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
+                            composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
+                            response["composer_url"] = {
+                                "project_id": str(project_id),
+                                "composer_port": composer_port,
+                                "composer_host": composer_host,
+                                "composer_sse_url": composer_sse_url,
+                            }
+                        except Exception as e:
+                            await logger.awarning(f"Failed to get mcp composer URL for project {project_id}: {e}")
+                            raise HTTPException(status_code=500, detail=str(e)) from e
                 elif should_stop_composer:
-                    # Stop MCP Composer when changing from OAuth
                     await logger.ainfo(
                         f"Auth settings changed from OAuth for project {project.name} ({project_id}), "
                         "stopping MCP Composer"
@@ -444,8 +451,8 @@ async def update_project_mcp_settings(
                         MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
                     )
                     await mcp_composer_service.stop_project_composer(str(project_id))
-
-            return {"message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"}
+           
+            return response
 
     except Exception as e:
         msg = f"Error updating project MCP settings: {e!s}"
@@ -519,32 +526,27 @@ async def install_mcp_config(
 
     removed_servers: list[str] = []  # Track removed servers for reinstallation
     try:
-        # Verify project exists and user has access
-        async with session_scope() as session:
-            project = (
-                await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-            ).first()
+        # Use helper function
+        project = await verify_project_access(project_id, current_user)
+        
+        # Check if project requires API key authentication and generate if needed
+        generated_api_key = None
 
-            if not project:
-                raise HTTPException(status_code=404, detail="Project not found")
+        # Determine if we need to generate an API key based on feature flag
+        should_generate_api_key = False
+        if not FEATURE_FLAGS.mcp_composer:
+            # When MCP_COMPOSER is disabled, only generate API key if autologin is disabled
+            # (matches frontend !isAutoLogin check)
+            settings_service = get_settings_service()
+            should_generate_api_key = not settings_service.auth_settings.AUTO_LOGIN
+        elif project.auth_settings:
+            # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
+            auth_settings = AuthSettings(**project.auth_settings) if project.auth_settings else AuthSettings()
+            should_generate_api_key = auth_settings.auth_type == "apikey"
 
-            # Check if project requires API key authentication and generate if needed
-            generated_api_key = None
-
-            # Determine if we need to generate an API key based on feature flag
-            should_generate_api_key = False
-            if not FEATURE_FLAGS.mcp_composer:
-                # When MCP_COMPOSER is disabled, only generate API key if autologin is disabled
-                # (matches frontend !isAutoLogin check)
-                settings_service = get_settings_service()
-                should_generate_api_key = not settings_service.auth_settings.AUTO_LOGIN
-            elif project.auth_settings:
-                # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
-                auth_settings = AuthSettings(**project.auth_settings) if project.auth_settings else AuthSettings()
-                should_generate_api_key = auth_settings.auth_type == "apikey"
-
-            if should_generate_api_key:
-                # Generate API key with specific name format
+        if should_generate_api_key:
+            # Generate API key with specific name format
+            async with session_scope() as session:
                 api_key_name = f"MCP Project {project.name} - {body.client}"
                 api_key_create = ApiKeyCreate(name=api_key_name)
                 unmasked_api_key = await create_api_key(session, api_key_create, current_user.id)
@@ -593,42 +595,14 @@ async def install_mcp_config(
                 except OSError as e:
                     await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
-        # Check if we should use MCP Composer (only when feature flag is enabled AND auth is OAuth)
-        use_mcp_composer = False
-        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
-            auth_type = project.auth_settings.get("auth_type")
-            if auth_type == "oauth":
-                use_mcp_composer = True
+        # Use helper function for OAuth check
+        use_mcp_composer = is_oauth_project(project)
 
         if use_mcp_composer:
-            # Initialize args list - use mcp-proxy to connect to project-specific MCP Composer's SSE endpoint
-            # Each project has its own MCP Composer instance on a unique port
-            mcp_composer_service: MCPComposerService = cast(
-                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-            )
-            composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-
-            if not composer_port:
-                # MCP Composer not running, start it now for OAuth projects
-                await logger.ainfo(
-                    f"Starting MCP Composer for project {project.name} ({project_id}) during auto-install"
-                )
-                await register_project_with_composer(project)
-
-                # Try to get the port again after starting
-                composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-                if not composer_port:
-                    # If still no port, wait a bit and try once more
-                    await asyncio.sleep(2)
-                    composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-
-                if not composer_port:
-                    error = f"Failed to start MCP Composer for project {project_id}"
-                    raise HTTPException(status_code=500, detail=error)
-
-            composer_host = getattr(settings_service.settings, "mcp_composer_host", "localhost")
+            # Use helper function
+            composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
             sse_url = f"http://{composer_host}:{composer_port}/sse"
-        # else: use the direct SSE URL that was already set above (line 519)
+        # else: use the direct SSE URL that was already set above
 
         # Build args based on whether we're using MCP Composer
         args = ["mcp-composer"] if use_mcp_composer else ["mcp-proxy"]
@@ -788,60 +762,27 @@ async def get_project_composer_url(
 ):
     """Get the MCP Composer URL for a specific project."""
     try:
-        # Verify project exists and user has access
-        async with session_scope() as session:
-            project = (
-                await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-            ).first()
-
-            if not project:
-                raise HTTPException(status_code=404, detail="Project not found")
-
-        # Check if this project uses OAuth and should have MCP Composer
-        has_oauth = (
-            FEATURE_FLAGS.mcp_composer and project.auth_settings and project.auth_settings.get("auth_type") == "oauth"
-        )
-        if not has_oauth:
+        # Use helper function
+        project = await verify_project_access(project_id, current_user)
+        
+        # Use helper function for OAuth check
+        if not is_oauth_project(project):
             raise HTTPException(
                 status_code=400,
                 detail="MCP Composer is only available for projects with OAuth authentication",
             )
-
-        # Get MCP Composer service
-        mcp_composer_service: MCPComposerService = cast(
-            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-        )
-        composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-
-        if not composer_port:
-            # Try to start MCP Composer for this project
-            await logger.ainfo(f"Starting MCP Composer for project {project.name} ({project_id})")
-            await register_project_with_composer(project)
-
-            # Wait a bit for it to start
-            await asyncio.sleep(2)
-
-            # Try to get port again
-            composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-            if not composer_port:
-                error = f"Failed to start MCP Composer for project {project_id}"
-                raise HTTPException(status_code=500, detail=error)
-
-        settings = get_settings_service().settings
-        composer_host = settings.mcp_composer_host or None
-        if not composer_host:
-            error = f"Composer host is not set in settings for project {project_id}"
-            raise HTTPException(status_code=500, detail=error)
-
+        
+        # Use helper function
+        composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
         composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
-
+        
         return {
             "project_id": str(project_id),
             "composer_port": composer_port,
             "composer_host": composer_host,
             "composer_sse_url": composer_sse_url,
         }
-
+        
     except Exception as e:
         msg = f"Error getting composer URL for project {project_id}: {e!s}"
         await logger.aexception(msg)
@@ -1261,3 +1202,50 @@ async def init_mcp_servers():
     except Exception as e:  # noqa: BLE001
         msg = f"Failed to initialize MCP servers: {e}"
         await logger.aexception(msg)
+
+
+async def verify_project_access(project_id: UUID, current_user: CurrentActiveMCPUser) -> Folder:
+    """Verify project exists and user has access."""
+    async with session_scope() as session:
+        project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        return project
+
+
+def is_oauth_project(project: Folder) -> bool:
+    """Check if project uses OAuth authentication."""
+    return (
+        FEATURE_FLAGS.mcp_composer
+        and project.auth_settings is not None
+        and project.auth_settings.get("auth_type", "") == "oauth"
+    )
+
+
+async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[str, str]:
+    """Get MCP Composer port or start it if not running."""
+    mcp_composer_service: MCPComposerService = cast(
+        MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+    )
+    composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
+    
+    if not composer_port:
+        await logger.adebug(f"Starting MCP Composer for project {project.name} ({project_id})")
+        await register_project_with_composer(project)
+        
+        composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
+        if not composer_port:
+            error = f"Failed to start MCP Composer for project {project_id}"
+            raise HTTPException(status_code=500, detail=error)
+    
+    settings = get_settings_service().settings
+    composer_host = settings.mcp_composer_host or None
+    if not composer_host:
+        error = f"Composer host is not set in settings for project {project_id}"
+        raise HTTPException(status_code=500, detail=error)
+    
+    return (composer_host, str(composer_port))
