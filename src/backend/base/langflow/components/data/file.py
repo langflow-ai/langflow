@@ -546,7 +546,7 @@ class FileComponent(BaseFileComponent):
                 payload = getattr(advanced_data, "data", {}) or {}
                 doc_rows = payload.get("doc")
                 if isinstance(doc_rows, list):
-                    rows: Data | None = [
+                    rows: list[Data | None] = [
                         Data(
                             data={
                                 "file_path": file_path,
@@ -554,7 +554,6 @@ class FileComponent(BaseFileComponent):
                             },
                         )
                         for item in doc_rows
-                        if item
                     ]
                     return self.rollup_data(file_list, rows)
 
