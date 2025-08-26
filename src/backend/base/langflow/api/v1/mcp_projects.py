@@ -608,6 +608,8 @@ async def install_mcp_config(
 
         use_mcp_composer = should_use_mcp_composer(project)
 
+        mcp_composer_enabled = get_settings_service().settings.mcp_composer_enabled
+
         if use_mcp_composer:
             composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
             sse_url = f"http://{composer_host}:{composer_port}/sse"
@@ -622,7 +624,7 @@ async def install_mcp_config(
         # Generate a Langflow API key for auto-install if needed
         # Only add API key headers for projects with "apikey" auth type (not "none" or OAuth)
         project_auth_type = project.auth_settings.get("auth_type", "") if project.auth_settings else ""
-        needs_api_key = not auth_settings.AUTO_LOGIN and not use_mcp_composer and project_auth_type == "apikey"
+        needs_api_key = project_auth_type == "apikey" if mcp_composer_enabled else not auth_settings.AUTO_LOGIN
 
         if needs_api_key:
             async with session_scope() as api_key_session:
