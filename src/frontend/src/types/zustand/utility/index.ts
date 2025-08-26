@@ -28,4 +28,6 @@ export type UtilityStoreType = {
   setEventDelivery: (eventDelivery: EventDeliveryType) => void;
   serializationMaxItemsLength: number;
   setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
+  packageManagerEnabled: boolean;
+  setPackageManagerEnabled: (packageManagerEnabled: boolean) => void;
 };

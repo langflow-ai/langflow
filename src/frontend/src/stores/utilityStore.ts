@@ -48,4 +48,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
+  packageManagerEnabled: true,
+  setPackageManagerEnabled: (packageManagerEnabled: boolean) =>
+    set({ packageManagerEnabled }),
 }));

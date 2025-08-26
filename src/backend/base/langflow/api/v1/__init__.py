@@ -9,15 +9,25 @@ from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
 from langflow.api.v1.mcp_projects import router as mcp_projects_router
 from langflow.api.v1.monitor import router as monitor_router
+from langflow.api.v1.packages import router as packages_router
 from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
 from langflow.api.v1.users import router as users_router
 from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
-from langflow.api.v1.voice_mode import router as voice_mode_router
+
+# Try to import voice_mode, but don't fail if dependencies are missing
+try:
+    from langflow.api.v1.voice_mode import router as voice_mode_router
+
+    VOICE_MODE_AVAILABLE = True
+except ImportError:
+    voice_mode_router = None
+    VOICE_MODE_AVAILABLE = False
 
 __all__ = [
+    "VOICE_MODE_AVAILABLE",
     "api_key_router",
     "chat_router",
     "endpoints_router",
@@ -29,6 +39,7 @@ __all__ = [
     "mcp_projects_router",
     "mcp_router",
     "monitor_router",
+    "packages_router",
     "projects_router",
     "starter_projects_router",
     "store_router",

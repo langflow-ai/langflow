@@ -1,3 +1,7 @@
 from . import factory, service
+from .base import Settings
 
-__all__ = ["factory", "service"]
+# Create a default settings instance for backward compatibility
+settings = Settings()
+
+__all__ = ["Settings", "factory", "service", "settings"]

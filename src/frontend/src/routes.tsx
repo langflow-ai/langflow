@@ -9,6 +9,7 @@ import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { PackageManagerGuard } from "./components/authorization/packageManagerGuard";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -34,6 +35,7 @@ import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import PackageManagerPage from "./pages/SettingsPage/pages/PackageManagerPage/package-manager-page";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
 
@@ -137,6 +139,14 @@ const router = createBrowserRouter(
                     element={<GlobalVariablesPage />}
                   />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
+                  <Route
+                    path="package-manager"
+                    element={
+                      <PackageManagerGuard>
+                        <PackageManagerPage />
+                      </PackageManagerGuard>
+                    }
+                  />
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
                     path="general/:scrollId?"
