@@ -1,38 +1,11 @@
-import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
-import useAddFlow from "@/hooks/flows/use-add-flow";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
-import { updateIds } from "@/utils/reactflowUtils";
 
-const KnowledgeBaseEmptyState = () => {
-  const examples = useFlowsManagerStore((state) => state.examples);
-  const addFlow = useAddFlow();
-  const navigate = useCustomNavigate();
-  const { folderId } = useParams();
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
-
-  const folderIdUrl = folderId ?? myCollectionId;
-
-  const handleCreateKnowledge = async () => {
-    const knowledgeBasesExample = examples.find(
-      (example) => example.name === "Knowledge Ingestion",
-    );
-
-    if (knowledgeBasesExample && knowledgeBasesExample.data) {
-      updateIds(knowledgeBasesExample.data);
-      addFlow({ flow: knowledgeBasesExample }).then((id) => {
-        navigate(`/flow/${id}/folder/${folderIdUrl}`);
-      });
-      track("New Flow Created", {
-        template: `${knowledgeBasesExample.name} Template`,
-      });
-    }
-  };
-
+const KnowledgeBaseEmptyState = ({
+  handleCreateKnowledge,
+}: {
+  handleCreateKnowledge: () => void;
+}) => {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
       <div className="flex flex-col items-center gap-2">

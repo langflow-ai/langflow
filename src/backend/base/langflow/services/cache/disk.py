@@ -4,8 +4,8 @@ import time
 from typing import Generic
 
 from diskcache import Cache
-from loguru import logger
 
+from langflow.logging.logger import logger
 from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType
 from langflow.services.cache.utils import CACHE_MISS
 

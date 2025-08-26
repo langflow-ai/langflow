@@ -1,11 +1,11 @@
 import requests
 from langchain.tools import StructuredTool
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import SecretStrInput, StrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
@@ -65,7 +65,7 @@ class NotionPageContent(LCToolComponent):
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return error_message
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error retrieving Notion page content")
+            logger.debug("Error retrieving Notion page content", exc_info=True)
             return f"Error: An unexpected error occurred while retrieving Notion page content. {e}"
 
     def parse_blocks(self, blocks: list) -> str:

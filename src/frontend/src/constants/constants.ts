@@ -763,6 +763,21 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "langwatch",
   "YouTube",
   "youtube",
+  "pinecone",
+  "weaviate",
+  "qdrant",
+  "mongodb",
+  "elastic",
+  "supabase",
+  "milvus",
+  "chroma",
+  "clickhouse",
+  "couchbase",
+  "upstash",
+  "vectara",
+  "cassandra",
+  "FAISS",
+  "pgvector",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
@@ -1089,5 +1104,7 @@ export const TWITTER_URL = "https://x.com/langflow_ai";
 export const DOCS_URL = "https://docs.langflow.org";
 export const DATASTAX_DOCS_URL =
   "https://docs.datastax.com/en/langflow/index.html";
+export const DESKTOP_URL = "https://www.langflow.org/desktop";
+export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";

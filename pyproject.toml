@@ -113,8 +113,6 @@ dependencies = [
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
-    "pylint>=3.3.4",
-    "ruff>=0.9.7",
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
     "ibm-watsonx-ai>=1.3.1",
@@ -127,7 +125,10 @@ dependencies = [
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
+    "structlog>=25.4.0",
+    "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
+    "traceloop-sdk>=0.43.1",
 ]
 
 [dependency-groups]
@@ -136,7 +137,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.9.7,<0.10",
+    "ruff>=0.12.7",
     "httpx>=0.28.1",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
@@ -219,8 +220,8 @@ clickhouse-connect = [
 nv-ingest = [
     # NOTE: These must be removed in order to run `uv lock --upgrade` or `uv sync --upgrade`
     # due to incompatibility with <3.12 and how uv handles lockfile creation.
-    # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these, 
-    # and that afterward, the lockfile contains nv-ingest. 
+    # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these,
+    # and that afterward, the lockfile contains nv-ingest.
     "nv-ingest-api==25.6.2,<26.0.0 ; python_version >= '3.12'",
     "nv-ingest-client==25.6.3,<26.0.0 ; python_version >= '3.12'",
 ]
@@ -301,7 +302,9 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
+    "D10", # Missing docstrings
+    "PLW1641", # Object does not implement `__hash__` method (mutable objects shouldn't be hashable)
     # Rules that are TODOs
     "ANN",
 ]
@@ -311,6 +314,7 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",
