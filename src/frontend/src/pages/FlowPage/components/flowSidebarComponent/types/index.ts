@@ -22,6 +22,8 @@ export interface CategoryGroupProps {
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
+  showConfig: boolean;
+  setShowConfig: (show: boolean) => void;
 }
 
 export interface SidebarGroupProps {
@@ -41,6 +43,9 @@ export interface SidebarGroupProps {
   ) => void;
   openCategories: string[];
   setOpenCategories: Dispatch<SetStateAction<string[]>>;
+  showSearchConfigTrigger: boolean;
+  showConfig: boolean;
+  setShowConfig: (show: boolean) => void;
 }
 
 export interface BundleItemProps {

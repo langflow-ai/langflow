@@ -3,6 +3,7 @@ import { useBlocker, useParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,7 +13,10 @@ import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { FlowSidebarComponent } from "./components/flowSidebarComponent";
+import {
+  FlowSearchProvider,
+  FlowSidebarComponent,
+} from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
@@ -160,13 +164,19 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
-              {!view && <FlowSidebarComponent isLoading={isLoading} />}
-              <main className="flex w-full overflow-hidden">
-                <div className="h-full w-full">
-                  <Page setIsLoading={setIsLoading} />
-                </div>
-              </main>
+            <SidebarProvider
+              width="17.5rem"
+              defaultOpen={!isMobile}
+              segmentedSidebar={ENABLE_NEW_SIDEBAR}
+            >
+              <FlowSearchProvider>
+                {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                <main className="flex w-full overflow-hidden">
+                  <div className="h-full w-full">
+                    <Page setIsLoading={setIsLoading} />
+                  </div>
+                </main>
+              </FlowSearchProvider>
             </SidebarProvider>
           </div>
         )}
