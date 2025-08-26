@@ -208,10 +208,19 @@ def configure(
     log_env: str | None = None,
     log_format: str | None = None,
     log_rotation: str | None = None,
+    cache: bool | None = None,
 ) -> None:
     """Configure the logger."""
+    # If is_configured AND the numeric_level set in the wrapper_class is the same as the log_level
+    cfg = structlog.get_config()
+    wrapper_class = cfg["wrapper_class"]
+    wrapper_class_name = wrapper_class.__name__ if wrapper_class else "None"
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
+
+    if structlog.is_configured() and (log_level and log_level.lower() in wrapper_class_name.lower()):
+        return
+
     if log_level is None:
         log_level = "ERROR"
 
@@ -268,7 +277,7 @@ def configure(
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout)
         if not log_file
         else structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
+        cache_logger_on_first_use=cache or True,
     )
 
     # Set up file logging if needed
@@ -364,4 +373,6 @@ class InterceptHandler(logging.Handler):
 
 
 # Initialize logger - will be reconfigured when configure() is called
+# Set it to critical level
 logger: structlog.BoundLogger = structlog.get_logger()
+configure(log_level="CRITICAL", cache=False)
