@@ -415,7 +415,7 @@ async def update_project_mcp_settings(
                         should_handle_mcp_composer = True
                         should_stop_composer = True
                     elif current_auth_type == "oauth" and new_auth_type == "oauth":
-                        # Both are OAuth - always trigger a restart check to see if 
+                        # Both are OAuth - always trigger a restart check to see if
                         # any auth values have changed.
                         # There are more efficient ways to do this, but this is simple, for now
                         should_handle_mcp_composer = True
@@ -1264,7 +1264,7 @@ def should_use_mcp_composer(project: Folder) -> bool:
 async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[str, str]:
     """Get MCP Composer port or start it if not running, restarting if config changed."""
     mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
-    
+
     # Prepare current auth config for comparison
     settings = get_settings_service().settings
     if not settings.host or not settings.port:
@@ -1276,13 +1276,13 @@ async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[
         raise HTTPException(status_code=500, detail=error)
 
     sse_url = await get_project_sse_url(project_id)
-    
+
     auth_config = None
     if project.auth_settings:
         decrypted_settings = decrypt_auth_settings(project.auth_settings)
         if decrypted_settings:
             auth_config = decrypted_settings
-    
+
     # Check if composer is running and if config has changed
     composer_port = await mcp_composer_service.ensure_composer_updated(str(project_id), sse_url, auth_config)
 
@@ -1292,7 +1292,7 @@ async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[
         composer_port = await mcp_composer_service.start_project_composer(
             project_id=str(project.id), sse_url=sse_url, auth_config=auth_config
         )
-        
+
         if not composer_port:
             error = f"Failed to start MCP Composer for project {project_id}"
             raise HTTPException(status_code=500, detail=error)

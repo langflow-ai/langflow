@@ -136,7 +136,7 @@ class MCPComposerService(Service):
         """Wait for a process to exit by polling."""
         while process.poll() is None:
             await asyncio.sleep(0.1)
-    
+
     def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
         """Check if auth configuration has changed in a way that requires restart."""
         # Handle None/empty cases
@@ -144,14 +144,14 @@ class MCPComposerService(Service):
             return False
         if bool(existing_auth) != bool(new_auth):
             return True
-        
+
         auth_type = new_auth.get("auth_type", "")
-        
+
         # Auth type changed?
         if existing_auth.get("auth_type") != auth_type:
             logger.debug(f"Auth type changed: '{existing_auth.get('auth_type')}' -> '{auth_type}'")
             return True
-        
+
         # Define which fields to check for each auth type
         fields_to_check = []
         if auth_type == "oauth":
@@ -160,20 +160,20 @@ class MCPComposerService(Service):
             fields_to_check = [k for k in all_keys if k.startswith("oauth_") or k in ["host", "port"]]
         elif auth_type == "apikey":
             fields_to_check = ["api_key"]
-        
+
         # Compare relevant fields
         for field in fields_to_check:
             old_val = existing_auth.get(field)
             new_val = new_auth.get(field)
-            
+
             # Convert None and empty string to None for comparison
             old_normalized = None if (old_val is None or old_val == "") else old_val
             new_normalized = None if (new_val is None or new_val == "") else new_val
-            
+
             if old_normalized != new_normalized:
                 logger.debug(f"OAuth field '{field}' changed: '{old_val}' -> '{new_val}'")
                 return True
-            
+
         return False
 
     async def start_project_composer(
@@ -195,13 +195,15 @@ class MCPComposerService(Service):
                 composer_info = self.project_composers[project_id]
                 process = composer_info.get("process")
                 existing_port = composer_info.get("port")  # Save the existing port
-                
+
                 # Check if OAuth settings have changed
                 existing_auth = composer_info.get("auth_config", {})
                 auth_changed = self._has_auth_config_changed(existing_auth, auth_config)
-                
+
                 if auth_changed:
-                    logger.info(f"OAuth settings changed for project {project_id}, restarting MCP Composer on port {existing_port}")
+                    logger.info(
+                        f"OAuth settings changed for project {project_id}, restarting MCP Composer on port {existing_port}"
+                    )
                     # Stop the existing composer but keep the port preference
                     await self._do_stop_project_composer(project_id)
                     # Will continue below to restart with new auth config
@@ -209,7 +211,9 @@ class MCPComposerService(Service):
                     logger.debug(f"MCP Composer already running for project {project_id} with unchanged settings")
                     return composer_info["port"]
                 else:
-                    logger.warning(f"MCP Composer process for project {project_id} was terminated, restarting on port {existing_port}")
+                    logger.warning(
+                        f"MCP Composer process for project {project_id} was terminated, restarting on port {existing_port}"
+                    )
                     if project_id in self.project_composers:
                         del self.project_composers[project_id]
 
@@ -225,10 +229,12 @@ class MCPComposerService(Service):
                     start_port = max([self.base_port, *list(used_ports)], default=self.base_port)
                     if used_ports:
                         start_port += 1  # Start from the next port after the highest used port
-                    
+
                     project_port = self._find_available_port(start_port)
                     if existing_port:
-                        logger.debug(f"Could not reuse port {existing_port} for project {project_id}, using {project_port} instead")
+                        logger.debug(
+                            f"Could not reuse port {existing_port} for project {project_id}, using {project_port} instead"
+                        )
             except RuntimeError as e:
                 logger.error(f"Could not find available port for project {project_id}: {e}")
                 raise
@@ -334,13 +340,7 @@ class MCPComposerService(Service):
         env = os.environ.copy()
 
         # Start the subprocess with stderr captured to PIPE, stdout to DEVNULL
-        process = subprocess.Popen(
-            cmd,
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+        process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
 
         # Give it a moment to start
         await asyncio.sleep(1)
@@ -370,25 +370,27 @@ class MCPComposerService(Service):
         if project_id not in self.project_composers:
             return None
         return self.project_composers[project_id]["port"]
-    
-    async def ensure_composer_updated(self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None) -> int | None:
+
+    async def ensure_composer_updated(
+        self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None
+    ) -> int | None:
         """Check if composer needs restart due to config changes and restart if needed.
-        
+
         Returns:
             int: The port number if composer is running (after any necessary restart)
             None: If composer is not running
         """
         if project_id not in self.project_composers:
             return None
-            
+
         composer_info = self.project_composers[project_id]
         existing_auth = composer_info.get("auth_config", {})
-        
+
         # Check if auth config has changed
         if self._has_auth_config_changed(existing_auth, auth_config):
             logger.info(f"Auth config changed for project {project_id}, triggering restart")
             return await self.start_project_composer(project_id, sse_url, auth_config)
-        
+
         # No changes, just return the current port
         return composer_info["port"]
 
