@@ -245,10 +245,12 @@ test(
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 0, y: 0 },
           });
+        await page.getByTestId("canvas_controls_dropdown").click();
 
         await page.getByTestId("fit_view").click();
 
         await zoomOut(page, 3);
+        await page.getByTestId("canvas_controls_dropdown").click();
 
         await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
