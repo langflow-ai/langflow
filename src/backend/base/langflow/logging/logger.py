@@ -277,7 +277,7 @@ def configure(
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout)
         if not log_file
         else structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=cache or True,
+        cache_logger_on_first_use=cache if cache is not None else True,
     )
 
     # Set up file logging if needed
