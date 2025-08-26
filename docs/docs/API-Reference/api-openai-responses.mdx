@@ -174,7 +174,7 @@ Conversation continuity allows you to maintain context across multiple API calls
 
 When you make a request, the API returns a response with an `id` field. You can use this `id` as the `previous_response_id` in your next request to continue the conversation from where it left off.
 
-**First Message:**
+First Message:
 ```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/responses" \
@@ -186,7 +186,7 @@ curl -X POST \
   }'
 ```
 
-**Response:**
+Response:
 ```json
 {
   "id": "response-abc123",
@@ -198,7 +198,7 @@ curl -X POST \
 }
 ```
 
-**Follow-up Message:**
+Follow-up message:
 ```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/responses" \
@@ -211,7 +211,7 @@ curl -X POST \
   }'
 ```
 
-**Response:**
+Response:
 ```json
 {
   "id": "response-def456",
