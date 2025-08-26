@@ -136,6 +136,51 @@ class MCPComposerService(Service):
         """Wait for a process to exit by polling."""
         while process.poll() is None:
             await asyncio.sleep(0.1)
+    
+    def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
+        """Check if auth configuration has changed in a way that requires restart.
+        
+        Args:
+            existing_auth: Current auth configuration
+            new_auth: New auth configuration to compare
+            
+        Returns:
+            bool: True if auth config has changed and requires restart
+        """
+        # If both are None or empty, no change
+        if not existing_auth and not new_auth:
+            return False
+        
+        # If one is None/empty and the other isn't, it changed
+        if bool(existing_auth) != bool(new_auth):
+            return True
+        
+        if existing_auth.get("auth_type") != new_auth.get("auth_type"):
+            return True
+        
+        # For OAuth, compare all OAuth-related fields
+        if existing_auth.get("auth_type") == "oauth" and new_auth.get("auth_type") == "oauth":
+            # TODO: should probably find a better way than hardcoding the fields
+            oauth_fields = [
+                "oauth_host", "oauth_port", "oauth_server_url", "oauth_callback_path",
+                "oauth_client_id", "oauth_client_secret", "oauth_auth_url", 
+                "oauth_token_url", "oauth_mcp_scope", "oauth_provider_scope"
+            ]
+            
+            for field in oauth_fields:
+                # Convert to string for comparison to handle None vs empty string
+                existing_value = str(existing_auth.get(field, ""))
+                new_value = str(new_auth.get(field, ""))
+                if existing_value != new_value:
+                    logger.debug(f"OAuth field '{field}' changed: '{existing_value}' -> '{new_value}'")
+                    return True
+        
+        # For API key auth, compare the key
+        if existing_auth.get("auth_type") == "apikey" and new_auth.get("auth_type") == "apikey":
+            if existing_auth.get("api_key") != new_auth.get("api_key"):
+                return True
+        
+        return False
 
     async def start_project_composer(
         self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None
@@ -151,25 +196,44 @@ class MCPComposerService(Service):
 
         async with self._start_locks[project_id]:
             # Check if already running (double-check after acquiring lock)
+            existing_port = None
             if project_id in self.project_composers:
                 composer_info = self.project_composers[project_id]
                 process = composer_info.get("process")
-                if process and process.poll() is None:
-                    logger.debug(f"MCP Composer already running for project {project_id}")
+                existing_port = composer_info.get("port")  # Save the existing port
+                
+                # Check if OAuth settings have changed
+                existing_auth = composer_info.get("auth_config", {})
+                auth_changed = self._has_auth_config_changed(existing_auth, auth_config)
+                
+                if auth_changed:
+                    logger.info(f"OAuth settings changed for project {project_id}, restarting MCP Composer on port {existing_port}")
+                    # Stop the existing composer but keep the port preference
+                    await self._do_stop_project_composer(project_id)
+                elif process and process.poll() is None:
+                    logger.debug(f"MCP Composer already running for project {project_id} with unchanged settings")
                     return composer_info["port"]
-                logger.warning(f"MCP Composer process for project {project_id} was terminated, restarting")
-                if project_id in self.project_composers:
-                    del self.project_composers[project_id]
+                else:
+                    logger.warning(f"MCP Composer process for project {project_id} was terminated, restarting on port {existing_port}")
+                    if project_id in self.project_composers:
+                        del self.project_composers[project_id]
 
-            # Find an available port starting from the base port
-            # Use a higher starting port for subsequent projects to avoid conflicts
-            used_ports = {info["port"] for info in self.project_composers.values()}
-            start_port = max([self.base_port, *list(used_ports)], default=self.base_port)
-            if used_ports:
-                start_port += 1  # Start from the next port after the highest used port
-
+            # Try to use the existing port if we had one, otherwise find a new one
             try:
-                project_port = self._find_available_port(start_port)
+                if existing_port and self._is_port_available(existing_port):
+                    # Reuse the same port if it's available
+                    project_port = existing_port
+                    logger.debug(f"Reusing existing port {project_port} for project {project_id}")
+                else:
+                    # Find a new port
+                    used_ports = {info["port"] for info in self.project_composers.values()}
+                    start_port = max([self.base_port, *list(used_ports)], default=self.base_port)
+                    if used_ports:
+                        start_port += 1  # Start from the next port after the highest used port
+                    
+                    project_port = self._find_available_port(start_port)
+                    if existing_port:
+                        logger.debug(f"Could not reuse port {existing_port} for project {project_id}, using {project_port} instead")
             except RuntimeError as e:
                 logger.error(f"Could not find available port for project {project_id}: {e}")
                 raise
