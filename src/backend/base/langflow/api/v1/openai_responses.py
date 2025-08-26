@@ -5,7 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
-from backend.base.langflow.services.telemetry.service import TelemetryService
+from langflow.services.telemetry.service import TelemetryService
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
