@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -9,9 +12,6 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
 import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
@@ -437,11 +437,7 @@ export default function Dropdown({
                         "pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
-                      <div
-                        className={cn("truncate text-[13px]", {
-                          "w-1/2": filteredMetadata?.length !== 0,
-                        })}
-                      >
+                      <div className="text-[13px] mr-2 whitespace-nowrap flex-shrink-0">
                         {option}
                       </div>
                       {filteredMetadata?.[index]?.status && (
@@ -481,7 +477,7 @@ export default function Dropdown({
                                     className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
                                   />
                                 )}
-                                <div className="truncate text-xs">
+                                <div className="text-xs truncate">
                                   {`${String(value)} ${key}`}
                                 </div>
                               </div>
@@ -509,7 +505,10 @@ export default function Dropdown({
             </ShadTooltip>
           ))
         ) : (
-          <CommandItem disabled className="w-full text-center text-sm text-muted-foreground px-2.5 py-1.5">
+          <CommandItem
+            disabled
+            className="w-full text-center text-sm text-muted-foreground px-2.5 py-1.5"
+          >
             No options found
           </CommandItem>
         )}
