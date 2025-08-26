@@ -612,8 +612,8 @@ async def install_mcp_config(
             composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
             sse_url = f"http://{composer_host}:{composer_port}/sse"
 
-        # Build args based on whether we're using MCP Composer
-        args = ["mcp-composer"] if use_mcp_composer else ["mcp-proxy"]
+        # mcp-proxy handles stdio<->sse
+        args = ["mcp-proxy"]
 
         # Check if we need to add Langflow API key headers
         # Necessary only when Project API Key Authentication is enabled

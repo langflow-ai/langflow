@@ -242,9 +242,7 @@ class MCPComposerService(Service):
             f"Starting MCP Composer for project {project_id} on host {self.composer_host} port {port} with SSE URL {sse_url}"
         )
 
-        # Skip auth configuration - let MCP Composer connect without authentication
-        # The SSE endpoint will be modified to allow internal connections
-        if False and auth_config:  # Disabled auth config
+        if auth_config:
             auth_type = auth_config.get("auth_type")
             if auth_type == "oauth":
                 cmd.extend(["--auth_type", "oauth"])
@@ -323,8 +321,7 @@ class MCPComposerService(Service):
                 sse_url,
             ]
 
-            # Skip auth configuration - disabled for internal connections
-            if False and auth_config:  # Disabled auth config
+            if auth_config:
                 auth_type = auth_config.get("auth_type")
                 if auth_type == "oauth":
                     cmd.extend(["--auth_type", "oauth"])
