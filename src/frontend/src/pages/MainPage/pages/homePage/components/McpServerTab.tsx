@@ -1,6 +1,7 @@
 import { memo, type ReactNode, useCallback, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import { useQueryClient } from "@tanstack/react-query";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
@@ -157,17 +158,20 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const queryClient = useQueryClient();
 
   const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
-  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+  const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
 
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
 
   // Only get composer URL for OAuth projects
+  // Disable the query during mutations to prevent stale auth state issues
   const isOAuthProject = currentAuthSettings?.auth_type === "oauth";
-  const { data: composerUrlData } = useGetProjectComposerUrl(projectId, isOAuthProject);
+  const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
+  const { data: composerUrlData } = useGetProjectComposerUrl(projectId, shouldQueryComposerUrl);
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,

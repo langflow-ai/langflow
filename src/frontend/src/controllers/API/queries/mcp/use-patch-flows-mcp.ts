@@ -46,6 +46,15 @@ export const usePatchFlowsMCP: useMutationFunctionType<
     PatchFlowMCPRequest
   > = mutate(["usePatchFlowsMCP"], patchFlowMCP, {
     onSuccess: (data, variables, context) => {
+      // Update the auth settings cache immediately to prevent race conditions
+      const currentMCPData = queryClient.getQueryData(["useGetFlowsMCP", params.project_id]);
+      if (currentMCPData && variables.auth_settings) {
+        queryClient.setQueryData(["useGetFlowsMCP", params.project_id], {
+          ...currentMCPData,
+          auth_settings: variables.auth_settings,
+        });
+      }
+
       // Update the cache with the exact SSE URL from the backend
       if (data.result?.sse_url) {
         if (data.result.uses_composer) {
@@ -72,7 +81,9 @@ export const usePatchFlowsMCP: useMutationFunctionType<
       }
     },
     onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFlowsMCP"] });
+      // Use invalidateQueries instead of refetchQueries to avoid race conditions
+      // This marks the queries as stale but doesn't immediately refetch them
+      queryClient.invalidateQueries({ queryKey: ["useGetFlowsMCP"] });
     },
     ...options,
   });

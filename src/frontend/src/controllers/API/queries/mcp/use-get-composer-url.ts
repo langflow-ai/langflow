@@ -22,11 +22,11 @@ export function useGetProjectComposerUrl(projectId: string, enabled: boolean = t
     enabled: !!projectId && enabled, // Only enabled if projectId exists AND explicitly enabled
     staleTime: 30000, // 30 seconds
     retry: 1,
-    // Handle 400 error when project doesn't have OAuth auth
+    // Handle 400/500 errors when project doesn't have OAuth auth
     // This allows the UI to gracefully fall back to direct SSE
     throwOnError: (error: any) => {
-      // Don't throw on 400 errors (non-OAuth projects)
-      return error?.status !== 400;
+      // Don't throw on 400 errors (non-OAuth projects) or 500 errors (auth transition states)
+      return error?.status !== 400 && error?.status !== 500;
     },
   });
 }
