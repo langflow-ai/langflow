@@ -431,7 +431,7 @@ async def update_project_mcp_settings(
                         "starting MCP Composer"
                     )
 
-                    if is_oauth_project(project):
+                    if should_use_mcp_composer(project):
                         try:
                             composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
                             composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
@@ -606,7 +606,7 @@ async def install_mcp_config(
                 except OSError as e:
                     await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
-        use_mcp_composer = is_oauth_project(project)
+        use_mcp_composer = should_use_mcp_composer(project)
 
         if use_mcp_composer:
             composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
@@ -620,7 +620,15 @@ async def install_mcp_config(
         auth_settings = get_settings_service().auth_settings
 
         # Generate a Langflow API key for auto-install if needed
-        if not auth_settings.AUTO_LOGIN and not use_mcp_composer:
+        # Only add API key headers for projects with "apikey" auth type (not "none" or OAuth)
+        project_auth_type = project.auth_settings.get("auth_type", "") if project.auth_settings else ""
+        needs_api_key = (
+            not auth_settings.AUTO_LOGIN 
+            and not use_mcp_composer 
+            and project_auth_type == "apikey"
+        )
+        
+        if needs_api_key:
             async with session_scope() as api_key_session:
                 api_key_create = ApiKeyCreate(name=f"MCP Server {project.name}")
                 api_key_response = await create_api_key(api_key_session, api_key_create, current_user.id)
@@ -770,7 +778,7 @@ async def get_project_composer_url(
     """Get the MCP Composer URL for a specific project."""
     try:
         project = await verify_project_access(project_id, current_user)
-        if not is_oauth_project(project):
+        if not should_use_mcp_composer(project):
             raise HTTPException(
                 status_code=400,
                 detail="MCP Composer is only available for projects with OAuth authentication",
@@ -1219,10 +1227,10 @@ async def verify_project_access(project_id: UUID, current_user: CurrentActiveMCP
         return project
 
 
-def is_oauth_project(project: Folder) -> bool:
-    """Check if project uses OAuth authentication."""
+def should_use_mcp_composer(project: Folder) -> bool:
+    """Check if project uses OAuth authentication and MCP Composer is enabled."""
     return (
-        FEATURE_FLAGS.mcp_composer
+        get_settings_service().settings.mcp_composer_enabled
         and project.auth_settings is not None
         and project.auth_settings.get("auth_type", "") == "oauth"
     )
