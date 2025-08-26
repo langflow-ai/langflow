@@ -13,6 +13,16 @@
 [![Discord Server](https://img.shields.io/discord/1116803230643527710?logo=discord&style=social&label=Join)](https://discord.gg/EqksyE2EX9)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/langflow-ai/langflow)
 
+<!-- Keep these links. Translations will automatically update with the README. -->
+[Deutsch](https://zdoc.app/de/langflow-ai/langflow) | 
+[Español](https://zdoc.app/es/langflow-ai/langflow) | 
+[français](https://zdoc.app/fr/langflow-ai/langflow) | 
+[日本語](https://zdoc.app/ja/langflow-ai/langflow) | 
+[한국어](https://zdoc.app/ko/langflow-ai/langflow) | 
+[Português](https://zdoc.app/pt/langflow-ai/langflow) | 
+[Русский](https://zdoc.app/ru/langflow-ai/langflow) | 
+[中文](https://zdoc.app/zh/langflow-ai/langflow)
+
 > [!CAUTION]
 > Users must update to Langflow >= 1.3 to protect against [CVE-2025-3248](https://nvd.nist.gov/vuln/detail/CVE-2025-3248).
 
