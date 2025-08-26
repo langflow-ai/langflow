@@ -196,19 +196,24 @@ For more Docling features, use the [**Docling** components](/integrations-doclin
 
 ### File output
 
-The output of the **File** component depends on the number and type of files loaded:
+The output of the **File** component depends on the number of files loaded and whether advanced parsing is enabled:
 
 - **No files**: Throws an error or, if **Silent Errors** is enabled, produces no output.
 
-- **One file**: Produces one of the following depending on the file type. If multiple types are available, you can select the output type by clicking the output field (near the component's output port).
-
-    - **Structured Content**: Available for some tabular and structured data.
-    For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
-    For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
+- **One file (Advanced parsing OFF)**:
+    - **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
+        - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
+        - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
     - **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
     - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
 
+- **One file (Advanced parsing ON)**:
+    - **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
+    - **Markdown**: A [`Message`](/data-types#message) containing the document exported to Markdown format with image placeholders.
+    - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
 - **Multiple files**: Produces a **Files** [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
+Advanced parsing is not available for multiple files.
 
 ## News Search
 
@@ -544,4 +549,5 @@ Replace these components with the **File** component, which supports loading CSV
 
 - [Google components](/bundles-google)
 - [Composio components](/integrations-composio)
+- [File management](/concepts-file-management)
 - [File management](/concepts-file-management)
