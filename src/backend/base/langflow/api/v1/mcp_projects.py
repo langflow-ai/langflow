@@ -12,7 +12,7 @@ from typing import Annotated, Any, cast
 from uuid import UUID
 
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -20,6 +20,7 @@ from mcp.server.sse import SseServerTransport
 from pydantic import SecretStr
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.mcp_utils import (
@@ -41,9 +42,11 @@ from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.utils import AUTO_LOGIN_WARNING
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
-from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
+from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, session_scope
 from langflow.services.mcp_composer.service import MCPComposerService
@@ -54,21 +57,31 @@ router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
 async def verify_project_auth(
+    db: AsyncSession,
     project_id: UUID,
-    query_param: str | None = None,
-    header_param: str | None = None,
+    query_param: str,
+    header_param: str,
 ) -> User:
-    """Custom authentication for MCP project endpoints when API key is required.
+    """MCP-specific user authentication that allows fallback to username lookup when not using API key auth.
 
-    This is only used when MCP composer is enabled and project requires API key auth.
+    This function provides authentication for MCP endpoints when using MCP Composer and no API key is provided,
+    or checks if the API key is valid.
     """
-    async with session_scope() as session:
-        # First, get the project to check its auth settings
-        project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
+    # MCP-specific authentication logic - always behaves as if skip_auth_auto_login is True
+    settings_service = get_settings_service()
+    result: ApiKey | User | None
 
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+    project = (await db.exec(select(Folder).where(Folder.id == project_id))).first()
 
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    auth_settings: AuthSettings | None = None
+    # Check if this project requires API key only authentication
+    if project.auth_settings:
+        auth_settings = AuthSettings(**project.auth_settings)
+
+    if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or auth_settings.auth_type == "apikey":
         # For MCP composer enabled, only use API key
         api_key = query_param or header_param
         if not api_key:
@@ -78,19 +91,35 @@ async def verify_project_auth(
             )
 
         # Validate the API key
-        user = await check_key(session, api_key)
+        user = await check_key(db, api_key)
         if not user:
             raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Verify user has access to the project
         project_access = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == user.id))
+            await db.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == user.id))
         ).first()
 
         if not project_access:
             raise HTTPException(status_code=403, detail="Access denied to this project")
 
         return user
+
+    # Get the first user
+    if not settings_service.auth_settings.SUPERUSER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing first superuser credentials",
+        )
+    # For MCP endpoints, always fall back to username lookup when no API key is provided
+    result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+    if result:
+        logger.warning(AUTO_LOGIN_WARNING)
+        return result
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid user",
+    )
 
 
 # Smart authentication dependency that chooses method based on project settings
@@ -110,16 +139,6 @@ async def verify_project_auth_conditional(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        # Check if this project requires API key only authentication
-        if FEATURE_FLAGS.mcp_composer and project.auth_settings:
-            auth_settings = AuthSettings(**project.auth_settings)
-            if auth_settings.auth_type == "apikey":
-                # For MCP composer projects with API key auth, use custom API key validation
-                api_key_header_value = request.headers.get("x-api-key")
-                api_key_query_value = request.query_params.get("x-api-key")
-                return await verify_project_auth(project_id, api_key_query_value, api_key_header_value)
-
-        # For all other cases, use standard MCP authentication (allows JWT + API keys)
         # Extract token
         token: str | None = None
         auth_header = request.headers.get("authorization")
@@ -130,6 +149,11 @@ async def verify_project_auth_conditional(
         api_key_query_value = request.query_params.get("x-api-key")
         api_key_header_value = request.headers.get("x-api-key")
 
+        # Check if this project requires API key only authentication
+        if FEATURE_FLAGS.mcp_composer:
+            return await verify_project_auth(session, project_id, api_key_query_value, api_key_header_value)
+
+        # For all other cases, use standard MCP authentication (allows JWT + API keys)
         # Call the MCP auth function directly
         from langflow.services.auth.utils import get_current_user_mcp
 
