@@ -72,13 +72,28 @@ class MCPComposerService(Service):
         """Stop all MCP Composer instances."""
         for project_id in list(self.project_composers.keys()):
             await self.stop_project_composer(project_id)
-        logger.info("All MCP Composer instances stopped")
+        logger.debug("All MCP Composer instances stopped")
 
     async def stop_project_composer(self, project_id: str):
         """Stop the MCP Composer instance for a specific project."""
         if project_id not in self.project_composers:
             return
 
+        # Use the same lock to ensure consistency
+        if project_id in self._start_locks:
+            async with self._start_locks[project_id]:
+                await self._do_stop_project_composer(project_id)
+                # Clean up the lock as well
+                del self._start_locks[project_id]
+        else:
+            # Fallback if no lock exists
+            await self._do_stop_project_composer(project_id)
+    
+    async def _do_stop_project_composer(self, project_id: str):
+        """Internal method to stop a project composer."""
+        if project_id not in self.project_composers:
+            return
+            
         composer_info = self.project_composers[project_id]
         process = composer_info.get("process")
 
@@ -86,17 +101,27 @@ class MCPComposerService(Service):
             try:
                 # Check if process is still running before trying to terminate
                 if process.poll() is None:
+                    logger.debug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
                     process.terminate()
-                    await asyncio.sleep(1)  # Give it time to shut down gracefully
-
-                    if process.poll() is None:
+                    
+                    # Wait longer for graceful shutdown
+                    try:
+                        await asyncio.wait_for(self._wait_for_process_exit(process), timeout=3.0)
+                        logger.debug(f"MCP Composer for project {project_id} terminated gracefully")
+                    except asyncio.TimeoutError:
                         logger.warning(
                             f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
                         )
                         process.kill()
-                        await asyncio.sleep(0.5)  # Brief pause after force kill
+                        # Wait a bit more for force kill to complete
+                        try:
+                            await asyncio.wait_for(self._wait_for_process_exit(process), timeout=2.0)
+                        except asyncio.TimeoutError:
+                            logger.error(f"Failed to kill MCP Composer process {process.pid} for project {project_id}")
+                else:
+                    logger.debug(f"MCP Composer process for project {project_id} was already terminated")
 
-                logger.info(f"MCP Composer stopped for project {project_id}")
+                logger.debug(f"MCP Composer stopped for project {project_id}")
 
             except ProcessLookupError:
                 # Process already terminated
@@ -106,6 +131,11 @@ class MCPComposerService(Service):
 
         # Remove from tracking
         del self.project_composers[project_id]
+        
+    async def _wait_for_process_exit(self, process):
+        """Wait for a process to exit by polling."""
+        while process.poll() is None:
+            await asyncio.sleep(0.1)
 
     async def start_project_composer(
         self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None
@@ -178,7 +208,7 @@ class MCPComposerService(Service):
                             try:
                                 # Try to find another available port
                                 project_port = self._find_available_port(project_port + 1)
-                                logger.info(f"Retrying with port {project_port} for project {project_id}")
+                                logger.debug(f"Retrying with port {project_port} for project {project_id}")
                                 continue
                             except RuntimeError:
                                 logger.error(f"Could not find alternative port for project {project_id}")
@@ -339,7 +369,8 @@ class MCPComposerService(Service):
             return None
         return self.project_composers[project_id]["port"]
 
-    def teardown(self):
+    async def teardown(self) -> None:
         """Clean up resources when the service is torn down."""
-        # TODO: FRAZ - never awaited ?
-        asyncio.run(self.stop())
+        logger.debug("Tearing down MCP Composer service...")
+        await self.stop()
+        logger.debug("MCP Composer service teardown complete")
