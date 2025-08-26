@@ -276,13 +276,7 @@ class MCPComposerService(Service):
         env = os.environ.copy()
 
         # Start the subprocess with stderr captured to PIPE, stdout to DEVNULL
-        process = subprocess.Popen(
-            cmd,
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+        process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
 
         # Give it a moment to start
         await asyncio.sleep(1)
@@ -297,14 +291,13 @@ class MCPComposerService(Service):
                 raise RuntimeError(f"MCP Composer failed to start for project {project_id}: {error_msg}")
             except subprocess.TimeoutExpired:
                 process.kill()
-                raise RuntimeError(
-                    f"MCP Composer for project {project_id} terminated but couldn't read error output"
-                )
+                raise RuntimeError(f"MCP Composer for project {project_id} terminated but couldn't read error output")
         else:
             # Process is running successfully
             logger.debug(f"MCP Composer started successfully for project {project_id}")
 
         return process
+
     def get_project_composer_port(self, project_id: str) -> int | None:
         """Get the port number for a specific project's composer."""
         if project_id not in self.project_composers:
