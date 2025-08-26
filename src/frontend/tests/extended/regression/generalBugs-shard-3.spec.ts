@@ -34,12 +34,8 @@ test(
     await page
       .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 400, y: 100 },
       });
-
-    await page
-      .getByTestId("input_outputChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
