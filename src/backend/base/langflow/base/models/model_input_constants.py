@@ -7,6 +7,7 @@ from langflow.components.azure.azure_openai import AzureChatOpenAIComponent
 from langflow.components.google.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.groq.groq import GroqModel
 from langflow.components.nvidia.nvidia import NVIDIAModelComponent
+from langflow.components.ollama.ollama import ChatOllamaComponent
 from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.sambanova.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
@@ -178,6 +179,17 @@ def _get_sambanova_inputs_and_fields():
     return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
 
 
+def _get_ollama_inputs_and_fields():
+    try:
+        from langflow.components.ollama.ollama import ChatOllamaComponent
+
+        ollama_inputs = get_filtered_inputs(ChatOllamaComponent)
+    except ImportError as e:
+        msg = "Ollama is not installed. Please install it with `pip install langchain-ollama`."
+        raise ImportError(msg) from e
+    return ollama_inputs, create_input_fields_dict(ollama_inputs, "")
+
+
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
@@ -281,6 +293,19 @@ try:
         "component_class": SambaNovaComponent(),
         "icon": SambaNovaComponent.icon,
         "is_active": False,
+    }
+except ImportError:
+    pass
+
+try:
+    ollama_inputs, ollama_fields = _get_ollama_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Ollama"] = {
+        "fields": ollama_fields,
+        "inputs": ollama_inputs,
+        "prefix": "",
+        "component_class": ChatOllamaComponent(),
+        "icon": ChatOllamaComponent.icon,
+        "is_active": True,
     }
 except ImportError:
     pass
