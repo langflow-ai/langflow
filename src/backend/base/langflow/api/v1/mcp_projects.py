@@ -622,12 +622,8 @@ async def install_mcp_config(
         # Generate a Langflow API key for auto-install if needed
         # Only add API key headers for projects with "apikey" auth type (not "none" or OAuth)
         project_auth_type = project.auth_settings.get("auth_type", "") if project.auth_settings else ""
-        needs_api_key = (
-            not auth_settings.AUTO_LOGIN 
-            and not use_mcp_composer 
-            and project_auth_type == "apikey"
-        )
-        
+        needs_api_key = not auth_settings.AUTO_LOGIN and not use_mcp_composer and project_auth_type == "apikey"
+
         if needs_api_key:
             async with session_scope() as api_key_session:
                 api_key_create = ApiKeyCreate(name=f"MCP Server {project.name}")

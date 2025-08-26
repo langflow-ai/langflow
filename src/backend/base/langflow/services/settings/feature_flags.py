@@ -1,5 +1,6 @@
-from langflow.services.deps import get_settings_service
 from pydantic_settings import BaseSettings
+
+from langflow.services.deps import get_settings_service
 
 
 class FeatureFlags(BaseSettings):
