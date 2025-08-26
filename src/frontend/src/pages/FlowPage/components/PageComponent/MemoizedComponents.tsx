@@ -1,9 +1,8 @@
 import { Background, Panel } from "@xyflow/react";
 import { memo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import CanvasControls, {
-  CustomControlButton,
-} from "@/components/core/canvasControlsComponent";
+import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
+import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
@@ -72,7 +71,7 @@ export const MemoizedSidebarTrigger = memo(() => {
         position="top-left"
       >
         {NAV_ITEMS.map((item) => (
-          <CustomControlButton
+          <CanvasControlButton
             data-testid={`sidebar-trigger-${item.id}`}
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
