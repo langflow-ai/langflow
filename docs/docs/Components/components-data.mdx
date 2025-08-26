@@ -175,13 +175,14 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 ### Advanced parsing
 
 In Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library.
-Advanced parsing can process a wide range of document types including PDFs, Office documents, images, and tabular data.
+Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files.
 
 When advanced parsing is enabled, the File component processes only the first file from the uploaded files and ignores any additional files.
 For processing multiple files with advanced parsing, use separate **File** components or use the dedicated [**Docling** components](/integrations-docling).
 
 The advanced parser option is automatically hidden when you select tabular data files, specifically `.csv`, `.xlsx`, and `.parquet`.
-These formats are better processed using standard parsing methods.
+Advanced parsing is designed for document processing, such as extracting text from PDFs, rather than structured data analysis.
+For structured data, use the [**Parser** component](/components-processing#parser).
 
 When you enable advanced parsing, you can configure the following advanced parsing parameters:
 
