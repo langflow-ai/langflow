@@ -76,6 +76,7 @@ async def create_project(
         # Set default auth settings based on AUTO_LOGIN configuration
         from langflow.services.auth.mcp_encryption import encrypt_auth_settings
         from langflow.services.deps import get_settings_service
+
         settings_service = get_settings_service()
 
         # If AUTO_LOGIN is false, automatically enable API key authentication
@@ -410,6 +411,7 @@ async def upload_file(
     # Set default auth settings based on AUTO_LOGIN configuration
     from langflow.services.auth.mcp_encryption import encrypt_auth_settings
     from langflow.services.deps import get_settings_service
+
     settings_service = get_settings_service()
 
     # If AUTO_LOGIN is false, automatically enable API key authentication

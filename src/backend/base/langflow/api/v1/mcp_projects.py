@@ -425,13 +425,13 @@ async def update_project_mcp_settings(
                         f"Auth settings changed to OAuth for project {project.name} ({project_id}), "
                         "starting MCP Composer"
                     )
+
                     async def _register_with_logging():
                         try:
                             await register_project_with_composer(project)
                         except Exception as e:  # noqa: BLE001
-                            await logger.awarning(
-                                f"Failed to start MCP Composer for project {project_id}: {e}"
-                            )
+                            await logger.awarning(f"Failed to start MCP Composer for project {project_id}: {e}")
+
                     asyncio.create_task(_register_with_logging())
 
                 elif should_stop_composer:
@@ -799,9 +799,7 @@ async def get_project_composer_url(
 
         # Check if this project uses OAuth and should have MCP Composer
         has_oauth = (
-            FEATURE_FLAGS.mcp_composer
-            and project.auth_settings
-            and project.auth_settings.get("auth_type") == "oauth"
+            FEATURE_FLAGS.mcp_composer and project.auth_settings and project.auth_settings.get("auth_type") == "oauth"
         )
         if not has_oauth:
             raise HTTPException(
