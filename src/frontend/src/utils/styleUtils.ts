@@ -211,6 +211,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
+  { display_name: "Knowledge Bases", name: "knowledge_bases", icon: "Package2" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
