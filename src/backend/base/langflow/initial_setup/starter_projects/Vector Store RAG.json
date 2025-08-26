@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-zueUA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zueUAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-oDuVT{œfieldNameœ:œquestionœ,œidœ:œPrompt-oDuVTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-zueUA",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zueUAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zueUAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-oDuVT",
-        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-oDuVTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-oDuVTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-parser-CbWBG{œdataTypeœ:œparserœ,œidœ:œparser-CbWBGœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-oDuVT{œfieldNameœ:œcontextœ,œidœ:œPrompt-oDuVTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-CbWBG",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-CbWBGœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-CbWBGœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-oDuVT",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-oDuVTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-oDuVTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -85,9 +85,9 @@
         "id": "reactflow__edge-File-PvlCh{œdataTypeœ:œFileœ,œidœ:œFile-PvlChœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-l3kJG{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-l3kJGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-PvlCh",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-PvlChœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-PvlChœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SplitText-l3kJG",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-l3kJGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-l3kJGœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-Prompt-oDuVT{œdataTypeœ:œPromptœ,œidœ:œPrompt-oDuVTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-9vLb9{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-9vLb9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-oDuVT",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-oDuVTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-oDuVTœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-9vLb9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-9vLb9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-9vLb9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -143,9 +143,9 @@
         "id": "reactflow__edge-LanguageModelComponent-9vLb9{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-9vLb9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-NH6u1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NH6u1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-9vLb9",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-9vLb9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-9vLb9œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-NH6u1",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NH6u1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NH6u1œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -172,9 +172,9 @@
         "id": "xy-edge__SplitText-l3kJG{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-l3kJGœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-s5fQW{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-s5fQWœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-l3kJG",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-l3kJGœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-l3kJGœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "AstraDB-s5fQW",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-s5fQWœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-s5fQWœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -198,9 +198,9 @@
         },
         "id": "xy-edge__ChatInput-zueUA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zueUAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-WAq6g{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-WAq6gœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "source": "ChatInput-zueUA",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zueUAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zueUAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-WAq6g",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-WAq6gœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-WAq6gœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "className": "",
@@ -225,9 +225,9 @@
         },
         "id": "xy-edge__AstraDB-WAq6g{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-WAq6gœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-parser-CbWBG{œfieldNameœ:œinput_dataœ,œidœ:œparser-CbWBGœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "source": "AstraDB-WAq6g",
-        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-WAq6gœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-WAq6gœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-CbWBG",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-CbWBGœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-CbWBGœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -3326,8 +3326,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -3342,8 +3340,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -3359,8 +3355,6 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -4138,8 +4132,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -4154,8 +4146,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -4171,8 +4161,6 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
