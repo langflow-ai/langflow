@@ -289,12 +289,15 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
-    def _process_docling_in_subprocess(self, file_path: str) -> Data:
+    def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
         passing JSON config via stdin. The child prints a JSON result to stdout.
         """
+        if not file_path:
+            return None
+
         args: dict[str, Any] = {
             "file_path": file_path,
             "markdown": bool(self.markdown),
@@ -537,7 +540,7 @@ class FileComponent(BaseFileComponent):
         if len(file_list) == 1:
             file_path = str(file_list[0].path)
             if self.advanced_mode and self._is_docling_compatible(file_path):
-                advanced_data = self._process_docling_in_subprocess(file_path)
+                advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
 
                 # --- UNNEST: expand each element in `doc` to its own Data row
                 payload = getattr(advanced_data, "data", {}) or {}
