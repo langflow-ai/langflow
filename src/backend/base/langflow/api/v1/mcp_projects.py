@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Any, cast, Annotated
+from typing import Annotated, Any, cast
 from uuid import UUID
 
 from anyio import BrokenResourceError
@@ -46,9 +46,9 @@ from langflow.services.database.models.api_key.crud import check_key, create_api
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, session_scope
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.schema import ServiceType
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -229,7 +229,6 @@ async def list_project_tools(
             # Get project-level auth settings and decrypt sensitive fields
             auth_settings = None
             if project.auth_settings:
-
                 # Decrypt sensitive fields before returning
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
                 auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else None
@@ -604,7 +603,6 @@ async def install_mcp_config(
             "command": command,
             "args": args,
         }
-
 
         mcp_config = {
             "mcpServers": {f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": server_config}

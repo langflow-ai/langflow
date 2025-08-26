@@ -324,7 +324,6 @@ class MCPComposerService(Service):
             process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
             return process
 
-
     def get_project_composer_port(self, project_id: str) -> int | None:
         """Get the port number for a specific project's composer."""
         if project_id not in self.project_composers:
