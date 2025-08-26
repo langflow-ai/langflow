@@ -1,0 +1,181 @@
+---
+title: "TrueFoundry"
+---
+
+This guide provides instructions for integrating Langflow with [Truefoundry AI Gateway](https://www.truefoundry.com/ai-gateway).
+
+TrueFoundry provides an enterprise-ready [AI Gateway](https://www.truefoundry.com/ai-gateway) and integrates seamlessly with frameworks like langflow, providing enterprise-grade AI features including cost tracking, access controls, rate limits, load balancing and fallback strategies
+
+TrueFoundry's AI Gateway routes all LLM calls through the Gateway to ensure your AI applications are secure, compliant, and cost-effective.
+
+## Prerequisites
+
+Before integrating Langflow with TrueFoundry, ensure you have:
+
+1. **TrueFoundry Account**: Create a [Truefoundry account](https://www.truefoundry.com/register) and follow our quick setup guide, see [Gateway Quick Start](https://docs.truefoundry.com/gateway/quick-start)
+2. **Langflow Installation**: Install Langflow using either the [Python package](https://github.com/langflow-ai/langflow) or [Docker deployment](https://docs.langflow.org/getting-started-installation)
+3. **Load Balance Configuration**: Setup load balancing configuration for your desired models (see Setup Process section below)
+
+## Why Load Balancing Configuration is Necessary
+
+Langflow works optimally with standard OpenAI model names (like `gpt-4`, `gpt-4o-mini`), but may experience compatibility issues with Truefoundry's fully qualified model names (like `openai-main/gpt-4` or `azure-openai/gpt-4`).
+
+When Langflow encounters these fully qualified model names directly, it may not function as expected due to internal processing differences.
+
+**The Solution**: Load balancing configuration allows you to:
+
+1. Use standard model names in your Langflow configurations (e.g., `gpt-4`)
+2. Have Truefoundry Gateway automatically route the request to the fully qualified target model (e.g., `openai-main/gpt-4`)
+
+This approach ensures seamless compatibility while still allowing you to access any model through the Truefoundry Gateway.
+
+## Setup Process
+
+### 1. Generate Your TrueFoundry Access Token
+
+Navigate to your TrueFoundry dashboard and generate a Personal Access Token:
+
+<Frame>
+  <img
+    src="/images/create PAT.png"
+    alt="TrueFoundry dashboard showing Personal Access Token creation interface"
+  />
+</Frame>
+
+### 2. Setup Load Balance Configuration
+
+Create a load balancing configuration to route your requests to specific model providers:
+
+```yaml
+name: langflow-loadbalancing-config
+type: gateway-load-balancing-config
+rules:
+  - id: langflow-load-balancing
+    type: weight-based-routing
+    when:
+      models:
+        - gpt-4o
+    load_balance_targets:
+      - target: openai-main/gpt-4o
+        weight: 100
+```
+
+This configuration ensures that when you request standard model names through Langflow, your requests will be routed to the appropriate models via the Truefoundry Gateway.
+
+### 3. Configure Langflow Language Model Component
+
+In your Langflow interface, configure the Language Model component with TrueFoundry Gateway settings:
+
+<Frame>
+  <img
+    src="/images/langflow-1.png"
+    alt="Langflow interface showing Language Model component configuration panel"
+  />
+</Frame>
+
+1. **Model Provider**: Select "OpenAI" from the dropdown
+2. **Model Name**: Use the standard model name from your load balancing configuration (e.g., `gpt-4o-mini`)
+3. **OpenAI API Key**: Enter your TrueFoundry Personal Access Token
+4. **OpenAI API Base**: Set to `https://{controlPlaneUrl}/api/llm/api/inference/openai`
+
+<Frame>
+  <img
+    src="/images/unified-code-tfy.png"
+    alt="TrueFoundry playground showing unified code snippet with base URL and model name for Langflow integration"
+  />
+</Frame>
+
+<Frame>
+  <img
+    src="/images/langflow-2.png"
+    alt="Langflow OpenAI component configuration with TrueFoundry API settings"
+  />
+</Frame>
+
+Replace `{controlPlaneUrl}` with your actual Truefoundry control plane URL.
+
+### 4. Advanced Configuration in Agent Settings
+
+For more advanced flows using agents, configure the agent component with TrueFoundry settings:
+
+
+
+Ensure the following settings are configured:
+- **Model Name**: Use the load-balanced model name (e.g., `gpt-4`)
+- **OpenAI API Base**: `https://{controlPlaneUrl}/api/llm/api/inference/openai`
+- **OpenAI API Key**: Your TrueFoundry Personal Access Token
+
+## Usage Examples
+
+### Basic Chat Flow
+
+Create a simple chat flow using the configured Language Model:
+
+<Frame>
+  <img
+    src="/images/langflow-3.png"
+    alt="Langflow canvas showing a basic chat flow with Chat Input, OpenAI model, and Chat Output components connected"
+  />
+</Frame>
+
+1. Drag and drop a "Chat Input" component
+2. Connect it to your configured "OpenAI" Language Model component
+3. Connect the output to a "Chat Output" component
+4. Run the flow to test the integration
+
+### Multi-Agent RAG Application
+
+For more complex applications involving RAG and multiple agents:
+
+```python
+# Example of using Langflow with TrueFoundry Gateway programmatically
+from langflow import load_flow_from_json
+
+# Load your flow configuration
+flow = load_flow_from_json("path/to/your/flow.json")
+
+# The flow will automatically use the configured TrueFoundry Gateway
+# for all OpenAI model calls
+result = flow.run(
+    input_value="What is the capital of Brazil?",
+    tweaks={
+        "OpenAI-model_name": "gpt-4",  # This will be load-balanced
+        "OpenAI-openai_api_base": "https://{controlPlaneUrl}/api/llm/api/inference/openai",
+        "OpenAI-openai_api_key": "your-truefoundry-api-key"
+    }
+)
+```
+
+### Environment Variables Configuration
+
+Alternatively, you can set environment variables for easier configuration across multiple flows:
+
+```bash
+export OPENAI_API_KEY="your-truefoundry-api-key"
+export OPENAI_API_BASE="https://{controlPlaneUrl}/api/llm/api/inference/openai"
+```
+
+## Understanding Load Balancing
+
+When you use Langflow with standard model names like `gpt-4`, your requests get load-balanced according to your configuration. In the example configuration above, any request to `gpt-4` will be routed to `openai-main/gpt-4` with 100% of the traffic.
+
+You can create more sophisticated routing rules with multiple targets and different weights:
+
+```yaml
+load_balance_targets:
+  - target: openai-main/gpt-4
+    weight: 70
+  - target: azure-openai/gpt-4
+    weight: 30
+```
+
+With this configuration, approximately 70% of your requests would go to OpenAI's GPT-4 model, and 30% would go to Azure OpenAI GPT-4 model.
+
+## Benefits of Using TrueFoundry Gateway with Langflow
+
+1. **Cost Tracking**: Monitor and track costs across all your Langflow applications
+2. **Security**: Enhanced security with centralized API key management
+3. **Access Controls**: Implement fine-grained access controls for different teams
+4. **Rate Limiting**: Prevent API quota exhaustion with intelligent rate limiting
+5. **Fallback Support**: Automatic failover to alternative providers when needed
+6. **Analytics**: Detailed analytics and monitoring for all LLM calls

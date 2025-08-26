@@ -146,6 +146,13 @@ module.exports = {
           ],
         },
         {
+          type: "category",
+          label: "AI Gateway",
+          items: [
+            "Develop/AI Gateway/truefoundry",
+          ],
+        },
+        {
           type: "doc",
           id: "Concepts/data-types",
           label: "Use Langflow data types"
