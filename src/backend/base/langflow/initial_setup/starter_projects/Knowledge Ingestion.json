@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URLComponent",
-            "id": "URLComponent-gIu1h",
+            "id": "URLComponent-WBxJx",
             "name": "page_results",
             "output_types": [
               "DataFrame"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-9BS47",
+            "id": "SplitText-edq28",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,19 +24,19 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URLComponent-gIu1h{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-gIu1hœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-9BS47{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-9BS47œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URLComponent-WBxJx{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-WBxJxœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-edq28{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-edq28œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URLComponent-gIu1h",
-        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-gIu1hœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "SplitText-9BS47",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-9BS47œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "URLComponent-WBxJx",
+        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-WBxJxœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "SplitText-edq28",
+        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-edq28œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-9BS47",
+            "id": "SplitText-edq28",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "input_df",
-            "id": "KnowledgeIngestion-Hnwnk",
+            "id": "KnowledgeIngestion-uSOy6",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -52,17 +52,17 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__SplitText-9BS47{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-9BS47œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KnowledgeIngestion-Hnwnk{œfieldNameœ:œinput_dfœ,œidœ:œKnowledgeIngestion-Hnwnkœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "source": "SplitText-9BS47",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-9BS47œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "KnowledgeIngestion-Hnwnk",
-        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKnowledgeIngestion-Hnwnkœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__SplitText-edq28{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-edq28œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KnowledgeIngestion-uSOy6{œfieldNameœ:œinput_dfœ,œidœ:œKnowledgeIngestion-uSOy6œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "source": "SplitText-edq28",
+        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-edq28œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "KnowledgeIngestion-uSOy6",
+        "targetHandle": "{œfieldNameœ:œinput_dfœ,œidœ:œKnowledgeIngestion-uSOy6œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "SplitText-9BS47",
+          "id": "SplitText-edq28",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -279,7 +279,7 @@
           "type": "SplitText"
         },
         "dragging": false,
-        "id": "SplitText-9BS47",
+        "id": "SplitText-edq28",
         "measured": {
           "height": 413,
           "width": 320
@@ -293,7 +293,7 @@
       },
       {
         "data": {
-          "id": "note-tlZf1",
+          "id": "note-httIY",
           "node": {
             "description": "## Knowledge Ingestion\n\nThis flow shows the basics of the creation and ingestion of knowledge bases in Langflow. Here we use the `URL` component to dynamically fetch page data from the Langflow website, split it into chunks of 100 tokens, then ingest into a Knowledge Base.\n\n1. (Optional) Change the URL or switch to a different input data source as desired.\n2. (Optional) Adjust the Chunk Size as desired.\n3. Select or Create a new knowledge base.\n4. Ensure the column you wish to Vectorize is properly reflected in the Column Configuration table.",
             "display_name": "",
@@ -304,7 +304,7 @@
         },
         "dragging": false,
         "height": 401,
-        "id": "note-tlZf1",
+        "id": "note-httIY",
         "measured": {
           "height": 401,
           "width": 388
@@ -320,7 +320,7 @@
       },
       {
         "data": {
-          "id": "URLComponent-gIu1h",
+          "id": "URLComponent-WBxJx",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -696,7 +696,7 @@
           "type": "URLComponent"
         },
         "dragging": false,
-        "id": "URLComponent-gIu1h",
+        "id": "URLComponent-WBxJx",
         "measured": {
           "height": 292,
           "width": 320
@@ -710,7 +710,7 @@
       },
       {
         "data": {
-          "id": "KnowledgeIngestion-Hnwnk",
+          "id": "KnowledgeIngestion-uSOy6",
           "node": {
             "base_classes": [
               "Data"
@@ -732,7 +732,7 @@
             ],
             "frozen": false,
             "icon": "upload",
-            "last_updated": "2025-08-26T16:18:17.194Z",
+            "last_updated": "2025-08-26T18:21:03.358Z",
             "legacy": false,
             "metadata": {
               "code_hash": "ce9549373934",
@@ -785,6 +785,8 @@
                 "group_outputs": false,
                 "method": "build_kb_info",
                 "name": "dataframe_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1093,28 +1095,28 @@
           "type": "KnowledgeIngestion"
         },
         "dragging": false,
-        "id": "KnowledgeIngestion-Hnwnk",
+        "id": "KnowledgeIngestion-uSOy6",
         "measured": {
           "height": 333,
           "width": 320
         },
         "position": {
-          "x": 1009.8616198503121,
-          "y": 106.45420057043017
+          "x": 1001.4259863865477,
+          "y": 110.75185048793182
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 7.17998883543396,
-      "y": 146.55882015689724,
-      "zoom": 0.9435154207621032
+      "x": 283.8838616133703,
+      "y": 160.13925386069144,
+      "zoom": 0.937778878472336
     }
   },
   "description": "An example of creating a Knowledge Base and ingesting data into it from a web URL.",
   "endpoint_name": null,
-  "id": "cac07026-264c-4d8b-ac4d-0d6de0679ba4",
+  "id": "fd03902d-38ec-4bc5-ac00-c308bbcca359",
   "is_component": false,
   "last_tested_version": "1.5.0.post2",
   "name": "Knowledge Ingestion",
