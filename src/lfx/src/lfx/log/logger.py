@@ -211,14 +211,18 @@ def configure(
     cache: bool | None = None,
 ) -> None:
     """Configure the logger."""
-    # If is_configured AND the numeric_level set in the wrapper_class is the same as the log_level
-    cfg = structlog.get_config()
-    wrapper_class = cfg["wrapper_class"]
-    wrapper_class_name = wrapper_class.__name__ if wrapper_class else "None"
+    # Early-exit only if structlog is configured AND current min level matches the requested one.
+    # Be defensive: get_config() may not contain 'wrapper_class' yet.
+    cfg = structlog.get_config() if structlog.is_configured() else {}
+    wrapper_class = cfg.get("wrapper_class")
+    current_min_level = getattr(wrapper_class, "min_level", None)
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
 
-    if structlog.is_configured() and (log_level and log_level.lower() in wrapper_class_name.lower()):
+    requested_min_level = LOG_LEVEL_MAP.get(
+        (log_level or os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")).upper(), logging.ERROR
+    )
+    if current_min_level == requested_min_level:
         return
 
     if log_level is None:
@@ -269,10 +273,14 @@ def configure(
     # Get numeric log level
     numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
 
+    # Create wrapper class and attach the min level for later comparison
+    wrapper_class = structlog.make_filtering_bound_logger(numeric_level)
+    wrapper_class.min_level = numeric_level
+
     # Configure structlog
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(numeric_level),
+        wrapper_class=wrapper_class,
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout)
         if not log_file
