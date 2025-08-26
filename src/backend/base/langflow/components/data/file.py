@@ -553,7 +553,8 @@ class FileComponent(BaseFileComponent):
                                 **(item if isinstance(item, dict) else {"value": item}),
                             },
                         )
-                        for item in doc_rows if item
+                        for item in doc_rows
+                        if item
                     ]
                     return self.rollup_data(file_list, rows)
 
