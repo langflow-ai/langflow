@@ -212,7 +212,6 @@ def configure(
 ) -> None:
     """Configure the logger."""
     # Early-exit only if structlog is configured AND current min level matches the requested one.
-    # Be defensive: get_config() may not contain 'wrapper_class' yet.
     cfg = structlog.get_config() if structlog.is_configured() else {}
     wrapper_class = cfg.get("wrapper_class")
     current_min_level = getattr(wrapper_class, "min_level", None)
