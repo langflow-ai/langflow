@@ -15,7 +15,10 @@ async function getProjectComposerUrl(
   return response.data;
 }
 
-export function useGetProjectComposerUrl(projectId: string, enabled: boolean = true) {
+export function useGetProjectComposerUrl(
+  projectId: string,
+  enabled: boolean = true,
+) {
   return useQuery({
     queryKey: ["project-composer-url", projectId],
     queryFn: () => getProjectComposerUrl(projectId),

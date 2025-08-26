@@ -47,7 +47,10 @@ export const usePatchFlowsMCP: useMutationFunctionType<
   > = mutate(["usePatchFlowsMCP"], patchFlowMCP, {
     onSuccess: (data, variables, context) => {
       // Update the auth settings cache immediately to prevent race conditions
-      const currentMCPData = queryClient.getQueryData(["useGetFlowsMCP", params.project_id]);
+      const currentMCPData = queryClient.getQueryData([
+        "useGetFlowsMCP",
+        params.project_id,
+      ]);
       if (currentMCPData && variables.auth_settings) {
         queryClient.setQueryData(["useGetFlowsMCP", params.project_id], {
           ...currentMCPData,
