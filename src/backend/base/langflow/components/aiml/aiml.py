@@ -64,9 +64,7 @@ class AIMLModelComponent(LCModelComponent):
     ]
 
     @override
-    def update_build_config(
-        self, build_config: dict, field_value: str, field_name: str | None = None
-    ):
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name in {"api_key", "aiml_api_base", "model_name"}:
             aiml = AimlModels()
             aiml.get_aiml_models()
@@ -81,11 +79,7 @@ class AIMLModelComponent(LCModelComponent):
         model_kwargs = self.model_kwargs or {}
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
 
-        openai_api_key = (
-            aiml_api_key.get_secret_value()
-            if isinstance(aiml_api_key, SecretStr)
-            else aiml_api_key
-        )
+        openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
 
         # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
         # to work correctly with o1 temperature settings.
