@@ -424,7 +424,7 @@ async def run_flow_for_openai_responses(
     )
 
 
-@router.post("/responses")
+@router.post("/responses", response_model=None)
 async def create_response(
     request: OpenAIResponsesRequest,
     background_tasks: BackgroundTasks,
