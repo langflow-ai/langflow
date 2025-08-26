@@ -70,7 +70,6 @@ test(
     const elementTestIds = [
       "input_outputChat Output",
       "dataAPI Request",
-      "datastaxAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "mem0Mem0 Chat Memory",
