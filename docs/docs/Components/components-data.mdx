@@ -170,6 +170,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (true), files with unsupported extensions are accepted but not processed. If disabled (false), the **File** component either can throw an error if an unsupported file type is provided. The default is true. |
 | ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
+| markdown | Markdown Export | Input parameter. Export processed documents to Markdown format. Only available when advanced mode is enabled. Default is false. |
 
 ### Advanced parsing
 
@@ -186,9 +187,9 @@ When you enable advanced parsing, you can configure the following advanced parsi
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| pipeline | Pipeline | Input parameter. Which Docling pipeline to use. Docling chooses the pipeline based on the source document type. Options: `standard`, `vlm`. Default: `standard`. |
-| ocr_engine | OCR Engine | Input parameter. Which OCR parser to use. The default is [EasyOCR](https://pypi.org/project/easyocr/). Options: `easyocr`, `tesserocr`, `rapidocr`, `ocrmac`. |
-| doc_key | Document Key | Input parameter. The key to use for the DoclingDocument column, which holds the structured information extracted from the source document. Default: `doc`. |
+| pipeline | Pipeline | Input parameter. Which Docling pipeline to use. Docling chooses the pipeline based on the source document type. Options: `standard`, `vlm`. Default: `standard`. See [Adjust pipeline features](https://docling-project.github.io/docling/usage/advanced_options/#adjust-pipeline-features) for details. |
+| ocr_engine | OCR Engine | Input parameter. Which OCR parser to use. [EasyOCR](https://pypi.org/project/easyocr/) is the supported OCR engine. For additional OCR engines, use the dedicated [**Docling** components](/integrations-docling). |
+| doc_key | Document Key | Input parameter. The key to use for the DoclingDocument column, which holds the structured information extracted from the source document. Default: `doc`. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. |
 | md_image_placeholder | Markdown Image Placeholder | Input parameter. Defines the placeholder for image files in the output Markdown document. |
 | md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter. Defines the placeholder for page breaks in the output Markdown document. |
 
