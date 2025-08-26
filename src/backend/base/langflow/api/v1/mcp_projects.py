@@ -414,8 +414,13 @@ async def update_project_mcp_settings(
                     elif current_auth_type == "oauth" and new_auth_type != "oauth":
                         should_handle_mcp_composer = True
                         should_stop_composer = True
+                    elif current_auth_type == "oauth" and new_auth_type == "oauth":
+                        # Both are OAuth - always trigger a restart check to see if 
+                        # any auth values have changed.
+                        # There are more efficient ways to do this, but this is simple, for now
+                        should_handle_mcp_composer = True
+                        should_start_composer = True
 
-                    # Encrypt and store
                     encrypted_settings = encrypt_auth_settings(auth_dict)
                     project.auth_settings = encrypted_settings
 
@@ -440,8 +445,6 @@ async def update_project_mcp_settings(
                     updated_flows.append(flow)
 
             await session.commit()
-
-            # Handle MCP Composer based on auth changes
 
             response: dict[str, Any] = {
                 "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"
@@ -595,7 +598,7 @@ async def install_mcp_config(
         if not host or not port:
             raise HTTPException(status_code=500, detail="Host and port are not set in settings")
 
-        sse_url = f"http://{host}:{port}/api/v1/mcp/project/{project_id}/sse"
+        sse_url = await get_project_sse_url(project_id)
 
         # Determine command and args based on operating system
         os_type = platform.system()
@@ -1169,7 +1172,7 @@ async def register_project_with_composer(project: Folder):
         if not settings.host or not settings.port:
             raise ValueError("Langflow host and port must be set in settings to register project with MCP Composer")
 
-        sse_url = f"http://{settings.host}:{settings.port}/api/v1/mcp/project/{project.id}/sse"
+        sse_url = await get_project_sse_url(project.id)
 
         # Prepare auth config if project has auth settings
         auth_config = None
@@ -1259,23 +1262,39 @@ def should_use_mcp_composer(project: Folder) -> bool:
 
 
 async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[str, str]:
-    """Get MCP Composer port or start it if not running."""
+    """Get MCP Composer port or start it if not running, restarting if config changed."""
     mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
-    composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-
-    if not composer_port:
-        await logger.adebug(f"Starting MCP Composer for project {project.name} ({project_id})")
-        await register_project_with_composer(project)
-
-        composer_port = mcp_composer_service.get_project_composer_port(str(project_id))
-        if not composer_port:
-            error = f"Failed to start MCP Composer for project {project_id}"
-            raise HTTPException(status_code=500, detail=error)
-
+    
+    # Prepare current auth config for comparison
     settings = get_settings_service().settings
+    if not settings.host or not settings.port:
+        raise ValueError("Langflow host and port must be set in settings to register project with MCP Composer")
+
     composer_host = settings.mcp_composer_host or None
     if not composer_host:
         error = f"Composer host is not set in settings for project {project_id}"
         raise HTTPException(status_code=500, detail=error)
+
+    sse_url = await get_project_sse_url(project_id)
+    
+    auth_config = None
+    if project.auth_settings:
+        decrypted_settings = decrypt_auth_settings(project.auth_settings)
+        if decrypted_settings:
+            auth_config = decrypted_settings
+    
+    # Check if composer is running and if config has changed
+    composer_port = await mcp_composer_service.ensure_composer_updated(str(project_id), sse_url, auth_config)
+
+    if not composer_port:
+        # Composer not running, start it
+        await logger.adebug(f"Starting MCP Composer for project {project.name} ({project_id})")
+        composer_port = await mcp_composer_service.start_project_composer(
+            project_id=str(project.id), sse_url=sse_url, auth_config=auth_config
+        )
+        
+        if not composer_port:
+            error = f"Failed to start MCP Composer for project {project_id}"
+            raise HTTPException(status_code=500, detail=error)
 
     return (composer_host, str(composer_port))

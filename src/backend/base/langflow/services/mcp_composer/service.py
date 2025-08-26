@@ -138,48 +138,42 @@ class MCPComposerService(Service):
             await asyncio.sleep(0.1)
     
     def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
-        """Check if auth configuration has changed in a way that requires restart.
-        
-        Args:
-            existing_auth: Current auth configuration
-            new_auth: New auth configuration to compare
-            
-        Returns:
-            bool: True if auth config has changed and requires restart
-        """
-        # If both are None or empty, no change
+        """Check if auth configuration has changed in a way that requires restart."""
+        # Handle None/empty cases
         if not existing_auth and not new_auth:
             return False
-        
-        # If one is None/empty and the other isn't, it changed
         if bool(existing_auth) != bool(new_auth):
             return True
         
-        if existing_auth.get("auth_type") != new_auth.get("auth_type"):
+        auth_type = new_auth.get("auth_type", "")
+        
+        # Auth type changed?
+        if existing_auth.get("auth_type") != auth_type:
+            logger.debug(f"Auth type changed: '{existing_auth.get('auth_type')}' -> '{auth_type}'")
             return True
         
-        # For OAuth, compare all OAuth-related fields
-        if existing_auth.get("auth_type") == "oauth" and new_auth.get("auth_type") == "oauth":
-            # TODO: should probably find a better way than hardcoding the fields
-            oauth_fields = [
-                "oauth_host", "oauth_port", "oauth_server_url", "oauth_callback_path",
-                "oauth_client_id", "oauth_client_secret", "oauth_auth_url", 
-                "oauth_token_url", "oauth_mcp_scope", "oauth_provider_scope"
-            ]
+        # Define which fields to check for each auth type
+        fields_to_check = []
+        if auth_type == "oauth":
+            # Get all oauth_* fields plus host/port from both configs
+            all_keys = set(existing_auth.keys()) | set(new_auth.keys())
+            fields_to_check = [k for k in all_keys if k.startswith("oauth_") or k in ["host", "port"]]
+        elif auth_type == "apikey":
+            fields_to_check = ["api_key"]
+        
+        # Compare relevant fields
+        for field in fields_to_check:
+            old_val = existing_auth.get(field)
+            new_val = new_auth.get(field)
             
-            for field in oauth_fields:
-                # Convert to string for comparison to handle None vs empty string
-                existing_value = str(existing_auth.get(field, ""))
-                new_value = str(new_auth.get(field, ""))
-                if existing_value != new_value:
-                    logger.debug(f"OAuth field '{field}' changed: '{existing_value}' -> '{new_value}'")
-                    return True
-        
-        # For API key auth, compare the key
-        if existing_auth.get("auth_type") == "apikey" and new_auth.get("auth_type") == "apikey":
-            if existing_auth.get("api_key") != new_auth.get("api_key"):
+            # Convert None and empty string to None for comparison
+            old_normalized = None if (old_val is None or old_val == "") else old_val
+            new_normalized = None if (new_val is None or new_val == "") else new_val
+            
+            if old_normalized != new_normalized:
+                logger.debug(f"OAuth field '{field}' changed: '{old_val}' -> '{new_val}'")
                 return True
-        
+            
         return False
 
     async def start_project_composer(
@@ -210,6 +204,7 @@ class MCPComposerService(Service):
                     logger.info(f"OAuth settings changed for project {project_id}, restarting MCP Composer on port {existing_port}")
                     # Stop the existing composer but keep the port preference
                     await self._do_stop_project_composer(project_id)
+                    # Will continue below to restart with new auth config
                 elif process and process.poll() is None:
                     logger.debug(f"MCP Composer already running for project {project_id} with unchanged settings")
                     return composer_info["port"]
@@ -363,6 +358,9 @@ class MCPComposerService(Service):
                 raise RuntimeError(f"MCP Composer for project {project_id} terminated but couldn't read error output")
         else:
             # Process is running successfully
+            # Close the stderr pipe to prevent resource leak since we're not reading from it
+            if process.stderr:
+                process.stderr.close()
             logger.debug(f"MCP Composer started successfully for project {project_id}")
 
         return process
@@ -372,6 +370,27 @@ class MCPComposerService(Service):
         if project_id not in self.project_composers:
             return None
         return self.project_composers[project_id]["port"]
+    
+    async def ensure_composer_updated(self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None) -> int | None:
+        """Check if composer needs restart due to config changes and restart if needed.
+        
+        Returns:
+            int: The port number if composer is running (after any necessary restart)
+            None: If composer is not running
+        """
+        if project_id not in self.project_composers:
+            return None
+            
+        composer_info = self.project_composers[project_id]
+        existing_auth = composer_info.get("auth_config", {})
+        
+        # Check if auth config has changed
+        if self._has_auth_config_changed(existing_auth, auth_config):
+            logger.info(f"Auth config changed for project {project_id}, triggering restart")
+            return await self.start_project_composer(project_id, sse_url, auth_config)
+        
+        # No changes, just return the current port
+        return composer_info["port"]
 
     async def teardown(self) -> None:
         """Clean up resources when the service is torn down."""
