@@ -28,12 +28,7 @@ class Tweaks(RootModel):
                     "parameter_name": "value",
                     "Component Name": {"parameter_name": "value"},
                     "component_id": {"parameter_name": "value"},
-                    "upload_files": [
-            			{
-            				"file_id": "252991ae3dc74347a96a3494f943e374",
-            				"file_name": "knowledges.txt"
-            			}
-            		]
+                    "upload_files": [{"file_id": "252991ae3dc74347a96a3494f943e374", "file_name": "knowledges.txt"}],
                 }
             ]
         }
