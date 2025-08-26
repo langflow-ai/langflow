@@ -26,8 +26,10 @@ test(
           .getByTestId("add-component-button-duckduckgo-search")
           .click();
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("popover-anchor-input-input_value")
