@@ -2,11 +2,11 @@ import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pandas as pd
 import pytest
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -62,7 +62,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self, tmp_path, mock_user_id):
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
-        data_df = pd.DataFrame(
+        data_df = DataFrame(
             {"text": ["Sample text 1", "Sample text 2"], "title": ["Title 1", "Title 2"], "category": ["cat1", "cat2"]}
         )
 
