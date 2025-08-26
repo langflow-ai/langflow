@@ -9,7 +9,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
@@ -18,6 +18,7 @@ from loguru import logger
 
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from langflow.components.processing.converter import convert_to_dataframe
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
@@ -26,6 +27,9 @@ from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_variable_service, session_scope
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
@@ -112,7 +116,6 @@ class KnowledgeIngestionComponent(Component):
                 "Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically."
             ),
             input_types=["Data", "DataFrame"],
-            is_list=True,
             required=True,
         ),
         TableInput(
@@ -177,7 +180,7 @@ class KnowledgeIngestionComponent(Component):
     ]
 
     # ------ Outputs -------------------------------------------------------
-    outputs = [Output(display_name="DataFrame", name="dataframe", method="build_kb_info")]
+    outputs = [Output(display_name="Results", name="dataframe_output", method="build_kb_info")]
 
     # ------ Internal helpers ---------------------------------------------
     def _get_kb_root(self) -> Path:
@@ -509,15 +512,8 @@ class KnowledgeIngestionComponent(Component):
     async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
         try:
-            # Get source DataFrame
-            df_source: pd.DataFrame = pd.DataFrame()
-            if isinstance(self.input_df, Data):
-                df_source = self.input_df.to_dataframe()
-            elif isinstance(self.input_df, list) and all(isinstance(item, Data) for item in self.input_df):
-                # If input_df is a list of Data objects, concatenate them into a single DataFrame
-                df_source = pd.concat([item.to_dataframe() for item in self.input_df], ignore_index=True)
-            else:
-                df_source = self.input_df
+            input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
+            df_source: DataFrame = convert_to_dataframe(input_value)
 
             # Validate column configuration (using Structured Output patterns)
             config_list = self._validate_column_config(df_source)
