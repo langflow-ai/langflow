@@ -20,11 +20,12 @@ If an environment variable is set in multiple places, the following hierarchy ap
 2. The `.env` file overrides system environment variables.
 3. System environment variables are used only if not set elsewhere.
 
+    When running a Langflow Docker image, the `-e` flag sets system environment variables.
+
 For example:
 - If you set `LANGFLOW_PORT=8080` in your system environment and `LANGFLOW_PORT=7860` in `.env`, Langflow uses `7860` from `.env`.
 - If you run `langflow run --port 9000` with `LANGFLOW_PORT=7860` in `.env`, Langflow uses `9000` from the CLI option.
 
-When using Docker, the `-e` flag sets system environment variables, which follow the same precedence rules.
 
 ## Configure environment variables
 

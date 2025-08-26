@@ -126,7 +126,8 @@ To set environment variables for Langflow Desktop, see [Set environment variable
 
 ### Access Langflow Desktop startup logs
 
-If you encounter issues with Langflow Desktop and need to access startup logs for debugging, follow these steps for your operating system.
+If you encounter issues with Langflow Desktop, you might need to access startup logs for debugging.
+Follow the steps for your operating system.
 
 The log file is only created when Langflow Desktop runs. If you don't see a log file, try starting Langflow Desktop first, then check for the log file.
 
@@ -138,7 +139,7 @@ The log file is only created when Langflow Desktop runs. If you don't see a log 
    cd ~/Library/Logs/com.Langflow
    ```
 
-2. Open the log contents to display the log files:
+2. Open the log contents to view the log files:
    ```bash
    open .
    ```
@@ -148,7 +149,7 @@ The log file is only created when Langflow Desktop runs. If you don't see a log 
 </TabItem>
 <TabItem value="windows" label="Windows">
 
-1. Open the Command Prompt (CMD) and run:
+1. Open the Command Prompt (CMD), and then run the following command:
    ```cmd
    cd %LOCALAPPDATA%\com.langflow\logs
    ```
@@ -158,20 +159,21 @@ The log file is only created when Langflow Desktop runs. If you don't see a log 
    start .
    ```
 
-3. Locate the `Langflow.log` file and send it to support for debugging assistance.
+3. Locate the `Langflow.log` file, and then send it to support for debugging assistance.
 
 </TabItem>
 </Tabs>
 
-### `User not found or inactive` when running multiple flows
+### User not found or inactive when running multiple flows
 
-When running multiple Langflow instances locally on different ports (for example, one on `localhost:7860` and another on `localhost:7861`), you might see authentication errors in the logs:
+When running multiple local Langflow instances on different ports, such as `localhost:7860` and `localhost:7861`, you might see authentication errors in the logs.
+For example:
 
 ```text
 [07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - utils - User not found or inactive.
 ```
 
-To resolve this error, use separate browser instances or browser profiles for each Langflow instance.
+To resolve this error, use separate browser instances or browser profiles to access each Langflow instance.
 
 ### Package is not installed
 
@@ -202,14 +204,14 @@ Clearing the cache erases your settings.
 If you want to retain your settings files, create a backup of those files before clearing the cache folder.
 :::
 
-### Langflow Desktop shows "latest version" but is outdated
+### Langflow Desktop says it is running the latest version, but it is actually behind
 
-If Langflow Desktop shows you're on the latest version (for example, version `1.3.3`) but a newer version (like `1.5.0`) is available, this is likely because you're running a version prior to `1.4.2`.
+If you are running Langflow Desktop version 1.4.2 or earlier, the UI might incorrectly report that you are on the latest version when a newer version is available.
 
-The automatic update feature through the graphical interface was introduced in version `1.4.2`.
-Versions prior to `1.4.2` don't include the necessary functionality to perform updates.
+This happens because the automatic update feature in the UI was introduced in version 1.4.2.
+Earlier versions can't automatically detect or apply updates.
 
-To resolve, uninstall Langflow Desktop and download the latest version from the [official website](https://langflow.org/desktop).
+To resolve this issue, uninstall Langflow Desktop, and then [download and install the latest version of Langflow Desktop](https://langflow.org/desktop).
 
 ## Langflow uninstall issues
 
