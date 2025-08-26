@@ -1,12 +1,14 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import type { SidebarGroupProps } from "../types";
 import { BundleItem } from "./bundleItems";
+import { SearchConfigTrigger } from "./searchConfigTrigger";
 
 export const MemoizedSidebarGroup = memo(
   ({
@@ -20,6 +22,9 @@ export const MemoizedSidebarGroup = memo(
     handleKeyDownInput,
     openCategories,
     setOpenCategories,
+    showSearchConfigTrigger,
+    showConfig,
+    setShowConfig,
   }: SidebarGroupProps) => {
     const sortedBundles = useMemo(() => {
       return BUNDLES.toSorted((a, b) => {
@@ -28,13 +33,23 @@ export const MemoizedSidebarGroup = memo(
           referenceArray.findIndex((value) => value === a.name) -
           referenceArray.findIndex((value) => value === b.name)
         );
-      });
-    }, [BUNDLES, search, sortedCategories]);
+      }).filter(
+        (item: { name: string | number }) =>
+          dataFilter[item.name] &&
+          Object.keys(dataFilter[item.name]).length > 0,
+      );
+    }, [BUNDLES, search, sortedCategories, dataFilter]);
 
     return (
       <SidebarGroup className="p-3">
-        <SidebarGroupLabel className="cursor-default">
-          Bundles
+        <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
+          <span>Bundles</span>
+          {showSearchConfigTrigger && ENABLE_NEW_SIDEBAR && (
+            <SearchConfigTrigger
+              showConfig={showConfig}
+              setShowConfig={setShowConfig}
+            />
+          )}
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
