@@ -34,6 +34,7 @@ class ChatOllamaComponent(LCModelComponent):
             display_name="Base URL",
             info="Endpoint of the Ollama API.",
             value="",
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="model_name",
