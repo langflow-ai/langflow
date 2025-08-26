@@ -1,6 +1,3 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -8,12 +5,17 @@ import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { useTypesStore } from "@/stores/typesStore";
+import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
-import { cn, filterNullOptions, formatName } from "../../../utils/utils";
+import { cn, filterNullOptions, formatName, groupByFamily } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -187,6 +189,78 @@ export default function Dropdown({
       setErrorData,
       name,
     );
+
+    // TODO: this is a hack to make the connect other models option work
+    // we should find a better way to do this
+    try {
+      if (value === "connect_other_models") {
+        const store = useFlowStore.getState();
+        const node = store.getNode(nodeId!);
+        const templateField = node?.data?.node?.template?.[name!];
+        if (!templateField) return;
+
+        const inputTypes: string[] =
+          (Array.isArray(templateField.input_types)
+            ? templateField.input_types
+            : []) || [];
+        const effectiveInputTypes =
+          inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+        const tooltipTitle: string =
+          (inputTypes && inputTypes.length > 0
+            ? inputTypes.join("\n")
+            : templateField.type) || "";
+
+        const myId = scapedJSONStringfy({
+          inputTypes: effectiveInputTypes,
+          type: templateField.type,
+          id: nodeId,
+          fieldName: name,
+          proxy: templateField.proxy,
+        });
+
+        const typesData = useTypesStore.getState().data;
+        const grouped = groupByFamily(
+          typesData,
+          (effectiveInputTypes && effectiveInputTypes.length > 0
+            ? effectiveInputTypes.join("\n")
+            : tooltipTitle) || "",
+          true,
+          store.nodes,
+        );
+
+        // Build a pseudo source so compatible target handles (left side) glow
+        const pseudoSourceHandle = scapedJSONStringfy({
+          id: "connect_other_models_source",
+          name: "Language Model",
+          output_types: effectiveInputTypes,
+          dataType: effectiveInputTypes[0] || "LanguageModel",
+        });
+
+        const filterObj = {
+          source: "connect_other_models_node",
+          sourceHandle: pseudoSourceHandle,
+          target: undefined,
+          targetHandle: undefined,
+          type: "LanguageModel",
+          // Use a generic color; exact tone is resolved when user hovers/clicks handles
+          color: "secondary-foreground",
+        } as any;
+
+        // Show compatible handles glow
+        store.setFilterEdge(grouped);
+        store.setFilterType(filterObj);
+
+        // Also simulate dragging to emphasize active state
+        store.setHandleDragging(filterObj);
+        const clearDrag = () => {
+          useFlowStore.getState().setHandleDragging(undefined);
+          document.removeEventListener("mouseup", clearDrag);
+        };
+        document.addEventListener("mouseup", clearDrag);
+      }
+    } finally {
+      setWaitingForResponse(false);
+    }
   };
 
   const handleRefreshButtonPress = async () => {
