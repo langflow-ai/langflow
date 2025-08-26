@@ -1,10 +1,11 @@
 const TwitterXSVG = (props) => {
-  return props.isDark ? (
+  const { isDark, ...restProps } = props;
+  return isDark ? (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0,0,256,256"
       fillRule="nonzero"
-      {...props}
+      {...restProps}
     >
       <g
         fill="#ffffff"
@@ -30,7 +31,7 @@ const TwitterXSVG = (props) => {
   ) : (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      {...props}
+      {...restProps}
       viewBox="0 0 30 30"
       width="30px"
       height="30px"
