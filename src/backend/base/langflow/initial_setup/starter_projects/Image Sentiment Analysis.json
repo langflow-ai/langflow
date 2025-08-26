@@ -556,11 +556,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.115.13"
                   },
                   {
                     "name": "langflow",
@@ -1040,7 +1040,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.10.6"
                   },
                   {
                     "name": "trustcall",

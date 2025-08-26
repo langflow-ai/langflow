@@ -239,11 +239,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.115.13"
                   },
                   {
                     "name": "langflow",
@@ -563,19 +563,19 @@
                 "dependencies": [
                   {
                     "name": "cryptography",
-                    "version": null
+                    "version": "43.0.3"
                   },
                   {
                     "name": "langchain_chroma",
-                    "version": null
+                    "version": "0.1.4"
                   },
                   {
                     "name": "loguru",
-                    "version": null
+                    "version": "0.7.3"
                   },
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.10.6"
                   },
                   {
                     "name": "langflow",
@@ -583,15 +583,15 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": null
+                    "version": "0.3.23"
                   },
                   {
                     "name": "langchain_huggingface",
-                    "version": null
+                    "version": "0.3.1"
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": null
+                    "version": "0.3.3"
                   }
                 ],
                 "total_dependencies": 8

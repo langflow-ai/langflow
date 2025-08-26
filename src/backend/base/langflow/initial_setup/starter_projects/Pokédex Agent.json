@@ -443,11 +443,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.115.13"
                   },
                   {
                     "name": "langflow",
@@ -862,11 +862,11 @@
                 "dependencies": [
                   {
                     "name": "aiofiles",
-                    "version": null
+                    "version": "24.1.0"
                   },
                   {
                     "name": "httpx",
-                    "version": null
+                    "version": "0.27.2"
                   },
                   {
                     "name": "validators",

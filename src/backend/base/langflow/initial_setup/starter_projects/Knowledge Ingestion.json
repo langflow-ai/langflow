@@ -93,7 +93,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": null
+                    "version": "0.3.8"
                   },
                   {
                     "name": "langflow",
@@ -361,11 +361,11 @@
                   },
                   {
                     "name": "bs4",
-                    "version": null
+                    "version": "4.12.3"
                   },
                   {
                     "name": "langchain_community",
-                    "version": null
+                    "version": "0.3.21"
                   },
                   {
                     "name": "langflow",
@@ -741,19 +741,19 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": null
+                    "version": "2.2.3"
                   },
                   {
                     "name": "cryptography",
-                    "version": null
+                    "version": "43.0.3"
                   },
                   {
                     "name": "langchain_chroma",
-                    "version": null
+                    "version": "0.1.4"
                   },
                   {
                     "name": "loguru",
-                    "version": null
+                    "version": "0.7.3"
                   },
                   {
                     "name": "langflow",
@@ -761,15 +761,15 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": null
+                    "version": "0.3.23"
                   },
                   {
                     "name": "langchain_huggingface",
-                    "version": null
+                    "version": "0.3.1"
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": null
+                    "version": "0.3.3"
                   }
                 ],
                 "total_dependencies": 8
