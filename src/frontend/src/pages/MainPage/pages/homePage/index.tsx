@@ -83,6 +83,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     localStorage.setItem("view", view);
   }, [view]);
 
+  const handleSelectAll = useCallback(() => {
+    setSelectedFlows(data.flows.map((flow) => flow.id));
+  }, [data.flows]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedFlows([]);
+  }, []);
+
   const handlePageChange = useCallback((newPageIndex, newPageSize) => {
     setPageIndex(newPageIndex);
     setPageSize(newPageSize);
@@ -264,6 +272,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                 setSearch={onSearch}
                 isEmptyFolder={isEmptyFolder}
                 selectedFlows={selectedFlows}
+                totalFlowsCount={data.flows.length}
+                onSelectAll={handleSelectAll}
+                onDeselectAll={handleDeselectAll}
               />
               {isEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
