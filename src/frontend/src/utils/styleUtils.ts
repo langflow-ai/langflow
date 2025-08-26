@@ -214,7 +214,7 @@ export const SIDEBAR_CATEGORIES = [
   {
     display_name: "Knowledge Bases",
     name: "knowledge_bases",
-    icon: "Package2",
+    icon: "Library",
   },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
