@@ -30,7 +30,9 @@ export const usePatchFlowsMCP: useMutationFunctionType<
 > = (params, options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  async function patchFlowMCP(requestData: PatchFlowMCPRequest): Promise<PatchFlowMCPResponse> {
+  async function patchFlowMCP(
+    requestData: PatchFlowMCPRequest,
+  ): Promise<PatchFlowMCPResponse> {
     const res = await api.patch(
       `${getURL("MCP")}/${params.project_id}`,
       requestData,
@@ -53,17 +55,17 @@ export const usePatchFlowsMCP: useMutationFunctionType<
           };
           queryClient.setQueryData(
             ["project-composer-url", params.project_id],
-            composerUrlData
+            composerUrlData,
           );
         } else {
           // OAuth disabled - remove composer cache and let UI fall back to direct SSE
           // The direct SSE URL logic is already in customGetMCPUrl, so we just clear the composer cache
-          queryClient.removeQueries({ 
-            queryKey: ["project-composer-url", params.project_id] 
+          queryClient.removeQueries({
+            queryKey: ["project-composer-url", params.project_id],
           });
         }
       }
-      
+
       // Call the original onSuccess if provided
       if (options?.onSuccess) {
         options.onSuccess(data, variables, context);

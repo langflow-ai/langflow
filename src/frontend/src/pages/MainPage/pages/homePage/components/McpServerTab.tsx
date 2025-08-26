@@ -259,7 +259,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   // Generate auth headers based on authentication type
   const getAuthHeaders = () => {
-        // If MCP auth is disabled, use the previous API key behavior
+    // If MCP auth is disabled, use the previous API key behavior
     if (!ENABLE_MCP_COMPOSER) {
       if (isAutoLogin) return "";
       return `
