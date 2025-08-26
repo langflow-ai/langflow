@@ -23,7 +23,7 @@ test(
     await page
       .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 50, y: 50 },
       });
 
     await page.getByTestId("canvas_controls_dropdown").click();
@@ -38,7 +38,7 @@ test(
     await page
       .getByTestId("dataURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 200 },
+        targetPosition: { x: 50, y: 300 },
       });
 
     //third component
@@ -49,7 +49,7 @@ test(
     await page
       .getByTestId("processingSplit Text")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 300 },
+        targetPosition: { x: 300, y: 500 },
       });
 
     //fourth component
