@@ -336,8 +336,6 @@ class LCModelComponent(Component):
             if not isinstance(component_inputs, list):
                 component_inputs = []
 
-            import warnings
-
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
