@@ -6,11 +6,9 @@ slug: /api-openai-responses
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/Tabs';
 
-Langflow includes an OpenAI-compatible API endpoints that allow you to use your Langflow flows as if they were OpenAI models.
-This enables seamless integration with existing OpenAI-compatible applications and libraries.
+Langflow includes an OpenAI-compatible API endpoint that allows you to execute your flows using OpenAI-compatible request and response formats.
 
-The OpenAI Responses API allows you to execute Langflow flows using OpenAI-compatible request and response formats.
-This enables you to use existing OpenAI client libraries with minimal code changes - just change the `model` name to your `flow_id`.
+This enables you to use existing OpenAI client libraries with minimal code changes - just change the `model` name to your `flow_id` instead of using OpenAI model names like "gpt-4" or "gpt-3.5-turbo".
 Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
 ## Requirements
@@ -51,7 +49,45 @@ POST /api/v1/responses
 
 ## Example request
 
-## Request body
+```curl
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "Hello, how are you?",
+    "stream": false
+  }'
+```
+
+<details>
+<summary>Response</summary>
+
+```json
+{
+  "id": "response-abc123",
+  "object": "response",
+  "created_at": 1703123456,
+  "status": "completed",
+  "model": "your-flow-id",
+  "output": [
+    {
+      "type": "message",
+      "content": "Hello! I'm doing well, thank you for asking. How can I help you today?"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 15,
+    "total_tokens": 25
+  }
+}
+```
+
+</details>
+
+### Request body
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -63,13 +99,7 @@ POST /api/v1/responses
 | previous_response_id | string | No | null | ID of previous response to continue conversation |
 | include | list[string] | No | null | Additional response data to include, e.g., ['tool_call.results'] |
 
-## Response
-
-```curl
-
-```
-
-## Response body
+### Response body
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -97,7 +127,34 @@ POST /api/v1/responses
 | user | string | User identifier (if any) |
 | metadata | dict | Additional metadata |
 
-## Streaming response body
+## Example streaming request
+
+```curl
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "Tell me a story about a robot",
+    "stream": true
+  }'
+```
+
+<details>
+<summary>Response</summary>
+
+```json
+{"id": "response-uuid", "object": "response.chunk", "created": 1703123456, "model": "your-flow-id", "delta": {"content": "Once"}}
+{"id": "response-uuid", "object": "response.chunk", "created": 1703123457, "model": "your-flow-id", "delta": {"content": " upon"}}
+{"id": "response-uuid", "object": "response.chunk", "created": 1703123458, "model": "your-flow-id", "delta": {"content": " a"}}
+{"id": "response-uuid", "object": "response.chunk", "created": 1703123459, "model": "your-flow-id", "delta": {"content": " time"}}
+{"id": "response-uuid", "object": "response.chunk", "created": 1703123460, "model": "your-flow-id", "delta": {"content": "..."}}
+{"id": "response-uuid", "object": "response.chunk", "created": 1703123461, "model": "your-flow-id", "delta": {}, "status": "completed"}
+```
+
+</details>
+### Streaming response body
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -186,7 +243,9 @@ curl -X POST \
   }'
 ```
 
-Response:
+<details>
+<summary>Response</summary>
+
 ```json
 {
   "id": "response-abc123",
@@ -197,6 +256,8 @@ Response:
   "previous_response_id": null
 }
 ```
+
+</details>
 
 Follow-up message:
 ```bash
@@ -211,7 +272,9 @@ curl -X POST \
   }'
 ```
 
-Response:
+<details>
+<summary>Response</summary>
+
 ```json
 {
   "id": "response-def456",
@@ -222,6 +285,8 @@ Response:
   "previous_response_id": "response-abc123"
 }
 ```
+
+</details>
 
 You can also use your own session IDs instead of the response ID:
 
