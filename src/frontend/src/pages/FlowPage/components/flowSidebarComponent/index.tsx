@@ -48,7 +48,6 @@ import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
-import { UniqueInputsComponents } from "./types";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -475,7 +474,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
   const hasSearchInput = search !== "" || filterType !== undefined;
-  console.log("hasSearchInput", hasSearchInput);
 
   const showComponents =
     (ENABLE_NEW_SIDEBAR &&
