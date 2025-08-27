@@ -3,12 +3,14 @@ title: Composio
 slug: /integrations-composio
 ---
 
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Composio** bundle.
+
 Composio components in Langflow provide [Composio](https://app.composio.dev/) tools to your **Agent** components.
-
-Instead of juggling multiple integrations and components in your flow, connect Composio components to an **Agent** component to use all of Composio's supported APIs and actions as tools for your agent.
-
-The Composio bundle includes a **Composio Tools** component that provides access to all Composio tools through a unified interface.
-Individual services like Gmail, GitHub, and Slack are also available as individual components, which authenticate and integrate with Composio the same way as the **Composio Tools** component.
+Individual services like Gmail, GitHub, and Slack are also available as individual components.
 
 For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
 
@@ -18,33 +20,28 @@ Composio components require authentication to Composio with a Composio API key.
 
 Depending on the components you use, you may also need additional access, such as an OpenAI API key, Gmail account, or GitHub account.
 
-## Use the Composio Tools component in a flow
+For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
 
-Connect a **Composio Tools** component to an **Agent** component to enable your agent to use Gmail functionality.
+## Use a Composio Gmail component in a flow
+
+Connect a Composio **Gmail** component to an **Agent** component to enable your agent to use Gmail functionality.
+Other Composio tools will connect the same way, and use the same parameters, but may require different API keys in Composio.
 
 1. In Langflow, create a Simple Agent starter flow.
 
-2. Add a **Composio Tools** component to the flow.
+2. Add a Composio **Gmail** component to the flow.
 
-3. Connect the **Agent** component's **Tools** port to the **Composio Tools** component's **Tools** port.
+3. Connect the **Agent** component's **Tools** port to the Composio **Gmail** component's **Tools** port.
 
 4. In the **Agent** component, enter your OpenAI API key or configure the **Agent** component to use a different LLM.
 5. In the **Composio API Key** field, enter your Composio API key.
-
-6. In the **Tool Name** field, select the tool you want your agent to have access to.
-
-    For this example, select the **Gmail** tool to allow your agent to control an email account with the **Composio Tools** component.
-
-7. In the **Actions** field, select the action you want the agent to take with the **Gmail** tool.
-
-    The **Gmail** tool supports multiple actions, and it also supports multiple actions within the same tool.
-    For this example, select **GMAIL_CREATE_EMAIL_DRAFT**.
-    For more information, see the [Composio documentation](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions).
+6. In the Composio **Gmail** component, enable **Tool Mode**.
+The **Actions** field populates with the actions available to the Agent, which it will choose from based on your request.
 
     At this point your flow has three connected components:
 
     * The **Chat Input** component is connected to the **Agent** component's **Input** port. This allows the flow to be triggered by an incoming prompt from a user or application.
-    * The **Composio Tools** component with the Gmail tool is connected to the **Agent** component's **Tools** port. The agent may not use this tool for every request; the agent only uses this connection if it decides the Gmail tool can help respond to the prompt.
+    * The Composio **Gmail** component with the Gmail tool is connected to the **Agent** component's **Tools** port. The agent may not use this tool for every request; the agent only uses this connection if it decides the Gmail tool can help respond to the prompt.
     * The **Agent** component's **Output** port is connected to the **Chat Output** component, which returns the final response to the user or application.
 
     ![Simple Agent flow with a Composio Tools component](/img/composio/composio-create-flow.png)
@@ -56,15 +53,24 @@ The agent should provide a list of connected tools, including the **Gmail** tool
     User:
     What tools are available to you?
 
-    AI:
-    I have access to the following tools:
+    I have access to a variety of tools that allow me to help you with different tasks. Here are the main categories of tools available to me:
 
-    1. **GMAIL_CREATE_EMAIL_DRAFT**: This tool allows me to create a draft email using Gmail's API. I can specify the recipient's email address, subject, body content, and whether the body content is HTML.
+    1. Gmail Tools:
+       - Fetch emails, search, and filter messages.
+       - Fetch specific email details by message ID.
+       - Create email drafts (with attachments, HTML, CC/BCC, etc.).
+       - Delete email drafts or specific messages.
 
-    2. **CurrentDate-get_current_date**: This tool retrieves the current date and time in a specified timezone.
+    2. Date & Time Tools:
+       - Get the current date and time in any timezone.
+
+    3. Multi-Tool Use:
+       - Run multiple tools in parallel for efficiency.
+
+    If you have a specific task in mind, let me know and I can tell you which tool I would use or demonstrate how I can help!
     ```
 
-9. To test the specific Composio tool, tell the agent to perform an action like writing a draft email:
+9. To test a specific action, tell the agent to perform an action like writing a draft email:
 
     ```text
     Create a draft email with the subject line "Greetings from Composio"
@@ -111,3 +117,32 @@ The agent should provide a list of connected tools, including the **Gmail** tool
 11. To add more Composio actions, add more Composio components to your flow, and then connect them to the **Agent** component's **Tools** port.
 
 For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
+
+### Composio tools parameters
+
+All Composio tools share the same parameter structure in Langflow, but they may require different API keys or authentication methods within the Composio platform.
+
+| Name | Type | Description |
+|------|------|-------------|
+| entity_id | String | Input parameter. The entity ID for the Composio account. Defaults to "default". |
+| api_key | SecretString | Input parameter. The Composio API key for authentication. |
+| tool_name | Connection | Input parameter. The name of the tool to use. |
+| actions | List | Input parameter. The actions to use with the selected tool. |
+| tools | Tool | Output parameter. The Composio tool instance. |
+
+## Available Composio tools
+
+- **Dropbox**
+- **GitHub**
+- **Gmail**
+- **Google Calendar**
+- **Google Meet**
+- **Google Tasks**
+- **Linear**
+- **Outlook**
+- **Reddit**
+- **Slack**
+- **Slackbot**
+- **Supabase**
+- **Todoist**
+- **Youtube**
