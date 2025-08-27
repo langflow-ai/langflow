@@ -4635,11 +4635,8 @@
                 "cache": true,
                 "display_name": "Raw Content",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "load_files_message",
                 "name": "message",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
