@@ -5,23 +5,23 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.base.data.kb_utils import get_knowledge_bases
-from langflow.components.data.kb_retrieval import KBRetrievalComponent
+from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
 from pydantic import SecretStr
 
 from tests.base import ComponentTestBaseWithoutClient
 
 
-class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
+class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
-        return KBRetrievalComponent
+        return KnowledgeRetrievalComponent
 
     @pytest.fixture(autouse=True)
     def mock_knowledge_base_path(self, tmp_path):
         """Mock the knowledge base root path directly."""
-        with patch("langflow.components.data.kb_retrieval.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+        with patch("langflow.components.knowledge_bases.retrieval.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     class MockUser:
@@ -40,14 +40,14 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
     def setup_mocks(self, mock_user_data):
         """Mock the component's user_id attribute and User object."""
         with (
-            patch.object(KBRetrievalComponent, "user_id", mock_user_data["user_id"]),
+            patch.object(KnowledgeRetrievalComponent, "user_id", mock_user_data["user_id"]),
             patch(
-                "langflow.components.data.kb_retrieval.get_user_by_id",
+                "langflow.components.knowledge_bases.retrieval.get_user_by_id",
                 new_callable=AsyncMock,
                 return_value=mock_user_data["user_obj"],
             ),
             patch(
-                "langflow.base.data.kb_utils.get_user_by_id",
+                "langflow.base.knowledge_bases.knowledge_base_utils.get_user_by_id",
                 new_callable=AsyncMock,
                 return_value=mock_user_data["user_obj"],
             ),
@@ -138,7 +138,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         kb_path = Path(default_kwargs["kb_root_path"]) / mock_user_id["user"] / default_kwargs["knowledge_base"]
 
-        with patch("langflow.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
+        with patch("langflow.components.knowledge_bases.retrieval.decrypt_api_key") as mock_decrypt:
             mock_decrypt.return_value = "decrypted_key"
 
             metadata = component._get_kb_metadata(kb_path)
@@ -185,7 +185,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         }
         (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata))
 
-        with patch("langflow.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
+        with patch("langflow.components.knowledge_bases.retrieval.decrypt_api_key") as mock_decrypt:
             mock_decrypt.side_effect = ValueError("Decryption failed")
 
             result = component._get_kb_metadata(kb_path)
@@ -327,7 +327,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
                 chunk_size=1000,
             )
 
-    async def test_get_chroma_kb_data_no_metadata(self, component_class, default_kwargs, tmp_path, mock_user_id):
+    async def test_retrieve_data_no_metadata(self, component_class, default_kwargs, tmp_path, mock_user_id):
         """Test retrieving data when metadata is missing."""
         # Remove metadata file
         kb_path = tmp_path / mock_user_id["user"] / default_kwargs["knowledge_base"]
@@ -338,10 +338,10 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
 
         with pytest.raises(ValueError, match="Metadata not found for knowledge base"):
-            await component.get_chroma_kb_data()
+            await component.retrieve_data()
 
-    def test_get_chroma_kb_data_path_construction(self, component_class, default_kwargs):
-        """Test that get_chroma_kb_data constructs the correct paths."""
+    def test_retrieve_data_path_construction(self, component_class, default_kwargs):
+        """Test that retrieve_data constructs the correct paths."""
         component = component_class(**default_kwargs)
 
         # Test that the component correctly builds the KB path
@@ -354,17 +354,17 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         assert expanded_path.exists()  # tmp_path should exist
 
         # Verify method exists with correct parameters
-        assert hasattr(component, "get_chroma_kb_data")
+        assert hasattr(component, "retrieve_data")
         assert hasattr(component, "search_query")
         assert hasattr(component, "top_k")
         assert hasattr(component, "include_embeddings")
 
-    async def test_get_chroma_kb_data_method_exists(self, component_class, default_kwargs):
-        """Test that get_chroma_kb_data method exists and can be called."""
+    async def test_retrieve_data_method_exists(self, component_class, default_kwargs):
+        """Test that retrieve_data method exists and can be called."""
         component = component_class(**default_kwargs)
 
         # Just verify the method exists and has the right signature
-        assert hasattr(component, "get_chroma_kb_data"), "Component should have get_chroma_kb_data method"
+        assert hasattr(component, "retrieve_data"), "Component should have retrieve_data method"
 
         # Mock all external calls to avoid integration issues
         with (
@@ -377,7 +377,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
 
             # This is a unit test focused on the component's internal logic
             with contextlib.suppress(Exception):
-                await component.get_chroma_kb_data()
+                await component.retrieve_data()
 
             # Verify internal methods were called
             mock_get_metadata.assert_called_once()
