@@ -37,28 +37,6 @@ class MCPComposerService(Service):
         except (OSError, ConnectionRefusedError):
             return True  # Port is available
 
-    def _find_available_port(self, start_port: int, max_attempts: int = 100) -> int:
-        """Find an available port starting from start_port.
-
-        Args:
-            start_port: The port to start searching from
-            max_attempts: Maximum number of ports to try
-
-        Returns:
-            int: An available port number
-
-        Raises:
-            RuntimeError: If no available port is found within max_attempts
-        """
-        for attempt in range(max_attempts):
-            port = start_port + attempt
-            if self._is_port_available(port):
-                logger.debug(f"Found available port: {port} (tried {attempt + 1} ports)")
-                return port
-
-        msg = f"Could not find an available port after trying {max_attempts} ports starting from {start_port}"
-        raise RuntimeError(msg)
-
     async def start(self):
         """Check if the MCP Composer service is enabled."""
         settings = get_settings_service().settings
@@ -190,11 +168,10 @@ class MCPComposerService(Service):
 
         async with self._start_locks[project_id]:
             # Check if already running (double-check after acquiring lock)
-            existing_port = None
+            project_port = auth_config.get("oauth_port")
             if project_id in self.project_composers:
                 composer_info = self.project_composers[project_id]
                 process = composer_info.get("process")
-                existing_port = composer_info.get("port")  # Save the existing port
 
                 # Check if OAuth settings have changed
                 existing_auth = composer_info.get("auth_config", {})
@@ -202,7 +179,7 @@ class MCPComposerService(Service):
 
                 if auth_changed:
                     logger.info(
-                        f"OAuth settings changed for project {project_id}, restarting MCP Composer on port {existing_port}"
+                        f"OAuth settings changed for project {project_id}, restarting MCP Composer on port {project_port}"
                     )
                     # Stop the existing composer but keep the port preference
                     await self._do_stop_project_composer(project_id)
@@ -212,31 +189,15 @@ class MCPComposerService(Service):
                     return composer_info["port"]
                 else:
                     logger.warning(
-                        f"MCP Composer process for project {project_id} was terminated, restarting on port {existing_port}"
+                        f"MCP Composer process for project {project_id} was terminated, restarting on port {project_port}"
                     )
                     if project_id in self.project_composers:
                         del self.project_composers[project_id]
 
-            # Try to use the existing port if we had one, otherwise find a new one
             try:
-                if existing_port and self._is_port_available(existing_port):
-                    # Reuse the same port if it's available
-                    project_port = existing_port
-                    logger.debug(f"Reusing existing port {project_port} for project {project_id}")
-                else:
-                    # Find a new port
-                    used_ports = {info["port"] for info in self.project_composers.values()}
-                    start_port = max([self.base_port, *list(used_ports)], default=self.base_port)
-                    if used_ports:
-                        start_port += 1  # Start from the next port after the highest used port
-
-                    project_port = self._find_available_port(start_port)
-                    if existing_port:
-                        logger.debug(
-                            f"Could not reuse port {existing_port} for project {project_id}, using {project_port} instead"
-                        )
+                self._is_port_available(project_port)
             except RuntimeError as e:
-                logger.error(f"Could not find available port for project {project_id}: {e}")
+                logger.error(f"Port for project {project_id} is not available: {e}")
                 raise
 
             max_retries = 3
@@ -291,11 +252,12 @@ class MCPComposerService(Service):
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
         cmd = [
-            "uvx",
+            "uv",
+            "run",
             "mcp-composer",
             "--mode",
             "sse",
-            "--endpoint",
+            "--sse-url",
             sse_url,
             "--host",
             self.composer_host,
