@@ -320,7 +320,7 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
 
     # Prefer configured username; fall back to default or any existing superuser
-    #NOTE: This user name cannot be a dynamic current user name since it is only used when autologin is True
+    # NOTE: This user name cannot be a dynamic current user name since it is only used when autologin is True
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
     super_user = await get_user_by_username(db, username)
     if not super_user:
