@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 

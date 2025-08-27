@@ -1,4 +1,3 @@
-# noqa: A005
 from lfx.io import (
     BoolInput,
     CodeInput,

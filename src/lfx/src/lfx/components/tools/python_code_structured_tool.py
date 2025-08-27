@@ -4,21 +4,14 @@ from typing import Any
 
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
-from loguru import logger
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
 from typing_extensions import override
 
 from lfx.base.langchain_utilities.model import LCToolComponent
-from lfx.inputs.inputs import (
-    BoolInput,
-    DropdownInput,
-    FieldTypes,
-    HandleInput,
-    MessageTextInput,
-    MultilineInput,
-)
+from lfx.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
 from lfx.io import Output
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 
@@ -139,7 +132,7 @@ class PythonCodeStructuredTool(LCToolComponent):
             build_config["tool_function"]["options"] = names
         except Exception as e:  # noqa: BLE001
             self.status = f"Failed to extract names: {e}"
-            logger.opt(exception=True).debug(self.status)
+            logger.debug(self.status, exc_info=True)
             build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
 

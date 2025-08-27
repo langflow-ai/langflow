@@ -2,13 +2,13 @@ from copy import deepcopy
 from pathlib import Path
 
 from langchain_chroma import Chroma
-from loguru import logger
 from typing_extensions import override
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import MultilineInput
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
@@ -21,6 +21,7 @@ class LocalDBComponent(LCVectorStoreComponent):
     description: str = "Local Vector Store with search capabilities"
     name = "LocalDB"
     icon = "database"
+    legacy = True
 
     inputs = [
         TabInput(

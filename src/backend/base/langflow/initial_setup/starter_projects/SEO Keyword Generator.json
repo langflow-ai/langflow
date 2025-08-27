@@ -562,8 +562,25 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "9619107fecd1",
-              "module": "lfx.components.input_output.chat_output.ChatOutput"
+              "code_hash": "6f74e04e39d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.116.1"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 3
+              },
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
             "outputs": [

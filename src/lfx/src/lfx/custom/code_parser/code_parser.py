@@ -8,10 +8,10 @@ from typing import Any
 
 from cachetools import TTLCache, keys
 from fastapi import HTTPException
-from loguru import logger
 
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import CallableCodeDetails, ClassCodeDetails, MissingDefault
+from lfx.lfx_logging.logger import logger
 
 
 class CodeSyntaxError(HTTPException):

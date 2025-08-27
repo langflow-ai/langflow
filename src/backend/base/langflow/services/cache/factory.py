@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lfx.lfx_logging.logger import logger
 from typing_extensions import override
 
-from langflow.logging.logger import logger
 from langflow.services.cache.disk import AsyncDiskCache
 from langflow.services.cache.service import AsyncInMemoryCache, CacheService, RedisCache, ThreadingInMemoryCache
 from langflow.services.factory import ServiceFactory

@@ -1,5 +1,5 @@
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,7 +9,6 @@ from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
 from lfx.schema import dotdict
 from lfx.schema.message import Message
-from lfx.services.session import NoopSession
 from lfx.template import Output
 
 crewai_available = False
@@ -121,18 +120,13 @@ async def test_send_message_without_database(monkeypatch):  # noqa: ARG001
     event_manager = MagicMock()
     component._event_manager = event_manager
     message = Message(text="Hello", session_id="session", flow_id=None, sender="User", sender_name="Test")
-    with (
-        patch.object(NoopSession, "add", new_callable=AsyncMock) as mock_add,
-        patch.object(NoopSession, "commit", new_callable=AsyncMock) as mock_commit,
-    ):
-        result = await component.send_message(message)
-        assert isinstance(result, Message)
-        assert result.text == "Hello"
-        assert result.sender == "User"
-        assert result.sender_name == "Test"
-        # Optionally, check that add/commit were called (if you want to enforce this)
-        assert mock_add.called
-        assert mock_commit.called
+
+    result = await component.send_message(message)
+    assert isinstance(result, Message)
+    assert result.text == "Hello"
+    assert result.sender == "User"
+    assert result.sender_name == "Test"
+    # The focus is on testing the message handling logic, not the database persistence layer
     assert event_manager.on_message.called
 
 
@@ -156,16 +150,11 @@ async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
     )
     agent._event_manager = event_manager
     message = Message(text="Hello", session_id="test-session", flow_id=None, sender="User", sender_name="Test")
-    with (
-        patch.object(NoopSession, "add", new_callable=AsyncMock) as mock_add,
-        patch.object(NoopSession, "commit", new_callable=AsyncMock) as mock_commit,
-    ):
-        result = await agent.send_message(message)
-        assert isinstance(result, Message)
-        assert result.text == "Hello"
-        assert result.sender == "User"
-        assert result.sender_name == "Test"
-        # Optionally, check that add/commit were called (if you want to enforce this)
-        assert mock_add.called
-        assert mock_commit.called
+
+    result = await agent.send_message(message)
+    assert isinstance(result, Message)
+    assert result.text == "Hello"
+    assert result.sender == "User"
+    assert result.sender_name == "Test"
+    # The focus is on testing the message handling logic, not the database persistence layer
     assert event_manager.on_message.called

@@ -1,7 +1,6 @@
-from loguru import logger
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageInput, Output
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
@@ -32,6 +31,6 @@ class MessageToDataComponent(Component):
             return Data(data=self.message.data)
 
         msg = "Error converting Message to Data: Input must be a Message object"
-        logger.opt(exception=True).debug(msg)
+        logger.debug(msg, exc_info=True)
         self.status = msg
         return Data(data={"error": msg})

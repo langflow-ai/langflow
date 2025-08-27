@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 
 from langflow.services.base import Service
 
@@ -133,7 +133,7 @@ class TracingService(Service):
             try:
                 trace_func(*args)
             except Exception:  # noqa: BLE001
-                logger.exception("Error processing trace_func")
+                await logger.aexception("Error processing trace_func")
             finally:
                 trace_context.traces_queue.task_done()
 
@@ -144,7 +144,7 @@ class TracingService(Service):
             trace_context.running = True
             trace_context.worker_task = asyncio.create_task(self._trace_worker(trace_context))
         except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
+            await logger.aexception("Error starting tracing service")
 
     def _initialize_langsmith_tracer(self, trace_context: TraceContext) -> None:
         langsmith_tracer = _get_langsmith_tracer()
@@ -248,7 +248,7 @@ class TracingService(Service):
             self._initialize_opik_tracer(trace_context)
             self._initialize_traceloop_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error initializing tracers: {e}")
+            await logger.adebug(f"Error initializing tracers: {e}")
 
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
@@ -261,7 +261,7 @@ class TracingService(Service):
                 trace_context.worker_task = None
 
         except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+            await logger.aexception("Error stopping tracing service")
 
     def _end_all_tracers(self, trace_context: TraceContext, outputs: dict, error: Exception | None = None) -> None:
         for tracer in trace_context.tracers.values():

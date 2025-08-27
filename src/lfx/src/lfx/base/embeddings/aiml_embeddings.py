@@ -2,10 +2,10 @@ import concurrent.futures
 import json
 
 import httpx
-from loguru import logger
 from pydantic import BaseModel, SecretStr
 
 from lfx.field_typing import Embeddings
+from lfx.lfx_logging.logger import logger
 
 
 class AIMLEmbeddingsImpl(BaseModel, Embeddings):

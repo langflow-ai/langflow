@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from loguru import logger
-
 from lfx.graph.edge.schema import EdgeData, LoopTargetHandleDict, SourceHandle, TargetHandle, TargetHandleDict
+from lfx.lfx_logging.logger import logger
 from lfx.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
@@ -28,7 +27,7 @@ class Edge:
                 try:
                     if "name" in self._target_handle:
                         self.target_handle: TargetHandle = TargetHandle.from_loop_target_handle(
-                            cast(LoopTargetHandleDict, self._target_handle)
+                            cast("LoopTargetHandleDict", self._target_handle)
                         )
                     else:
                         self.target_handle = TargetHandle(**self._target_handle)

@@ -171,7 +171,7 @@ class Data(BaseModel):
         files = self.data.get("files", [])
         if sender == MESSAGE_SENDER_USER:
             if files:
-                from lfx.schema.image import get_file_paths
+                from langflow.schema.image import get_file_paths
 
                 resolved_file_paths = get_file_paths(files)
                 contents = [create_image_content_dict(file_path) for file_path in resolved_file_paths]
@@ -236,7 +236,7 @@ class Data(BaseModel):
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return serialize_data(data)  # use the custom serializer
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error converting Data to JSON")
+            logger.debug("Error converting Data to JSON", exc_info=True)
             return str(self.data)
 
     def __contains__(self, key) -> bool:
@@ -254,19 +254,19 @@ class Data(BaseModel):
         Returns:
             Data: The filtered Data.
         """
-        from lfx.template.utils import apply_json_filter
+        from langflow.template.utils import apply_json_filter
 
         return apply_json_filter(self.data, filter_str)
 
     def to_message(self) -> Message:
-        from lfx.schema.message import Message  # Local import to avoid circular import
+        from langflow.schema.message import Message  # Local import to avoid circular import
 
         if self.text_key in self.data:
             return Message(text=self.get_text())
         return Message(text=str(self.data))
 
     def to_dataframe(self) -> DataFrame:
-        from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
+        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
 
         data_dict = self.data
         # If data contains only one key and the value is a list of dictionaries, convert to DataFrame
@@ -277,6 +277,14 @@ class Data(BaseModel):
         ):
             return DataFrame(data=next(iter(data_dict.values())))
         return DataFrame(data=[self])
+
+    def __repr__(self) -> str:
+        """Return string representation of the Data object."""
+        return f"Data(text_key={self.text_key!r}, data={self.data!r}, default_value={self.default_value!r})"
+
+    def __hash__(self) -> int:
+        """Return hash of the Data object based on its string representation."""
+        return hash(self.__repr__())
 
 
 def custom_serializer(obj):

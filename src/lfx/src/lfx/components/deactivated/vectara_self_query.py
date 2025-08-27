@@ -68,9 +68,9 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
             metadata_field_obj.append(attribute_info)
 
         return SelfQueryRetriever.from_llm(
-            self.llm,  # noqa: ignore[attr-defined]
-            self.vectorstore,  # noqa: ignore[attr-defined]
-            self.document_content_description,  # noqa: ignore[attr-defined]
+            self.llm,  # type: ignore[attr-defined]
+            self.vectorstore,  # type: ignore[attr-defined]
+            self.document_content_description,  # type: ignore[attr-defined]
             metadata_field_obj,
             verbose=True,
         )

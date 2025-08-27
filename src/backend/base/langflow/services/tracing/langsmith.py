@@ -6,7 +6,7 @@ import types
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data

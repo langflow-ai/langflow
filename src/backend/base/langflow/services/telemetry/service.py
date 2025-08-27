@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
@@ -55,13 +55,13 @@ class TelemetryService(Service):
             try:
                 await func(payload, path)
             except Exception:  # noqa: BLE001
-                logger.error("Error sending telemetry data")
+                await logger.aerror("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 
     async def send_telemetry_data(self, payload: BaseModel, path: str | None = None) -> None:
         if self.do_not_track:
-            logger.debug("Telemetry tracking is disabled.")
+            await logger.adebug("Telemetry tracking is disabled.")
             return
 
         url = f"{self.base_url}"
@@ -72,15 +72,15 @@ class TelemetryService(Service):
             payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
             response = await self.client.get(url, params=payload_dict)
             if response.status_code != httpx.codes.OK:
-                logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
+                await logger.aerror(f"Failed to send telemetry data: {response.status_code} {response.text}")
             else:
-                logger.debug("Telemetry data sent successfully.")
+                await logger.adebug("Telemetry data sent successfully.")
         except httpx.HTTPStatusError:
-            logger.error("HTTP error occurred")
+            await logger.aerror("HTTP error occurred")
         except httpx.RequestError:
-            logger.error("Request error occurred")
+            await logger.aerror("Request error occurred")
         except Exception:  # noqa: BLE001
-            logger.error("Unexpected error occurred")
+            await logger.aerror("Unexpected error occurred")
 
     async def log_package_run(self, payload: RunPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "run"))
@@ -160,7 +160,7 @@ class TelemetryService(Service):
         try:
             await self.telemetry_queue.join()
         except Exception:  # noqa: BLE001
-            logger.exception("Error flushing logs")
+            await logger.aexception("Error flushing logs")
 
     @staticmethod
     async def _cancel_task(task: asyncio.Task, cancel_msg: str) -> None:
@@ -185,7 +185,7 @@ class TelemetryService(Service):
                 await self._cancel_task(self.log_package_version_task, "Cancel telemetry log package version task")
             await self.client.aclose()
         except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+            await logger.aexception("Error stopping tracing service")
 
     async def teardown(self) -> None:
         await self.stop()

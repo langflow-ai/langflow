@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
 from jose import JWTError
+from lfx.lfx_logging.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
 from multiprocess.context import Process
@@ -30,7 +31,6 @@ from sqlmodel import select
 
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.auth.utils import check_key, get_current_user_by_jwt
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
@@ -176,7 +176,7 @@ def wait_for_server_ready(host, port, protocol) -> None:
         except HTTPError:
             time.sleep(1)
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
+            logger.debug("Error while waiting for the server to become ready.", exc_info=True)
             time.sleep(1)
 
 

@@ -8,11 +8,7 @@ from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from lfx.helpers.flow import get_flow_inputs
-from lfx.inputs.inputs import (
-    DropdownInput,
-    InputTypes,
-    MessageInput,
-)
+from lfx.inputs.inputs import DropdownInput, InputTypes, MessageInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict

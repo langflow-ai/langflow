@@ -29,9 +29,9 @@ class TwelveLabsVideoEmbeddings(Embeddings):
 
             # First try to use video embedding, then fall back to clip embedding if available
             if result["video_embedding"] is not None:
-                embeddings.append(cast(list[float], result["video_embedding"]))
+                embeddings.append(cast("list[float]", result["video_embedding"]))
             elif result["clip_embeddings"] and len(result["clip_embeddings"]) > 0:
-                embeddings.append(cast(list[float], result["clip_embeddings"][0]))
+                embeddings.append(cast("list[float]", result["clip_embeddings"][0]))
             else:
                 # If neither is available, raise an error
                 error_msg = "No embeddings were generated for the video"
@@ -45,9 +45,9 @@ class TwelveLabsVideoEmbeddings(Embeddings):
 
         # First try to use video embedding, then fall back to clip embedding if available
         if result["video_embedding"] is not None:
-            return cast(list[float], result["video_embedding"])
+            return cast("list[float]", result["video_embedding"])
         if result["clip_embeddings"] and len(result["clip_embeddings"]) > 0:
-            return cast(list[float], result["clip_embeddings"][0])
+            return cast("list[float]", result["clip_embeddings"][0])
         # If neither is available, raise an error
         error_msg = "No embeddings were generated for the video"
         raise ValueError(error_msg)

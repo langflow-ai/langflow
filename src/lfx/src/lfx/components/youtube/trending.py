@@ -6,6 +6,7 @@ from googleapiclient.errors import HttpError
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
 
@@ -279,8 +280,6 @@ class YouTubeTrendingComponent(Component):
 
             return DataFrame(pd.DataFrame({"error": [error_message]}))
 
-        except Exception as e:
-            import logging
-
-            logging.exception("An unexpected error occurred:")
+        except Exception as e:  # noqa: BLE001
+            logger.exception("An unexpected error occurred:")
             return DataFrame(pd.DataFrame({"error": [str(e)]}))

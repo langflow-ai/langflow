@@ -1,8 +1,8 @@
 import assemblyai as aai
-from loguru import logger
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, IntInput, Output, SecretStrInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 
 
@@ -58,7 +58,7 @@ class AssemblyAIGetSubtitles(Component):
             transcript = aai.Transcript.get_by_id(transcript_id)
         except Exception as e:  # noqa: BLE001
             error = f"Getting transcription failed: {e}"
-            logger.opt(exception=True).debug(error)
+            logger.debug(error, exc_info=True)
             self.status = error
             return Data(data={"error": error})
 

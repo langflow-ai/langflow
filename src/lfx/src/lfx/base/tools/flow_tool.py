@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.tools import BaseTool, ToolException
-from loguru import logger
 from typing_extensions import override
 
 from lfx.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
 from lfx.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
+from lfx.lfx_logging.logger import logger
 from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
@@ -110,7 +110,7 @@ class FlowTool(BaseTool):
         try:
             run_id = self.graph.run_id if hasattr(self, "graph") and self.graph else None
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).warning("Failed to set run_id")
+            logger.warning("Failed to set run_id", exc_info=True)
             run_id = None
         run_outputs = await run_flow(
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},

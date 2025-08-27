@@ -10,8 +10,8 @@ from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
+from lfx.lfx_logging.logger import logger
 from lfx.services.settings.service import SettingsService
-from loguru import logger
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
@@ -310,7 +310,7 @@ async def create_super_user(
             if not super_user:
                 raise  # Re-raise if it's not a race condition
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error creating superuser.")
+            logger.debug("Error creating superuser.", exc_info=True)
 
     return super_user
 

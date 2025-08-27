@@ -1,8 +1,8 @@
 import assemblyai as aai
-from loguru import logger
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, FloatInput, IntInput, MultilineInput, Output, SecretStrInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 
 
@@ -131,7 +131,7 @@ class AssemblyAILeMUR(Component):
         try:
             response = self.perform_lemur_action(transcript_group, self.endpoint)
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error running LeMUR")
+            logger.debug("Error running LeMUR", exc_info=True)
             error = f"An Error happened: {e}"
             self.status = error
             return Data(data={"error": error})

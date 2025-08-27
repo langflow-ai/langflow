@@ -1,7 +1,8 @@
 from collections.abc import Callable
 
 import emoji
-from loguru import logger
+
+from lfx.lfx_logging.logger import logger
 
 
 def validate_icon(value: str):

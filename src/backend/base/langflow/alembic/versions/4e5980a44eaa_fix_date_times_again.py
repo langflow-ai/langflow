@@ -10,7 +10,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.

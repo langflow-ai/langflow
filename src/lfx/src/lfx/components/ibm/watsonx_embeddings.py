@@ -4,12 +4,12 @@ import requests
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
-from loguru import logger
 from pydantic.v1 import SecretStr
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.dotdict import dotdict
 
 

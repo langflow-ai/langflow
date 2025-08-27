@@ -13,7 +13,7 @@ import anyio
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 from sqlalchemy import event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
@@ -193,7 +193,7 @@ class DatabaseService(Service):
                 try:
                     yield session
                 except exc.SQLAlchemyError as db_exc:
-                    logger.error(f"Database error during session scope: {db_exc}")
+                    await logger.aerror(f"Database error during session scope: {db_exc}")
                     await session.rollback()
                     raise
 
@@ -219,7 +219,7 @@ class DatabaseService(Service):
             if not orphaned_flows:
                 return
 
-            logger.debug("Assigning orphaned flows to the default superuser")
+            await logger.adebug("Assigning orphaned flows to the default superuser")
 
             # Retrieve superuser
             superuser_username = settings_service.auth_settings.SUPERUSER
@@ -227,7 +227,7 @@ class DatabaseService(Service):
 
             if not superuser:
                 error_message = "Default superuser not found"
-                logger.error(error_message)
+                await logger.aerror(error_message)
                 raise RuntimeError(error_message)
 
             # Get existing flow names for the superuser
@@ -244,7 +244,7 @@ class DatabaseService(Service):
 
             # Commit changes
             await session.commit()
-            logger.debug("Successfully assigned orphaned flows to the default superuser")
+            await logger.adebug("Successfully assigned orphaned flows to the default superuser")
 
     @staticmethod
     def _generate_unique_flow_name(original_name: str, existing_names: set[str]) -> str:
@@ -372,7 +372,7 @@ class DatabaseService(Service):
             try:
                 await session.exec(text("SELECT * FROM alembic_version"))
             except Exception:  # noqa: BLE001
-                logger.debug("Alembic not initialized")
+                await logger.adebug("Alembic not initialized")
                 should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
 
@@ -473,7 +473,7 @@ class DatabaseService(Service):
             await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
-        logger.debug("Tearing down database")
+        await logger.adebug("Tearing down database")
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
@@ -481,5 +481,5 @@ class DatabaseService(Service):
             async with self.with_session() as session:
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
-            logger.exception("Error tearing down database")
+            await logger.aexception("Error tearing down database")
         await self.engine.dispose()

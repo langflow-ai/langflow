@@ -2,23 +2,19 @@ import time
 from collections.abc import Callable
 
 import socketio
-from lfx.graph.graph.base import Graph
-from lfx.graph.graph.utils import layered_topological_sort
-from lfx.graph.utils import log_vertex_build
-from lfx.graph.vertex.base import Vertex
-from loguru import logger
-from sqlmodel import select
+from lfx.lfx_logging.logger import logger
 
 from langflow.api.utils import format_elapsed_time
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_session
+from langflow.graph.graph.base import Graph
+from langflow.graph.graph.utils import layered_topological_sort
+from langflow.graph.utils import log_vertex_build
+from langflow.graph.vertex.base import Vertex
 
 
 async def get_vertices(sio, sid, flow_id, chat_service) -> None:
     try:
         session = await anext(get_session())
-        stmt = select(Flow).where(Flow.id == flow_id)
         flow: Flow = (await session.exec(stmt)).first()
         if not flow or not flow.data:
             await sio.emit("error", data="Invalid flow ID", to=sid)
@@ -37,7 +33,7 @@ async def get_vertices(sio, sid, flow_id, chat_service) -> None:
         await sio.emit("vertices_order", data=vertices, to=sid)
 
     except Exception as exc:  # noqa: BLE001
-        logger.opt(exception=True).debug("Error getting vertices")
+        logger.debug("Error getting vertices", exc_info=True)
         await sio.emit("error", data=str(exc), to=sid)
 
 
@@ -81,7 +77,7 @@ async def build_vertex(
                 timedelta=timedelta,
             )
         except Exception as exc:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error building vertex")
+            logger.debug("Error building vertex", exc_info=True)
             params = str(exc)
             valid = False
             result_dict = ResultDataResponse(results={})
@@ -101,5 +97,5 @@ async def build_vertex(
         await sio.emit("vertex_build", data=response.model_dump(), to=sid)
 
     except Exception as exc:  # noqa: BLE001
-        logger.opt(exception=True).debug("Error building vertex")
+        logger.debug("Error building vertex", exc_info=True)
         await sio.emit("error", data=str(exc), to=sid)

@@ -6,7 +6,7 @@ import pytest
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from pymongo.collection import Collection
 
-from lfx.components.vectorstores.mongodb_atlas import MongoVectorStoreComponent
+from lfx.components.mongodb_atlas import MongoVectorStoreComponent
 from lfx.schema.data import Data
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 

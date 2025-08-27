@@ -1,6 +1,6 @@
-from lfx import custom as custom  # noqa: PLC0414
-from lfx.custom import custom_component as custom_component  # noqa: PLC0414
-from lfx.custom import utils as utils  # noqa: PLC0414
+from lfx import custom as custom
+from lfx.custom import custom_component as custom_component
+from lfx.custom import utils as utils
 from lfx.custom.custom_component.component import Component, get_component_toolkit
 from lfx.custom.custom_component.custom_component import CustomComponent
 

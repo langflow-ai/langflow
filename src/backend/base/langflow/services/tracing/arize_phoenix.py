@@ -78,7 +78,7 @@ class ArizePhoenixTracer(BaseTracer):
             self.child_spans: dict[str, Span] = {}
 
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up Arize/Phoenix tracer")
+            logger.debug("Error setting up Arize/Phoenix tracer", exc_info=True)
             self._ready = False
 
     @property

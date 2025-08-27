@@ -215,15 +215,18 @@ class TestPerformanceCharacteristics:
 
     def test_lazy_loading_performance(self):
         """Test that components can be accessed and cached properly."""
-        from lfx.components import vectorstores
+        from lfx.components import chroma as chromamodules
 
-        # ChromaVectorStoreComponent should raise AttributeError due to missing chromadb dependency
-        with pytest.raises(AttributeError, match="Could not import.*ChromaVectorStoreComponent"):
-            _ = vectorstores.ChromaVectorStoreComponent
+        # Test that we can access a component
+        chroma = chromamodules.ChromaVectorStoreComponent
+        assert chroma is not None
 
-        # Test that error is cached - subsequent access should also fail
-        with pytest.raises(AttributeError, match="Could not import.*ChromaVectorStoreComponent"):
-            _ = vectorstores.ChromaVectorStoreComponent
+        # After access, it should be cached in the module's globals
+        assert "ChromaVectorStoreComponent" in chromamodules.__dict__
+
+        # Subsequent access should return the same cached object
+        chroma_2 = chromamodules.ChromaVectorStoreComponent
+        assert chroma_2 is chroma
 
     def test_caching_behavior(self):
         """Test that components are cached after first access."""

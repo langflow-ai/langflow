@@ -1,9 +1,8 @@
 from typing import Any
 
-from loguru import logger
-
 from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.helpers.flow import run_flow
+from lfx.lfx_logging.logger import logger
 from lfx.schema.dotdict import dotdict
 
 
@@ -34,7 +33,7 @@ class RunFlowComponent(RunFlowBaseComponent):
                     build_config = self.update_build_config_from_graph(build_config, graph)
                 except Exception as e:
                     msg = f"Error building graph for flow {field_value}"
-                    logger.exception(msg)
+                    await logger.aexception(msg)
                     raise RuntimeError(msg) from e
         return build_config
 

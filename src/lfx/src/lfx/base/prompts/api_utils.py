@@ -3,10 +3,10 @@ from typing import Any
 
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
-from loguru import logger
 
 from lfx.inputs.inputs import DefaultPromptField
 from lfx.interface.utils import extract_input_variables_from_prompt
+from lfx.lfx_logging.logger import logger
 
 _INVALID_CHARACTERS = {
     " ",

@@ -228,8 +228,21 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "e4b13ca0e0af",
-              "module": "lfx.components.arxiv.arxiv.ArXivComponent"
+              "code_hash": "b61405ff011f",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "defusedxml",
+                    "version": "0.7.1"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 2
+              },
+              "module": "langflow.components.arxiv.arxiv.ArXivComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -389,8 +402,25 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "9619107fecd1",
-              "module": "lfx.components.input_output.chat_output.ChatOutput"
+              "code_hash": "6f74e04e39d5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.116.1"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 3
+              },
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
             "output_types": [],
@@ -700,8 +730,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "715a37648834",
-              "module": "lfx.components.input_output.chat.ChatInput"
+              "code_hash": "192913db3453",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
             "output_types": [],
@@ -1037,8 +1076,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "bf19ee6feee3",
-              "module": "lfx.components.processing.parser.ParserComponent"
+              "code_hash": "556209520650",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "langflow.components.processing.parser.ParserComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1212,8 +1260,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "17dbc66df007",
-              "module": "lfx.components.logic.loop.LoopComponent"
+              "code_hash": "5b234f78c942",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "langflow.components.logic.loop.LoopComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1625,8 +1682,17 @@
             "key": "TypeConverterComponent",
             "legacy": false,
             "metadata": {
-              "code_hash": "05cbf5ab183d",
-              "module": "lfx.components.processing.converter.TypeConverterComponent"
+              "code_hash": "38e56a852063",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "langflow.components.processing.converter.TypeConverterComponent"
             },
             "minimized": false,
             "output_types": [],

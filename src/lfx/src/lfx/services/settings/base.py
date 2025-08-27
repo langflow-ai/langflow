@@ -412,7 +412,7 @@ class Settings(BaseSettings):
                     logger.debug("Copying existing database to new location")
                     copy2(f"./{db_file_name}", new_path)
                     logger.debug(f"Copied existing database to {new_path}")
-                except Exception:  # noqa: BLE001
+                except Exception:
                     logger.exception("Failed to copy database, using default path")
                     new_path = f"./{db_file_name}"
             else:
@@ -534,6 +534,6 @@ async def load_settings_from_yaml(file_path: str) -> Settings:
             if key not in Settings.model_fields:
                 msg = f"Key {key} not found in settings"
                 raise KeyError(msg)
-            logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
+            await logger.adebug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return await asyncio.to_thread(Settings, **settings_dict)

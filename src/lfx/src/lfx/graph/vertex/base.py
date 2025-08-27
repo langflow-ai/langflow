@@ -8,14 +8,13 @@ from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.interface import initialize
 from lfx.interface.listing import lazy_load_dict
+from lfx.lfx_logging.logger import logger
 from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
@@ -389,7 +388,7 @@ class Vertex:
         event_manager: EventManager | None = None,
     ) -> None:
         """Initiate the build process."""
-        logger.debug(f"Building {self.display_name}")
+        await logger.adebug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict()
 
         if self.base_type is None:
@@ -610,7 +609,7 @@ class Vertex:
 
                     self.params[key].append(result)
                 except AttributeError as e:
-                    logger.exception(e)
+                    await logger.aexception(e)
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
                         f"Error building Component {self.display_name}: \n\n{e}"
@@ -657,7 +656,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
-            logger.exception(exc)
+            await logger.aexception(exc)
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildError(msg, tb) from exc
 

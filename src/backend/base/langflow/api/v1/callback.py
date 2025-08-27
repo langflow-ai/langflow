@@ -5,8 +5,8 @@ from uuid import UUID
 
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
+from lfx.lfx_logging.logger import logger
 from lfx.utils.util import remove_ansi_escape_codes
-from loguru import logger
 from typing_extensions import override
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
@@ -73,7 +73,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             for resp in resps:
                 await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
         except Exception:  # noqa: BLE001
-            logger.exception("Error sending response")
+            await logger.aexception("Error sending response")
 
     async def on_tool_error(
         self,

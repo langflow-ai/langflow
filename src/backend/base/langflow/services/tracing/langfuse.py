@@ -5,7 +5,7 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 from typing_extensions import override
 
 from langflow.serialization.serialization import serialize

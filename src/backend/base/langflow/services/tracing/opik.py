@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from loguru import logger
+from lfx.lfx_logging.logger import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data

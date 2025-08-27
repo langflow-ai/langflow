@@ -1,8 +1,7 @@
 import asyncio
 
-from loguru import logger
-
 from lfx.custom.directory_reader.directory_reader import DirectoryReader
+from lfx.lfx_logging.logger import logger
 from lfx.template.frontend_node.custom_components import CustomComponentFrontendNode
 
 

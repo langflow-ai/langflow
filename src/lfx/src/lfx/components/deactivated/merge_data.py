@@ -1,7 +1,6 @@
-from loguru import logger
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, Output
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 
 

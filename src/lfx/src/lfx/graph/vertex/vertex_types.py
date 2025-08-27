@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
-from loguru import logger
 
 from lfx.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from lfx.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from lfx.graph.vertex.base import Vertex
 from lfx.graph.vertex.exceptions import NoComponentInstanceError
+from lfx.lfx_logging.logger import logger
 from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
@@ -427,7 +427,7 @@ class InterfaceVertex(ComponentVertex):
         # Update artifacts with the message
         # and remove the stream_url
         self.finalize_build()
-        logger.debug(f"Streamed message: {complete_message}")
+        await logger.adebug(f"Streamed message: {complete_message}")
         # Set the result in the vertex of origin
         edges = self.get_edge_with_target(self.id)
         for edge in edges:

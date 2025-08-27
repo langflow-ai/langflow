@@ -1,17 +1,9 @@
 import httpx
-from loguru import logger
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import (
-    BoolInput,
-    DropdownInput,
-    IntInput,
-    MessageTextInput,
-    MultilineInput,
-    Output,
-    SecretStrInput,
-)
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 
 

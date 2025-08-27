@@ -4,12 +4,12 @@ from enum import Enum
 
 from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 
 

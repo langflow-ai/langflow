@@ -7,8 +7,8 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from loguru import logger
 
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
 from lfx.utils.constants import DIRECT_TYPES

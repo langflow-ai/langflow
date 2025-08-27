@@ -1,7 +1,6 @@
 from typing import Any, cast
 
 import requests
-from loguru import logger
 from pydantic import ValidationError
 
 from lfx.base.models.anthropic_constants import (
@@ -14,6 +13,7 @@ from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from lfx.lfx_logging.logger import logger
 from lfx.schema.dotdict import dotdict
 
 
@@ -101,7 +101,7 @@ class AnthropicModelComponent(LCModelComponent):
 
         return output
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             import anthropic
 
@@ -129,7 +129,7 @@ class AnthropicModelComponent(LCModelComponent):
                 model_with_tool = ChatAnthropic(
                     model=model,  # Use the current model being checked
                     anthropic_api_key=self.api_key,
-                    anthropic_api_url=cast(str, self.base_url) or DEFAULT_ANTHROPIC_API_URL,
+                    anthropic_api_url=cast("str", self.base_url) or DEFAULT_ANTHROPIC_API_URL,
                 )
 
                 if (
