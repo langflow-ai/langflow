@@ -3,13 +3,13 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 from langchain_core.tools import ToolException
-from langflow.custom import Component
-from langflow.custom.utils import build_custom_component_template
-
-from lfx.components.wikipedia import WikidataComponent
 
 # Import the base test class
 from tests.base import ComponentTestBaseWithoutClient
+
+from langflow.custom import Component
+from lfx.components.wikipedia import WikidataComponent
+from lfx.custom.utils import build_custom_component_template
 
 
 class TestWikidataComponent(ComponentTestBaseWithoutClient):

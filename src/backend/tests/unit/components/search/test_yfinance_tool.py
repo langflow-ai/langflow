@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.tools import ToolException
-from langflow.custom.utils import build_custom_component_template
 
 from lfx.components.yahoosearch.yahoo import YahooFinanceMethod, YfinanceComponent
+from lfx.custom.utils import build_custom_component_template
 from lfx.schema import Data
 
 
