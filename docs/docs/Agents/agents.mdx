@@ -178,7 +178,7 @@ The **Structured Response** (`structured_response`) output is [`Data`](/data-typ
 This output attempts to parse the agent's response as JSON and returns it as structured data:
 * If the response contains valid JSON, it is returned as-is.
 * If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
-* If no valid JSON is found, the output returns the raw content with an error indicator `Could not parse as JSON`.
+* If no valid JSON is found, the output returns the raw content with an error indicator `Try setting an output schema`.
 * When **Output Schema** is configured, the agent's LLM uses the schema along with **Output Format Instructions** to validate and structure its JSON responses.
 
 This structured response can be used to further use an Agent's response in downstream applications.
