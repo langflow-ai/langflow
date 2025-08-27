@@ -6,12 +6,13 @@ slug: /api-openai-responses
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/Tabs';
 
-Langflow includes an OpenAI-compatible API endpoint that allows you to execute your flows using OpenAI-compatible request and response formats.
+Langflow includes an OpenAI-compatible API endpoint at `POST /api/v1/responses`.
+This endpoint allows you to run your flows using OpenAI-compatible request and response formats.
 
 This enables you to use existing OpenAI client libraries with minimal code changes - just change the `model` name to your `flow_id` instead of using OpenAI model names like "gpt-4" or "gpt-3.5-turbo".
 Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
-## Requirements
+## Prerequisites
 
 Your Langflow flow must contain a **ChatInput** component to be compatible with the OpenAI Responses API.
 Flows without this component will return an error. The component types `ChatInput` and `Chat Input` are recognized as chat inputs.
@@ -19,18 +20,8 @@ Flows without this component will return an error. The component types `ChatInpu
 - **Tools**: The `tools` parameter is not yet supported and will return an error if provided.
 - **Flow Requirements**: Flows must contain a ChatInput component.
 - **Model Names**: The `model` field must contain a valid flow ID or endpoint name.
-- **Authentication**: All requests require an API key passed in the `x-api-key` header:
-
-    ```bash
-    curl -X POST \
-      "$LANGFLOW_SERVER_URL/api/v1/responses" \
-      -H "x-api-key: $LANGFLOW_API_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "model": "your-flow-id",
-        "input": "Hello, how are you?"
-      }'
-    ```
+- **Authentication**: All requests require an API key passed in the `x-api-key` header.
+For more information, see [API keys and authentication](/api-keys-and-authentication).
 
 ## Request
 
@@ -62,7 +53,7 @@ curl -X POST \
 ```
 
 <details>
-<summary>Response</summary>
+<summary>Result</summary>
 
 ```json
 {
@@ -194,7 +185,6 @@ curl -X POST \
 
 When your flow includes tools or function calls, you can get detailed information about their execution by including `"tool_call.results"` in the `include` parameter.
 
-#### Basic Tool Call Response (Default)
 Without the `include` parameter, tool calls return basic function call information:
 
 ```json
@@ -225,7 +215,7 @@ With `include: ["tool_call.results"]`, you get comprehensive information about t
 }
 ```
 
-## Conversation continuity using `previous_response_id`
+## Continue conversations with response and session IDs
 
 Conversation continuity allows you to maintain context across multiple API calls, enabling multi-turn conversations with your flows. This is essential for building chat applications where users can have ongoing conversations.
 
