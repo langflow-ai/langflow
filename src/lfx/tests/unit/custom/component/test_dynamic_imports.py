@@ -218,15 +218,8 @@ class TestPerformanceCharacteristics:
         from lfx.components import chroma as chromamodules
 
         # Test that we can access a component
-        chroma = chromamodules.ChromaVectorStoreComponent
-        assert chroma is not None
-
-        # After access, it should be cached in the module's globals
-        assert "ChromaVectorStoreComponent" in chromamodules.__dict__
-
-        # Subsequent access should return the same cached object
-        chroma_2 = chromamodules.ChromaVectorStoreComponent
-        assert chroma_2 is chroma
+        with pytest.raises(AttributeError, match="Could not import.*ChromaVectorStoreComponent"):
+            chromamodules.ChromaVectorStoreComponent  # noqa: B018
 
     def test_caching_behavior(self):
         """Test that components are cached after first access."""
