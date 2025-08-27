@@ -29,7 +29,6 @@ from lfx.base.constants import (
 from lfx.lfx_logging.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.util import escape_json_dump
-from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select

@@ -40,14 +40,11 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
-from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
