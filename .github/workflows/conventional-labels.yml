@@ -4,6 +4,9 @@ name: Label PRs with Conventional Commits
 on:
   pull_request_target:
     types: [opened, edited, synchronize]
+    branches:
+      - main
+      - 'release-*'
   merge_group:
 
 jobs:

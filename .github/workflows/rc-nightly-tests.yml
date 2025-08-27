@@ -1,0 +1,106 @@
+name: Release Candidate Nightly Tests
+
+on:
+  pull_request:
+    types: [opened, labeled, synchronize]
+    branches:
+      - 'release-*'
+  workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      ANTHROPIC_API_KEY:
+        required: true
+      STORE_API_KEY:
+        required: true
+      TAVILY_API_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to test"
+        required: false
+        type: string
+
+env:
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+  TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
+jobs:
+  should-run-rc-tests:
+    name: Check if RC tests should run
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ (startsWith(github.base_ref, 'release-') && (contains( github.event.pull_request.labels.*.name, 'type:release') || github.event_name == 'workflow_call')) || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - run: echo "Checking if RC nightly tests should run"
+      - run: echo "Event name -> ${{ github.event_name }}"
+      - run: echo "Base ref -> ${{ github.base_ref }}"
+      - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
+      - run: echo "Should run -> ${{ (startsWith(github.base_ref, 'release-') && (contains( github.event.pull_request.labels.*.name, 'type:release') || github.event_name == 'workflow_call')) || github.event_name == 'workflow_dispatch' }}"
+
+  rc-frontend-tests:
+    name: RC Frontend Tests (Full Suite)
+    needs: should-run-rc-tests
+    if: needs.should-run-rc-tests.outputs.should-run == 'true'
+    uses: ./.github/workflows/typescript_test.yml
+    with:
+      tests_folder: "tests"
+      release: true
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
+  rc-backend-tests:
+    name: RC Backend Tests (Full Suite)
+    needs: should-run-rc-tests
+    if: needs.should-run-rc-tests.outputs.should-run == 'true'
+    uses: ./.github/workflows/python_test.yml
+    with:
+      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      ref: ${{ inputs.branch || github.ref }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  rc-integration-tests:
+    name: RC Integration Tests
+    needs: should-run-rc-tests
+    if: needs.should-run-rc-tests.outputs.should-run == 'true'
+    uses: ./.github/workflows/integration_tests.yml
+    with:
+      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      ref: ${{ inputs.branch || github.ref }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  rc-tests-success:
+    name: "RC Tests Success"
+    needs: [rc-frontend-tests, rc-backend-tests, rc-integration-tests, should-run-rc-tests]
+    if: always() && needs.should-run-rc-tests.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check RC test results
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ RC Tests FAILED: One or more test suites failed"
+            echo ""
+            echo "🔧 RC branch requires all tests to pass before merge"
+            echo "Please fix the failing tests and push your changes"
+            exit 1
+          elif [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "⚠️  RC Tests CANCELLED"
+            exit 1
+          else
+            echo "✅ RC Tests SUCCESS: All test suites passed!"
+            echo ""
+            echo "🎉 Release candidate tests completed successfully"
+            echo "  - Frontend tests (full suite): ✅"
+            echo "  - Backend tests (full suite): ✅" 
+            echo "  - Integration tests: ✅"
+          fi

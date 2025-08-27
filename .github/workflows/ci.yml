@@ -39,6 +39,9 @@ on:
         default: "['3.10']"
   pull_request:
     types: [synchronize, labeled]
+    branches:
+      - main
+      - 'release-*'
   merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -120,8 +123,8 @@ jobs:
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
-      should-run-ci: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
-      should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
+      should-run-ci: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') || (startsWith(github.base_ref, 'release-') && github.event.pull_request.draft == false && contains( github.event.pull_request.labels.*.name, 'type:release')) }}
+      should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' || startsWith(github.base_ref, 'release-') }}
     steps:
       #  Do anything just to make the job run
       - run: echo "Debug CI Condition"
@@ -234,6 +237,17 @@ jobs:
         run: |
           uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
 
+  rc-nightly-tests:
+    needs: [set-ci-condition]
+    name: RC Nightly Tests
+    if: startsWith(github.base_ref, 'release-') && needs.set-ci-condition.outputs.should-run-tests == 'true'
+    uses: ./.github/workflows/rc-nightly-tests.yml
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
@@ -245,6 +259,7 @@ jobs:
         lint-backend,
         test-docs-build,
         test-templates,
+        rc-nightly-tests,
         set-ci-condition,
         path-filter,
         check-nightly-status

@@ -3,6 +3,9 @@ name: Smoke Tests
 on:
   pull_request:
     types: [opened, labeled, synchronize, reopened]
+    branches:
+      - main
+      - 'release-*'
   workflow_dispatch:
 
 jobs:
