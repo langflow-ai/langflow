@@ -395,7 +395,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   Googlemaps: "Googlemaps",
   Todoist: "Todoist",
   Zoom: "Zoom",
-  AIML: "AI/ML",
+  AIML: "AIML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",
   EmbeddingModels: "Binary",
