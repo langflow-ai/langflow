@@ -8,9 +8,8 @@ from typing import TYPE_CHECKING
 
 from lfx.services.manager import NoFactoryRegisteredError
 from lfx.services.manager import ServiceManager as BaseServiceManager
+from lfx.utils.concurrency import KeyedMemoryLockManager
 from loguru import logger
-
-from langflow.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:
     from langflow.services.base import Service
