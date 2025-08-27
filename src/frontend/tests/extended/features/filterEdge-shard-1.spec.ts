@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -60,7 +59,6 @@ test(
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
-      "disclosure-vector stores",
       "disclosure-agents",
       "disclosure-logic",
       "disclosure-tools",
@@ -72,13 +70,12 @@ test(
     const elementTestIds = [
       "input_outputChat Output",
       "dataAPI Request",
-      "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "mem0Mem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
-      "langchain_utilitiesCharacterTextSplitter",
+      "langchain_utilitiesCharacter Text Splitter",
     ];
 
     await Promise.all(
@@ -91,10 +88,11 @@ test(
     );
 
     await Promise.all(
-      elementTestIds.map((id) => {
+      elementTestIds.map(async (id) => {
         if (!expect(page.getByTestId(id).first()).toBeVisible()) {
           console.error(`${id} is not visible`);
         }
+        return expect(page.getByTestId(id).first()).toBeVisible();
       }),
     );
 
@@ -104,8 +102,7 @@ test(
       "cohereCohere Language Models",
       "groqGroq",
       "lmstudioLM Studio",
-      "maritalkMaritalk",
-      "mistralMistralAI",
+      "maritalkMariTalk",
       "perplexityPerplexity",
       "baiduQianfan",
       "sambanovaSambaNova",

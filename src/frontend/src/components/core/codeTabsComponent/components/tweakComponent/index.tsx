@@ -1,10 +1,10 @@
+import { useEffect, useState } from "react";
 import AccordionComponent from "@/components/common/accordionComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { EditNodeComponent } from "@/modals/editNodeModal/components/editNodeComponent";
-import { APIClassType } from "@/types/api";
-import { AllNodeType } from "@/types/flow";
+import type { APIClassType } from "@/types/api";
+import type { AllNodeType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import { useEffect, useState } from "react";
 
 export function TweakComponent({
   open,

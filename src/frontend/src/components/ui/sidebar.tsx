@@ -1,12 +1,11 @@
 "use client";
 
 import { Slot } from "@radix-ui/react-slot";
-import { VariantProps, cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
-
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useIsMobile } from "@/hooks/use-mobile";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { cn } from "../../utils/utils";
@@ -18,9 +17,46 @@ import { Skeleton } from "./skeleton";
 import { TooltipProvider } from "./tooltip";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
+const SIDEBAR_SECTION_COOKIE_NAME = "sidebar:section";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "19rem";
 const SIDEBAR_WIDTH_ICON = "4rem";
+const SEGMENTED_SIDEBAR_ICON_WIDTH = "40px";
+
+export type SidebarSection = "search" | "components" | "bundles" | "mcp";
+
+// Helper function to get cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+  return null;
+}
+
+// Helper function to get initial sidebar state from cookie
+function getInitialSidebarState(defaultOpen: boolean): boolean {
+  const cookieValue = getCookie(SIDEBAR_COOKIE_NAME);
+  if (cookieValue === null) return defaultOpen;
+  return cookieValue === "true";
+}
+
+// Helper function to get initial sidebar section from cookie
+function getInitialSidebarSection(
+  defaultSection: SidebarSection,
+): SidebarSection {
+  const cookieValue = getCookie(SIDEBAR_SECTION_COOKIE_NAME);
+  if (cookieValue === null) return defaultSection;
+  if (
+    cookieValue === "search" ||
+    cookieValue === "components" ||
+    cookieValue === "bundles" ||
+    cookieValue === "mcp"
+  ) {
+    return cookieValue;
+  }
+  return defaultSection;
+}
 
 type SidebarContext = {
   state: "expanded" | "collapsed";
@@ -28,6 +64,14 @@ type SidebarContext = {
   setOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   defaultOpen: boolean;
+  // Section management
+  activeSection: SidebarSection;
+  setActiveSection: (section: SidebarSection) => void;
+  defaultSection: SidebarSection;
+  // Search functionality
+  searchInputRef?: React.RefObject<HTMLInputElement>;
+  isSearchFocused?: boolean;
+  focusSearch?: () => void;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -48,6 +92,10 @@ const SidebarProvider = React.forwardRef<
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     width?: string;
+    segmentedSidebar?: boolean;
+    defaultSection?: SidebarSection;
+    activeSection?: SidebarSection;
+    onSectionChange?: (section: SidebarSection) => void;
   }
 >(
   (
@@ -55,17 +103,23 @@ const SidebarProvider = React.forwardRef<
       defaultOpen = true,
       open: openProp,
       onOpenChange: setOpenProp,
+      defaultSection = "components",
+      activeSection: activeSectionProp,
+      onSectionChange: setActiveSectionProp,
       className,
       style,
       children,
       width = SIDEBAR_WIDTH,
+      segmentedSidebar = false,
       ...props
     },
     ref,
   ) => {
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen);
+    const [_open, _setOpen] = React.useState(() =>
+      getInitialSidebarState(defaultOpen),
+    );
     const open = openProp ?? _open;
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
@@ -81,6 +135,25 @@ const SidebarProvider = React.forwardRef<
         document.cookie = `${SIDEBAR_COOKIE_NAME}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
       },
       [setOpenProp, open],
+    );
+
+    // Section state management
+    const [_activeSection, _setActiveSection] = React.useState<SidebarSection>(
+      () => getInitialSidebarSection(defaultSection),
+    );
+    const activeSection = activeSectionProp ?? _activeSection;
+    const setActiveSection = React.useCallback(
+      (section: SidebarSection) => {
+        if (setActiveSectionProp) {
+          return setActiveSectionProp(section);
+        }
+
+        _setActiveSection(section);
+
+        // This sets the cookie to keep the sidebar section state.
+        document.cookie = `${SIDEBAR_SECTION_COOKIE_NAME}=${section}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      },
+      [setActiveSectionProp],
     );
 
     // Helper to toggle the sidebar.
@@ -99,8 +172,20 @@ const SidebarProvider = React.forwardRef<
         setOpen,
         toggleSidebar,
         defaultOpen,
+        activeSection,
+        setActiveSection,
+        defaultSection,
       }),
-      [state, open, setOpen, toggleSidebar, defaultOpen],
+      [
+        state,
+        open,
+        setOpen,
+        toggleSidebar,
+        defaultOpen,
+        activeSection,
+        setActiveSection,
+        defaultSection,
+      ],
     );
 
     const toggleSidebarShortcut = useShortcutsStore(
@@ -126,7 +211,9 @@ const SidebarProvider = React.forwardRef<
             style={
               {
                 "--sidebar-width": width,
-                "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+                "--sidebar-width-icon": segmentedSidebar
+                  ? SEGMENTED_SIDEBAR_ICON_WIDTH
+                  : SIDEBAR_WIDTH_ICON,
                 ...style,
               } as React.CSSProperties
             }
@@ -418,14 +505,17 @@ SidebarSeparator.displayName = "SidebarSeparator";
 
 const SidebarContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div">
->(({ className, ...props }, ref) => {
+  React.ComponentProps<"div"> & {
+    segmentedSidebar?: boolean;
+  }
+>(({ className, segmentedSidebar = false, ...props }, ref) => {
   return (
     <div
       ref={ref}
       data-sidebar="content"
       className={cn(
         "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        segmentedSidebar && "sidebar-segmented",
         className,
       )}
       {...props}

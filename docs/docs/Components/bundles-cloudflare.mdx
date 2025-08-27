@@ -1,0 +1,31 @@
+---
+title: Cloudflare
+slug: /bundles-cloudflare
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Cloudflare** bundle.
+
+## Cloudflare Workers AI Embeddings
+
+The **Cloudflare Workers AI Embeddings** component generates embeddings using [Cloudflare Workers AI models](https://developers.cloudflare.com/workers-ai/).
+
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+
+### Cloudflare Workers AI Embeddings parameters
+
+Some **Cloudflare Workers AI Embeddings** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| account_id | Cloudflare account ID | Input parameter. Your [Cloudflare account ID](https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/#find-account-id-workers-and-pages). |
+| api_token | Cloudflare API token | Input parameter. Your [Cloudflare API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/). |
+| model_name | Model Name | Input parameter. A [supported model](https://developers.cloudflare.com/workers-ai/models/#text-embeddings) for embedding generation. |
+| strip_new_lines | Strip New Lines | Input parameter. Whether to strip new lines from the input text. |
+| batch_size | Batch Size | Input parameter. The number of texts to embed in each batch. |
+| api_base_url | Cloudflare API base URL | Input parameter. The base URL for the Cloudflare API. |
+| headers | Headers | Input parameter. Additional headers for the embedding generation API request. |

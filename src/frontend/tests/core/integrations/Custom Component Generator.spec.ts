@@ -24,10 +24,11 @@ withEventDeliveryModes(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByTestId("template-custom-component-generator").click();
-
+    await page.getByTestId("canvas_controls_dropdown").click();
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
       timeout: 5000,
@@ -48,8 +49,8 @@ withEventDeliveryModes(
         .locator("input")
         .last()
         .fill(process.env.ANTHROPIC_API_KEY ?? "");
-    } catch (e) {
-      console.log("There's API already added");
+    } catch (_e) {
+      console.error("There's API already added");
     }
 
     await page.getByTestId("playground-btn-flow-io").click();

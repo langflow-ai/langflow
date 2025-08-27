@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -20,8 +20,11 @@ test(
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTitle("fit view").click();
     await page.getByTitle("zoom out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("title-Custom Component").first().click();
 
@@ -63,6 +66,7 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 3000,
@@ -70,6 +74,7 @@ test(
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Verify that all tabs are visible
     expect(await page.getByText("Tab 1").isVisible()).toBeTruthy();
@@ -111,7 +116,7 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     throw new Error("Could not find value attribute in the HTML");
   }
 
-  let codeContent = valueMatch[1]
+  const codeContent = valueMatch[1]
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")

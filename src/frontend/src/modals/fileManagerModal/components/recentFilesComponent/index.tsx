@@ -1,11 +1,11 @@
+import Fuse from "fuse.js";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { IS_MAC } from "@/constants/constants";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import { CustomLink } from "@/customization/components/custom-link";
 import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
-import { FileType } from "@/types/file_management";
-import Fuse from "fuse.js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FileType } from "@/types/file_management";
 import FilesRendererComponent from "../filesRendererComponent";
 
 export default function RecentFilesComponent({

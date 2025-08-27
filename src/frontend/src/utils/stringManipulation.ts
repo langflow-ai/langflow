@@ -1,6 +1,6 @@
 import DOMPurify from "dompurify";
 import React from "react";
-import { FieldParserType } from "../types/api";
+import type { FieldParserType } from "../types/api";
 
 function toSnakeCase(str: string): string {
   return str.trim().replace(/[-\s]+/g, "_");
@@ -35,7 +35,7 @@ function toUpperCase(str: string): string {
   return str?.toUpperCase();
 }
 
-function toSpaceCase(str: string): string {
+export function toSpaceCase(str: string): string {
   return str
     .trim()
     .replace(/[_\s-]+/g, " ")
@@ -177,7 +177,7 @@ export function parseString(
           result = sanitizeMcpName(result);
           break;
       }
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`Error in parser ${parser}`);
     }
   }
@@ -213,7 +213,7 @@ export const formatFileSize = (bytes: number): string => {
   const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 };
 
 export const convertStringToHTML = (htmlString: string): JSX.Element => {

@@ -9,10 +9,13 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
@@ -47,8 +50,8 @@ test(
 
     await page.getByTestId("code-button-modal").click();
 
-    let code = await extractAndCleanCode(page);
-    let updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
+    const code = await extractAndCleanCode(page);
+    const updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
 
     expect(updatedCode).not.toBe(code);
 

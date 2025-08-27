@@ -1,5 +1,5 @@
 const TwitterXSVG = (props) => {
-  return props.isdark === "true" ? (
+  return props.isDark ? (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0,0,256,256"

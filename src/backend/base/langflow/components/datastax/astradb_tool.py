@@ -268,7 +268,7 @@ class AstraDBToolComponent(LCToolComponent):
         return tool
 
     def projection_args(self, input_str: str) -> dict | None:
-        """Build the projection arguments for the AstraDB query."""
+        """Build the projection arguments for the Astra DB query."""
         elements = input_str.split(",")
         result = {}
 
@@ -329,7 +329,7 @@ class AstraDBToolComponent(LCToolComponent):
         raise ValueError(msg)
 
     def build_filter(self, args: dict, filter_settings: list) -> dict:
-        """Build filter dictionary for AstraDB query.
+        """Build filter dictionary for Astra DB query.
 
         Args:
             args: Dictionary of arguments from the tool
@@ -370,7 +370,7 @@ class AstraDBToolComponent(LCToolComponent):
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
-        """Run the query to get the data from the AstraDB collection."""
+        """Run the query to get the data from the Astra DB collection."""
         collection = self._build_collection()
         sort = {}
 

@@ -4,12 +4,12 @@ from enum import Enum
 
 import yfinance as yf
 from langchain_core.tools import ToolException
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 
@@ -49,9 +49,9 @@ class YahooFinanceSchema(BaseModel):
 
 
 class YfinanceComponent(Component):
-    display_name = "Yahoo Finance"
+    display_name = "Yahoo! Finance"
     description = """Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \
-to access financial data and market information from Yahoo Finance."""
+to access financial data and market information from Yahoo! Finance."""
     icon = "trending-up"
 
     inputs = [

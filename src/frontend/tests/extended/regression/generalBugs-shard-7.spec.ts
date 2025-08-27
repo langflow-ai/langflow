@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+
 // TODO: This test might not be needed anymore
 test(
   "should be able to select all with ctrl + A on advanced modal",
@@ -14,6 +15,8 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 5000,
       state: "visible",
@@ -23,6 +26,8 @@ test(
       timeout: 5000,
       state: "visible",
     });
+
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
@@ -38,9 +43,11 @@ test(
           .getByTestId("add-component-button-ollama-embeddings")
           .click();
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="div-generic-node"]', {
       timeout: 5000,

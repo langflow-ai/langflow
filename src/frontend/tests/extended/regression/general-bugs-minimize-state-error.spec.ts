@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 async function toggleNodeState(page: Page, action: "minimize" | "expand") {
@@ -16,10 +16,13 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
 

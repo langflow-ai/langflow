@@ -4,6 +4,7 @@ import path from "path";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+
 test(
   "user should be able to use chat memory as expected",
   { tag: ["@release", "@workspace", "@components"] },
@@ -20,11 +21,14 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 2000,
     });
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("message history");
@@ -87,7 +91,10 @@ AI:
     await page.getByText("Edit Prompt", { exact: true }).click();
     await page.getByText("Check & Save").last().click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     //connection 1
     await page

@@ -32,10 +32,12 @@ withEventDeliveryModes(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Price Deal Finder" }).click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
@@ -75,8 +77,8 @@ withEventDeliveryModes(
         timeout: 180000,
         state: "hidden",
       });
-    } catch (error) {
-      console.log("Timeout error");
+    } catch (_error) {
+      console.error("Timeout error");
       test.skip(true, "Timeout error");
     }
 

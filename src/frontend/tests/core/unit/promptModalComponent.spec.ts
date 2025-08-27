@@ -169,12 +169,12 @@ test(
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
     if (valueBadgeOne != "prompt") {
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
+    const valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
     if (valueBadgeTwo != "prompt1") {
       expect(false).toBeTruthy();
     }
@@ -315,8 +315,11 @@ test(
     ).toBeTruthy();
 
     await page.getByText("Close").last().click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 2);
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("edit-button-modal").last().click();
 
     await page.locator('//*[@id="showprompt1"]').click();

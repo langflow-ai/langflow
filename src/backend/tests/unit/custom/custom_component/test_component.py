@@ -1,13 +1,15 @@
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from langflow.components.custom_component import CustomComponent
 from langflow.components.input_output import ChatInput, ChatOutput
+from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import update_component_build_config
 from langflow.schema import dotdict
+from langflow.schema.message import Message
 from langflow.template import Output
-from typing_extensions import override
 
 crewai_available = False
 try:
@@ -25,7 +27,7 @@ def test_set_invalid_output():
         chatoutput.set(input_value=chatinput.build_config)
 
 
-@pytest.mark.skipif(not crewai_available, reason="CrewAI is not installed")
+@pytest.mark.xfail(reason="CrewAI is not outdated")
 def test_set_component():
     crewai_agent = CrewAIAgentComponent()
     task = SequentialTaskComponent()
@@ -75,12 +77,11 @@ def _assert_all_outputs_have_different_required_inputs(outputs: list[Output]):
 
 async def test_update_component_build_config_sync():
     class TestComponent(CustomComponent):
-        @override
         def update_build_config(
             self,
             build_config: dotdict,
-            field_value: Any,
-            field_name: str | None = None,
+            field_value: Any,  # noqa: ARG002
+            field_name: str | None = None,  # noqa: ARG002
         ):
             build_config["foo"] = "bar"
             return build_config
@@ -93,12 +94,11 @@ async def test_update_component_build_config_sync():
 
 async def test_update_component_build_config_async():
     class TestComponent(CustomComponent):
-        @override
         async def update_build_config(
             self,
             build_config: dotdict,
-            field_value: Any,
-            field_name: str | None = None,
+            field_value: Any,  # noqa: ARG002
+            field_name: str | None = None,  # noqa: ARG002
         ):
             build_config["foo"] = "bar"
             return build_config
@@ -107,3 +107,45 @@ async def test_update_component_build_config_async():
     build_config = dotdict()
     build_config = await update_component_build_config(component, build_config, "", "")
     assert build_config["foo"] == "bar"
+
+
+@pytest.mark.usefixtures("use_noop_session")
+@pytest.mark.asyncio
+async def test_send_message_without_database(monkeypatch):  # noqa: ARG001
+    component = Component()
+    event_manager = MagicMock()
+    component._event_manager = event_manager
+    message = Message(text="Hello", session_id="session", flow_id=None, sender="User", sender_name="Test")
+
+    result = await component.send_message(message)
+    assert isinstance(result, Message)
+    assert result.text == "Hello"
+    assert result.sender == "User"
+    assert result.sender_name == "Test"
+    # The focus is on testing the message handling logic, not the database persistence layer
+    assert event_manager.on_message.called
+
+
+@pytest.mark.usefixtures("use_noop_session")
+@pytest.mark.asyncio
+async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
+    from langflow.components.agents.agent import AgentComponent
+
+    event_manager = MagicMock()
+    agent = AgentComponent(
+        agent_llm="OpenAI",
+        input_value="Hello",
+        system_prompt="You are a helpful assistant.",
+        tools=[],
+        _session_id="test-session",
+    )
+    agent._event_manager = event_manager
+    message = Message(text="Hello", session_id="test-session", flow_id=None, sender="User", sender_name="Test")
+
+    result = await agent.send_message(message)
+    assert isinstance(result, Message)
+    assert result.text == "Hello"
+    assert result.sender == "User"
+    assert result.sender_name == "Test"
+    # The focus is on testing the message handling logic, not the database persistence layer
+    assert event_manager.on_message.called

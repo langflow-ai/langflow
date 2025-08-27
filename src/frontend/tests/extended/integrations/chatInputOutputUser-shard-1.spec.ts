@@ -21,9 +21,13 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await initialGPTsetup(page);
 
     await page.getByTestId("button_run_chat output").last().click();
@@ -71,7 +75,7 @@ test(
 
     // Get URL node ID
     const urlNode = await page.locator(".react-flow__node").first();
-    const urlNodeId = await urlNode.getAttribute("data-id");
+    const _urlNodeId = await urlNode.getAttribute("data-id");
 
     // Add two chat outputs
     await page.getByTestId("sidebar-search-input").click();
@@ -95,8 +99,10 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 400 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Fill URL input
     await page

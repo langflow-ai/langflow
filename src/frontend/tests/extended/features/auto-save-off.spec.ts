@@ -40,12 +40,14 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 5000,
     });
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
 
@@ -66,11 +68,15 @@ test(
       );
 
       await page.getByText("Exit Anyway", { exact: true }).click();
-    } catch (error) {
-      console.log("Warning text not visible, skipping dialog confirmation");
+    } catch (_error) {
+      console.error("Warning text not visible, skipping dialog confirmation");
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlowDiv = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlowDiv.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,
@@ -102,6 +108,7 @@ test(
       console.error("Failed to hover or find add component button:", error);
       throw error;
     }
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Wait for fit view button
     await page.waitForSelector('[data-testid="fit_view"]', {
@@ -109,12 +116,17 @@ test(
     });
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("icon-ChevronLeft").last().click();
 
     await page.getByText("Save And Exit", { exact: true }).click();
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow.click();
 
     await page.waitForSelector("text=loading", {
       state: "hidden",
@@ -137,12 +149,14 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 5000,
     });
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("save-flow-button").click();
     await page.getByTestId("icon-ChevronLeft").last().click();
@@ -162,7 +176,11 @@ test(
       await page.getByText("Save And Exit", { exact: true }).last().click();
     }
 
-    await page.getByText("Untitled document").first().click();
+    const newFlow2 = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlow2.click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 5000,
