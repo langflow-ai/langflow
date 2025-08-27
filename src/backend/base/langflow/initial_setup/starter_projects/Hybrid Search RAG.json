@@ -746,7 +746,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.115.13"
+                    "version": "0.116.1"
                   },
                   {
                     "name": "langflow",
@@ -1248,12 +1248,29 @@
             "last_updated": "2025-08-26T16:33:20.961Z",
             "legacy": false,
             "metadata": {
-              "keywords": [
-                "model",
-                "llm",
-                "language model",
-                "large language model"
-              ]
+              "code_hash": "23fbe9daca09",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "astrapy",
+                    "version": "2.0.1"
+                  },
+                  {
+                    "name": "langchain_astradb",
+                    "version": "0.6.0"
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.75"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 4
+              },
+              "module": "langflow.components.datastax.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
