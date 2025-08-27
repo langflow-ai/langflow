@@ -7,8 +7,7 @@ lfx's Message model and service interfaces.
 
 from uuid import UUID
 
-from loguru import logger
-
+from lfx.lfx_logging.logger import logger
 from lfx.schema.message import Message
 from lfx.services.deps import session_scope
 from lfx.utils.async_helpers import run_until_complete

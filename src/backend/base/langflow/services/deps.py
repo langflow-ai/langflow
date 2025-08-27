@@ -39,7 +39,9 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from lfx.services.manager import service_manager
+    from lfx.services.manager import get_service_manager
+
+    service_manager = get_service_manager()
 
     if not service_manager.are_factories_registered():
         # ! This is a workaround to ensure that the service manager is initialized

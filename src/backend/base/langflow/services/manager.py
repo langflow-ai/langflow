@@ -21,9 +21,10 @@ def initialize_settings_service() -> None:
 
 def initialize_session_service() -> None:
     """Initialize the session manager."""
+    from lfx.services.manager import get_service_manager
+
     from langflow.services.cache import factory as cache_factory
     from langflow.services.session import factory as session_service_factory
-    from lfx.services.manager import get_service_manager
 
     initialize_settings_service()
 

@@ -3,7 +3,7 @@ import importlib
 import json
 import pkgutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
@@ -149,7 +149,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     return (top_level, module_components)
 
 
-async def _determine_loading_strategy(settings_service: SettingsService) -> dict:
+async def _determine_loading_strategy(settings_service: "SettingsService") -> dict:
     """Determines and executes the appropriate component loading strategy.
 
     Args:
@@ -181,7 +181,7 @@ async def _determine_loading_strategy(settings_service: SettingsService) -> dict
 
 
 async def get_and_cache_all_types_dict(
-    settings_service: SettingsService,
+    settings_service: "SettingsService",
 ):
     """Retrieves and caches the complete dictionary of component types and templates.
 
@@ -345,7 +345,7 @@ async def get_component_minimal_metadata(component_type: str, component_name: st
     return metadata
 
 
-async def ensure_component_loaded(component_type: str, component_name: str, settings_service: SettingsService):
+async def ensure_component_loaded(component_type: str, component_name: str, settings_service: "SettingsService"):
     """Ensure a component is fully loaded if it was only partially loaded."""
     # If already fully loaded, return immediately
     component_key = f"{component_type}:{component_name}"
@@ -424,7 +424,7 @@ async def load_single_component(component_type: str, component_name: str, compon
 
 
 # Also add a utility function to load specific component types
-async def get_type_dict(component_type: str, settings_service: SettingsService | None = None):
+async def get_type_dict(component_type: str, settings_service: Optional["SettingsService"] = None):
     """Get a specific component type dictionary, loading if needed."""
     if settings_service is None:
         # Import here to avoid circular imports

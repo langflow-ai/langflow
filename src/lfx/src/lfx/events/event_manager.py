@@ -8,8 +8,9 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 from fastapi.encoders import jsonable_encoder
-from loguru import logger
 from typing_extensions import Protocol
+
+from lfx.lfx_logging.logger import logger
 
 if TYPE_CHECKING:
     # Lightweight type stub for log types

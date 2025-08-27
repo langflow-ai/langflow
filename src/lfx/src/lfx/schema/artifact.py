@@ -2,9 +2,9 @@ from collections.abc import Generator
 from enum import Enum
 
 from fastapi.encoders import jsonable_encoder
-from loguru import logger
 from pydantic import BaseModel
 
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.encoders import CUSTOM_ENCODERS

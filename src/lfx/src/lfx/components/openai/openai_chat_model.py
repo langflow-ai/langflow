@@ -1,17 +1,14 @@
 from typing import Any
 
 from langchain_openai import ChatOpenAI
-from loguru import logger
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.openai_constants import (
-    OPENAI_CHAT_MODEL_NAMES,
-    OPENAI_REASONING_MODEL_NAMES,
-)
+from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.lfx_logging.logger import logger
 
 
 class OpenAIModelComponent(LCModelComponent):

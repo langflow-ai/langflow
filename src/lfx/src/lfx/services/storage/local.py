@@ -2,8 +2,7 @@
 
 from pathlib import Path
 
-from loguru import logger
-
+from lfx.lfx_logging.logger import logger
 from lfx.services.storage.service import StorageService
 
 

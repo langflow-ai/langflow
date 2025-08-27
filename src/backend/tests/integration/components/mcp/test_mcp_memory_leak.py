@@ -13,9 +13,10 @@ import time
 
 import psutil
 import pytest
-from langflow.base.mcp.util import MCPSessionManager
-from loguru import logger
 from mcp import StdioServerParameters
+
+from langflow.base.mcp.util import MCPSessionManager
+from lfx.lfx_logging.logger import logger
 
 pytestmark = [
     pytest.mark.timeout(300, method="thread"),

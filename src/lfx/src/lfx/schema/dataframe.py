@@ -1,11 +1,13 @@
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 from langchain_core.documents import Document
 from pandas import DataFrame as pandas_DataFrame
 
 from lfx.schema.data import Data
-from lfx.schema.message import Message
+
+if TYPE_CHECKING:
+    from lfx.schema.message import Message
 
 
 class DataFrame(pandas_DataFrame):
@@ -189,7 +191,9 @@ class DataFrame(pandas_DataFrame):
         dict_list = self.to_dict(orient="records")
         return Data(data={"results": dict_list})
 
-    def to_message(self) -> Message:
+    def to_message(self) -> "Message":
+        from lfx.schema.message import Message
+
         # Process DataFrame similar to the _safe_convert method
         # Remove empty rows
         processed_df = self.dropna(how="all")

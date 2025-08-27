@@ -25,10 +25,10 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, APIKeyQuery
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from lfx.cli.common import execute_graph_with_capture, extract_result_data, get_api_key
+from lfx.lfx_logging.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable

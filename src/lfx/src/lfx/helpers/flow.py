@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from loguru import logger
 from pydantic import BaseModel, Field, create_model
 
+from lfx.lfx_logging.logger import logger
 from lfx.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:

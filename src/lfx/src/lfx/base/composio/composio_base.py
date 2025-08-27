@@ -5,20 +5,13 @@ from typing import Any
 from composio import Composio
 from composio_langchain import LangchainProvider
 from langchain_core.tools import Tool
-from loguru import logger
 
 from lfx.base.mcp.util import create_input_schema_from_json_schema
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import (
-    AuthInput,
-    FileInput,
-    InputTypes,
-    MessageTextInput,
-    SecretStrInput,
-    SortableListInput,
-)
+from lfx.inputs.inputs import AuthInput, FileInput, InputTypes, MessageTextInput, SecretStrInput, SortableListInput
 from lfx.io import Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message

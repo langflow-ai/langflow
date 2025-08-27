@@ -9,13 +9,13 @@ from typing import Any, Literal
 import orjson
 import yaml
 from aiofile import async_open
-from loguru import logger
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
 
 from lfx.constants import BASE_COMPONENTS_PATH
+from lfx.lfx_logging.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url

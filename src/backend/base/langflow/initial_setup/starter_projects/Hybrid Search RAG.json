@@ -205,17 +205,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "192913db3453",
+              "code_hash": "715a37648834",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 1
               },
-              "module": "langflow.components.input_output.chat.ChatInput"
+              "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
             "output_types": [],
@@ -524,17 +524,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "556209520650",
+              "code_hash": "bf19ee6feee3",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 1
               },
-              "module": "langflow.components.processing.parser.ParserComponent"
+              "module": "lfx.components.processing.parser.ParserComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -715,7 +715,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "6f74e04e39d5",
+              "code_hash": "9619107fecd1",
               "dependencies": {
                 "dependencies": [
                   {
@@ -727,13 +727,13 @@
                     "version": "0.116.1"
                   },
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 3
               },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
+              "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
             "output_types": [],
@@ -1037,17 +1037,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "556209520650",
+              "code_hash": "bf19ee6feee3",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 1
               },
-              "module": "langflow.components.processing.parser.ParserComponent"
+              "module": "lfx.components.processing.parser.ParserComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1242,7 +1242,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "23fbe9daca09",
+              "code_hash": "0e26d8c1384d",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1258,13 +1258,13 @@
                     "version": "0.3.75"
                   },
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 4
               },
-              "module": "langflow.components.datastax.astradb.AstraDBVectorStoreComponent"
+              "module": "lfx.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -2647,7 +2647,7 @@
             "icon": "braces",
             "legacy": false,
             "metadata": {
-              "code_hash": "ad2a6f4552c0",
+              "code_hash": "6fb55f08b295",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2659,13 +2659,13 @@
                     "version": "0.0.39"
                   },
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 3
               },
-              "module": "langflow.components.processing.structured_output.StructuredOutputComponent"
+              "module": "lfx.components.processing.structured_output.StructuredOutputComponent"
             },
             "minimized": false,
             "output_types": [],

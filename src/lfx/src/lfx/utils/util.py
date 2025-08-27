@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from docstring_parser import parse
-from loguru import logger
 
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
 from lfx.template.frontend_node.constants import FORCE_SHOW_FIELDS

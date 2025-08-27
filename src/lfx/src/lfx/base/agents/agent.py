@@ -7,7 +7,6 @@ from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActi
 from langchain.agents.agent import RunnableAgent
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
-from loguru import logger
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
@@ -16,6 +15,7 @@ from lfx.custom.custom_component.component import Component, _get_component_tool
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes, MultilineInput
 from lfx.io import BoolInput, HandleInput, IntInput, MessageInput
+from lfx.lfx_logging.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data

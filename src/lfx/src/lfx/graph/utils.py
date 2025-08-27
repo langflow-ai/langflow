@@ -5,9 +5,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from loguru import logger
-
 from lfx.interface.utils import extract_input_variables_from_prompt
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 

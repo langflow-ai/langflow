@@ -7,10 +7,10 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 from langchain_core.documents import Document
-from loguru import logger
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
+from lfx.lfx_logging.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 
 

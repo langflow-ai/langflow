@@ -121,7 +121,7 @@ def get_lifespan(*, fix_migration=False, version=None):
     async def lifespan(_app: FastAPI):
         from lfx.interface.components import get_and_cache_all_types_dict
 
-        configure(async_file=True)
+        configure()
 
         # Startup message
         if version:

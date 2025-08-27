@@ -11,9 +11,9 @@ from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
+from lfx.lfx_logging.logger import logger
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 

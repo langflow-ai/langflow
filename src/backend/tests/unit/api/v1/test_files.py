@@ -11,17 +11,17 @@ import anyio
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+from tests.conftest import _delete_transactions_and_vertex_builds
+
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service
-from sqlalchemy.orm import selectinload
-from sqlmodel import select
-
 from lfx.services.deps import session_scope
-from tests.conftest import _delete_transactions_and_vertex_builds
 
 
 @pytest.fixture(name="files_created_api_key")
@@ -125,10 +125,10 @@ async def files_client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-            from lfx.services.manager import service_manager
+            from lfx.services.manager import get_service_manager
 
-            service_manager.factories.clear()
-            service_manager.services.clear()  # Clear the services cache
+            get_service_manager().factories.clear()
+            get_service_manager().services.clear()  # Clear the services cache
             app = create_app()
             return app, db_path
 

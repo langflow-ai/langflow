@@ -3,8 +3,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from lfx.lfx_logging.logger import logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
@@ -16,12 +14,15 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
+from lfx.lfx_logging.logger import logger
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
 from .deps import get_db_service, get_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
-    from lfx.services.settings.manager import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from lfx.services.settings.manager import SettingsService
 
 
 async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
@@ -131,8 +132,9 @@ async def teardown_services() -> None:
     async with session_scope() as session:
         await teardown_superuser(get_settings_service(), session)
 
-    from lfx.services.manager import service_manager
+    from lfx.services.manager import get_service_manager
 
+    service_manager = get_service_manager()
     await service_manager.teardown()
 
 
@@ -222,9 +224,9 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
 def register_all_service_factories() -> None:
     """Register all available service factories with the service manager."""
     # Import all service factories
-    from lfx.services.manager import service_manager
-    from lfx.services.settings import factory as settings_factory
+    from lfx.services.manager import get_service_manager
 
+    service_manager = get_service_manager()
     from langflow.services.auth import factory as auth_factory
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
@@ -239,6 +241,7 @@ def register_all_service_factories() -> None:
     from langflow.services.telemetry import factory as telemetry_factory
     from langflow.services.tracing import factory as tracing_factory
     from langflow.services.variable import factory as variable_factory
+    from lfx.services.settings import factory as settings_factory
 
     # Register all factories
     service_manager.register_factory(settings_factory.SettingsServiceFactory())

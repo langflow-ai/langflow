@@ -228,7 +228,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "b61405ff011f",
+              "code_hash": "e4b13ca0e0af",
               "dependencies": {
                 "dependencies": [
                   {
@@ -236,13 +236,13 @@
                     "version": "0.7.1"
                   },
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 2
               },
-              "module": "langflow.components.arxiv.arxiv.ArXivComponent"
+              "module": "lfx.components.arxiv.arxiv.ArXivComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -402,7 +402,7 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "6f74e04e39d5",
+              "code_hash": "9619107fecd1",
               "dependencies": {
                 "dependencies": [
                   {
@@ -414,13 +414,13 @@
                     "version": "0.116.1"
                   },
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 3
               },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
+              "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
             "output_types": [],
@@ -730,17 +730,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "192913db3453",
+              "code_hash": "715a37648834",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 1
               },
-              "module": "langflow.components.input_output.chat.ChatInput"
+              "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
             "output_types": [],
@@ -1076,17 +1076,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "556209520650",
+              "code_hash": "bf19ee6feee3",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 1
               },
-              "module": "langflow.components.processing.parser.ParserComponent"
+              "module": "lfx.components.processing.parser.ParserComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1260,17 +1260,17 @@
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
-              "code_hash": "5b234f78c942",
+              "code_hash": "17dbc66df007",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 1
               },
-              "module": "langflow.components.logic.loop.LoopComponent"
+              "module": "lfx.components.logic.loop.LoopComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1682,17 +1682,17 @@
             "key": "TypeConverterComponent",
             "legacy": false,
             "metadata": {
-              "code_hash": "38e56a852063",
+              "code_hash": "05cbf5ab183d",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 1
               },
-              "module": "langflow.components.processing.converter.TypeConverterComponent"
+              "module": "lfx.components.processing.converter.TypeConverterComponent"
             },
             "minimized": false,
             "output_types": [],

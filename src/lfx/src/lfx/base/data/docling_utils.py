@@ -4,8 +4,8 @@ import traceback
 from contextlib import suppress
 
 from docling_core.types.doc import DoclingDocument
-from loguru import logger
 
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 

@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import yaml
 from cachetools import TTLCache
 from langchain_core.documents import Document
-from loguru import logger
 from pydantic import BaseModel
 
 from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
 from lfx.helpers.flow import list_flows, load_flow, run_flow
+from lfx.lfx_logging.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service, get_variable_service, session_scope
 from lfx.services.storage.service import StorageService

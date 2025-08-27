@@ -1,14 +1,10 @@
 from typing import Any
 
 from composio import Action
-from loguru import logger
 
 from lfx.base.composio.composio_base import ComposioBaseComponent
-from lfx.inputs import (
-    BoolInput,
-    IntInput,
-    MessageTextInput,
-)
+from lfx.inputs import BoolInput, IntInput, MessageTextInput
+from lfx.lfx_logging.logger import logger
 
 
 class ComposioSlackAPIComponent(ComposioBaseComponent):

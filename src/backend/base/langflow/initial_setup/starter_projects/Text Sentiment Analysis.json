@@ -713,7 +713,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "6f74e04e39d5",
+              "code_hash": "9619107fecd1",
               "dependencies": {
                 "dependencies": [
                   {
@@ -725,13 +725,13 @@
                     "version": "0.116.1"
                   },
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 3
               },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
+              "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
             "output_types": [],
@@ -1041,7 +1041,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "6f74e04e39d5",
+              "code_hash": "9619107fecd1",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1053,13 +1053,13 @@
                     "version": "0.116.1"
                   },
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   }
                 ],
                 "total_dependencies": 3
               },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
+              "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
             "output_types": [],
