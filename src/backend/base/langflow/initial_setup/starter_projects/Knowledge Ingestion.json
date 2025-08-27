@@ -92,7 +92,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.8"
+                    "version": "0.3.9"
                   },
                   {
                     "name": "langflow",
@@ -356,7 +356,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.32.4"
+                    "version": "2.32.5"
                   },
                   {
                     "name": "bs4",
