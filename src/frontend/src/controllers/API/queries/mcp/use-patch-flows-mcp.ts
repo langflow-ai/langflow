@@ -62,22 +62,9 @@ export const usePatchFlowsMCP: useMutationFunctionType<
 
       // Update the cache with the exact SSE URL from the backend
       if (data.result?.sse_url) {
-        if (data.result.uses_composer) {
-          const composerUrlData = {
-            project_id: data.result.project_id,
-            sse_url: data.result.sse_url,
-          };
-          queryClient.setQueryData(
-            ["project-composer-url", params.project_id],
-            composerUrlData,
-          );
-        } else {
-          // OAuth disabled - remove composer cache and let UI fall back to direct SSE
-          // The direct SSE URL logic is already in customGetMCPUrl, so we just clear the composer cache
-          queryClient.removeQueries({
-            queryKey: ["project-composer-url", params.project_id],
-          });
-        }
+        queryClient.invalidateQueries({
+          queryKey: ["project-composer-url", params.project_id],
+        });
       }
 
       // Call the original onSuccess if provided
