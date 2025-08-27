@@ -727,20 +727,20 @@ async def load_flows_from_directory() -> None:
     """On langflow startup, this loads all flows from the directory specified in the settings.
 
     All flows are uploaded into the default folder for the superuser.
-    Note that this feature currently only works if AUTO_LOGIN is enabled in the settings.
     """
     settings_service = get_settings_service()
     flows_path = settings_service.settings.load_flows_path
     if not flows_path:
         return
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
-        return
 
     async with session_scope() as session:
-        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+        # Find superuser by role instead of username to avoid issues with credential reset
+        from langflow.services.database.models.user.model import User
+        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+        result = await session.exec(stmt)
+        user = result.first()
         if user is None:
-            msg = "Superuser not found in the database"
+            msg = "No superuser found in the database"
             raise NoResultFound(msg)
 
         # Ensure that the default folder exists for this user
@@ -793,13 +793,15 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     bundle_urls = settings_service.settings.bundle_urls
     if not bundle_urls:
         return [], []
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        logger.warning("AUTO_LOGIN is disabled, not loading flows from URLs")
 
     async with session_scope() as session:
-        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+        # Find superuser by role instead of username to avoid issues with credential reset
+        from langflow.services.database.models.user.model import User
+        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+        result = await session.exec(stmt)
+        user = result.first()
         if user is None:
-            msg = "Superuser not found in the database"
+            msg = "No superuser found in the database"
             raise NoResultFound(msg)
         user_id = user.id
 
@@ -817,8 +819,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
                     path = Path(filename)
                     for dir_name in dir_names:
                         if (
-                            settings_service.auth_settings.AUTO_LOGIN
-                            and path.is_relative_to(f"{dir_name}flows/")
+                            path.is_relative_to(f"{dir_name}flows/")
                             and path.suffix == ".json"
                         ):
                             file_content = zfile.read(filename)
