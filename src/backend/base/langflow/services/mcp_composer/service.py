@@ -194,11 +194,10 @@ class MCPComposerService(Service):
                     if project_id in self.project_composers:
                         del self.project_composers[project_id]
 
-            try:
-                self._is_port_available(project_port)
-            except RuntimeError as e:
-                logger.error(f"Port for project {project_id} is not available: {e}")
-                raise
+            is_port_available = self._is_port_available(project_port)
+            if not is_port_available:
+                error = f"Port for project {project_id} is not available"
+                raise RuntimeError(error)
 
             max_retries = 3
             last_error = None
@@ -353,8 +352,13 @@ class MCPComposerService(Service):
             logger.info(f"Auth config changed for project {project_id}, triggering restart")
             return await self.start_project_composer(project_id, sse_url, auth_config)
 
+        project_port = composer_info["port"]
         # No changes, just return the current port
-        return composer_info["port"]
+        is_port_available = self._is_port_available(project_port)
+        if not is_port_available:
+            error = f"Port for project {project_id} is not available"
+            raise RuntimeError(error)
+        return project_port
 
     async def teardown(self) -> None:
         """Clean up resources when the service is torn down."""
