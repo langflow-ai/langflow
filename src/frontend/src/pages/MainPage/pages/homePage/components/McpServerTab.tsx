@@ -304,8 +304,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-          ? "wsl"
-          : "uvx"
+            ? "wsl"
+            : "uvx"
       }",
       "args": [
         ${
@@ -314,9 +314,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-            ? `"uvx",
+              ? `"uvx",
         `
-            : ""
+              : ""
         }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
       ]
@@ -429,7 +429,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 ) : (
                   <ShadTooltip
                     content={
-                      composerUrlData?.port_available ?? true
+                      (composerUrlData?.port_available ?? true)
                         ? undefined
                         : "MCP Server is not running: port not available. Please check your settings and try again."
                     }
@@ -437,14 +437,14 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     <span
                       className={cn(
                         "flex gap-2 text-mmd items-center",
-                        composerUrlData?.port_available ?? true
+                        (composerUrlData?.port_available ?? true)
                           ? "text-accent-emerald-foreground"
                           : "text-accent-amber-foreground",
                       )}
                     >
                       <ForwardedIconComponent
                         name={
-                          composerUrlData?.port_available ?? true
+                          (composerUrlData?.port_available ?? true)
                             ? "Check"
                             : "AlertTriangle"
                         }
@@ -618,8 +618,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         installedMCP?.includes(installer.name)
                           ? "Check"
                           : loadingMCP.includes(installer.name)
-                          ? "Loader2"
-                          : "Plus"
+                            ? "Loader2"
+                            : "Plus"
                       }
                       className={cn(
                         "h-4 w-4 absolute top-0 left-0 opacity-100",
