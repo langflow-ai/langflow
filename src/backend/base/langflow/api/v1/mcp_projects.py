@@ -460,12 +460,15 @@ async def update_project_mcp_settings(
 
                     if should_use_mcp_composer(project):
                         try:
-                            composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
+                            composer_host, composer_port, port_available = await get_or_start_mcp_composer(
+                                project, project_id
+                            )
                             composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "sse_url": composer_sse_url,
                                 "uses_composer": True,
+                                "port_available": port_available,
                             }
                         except Exception as e:
                             await logger.awarning(f"Failed to get mcp composer URL for project {project_id}: {e}")
@@ -489,6 +492,7 @@ async def update_project_mcp_settings(
                         "project_id": str(project_id),
                         "sse_url": sse_url,
                         "uses_composer": False,
+                        "port_available": True,
                     }
 
             return response
@@ -638,8 +642,14 @@ async def install_mcp_config(
         mcp_composer_enabled = get_settings_service().settings.mcp_composer_enabled
 
         if use_mcp_composer:
-            composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
+            composer_host, composer_port, port_available = await get_or_start_mcp_composer(project, project_id)
             sse_url = f"http://{composer_host}:{composer_port}/sse"
+
+        if not port_available:
+            raise HTTPException(
+                status_code=500,
+                detail="MCP Server is not running: port not available. Please check your settings and try again.",
+            )
 
         # mcp-proxy handles stdio<->sse
         args = ["mcp-proxy"]
@@ -809,13 +819,14 @@ async def get_project_composer_url(
                 detail="MCP Composer is only available for projects with OAuth authentication",
             )
 
-        composer_host, composer_port = await get_or_start_mcp_composer(project, project_id)
+        composer_host, composer_port, port_available = await get_or_start_mcp_composer(project, project_id)
         composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
 
         return {
             "project_id": str(project_id),
             "sse_url": composer_sse_url,
             "uses_composer": True,
+            "port_available": port_available,
         }
 
     except Exception as e:
@@ -1284,17 +1295,20 @@ async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[
             auth_config = decrypted_settings
 
     # Check if composer is running and if config has changed
-    composer_port = await mcp_composer_service.ensure_composer_updated(str(project_id), sse_url, auth_config)
 
-    if not composer_port:
-        # Composer not running, start it
-        await logger.adebug(f"Starting MCP Composer for project {project.name} ({project_id})")
-        composer_port = await mcp_composer_service.start_project_composer(
-            project_id=str(project.id), sse_url=sse_url, auth_config=auth_config
-        )
+    try:
+        composer_port = await mcp_composer_service.ensure_composer_updated(str(project_id), sse_url, auth_config)
 
         if not composer_port:
-            error = f"Failed to start MCP Composer for project {project_id}"
-            raise HTTPException(status_code=500, detail=error)
+            # Composer not running, start it
+            await logger.adebug(f"Starting MCP Composer for project {project.name} ({project_id})")
+            composer_port = await mcp_composer_service.start_project_composer(
+                project_id=str(project.id), sse_url=sse_url, auth_config=auth_config
+            )
+        port_available = True
+    except RuntimeError as e:
+        composer_port = auth_config.get("oauth_port")
+        await logger.aerror(e)
+        port_available = False
 
-    return (composer_host, str(composer_port))
+    return (composer_host, str(composer_port), port_available)
